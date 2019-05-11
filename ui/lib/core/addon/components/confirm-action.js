@@ -26,38 +26,63 @@ export default Component.extend({
   tagName: 'span',
   classNames: ['confirm-action'],
   layout: hbs`
-    {{#if showConfirm ~}}
-      <span class={{containerClasses}}>
-        <span class={{concat 'confirm-action-text ' messageClasses}}>{{if disabled disabledMessage confirmMessage}}</span>
-        <button {{action 'onConfirm'}} disabled={{disabled}} class={{confirmButtonClasses}} type="button" data-test-confirm-button=true>{{confirmButtonText}}</button>
-        <button {{action 'toggleConfirm'}} type="button" class={{cancelButtonClasses}} data-test-confirm-cancel-button=true>{{cancelButtonText}}</button>
-      </span>
-    {{else}}
-      <button
-        class={{buttonClasses}}
-        type="button"
-        disabled={{disabled}}
-        data-test-confirm-action-trigger=true
-        {{action 'toggleConfirm'}}
-      >
+    {{#basic-dropdown class="popup-menu" horizontalPosition=horizontalPosition verticalPosition=verticalPosition onOpen=(action "toggleConfirm") onClose=(action "toggleConfirm") as |d|}}
+      {{#d.trigger
+        tagName="button"
+        class=(concat buttonClasses " popup-menu-trigger" (if d.isOpen " is-active"))
+        disabled=disabled
+        data-test-confirm-action-trigger="true"
+      }}
         {{yield}}
-      </button>
-    {{~/if}}
+        {{#if (eq buttonClasses 'toolbar-link') ~}}
+          <Icon @glyph="chevron-{{if showConfirm 'up' 'down'}}" />
+        {{~/if}}
+      {{/d.trigger}}
+      {{#d.content class=(concat "popup-menu-content")}}
+        <div class="box confirm-action-message">
+          <div class="message is-highlight">
+            <div class="message-title">
+              <Icon @glyph="alert-triangle" />
+              {{if disabled disabledTitle confirmTitle}}
+            </div>
+            <p>
+              {{if disabled disabledMessage confirmMessage}}
+            </p>
+          </div>
+          <div class="confirm-action-options">
+            <button
+              type="button"
+              disabled={{disabled}}
+              class="link is-destroy"
+              data-test-confirm-button="true"
+              {{action 'onConfirm'}}
+            >
+              {{confirmButtonText}}
+            </button>
+            <button
+              type="button"
+              class="link"
+              data-test-confirm-cancel-button="true"
+              {{action d.actions.close}}
+            >
+              {{cancelButtonText}}
+            </button>
+          </div>
+        </div>
+      {{/d.content}}
+    {{/basic-dropdown}}
   `,
-
-  disabled: false,
-  disabledMessage: 'Complete the form to complete this action',
-  showConfirm: false,
-  messageClasses: 'is-size-8 has-text-grey',
-  confirmButtonClasses: 'is-danger is-outlined button',
-  containerClasses: '',
-  buttonClasses: 'button',
   buttonText: 'Delete',
-  confirmMessage: 'Are you sure you want to do this?',
+  confirmTitle: 'Delete this?',
+  confirmMessage: 'This data will be permenantly deleted.',
   confirmButtonText: 'Delete',
-  cancelButtonClasses: 'button',
   cancelButtonText: 'Cancel',
-  // the action to take when we confirm
+  disabledTitle: "Can't delete this yet",
+  disabledMessage: 'Complete the form to complete this action',
+  horizontalPosition: 'auto-right',
+  verticalPosition: 'below',
+  disabled: false,
+  showConfirm: false,
   onConfirmAction: null,
 
   actions: {

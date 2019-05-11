@@ -48,14 +48,13 @@
     </div>
   </div>
   {{#if (and (not model.revocationTime) model.canRevoke)}}
-    {{#confirm-action
-      buttonClasses="button"
-      onConfirmAction=(action "delete")
-      confirmMessage=(concat "Are you sure you want to revoke " model.id "?")
-      cancelButtonText="Cancel"
-      confirmButtonText="Revoke"
-    }}
+    <ConfirmAction
+      @buttonClasses="button"
+      @onConfirmAction={{action "delete"}}
+      @confirmMessage={{concat "Are you sure you want to revoke " model.id "?"}}
+      @confirmButtonText="Revoke"
+    >
       Revoke
-    {{/confirm-action}}
+    </ConfirmAction>
   {{/if}}
 </div>

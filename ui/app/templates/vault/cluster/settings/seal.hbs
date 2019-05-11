@@ -17,16 +17,16 @@
     </p>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#confirm-action
-      onConfirmAction=(action "seal")
-      confirmMessage=(concat "Are you sure you want to seal " model.cluster.name "?")
-      confirmButtonText="Seal"
-      buttonClasses="button is-primary"
-      cancelButtonText="Cancel"
-      data-test-seal=true
-      }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @onConfirmAction={{action "seal"}}
+      @confirmMessage={{concat "Are you sure you want to seal " model.cluster.name "?"}}
+      @confirmButtonText="Seal"
+      @horizontalPosition="auto-left"
+      data-test-seal="true"
+    >
       Seal
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 {{else}}
   <EmptyState

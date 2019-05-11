@@ -27,15 +27,14 @@
       {{/secret-link}}
     </div>
     {{#if (and (eq mode 'edit') model.canDelete)}}
-      {{#confirm-action
-        data-test-role-delete
-        buttonClasses="button"
-        onConfirmAction=(action "delete")
-        confirmMessage=(concat "Are you sure you want to delete " model.id "?")
-        cancelButtonText="Cancel"
-      }}
+      <ConfirmAction
+        @buttonClasses="button is-ghost"
+        @onConfirmAction={{action "delete"}}
+        @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
+        data-test-role-delete="true"
+      >
         Delete
-      {{/confirm-action}}
+      </ConfirmAction>
     {{/if}}
   </div>
 </form>

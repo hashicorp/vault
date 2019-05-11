@@ -99,7 +99,6 @@
             {{#if activeCluster.unsealed}}
               {{#if (has-permission 'status' routeParams='seal')}}
                 {{#link-to 'vault.cluster.settings.seal' cluster.name
-                  class="level is-mobile"
                   invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
                 }}
                   <div class="level is-mobile">

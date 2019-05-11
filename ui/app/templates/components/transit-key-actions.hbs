@@ -1,17 +1,16 @@
 {{#if (eq selectedAction 'rotate')}}
   {{#if key.canRotate}}
-    {{#confirm-action
-        buttonClasses="toolbar-link"
-        onConfirmAction=(action "doSubmit")
-        confirmMessage=(concat 'Are you sure you want to rotate "' key.id '"?')
-        confirmButtonText="Confirm rotation"
-        cancelButtonText="Cancel"
-        messageClasses="is-block-mobile has-text-grey"
-        data-test-transit-key-rotate=true
-      }}
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @onConfirmAction={{action "doSubmit"}}
+      @confirmMessage={{concat 'Are you sure you want to rotate "' key.id '"?'}}
+      @confirmButtonText="Confirm rotation"
+      @cancelButtonText="Cancel"
+      data-test-transit-key-rotate="true"
+    >
       Rotate encryption key
       <Chevron @isButton={{true}} />
-    {{/confirm-action}}
+    </ConfirmAction>
   {{/if}}
 {{else}}
   {{message-error errors=errors}}

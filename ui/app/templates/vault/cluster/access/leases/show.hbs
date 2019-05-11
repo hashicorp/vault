@@ -70,14 +70,13 @@
 <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
   <div class="field">{{!-- needs to be here to push over the button --}}</div>
   {{#if capabilities.revoke.canUpdate}}
-    {{#confirm-action
-      onConfirmAction=(action "revokeLease" model)
-      confirmMessage= (concat "Are you sure you want to revoke this lease?")
-      confirmButtonText="Confirm revocation"
-      cancelButtonText="Cancel"
-      data-test-lease-revoke=true
-    }}
+    <ConfirmAction
+      @onConfirmAction={{action "revokeLease" model}}
+      @confirmMessage={{concat "Are you sure you want to revoke this lease?"}}
+      @confirmButtonText="Confirm revocation"
+      data-test-lease-revoke="true"
+    >
       Revoke lease
-    {{/confirm-action}}
+    </ConfirmAction>
   {{/if}}
 </div>

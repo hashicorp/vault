@@ -26,8 +26,8 @@
         @buttonClasses="button is-ghost"
         @onConfirmAction={{action (perform save model (hash method="destroyRecord"))}}
         @confirmMessage="Are you sure you want to delete this config?"
-        data-test-edit-delete
-        >
+        data-test-edit-delete="true"
+      >
         <span data-test-edit-delete-text>
           {{deleteButtonText}}
         </span>

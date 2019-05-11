@@ -112,10 +112,15 @@
 .popup-menu-content .level-left {
   flex-shrink: 1;
 }
-.popup-menu-trigger {
-  height: 2rem;
-  min-width: 0;
-  padding: 0 $size-10;
+
+.list-item-row,
+.wizard-dismiss-menu {
+  .popup-menu-trigger {
+    height: 2.5rem;
+    min-width: 0;
+    padding: 0;
+    width: 2.5rem;
+  }
 }
 
 .status-menu-content {

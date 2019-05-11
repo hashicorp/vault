@@ -91,14 +91,13 @@
         </div>
       </div>
       {{#if (and key.canDelete capabilities.canDelete)}}
-        {{#confirm-action
-          buttonClasses="button"
-          onConfirmAction=(action "deleteKey")
-          confirmMessage=(concat "Are you sure you want to delete " key.id "?")
-          cancelButtonText="Cancel"
-        }}
+        <ConfirmAction
+          @buttonClasses="button"
+          @onConfirmAction={{action "deleteKey"}}
+          @confirmMessage={{concat "Are you sure you want to delete " key.id "?"}}
+        >
           Delete encryption key
-        {{/confirm-action}}
+        </ConfirmAction>
       {{/if}}
     </div>
 </form>
