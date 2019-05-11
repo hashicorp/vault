@@ -1252,3 +1252,62 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/keys/my-key/trim
 ```
+
+## Configure Cache
+
+This endpoint is used to configure the transit engine's cache. Note that configuration
+changes will not be applied until the transit plugin is reloaded which can be achieved
+ using the [`/sys/plugins/reload/backend`](../../system/plugins-reload-backend.html.md#reload-plugins) endpoint.
+
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `POST`   | `/transit/cache-config` |
+
+### Parameters
+
+- `size` `(int: 0)` - Specifies the size in terms of number of entries. A size of
+  `0` means unlimited. A _Least Recently Used_ (LRU) caching strategy is used for a
+  non-zero cache size.
+
+### Sample Payload
+
+```json
+{
+  "size": 456
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..."
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/transit/cache-config
+```
+
+## Read Transit Cache Configuration
+
+This endpoint retrieves configurations for the transit engine's cache.
+
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `GET`   | `/transit/cache-config` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..."
+    --request GET \
+    http://127.0.0.1:8200/v1/transit/cache-config
+```
+
+### Sample Response
+
+```json
+  "data": {
+    "cache_size": 0
+  },
+```
