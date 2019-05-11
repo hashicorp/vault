@@ -48,7 +48,7 @@ token:
       "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
     }
     ```
-For Consul 1.4 and above, use the command line to generate a token with the appropiate policy:
+For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
 
    ```sh
    $ CONSUL_HTTP_TOKEN=d54fe46a-1f57-a589-3583-6b78e334b03b consul acl token create -policy-name=global-management
