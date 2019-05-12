@@ -1,3 +1,7 @@
+.page-header + .tabs-container {
+  box-shadow: none;
+}
+
 .tabs {
   box-shadow: inset 0 -1px 0 $grey-light;
 
@@ -15,24 +19,24 @@
       border-color: $blue;
       color: $blue;
     }
-    &:first-child a,
-    &:first-child .tab {
-      margin-left: $size-5;
-    }
   }
 
   a,
   .tab {
-    color: $grey-dark;
+    color: $grey;
     font-weight: $font-weight-semibold;
     text-decoration: none;
     padding: $size-6 $size-8 $size-8;
     border-bottom: 2px solid transparent;
-    transition: border-color $speed;
+    transition: background-color $speed, border-color $speed;
 
     &:hover,
     &:active {
       border-color: $grey-light;
+    }
+
+    &:hover {
+      background-color: $ui-gray-050;
     }
   }
 

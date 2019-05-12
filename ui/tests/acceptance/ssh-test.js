@@ -63,6 +63,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
     const sshPath = `ssh-${now}`;
 
     await enablePage.enable('ssh', sshPath);
+    await click('[data-test-configuration-tab]');
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');

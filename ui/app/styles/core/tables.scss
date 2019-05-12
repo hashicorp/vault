@@ -1,16 +1,14 @@
 .table {
   thead,
   .thead {
-    background: $grey-lighter;
     box-shadow: 0 1px 0 0 $grey-light, 0 -1px 0 0 $grey-light;
 
     th,
     .th {
-      text-transform: uppercase;
       font-size: $size-8;
-      color: $grey-dark;
-      font-weight: normal;
-      padding: 0.5rem 1.5rem;
+      color: $grey;
+      font-weight: $font-weight-semibold;
+      padding: 1rem 1.5rem 0;
       border-width: 0 0 1px 0;
       border-color: $grey-light;
     }
