@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -75,7 +76,7 @@ func (c *KVListCommand) Flags() *FlagSets {
 	f.UintVar(&UintVar{
 		Name:    "concurrent",
 		Target:  &c.flagConcurrent,
-		Default: 1,
+		Default: 16,
 		Usage:   "Specifies the number of concurrent recursions to run.",
 	})
 
@@ -184,6 +185,7 @@ func (c *KVListCommand) Run(args []string) int {
 					wg:     sync.WaitGroup{},
 					sem:    make(chan int32, c.flagConcurrent),
 					mux:    sync.Mutex{},
+					tck:    time.NewTicker(time.Millisecond * 100),
 				}
 				e      bool
 				opErr  string
@@ -212,22 +214,22 @@ func (c *KVListCommand) Run(args []string) int {
 			// Launch the recursive call and wait for it them to finish.
 			r.wg.Add(1)
 			go kvListRecursive(r, path, s)
-			for atomic.LoadInt32(&r.track) < i {
+			for len(r.sem) > 0 || atomic.LoadInt32(&r.track) < i {
+				// For loop termination.
+				if atomic.LoadInt32(&r.track) == 0 {
+					atomic.AddInt32(&r.track, 1)
+				}
+
 				select {
 				case x, ok := <-r.sem:
 					if ok {
-						// For loop termination.
-						if atomic.LoadInt32(&r.track) == 0 {
-							atomic.AddInt32(&r.track, 1)
-						}
-
 						// For continuing the loop.
 						i += x
 					} else {
 						break
 					}
 				default:
-					continue
+					<-r.tck.C
 				}
 			}
 			r.wg.Wait()

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -35,6 +36,7 @@ type kvListRecursiveParams struct {
 	wg  sync.WaitGroup // Keep track of launched goroutines.
 	sem chan int32     // Semaphone for throttling goroutines.
 	mux sync.Mutex     // Mutex to append entries to `data'.
+	tck *time.Ticker   // Avoid busy loops when polling for goroutines.
 }
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -194,7 +196,6 @@ func kvListRecursive(r *kvListRecursiveParams, base string, sub []interface{}) {
 
 	// Wait in the queue.
 	r.sem <- int32(1)
-
 
 	// No need to recursively list values that don't have any sub-paths.
 	if !strings.HasSuffix(base, "/") {
