@@ -12,11 +12,10 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	log "github.com/hashicorp/go-hclog"
-
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/physical"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify AliCloudOSSBackend satisfies the correct interfaces

@@ -12,17 +12,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -102,15 +102,18 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			case <-ctx.Done():
 			case <-m.quitCh:
 				cancel()
+			case <-revokeCtx.Done():
 			}
 		}()
 
 		select {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		case <-m.quitContext.Done():
 			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		default:
 		}
@@ -187,7 +190,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	errorFunc := func() {
 		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
-			c.logger.Error("error shutting down core: %v", err)
+			c.logger.Error("error shutting down core", "error", err)
 		}
 	}
 	go c.expiration.Restore(errorFunc)
@@ -494,9 +497,12 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	wg.Wait()
 
 	m.restoreModeLock.Lock()
-	m.restoreLoaded = sync.Map{}
-	m.restoreLocks = nil
 	atomic.StoreInt32(m.restoreMode, 0)
+	m.restoreLoaded.Range(func(k, v interface{}) bool {
+		m.restoreLoaded.Delete(k)
+		return true
+	})
+	m.restoreLocks = nil
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
@@ -821,11 +827,11 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}
 
-	reqNS, err := namespace.FromContext(ctx)
+	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if reqNS.ID != le.namespace.ID {
+	if ns.ID != le.namespace.ID {
 		return nil, errors.New("cannot renew a lease across namespaces")
 	}
 
@@ -869,6 +875,26 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	le.Secret = resp.Secret
 	le.ExpireTime = resp.Secret.ExpirationTime()
 	le.LastRenewalTime = time.Now()
+
+	// If the token it's associated with is a batch token, constrain lease
+	// times
+	if le.ClientTokenType == logical.TokenTypeBatch {
+		te, err := m.tokenStore.Lookup(ctx, le.ClientToken)
+		if err != nil {
+			return nil, err
+		}
+		if te == nil {
+			return nil, errors.New("cannot renew lease, no valid associated token")
+		}
+		tokenLeaseTimes, err := m.FetchLeaseTimesByToken(ctx, te)
+		if err != nil {
+			return nil, err
+		}
+		if le.ExpireTime.After(tokenLeaseTimes.ExpireTime) {
+			resp.Secret.TTL = tokenLeaseTimes.ExpireTime.Sub(le.LastRenewalTime)
+			le.ExpireTime = tokenLeaseTimes.ExpireTime
+		}
+	}
 
 	{
 		m.pendingLock.Lock()
@@ -975,7 +1001,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if resp.Auth.EntityID != "" &&
 		resp.Auth.GroupAliases != nil &&
 		m.core.identityStore != nil {
-		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
 			return nil, err
 		}
@@ -1009,7 +1035,8 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
-	if req.ClientToken == "" {
+	te := req.TokenEntry()
+	if te == nil {
 		return "", fmt.Errorf("cannot register a lease with an empty client token")
 	}
 
@@ -1024,7 +1051,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	}
 
 	// Create a lease entry
-	leaseRand, err := base62.Random(TokenLength, true)
+	leaseRand, err := base62.Random(TokenLength)
 	if err != nil {
 		return "", err
 	}
@@ -1041,14 +1068,15 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	}
 
 	le := &leaseEntry{
-		LeaseID:     leaseID,
-		ClientToken: req.ClientToken,
-		Path:        req.Path,
-		Data:        resp.Data,
-		Secret:      resp.Secret,
-		IssueTime:   time.Now(),
-		ExpireTime:  resp.Secret.ExpirationTime(),
-		namespace:   ns,
+		LeaseID:         leaseID,
+		ClientToken:     req.ClientToken,
+		ClientTokenType: te.Type,
+		Path:            req.Path,
+		Data:            resp.Data,
+		Secret:          resp.Secret,
+		IssueTime:       time.Now(),
+		ExpireTime:      resp.Secret.ExpirationTime(),
+		namespace:       ns,
 	}
 
 	defer func() {
@@ -1075,14 +1103,35 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		}
 	}()
 
+	// If the token is a batch token, we want to constrain the maximum lifetime
+	// by the token's lifetime
+	if te.Type == logical.TokenTypeBatch {
+		tokenLeaseTimes, err := m.FetchLeaseTimesByToken(ctx, te)
+		if err != nil {
+			return "", err
+		}
+		if le.ExpireTime.After(tokenLeaseTimes.ExpireTime) {
+			le.ExpireTime = tokenLeaseTimes.ExpireTime
+		}
+	}
+
 	// Encode the entry
 	if err := m.persistEntry(ctx, le); err != nil {
 		return "", err
 	}
 
-	// Maintain secondary index by token
-	if err := m.createIndexByToken(ctx, le); err != nil {
-		return "", err
+	// Maintain secondary index by token, except for orphan batch tokens
+	switch {
+	case te.Type != logical.TokenTypeBatch:
+		if err := m.createIndexByToken(ctx, le, le.ClientToken); err != nil {
+			return "", err
+		}
+	case te.Parent != "":
+		// If it's a non-orphan batch token, assign the secondary index to its
+		// parent
+		if err := m.createIndexByToken(ctx, le, te.Parent); err != nil {
+			return "", err
+		}
 	}
 
 	// Setup revocation timer if there is a lease
@@ -1098,8 +1147,12 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
+	if te.Type == logical.TokenTypeBatch {
+		return errors.New("cannot register a lease for a batch token")
+	}
+
 	if auth.ClientToken == "" {
-		return fmt.Errorf("cannot register an auth lease with an empty token")
+		return errors.New("cannot register an auth lease with an empty token")
 	}
 
 	if strings.Contains(te.Path, "..") {
@@ -1149,8 +1202,23 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 // FetchLeaseTimesByToken is a helper function to use token values to compute
 // the leaseID, rather than pushing that logic back into the token store.
+// As a special case, for a batch token it simply returns the information
+// encoded on it.
 func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logical.TokenEntry) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
+
+	if te == nil {
+		return nil, errors.New("cannot fetch lease times for nil token")
+	}
+
+	if te.Type == logical.TokenTypeBatch {
+		issueTime := time.Unix(te.CreationTime, 0)
+		return &leaseEntry{
+			IssueTime:       issueTime,
+			ExpireTime:      issueTime.Add(te.TTL),
+			ClientTokenType: logical.TokenTypeBatch,
+		}, nil
+	}
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
 	if err != nil {
@@ -1270,11 +1338,22 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
+		if le.ClientTokenType == logical.TokenTypeBatch {
+			return errors.New("batch tokens cannot be revoked")
+		}
+
 		if err := m.tokenStore.revokeTree(ctx, le); err != nil {
 			return errwrap.Wrapf("failed to revoke token: {{err}}", err)
 		}
 
 		return nil
+	}
+
+	if le.Secret != nil {
+		// not sure if this is really valid to have a leaseEntry with a nil Secret
+		// (if there's a nil Secret, what are you really leasing?), but the tests
+		// create one, and good to be defensive
+		le.Secret.IssueTime = le.IssueTime
 	}
 
 	// Make sure we're operating in the right namespace
@@ -1309,6 +1388,10 @@ func (m *ExpirationManager) renewEntry(ctx context.Context, le *leaseEntry, incr
 // renewAuthEntry is used to attempt renew of an auth entry. Only the token
 // store should get the actual token ID intact.
 func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+	if le.ClientTokenType == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be renewed"), nil
+	}
+
 	auth := *le.Auth
 	auth.IssueTime = le.IssueTime
 	auth.Increment = increment
@@ -1371,14 +1454,14 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	view := m.leaseView(ns)
 	out, err := view.Get(ctx, leaseID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read lease entry: {{err}}", err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read lease entry %s: {{err}}", leaseID), err)
 	}
 	if out == nil {
 		return nil, nil
 	}
 	le, err := decodeLeaseEntry(out.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode lease entry: {{err}}", err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
 	}
 	le.namespace = ns
 
@@ -1436,10 +1519,10 @@ func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) err
 }
 
 // createIndexByToken creates a secondary index from the token to a lease entry
-func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEntry) error {
+func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	_, nsID := namespace.SplitIDFromString(le.ClientToken)
+	_, nsID := namespace.SplitIDFromString(token)
 	if nsID != "" {
 		tokenNS, err := NamespaceByID(ctx, nsID, m.core)
 		if err != nil {
@@ -1450,7 +1533,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 		}
 	}
 
-	saltedID, err := m.tokenStore.SaltID(saltCtx, le.ClientToken)
+	saltedID, err := m.tokenStore.SaltID(saltCtx, token)
 	if err != nil {
 		return err
 	}
@@ -1664,6 +1747,7 @@ func (m *ExpirationManager) emitMetrics() {
 type leaseEntry struct {
 	LeaseID         string                 `json:"lease_id"`
 	ClientToken     string                 `json:"client_token"`
+	ClientTokenType logical.TokenType      `json:"token_type"`
 	Path            string                 `json:"path"`
 	Data            map[string]interface{} `json:"data"`
 	Secret          *logical.Secret        `json:"secret"`
@@ -1681,24 +1765,29 @@ func (le *leaseEntry) encode() ([]byte, error) {
 }
 
 func (le *leaseEntry) renewable() (bool, error) {
-	var err error
 	switch {
-	// If there is no entry, cannot review
-	case le == nil || le.ExpireTime.IsZero():
-		err = fmt.Errorf("lease not found or lease is not renewable")
+	// If there is no entry, cannot review to renew
+	case le == nil:
+		return false, fmt.Errorf("lease not found")
+
+	case le.ExpireTime.IsZero():
+		return false, fmt.Errorf("lease is not renewable")
+
+	case le.ClientTokenType == logical.TokenTypeBatch:
+		return false, nil
+
 	// Determine if the lease is expired
 	case le.ExpireTime.Before(time.Now()):
-		err = fmt.Errorf("lease expired")
+		return false, fmt.Errorf("lease expired")
+
 	// Determine if the lease is renewable
 	case le.Secret != nil && !le.Secret.Renewable:
-		err = fmt.Errorf("lease is not renewable")
+		return false, fmt.Errorf("lease is not renewable")
+
 	case le.Auth != nil && !le.Auth.Renewable:
-		err = fmt.Errorf("lease is not renewable")
+		return false, fmt.Errorf("lease is not renewable")
 	}
 
-	if err != nil {
-		return false, err
-	}
 	return true, nil
 }
 

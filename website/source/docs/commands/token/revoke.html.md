@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token revoke - Command"
+sidebar_title: "<code>revoke</code>"
 sidebar_current: "docs-commands-token-revoke"
 description: |-
   The "token revoke" revokes authentication tokens and their children. If a

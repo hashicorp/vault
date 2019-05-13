@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Dev Server Mode"
+sidebar_title: "'Dev' Server"
 sidebar_current: "docs-concepts-devserver"
 description: |-
   The dev server in Vault can be used for development or to experiment with Vault.
@@ -21,7 +22,8 @@ in-memory). It is only made for development or experimentation.
 
 ## Properties
 
-The properties of the dev server:
+The properties of the dev server (some can be overridden with command line
+flags or by specifying a configuration file):
 
   * **Initialized and unsealed** - The server will be automatically initialized
     and unsealed. You don't need to use `vault operator unseal`. It is ready

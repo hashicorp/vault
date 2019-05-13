@@ -9,8 +9,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
@@ -31,10 +32,7 @@ func prepareTestContainer(t *testing.T) (func(), string) {
 	}
 
 	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL := fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
@@ -115,7 +113,7 @@ func TestBackend_basic(t *testing.T) {
 
 	// for wildcard based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t, true),
@@ -141,7 +139,7 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 
 	// for host based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t, false),
@@ -166,7 +164,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			// test SQL with wildcard based user
@@ -197,7 +195,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepWriteLease(t),

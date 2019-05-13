@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -212,7 +212,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	if (publicKeyEntry != nil && publicKeyEntry.Key != "") || (privateKeyEntry != nil && privateKeyEntry.Key != "") {
-		return nil, fmt.Errorf("keys are already configured; delete them before reconfiguring")
+		return logical.ErrorResponse("keys are already configured; delete them before reconfiguring"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(caPublicKeyStoragePath, &keyStorageEntry{

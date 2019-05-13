@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Consul - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-consul"
+sidebar_title: "Consul"
+sidebar_current: "api-http-secret-consul"
 description: |-
   This is the API documentation for the Vault Consul secrets engine.
 ---
@@ -22,9 +23,9 @@ This endpoint configures the access information for Consul. This access
 information is used so that Vault can communicate with Consul and generate
 Consul tokens.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/consul/config/access`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/consul/config/access`      |
 
 ### Parameters
 
@@ -62,26 +63,37 @@ This endpoint creates or updates the Consul role definition. If the role does
 not exist, it will be created. If the role already exists, it will receive
 updated attributes.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/consul/roles/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/consul/roles/:name`        |
 
-### Parameters
+### Parameters for Consul version below 1.4
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
 
-- `lease` `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
-  provided, the default Vault lease is used.
+- `token_type` `(string: "client")` - Specifies the type of token to create when
+  using this role. Valid values are `"client"` or `"management"`.
 
-- `policy` `(string: <required>)` – Specifies the base64 encoded ACL policy. The
+- `policy` `(string: <policy or policies>)` – Specifies the base64 encoded ACL policy. The
   ACL format can be found in the [Consul ACL
   documentation](https://www.consul.io/docs/internals/acl.html). This is
   required unless the `token_type` is `management`.
 
-- `token_type` `(string: "client")` - Specifies the type of token to create when
-  using this role. Valid values are `"client"` or `"management"`.
+- `policies` `(list: <policy or policies>)` – The list of policies to assign to the generated
+  token.  This is only available in Consul 1.4 and greater.
+
+- `local` `(bool: false)` - Indicates that the token should not be replicated 
+  globally and instead be local to the current datacenter.  Only available in Consul
+  1.4 and greater.
+
+- `ttl` `(duration: "")` – Specifies the TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault TTL is used.
+
+- `max_ttl` `(duration: "")` – Specifies the max TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault Max TTL is used.
 
 ### Sample Payload
 
@@ -111,14 +123,40 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
+### Parameters for Consul versions 1.4 and above
+
+- `lease` `(string: "")` – Specifies the lease for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
+  provided, the default Vault lease is used.
+
+- `policies` `(string: <required>)` – Comma separated list of policies to be applied
+  to the tokens.
+
+### Sample payload
+```json
+{
+  "policies": "global-management"
+}
+```
+
+### Sample request
+
+```sh
+curl \
+→     --request POST \
+→     --header "X-Vault-Token: ..."\
+→     --data @payload.json \
+→     http://127.0.0.1:8200/v1/consul/roles/example-role
+```
+
 ## Read Role
 
 This endpoint queries for information about a Consul role with the given name.
 If no role exists with that name, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/consul/roles/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/consul/roles/:name`        |
 
 ### Parameters
 
@@ -149,9 +187,9 @@ $ curl \
 
 This endpoint lists all existing roles in the secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/consul/roles`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/consul/roles`              |
 
 ### Sample Request
 
@@ -179,9 +217,9 @@ $ curl \
 This endpoint deletes a Consul role with the given name. Even if the role does
 not exist, this endpoint will still return a successful response.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/consul/roles/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/consul/roles/:name`        |
 
 ### Parameters
 
@@ -202,9 +240,9 @@ $ curl \
 This endpoint generates a dynamic Consul token based on the given role
 definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/consul/creds/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/consul/creds/:name`        |
 
 ### Parameters
 

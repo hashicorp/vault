@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 const (

@@ -40,6 +40,18 @@ module('Integration | Component | masked input', function(hooks) {
     assert.notOk(component.textareaIsPresent);
   });
 
+  test('it renders a copy button when allowCopy is true', async function(assert) {
+    await render(hbs`{{masked-input allowCopy=true}}`);
+
+    assert.ok(component.copyButtonIsPresent);
+  });
+
+  test('it does not render a copy button when allowCopy is false', async function(assert) {
+    await render(hbs`{{masked-input allowCopy=false}}`);
+
+    assert.notOk(component.copyButtonIsPresent);
+  });
+
   test('it unmasks text on focus', async function(assert) {
     this.set('value', 'value');
     await render(hbs`{{masked-input value=value}}`);

@@ -6,13 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+var (
+	userPathRegex = regexp.MustCompile(`^\/([\x21-\x7F]{0,510}\/)?$`)
 )
 
 func pathListRoles(b *backend) *framework.Path {
@@ -35,6 +41,7 @@ func pathRoles(b *backend) *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
+				DisplayName: "Policy Name",
 			},
 
 			"credential_type": &framework.FieldSchema{
@@ -45,11 +52,13 @@ func pathRoles(b *backend) *framework.Path {
 			"role_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is " + assumedRoleCred,
+				DisplayName: "Role ARNs",
 			},
 
 			"policy_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+				DisplayName: "Policy ARNs",
 			},
 
 			"policy_document": &framework.FieldSchema{
@@ -61,15 +70,36 @@ will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
+			"default_sts_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
+				DisplayName: "Default TTL",
+			},
+
+			"max_sts_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
+				DisplayName: "Max TTL",
+			},
+
 			"arn": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
 or IAM role to assume`,
+				Deprecated: true,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Deprecated; use policy_document instead. IAM policy document",
+				Deprecated:  true,
+			},
+
+			"user_path": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Path for IAM User. Only valid when credential_type is " + iamUserCred,
+				DisplayName: "User Path",
+				Default:     "/",
 			},
 		},
 
@@ -206,6 +236,47 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.PolicyDocument = compacted
 	}
 
+	if defaultSTSTTLRaw, ok := d.GetOk("default_sts_ttl"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with default_sts_ttl"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
+			return logical.ErrorResponse(fmt.Sprintf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
+		}
+		roleEntry.DefaultSTSTTL = time.Duration(defaultSTSTTLRaw.(int)) * time.Second
+	}
+
+	if maxSTSTTLRaw, ok := d.GetOk("max_sts_ttl"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with max_sts_ttl"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
+			return logical.ErrorResponse(fmt.Sprintf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
+		}
+
+		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
+	}
+
+	if userPathRaw, ok := d.GetOk("user_path"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with user_path"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
+			return logical.ErrorResponse(fmt.Sprintf("user_path parameter only valid for %s credential type", iamUserCred)), nil
+		}
+		if !userPathRegex.MatchString(userPathRaw.(string)) {
+			return logical.ErrorResponse(fmt.Sprintf("The specified value for user_path is invalid. It must match '%s' regexp", userPathRegex.String())), nil
+		}
+
+		roleEntry.UserPath = userPathRaw.(string)
+	}
+
+	if roleEntry.MaxSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
+		return logical.ErrorResponse(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`), nil
+	}
+
 	if legacyRole != "" {
 		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
 		if roleEntry.InvalidData != "" {
@@ -230,6 +301,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(resp.Warnings) == 0 {
+		return nil, nil
 	}
 
 	return &resp, nil
@@ -282,7 +357,7 @@ func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName stri
 	}
 
 	newRoleEntry := upgradeLegacyPolicyEntry(string(legacyEntry.Value))
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		err = setAwsRole(ctx, s, roleName, newRoleEntry)
 		if err != nil {
 			return nil, err
@@ -374,22 +449,29 @@ func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEnt
 }
 
 type awsRoleEntry struct {
-	CredentialTypes          []string `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
-	PolicyArns               []string `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
-	RoleArns                 []string `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
-	PolicyDocument           string   `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
-	InvalidData              string   `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
-	ProhibitFlexibleCredPath bool     `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
-	Version                  int      `json:"version"`                               // Version number of the role format
+	CredentialTypes          []string      `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
+	PolicyArns               []string      `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
+	RoleArns                 []string      `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
+	PolicyDocument           string        `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	InvalidData              string        `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
+	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
+	Version                  int           `json:"version"`                               // Version number of the role format
+	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
+	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
+	UserPath                 string        `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 	respData := map[string]interface{}{
-		"credential_types": r.CredentialTypes,
-		"policy_arns":      r.PolicyArns,
-		"role_arns":        r.RoleArns,
-		"policy_document":  r.PolicyDocument,
+		"credential_type": strings.Join(r.CredentialTypes, ","),
+		"policy_arns":     r.PolicyArns,
+		"role_arns":       r.RoleArns,
+		"policy_document": r.PolicyDocument,
+		"default_sts_ttl": int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":     int64(r.MaxSTSTTL.Seconds()),
+		"user_path":       r.UserPath,
 	}
+
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData
 	}

@@ -20,6 +20,7 @@ type UsersService service
 type User struct {
 	Login             *string    `json:"login,omitempty"`
 	ID                *int64     `json:"id,omitempty"`
+	NodeID            *string    `json:"node_id,omitempty"`
 	AvatarURL         *string    `json:"avatar_url,omitempty"`
 	HTMLURL           *string    `json:"html_url,omitempty"`
 	GravatarID        *string    `json:"gravatar_id,omitempty"`
@@ -132,6 +133,56 @@ func (s *UsersService) Edit(ctx context.Context, user *User) (*User, *Response, 
 	}
 
 	return uResp, resp, nil
+}
+
+// HovercardOptions specifies optional parameters to the UsersService.GetHovercard
+// method.
+type HovercardOptions struct {
+	// SubjectType specifies the additional information to be received about the hovercard.
+	// Possible values are: organization, repository, issue, pull_request. (Required when using subject_id.)
+	SubjectType string `url:"subject_type"`
+
+	// SubjectID specifies the ID for the SubjectType. (Required when using subject_type.)
+	SubjectID string `url:"subject_id"`
+}
+
+// Hovercard represents hovercard information about a user.
+type Hovercard struct {
+	Contexts []*UserContext `json:"contexts,omitempty"`
+}
+
+// UserContext represents the contextual information about user.
+type UserContext struct {
+	Message *string `json:"message,omitempty"`
+	Octicon *string `json:"octicon,omitempty"`
+}
+
+// GetHovercard fetches contextual information about user. It requires authentication
+// via Basic Auth or via OAuth with the repo scope.
+//
+// GitHub API docs: https://developer.github.com/v3/users/#get-contextual-information-about-a-user
+func (s *UsersService) GetHovercard(ctx context.Context, user string, opt *HovercardOptions) (*Hovercard, *Response, error) {
+	u := fmt.Sprintf("users/%v/hovercard", user)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeHovercardPreview)
+
+	hc := new(Hovercard)
+	resp, err := s.client.Do(ctx, req, hc)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return hc, resp, nil
 }
 
 // UserListOptions specifies optional parameters to the UsersService.ListAll

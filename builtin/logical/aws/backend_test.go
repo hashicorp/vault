@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,10 +21,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -47,7 +48,7 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -77,7 +78,7 @@ func TestBackend_basicSTS(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepRotateRoot(accessKey),
@@ -103,7 +104,7 @@ func TestBackend_policyCrud(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -250,7 +251,7 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	// 1. Create user, without any permissions or credentials. At this point,
 	//	  nobody cares if creds compromised because this user can do nothing.
 	// 2. Attach the timebomb policy. This grants no access but puts a time limit
-	//	  on validitity of compromised credentials. If this fails, nobody cares
+	//	  on validity of compromised credentials. If this fails, nobody cares
 	//	  because the user has no permissions to do anything anyway
 	// 3. Attach the AdminAccess policy. The IAM user still has no credentials to
 	//	  do anything
@@ -500,6 +501,23 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
+func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp.Secret == nil {
+				return fmt.Errorf("bad: nil Secret returned")
+			}
+			ttl := resp.Secret.TTL
+			if ttl > maximumTTL {
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+			}
+			return nil
+		},
+	}
+}
+
 func describeInstancesTest(accessKey, secretKey, token string) error {
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
 	awsConfig := &aws.Config{
@@ -537,6 +555,27 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 		}
 		return err
 	})
+}
+
+func assertCreatedIAMUser(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := iam.New(session.New(awsConfig))
+	log.Printf("[WARN] Checking if IAM User is created properly...")
+	userOutput, err := client.GetUser(&iam.GetUserInput{})
+	if err != nil {
+		return err
+	}
+
+	if *userOutput.User.Path != "/path/" {
+		return fmt.Errorf("bad: got: %#v\nexpected: %#v", userOutput.User.Path, "/path/")
+	}
+
+	return nil
 }
 
 func listIamUsersTest(accessKey, secretKey, token string) error {
@@ -630,10 +669,13 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":      []string(nil),
-				"role_arns":        []string(nil),
-				"policy_document":  value,
-				"credential_types": []string{iamUserCred, federationTokenCred},
+				"policy_arns":     []string(nil),
+				"role_arns":       []string(nil),
+				"policy_document": value,
+				"credential_type": strings.Join([]string{iamUserCred, federationTokenCred}, ","),
+				"default_sts_ttl": int64(0),
+				"max_sts_ttl":     int64(0),
+				"user_path":       "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -705,7 +747,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -724,22 +766,27 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
 		"credential_type": iamUserCred,
+		"user_path":       "/path/",
 	}
 	expectedRoleData := map[string]interface{}{
-		"policy_document":  compacted,
-		"policy_arns":      []string{ec2PolicyArn, iamPolicyArn},
-		"credential_types": []string{iamUserCred},
-		"role_arns":        []string(nil),
+		"policy_document": compacted,
+		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
+		"credential_type": iamUserCred,
+		"role_arns":       []string(nil),
+		"default_sts_ttl": int64(0),
+		"max_sts_ttl":     int64(0),
+		"user_path":       "/path/",
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
-			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser}),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
 		},
 	})
@@ -783,7 +830,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -796,11 +843,46 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	})
 }
 
+func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
+	minAwsAssumeRoleDuration := 900
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+	roleData := map[string]interface{}{
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
+		"credential_type": assumedRoleCred,
+		"default_sts_ttl": minAwsAssumeRoleDuration,
+		"max_sts_ttl":     minAwsAssumeRoleDuration,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID)
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+		},
+		Teardown: func() error {
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
 func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -825,10 +907,13 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":      []string{value},
-				"role_arns":        []string(nil),
-				"policy_document":  "",
-				"credential_types": []string{iamUserCred},
+				"policy_arns":     []string{value},
+				"role_arns":       []string(nil),
+				"policy_document": "",
+				"credential_type": iamUserCred,
+				"default_sts_ttl": int64(0),
+				"max_sts_ttl":     int64(0),
+				"user_path":       "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

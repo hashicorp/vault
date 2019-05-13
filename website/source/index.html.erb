@@ -1,129 +1,55 @@
 ---
-description: |-
-  Vault secures, stores, and tightly controls access to tokens, passwords,
-  certificates, API keys, and other secrets in modern computing. Vault handles
-  leasing, key revocation, key rolling, auditing, and provides secrets as a
-  service through a unified API.
+description: "Vault secures, stores, and tightly controls access to tokens, passwords, certificates, API keys, and other secrets in modern computing. Vault handles leasing, key revocation, key rolling, auditing, and provides secrets as a service through a unified API."
 ---
 
-<%= partial "layouts/sidebar" %>
+<% page = dato.vault_oss_page %>
 
-<div id="demo-app"></div>
+<hashi-product-subnav project_site="true" current_path="<%= current_page.path %>" _data="<%= encode({
+  products: dato.enterprise_products.map(&:to_hash),
+  subnav: dato.vault_product_page.subnav.to_hash
+}) %>"></hashi-product-subnav>
 
-<div id="container" class="col-md-offset-3 col-md-6 col-sm-offset-2 col-sm-8">
-  <div class="row">
-    <%= inline_svg "logo-hashicorp.svg", height: 120, class: "logo" %>
-    <span id="tag-line">A Tool for Managing Secrets</span>
+<hashi-hero _data="<%= encode(page.hero) %>"></hashi-hero>
+<div class='g-section-block'>
+  <section class='g-container'>
+    <hashi-section-header
+      headline="<%= page.use_cases_headline.headline %>"
+      description="<%= page.use_cases_headline.description %>"
+    ></hashi-section-header>
 
-    <div>
-      <a class="button primary started" href="/intro">Get Started</a>
-      <a class="button terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
-    </div>
+    <hashi-callouts _data="<%= encode(page.use_cases_callouts[0]) %>"></hashi-callouts>
+  </section>
 
-    <div id="diagram"></div>
+  <section class='g-container'>
+    <hashi-section-header
+      headline="<%= page.documentation_headline.headline %>"
+      description="<%= page.documentation_headline.description %>"
+    ></hashi-section-header>
 
-    <p>
-      <strong>HashiCorp Vault</strong> secures, stores, and tightly
-      controls access to tokens, passwords, certificates, API keys,
-      and other secrets in modern computing. Vault handles leasing,
-      key revocation, key rolling, and auditing. Through a unified
-      API, users can access an encrypted Key/Value store and network
-      encryption-as-a-service, or generate AWS IAM/STS credentials,
-      SQL/NoSQL databases, X.509 certificates, SSH credentials, and
-      more.
-    </p>
-  </div>
+    <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
+  </section>
 
-  <div class="row">
-    <h2 class="features-header">Features</h2>
+  <section class='gray'>
+    <div class='g-container'>
+      <hashi-section-header
+        headline="<%= page.features_headline.headline %>"
+        description="<%= page.features_headline.description %>"
+      ></hashi-section-header>
 
-    <div id="crud" class="feature">
-      <div class="graphic"></div>
-      <h3 class="feature-header">Secret Storage</h3>
-      <p>
-        Vault can store your existing secrets, or it can
-        dynamically generate new secrets to control access to
-        third-party resources or provide time-limited credentials
-        for your infrastructure. All data that Vault stores is
-        encrypted. Any dynamically-generated secrets are associated
-        with leases, and Vault will automatically revoke these
-        secrets after the lease period ends. Access control
-        policies provide strict control over who can access what
-        secrets.
-      </p>
-      <div class="feature-footer">
-        <a class="button" href="/intro/use-cases.html">Learn more</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div id="key" class="feature">
-      <div class="graphic"></div>
-      <h3 class="feature-header">Key Rolling</h3>
-      <p>
-        Secrets you store within Vault can be updated at any time.
-        If using Vault's encryption-as-a-service functionality, the
-        keys used can be rolled to a new key version at any time,
-        while retaining the ability to decrypt values encrypted
-        with past key versions. For dynamically-generated secrets,
-        configurable maximum lease lifetimes ensure that key
-        rolling is easy to enforce.
-      </p>
-      <div class="feature-footer">
-        <a class="button" href="/docs/concepts/lease.html">Learn more</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div id="audit" class="feature">
-      <div class="graphic"></div>
-      <h3 class="feature-header">Audit Logs</h3>
-      <p>
-        Vault stores a detailed audit log of all authenticated
-        client interaction: authentication, token creation, secret
-        access, secret revocation, and more. Audit logs can be sent
-        to multiple backends to ensure redundant copies. Paired
-        with Vault's strict leasing policies, operators can easily
-        trace the lifetime and origin of any secret.
-      </p>
-      <div class="feature-footer">
-        <a class="button" href="/docs/audit/index.html">Learn more</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div id="cta">
-      <a class="button" href="/intro/index.html">Get Started with Vault</a>
-      <p class="cta-black">Completely free and open source.</p>
-    </div>
-  </div>
-
-  <div id="latest-announcement" class="row">
-    <div class="col-sm-12">
-      <h2>Latest Vault News</h2>
-    </div>
-
-    <div class="col-sm-12">
-      <% data.news.posts.each do |post| %>
-        <div class="latest-item">
-          <%= post.media_html %>
-          <h3><%= post.title %></h3>
-          <%= simple_format post.body %>
-          <% if post.link_url %>
-            <div class="latest-footer">
-              <a class="button" href="<%= post.link_url %>" target="_blank"><%= post.link_text || data.news.default_link_text %></a>
-            </div>
+      <div class='button-container'>
+        <% if page.features_buttons %>
+          <% page.features_buttons.buttons.each do |btn| %>
+            <hashi-button
+              title="<%= btn.text %>"
+              url="<%= btn.url %>"
+            ></hashi-button>
           <% end %>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section class='no-pad'>
+    <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta>
+  </section>
 </div>
-
-
-<% content_for(:scripts) do %>
-  <%= javascript_include_tag "demo-app", defer: true %>
-<% end %>

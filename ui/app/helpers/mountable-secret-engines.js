@@ -8,6 +8,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'cloud',
   },
   {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
+    category: 'cloud',
+  },
+  {
     displayName: 'AWS',
     value: 'aws',
     type: 'aws',
@@ -35,6 +41,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Google Cloud',
     value: 'gcp',
     type: 'gcp',
+    category: 'cloud',
+  },
+  {
+    displayName: 'Google Cloud KMS',
+    value: 'gcpkms',
+    type: 'gcpkms',
     category: 'cloud',
   },
   {

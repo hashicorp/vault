@@ -7,6 +7,7 @@
   item.id
   class="list-item-row"
   data-test-secret-link=item.id
+  encode=true
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
@@ -19,19 +20,18 @@
         item.id
         class="has-text-black has-text-weight-semibold"
       }}
-      {{i-con
-        glyph="role"
-        size=14
-        class="has-text-grey-light is-pulled-left"
-      }}
-      <div class="role-item-details">
-        <span class="is-underline">{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}</span>
-        <br>
-        <span class="tag has-text-grey-dark">{{item.keyType}}</span>
-        {{#if item.zeroAddress}}
-          <span class="has-text-grey is-size-7">Zero-Address</span>
-        {{/if}}
-      </div>
+        <Icon
+          @glyph="user-square-outline"
+          class="has-text-grey-light is-pulled-left"
+        />
+        <div class="role-item-details">
+          <span class="is-underline">{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}</span>
+          <br>
+          <span class="tag has-text-grey-dark">{{item.keyType}}</span>
+          {{#if item.zeroAddress}}
+            <span class="has-text-grey is-size-7">Zero-Address</span>
+          {{/if}}
+        </div>
       {{/link-to}}
     </div>
     <div class="column has-text-right">

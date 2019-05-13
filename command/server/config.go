@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,10 +14,14 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+)
+
+const (
+	prometheusDefaultRetentionTime = 24 * time.Hour
 )
 
 // Config is the configuration for the vault server.
@@ -25,7 +30,7 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	Seal *Seal `hcl:"-"`
+	Seals []*Seal `hcl:"-"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -69,6 +74,9 @@ type Config struct {
 
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+
+	DisableIndexing    bool        `hcl:"-"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -95,7 +103,10 @@ func DevConfig(ha, transactional bool) *Config {
 
 		EnableUI: true,
 
-		Telemetry: &Telemetry{},
+		Telemetry: &Telemetry{
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
+			DisableHostname:         true,
+		},
 	}
 
 	switch {
@@ -135,8 +146,9 @@ func (b *Storage) GoString() string {
 
 // Seal contains Seal configuration for the server
 type Seal struct {
-	Type   string
-	Config map[string]string
+	Type     string
+	Disabled bool
+	Config   map[string]string
 }
 
 func (h *Seal) GoString() string {
@@ -229,6 +241,12 @@ type Telemetry struct {
 	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
 	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
 	DogStatsDTags []string `hcl:"dogstatsd_tags"`
+
+	// Prometheus:
+	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
+	// Default: 24h
+	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -259,9 +277,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.Seal = c.Seal
-	if c2.Seal != nil {
-		result.Seal = c2.Seal
+	for _, s := range c.Seals {
+		result.Seals = append(result.Seals, s)
+	}
+	for _, s := range c2.Seals {
+		result.Seals = append(result.Seals, s)
 	}
 
 	result.Telemetry = c.Telemetry
@@ -283,6 +303,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableMlock = c.DisableMlock
 	if c2.DisableMlock {
 		result.DisableMlock = c2.DisableMlock
+	}
+
+	result.DisablePrintableCheck = c.DisablePrintableCheck
+	if c2.DisablePrintableCheckRaw != nil {
+		result.DisablePrintableCheck = c2.DisablePrintableCheck
 	}
 
 	// merge these integers via a MAX operation
@@ -326,6 +351,24 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableRawEndpoint = c2.EnableRawEndpoint
 	}
 
+	result.APIAddr = c.APIAddr
+	if c2.APIAddr != "" {
+		result.APIAddr = c2.APIAddr
+	}
+
+	result.ClusterAddr = c.ClusterAddr
+	if c2.ClusterAddr != "" {
+		result.ClusterAddr = c2.ClusterAddr
+	}
+
+	// Retain raw value so that it can be assigned to storage objects
+	result.DisableClustering = c.DisableClustering
+	result.DisableClusteringRaw = c.DisableClusteringRaw
+	if c2.DisableClusteringRaw != nil {
+		result.DisableClustering = c2.DisableClustering
+		result.DisableClusteringRaw = c2.DisableClusteringRaw
+	}
+
 	result.PluginDirectory = c.PluginDirectory
 	if c2.PluginDirectory != "" {
 		result.PluginDirectory = c2.PluginDirectory
@@ -344,6 +387,36 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableSealWrap = c.DisableSealWrap
 	if c2.DisableSealWrap {
 		result.DisableSealWrap = c2.DisableSealWrap
+	}
+
+	result.DisableIndexing = c.DisableIndexing
+	if c2.DisableIndexing {
+		result.DisableIndexing = c2.DisableIndexing
+	}
+
+	// Use values from top-level configuration for storage if set
+	if storage := result.Storage; storage != nil {
+		if result.APIAddr != "" {
+			storage.RedirectAddr = result.APIAddr
+		}
+		if result.ClusterAddr != "" {
+			storage.ClusterAddr = result.ClusterAddr
+		}
+		if result.DisableClusteringRaw != nil {
+			storage.DisableClustering = result.DisableClustering
+		}
+	}
+
+	if haStorage := result.HAStorage; haStorage != nil {
+		if result.APIAddr != "" {
+			haStorage.RedirectAddr = result.APIAddr
+		}
+		if result.ClusterAddr != "" {
+			haStorage.ClusterAddr = result.ClusterAddr
+		}
+		if result.DisableClusteringRaw != nil {
+			haStorage.DisableClustering = result.DisableClustering
+		}
 	}
 
 	return result
@@ -451,6 +524,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisableIndexingRaw != nil {
+		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -482,13 +561,13 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "hsm"); err != nil {
+		if err := parseSeals(&result, o, "hsm"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "seal"); err != nil {
+		if err := parseSeals(&result, o, "seal"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
@@ -719,38 +798,45 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
-	if len(list.Items) > 1 {
-		return fmt.Errorf("only one %q block is permitted", blockName)
+func parseSeals(result *Config, list *ast.ObjectList, blockName string) error {
+	if len(list.Items) > 2 {
+		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
 	}
 
-	// Get our item
-	item := list.Items[0]
+	seals := make([]*Seal, 0, len(list.Items))
+	for _, item := range list.Items {
+		key := "seal"
+		if len(item.Keys) > 0 {
+			key = item.Keys[0].Token.Value().(string)
+		}
 
-	key := blockName
-	if len(item.Keys) > 0 {
-		key = item.Keys[0].Token.Value().(string)
+		var m map[string]string
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("seal.%s:", key))
+		}
+
+		var disabled bool
+		var err error
+		if v, ok := m["disabled"]; ok {
+			disabled, err = strconv.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "disabled")
+		}
+		seals = append(seals, &Seal{
+			Type:     strings.ToLower(key),
+			Disabled: disabled,
+			Config:   m,
+		})
 	}
 
-	// Valid parameter for the Seal types
-	switch key {
-	case "pkcs11":
-	case "awskms":
-	case "gcpckms":
-	case "azurekeyvault":
-	default:
-		return fmt.Errorf("invalid seal type %q", key)
+	if len(seals) == 2 &&
+		(seals[0].Disabled && seals[1].Disabled || !seals[0].Disabled && !seals[1].Disabled) {
+		return errors.New("seals: two seals provided but both are disabled or neither are disabled")
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-	}
-
-	result.Seal = &Seal{
-		Type:   strings.ToLower(key),
-		Config: m,
-	}
+	result.Seals = seals
 
 	return nil
 }
@@ -800,5 +886,15 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
+
+	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
+		var err error
+		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
+			return err
+		}
+	} else {
+		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
+	}
+
 	return nil
 }

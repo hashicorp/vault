@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -38,8 +38,8 @@ const (
 	// recoveryKeyPath is the path to the recovery key
 	recoveryKeyPath = "core/recovery-key"
 
-	// storedBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
-	storedBarrierKeysPath = "core/hsm/barrier-unseal-keys"
+	// StoredBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
+	StoredBarrierKeysPath = "core/hsm/barrier-unseal-keys"
 
 	// hsmStoredIVPath is the path to the initialization vector for stored keys
 	hsmStoredIVPath = "core/hsm/iv"
@@ -62,11 +62,14 @@ type Seal interface {
 	BarrierType() string
 	BarrierConfig(context.Context) (*SealConfig, error)
 	SetBarrierConfig(context.Context, *SealConfig) error
+	SetCachedBarrierConfig(*SealConfig)
 
 	RecoveryKeySupported() bool
 	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
+	RecoveryKey(context.Context) ([]byte, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
+	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
 }
@@ -160,8 +163,8 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 		conf.Type = d.BarrierType()
 	case d.BarrierType():
 	default:
-		d.core.logger.Error("barrier seal type does not match loaded type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
-		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierType())
+		d.core.logger.Error("barrier seal type does not match expected type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
+		return nil, fmt.Errorf("barrier seal type of %q does not match expected type of %q", conf.Type, d.BarrierType())
 	}
 
 	// Check for a valid seal configuration
@@ -210,6 +213,10 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 	return nil
 }
 
+func (d *defaultSeal) SetCachedBarrierConfig(config *SealConfig) {
+	d.config.Store(config)
+}
+
 func (d *defaultSeal) RecoveryType() string {
 	if d.PretendToAllowRecoveryKeys {
 		return RecoveryTypeShamir
@@ -227,11 +234,22 @@ func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 	return nil, fmt.Errorf("recovery not supported")
 }
 
+func (d *defaultSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
+	if d.PretendToAllowRecoveryKeys {
+		return d.PretendRecoveryKey, nil
+	}
+
+	return nil, fmt.Errorf("recovery not supported")
+}
+
 func (d *defaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
 	if d.PretendToAllowRecoveryKeys {
 		return nil
 	}
 	return fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) SetCachedRecoveryConfig(config *SealConfig) {
 }
 
 func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {

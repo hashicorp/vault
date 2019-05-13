@@ -1,0 +1,83 @@
+---
+page_title: "Vault API Documentation"
+description: |-
+  Vault API reference documentation.
+---
+
+<% @meganav_title = 'API Docs' %>
+
+<hashi-product-subnav project_site="true" current_path="<%= current_page.path %>" _data="<%= encode({
+  products: dato.enterprise_products.map(&:to_hash),
+  subnav: dato.vault_product_page.subnav.to_hash
+}) %>"></hashi-product-subnav>
+
+<div class='g-section-block'>
+  <section id='intro' class='g-container'>
+    <hashi-section-header
+      headline='Vault API Documentation'
+      description="The Vault HTTP API gives you full access to Vault via HTTP. Every aspect of Vault can be controlled via this API. The Vault CLI uses the HTTP API to access Vault."
+      use_h1="true"
+    ></hashi-section-header>
+
+    <div class='button-container'>
+      <hashi-button
+        title="Learn Vault"
+        url="https://learn.hashicorp.com/vault"
+      ></hashi-button>
+      <hashi-button
+        title="Download"
+        url="/downloads.html"
+        theme="dark-outline"
+      ></hashi-button>
+    </div>
+  </section>
+
+  <section id='categories' class='g-container'>
+    <hashi-linked-text-summary-list _data="<%= encode(data.api_basic_categories) %>"></hashi-linked-text-summary-list>
+  </section>
+
+  <section id='new-to-vault' class='gray'>
+    <div class='g-container'>
+      <hashi-section-header
+        headline='New to Vault?'
+        description="Learn how to use Vault to read, write, and create real secrets, and see how it works in practice. The basics include installation and core concepts, while providing a foundation for advanced tracks."
+      ></hashi-section-header>
+
+      <div class='button-container'>
+        <hashi-button
+          title="Start Learning"
+          url="https://learn.hashicorp.com/vault"
+        ></hashi-button>
+      </div>
+    </div>
+  </section>
+
+  <section id='categories' class='g-container'>
+    <hashi-section-header headline='API Reference'></hashi-section-header>
+
+    <hashi-docs-sitemap
+      order="<%= encode(data.api_detailed_categories) %>"
+      data="<%= encode(get_sidebar_data('api')) %>"
+    ></hashi-docs-sitemap>
+  </section>
+
+  <section id='get-started' class='black'>
+    <div class='g-container'>
+      <hashi-section-header headline='Ready to get started?'></hashi-section-header>
+
+      <div class='button-container'>
+        <hashi-button
+          title="Learn Vault"
+          url="https://learn.hashicorp.com/vault"
+          theme='light-fill'
+        ></hashi-button>
+        <hashi-button
+          title="Download"
+          url="/downloads.html"
+          theme='light-outline'
+        ></hashi-button>
+      </div>
+    </div>
+  </section>
+
+</div>

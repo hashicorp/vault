@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
@@ -124,8 +124,8 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 			roleSecretIDReq := &logical.Request{
 				Operation: logical.UpdateOperation,

@@ -8,7 +8,9 @@ export default Component.extend({
     if (num) {
       num = parseInt(num, 10);
     }
-    return Array(num || 0).fill(null).map(() => ({ value: '' }));
+    return Array(num || 0)
+      .fill(null)
+      .map(() => ({ value: '' }));
   }),
   listLength: 0,
   actions: {

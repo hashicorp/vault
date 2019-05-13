@@ -28,10 +28,6 @@ type LoginCommand struct {
 	flagNoPrint   bool
 	flagTokenOnly bool
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	flagNoVerify bool
-
 	testStdin io.Reader // for tests
 }
 
@@ -132,16 +128,6 @@ func (c *LoginCommand) Flags() *FlagSets {
 			"values will have no affect.",
 	})
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	f.BoolVar(&BoolVar{
-		Name:    "no-verify",
-		Target:  &c.flagNoVerify,
-		Hidden:  true,
-		Default: false,
-		Usage:   "",
-	})
-
 	return set
 }
 
@@ -162,39 +148,6 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-
-	// Deprecations
-	// TODO: remove in 0.10.0
-	switch {
-	case c.flagNoVerify:
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -no-verify flag is deprecated. In the past, Vault " +
-					"performed a lookup on a token after authentication. This is no " +
-					"longer the case for all auth methods except \"token\". Vault will " +
-					"still attempt to perform a lookup when given a token directly " +
-					"because that is how it gets the list of policies, ttl, and other " +
-					"metadata. To disable this lookup, specify \"lookup=false\" as a " +
-					"configuration option to the token auth method, like this:"))
-			c.UI.Warn("")
-			c.UI.Warn("    $ vault auth token=ABCD lookup=false")
-			c.UI.Warn("")
-			c.UI.Warn("Or omit the token and Vault will prompt for it:")
-			c.UI.Warn("")
-			c.UI.Warn("    $ vault auth lookup=false")
-			c.UI.Warn("    Token (will be hidden): ...")
-			c.UI.Warn("")
-			c.UI.Warn(wrapAtLength(
-				"If you are not using token authentication, you can safely omit this " +
-					"flag. Vault will not perform a lookup after authentication."))
-			c.UI.Warn("")
-		}
-
-		// There's no point in passing this to other auth handlers...
-		if c.flagMethod == "token" {
-			args = append(args, "lookup=false")
-		}
-	}
 
 	// Set the right flags if the user requested token-only - this overrides
 	// any previously configured values, as documented.

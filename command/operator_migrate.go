@@ -14,8 +14,9 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -148,7 +149,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	}
 
 	if c.flagReset {
-		if err := SetMigration(from, false); err != nil {
+		if err := SetStorageMigration(from, false); err != nil {
 			return errwrap.Wrapf("error reseting migration lock: {{err}}", err)
 		}
 		return nil
@@ -159,20 +160,20 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
 	}
 
-	migrationStatus, err := CheckMigration(from)
+	migrationStatus, err := CheckStorageMigration(from)
 	if err != nil {
-		return errors.New("error checking migration status")
+		return errwrap.Wrapf("error checking migration status: {{err}}", err)
 	}
 
 	if migrationStatus != nil {
 		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetMigration(from, true); err != nil {
+	if err := SetStorageMigration(from, true); err != nil {
 		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
 	}
 
-	defer SetMigration(from, false)
+	defer SetStorageMigration(from, false)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -183,6 +184,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	select {
 	case err := <-doneCh:
+		cancelFunc()
 		return err
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Migration shutdown triggered\n")
@@ -190,13 +192,12 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		<-doneCh
 		return errAbort
 	}
-	return nil
 }
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
 	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == migrationLock {
+		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
 
@@ -213,7 +214,7 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		if err := to.Put(ctx, entry); err != nil {
 			return errwrap.Wrapf("error writing entry: {{err}}", err)
 		}
-		c.logger.Info("copied key: " + path)
+		c.logger.Info("copied key", "path", path)
 		return nil
 	})
 }
@@ -310,7 +311,9 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 			// remove List-triggering key and add children in reverse order
 			dfs = dfs[:len(dfs)-1]
 			for i := len(children) - 1; i >= 0; i-- {
-				dfs = append(dfs, key+children[i])
+				if children[i] != "" {
+					dfs = append(dfs, key+children[i])
+				}
 			}
 		} else {
 			err := cb(ctx, key)

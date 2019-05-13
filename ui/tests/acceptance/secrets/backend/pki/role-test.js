@@ -47,6 +47,9 @@ module('Acceptance | secrets/pki/create', function(hooks) {
 
     await listPage.visitRoot({ backend: path });
     assert.equal(listPage.secrets.length, 1, 'shows role in the list');
+    let secret = listPage.secrets.objectAt(0);
+    await secret.menuToggle();
+    assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
   });
 
   test('it deletes a role', async function(assert) {

@@ -119,7 +119,7 @@ func mult(a, b uint8) (out uint8) {
 
 	ret := expTable[sum]
 
-	// Ensure we return zero if either a or be are zero but aren't subject to
+	// Ensure we return zero if either a or b are zero but aren't subject to
 	// timing attacks
 	goodVal = ret
 

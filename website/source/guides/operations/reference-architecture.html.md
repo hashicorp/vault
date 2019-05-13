@@ -1,11 +1,12 @@
 ---
 layout: "guides"
 page_title: "Vault Reference Architecture - Guides"
+sidebar_title: "Reference Architecture"
 sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
-product_version: 0.11
+ea_version: 1.0
 ---
 
 # Vault Reference Architecture
@@ -39,7 +40,7 @@ cluster replication.
 ### Reference Diagram
 
 Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.html)
-![Reference diagram](/assets/images/vault-ref-arch-2.png)
+![Reference diagram](/img/vault-ref-arch-2.png)
 
 #### Design Summary
 
@@ -62,12 +63,12 @@ voting member per AZ, providing both Zone and Node level failure protection.
 
 -> Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election.html).
 
-![Failure tolerance|40%](/assets/images/vault-ref-arch-3.png)
+![Failure tolerance|40%](/img/vault-ref-arch-3.png)
 
 
 ### Network Connectivity Details
 
-![Network Connectivity Details](/assets/images/vault-ref-arch.png)
+![Network Connectivity Details](/img/vault-ref-arch.png)
 
 ### Deployment System Requirements
 
@@ -164,7 +165,7 @@ operate just as a typical DNS resolution operation.
 
 ### <a name="external-lb"></a>Load Balancing Using External Load Balancer
 
-![Vault Behind a Load Balancer](/assets/images/vault-ref-arch-9.png)
+![Vault Behind a Load Balancer](/img/vault-ref-arch-9.png)
 
 External load balancers are supported as well, and would be placed in front of the
 Vault cluster, and would poll specific Vault URL's to detect the active node and
@@ -222,7 +223,7 @@ datacenters requires Vault Enterprise.
 
 ## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
 
-<img src="/assets/images/vault-ref-arch-6.png">
+<img src="/img/vault-ref-arch-6.png">
 
 ### Vault Replication
 
@@ -233,7 +234,7 @@ and **disaster recovery**. The [Vault
 documentation](/docs/enterprise/replication/index.html) provides more detailed
 information on the replication capabilities within Vault Enterprise.
 
-![Replication Pattern](/assets/images/vault-ref-arch-8.png)
+![Replication Pattern](/img/vault-ref-arch-8.png)
 
 #### Performance Replication
 
@@ -258,7 +259,7 @@ utmost concern.
 If your disaster recovery strategy is to plan for a loss of an entire data
 center, the following diagram illustrates a possible replication scenario.
 
-![Replication Pattern](/assets/images/vault-ref-arch-4.png)
+![Replication Pattern](/img/vault-ref-arch-4.png)
 
 In this scenario, if the Vault cluster in Region A fails and you promote the DR
 cluster in Region B to be the new primary, your applications will need to read
@@ -273,7 +274,7 @@ If your disaster recovery strategy is to plan for a loss of a cluster but not th
 entire data center, the following diagram illustrates a possible replication
 scenario.
 
-![Replication Pattern](/assets/images/vault-ref-arch-7.png)
+![Replication Pattern](/img/vault-ref-arch-7.png)
 
 -> Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery.html) guide for additional information.
 
@@ -317,8 +318,7 @@ within that replication set must use an HSM as well.
   secret sharing method), the clusters within that replication set can be mixed,
   such that some may use an HSM, others may use Shamir.
 
-For sake of this discussion, the [cloud
-auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
+For sake of this discussion, the cloud auto-unseal feature is treated as an
 HSM.
 
 ## Additional References

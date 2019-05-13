@@ -14,11 +14,12 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oklog/run"
 )
 
@@ -91,7 +92,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	// Initialize a lock
-	lock, err := c.ha.LockWith(coreLockPath, "read")
+	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
 		c.stateLock.RUnlock()
 		return false, "", "", err
@@ -108,28 +109,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", nil
 	}
 
-	c.clusterLeaderParamsLock.RLock()
-	localLeaderUUID := c.clusterLeaderUUID
-	localRedirAddr := c.clusterLeaderRedirectAddr
-	localClusterAddr := c.clusterLeaderClusterAddr
-	c.clusterLeaderParamsLock.RUnlock()
+	var localLeaderUUID, localRedirectAddr, localClusterAddr string
+	clusterLeaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	}
 
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
-	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
 		c.stateLock.RUnlock()
-		return false, localRedirAddr, localClusterAddr, nil
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
 	defer c.stateLock.RUnlock()
-	c.clusterLeaderParamsLock.Lock()
-	defer c.clusterLeaderParamsLock.Unlock()
+	c.leaderParamsLock.Lock()
+	defer c.leaderParamsLock.Unlock()
 
 	// Validate base conditions again
-	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, localRedirAddr, localClusterAddr, nil
+	clusterLeaderParams = c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	} else {
+		localLeaderUUID = ""
+		localRedirectAddr = ""
+		localClusterAddr = ""
+	}
+
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
@@ -174,9 +188,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 	// Don't set these until everything has been parsed successfully or we'll
 	// never try again
-	c.clusterLeaderRedirectAddr = adv.RedirectAddr
-	c.clusterLeaderClusterAddr = adv.ClusterAddr
-	c.clusterLeaderUUID = leaderUUID
+	c.clusterLeaderParams.Store(&ClusterLeaderParams{
+		LeaderUUID:         leaderUUID,
+		LeaderRedirectAddr: adv.RedirectAddr,
+		LeaderClusterAddr:  adv.ClusterAddr,
+	})
 
 	return false, adv.RedirectAddr, adv.ClusterAddr, nil
 }
@@ -212,10 +228,6 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
@@ -223,6 +235,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
 	}
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
@@ -233,6 +246,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
+		auth.TokenType = te.Type
 	}
 
 	logInput := &audit.LogInput{
@@ -392,7 +406,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			c.logger.Error("failed to generate uuid", "error", err)
 			return
 		}
-		lock, err := c.ha.LockWith(coreLockPath, uuid)
+		lock, err := c.ha.LockWith(CoreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("failed to create lock", "error", err)
 			return
@@ -405,6 +419,14 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if leaderLostCh == nil {
 			return
 		}
+
+		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
+			c.heldHALock = nil
+			lock.Unlock()
+			c.logger.Info("marked never become active, giving up active state")
+			continue
+		}
+
 		c.logger.Info("acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
@@ -412,6 +434,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeTime := time.Now()
 
 		continueCh := interruptPerfStandby(newLeaderCh, stopCh)
+
 		// Grab the statelock or stop
 		if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh); stopped {
 			lock.Unlock()
@@ -553,7 +576,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					c.logger.Error("clearing leader advertisement failed", "error", err)
 				}
 
-				c.heldHALock.Unlock()
+				if err := c.heldHALock.Unlock(); err != nil {
+					c.logger.Error("unlocking HA lock failed", "error", err)
+				}
 				c.heldHALock = nil
 			}
 
@@ -566,6 +591,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 	}
 }
 
+// grabLockOrStop returns true if we failed to get the lock before stopCh
+// was closed.  Returns false if the lock was obtained, in which case it's
+// the caller's responsibility to unlock it.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	// Grab the lock as we need it for cluster setup, which needs to happen
 	// before advertising;
@@ -619,6 +647,12 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				// Bind locally, as the race detector is tripping here
 				lopCount := opCount
 				isLeader, _, newClusterAddr, _ := c.Leader()
+
+				// If we are the leader reset the clusterAddr since the next
+				// failover might go to the node that was previously active.
+				if isLeader {
+					clusterAddr = ""
+				}
 
 				if !isLeader && newClusterAddr != clusterAddr && newLeaderCh != nil {
 					select {
@@ -795,7 +829,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey.Load())
 	}
 
-	keyParams := &clusterKeyParams{
+	keyParams := &certutil.ClusterKeyParams{
 		Type: corePrivateKeyTypeP521,
 		X:    key.X,
 		Y:    key.Y,
@@ -815,7 +849,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	if err != nil {
 		return err
 	}
-	ent := &Entry{
+	ent := &logical.StorageEntry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}
@@ -870,4 +904,12 @@ func (c *Core) clearLeader(uuid string) error {
 	}
 
 	return err
+}
+
+func (c *Core) SetNeverBecomeActive(on bool) {
+	if on {
+		atomic.StoreUint32(c.neverBecomeActive, 1)
+	} else {
+		atomic.StoreUint32(c.neverBecomeActive, 0)
+	}
 }

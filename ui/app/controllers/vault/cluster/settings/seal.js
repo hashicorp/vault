@@ -6,11 +6,14 @@ export default Controller.extend({
 
   actions: {
     seal() {
-      return this.model.cluster.store.adapterFor('cluster').seal().then(() => {
-        this.model.cluster.get('leaderNode').set('sealed', true);
-        this.get('auth').deleteCurrentToken();
-        return this.transitionToRoute('vault.cluster');
-      });
+      return this.model.cluster.store
+        .adapterFor('cluster')
+        .seal()
+        .then(() => {
+          this.model.cluster.get('leaderNode').set('sealed', true);
+          this.get('auth').deleteCurrentToken();
+          return this.transitionToRoute('vault.cluster');
+        });
     },
   },
 });

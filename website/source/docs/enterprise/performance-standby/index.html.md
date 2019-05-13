@@ -1,21 +1,22 @@
 ---
 layout: "docs"
 page_title: "Performance Standby Nodes - Vault Enterprise"
+sidebar_title: "Performance Standbys"
 sidebar_current: "docs-vault-enterprise-perf-standbys"
 description: |-
   Performance Standby Nodes - Vault Enterprise
 ---
 
-# Performance Standby Nodes 
+# Performance Standby Nodes
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
-is automatically enabled when using a data store that supports it. You can 
+is automatically enabled when using a data store that supports it. You can
 learn more about HA mode on the [Concepts](/docs/concepts/ha.html) page.
 
 Vault Enterprise offers additional features that allow HA nodes to service
 read-only requests on the local standby node. Read-only requests are requests
-that do not modify Vault's storage. 
+that do not modify Vault's storage.
 
 ## Server-to-Server Communication
 
@@ -36,7 +37,7 @@ storage write is detected the standby will forward the request over the cluster
 port connection to the active node. If the request is read-only the Performance
 Standby will handle the requests locally.
 
-Sending requests to Performance Stanbys that result in forwarded writes will be
+Sending requests to Performance Standbys that result in forwarded writes will be
 slightly slower than going directly to the active node. A client that has
 advanced knowledge of the behavior of the call can choose to point the request
 to the appropriate node.
@@ -45,7 +46,7 @@ to the appropriate node.
 
 A Performance Standby will tag itself as such in consul if service registration
 is enabled. To access the set of Performance Standbys the `performance-standby`
-tag can be used. For example to send requets to only the performance standbys
+tag can be used. For example to send requests to only the performance standbys
 `https://performance-standby.vault.dc1.consul` could be used (host name may vary
 based on consul configuration).
 

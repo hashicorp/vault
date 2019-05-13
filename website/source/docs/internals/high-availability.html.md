@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "High Availability"
+sidebar_title: "High Availability"
 sidebar_current: "docs-internals-ha"
 description: |-
   Learn about the high availability design of Vault.
@@ -64,5 +65,5 @@ the request will be forwarded onto the active server. If the request is
 read-only the request will be serviced locally on the Performance Standby.
 
 Just like traditional HA standbys if the active node is sealed, fails, or loses
-newtwork connectivity then a performance standby can take over and become the
+network connectivity then a performance standby can take over and become the
 active instance.

@@ -76,8 +76,8 @@ func (client *Client) CreateGroupWithCallback(request *CreateGroupRequest, callb
 // CreateGroupRequest is the request struct for api CreateGroup
 type CreateGroupRequest struct {
 	*requests.RpcRequest
-	GroupName string `position:"Query" name:"GroupName"`
 	Comments  string `position:"Query" name:"Comments"`
+	GroupName string `position:"Query" name:"GroupName"`
 }
 
 // CreateGroupResponse is the response struct for api CreateGroup
@@ -92,7 +92,7 @@ func CreateCreateGroupRequest() (request *CreateGroupRequest) {
 	request = &CreateGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateGroup", "ram", "openAPI")
 	return
 }
 

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Oracle - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-oracle-maria"
+sidebar_title: "Oracle"
+sidebar_current: "api-http-secret-databases-oracle-maria"
 description: |-
   The Oracle plugin for Vault's database secrets engine generates database credentials to access Oracle servers.
 ---
@@ -18,9 +19,9 @@ In addition to the parameters defined by the [Database
 Backend](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the Oracle DSN.

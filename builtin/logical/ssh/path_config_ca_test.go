@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
@@ -117,8 +117,11 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 
 	// Fail to overwrite it
 	resp, err = b.HandleRequest(context.Background(), caReq)
-	if err == nil {
-		t.Fatalf("expected an error")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error, got %#v", *resp)
 	}
 
 	caReq.Operation = logical.DeleteOperation
@@ -142,8 +145,11 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 
 	// Fail to overwrite it
 	resp, err = b.HandleRequest(context.Background(), caReq)
-	if err == nil {
-		t.Fatalf("expected an error")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error, got %#v", *resp)
 	}
 
 	caReq.Operation = logical.DeleteOperation

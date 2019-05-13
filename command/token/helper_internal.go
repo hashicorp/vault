@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 var _ TokenHelper = (*InternalTokenHelper)(nil)
@@ -25,7 +26,7 @@ func (i *InternalTokenHelper) populateTokenPath() {
 	if err != nil {
 		panic(fmt.Sprintf("error getting user's home directory: %v", err))
 	}
-	i.tokenPath = homePath + "/.vault-token"
+	i.tokenPath = filepath.Join(homePath, ".vault-token")
 }
 
 func (i *InternalTokenHelper) Path() string {

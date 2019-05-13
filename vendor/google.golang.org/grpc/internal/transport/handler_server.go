@@ -24,6 +24,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -34,7 +35,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -63,9 +63,6 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request, stats sta
 	if _, ok := w.(http.Flusher); !ok {
 		return nil, errors.New("gRPC requires a ResponseWriter supporting http.Flusher")
 	}
-	if _, ok := w.(http.CloseNotifier); !ok {
-		return nil, errors.New("gRPC requires a ResponseWriter supporting http.CloseNotifier")
-	}
 
 	st := &serverHandlerTransport{
 		rw:             w,
@@ -80,7 +77,7 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request, stats sta
 	if v := r.Header.Get("grpc-timeout"); v != "" {
 		to, err := decodeTimeout(v)
 		if err != nil {
-			return nil, streamErrorf(codes.Internal, "malformed time-out: %v", err)
+			return nil, status.Errorf(codes.Internal, "malformed time-out: %v", err)
 		}
 		st.timeoutSet = true
 		st.timeout = to
@@ -98,7 +95,7 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request, stats sta
 		for _, v := range vv {
 			v, err := decodeMetadataHeader(k, v)
 			if err != nil {
-				return nil, streamErrorf(codes.Internal, "malformed binary metadata: %v", err)
+				return nil, status.Errorf(codes.Internal, "malformed binary metadata: %v", err)
 			}
 			metakv = append(metakv, k, v)
 		}
@@ -176,17 +173,11 @@ func (a strAddr) String() string { return string(a) }
 
 // do runs fn in the ServeHTTP goroutine.
 func (ht *serverHandlerTransport) do(fn func()) error {
-	// Avoid a panic writing to closed channel. Imperfect but maybe good enough.
 	select {
 	case <-ht.closedCh:
 		return ErrConnClosing
-	default:
-		select {
-		case ht.writes <- fn:
-			return nil
-		case <-ht.closedCh:
-			return ErrConnClosing
-		}
+	case ht.writes <- fn:
+		return nil
 	}
 }
 
@@ -237,9 +228,8 @@ func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status) erro
 		if ht.stats != nil {
 			ht.stats.HandleRPC(s.Context(), &stats.OutTrailer{})
 		}
-		ht.Close()
-		close(ht.writes)
 	}
+	ht.Close()
 	return err
 }
 
@@ -274,9 +264,7 @@ func (ht *serverHandlerTransport) Write(s *Stream, hdr []byte, data []byte, opts
 		ht.writeCommonHeaders(s)
 		ht.rw.Write(hdr)
 		ht.rw.Write(data)
-		if !opts.Delay {
-			ht.rw.(http.Flusher).Flush()
-		}
+		ht.rw.(http.Flusher).Flush()
 	})
 }
 
@@ -309,7 +297,7 @@ func (ht *serverHandlerTransport) WriteHeader(s *Stream, md metadata.MD) error {
 func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), traceCtx func(context.Context, string) context.Context) {
 	// With this transport type there will be exactly 1 stream: this HTTP request.
 
-	ctx := contextFromRequest(ht.req)
+	ctx := ht.req.Context()
 	var cancel context.CancelFunc
 	if ht.timeoutSet {
 		ctx, cancel = context.WithTimeout(ctx, ht.timeout)
@@ -317,22 +305,16 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 		ctx, cancel = context.WithCancel(ctx)
 	}
 
-	// requestOver is closed when either the request's context is done
-	// or the status has been written via WriteStatus.
+	// requestOver is closed when the status has been written via WriteStatus.
 	requestOver := make(chan struct{})
-
-	// clientGone receives a single value if peer is gone, either
-	// because the underlying connection is dead or because the
-	// peer sends an http2 RST_STREAM.
-	clientGone := ht.rw.(http.CloseNotifier).CloseNotify()
 	go func() {
 		select {
 		case <-requestOver:
-			return
 		case <-ht.closedCh:
-		case <-clientGone:
+		case <-ht.req.Context().Done():
 		}
 		cancel()
+		ht.Close()
 	}()
 
 	req := ht.req
@@ -409,10 +391,7 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 func (ht *serverHandlerTransport) runStream() {
 	for {
 		select {
-		case fn, ok := <-ht.writes:
-			if !ok {
-				return
-			}
+		case fn := <-ht.writes:
 			fn()
 		case <-ht.closedCh:
 			return
@@ -434,18 +413,18 @@ func (ht *serverHandlerTransport) Drain() {
 //   * io.EOF
 //   * io.ErrUnexpectedEOF
 //   * of type transport.ConnectionError
-//   * of type transport.StreamError
+//   * an error from the status package
 func mapRecvMsgError(err error) error {
 	if err == io.EOF || err == io.ErrUnexpectedEOF {
 		return err
 	}
 	if se, ok := err.(http2.StreamError); ok {
 		if code, ok := http2ErrConvTab[se.Code]; ok {
-			return StreamError{
-				Code: code,
-				Desc: se.Error(),
-			}
+			return status.Error(code, se.Error())
 		}
+	}
+	if strings.Contains(err.Error(), "body closed by handler") {
+		return status.Error(codes.Canceled, err.Error())
 	}
 	return connectionErrorf(true, err, err.Error())
 }

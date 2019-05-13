@@ -1,4 +1,12 @@
-@mixin css-arrow($vertical-direction, $size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
+@mixin css-arrow(
+  $vertical-direction,
+  $size,
+  $color,
+  $border-width,
+  $border-color,
+  $left: 50%,
+  $left-offset: 0px
+) {
   & {
     border: 1px solid $border-color;
   }
@@ -11,7 +19,7 @@
       top: 100%;
     }
     border: solid transparent;
-    content: " ";
+    content: ' ';
     height: 0;
     width: 0;
     position: absolute;

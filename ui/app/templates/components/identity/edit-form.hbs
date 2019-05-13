@@ -3,9 +3,10 @@
     <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
     {{message-error model=model}}
     {{#if (eq mode "merge")}}
-      {{#message-in-page type="warning"}}
-        Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.
-      {{/message-in-page}}
+      <AlertBanner
+        @type="warning"
+        @message="Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to."
+      />
     {{/if}}
     {{#each model.fields as |attr|}}
       {{form-field data-test-field attr=attr model=model}}

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "TLS Certificate - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-cert"
+sidebar_title: "TLS Certificates"
+sidebar_current: "api-http-auth-cert"
 description: |-
   This is the API documentation for the Vault TLS Certificate authentication
   method.
@@ -21,9 +22,9 @@ location, please update your API calls accordingly.
 
 Sets a CA cert and associated parameters in a role name.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/certs/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -56,6 +57,11 @@ Sets a CA cert and associated parameters in a role name.
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
   a comma-separated list of URI patterns. Authentication requires at least one
   URI matching at least one pattern. If not set, defaults to allowing all URIs.
+- `allowed_organizational_units` `(string: "" or array: [])` - Constrain the
+  Organizational Units (OU) in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of OU patterns. Authentication requires at least one
+  OU matching at least one pattern. If not set, defaults to allowing all OUs.
 - `required_extensions` `(string: "" or array: [])` - Require specific Custom
   Extension OIDs to exist and match the pattern. Value is a comma separated
   string or array of `oid:value`. Expects the extension value to be some type
@@ -104,9 +110,9 @@ $ curl \
 
 Gets information associated with the named role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/cert/certs/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -146,9 +152,9 @@ $ curl \
 
 Lists configured certificate names.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/cert/certs`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/cert/certs`           |
 
 ### Sample Request
 
@@ -157,6 +163,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
     http://127.0.0.1:8200/v1/auth/cert/certs
+```
 
 ### Sample Response
 
@@ -181,9 +188,9 @@ $ curl \
 
 Deletes the named role and CA cert from the method mount.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/cert/certs/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -202,9 +209,9 @@ $ curl \
 
 Sets a named CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/crls/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/crls/:name`      |
 
 
 ### Parameters
@@ -226,7 +233,7 @@ Sets a named CRL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
@@ -236,9 +243,9 @@ Gets information associated with the named CRL (currently, the serial
 numbers contained within).  As the serials can be integers up to an
 arbitrary size, these are returned as strings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/cert/crls/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/cert/crls/:name`      |
 
 ### Parameters
 
@@ -273,9 +280,9 @@ $ curl \
 
 Deletes the named CRL from the auth method mount.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/cert/crls/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/cert/crls/:name`      |
 
 ### Parameters
 
@@ -294,9 +301,9 @@ $ curl \
 
 Configuration options for the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/config`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/config`          |
 
 ### Parameters
 
@@ -318,7 +325,7 @@ Configuration options for the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
@@ -331,9 +338,9 @@ is required to be verified, then it should be a fully qualified DNS domain name
 and must be duplicated as a DNS SAN (see
 https://tools.ietf.org/html/rfc6125#section-2.3)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/login`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/login`           |
 
 ### Parameters
 
@@ -354,7 +361,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 ```
 $ curl \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/login
 ```
 

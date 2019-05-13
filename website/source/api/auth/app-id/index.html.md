@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AppID - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-appid"
+sidebar_title: "App ID <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-auth-appid"
 description: |-
   This is the API documentation for the Vault App ID auth method.
 ---

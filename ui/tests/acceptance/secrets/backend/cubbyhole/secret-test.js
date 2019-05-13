@@ -26,12 +26,6 @@ module('Acceptance | secrets/cubbyhole/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(kvPath, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `cubbyhole/${kvPath}`,
-      'calls capabilites with the correct path'
-    );
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });

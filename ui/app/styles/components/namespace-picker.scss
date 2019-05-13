@@ -1,30 +1,72 @@
 .namespace-picker {
-  border-right: 1px solid rgba($black, 0.5);
-  margin-right: $size-10;
   position: relative;
-  padding: 0.5rem;
   color: $white;
+  display: flex;
   fill: $white;
+  padding: $spacing-xxs $spacing-xs;
+  width: 100%;
+
+  @include from($mobile) {
+    margin-left: -$spacing-xs;
+    padding: $spacing-xxs 0 $spacing-xxs $spacing-s;
+    width: auto;
+  }
 }
+
 .namespace-picker.no-namespaces {
   border: none;
   padding-right: 0;
 }
 .namespace-picker-trigger {
-  display: flex;
   align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  height: 2rem;
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+
+  @include from($mobile) {
+    height: auto;
+    padding: $spacing-xs $spacing-m;
+  }
+
+  .is-status-chevron {
+    transform: rotate(-90deg);
+
+    @include from($mobile) {
+      transform: rotate(0deg);
+    }
+  }
+
+  &.ember-basic-dropdown-trigger--below .is-status-chevron {
+    transform: rotate(0deg);
+
+    @include from($mobile) {
+      transform: rotate(180deg);
+    }
+  }
 }
 .namespace-name {
   display: inline-block;
-  margin-left: $size-10;
+  flex: 1 1 auto;
   font-size: 1rem;
+  margin: 0 $spacing-xs;
+
+  @include from($mobile) {
+    margin-left: $size-10;
+  }
 }
 .namespace-picker-content {
-  width: 300px;
+  width: $drawer-width - ($spacing-xs * 2);
   max-height: 300px;
   overflow: auto;
   border-radius: $radius;
   box-shadow: $box-shadow, $box-shadow-high;
+
+  @include from($mobile) {
+    width: $drawer-width;
+  }
 }
 .namespace-picker-content .level-left {
   max-width: 210px;
@@ -45,13 +87,6 @@
   }
 }
 
-.namespace-header {
-  margin: $size-9 $size-9 0;
-  color: $grey;
-  font-size: $size-8;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-}
 .current-namespace {
   border-bottom: 1px solid rgba($black, 0.1);
 }
@@ -81,7 +116,7 @@
   z-index: 1;
 }
 .leaf-panel-left {
-  transform: translateX(-300px);
+  transform: translateX(-$drawer-width);
 }
 .leaf-panel-adding,
 .leaf-panel-current {
@@ -93,7 +128,7 @@
 .animated-list {
   .leaf-panel-exiting,
   .leaf-panel-adding {
-    transform: translateX(300px);
+    transform: translateX($drawer-width);
     z-index: 20;
   }
 }

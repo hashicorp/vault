@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "audit disable - Command"
+sidebar_title: "<code>disable</code>"
 sidebar_current: "docs-commands-audit-disable"
 description: |-
   The "audit disable" command disables an audit device at a given path, if one

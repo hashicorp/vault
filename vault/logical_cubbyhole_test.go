@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCubbyholeBackend_Write(t *testing.T) {

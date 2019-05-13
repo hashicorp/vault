@@ -427,9 +427,9 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 			}
 			result.Entries = append(result.Entries, entry)
 		case 5:
-			resultCode, resultDescription := getLDAPResultCode(packet)
-			if resultCode != 0 {
-				return result, NewError(resultCode, errors.New(resultDescription))
+			err := GetLDAPError(packet)
+			if err != nil {
+				return nil, err
 			}
 			if len(packet.Children) == 3 {
 				for _, child := range packet.Children[2].Children {

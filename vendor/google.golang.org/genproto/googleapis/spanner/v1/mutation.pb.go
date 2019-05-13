@@ -42,7 +42,7 @@ func (m *Mutation) Reset()         { *m = Mutation{} }
 func (m *Mutation) String() string { return proto.CompactTextString(m) }
 func (*Mutation) ProtoMessage()    {}
 func (*Mutation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mutation_fd5c830afe968207, []int{0}
+	return fileDescriptor_mutation_7ac3401eb5ab6104, []int{0}
 }
 func (m *Mutation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Mutation.Unmarshal(m, b)
@@ -69,24 +69,32 @@ type isMutation_Operation interface {
 type Mutation_Insert struct {
 	Insert *Mutation_Write `protobuf:"bytes,1,opt,name=insert,proto3,oneof"`
 }
+
 type Mutation_Update struct {
 	Update *Mutation_Write `protobuf:"bytes,2,opt,name=update,proto3,oneof"`
 }
+
 type Mutation_InsertOrUpdate struct {
 	InsertOrUpdate *Mutation_Write `protobuf:"bytes,3,opt,name=insert_or_update,json=insertOrUpdate,proto3,oneof"`
 }
+
 type Mutation_Replace struct {
 	Replace *Mutation_Write `protobuf:"bytes,4,opt,name=replace,proto3,oneof"`
 }
+
 type Mutation_Delete_ struct {
 	Delete *Mutation_Delete `protobuf:"bytes,5,opt,name=delete,proto3,oneof"`
 }
 
-func (*Mutation_Insert) isMutation_Operation()         {}
-func (*Mutation_Update) isMutation_Operation()         {}
+func (*Mutation_Insert) isMutation_Operation() {}
+
+func (*Mutation_Update) isMutation_Operation() {}
+
 func (*Mutation_InsertOrUpdate) isMutation_Operation() {}
-func (*Mutation_Replace) isMutation_Operation()        {}
-func (*Mutation_Delete_) isMutation_Operation()        {}
+
+func (*Mutation_Replace) isMutation_Operation() {}
+
+func (*Mutation_Delete_) isMutation_Operation() {}
 
 func (m *Mutation) GetOperation() isMutation_Operation {
 	if m != nil {
@@ -261,12 +269,15 @@ func _Mutation_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-// Arguments to [insert][google.spanner.v1.Mutation.insert], [update][google.spanner.v1.Mutation.update], [insert_or_update][google.spanner.v1.Mutation.insert_or_update], and
+// Arguments to [insert][google.spanner.v1.Mutation.insert],
+// [update][google.spanner.v1.Mutation.update],
+// [insert_or_update][google.spanner.v1.Mutation.insert_or_update], and
 // [replace][google.spanner.v1.Mutation.replace] operations.
 type Mutation_Write struct {
 	// Required. The table whose rows will be written.
 	Table string `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
-	// The names of the columns in [table][google.spanner.v1.Mutation.Write.table] to be written.
+	// The names of the columns in
+	// [table][google.spanner.v1.Mutation.Write.table] to be written.
 	//
 	// The list of columns must contain enough columns to allow
 	// Cloud Spanner to derive values for all primary key columns in the
@@ -275,11 +286,13 @@ type Mutation_Write struct {
 	// The values to be written. `values` can contain more than one
 	// list of values. If it does, then multiple rows are written, one
 	// for each entry in `values`. Each list in `values` must have
-	// exactly as many entries as there are entries in [columns][google.spanner.v1.Mutation.Write.columns]
-	// above. Sending multiple lists is equivalent to sending multiple
-	// `Mutation`s, each containing one `values` entry and repeating
-	// [table][google.spanner.v1.Mutation.Write.table] and [columns][google.spanner.v1.Mutation.Write.columns]. Individual values in each list are
-	// encoded as described [here][google.spanner.v1.TypeCode].
+	// exactly as many entries as there are entries in
+	// [columns][google.spanner.v1.Mutation.Write.columns] above. Sending
+	// multiple lists is equivalent to sending multiple `Mutation`s, each
+	// containing one `values` entry and repeating
+	// [table][google.spanner.v1.Mutation.Write.table] and
+	// [columns][google.spanner.v1.Mutation.Write.columns]. Individual values in
+	// each list are encoded as described [here][google.spanner.v1.TypeCode].
 	Values               []*_struct.ListValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
@@ -290,7 +303,7 @@ func (m *Mutation_Write) Reset()         { *m = Mutation_Write{} }
 func (m *Mutation_Write) String() string { return proto.CompactTextString(m) }
 func (*Mutation_Write) ProtoMessage()    {}
 func (*Mutation_Write) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mutation_fd5c830afe968207, []int{0, 0}
+	return fileDescriptor_mutation_7ac3401eb5ab6104, []int{0, 0}
 }
 func (m *Mutation_Write) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Mutation_Write.Unmarshal(m, b)
@@ -335,9 +348,10 @@ func (m *Mutation_Write) GetValues() []*_struct.ListValue {
 type Mutation_Delete struct {
 	// Required. The table whose rows will be deleted.
 	Table string `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
-	// Required. The primary keys of the rows within [table][google.spanner.v1.Mutation.Delete.table] to delete.
-	// Delete is idempotent. The transaction will succeed even if some or all
-	// rows do not exist.
+	// Required. The primary keys of the rows within
+	// [table][google.spanner.v1.Mutation.Delete.table] to delete. Delete is
+	// idempotent. The transaction will succeed even if some or all rows do not
+	// exist.
 	KeySet               *KeySet  `protobuf:"bytes,2,opt,name=key_set,json=keySet,proto3" json:"key_set,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -348,7 +362,7 @@ func (m *Mutation_Delete) Reset()         { *m = Mutation_Delete{} }
 func (m *Mutation_Delete) String() string { return proto.CompactTextString(m) }
 func (*Mutation_Delete) ProtoMessage()    {}
 func (*Mutation_Delete) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mutation_fd5c830afe968207, []int{0, 1}
+	return fileDescriptor_mutation_7ac3401eb5ab6104, []int{0, 1}
 }
 func (m *Mutation_Delete) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Mutation_Delete.Unmarshal(m, b)
@@ -389,10 +403,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google/spanner/v1/mutation.proto", fileDescriptor_mutation_fd5c830afe968207)
+	proto.RegisterFile("google/spanner/v1/mutation.proto", fileDescriptor_mutation_7ac3401eb5ab6104)
 }
 
-var fileDescriptor_mutation_fd5c830afe968207 = []byte{
+var fileDescriptor_mutation_7ac3401eb5ab6104 = []byte{
 	// 413 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0xd1, 0xea, 0xd3, 0x30,
 	0x14, 0xc6, 0xed, 0xba, 0x75, 0x2e, 0x43, 0xd1, 0xa2, 0x58, 0x8b, 0x17, 0x75, 0x57, 0xbb, 0x4a,

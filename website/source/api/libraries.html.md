@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "HTTP API: Libraries"
-sidebar_current: "docs-http-libraries"
+sidebar_title: "Client Libraries"
+sidebar_current: "api-http-libraries"
 description: |-
   List of official and community contributed libraries for interacting with the Vault HTTP API.
 ---
@@ -46,7 +47,7 @@ $ pip install ansible-modules-hashivault
 
 ### C&#35;
 
-* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
+* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard 2.0 & 1.3, .NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
 
 ```shell
 $ Install-Package VaultSharp
@@ -64,6 +65,7 @@ $ Install-Package Vault
 
 ### Elixir
 
+* [libvault](https://hex.pm/packages/libvault)
 * [vaultex](https://hex.pm/packages/vaultex)
 
 ### Go

@@ -74,9 +74,6 @@ func (s *MarketplaceService) ListPlans(ctx context.Context, opt *ListOptions) ([
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMarketplacePreview)
-
 	var plans []*MarketplacePlan
 	resp, err := s.client.Do(ctx, req, &plans)
 	if err != nil {
@@ -101,9 +98,6 @@ func (s *MarketplaceService) ListPlanAccountsForPlan(ctx context.Context, planID
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMarketplacePreview)
-
 	var accounts []*MarketplacePlanAccount
 	resp, err := s.client.Do(ctx, req, &accounts)
 	if err != nil {
@@ -127,9 +121,6 @@ func (s *MarketplaceService) ListPlanAccountsForAccount(ctx context.Context, acc
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMarketplacePreview)
 
 	var accounts []*MarketplacePlanAccount
 	resp, err := s.client.Do(ctx, req, &accounts)
@@ -158,9 +149,6 @@ func (s *MarketplaceService) ListMarketplacePurchasesForUser(ctx context.Context
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMarketplacePreview)
 
 	var purchases []*MarketplacePurchase
 	resp, err := s.client.Do(ctx, req, &purchases)

@@ -213,7 +213,7 @@ func processEnvChg(sess *tdsSession) {
 
 			// SQL Collation data should contain 5 bytes in length
 			if collationSize != 5 {
-				badStreamPanicf("Invalid SQL Collation size value returned from server: %s", collationSize)
+				badStreamPanicf("Invalid SQL Collation size value returned from server: %d", collationSize)
 			}
 
 			// 4 bytes, contains: LCID ColFlags Version
@@ -385,11 +385,9 @@ func processEnvChg(sess *tdsSession) {
 	}
 }
 
-type returnStatus int32
-
 // http://msdn.microsoft.com/en-us/library/dd358180.aspx
-func parseReturnStatus(r *tdsBuffer) returnStatus {
-	return returnStatus(r.int32())
+func parseReturnStatus(r *tdsBuffer) ReturnStatus {
+	return ReturnStatus(r.int32())
 }
 
 func parseOrder(r *tdsBuffer) (res orderStruct) {

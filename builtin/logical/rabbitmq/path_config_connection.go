@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/michaelklishin/rabbit-hole"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	rabbithole "github.com/michaelklishin/rabbit-hole"
 )
 
 func pathConfigConnection(b *backend) *framework.Path {

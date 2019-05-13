@@ -7,7 +7,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {

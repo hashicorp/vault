@@ -3,6 +3,7 @@
   @extend .is-bottomless;
   padding: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .auth-form .vault-loader {
@@ -16,4 +17,20 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.toolbar-namespace-picker {
+  padding: 0 $spacing-s;
+
+  .field {
+    width: 100%;
+  }
+
+  .field-label {
+    margin-right: $spacing-s;
+  }
+
+  .is-label {
+    color: $grey;
+  }
 }

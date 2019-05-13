@@ -9,11 +9,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 )
 
 const (

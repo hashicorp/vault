@@ -7,8 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -16,7 +17,7 @@ type forwardedRequestRPCServer struct {
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
-	perfStandbyRepCluster *ReplicatedCluster
+	perfStandbyRepCluster *replication.Cluster
 	perfStandbyCache      *cache.Cache
 }
 
@@ -41,7 +42,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				s.core.logger.Error("forwarding: panic serving request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
+				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
 			}
 		}()
 		s.handler.ServeHTTP(w, req)
@@ -60,7 +61,9 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 		}
 	}
 
-	resp.LastRemoteWal = LastRemoteWAL(s.core)
+	// Performance standby nodes will use this value to do wait for WALs to ship
+	// in order to do a best-effort read after write gurantee
+	resp.LastRemoteWal = LastWAL(s.core)
 
 	return resp, nil
 }

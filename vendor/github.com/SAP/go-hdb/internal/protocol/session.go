@@ -198,13 +198,13 @@ func NewSession(ctx context.Context, prm sessionPrm) (*Session, error) {
 	wr := bufio.NewWriter(conn)
 
 	s := &Session{
-		prm:  prm,
-		conn: conn,
-		rd:   rd,
-		wr:   wr,
-		mh:   new(messageHeader),
-		sh:   new(segmentHeader),
-		ph:   new(partHeader),
+		prm:                       prm,
+		conn:                      conn,
+		rd:                        rd,
+		wr:                        wr,
+		mh:                        new(messageHeader),
+		sh:                        new(segmentHeader),
+		ph:                        new(partHeader),
 		scramsha256InitialRequest: new(scramsha256InitialRequest),
 		scramsha256InitialReply:   new(scramsha256InitialReply),
 		scramsha256FinalRequest:   new(scramsha256FinalRequest),
@@ -743,7 +743,7 @@ func (s *Session) initRequest() error {
 	req.protocol.major = 4
 	req.protocol.minor = 1
 	req.numOptions = 1
-	req.endianess = archEndian
+	req.endianess = littleEndian
 	if err := req.write(s.wr); err != nil {
 		return err
 	}
@@ -931,8 +931,11 @@ func (s *Session) readReply(beforeRead beforeRead) error {
 		}
 		cnt := s.rd.Cnt()
 
-		if cnt != int(s.ph.bufferLength) {
-			outLogger.Printf("+++ partLenght: %d - not equal read byte amount: %d", s.ph.bufferLength, cnt)
+		switch {
+		case cnt < int(s.ph.bufferLength): // protocol buffer length > read bytes -> skip the unread bytes
+			s.rd.Skip(int(s.ph.bufferLength) - cnt)
+		case cnt > int(s.ph.bufferLength): // read bytes > protocol buffer length -> should never happen
+			return fmt.Errorf("protocol error: read bytes %d > buffer length %d", cnt, s.ph.bufferLength)
 		}
 
 		if i != lastPart { // not last part

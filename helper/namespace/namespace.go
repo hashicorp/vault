@@ -75,14 +75,6 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 	return ns, nil
 }
 
-func TestContext() context.Context {
-	return ContextWithNamespace(context.Background(), TestNamespace())
-}
-
-func TestNamespace() *Namespace {
-	return RootNamespace
-}
-
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the
 // provided string
 func Canonicalize(nsPath string) string {
@@ -102,13 +94,34 @@ func Canonicalize(nsPath string) string {
 }
 
 func SplitIDFromString(input string) (string, string) {
-	idx := strings.LastIndex(input, ".")
-	if idx == -1 {
-		return input, ""
-	}
-	if idx == len(input)-1 {
-		return input, ""
+	prefix := ""
+	slashIdx := strings.LastIndex(input, "/")
+
+	switch {
+	case strings.HasPrefix(input, "b."):
+		prefix = "b."
+		input = input[2:]
+
+	case strings.HasPrefix(input, "s."):
+		prefix = "s."
+		input = input[2:]
+
+	case slashIdx > 0:
+		// Leases will never have a b./s. to start
+		if slashIdx == len(input)-1 {
+			return input, ""
+		}
+		prefix = input[:slashIdx+1]
+		input = input[slashIdx+1:]
 	}
 
-	return input[:idx], input[idx+1:]
+	idx := strings.LastIndex(input, ".")
+	if idx == -1 {
+		return prefix + input, ""
+	}
+	if idx == len(input)-1 {
+		return prefix + input, ""
+	}
+
+	return prefix + input[:idx], input[idx+1:]
 }

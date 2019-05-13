@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Cassandra - Database - Secrets Engines"
+sidebar_title: "Cassandra"
 sidebar_current: "docs-secrets-databases-cassandra"
 description: |-
   Cassandra is one of the supported plugins for the database secrets engine.

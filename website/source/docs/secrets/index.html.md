@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Secrets Engines"
+sidebar_title: "Secrets Engines"
 sidebar_current: "docs-secrets"
 description: |-
   Secrets engines are mountable engines that store or generate secrets in Vault.

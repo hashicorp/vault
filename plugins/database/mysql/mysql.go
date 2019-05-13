@@ -9,13 +9,11 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/dbtxn"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const (
@@ -95,7 +93,7 @@ func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -294,11 +292,13 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 				continue
 			}
 
-			m := map[string]string{
-				"username": m.Username,
-				"password": password,
-			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			// This is not a prepared statement because not all commands are supported
+			// 1295: This command is not supported in the prepared statement protocol yet
+			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+			query = strings.Replace(query, "{{username}}", m.Username, -1)
+			query = strings.Replace(query, "{{password}}", password, -1)
+
+			if _, err := tx.ExecContext(ctx, query); err != nil {
 				return nil, err
 			}
 		}

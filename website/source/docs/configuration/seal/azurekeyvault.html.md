@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure Key Vault - Seals - Configuration"
+sidebar_title: "Azure Key Vault"
 sidebar_current: "docs-configuration-seal-azurekeyvault"
 description: |-
   The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal wrapping
@@ -10,8 +11,7 @@ description: |-
 # `azurekeyvault` Seal
 
 The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal
-wrapping mechanism. Vault Enterprise's Azure Key Vault seal is activated by one of
-the following:
+wrapping mechanism. The Azure Key Vault seal is activated by one of the following:
 
 * The presence of a `seal "azurekeyvault"` block in Vault's configuration file.
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `azurekeyvault`.
@@ -45,14 +45,14 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
   May also be specified by the `AZURE_CLIENT_ID` environment variable.
 
-- `client_secret` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
-  May also be specified by the `AZURE_CLIENT_ID` environment variable.
+- `client_secret` `(string: <required or MSI>)`: The client secret for credentials to query the Azure APIs.
+  May also be specified by the `AZURE_CLIENT_SECRET` environment variable.
 
 - `environment` `(string: "AZUREPUBLICCLOUD")`: The Azure Cloud environment API endpoints to use.  May also 
-  be specified by the `VAULT_AZUREKEYVAULT_VAULT_NAME` environment variable.
+  be specified by the `AZURE_ENVIRONMENT` environment variable.
 
 - `vault_name` `(string: <required>)`: The Key Vault vault to use the encryption keys for encryption and 
-  decryption. May also be specified by the `VAULT_AZUREKEYVAULT_KEY_NAME` environment variable.
+  decryption. May also be specified by the `VAULT_AZUREKEYVAULT_VAULT_NAME` environment variable.
 
 - `key_name` `(string: <required>)`: The Key Vault key to use for encryption and decryption. May also be specified by the
   `VAULT_AZUREKEYVAULT_KEY_NAME` environment variable.

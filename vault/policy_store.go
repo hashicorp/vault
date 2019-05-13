@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/golang-lru"
-	"github.com/hashicorp/vault/helper/consts"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -83,6 +83,15 @@ path "auth/token/revoke-self" {
 path "sys/capabilities-self" {
     capabilities = ["update"]
 }
+
+# Allow a token to look up its own entity by id or name
+path "identity/entity/id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+path "identity/entity/name/{{identity.entity.name}}" {
+  capabilities = ["read"]
+}
+
 
 # Allow a token to look up its resultant ACL from all policies. This is useful
 # for UIs. It is an internal path because the format may change at any time

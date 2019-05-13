@@ -4,7 +4,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
   setupApplicationTest(hooks);
@@ -77,24 +76,22 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     assert.ok(page.form.certificateIsPresent, 'the certificate is included');
 
     await page.form.back();
-    await withFlash(page.form.generateCA(), () => {
-      assert.ok(
-        page.flash.latestMessage.includes('You tried to generate a new root CA'),
-        'shows warning message'
-      );
-    });
+    await page.form.generateCA();
+    assert.ok(
+      page.flash.latestMessage.includes('You tried to generate a new root CA'),
+      'shows warning message'
+    );
   });
 
   test('cert config: upload', async function(assert) {
     await mountAndNav(assert);
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
 
-    await withFlash(page.form.uploadCA(PEM_BUNDLE), () => {
-      assert.ok(
-        page.flash.latestMessage.startsWith('The certificate for this backend has been updated'),
-        'flash message displays properly'
-      );
-    });
+    await page.form.uploadCA(PEM_BUNDLE);
+    assert.ok(
+      page.flash.latestMessage.startsWith('The certificate for this backend has been updated'),
+      'flash message displays properly'
+    );
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function(assert) {

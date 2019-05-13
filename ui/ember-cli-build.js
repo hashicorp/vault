@@ -2,29 +2,28 @@
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+const config = require('./config/environment')();
+
+const environment = EmberApp.env();
+const isProd = environment === 'production';
+const isTest = environment === 'test';
+const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
-  var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
-    favicons: {
-      faviconsConfig: {
-        appName: 'Vault Enterprise',
-        path: config.rootURL,
-        url: null,
-        icons: {
-          android: false,
-          appleIcon: false,
-          appleStartup: false,
-          coast: false,
-          favicons: true,
-          firefox: false,
-          opengraph: false,
-          twitter: false,
-          windows: false,
-          yandex: false,
-        },
+    svgJar: {
+      //optimize: false,
+      //paths: [],
+      optimizer: {},
+      sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+      rootURL: '/ui/',
+    },
+    assetLoader: {
+      generateURI: function(filePath) {
+        return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
       },
     },
+
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
@@ -32,7 +31,21 @@ module.exports = function(defaults) {
     babel: {
       plugins: ['transform-object-rest-spread'],
     },
+    'ember-cli-babel': {
+      includePolyfill: isTest || isProd || isCI,
+    },
+    hinting: isTest,
+    tests: isTest,
+    sourcemaps: {
+      enabled: !isProd,
+    },
+    sassOptions: {
+      sourceMap: false,
+      onlyIncluded: true,
+      implementation: require('node-sass'),
+    },
     autoprefixer: {
+      enabled: isTest || isProd,
       grid: true,
       browsers: ['defaults', 'ie 11'],
     },
@@ -43,6 +56,9 @@ module.exports = function(defaults) {
         // and https://github.com/webpack/webpack/issues/5627
         devtool: 'inline-source-map',
       },
+    },
+    'ember-test-selectors': {
+      strip: isProd,
     },
   });
 
@@ -56,6 +72,10 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
   app.import('node_modules/text-encoder-lite/index.js');
 
+  app.import('app/styles/bulma/bulma-radio-checkbox.css');
+
+  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
+  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

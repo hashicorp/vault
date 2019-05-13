@@ -9,9 +9,11 @@ const Router = EmberRouter.extend({
 Router.map(function() {
   this.route('vault', { path: '/' }, function() {
     this.route('cluster', { path: '/:cluster_name' }, function() {
+      this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.route('license');
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -28,7 +30,6 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
-        this.route('control-groups');
       });
       this.route('unseal');
       this.route('tools', function() {
@@ -65,6 +66,7 @@ Router.map(function() {
           });
         });
         this.route('control-groups');
+        this.route('control-groups-configure', { path: '/control-groups/configure' });
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
         this.route('namespaces', function() {
           this.route('index', { path: '/' });
@@ -91,6 +93,10 @@ Router.map(function() {
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
 
+          // kv v2 versions
+          this.route('versions-root', { path: '/versions/' });
+          this.route('versions', { path: '/versions/*secret' });
+
           // ssh sign
           this.route('sign-root', { path: '/sign/' });
           this.route('sign', { path: '/sign/*secret' });
@@ -108,22 +114,9 @@ Router.map(function() {
         this.route('edit', { path: '/:policy_name/edit' });
       });
       this.route('replication-dr-promote');
-      this.route('replication', function() {
-        this.route('index', { path: '/' });
-        this.route('mode', { path: '/:replication_mode' }, function() {
-          //details
-          this.route('index', { path: '/' });
-          this.route('manage');
-          this.route('secondaries', function() {
-            this.route('add', { path: '/add' });
-            this.route('revoke', { path: '/revoke' });
-            this.route('config-show', { path: '/config/show/:secondary_id' });
-            this.route('config-edit', { path: '/config/edit/:secondary_id' });
-            this.route('config-create', { path: '/config/create/:secondary_id' });
-          });
-        });
-      });
-
+      if (config.addRootMounts) {
+        config.addRootMounts.call(this);
+      }
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

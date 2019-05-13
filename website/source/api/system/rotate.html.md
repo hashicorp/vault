@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/rotate - HTTP API"
-sidebar_current: "docs-http-system-rotate"
+sidebar_title: "<code>/sys/rotate</code>"
+sidebar_current: "api-http-system-rotate"
 description: |-
   The `/sys/rotate` endpoint is used to rotate the encryption key.
 ---
@@ -19,9 +20,9 @@ the new key, while old values are decrypted with previous encryption keys.
 
 This path requires `sudo` capability in addition to `update`.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/rotate`                | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/rotate`                |
 
 ### Sample Request
 

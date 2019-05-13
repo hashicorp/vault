@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Versioned KV Secret Engine - Guides"
+sidebar_title: "Versioned KV Secret Engine"
 sidebar_current: "guides-secret-mgmt-versioned-kv"
 description: |-
   Vault 0.10.0 introduced version 2 of key-value secret engine which supports
@@ -49,7 +50,7 @@ in case of unwanted deletion or updates of the data.  In addition, its
 _Check-and-Set_ operations can be used to protect the data from being overwritten
 unintentionally.
 
-![Versioned KV](/assets/images/vault-versioned-kv-1.png)
+![Versioned KV](/img/vault-versioned-kv-1.png)
 
 ## Prerequisites
 
@@ -198,7 +199,7 @@ $ curl --header "X-Vault-Token: ..." \
 Open a web browser and launch the Vault UI (e.g. `http://127.0.0.1:8200/ui`) and
 then login.
 
-![Web UI](/assets/images/vault-versioned-kv-2.png)
+![Web UI](/img/vault-versioned-kv-2.png)
 
 If `secret/` does not indicates **`v2`**, you can upgrade it from `v1` to `v2`
 by executing the following CLI command:
@@ -211,7 +212,7 @@ Alternatively, you can enable KV secret engine v2 at a different path by
 clicking **Enable new engine**. Select **KV** from the **Secret engine type**
 drop-down list.  Be sure that the **Version** is set to be **Version 2**.
 
-![Enabling kv-v2](/assets/images/vault-versioned-kv-3.png)
+![Enabling kv-v2](/img/vault-versioned-kv-3.png)
 
 Click **Enable Engine** to complete.
 
@@ -341,14 +342,14 @@ $ curl --header "X-Vault-Token: ..." \
 
 In the Web UI, select `secret/` and then click **Create secret**.
 
-![Write Secret](/assets/images/vault-versioned-kv-5.png)
+![Write Secret](/img/vault-versioned-kv-5.png)
 
 Click **Save**.
 
 To update the existing secret, select **Edit**, change the `contact_email`
 value, and then click **Save**.
 
-![Write Secret](/assets/images/vault-versioned-kv-6.png)
+![Write Secret](/img/vault-versioned-kv-6.png)
 
 
 ### <a name="step3"></a>Step 3: Retrieve a Specific Version of Secret

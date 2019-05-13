@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "HANA - Database - Secrets Engines"
+sidebar_title: "HanaDB"
 sidebar_current: "docs-secrets-databases-hanadb"
 description: |-
   HANA is one of the supported plugins for the database secrets engine. This

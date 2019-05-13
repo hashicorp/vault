@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "HANA - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-hanadb"
+sidebar_title: "HanaDB"
+sidebar_current: "api-http-secret-databases-hanadb"
 description: |-
   The HANA plugin for Vault's database secrets engine generates database credentials to access HANA servers.
 ---
@@ -19,8 +20,8 @@ secrets engine](/api/secret/databases/index.html#configure-connection), this plu
 has a number of parameters to further configure a connection.
 
 | Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the HANA DSN.  This field

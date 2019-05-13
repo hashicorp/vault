@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth File Sink"
+sidebar_title: "File"
 sidebar_current: "docs-agent-autoauth-sinks-file"
 description: |-
   File sink for Vault Agent Auto-Auth

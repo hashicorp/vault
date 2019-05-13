@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -40,10 +41,23 @@ func NewVirtualMachineImagesClientWithBaseURI(baseURI string, subscriptionID str
 }
 
 // Get gets a virtual machine image.
-//
-// location is the name of a supported Azure region. publisherName is a valid image publisher. offer is a valid
-// image publisher offer. skus is a valid image SKU. version is a valid image SKU version.
+// Parameters:
+// location - the name of a supported Azure region.
+// publisherName - a valid image publisher.
+// offer - a valid image publisher offer.
+// skus - a valid image SKU.
+// version - a valid image SKU version.
 func (client VirtualMachineImagesClient) Get(ctx context.Context, location string, publisherName string, offer string, skus string, version string) (result VirtualMachineImage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineImagesClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, location, publisherName, offer, skus, version)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "Get", nil, "Failure preparing request")
@@ -110,10 +124,23 @@ func (client VirtualMachineImagesClient) GetResponder(resp *http.Response) (resu
 }
 
 // List gets a list of all virtual machine image versions for the specified location, publisher, offer, and SKU.
-//
-// location is the name of a supported Azure region. publisherName is a valid image publisher. offer is a valid
-// image publisher offer. skus is a valid image SKU. filter is the filter to apply on the operation.
+// Parameters:
+// location - the name of a supported Azure region.
+// publisherName - a valid image publisher.
+// offer - a valid image publisher offer.
+// skus - a valid image SKU.
+// filter - the filter to apply on the operation.
 func (client VirtualMachineImagesClient) List(ctx context.Context, location string, publisherName string, offer string, skus string, filter string, top *int32, orderby string) (result ListVirtualMachineImageResource, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineImagesClient.List")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListPreparer(ctx, location, publisherName, offer, skus, filter, top, orderby)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "List", nil, "Failure preparing request")
@@ -188,9 +215,20 @@ func (client VirtualMachineImagesClient) ListResponder(resp *http.Response) (res
 }
 
 // ListOffers gets a list of virtual machine image offers for the specified location and publisher.
-//
-// location is the name of a supported Azure region. publisherName is a valid image publisher.
+// Parameters:
+// location - the name of a supported Azure region.
+// publisherName - a valid image publisher.
 func (client VirtualMachineImagesClient) ListOffers(ctx context.Context, location string, publisherName string) (result ListVirtualMachineImageResource, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineImagesClient.ListOffers")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListOffersPreparer(ctx, location, publisherName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListOffers", nil, "Failure preparing request")
@@ -254,9 +292,19 @@ func (client VirtualMachineImagesClient) ListOffersResponder(resp *http.Response
 }
 
 // ListPublishers gets a list of virtual machine image publishers for the specified Azure location.
-//
-// location is the name of a supported Azure region.
+// Parameters:
+// location - the name of a supported Azure region.
 func (client VirtualMachineImagesClient) ListPublishers(ctx context.Context, location string) (result ListVirtualMachineImageResource, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineImagesClient.ListPublishers")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListPublishersPreparer(ctx, location)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListPublishers", nil, "Failure preparing request")
@@ -319,10 +367,21 @@ func (client VirtualMachineImagesClient) ListPublishersResponder(resp *http.Resp
 }
 
 // ListSkus gets a list of virtual machine image SKUs for the specified location, publisher, and offer.
-//
-// location is the name of a supported Azure region. publisherName is a valid image publisher. offer is a valid
-// image publisher offer.
+// Parameters:
+// location - the name of a supported Azure region.
+// publisherName - a valid image publisher.
+// offer - a valid image publisher offer.
 func (client VirtualMachineImagesClient) ListSkus(ctx context.Context, location string, publisherName string, offer string) (result ListVirtualMachineImageResource, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineImagesClient.ListSkus")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListSkusPreparer(ctx, location, publisherName, offer)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineImagesClient", "ListSkus", nil, "Failure preparing request")

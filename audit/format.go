@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/jws"
+	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -134,6 +135,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Metadata:                  auth.Metadata,
 			EntityID:                  auth.EntityID,
 			RemainingUses:             req.ClientTokenRemainingUses,
+			TokenType:                 auth.TokenType.String(),
 		},
 
 		Request: AuditRequest{
@@ -304,6 +306,8 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ExternalNamespacePolicies: resp.Auth.ExternalNamespacePolicies,
 			Metadata:                  resp.Auth.Metadata,
 			NumUses:                   resp.Auth.NumUses,
+			EntityID:                  resp.Auth.EntityID,
+			TokenType:                 resp.Auth.TokenType.String(),
 		}
 	}
 
@@ -334,16 +338,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		Type:  "response",
 		Error: errString,
 		Auth: AuditAuth{
+			ClientToken:               auth.ClientToken,
+			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
 			Policies:                  auth.Policies,
 			TokenPolicies:             auth.TokenPolicies,
 			IdentityPolicies:          auth.IdentityPolicies,
 			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
 			Metadata:                  auth.Metadata,
-			ClientToken:               auth.ClientToken,
-			Accessor:                  auth.Accessor,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
+			TokenType:                 auth.TokenType.String(),
 		},
 
 		Request: AuditRequest{
@@ -367,8 +372,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
+			Warnings: resp.Warnings,
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
+			Headers:  resp.Headers,
 		},
 	}
 
@@ -421,8 +428,10 @@ type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
+	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers  map[string][]string    `json:"headers"`
 }
 
 type AuditAuth struct {
@@ -437,6 +446,7 @@ type AuditAuth struct {
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id"`
+	TokenType                 string              `json:"token_type"`
 }
 
 type AuditSecret struct {
@@ -472,12 +482,15 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	wt, err := jws.ParseJWT([]byte(token))
-	if err != nil || wt == nil {
+	parsedJWT, err := squarejwt.ParseSigned(token)
+	if err != nil {
 		return nil
 	}
 
-	result, _ := wt.Claims().JWTID()
+	var claims squarejwt.Claims
+	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return nil
+	}
 
-	return &result
+	return &claims.ID
 }

@@ -1,0 +1,44 @@
+<div class="is-flex-v-centered auth-button-type-google" >
+<svg width="39" height="39" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 46 46">
+  <defs>
+    <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="a">
+      <feOffset dy="1" in="SourceAlpha" result="shadowOffsetOuter1"/>
+      <feGaussianBlur stdDeviation=".5" in="shadowOffsetOuter1" result="shadowBlurOuter1"/>
+      <feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.168 0" in="shadowBlurOuter1" result="shadowMatrixOuter1"/>
+      <feOffset in="SourceAlpha" result="shadowOffsetOuter2"/>
+      <feGaussianBlur stdDeviation=".5" in="shadowOffsetOuter2" result="shadowBlurOuter2"/>
+      <feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.084 0" in="shadowBlurOuter2" result="shadowMatrixOuter2"/>
+      <feMerge>
+        <feMergeNode in="shadowMatrixOuter1"/>
+        <feMergeNode in="shadowMatrixOuter2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <rect id="b" width="40" height="40" rx="2"/>
+    <rect id="c" x="5" y="5" width="38" height="38" rx="1"/>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <g transform="translate(3 3)" filter="url(#a)">
+      <use fill="#4285F4" xlink:href="#b"/>
+      <use xlink:href="#b"/>
+      <use xlink:href="#b"/>
+      <use xlink:href="#b"/>
+    </g>
+    <g transform="translate(-1 -1)">
+      <use fill="#FFF" xlink:href="#c"/>
+      <use xlink:href="#c"/>
+      <use xlink:href="#c"/>
+      <use xlink:href="#c"/>
+    </g>
+    <path d="M31.64 23.20454545c0-.63818181-.0572727-1.25181818-.1636364-1.84090909H23V24.845h4.8436364c-.2086364 1.125-.8427273 2.0781818-1.7959091 2.7163636v2.2581819h2.9086363C30.6581818 28.2527273 31.64 25.9454545 31.64 23.20454545z" fill="#4285F4"/>
+    <path d="M23 32c2.43 0 4.4672727-.8059091 5.9563636-2.1804545l-2.9086363-2.2581819c-.8059091.54-1.8368182.8590909-3.0477273.8590909-2.34409091 0-4.32818182-1.5831818-5.03590909-3.7104545h-3.00681818v2.3318182C16.43818182 29.9831818 19.48181818 32 23 32z" fill="#34A853"/>
+    <path d="M17.96409091 24.71c-.18-.54-.28227273-1.11681818-.28227273-1.71 0-.59318182.10227273-1.17.28227273-1.71v-2.33181818h-3.00681818C14.34772727 20.17318182 14 21.54772727 14 23c0 1.4522727.34772727 2.8268182.95727273 4.0418182L17.9640909 24.71z" fill="#FBBC05"/>
+    <path d="M23 17.57954545c1.3213636 0 2.5077273.45409091 3.4404545 1.3459091l2.5813637-2.58136364C27.4631818 14.89181818 25.4259091 14 23 14c-3.51818182 0-6.56181818 2.01681818-8.04272727 4.95818182L17.9640909 21.29C18.67181818 19.16272727 20.65590909 17.57954545 23 17.57954545z" fill="#EA4335"/>
+    <path d="M14 14h18v18H14V14z"/>
+  </g>
+</svg>
+
+<div class="is-flex-1 text">
+Sign in with Google
+</div>
+</div>

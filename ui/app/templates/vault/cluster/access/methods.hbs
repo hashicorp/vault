@@ -4,13 +4,18 @@
       Authentication Methods
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#link-to 'vault.cluster.settings.auth.enable' class="button has-icon-right is-ghost is-compact"}}
-      Enable new method
-      {{i-con glyph="chevron-right" size=11}}
-    {{/link-to}}
-  </p.levelRight>
 </PageHeader>
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @type="add"
+      @params={{array 'vault.cluster.settings.auth.enable'}}
+    >
+      Enable new method
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
 
 {{#each (sort-by "path" model) as |method|}}
   <div
@@ -20,18 +25,28 @@
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          {{i-con glyph="folder" size=14 class="has-text-grey-light"}}
+          <ToolTip @horizontalPosition="left" as |T|>
+            <T.trigger>
+              <Icon
+                @glyph={{if
+                  (or
+                    (find-by "type" method.methodType (mountable-auth-methods))
+                    (eq method.methodType "token")
+                  )
+                  method.methodType
+                  "auth"
+                }} @class="hs-icon-l has-text-grey-light"/>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{method.methodType}}
+              </div>
+            </T.content>
+          </ToolTip>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
             {{method.path}}
           </span>
           <br />
-          <span class="tag">
-            {{#if (eq method.methodType 'plugin')}}
-              {{method.methodType}}: {{method.config.plugin_name}}
-            {{else}}
-              {{method.methodType}}
-            {{/if}}
-          </span>
           <code class="has-text-grey is-size-8">
             {{method.accessor}}
           </code>
@@ -39,18 +54,18 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          {{#popup-menu name="auth-backend-nav" contentClass="is-wide"}}
+          {{#popup-menu name="auth-backend-nav"}}
             <nav class="menu">
               <ul class="menu-list">
                 <li>
                   {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
-                    View Configuration
+                    View configuration
                   {{/link-to}}
                 </li>
                 {{#if method.canEdit}}
                   <li>
                     {{#link-to "vault.cluster.settings.auth.configure" method.id}}
-                      Edit Configuration
+                      Edit configuration
                     {{/link-to}}
                   </li>
                 {{/if}}
@@ -61,9 +76,9 @@
                       confirmButtonClasses="button is-primary"
                       buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
-                      confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
-                      showConfirm=(get this (concat "shouldDelete-" method.id))
-                      class=(if (get this (concat "shouldDelete-" method.id)) "message is-block is-warning is-outline")
+                      confirmMessage=(concat "Are you sure you want to disable the " method.id " Auth Method at " method.path "?")
+                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash method.id)))
+                      class=(if (get this (concat "shouldDelete-" (dot-to-dash method.id))) "message is-block is-warning is-outline")
                       containerClasses="message-body is-block"
                       messageClasses="is-block"
                       confirmButtonText="Disable"

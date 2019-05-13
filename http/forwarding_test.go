@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -209,7 +209,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				core.Logger().Error("got a panic: %v", err)
+				core.Logger().Error("got a panic", "error", err)
 				t.Fail()
 			}
 			atomic.AddUint32(totalOps, myTotalOps)

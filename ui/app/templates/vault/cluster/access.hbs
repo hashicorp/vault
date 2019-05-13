@@ -1,47 +1,59 @@
 <div class="columns">
   {{#menu-sidebar title="Access" class="is-3" data-test-sidebar=true}}
-    <li>
-      {{#link-to "vault.cluster.access.methods" data-test-link=true current-when="vault.cluster.access.methods vault.cluster.access.method"}}
-        Auth Methods
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
-        Entities
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
-        Groups
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.leases" data-test-link=true}}
-        Leases
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
-        Namespaces
-        {{#unless (has-feature "Namespaces")}}
-          {{#if (is-version "OSS")}}
-            {{edition-badge edition="Enterprise"}}
-          {{/if}}
-        {{/unless}}
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor"}}
-        Control Groups
-        {{#unless (has-feature "Control Groups")}}
-          {{#if (is-version "OSS")}}
-            {{edition-badge edition="Enterprise"}}
-          {{else}}
-            {{edition-badge edition="Premium"}}
-          {{/if}}
-        {{/unless}}
-      {{/link-to}}
-    </li>
+    {{#if (has-permission "access" routeParams="methods")}}
+      <li>
+        {{#link-to "vault.cluster.access.methods" data-test-link=true current-when="vault.cluster.access.methods vault.cluster.access.method"}}
+          Auth Methods
+        {{/link-to}}
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="entities")}}
+      <li>
+        {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
+          Entities
+        {{/link-to}}
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="groups")}}
+      <li>
+        {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
+          Groups
+        {{/link-to}}
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="leases")}}
+      <li>
+        {{#link-to "vault.cluster.access.leases" data-test-link=true}}
+          Leases
+        {{/link-to}}
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="namespaces")}}
+      <li>
+        {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
+          Namespaces
+          {{#unless (has-feature "Namespaces")}}
+            {{#if (is-version "OSS")}}
+              {{edition-badge edition="Enterprise"}}
+            {{/if}}
+          {{/unless}}
+        {{/link-to}}
+      </li>
+    {{/if}}
+    {{#if (has-permission "access" routeParams="control-groups")}}
+      <li>
+        {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"}}
+          Control Groups
+          {{#unless (has-feature "Control Groups")}}
+            {{#if (is-version "OSS")}}
+              {{edition-badge edition="Enterprise"}}
+            {{else}}
+              {{edition-badge edition="Premium"}}
+            {{/if}}
+          {{/unless}}
+        {{/link-to}}
+      </li>
+    {{/if}}
   {{/menu-sidebar}}
   <div class="column is-9">
     {{outlet}}

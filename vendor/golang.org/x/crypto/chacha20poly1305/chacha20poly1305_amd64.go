@@ -20,7 +20,6 @@ func chacha20Poly1305Open(dst []byte, key []uint32, src, ad []byte) bool
 func chacha20Poly1305Seal(dst []byte, key []uint32, src, ad []byte)
 
 var (
-	useASM  = cpu.X86.HasSSSE3
 	useAVX2 = cpu.X86.HasAVX2 && cpu.X86.HasBMI2
 )
 
@@ -48,7 +47,7 @@ func setupState(state *[16]uint32, key *[8]uint32, nonce []byte) {
 }
 
 func (c *chacha20poly1305) seal(dst, nonce, plaintext, additionalData []byte) []byte {
-	if !useASM {
+	if !cpu.X86.HasSSSE3 {
 		return c.sealGeneric(dst, nonce, plaintext, additionalData)
 	}
 
@@ -64,7 +63,7 @@ func (c *chacha20poly1305) seal(dst, nonce, plaintext, additionalData []byte) []
 }
 
 func (c *chacha20poly1305) open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
-	if !useASM {
+	if !cpu.X86.HasSSSE3 {
 		return c.openGeneric(dst, nonce, ciphertext, additionalData)
 	}
 

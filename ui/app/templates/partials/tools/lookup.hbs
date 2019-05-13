@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Lookup Token
+      Lookup token
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -13,7 +13,7 @@
     {{info-table-row label="Creation TTL" value=creation_ttl data-test-tools="token-lookup-row"}}
     {{#if expirationDate}}
       {{info-table-row label="Expiration date" value=expirationDate data-test-tools="token-lookup-row"}}
-      {{info-table-row label="Expires in" value=(moment-from-now expirationDate interval=1000 hideSuffix=true) data-test-tools="token-lookup-row"}}
+      {{info-table-row label="Expires in" value=(date-from-now expirationDate) data-test-tools="token-lookup-row"}}
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -43,7 +43,7 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button type="submit" data-test-tools-submit="true" class="button is-primary">
-        Lookup Token
+        Lookup token
       </button>
     </div>
   </div>

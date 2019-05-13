@@ -12,6 +12,7 @@ import {
 
 export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
+  hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-component=ttl-picker]'),
   hasJSONEditor: isPresent('[data-test-component=json-editor]'),
@@ -19,6 +20,7 @@ export default {
   hasInput: isPresent('input'),
   hasCheckbox: isPresent('input[type=checkbox]'),
   hasTextarea: isPresent('textarea'),
+  hasMaskedInput: isPresent('[data-test-masked-input]'),
   hasTooltip: isPresent('[data-test-component=info-tooltip]'),
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   tooltipContent: text('[data-test-help-text]'),

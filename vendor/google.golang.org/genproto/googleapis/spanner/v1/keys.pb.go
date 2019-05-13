@@ -27,7 +27,8 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 //
 // Keys are represented by lists, where the ith value in the list
 // corresponds to the ith component of the table or index primary key.
-// Individual values are encoded as described [here][google.spanner.v1.TypeCode].
+// Individual values are encoded as described
+// [here][google.spanner.v1.TypeCode].
 //
 // For example, consider the following table definition:
 //
@@ -129,7 +130,7 @@ func (m *KeyRange) Reset()         { *m = KeyRange{} }
 func (m *KeyRange) String() string { return proto.CompactTextString(m) }
 func (*KeyRange) ProtoMessage()    {}
 func (*KeyRange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_663ac4cd84aabc34, []int{0}
+	return fileDescriptor_keys_54e97a5c3f94e641, []int{0}
 }
 func (m *KeyRange) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeyRange.Unmarshal(m, b)
@@ -152,37 +153,22 @@ var xxx_messageInfo_KeyRange proto.InternalMessageInfo
 type isKeyRange_StartKeyType interface {
 	isKeyRange_StartKeyType()
 }
-type isKeyRange_EndKeyType interface {
-	isKeyRange_EndKeyType()
-}
 
 type KeyRange_StartClosed struct {
 	StartClosed *_struct.ListValue `protobuf:"bytes,1,opt,name=start_closed,json=startClosed,proto3,oneof"`
 }
+
 type KeyRange_StartOpen struct {
 	StartOpen *_struct.ListValue `protobuf:"bytes,2,opt,name=start_open,json=startOpen,proto3,oneof"`
 }
-type KeyRange_EndClosed struct {
-	EndClosed *_struct.ListValue `protobuf:"bytes,3,opt,name=end_closed,json=endClosed,proto3,oneof"`
-}
-type KeyRange_EndOpen struct {
-	EndOpen *_struct.ListValue `protobuf:"bytes,4,opt,name=end_open,json=endOpen,proto3,oneof"`
-}
 
 func (*KeyRange_StartClosed) isKeyRange_StartKeyType() {}
-func (*KeyRange_StartOpen) isKeyRange_StartKeyType()   {}
-func (*KeyRange_EndClosed) isKeyRange_EndKeyType()     {}
-func (*KeyRange_EndOpen) isKeyRange_EndKeyType()       {}
+
+func (*KeyRange_StartOpen) isKeyRange_StartKeyType() {}
 
 func (m *KeyRange) GetStartKeyType() isKeyRange_StartKeyType {
 	if m != nil {
 		return m.StartKeyType
-	}
-	return nil
-}
-func (m *KeyRange) GetEndKeyType() isKeyRange_EndKeyType {
-	if m != nil {
-		return m.EndKeyType
 	}
 	return nil
 }
@@ -197,6 +183,29 @@ func (m *KeyRange) GetStartClosed() *_struct.ListValue {
 func (m *KeyRange) GetStartOpen() *_struct.ListValue {
 	if x, ok := m.GetStartKeyType().(*KeyRange_StartOpen); ok {
 		return x.StartOpen
+	}
+	return nil
+}
+
+type isKeyRange_EndKeyType interface {
+	isKeyRange_EndKeyType()
+}
+
+type KeyRange_EndClosed struct {
+	EndClosed *_struct.ListValue `protobuf:"bytes,3,opt,name=end_closed,json=endClosed,proto3,oneof"`
+}
+
+type KeyRange_EndOpen struct {
+	EndOpen *_struct.ListValue `protobuf:"bytes,4,opt,name=end_open,json=endOpen,proto3,oneof"`
+}
+
+func (*KeyRange_EndClosed) isKeyRange_EndKeyType() {}
+
+func (*KeyRange_EndOpen) isKeyRange_EndKeyType() {}
+
+func (m *KeyRange) GetEndKeyType() isKeyRange_EndKeyType {
+	if m != nil {
+		return m.EndKeyType
 	}
 	return nil
 }
@@ -352,8 +361,8 @@ type KeySet struct {
 	// with which this `KeySet` is used.  Individual key values are
 	// encoded as described [here][google.spanner.v1.TypeCode].
 	Keys []*_struct.ListValue `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
-	// A list of key ranges. See [KeyRange][google.spanner.v1.KeyRange] for more information about
-	// key range specifications.
+	// A list of key ranges. See [KeyRange][google.spanner.v1.KeyRange] for more
+	// information about key range specifications.
 	Ranges []*KeyRange `protobuf:"bytes,2,rep,name=ranges,proto3" json:"ranges,omitempty"`
 	// For convenience `all` can be set to `true` to indicate that this
 	// `KeySet` matches all keys in the table or index. Note that any keys
@@ -368,7 +377,7 @@ func (m *KeySet) Reset()         { *m = KeySet{} }
 func (m *KeySet) String() string { return proto.CompactTextString(m) }
 func (*KeySet) ProtoMessage()    {}
 func (*KeySet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_663ac4cd84aabc34, []int{1}
+	return fileDescriptor_keys_54e97a5c3f94e641, []int{1}
 }
 func (m *KeySet) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeySet.Unmarshal(m, b)
@@ -414,9 +423,9 @@ func init() {
 	proto.RegisterType((*KeySet)(nil), "google.spanner.v1.KeySet")
 }
 
-func init() { proto.RegisterFile("google/spanner/v1/keys.proto", fileDescriptor_keys_663ac4cd84aabc34) }
+func init() { proto.RegisterFile("google/spanner/v1/keys.proto", fileDescriptor_keys_54e97a5c3f94e641) }
 
-var fileDescriptor_keys_663ac4cd84aabc34 = []byte{
+var fileDescriptor_keys_54e97a5c3f94e641 = []byte{
 	// 371 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xc1, 0x6b, 0xea, 0x30,
 	0x1c, 0xc7, 0x5f, 0xab, 0xf8, 0x34, 0x8a, 0xf8, 0x0a, 0x8f, 0x57, 0x7c, 0x3b, 0x88, 0xa7, 0x9d,

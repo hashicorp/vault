@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "HSM Integration - Vault Enterprise"
+sidebar_title: "HSM Support"
 sidebar_current: "docs-vault-enterprise-hsm"
 description: |-
   Vault Enterprise has HSM support, allowing for external master key storage and automatic unsealing.

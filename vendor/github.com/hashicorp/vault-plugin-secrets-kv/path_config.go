@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathConfig returns the path configuration for CRUD operations on the backend
@@ -24,10 +24,18 @@ func pathConfig(b *versionedKVBackend) *framework.Path {
 				Description: "If true, the backend will require the cas parameter to be set for each write",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.upgradeCheck(b.pathConfigWrite()),
-			logical.CreateOperation: b.upgradeCheck(b.pathConfigWrite()),
-			logical.ReadOperation:   b.upgradeCheck(b.pathConfigRead()),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.upgradeCheck(b.pathConfigWrite()),
+				Summary:  "Configure backend level settings that are applied to every key in the key-value store.",
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.upgradeCheck(b.pathConfigWrite()),
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.upgradeCheck(b.pathConfigRead()),
+				Summary:  "Read the backend level settings.",
+			},
 		},
 
 		HelpSynopsis:    confHelpSyn,

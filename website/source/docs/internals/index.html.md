@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Internals"
+sidebar_title: "Internals"
 sidebar_current: "docs-internals"
 description: |-
   This section covers the internals of Vault and explains technical details of Vaults operation.

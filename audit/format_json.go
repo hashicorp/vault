@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
 // JSONFormatWriter is an AuditFormatWriter implementation that structures data into

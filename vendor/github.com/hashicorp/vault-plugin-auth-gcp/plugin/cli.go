@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/iam/v1"
 	"strings"
@@ -163,8 +163,8 @@ Configuration:
 	permissions on this service account. 
   
   project=<string>                                
-	Project the service account belongs to. Defaults to credentials 
-	"project_id" if "credentials" specified and this value is not.  
+	Project for the service account who will be authenticating to Vault.
+    Defaults to the credential's "project_id" (if credentials are specified)."
 `
 
 	return strings.TrimSpace(help)

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Manta - Storage Backends - Configuration"
+sidebar_title: "Manta"
 sidebar_current: "docs-configuration-storage-manta"
 description: |-
   The Manta storage backend is used to persist Vault's data in Triton's Manta Object

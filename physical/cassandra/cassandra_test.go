@@ -10,8 +10,9 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 )
 
@@ -70,7 +71,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 	}
 
 	cleanup := func() {
-		pool.Purge(resource)
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	setup := func() error {

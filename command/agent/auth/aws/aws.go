@@ -13,11 +13,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/aws"
+	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
 
@@ -238,7 +238,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue)
+		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, "")
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return

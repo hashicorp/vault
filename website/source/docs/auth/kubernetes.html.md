@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Kubernetes - Auth Methods"
+sidebar_title: "Kubernetes"
 sidebar_current: "docs-auth-kubernetes"
 description: |-
   The Kubernetes auth method allows automated authentication of Kubernetes
@@ -109,7 +110,7 @@ setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this auth method.
 
 Service Accounts used in this auth method will need to have access to the
-TokenReview API. If Kubernetes is configured to use RBAC roles the Service
+TokenReview API. If Kubernetes is configured to use RBAC roles, the Service
 Account should be granted permissions to access this API. The following
 example ClusterRoleBinding could be used to grant these permissions:
 

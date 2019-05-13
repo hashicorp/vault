@@ -12,10 +12,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"golang.org/x/oauth2"
 	iam "google.golang.org/api/iam/v1"
 )

@@ -1,35 +1,31 @@
 ---
 layout: "inner"
 page_title: "Community"
-description: |-
-  Vault is an open source project with a growing community.
+description: "Vault is an open source project with a growing community."
 ---
 
-<h1>Community</h1>
+<hashi-section-header
+  headline='Community'
+  description='Vault is an open source project with a growing community. There are active, dedicated users willing to help you through various mediums.'
+  use_h1=true
+></hashi-section-header>
 
-<p>
-  Vault is an open source project with a growing community. There are active,
-  dedicated users willing to help you through various mediums.
-</p>
-<p>
-  <strong>IRC:</strong> <code>#vault-tool</code> on Freenode
-</p>
-<p>
-  <strong>Announcement list:</strong>
-  <a href="https://groups.google.com/group/hashicorp-announce">HashiCorp Announcement Google Group</a>
-</p>
-<p>
-  <strong>Discussion list:</strong>
-  <a href="https://groups.google.com/group/vault-tool">Vault Google Group</a>
-</p>
-<p>
-  <strong>Bug Tracker:</strong>
-  <a href="https://github.com/hashicorp/vault/issues">Issue tracker
-	on GitHub</a>. Please only use this for reporting bugs. Do not ask
-  for general help here. Use IRC or the mailing list for that.
-</p>
-<p>
-  <strong>Training:</strong>
-  Paid <a href="https://www.hashicorp.com/training.html">HashiCorp training courses</a>
-  are also available in a city near you. Private training courses are also available.
-</p>
+<hashi-vertical-text-block-list _data="<%= encode([
+  {
+    header: 'IRC',
+    body: '`#vault-tool` on Freenode'
+  }, {
+    header: 'Announcement List',
+    body: '[HashiCorp Announcement Google Group](https://groups.google.com/group/hashicorp-announce)'
+  }, {
+    header: 'Discussion List',
+    body: '[Vault Google Group](https://groups.google.com/group/vault-tool)'
+  }, {
+    header: 'Bug Tracker',
+    body: '[Issue tracker
+  	on GitHub](https://github.com/hashicorp/vault/issues) for reporting bugs. Use IRC or the mailing list for general help.'
+  }, {
+    header: 'Training',
+    body: '[Paid HashiCorp](https://www.hashicorp.com/training.html) training courses are available in a city near you. Private training courses are also available.'
+  }
+]) %>"></hashi-vertical-text-block-list>

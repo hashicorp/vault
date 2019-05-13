@@ -1,11 +1,13 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -15,16 +17,16 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	"github.com/elazarl/go-bindata-assetfs"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/pathmanager"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -123,10 +125,12 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
-		mux.Handle("/", handleRootRedirect())
+		mux.Handle("/ui", handleUIRedirect())
+		mux.Handle("/", handleUIRedirect())
 	}
 
 	additionalRoutes(mux, core)
@@ -181,7 +185,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 			}
 			r = newR
 
-		case strings.HasPrefix(r.URL.Path, "/ui/"), r.URL.Path == "/":
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
@@ -351,12 +355,67 @@ func handleUIStub() http.Handler {
 	stubHTML := `
 	<!DOCTYPE html>
 	<html>
-	<p>Vault UI is not available in this binary. To get Vault UI do one of the following:</p>
+	<style>
+	body {
+	color: #1F2124;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+	}
+
+	.wrapper {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 500px;
+	}
+
+	.content ul {
+	line-height: 1.5;
+	}
+
+	a {
+	color: #1563ff;
+	text-decoration: none;
+	}
+
+	.header {
+	display: flex;
+	color: #6a7786;
+	align-items: center;
+	}
+
+	.header svg {
+	padding-right: 12px;
+	}
+
+	.alert {
+	transform: scale(0.07);
+	fill: #6a7786;
+	}
+
+	h1 {
+	font-weight: 500;
+	}
+
+	p {
+	margin-top: 0px;
+	}
+	</style>
+	<div class="wrapper">
+	<div class="content">
+	<div class="header">
+	<svg width="36px" height="36px" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+	<path class="alert" d="M476.7 422.2L270.1 72.7c-2.9-5-8.3-8.7-14.1-8.7-5.9 0-11.3 3.7-14.1 8.7L35.3 422.2c-2.8 5-4.8 13-1.9 17.9 2.9 4.9 8.2 7.9 14 7.9h417.1c5.8 0 11.1-3 14-7.9 3-4.9 1-13-1.8-17.9zM288 400h-64v-48h64v48zm0-80h-64V176h64v144z"/>
+	</svg>
+	<h1>Vault UI is not available in this binary.</h1>
+	</div>
+	<p>To get Vault UI do one of the following:</p>
 	<ul>
 	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
 	<li>Run <code>make release</code> to create your own release binaries.
 	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
 	</ul>
+	</div>
+	</div>
 	</html>
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -364,7 +423,7 @@ func handleUIStub() http.Handler {
 	})
 }
 
-func handleRootRedirect() http.Handler {
+func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/ui/", 307)
 		return
@@ -387,7 +446,7 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
+func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -396,17 +455,27 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 	if maxRequestSize != nil {
 		max, ok := maxRequestSize.(int64)
 		if !ok {
-			return errors.New("could not parse max_request_size from request context")
+			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
 			reader = http.MaxBytesReader(w, r.Body, max)
 		}
 	}
+	var origBody io.ReadWriter
+	if core.PerfStandby() {
+		// Since we're checking PerfStandby here we key on origBody being nil
+		// or not later, so we need to always allocate so it's non-nil
+		origBody = new(bytes.Buffer)
+		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
-		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
-	return err
+	if origBody != nil {
+		return ioutil.NopCloser(origBody), err
+	}
+	return nil, err
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
@@ -421,9 +490,16 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-			if !perfStandbyAlwaysForwardPaths.HasPath(path) {
+			switch {
+			case !perfStandbyAlwaysForwardPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
 				return
+			case strings.HasPrefix(path, "auth/token/create/"):
+				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), path)
+				if err == nil && isBatch {
+					handler.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 
@@ -475,9 +551,9 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
 		} else {
-			core.Logger().Error("handleRequestForwarding: error forwarding request", "error", err)
+			core.Logger().Error("forward request error", "error", err)
 		}
 
 		// Fall back to redirection
@@ -497,7 +573,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 // request is a helper to perform a request and properly exit in the
 // case of an error.
-func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
+func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
 	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
 		if resp == nil {
@@ -507,14 +583,43 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
-		return resp, false
+		return resp, false, false
+	}
+	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
+		return nil, false, true
+	}
+
+	if resp != nil && len(resp.Headers) > 0 {
+		// Set this here so it will take effect regardless of any other type of
+		// response processing
+		header := w.Header()
+		for k, v := range resp.Headers {
+			for _, h := range v {
+				header.Add(k, h)
+			}
+		}
+
+		switch {
+		case resp.Secret != nil,
+			resp.Auth != nil,
+			len(resp.Data) > 0,
+			resp.Redirect != "",
+			len(resp.Warnings) > 0,
+			resp.WrapInfo != nil:
+			// Nothing, resp has data
+
+		default:
+			// We have an otherwise totally empty response except for headers,
+			// so nil out the response now that the headers are written out
+			resp = nil
+		}
 	}
 
 	if respondErrorCommon(w, r, resp, err) {
-		return resp, false
+		return resp, false, false
 	}
 
-	return resp, true
+	return resp, true, false
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
@@ -567,19 +672,53 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	w.WriteHeader(307)
 }
 
+// getTokenFromReq parse headers of the incoming request to extract token if
+// present it accepts Authorization Bearer (RFC6750) and X-Vault-Token header.
+// Returns true if the token was sourced from a Bearer header.
+func getTokenFromReq(r *http.Request) (string, bool) {
+	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
+		return token, false
+	}
+	if headers, ok := r.Header["Authorization"]; ok {
+		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
+
+		// If string does not start by 'Bearer ', it is not one we would use,
+		// but might be used by plugins
+		for _, v := range headers {
+			if !strings.HasPrefix(v, "Bearer ") {
+				continue
+			}
+			return strings.TrimSpace(v[7:]), true
+		}
+	}
+	return "", false
+}
+
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if v := r.Header.Get(consts.AuthHeaderName); v != "" {
-		req.ClientToken = v
+	token, fromAuthzHeader := getTokenFromReq(r)
+	if token != "" {
+		req.ClientToken = token
+		req.ClientTokenSource = logical.ClientTokenFromVaultHeader
+		if fromAuthzHeader {
+			req.ClientTokenSource = logical.ClientTokenFromAuthzHeader
+		}
 
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
-		// a token from a Vault version pre-accessors.
-		te, err := core.LookupToken(r.Context(), v)
-		if err != nil && strings.Count(v, ".") != 2 {
-			return req, err
+		// a token from a Vault version pre-accessors. We ignore errors for
+		// JWTs.
+		te, err := core.LookupToken(r.Context(), token)
+		if err != nil {
+			dotCount := strings.Count(token, ".")
+			// If we have two dots but the second char is a dot it's a vault
+			// token of the form s.SOMETHING.nsid, not a JWT
+			if dotCount != 2 ||
+				dotCount == 2 && token[1] == '.' {
+				return req, err
+			}
 		}
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
@@ -659,7 +798,7 @@ func parseMFAHeader(req *logical.Request) error {
 		// Handle the case where only method name is mentioned and no value
 		// is supplied
 		if !strings.Contains(mfaHeaderValue, ":") {
-			// Mark the presense of method name, but set an empty set to it
+			// Mark the presence of method name, but set an empty set to it
 			// indicating that there were no values supplied for the method
 			if req.MFACreds[mfaHeaderValue] == nil {
 				req.MFACreds[mfaHeaderValue] = []string{}
@@ -683,18 +822,7 @@ func parseMFAHeader(req *logical.Request) error {
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
+	logical.RespondError(w, status, err)
 }
 
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
@@ -717,8 +845,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-type ErrorResponse struct {
-	Errors []string `json:"errors"`
 }

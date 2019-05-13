@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth help - Command"
+sidebar_title: "<code>help</code>"
 sidebar_current: "docs-commands-auth-help"
 description: |-
   The "auth help" command prints usage and help for an auth method.

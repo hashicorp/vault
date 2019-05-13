@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
@@ -19,6 +20,8 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
 )
+
+var authorizerLifetime = 30 * time.Minute
 
 type computeClient interface {
 	Get(ctx context.Context, resourceGroup, vmName string, instanceView compute.InstanceViewTypes) (compute.VirtualMachine, error)
@@ -39,9 +42,12 @@ type provider interface {
 }
 
 type azureProvider struct {
-	oidcVerifier *oidc.IDTokenVerifier
-	settings     *azureSettings
-	httpClient   *http.Client
+	oidcVerifier         *oidc.IDTokenVerifier
+	settings             *azureSettings
+	httpClient           *http.Client
+	authorizer           autorest.Authorizer
+	authorizerExpiration time.Time
+	lock                 sync.RWMutex
 }
 
 type oidcDiscoveryInfo struct {
@@ -136,6 +142,23 @@ func (p *azureProvider) VMSSClient(subscriptionID string) (vmssClient, error) {
 }
 
 func (p *azureProvider) getAuthorizer() (autorest.Authorizer, error) {
+	p.lock.RLock()
+	unlockFunc := p.lock.RUnlock
+	defer func() { unlockFunc() }()
+
+	if p.authorizer != nil && time.Now().Before(p.authorizerExpiration) {
+		return p.authorizer, nil
+	}
+
+	// Upgrade lock
+	p.lock.RUnlock()
+	p.lock.Lock()
+	unlockFunc = p.lock.Unlock
+
+	if p.authorizer != nil && time.Now().Before(p.authorizerExpiration) {
+		return p.authorizer, nil
+	}
+
 	// Create an OAuth2 client for retrieving VM data
 	var authorizer autorest.Authorizer
 	var err error
@@ -158,6 +181,8 @@ func (p *azureProvider) getAuthorizer() (autorest.Authorizer, error) {
 			return nil, err
 		}
 	}
+	p.authorizer = authorizer
+	p.authorizerExpiration = time.Now().Add(authorizerLifetime)
 	return authorizer, nil
 }
 

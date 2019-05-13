@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PostgreSQL - Storage Backends - Configuration"
+sidebar_title: "PostgreSQL"
 sidebar_current: "docs-configuration-storage-postgresql"
 description: |-
   The PostgreSQL storage backend is used to persist Vault's data in a PostgreSQL
@@ -12,8 +13,8 @@ description: |-
 The PostgreSQL storage backend is used to persist Vault's data in a
 [PostgreSQL][postgresql] server or cluster.
 
-- **No High Availability** – the PostgreSQL storage backend does not support
-  high availability.
+- **High Availability** – the PostgreSQL storage backend supports
+  high availability. Requires PostgreSQL 9.5 or later.
 
 - **Community Supported** – the PostgreSQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -40,6 +41,19 @@ CREATE TABLE vault_kv_store (
 
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
 ```
+
+Store for HAEnabled backend
+
+```sql
+CREATE TABLE vault_ha_locks (
+  ha_key                                      TEXT COLLATE "C" NOT NULL,
+  ha_identity                                 TEXT COLLATE "C" NOT NULL,          
+  ha_value                                    TEXT COLLATE "C",  
+  valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL,
+  CONSTRAINT ha_key PRIMARY KEY (ha_key)
+);
+```
+
 
 If you're using a version of PostgreSQL prior to 9.5, create the following function:
 
@@ -84,6 +98,8 @@ LANGUAGE plpgsql;
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to PostgreSQL.
+
+- `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
 
 ## `postgresql` Examples
 

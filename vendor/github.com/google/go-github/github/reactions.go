@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // ReactionsService provides access to the reactions-related functions in the
@@ -61,8 +60,7 @@ func (s *ReactionsService) ListCommentReactions(ctx context.Context, owner, repo
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	var m []*Reaction
 	resp, err := s.client.Do(ctx, req, &m)
@@ -88,8 +86,7 @@ func (s ReactionsService) CreateCommentReaction(ctx context.Context, owner, repo
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	m := &Reaction{}
 	resp, err := s.client.Do(ctx, req, m)
@@ -116,8 +113,7 @@ func (s *ReactionsService) ListIssueReactions(ctx context.Context, owner, repo s
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	var m []*Reaction
 	resp, err := s.client.Do(ctx, req, &m)
@@ -143,8 +139,7 @@ func (s ReactionsService) CreateIssueReaction(ctx context.Context, owner, repo s
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	m := &Reaction{}
 	resp, err := s.client.Do(ctx, req, m)
@@ -171,8 +166,7 @@ func (s *ReactionsService) ListIssueCommentReactions(ctx context.Context, owner,
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	var m []*Reaction
 	resp, err := s.client.Do(ctx, req, &m)
@@ -198,8 +192,7 @@ func (s ReactionsService) CreateIssueCommentReaction(ctx context.Context, owner,
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	m := &Reaction{}
 	resp, err := s.client.Do(ctx, req, m)
@@ -226,8 +219,7 @@ func (s *ReactionsService) ListPullRequestCommentReactions(ctx context.Context, 
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	var m []*Reaction
 	resp, err := s.client.Do(ctx, req, &m)
@@ -253,8 +245,7 @@ func (s ReactionsService) CreatePullRequestCommentReaction(ctx context.Context, 
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	m := &Reaction{}
 	resp, err := s.client.Do(ctx, req, m)

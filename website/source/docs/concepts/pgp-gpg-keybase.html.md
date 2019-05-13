@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Using PGP, GPG, and Keybase"
+sidebar_title: "PGP, GPG, and Keybase"
 sidebar_current: "docs-concepts-pgp-gpg-keybase"
 description: |-
   Vault has the ability to integrate with OpenPGP-compatible programs like GPG
@@ -84,7 +85,7 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "wcBMA37..." | base64 -d | keybase pgp decrypt
+$ echo "wcBMA37..." | base64 --decode | keybase pgp decrypt
 ```
 
 And replace `wcBMA37...` with the encrypted key.
@@ -163,10 +164,10 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "wcBMA37..." | base64 -d | gpg -dq 
+$ echo "wcBMA37..." | base64 --decode | gpg -dq
 ```
 
-And replace `wcBMA37...` with the encrypted key. 
+And replace `wcBMA37...` with the encrypted key.
 
 If you encrypted your private PGP key with a passphrase, you may be prompted to
 enter it.  After you enter your password, the output will be the plain-text

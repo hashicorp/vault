@@ -44,7 +44,7 @@ func (m *RetryInfo) Reset()         { *m = RetryInfo{} }
 func (m *RetryInfo) String() string { return proto.CompactTextString(m) }
 func (*RetryInfo) ProtoMessage()    {}
 func (*RetryInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{0}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{0}
 }
 func (m *RetryInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RetryInfo.Unmarshal(m, b)
@@ -86,7 +86,7 @@ func (m *DebugInfo) Reset()         { *m = DebugInfo{} }
 func (m *DebugInfo) String() string { return proto.CompactTextString(m) }
 func (*DebugInfo) ProtoMessage()    {}
 func (*DebugInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{1}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{1}
 }
 func (m *DebugInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DebugInfo.Unmarshal(m, b)
@@ -143,7 +143,7 @@ func (m *QuotaFailure) Reset()         { *m = QuotaFailure{} }
 func (m *QuotaFailure) String() string { return proto.CompactTextString(m) }
 func (*QuotaFailure) ProtoMessage()    {}
 func (*QuotaFailure) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{2}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{2}
 }
 func (m *QuotaFailure) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QuotaFailure.Unmarshal(m, b)
@@ -194,7 +194,7 @@ func (m *QuotaFailure_Violation) Reset()         { *m = QuotaFailure_Violation{}
 func (m *QuotaFailure_Violation) String() string { return proto.CompactTextString(m) }
 func (*QuotaFailure_Violation) ProtoMessage()    {}
 func (*QuotaFailure_Violation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{2, 0}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{2, 0}
 }
 func (m *QuotaFailure_Violation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QuotaFailure_Violation.Unmarshal(m, b)
@@ -245,7 +245,7 @@ func (m *PreconditionFailure) Reset()         { *m = PreconditionFailure{} }
 func (m *PreconditionFailure) String() string { return proto.CompactTextString(m) }
 func (*PreconditionFailure) ProtoMessage()    {}
 func (*PreconditionFailure) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{3}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{3}
 }
 func (m *PreconditionFailure) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PreconditionFailure.Unmarshal(m, b)
@@ -296,7 +296,7 @@ func (m *PreconditionFailure_Violation) Reset()         { *m = PreconditionFailu
 func (m *PreconditionFailure_Violation) String() string { return proto.CompactTextString(m) }
 func (*PreconditionFailure_Violation) ProtoMessage()    {}
 func (*PreconditionFailure_Violation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{3, 0}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{3, 0}
 }
 func (m *PreconditionFailure_Violation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PreconditionFailure_Violation.Unmarshal(m, b)
@@ -351,7 +351,7 @@ func (m *BadRequest) Reset()         { *m = BadRequest{} }
 func (m *BadRequest) String() string { return proto.CompactTextString(m) }
 func (*BadRequest) ProtoMessage()    {}
 func (*BadRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{4}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{4}
 }
 func (m *BadRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BadRequest.Unmarshal(m, b)
@@ -395,7 +395,7 @@ func (m *BadRequest_FieldViolation) Reset()         { *m = BadRequest_FieldViola
 func (m *BadRequest_FieldViolation) String() string { return proto.CompactTextString(m) }
 func (*BadRequest_FieldViolation) ProtoMessage()    {}
 func (*BadRequest_FieldViolation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{4, 0}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{4, 0}
 }
 func (m *BadRequest_FieldViolation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BadRequest_FieldViolation.Unmarshal(m, b)
@@ -447,7 +447,7 @@ func (m *RequestInfo) Reset()         { *m = RequestInfo{} }
 func (m *RequestInfo) String() string { return proto.CompactTextString(m) }
 func (*RequestInfo) ProtoMessage()    {}
 func (*RequestInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{5}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{5}
 }
 func (m *RequestInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RequestInfo.Unmarshal(m, b)
@@ -489,7 +489,8 @@ type ResourceInfo struct {
 	ResourceType string `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
 	// The name of the resource being accessed.  For example, a shared calendar
 	// name: "example.com_4fghdhgsrgh@group.calendar.google.com", if the current
-	// error is [google.rpc.Code.PERMISSION_DENIED][google.rpc.Code.PERMISSION_DENIED].
+	// error is
+	// [google.rpc.Code.PERMISSION_DENIED][google.rpc.Code.PERMISSION_DENIED].
 	ResourceName string `protobuf:"bytes,2,opt,name=resource_name,json=resourceName,proto3" json:"resource_name,omitempty"`
 	// The owner of the resource (optional).
 	// For example, "user:<owner email>" or "project:<Google developer project
@@ -508,7 +509,7 @@ func (m *ResourceInfo) Reset()         { *m = ResourceInfo{} }
 func (m *ResourceInfo) String() string { return proto.CompactTextString(m) }
 func (*ResourceInfo) ProtoMessage()    {}
 func (*ResourceInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{6}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{6}
 }
 func (m *ResourceInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ResourceInfo.Unmarshal(m, b)
@@ -573,7 +574,7 @@ func (m *Help) Reset()         { *m = Help{} }
 func (m *Help) String() string { return proto.CompactTextString(m) }
 func (*Help) ProtoMessage()    {}
 func (*Help) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{7}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{7}
 }
 func (m *Help) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Help.Unmarshal(m, b)
@@ -615,7 +616,7 @@ func (m *Help_Link) Reset()         { *m = Help_Link{} }
 func (m *Help_Link) String() string { return proto.CompactTextString(m) }
 func (*Help_Link) ProtoMessage()    {}
 func (*Help_Link) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{7, 0}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{7, 0}
 }
 func (m *Help_Link) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Help_Link.Unmarshal(m, b)
@@ -667,7 +668,7 @@ func (m *LocalizedMessage) Reset()         { *m = LocalizedMessage{} }
 func (m *LocalizedMessage) String() string { return proto.CompactTextString(m) }
 func (*LocalizedMessage) ProtoMessage()    {}
 func (*LocalizedMessage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_error_details_4199ce9006de828a, []int{8}
+	return fileDescriptor_error_details_0786ccff29c8b842, []int{8}
 }
 func (m *LocalizedMessage) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LocalizedMessage.Unmarshal(m, b)
@@ -718,10 +719,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google/rpc/error_details.proto", fileDescriptor_error_details_4199ce9006de828a)
+	proto.RegisterFile("google/rpc/error_details.proto", fileDescriptor_error_details_0786ccff29c8b842)
 }
 
-var fileDescriptor_error_details_4199ce9006de828a = []byte{
+var fileDescriptor_error_details_0786ccff29c8b842 = []byte{
 	// 595 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xcd, 0x6e, 0xd3, 0x4c,
 	0x14, 0x95, 0x9b, 0xb4, 0x9f, 0x7c, 0x93, 0xaf, 0x14, 0xf3, 0xa3, 0x10, 0x09, 0x14, 0x8c, 0x90,

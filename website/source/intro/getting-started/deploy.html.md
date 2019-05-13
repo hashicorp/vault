@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Deploy Vault - Getting Started"
+sidebar_title: "Deploy Vault"
 sidebar_current: "gettingstarted-deploy"
 description: |-
   Learn how to deploy Vault into production, how to initialize it, configure it, etc.

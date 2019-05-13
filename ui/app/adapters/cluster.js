@@ -9,7 +9,17 @@ import DS from 'ember-data';
 
 const { AdapterError } = DS;
 
-const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
+const ENDPOINTS = [
+  'health',
+  'seal-status',
+  'tokens',
+  'token',
+  'seal',
+  'unseal',
+  'init',
+  'capabilities-self',
+  'license',
+];
 
 const REPLICATION_ENDPOINTS = {
   reindex: 'reindex',
@@ -28,6 +38,7 @@ export default ApplicationAdapter.extend({
   shouldBackgroundReloadRecord() {
     return true;
   },
+
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
@@ -58,13 +69,19 @@ export default ApplicationAdapter.extend({
 
   health() {
     return this.ajax(this.urlFor('health'), 'GET', {
-      data: { standbycode: 200, sealedcode: 200, uninitcode: 200, drsecondarycode: 200 },
+      data: {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
       unauthenticated: true,
     });
   },
 
   features() {
-    return this.ajax(`${this.buildURL()}/license/features`, 'GET', {
+    return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
   },
@@ -92,7 +109,7 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { token, password, username, path } = data;
+    const { role, jwt, token, password, username, path } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
     let options = {
@@ -102,6 +119,8 @@ export default ApplicationAdapter.extend({
       options.headers = {
         'X-Vault-Token': token,
       };
+    } else if (backend === 'jwt' || backend === 'oidc') {
+      options.data = { role, jwt };
     } else {
       options.data = token ? { token, password } : { password };
     }
@@ -122,9 +141,12 @@ export default ApplicationAdapter.extend({
     const authBackend = type.toLowerCase();
     const authURLs = {
       github: 'login',
+      jwt: 'login',
+      oidc: 'login',
       userpass: `login/${encodeURIComponent(username)}`,
       ldap: `login/${encodeURIComponent(username)}`,
       okta: `login/${encodeURIComponent(username)}`,
+      radius: `login/${encodeURIComponent(username)}`,
       token: 'lookup-self',
     };
     const urlSuffix = authURLs[authBackend];
@@ -163,7 +185,7 @@ export default ApplicationAdapter.extend({
   generateDrOperationToken(data, options) {
     const verb = options && options.checkStatus ? 'GET' : 'PUT';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.otp) {
+    if (!data || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {

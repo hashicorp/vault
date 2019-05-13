@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 
 	"github.com/hashicorp/vault/builtin/credential/github"
@@ -241,7 +241,9 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	//
 
 	// Extract the entity ID of the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

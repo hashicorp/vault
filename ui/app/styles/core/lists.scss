@@ -8,3 +8,11 @@
     position: relative;
   }
 }
+
+.list-header {
+  margin: $size-9 $size-9 0;
+  color: $grey;
+  font-size: $size-8;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+}

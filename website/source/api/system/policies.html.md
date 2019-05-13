@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/policies/ - HTTP API"
-sidebar_current: "docs-http-system-policies"
+sidebar_title: "<code>/sys/policies</code>"
+sidebar_current: "api-http-system-policies"
 description: |-
   The `/sys/policies/` endpoints are used to manage ACL, RGP, and EGP policies in Vault.
 ---
@@ -17,9 +18,9 @@ The `/sys/policies` endpoints are used to manage ACL, RGP, and EGP policies in V
 
 This endpoint lists all configured ACL policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/policies/acl`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/policies/acl`          |
 
 ### Sample Request
 
@@ -41,9 +42,9 @@ $ curl \
 
 This endpoint retrieves information about the named ACL policy.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/policies/acl/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/policies/acl/:name`    |
 
 ### Parameters
 
@@ -72,9 +73,9 @@ $ curl \
 This endpoint adds a new or updates an existing ACL policy. Once a policy is
 updated, it takes effect immediately to all associated users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policies/acl/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/policies/acl/:name`    |
 
 ### Parameters
 
@@ -108,9 +109,9 @@ This endpoint deletes the ACL policy with the given name. This will immediately
 affect all users associated with this policy. (A deleted policy set on a token
 acts as an empty policy.)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/policies/acl/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/policies/acl/:name`    |
 
 ### Parameters
 
@@ -130,9 +131,9 @@ $ curl \
 
 This endpoint lists all configured RGP policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/policies/rgp`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/policies/rgp`          |
 
 ### Sample Request
 
@@ -154,9 +155,9 @@ $ curl \
 
 This endpoint retrieves information about the named RGP policy.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/policies/rgp/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/policies/rgp/:name`    |
 
 ### Parameters
 
@@ -186,9 +187,9 @@ $ curl \
 This endpoint adds a new or updates an existing RGP policy. Once a policy is
 updated, it takes effect immediately to all associated users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policies/rgp/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/policies/rgp/:name`    |
 
 ### Parameters
 
@@ -227,9 +228,9 @@ This endpoint deletes the RGP policy with the given name. This will immediately
 affect all users associated with this policy. (A deleted policy set on a token
 acts as an empty policy.)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/policies/rgp/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/policies/rgp/:name`    |
 
 ### Parameters
 
@@ -255,9 +256,9 @@ path, this endpoint returns two identifiers:
  * `name_path_map` contains an object mapping names to paths and glob status in
    a more machine-friendly format
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/policies/egp`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/policies/egp`          |
 
 ### Sample Request
 
@@ -279,9 +280,9 @@ $ curl \
 
 This endpoint retrieves information about the named EGP policy.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/policies/egp/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/policies/egp/:name`    |
 
 ### Parameters
 
@@ -312,9 +313,9 @@ $ curl \
 This endpoint adds a new or updates an existing EGP policy. Once a policy is
 updated, it takes effect immediately to all associated users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policies/egp/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/policies/egp/:name`    |
 
 ### Parameters
 
@@ -357,9 +358,9 @@ $ curl \
 
 This endpoint deletes the EGP policy with the given name from all paths on which it was configured.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/policies/egp/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/policies/egp/:name`    |
 
 ### Parameters
 

@@ -47,8 +47,8 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-For more information, see the [introduction section](https://www.vaultproject.io/intro)
-of the Vault website.
+For more information, see the [getting started guide](https://learn.hashicorp.com/vault/)
+on Hashicorp's learning platform.
 
 Getting Started & Documentation
 -------------------------------
@@ -60,12 +60,14 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine (version
-1.10.1+ is *required*).
+1.12.1+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). Next, clone this repository
-into `$GOPATH/src/github.com/hashicorp/vault`. You can then download any
-required build tools by bootstrapping your environment:
+[GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
+your path as some distributions bundle old version of build tools. Next, clone this
+repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
+so it is recommended that you clone the repository ***outside*** of the GOPATH.
+You can then download any required build tools by bootstrapping your environment:
 
 ```sh
 $ make bootstrap
@@ -77,6 +79,16 @@ put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
 $ make dev
+...
+$ bin/vault
+...
+```
+
+To compile a development version of Vault with the UI, run `make static-dist dev-ui`. This will
+put the Vault binary in the `bin` and `$GOPATH/bin` folders:
+
+```sh
+$ make static-dist dev-ui
 ...
 $ bin/vault
 ...

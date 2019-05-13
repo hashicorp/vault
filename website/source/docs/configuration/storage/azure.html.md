@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Storage Backends - Configuration"
+sidebar_title: "Azure"
 sidebar_current: "docs-configuration-storage-azure"
 description: |-
   The Azure storage backend is used to persist Vault's data in an Azure Storage

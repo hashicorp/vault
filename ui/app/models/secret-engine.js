@@ -1,7 +1,6 @@
 import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
@@ -24,7 +23,7 @@ export default DS.Model.extend({
   options: fragment('mount-options', { defaultValue: {} }),
   local: attr('boolean', {
     helpText:
-      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+      'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
   }),
   sealWrap: attr('boolean', {
     helpText:
@@ -39,6 +38,10 @@ export default DS.Model.extend({
       modelType = 'secret-v2';
     }
     return modelType;
+  }),
+
+  isV2KV: computed('modelTypeForKV', function() {
+    return this.modelTypeForKV === 'secret-v2';
   }),
 
   formFields: computed('engineType', function() {

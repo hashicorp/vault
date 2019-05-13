@@ -1,0 +1,91 @@
+---
+layout: "docs"
+page_title: "AliCloud KMS - Seals - Configuration"
+sidebar_title: "AliCloud KMS"
+sidebar_current: "docs-configuration-seal-alicloudkms"
+description: |-
+  The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping
+  mechanism.
+---
+
+# `alicloudkms` Seal
+
+The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping mechanism.
+The AliCloud KMS seal is activated by one of the following:
+
+* The presence of a `seal "alicloudkms"` block in Vault's configuration file.
+* The presence of the environment variable `VAULT_SEAL_TYPE` set to `alicloudkms`. If
+  enabling via environment variable, all other required values specific to AliCloud
+  KMS (i.e. `VAULT_ALICLOUDKMS_SEAL_KEY_ID`) must be also supplied, as well as all
+  other AliCloud-related environment variables that lends to successful
+  authentication.
+
+## `alicloudkms` Example
+
+This example shows configuring AliCloud KMS seal through the Vault configuration file
+by providing all the required values:
+
+```hcl
+seal "alicloudkms" {
+  region     = "us-east-1"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+}
+```
+
+## `alicloudkms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+* `region` `(string: <required> "us-east-1")`: The AliCloud region where the encryption key
+  lives. May also be specified by the `ALICLOUD_REGION`
+  environment variable.
+
+* `domain` `(string: "kms.us-east-1.aliyuncs.com")`: If set, overrides the endpoint
+  AliCloud would normally use for KMS for a particular region. May also be specified
+  by the `ALICLOUD_DOMAIN` environment variable.
+
+* `access_key` `(string: <required>)`: The AliCloud access key ID to use. May also be
+  specified by the `ALICLOUD_ACCESS_KEY` environment variable or as part of the
+  AliCloud profile from the AliCloud CLI or instance profile.
+
+* `secret_key` `(string: <required>)`: The AliCloud secret access key to use. May
+  also be specified by the `ALICLOUD_SECRET_KEY` environment variable or as
+  part of the AliCloud profile from the AliCloud CLI or instance profile.
+
+* `kms_key_id` `(string: <required>)`: The AliCloud KMS key ID to use for encryption
+  and decryption. May also be specified by the `VAULT_ALICLOUDKMS_SEAL_KEY_ID`
+  environment variable.
+
+## Authentication
+
+Authentication-related values must be provided, either as environment
+variables or as configuration parameters.
+
+~> **Note:** Although the configuration file allows you to pass in
+`ALICLOUD_ACCESS_KEY` and `ALICLOUD_SECRET_KEY` as part of the seal's parameters, it
+is _strongly_ recommended to set these values via environment variables.
+
+```text
+AliCloud authentication values:
+
+* `ALICLOUD_REGION`
+* `ALICLOUD_ACCESS_KEY`
+* `ALICLOUD_SECRET_KEY`
+```
+
+Note: The client uses the official AliCloud SDK and will use environment credentials,
+the specified credentials, or RAM role credentials in that order.
+
+## `alicloudkms` Environment Variables
+
+Alternatively, the AliCloud KMS seal can be activated by providing the following
+environment variables:
+
+```text
+Vault Seal specific values:
+
+* `VAULT_SEAL_TYPE`
+* `VAULT_ALICLOUDKMS_SEAL_KEY_ID`
+```

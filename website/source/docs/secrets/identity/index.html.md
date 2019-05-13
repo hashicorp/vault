@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Identity - Secrets Engines"
+sidebar_title: "Identity"
 sidebar_current: "docs-secrets-identity"
 description: |-
   The Identity secrets engine for Vault manages client identities.

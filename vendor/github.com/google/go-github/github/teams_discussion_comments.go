@@ -21,7 +21,7 @@ type DiscussionComment struct {
 	DiscussionURL *string    `json:"discussion_url,omitempty"`
 	HTMLURL       *string    `json:"html_url,omitempty"`
 	NodeID        *string    `json:"node_id,omitempty"`
-	Number        *int64     `json:"number,omitempty"`
+	Number        *int       `json:"number,omitempty"`
 	UpdatedAt     *Timestamp `json:"updated_at,omitempty"`
 	URL           *string    `json:"url,omitempty"`
 }

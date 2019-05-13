@@ -1,0 +1,151 @@
+{{#if (and (eq replicationMode 'dr') (eq model.replicationAttrs.modeForUrl 'secondary'))}}
+  <div class="box is-marginless is-shadowless">
+    <p>
+      Change a secondary cluster’s assigned primary cluster using a secondary
+      activation token. This does not wipe all data in the cluster.
+    </p>
+    <div class="field">
+      <label for="dr_operation_token" class="is-label">
+        DR operation token
+      </label>
+      <div class="control">
+        {{input class="input" id="dr_operation_token" name="dr_operation_token" value=dr_operation_token}}
+      </div>
+    </div>
+    <div class="field">
+      <label for="secondary-token" class="is-label">
+        Secondary activation token
+      </label>
+      <div class="control">
+        {{textarea value=token id="secondary-token" name="secondary-token" class="textarea"}}
+      </div>
+    </div>
+    <ToggleButton
+      @class="is-block"
+      @toggleAttr="showOptions"
+      @toggleTarget={{this}}
+      @openLabel="Hide options"
+      @closedLabel="Options"
+      />
+    {{#if showOptions}}
+      <div class="box is-marginless">
+        <div class="field">
+          <label for="primary_api_addr" class="is-label">
+            Primary API address <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            {{input class="input" value=primary_api_addr id="primary_api_addr" name="primary_api_addr"}}
+          </div>
+          <p class="help">
+           Set this to the API address (normal Vault address) to override the
+           value embedded in the token.
+          </p>
+        </div>
+        <div class="field">
+          <label for="ca_file" class="is-label">
+            CA file <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            {{input value=ca_file id="ca_file" name="ca_file" class="input"}}
+          </div>
+          <p class="help">
+            Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the primary.
+          </p>
+        </div>
+        <div class="field">
+          <label for="ca_path" class="is-label">
+            CA path <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            {{input value=ca_path id="ca_path" name="ca_file" class="input"}}
+          </div>
+          <p class="help">
+            Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping the token from the primary.
+          </p>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+
+  <div class="box is-marginless is-shadowless">
+    <div class="field">
+      <div class="control">
+        {{#confirm-action
+          buttonClasses="button is-primary"
+          onConfirmAction=(action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash dr_operation_token=dr_operation_token token=token primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file))
+          confirmMessage="Are you sure you want to update this cluster's primary?"
+          confirmButtonText="Update primary"
+          cancelButtonText="Cancel"
+          }}
+          Update primary
+        {{/confirm-action}}
+      </div>
+    </div>
+  </div>
+{{else}}
+  <h4 class="title is-5 is-marginless">
+    Update primary
+  </h4>
+  <div class="content">
+    <p>
+      Change a secondary cluster’s assigned primary cluster using a secondary
+      activation token. This does not wipe all data in the cluster.
+    </p>
+  </div>
+  <div class="field">
+    <label for="secondary-token" class="is-label">
+      Secondary activation token
+    </label>
+    <div class="control">
+      {{textarea value=token id="secondary-token" name="secondary-token" class="textarea"}}
+    </div>
+  </div>
+  <div class="field">
+    <label for="primary_api_addr" class="is-label">
+      Primary API address <em class="is-optional">(optional)</em>
+    </label>
+    <div class="control">
+      {{input class="input" value=primary_api_addr id="primary_api_addr" name="primary_api_addr"}}
+    </div>
+    <p class="help has-text-grey">
+     Set this to the API address (normal Vault address) to override the
+     value embedded in the token.
+    </p>
+  </div>
+  <div class="field">
+    <label for="ca_file" class="is-label">
+      CA file <em class="is-optional">(optional)</em>
+    </label>
+    <div class="control">
+      {{input value=ca_file id="ca_file" name="ca_file" class="input"}}
+    </div>
+    <p class="help has-text-grey">
+      Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the primary.
+    </p>
+  </div>
+  <div class="field">
+    <label for="ca_path" class="is-label">
+      CA path <em class="is-optional">(optional)</em>
+    </label>
+    <div class="control">
+      {{input value=ca_path id="ca_path" name="ca_file" class="input"}}
+    </div>
+    <p class="help has-text-grey">
+      Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping the token from the primary.
+    </p>
+  </div>
+
+  <div class="field">
+    <div class="control">
+      {{#confirm-action
+        buttonClasses="button is-primary"
+        onConfirmAction=(action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash token=token primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file))
+        confirmMessage="Are you sure you want to update this cluster's primary?"
+        confirmButtonText="Update primary"
+        cancelButtonText="Cancel"
+        }}
+        Update primary
+      {{/confirm-action}}
+    </div>
+  </div>
+{{/if}}

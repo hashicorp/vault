@@ -67,7 +67,7 @@ type Desc struct {
 
 // NewDesc allocates and initializes a new Desc. Errors are recorded in the Desc
 // and will be reported on registration time. variableLabels and constLabels can
-// be nil if no such labels should be set. fqName and help must not be empty.
+// be nil if no such labels should be set. fqName must not be empty.
 //
 // variableLabels only contain the label names. Their label values are variable
 // and therefore not part of the Desc. (They are managed within the Metric.)
@@ -79,10 +79,6 @@ func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *
 		fqName:         fqName,
 		help:           help,
 		variableLabels: variableLabels,
-	}
-	if help == "" {
-		d.err = errors.New("empty help string")
-		return d
 	}
 	if !model.IsValidMetricName(model.LabelValue(fqName)) {
 		d.err = fmt.Errorf("%q is not a valid metric name", fqName)
@@ -97,7 +93,7 @@ func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *
 	// First add only the const label names and sort them...
 	for labelName := range constLabels {
 		if !checkLabelName(labelName) {
-			d.err = fmt.Errorf("%q is not a valid label name", labelName)
+			d.err = fmt.Errorf("%q is not a valid label name for metric %q", labelName, fqName)
 			return d
 		}
 		labelNames = append(labelNames, labelName)
@@ -119,7 +115,7 @@ func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *
 	// dimension with a different mix between preset and variable labels.
 	for _, labelName := range variableLabels {
 		if !checkLabelName(labelName) {
-			d.err = fmt.Errorf("%q is not a valid label name", labelName)
+			d.err = fmt.Errorf("%q is not a valid label name for metric %q", labelName, fqName)
 			return d
 		}
 		labelNames = append(labelNames, "$"+labelName)
@@ -156,7 +152,7 @@ func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *
 			Value: proto.String(v),
 		})
 	}
-	sort.Sort(LabelPairSorter(d.constLabelPairs))
+	sort.Sort(labelPairSorter(d.constLabelPairs))
 	return d
 }
 

@@ -1,7 +1,7 @@
-{{#link-to 'vault.cluster' 'vault' class=class}}
-  {{#if hasBlock}}
+<span class={{class}}>
+  {{#if (has-block)}}
     {{yield}}
   {{else}}
     {{text}}
   {{/if}}
-{{/link-to}}
+</span>

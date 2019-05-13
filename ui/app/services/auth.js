@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import $ from 'jquery';
@@ -8,17 +9,18 @@ import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-
+import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
-const ROOT_PREFIX = '🗝';
-const IDLE_TIMEOUT_MS = 3 * 60e3;
+const ROOT_PREFIX = '_root_';
 const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
+  permissions: service(),
   namespace: service(),
+  IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -61,6 +63,10 @@ export default Service.extend({
     return ENV.environment;
   },
 
+  now() {
+    return Date.now();
+  },
+
   setCluster(clusterId) {
     this.set('activeCluster', clusterId);
   },
@@ -95,18 +101,15 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp, creationTime) {
-    const creationTTL = resp.creation_ttl || resp.lease_duration;
-    const leaseMilli = creationTTL ? creationTTL * 1e3 : null;
-    const tokenIssueEpoch = resp.creation_time ? resp.creation_time * 1e3 : creationTime || Date.now();
-    const tokenExpirationEpoch = tokenIssueEpoch + leaseMilli;
-    const expirationData = {
-      tokenIssueEpoch,
+  calculateExpiration(resp) {
+    let now = this.now();
+    const ttl = resp.ttl || resp.lease_duration;
+    const tokenExpirationEpoch = now + ttl * 1e3;
+    this.set('expirationCalcTS', now);
+    return {
+      ttl,
       tokenExpirationEpoch,
-      leaseMilli,
     };
-    this.set('expirationCalcTS', Date.now());
-    return expirationData;
   },
 
   persistAuthData() {
@@ -210,17 +213,19 @@ export default Service.extend({
 
   tokenExpired: computed(function() {
     const expiration = this.get('tokenExpirationDate');
-    return expiration ? Date.now() >= expiration : null;
+    return expiration ? this.now() >= expiration : null;
   }).volatile(),
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
     const tokenName = this.get('currentTokenName');
+    let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
-    if (!tokenName || !data) {
+    if (!tokenName || !data || !expirationCalcTS) {
       return null;
     }
-    const { leaseMilli, tokenIssueEpoch, renewable } = data;
-    return data && renewable ? Math.floor(leaseMilli / 2) + tokenIssueEpoch : null;
+    const { ttl, renewable } = data;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
   }),
 
   renew() {
@@ -242,14 +247,25 @@ export default Service.extend({
     );
   },
 
-  shouldRenew: computed(function() {
-    const now = Date.now();
+  checkShouldRenew: task(function*() {
+    while (true) {
+      if (Ember.testing) {
+        return;
+      }
+      yield timeout(5000);
+      if (this.shouldRenew()) {
+        yield this.renew();
+      }
+    }
+  }).on('init'),
+  shouldRenew() {
+    const now = this.now();
     const lastFetch = this.get('lastFetch');
     const renewTime = this.get('renewAfterEpoch');
-    if (this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
+    if (!this.currentTokenName || this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
       return false;
     }
-    if (lastFetch && now - lastFetch >= IDLE_TIMEOUT_MS) {
+    if (lastFetch && now - lastFetch >= this.IDLE_TIMEOUT) {
       this.set('allowExpiration', true);
       return false;
     }
@@ -257,37 +273,46 @@ export default Service.extend({
       return true;
     }
     return false;
-  }).volatile(),
+  },
 
   setLastFetch(timestamp) {
     this.set('lastFetch', timestamp);
+    // if expiration was allowed we want to go ahead and renew here
+    if (this.allowExpiration) {
+      this.renew();
+    }
+    this.set('allowExpiration', false);
   },
 
   getTokensFromStorage(filterFn) {
-    return this.storage().keys().reject(key => {
-      return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
-    });
+    return this.storage()
+      .keys()
+      .reject(key => {
+        return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
+      });
   },
 
   checkForRootToken() {
     if (this.environment() === 'development') {
       return;
     }
+
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
-      if (data.policies.includes('root')) {
+      if (data && data.policies.includes('root')) {
         this.removeTokenData(key);
       }
     });
   },
 
-  authenticate(/*{clusterId, backend, data}*/) {
+  async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
-    return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
-    });
+    let resp = await adapter.authenticate(options);
+    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
+    await this.get('permissions').getPaths.perform();
+    return authData;
   },
 
   deleteCurrentToken() {

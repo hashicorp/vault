@@ -6,10 +6,12 @@ export default Controller.extend({
 
   actions: {
     transitionToCluster(resp) {
-      return this.get('model').reload().then(() => {
-        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE', resp);
-        return this.transitionToRoute('vault.cluster', this.get('model.name'));
-      });
+      return this.get('model')
+        .reload()
+        .then(() => {
+          this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE', resp);
+          return this.transitionToRoute('vault.cluster', this.get('model.name'));
+        });
     },
 
     setUnsealState(resp) {

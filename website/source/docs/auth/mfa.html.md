@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Multi-Factor Authentication (MFA) - Auth Methods"
+sidebar_title: "MFA <sup>LEGACY / UNSUPPORTED</sup>"
 sidebar_current: "docs-auth-mfa"
 description: |-
   Multi-factor authentication (MFA) is supported for several authentication

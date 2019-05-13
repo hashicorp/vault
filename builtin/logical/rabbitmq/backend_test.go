@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
-	"github.com/michaelklishin/rabbit-hole"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
@@ -42,10 +43,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string, int) {
 	}
 
 	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	port, _ := strconv.Atoi(resource.GetPort("15672/tcp"))
@@ -82,8 +80,8 @@ func TestBackend_basic(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),
@@ -104,8 +102,8 @@ func TestBackend_roleCrud(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),

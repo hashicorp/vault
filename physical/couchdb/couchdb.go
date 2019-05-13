@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // CouchDBBackend allows the management of couchdb users

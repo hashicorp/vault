@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
@@ -14,7 +14,7 @@ func (b *backend) walRollback(ctx context.Context, req *logical.Request, kind st
 		"user": b.pathUserRollback,
 	}
 
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformancePrimary) {
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		return nil
 	}
 

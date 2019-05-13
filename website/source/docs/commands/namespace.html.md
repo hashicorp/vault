@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "namespace - Command"
+sidebar_title: "<code>namespace</code>"
 sidebar_current: "docs-commands-namespace"
 description: |-
   The "namespace" command groups subcommands for interacting with namespaces.

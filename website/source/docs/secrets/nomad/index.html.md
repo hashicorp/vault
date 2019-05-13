@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Nomad Secret Backend"
+sidebar_title: "Nomad"
 sidebar_current: "docs-secrets-nomad"
 description: |-
   The Nomad secret backend for Vault generates tokens for Nomad dynamically.

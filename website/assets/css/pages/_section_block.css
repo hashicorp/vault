@@ -1,0 +1,78 @@
+.g-section-block {
+  & section {
+    padding-top: 96px;
+    padding-bottom: 96px;
+
+    @media (max-width: 768px) {
+      padding-top: 60px;
+      padding-bottom: 60px;
+    }
+
+    &.gray {
+      background: #f6f7fa;
+    }
+
+    &.black {
+      background: var(--black);
+      color: white;
+    }
+
+    &.no-pad {
+      padding: 0;
+    }
+
+    /* copied over from www, should be component-ized */
+    & > * + *,
+    & > .g-container > * + * {
+      margin-top: 96px;
+
+      @media (max-width: 1119px) {
+        margin-top: 72px;
+      }
+
+      @media (max-width: 767px) {
+        margin-top: 56px;
+      }
+    }
+
+    & > .g-section-header,
+    & > .g-container > .g-section-header {
+      & + * {
+        margin-top: 72px;
+
+        @media (max-width: 1119px) {
+          margin-top: 64px;
+        }
+
+        @media (max-width: 767px) {
+          margin-top: 40px;
+        }
+      }
+    }
+
+    & > * + .button-container,
+    & > .g-container > * + .button-container {
+      margin-top: 40px;
+
+      @media (max-width: 767px) {
+        margin-top: 32px;
+      }
+    }
+  }
+
+  & .button-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: auto -8px -16px;
+
+    & > * {
+      margin: auto 8px 16px;
+    }
+  }
+
+  /* Temporary Overrides */
+  & .g-section-header {
+    margin: 0 auto;
+  }
+}

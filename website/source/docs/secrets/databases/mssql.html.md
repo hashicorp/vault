@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MSSQL - Database - Secrets Engines"
+sidebar_title: "MSSQL"
 sidebar_current: "docs-secrets-databases-mssql"
 description: |-
 

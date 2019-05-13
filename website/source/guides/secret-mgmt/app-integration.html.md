@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Direct Application Integration - Guides"
+sidebar_title: "Direct Application Integration"
 sidebar_current: "guides-secret-mgmt-app-integration"
 description: |-
   This guide demonstrates the use of Consul Template and Envconsul tools. To

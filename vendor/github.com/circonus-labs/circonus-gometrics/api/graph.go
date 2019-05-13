@@ -37,13 +37,13 @@ type GraphAccessKey struct {
 
 // GraphComposite defines a composite
 type GraphComposite struct {
-	Axis          string  `json:"axis,omitempty"`           // string
-	Color         string  `json:"color,omitempty"`          // string
-	DataFormula   *string `json:"data_formula,omitempty"`   // string or null
-	Hidden        bool    `json:"hidden,omitempty"`         // boolean
-	LegendFormula *string `json:"legend_formula,omitempty"` // string or null
-	Name          string  `json:"name,omitempty"`           // string
-	Stack         *uint   `json:"stack,omitempty"`          // uint or null
+	Axis          string  `json:"axis"`           // string
+	Color         string  `json:"color"`          // string
+	DataFormula   *string `json:"data_formula"`   // string or null
+	Hidden        bool    `json:"hidden"`         // boolean
+	LegendFormula *string `json:"legend_formula"` // string or null
+	Name          string  `json:"name"`           // string
+	Stack         *uint   `json:"stack"`          // uint or null
 }
 
 // GraphDatapoint defines a datapoint
@@ -60,16 +60,17 @@ type GraphDatapoint struct {
 	MetricName    string      `json:"metric_name,omitempty"`  // string
 	MetricType    string      `json:"metric_type,omitempty"`  // string
 	Name          string      `json:"name"`                   // string
+	Search        *string     `json:"search"`                 // string or null
 	Stack         *uint       `json:"stack"`                  // uint or null
 }
 
 // GraphGuide defines a guide
 type GraphGuide struct {
-	Color         string  `json:"color,omitempty"`          // string
-	DataFormula   *string `json:"data_formula,omitempty"`   // string or null
-	Hidden        bool    `json:"hidden,omitempty"`         // boolean
-	LegendFormula *string `json:"legend_formula,omitempty"` // string or null
-	Name          string  `json:"name,omitempty"`           // string
+	Color         string  `json:"color"`          // string
+	DataFormula   *string `json:"data_formula"`   // string or null
+	Hidden        bool    `json:"hidden"`         // boolean
+	LegendFormula *string `json:"legend_formula"` // string or null
+	Name          string  `json:"name"`           // string
 }
 
 // GraphMetricCluster defines a metric cluster

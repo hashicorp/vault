@@ -108,6 +108,12 @@ func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
 			nv.Value = sql.Out{Dest: conv}
 		}
 		return nil
+	case *ReturnStatus:
+		*v = 0 // By default the return value should be zero.
+		c.returnStatus = v
+		return driver.ErrRemoveArgument
+	case TVPType:
+		return nil
 	default:
 		var err error
 		nv.Value, err = convertInputParameter(nv.Value)
@@ -124,11 +130,11 @@ func (s *Stmt) makeParamExtra(val driver.Value) (res param, err error) {
 	case VarCharMax:
 		res.ti.TypeId = typeBigVarChar
 		res.buffer = []byte(val)
-		res.ti.Size = 0  // currently zero forces varchar(max)
+		res.ti.Size = 0 // currently zero forces varchar(max)
 	case NVarCharMax:
 		res.ti.TypeId = typeNVarChar
 		res.buffer = str2ucs2(string(val))
-		res.ti.Size = 0  // currently zero forces nvarchar(max)
+		res.ti.Size = 0 // currently zero forces nvarchar(max)
 	case DateTime1:
 		t := time.Time(val)
 		res.ti.TypeId = typeDateTimeN
@@ -156,6 +162,17 @@ func (s *Stmt) makeParamExtra(val driver.Value) (res param, err error) {
 	case sql.Out:
 		res, err = s.makeParam(val.Dest)
 		res.Flags = fByRevValue
+	case TVPType:
+		err = val.check()
+		if err != nil {
+			return
+		}
+		res.ti.UdtInfo.TypeName = val.TVPTypeName
+		res.ti.UdtInfo.SchemaName = val.TVPScheme
+		res.ti.TypeId = typeTvp
+		res.buffer, err = val.encode()
+		res.ti.Size = len(res.buffer)
+
 	default:
 		err = fmt.Errorf("mssql: unknown type for %T", val)
 	}

@@ -19,7 +19,6 @@ export default {
     },
     complete: {
       onEntry: ['completeFeature'],
-      on: { RESET: 'idle' },
     },
   },
 };

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Telemetry"
+sidebar_title: "Telemetry"
 sidebar_current: "docs-internals-telemetry"
 description: |-
   Learn about the telemetry data available in Vault.

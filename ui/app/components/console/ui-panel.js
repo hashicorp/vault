@@ -19,8 +19,9 @@ export default Component.extend({
   router: service(),
   controlGroup: service(),
   store: service(),
+  'data-test-component': 'console/ui-panel',
 
-  classNames: 'console-ui-panel-scroller',
+  classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
@@ -114,6 +115,9 @@ export default Component.extend({
   },
 
   actions: {
+    closeConsole() {
+      this.set('console.isOpen', false);
+    },
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
     },

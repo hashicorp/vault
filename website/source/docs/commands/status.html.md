@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "status - Command"
+sidebar_title: "<code>status</code>"
 sidebar_current: "docs-commands-status"
 description: |-
   The "status" command prints the current state of Vault including whether it is

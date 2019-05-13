@@ -262,3 +262,9 @@ func buildPadStr(str string, padStr string, padLen int, padLeft bool, padRight b
 
 	return leftSide + str + rightSide
 }
+
+// TruncatingErrorf removes extra args from fmt.Errorf if not formatted in the str object
+func TruncatingErrorf(str string, args ...interface{}) error {
+	n := strings.Count(str, "%s")
+	return fmt.Errorf(str, args[:n]...)
+}

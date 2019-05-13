@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Production Hardening - Guides"
+sidebar_title: "Production Hardening"
 sidebar_current: "guides-operations-production-hardening"
 description: |-
   This guide provides guidance on best practices for a production hardened deployment of HashiCorp Vault.

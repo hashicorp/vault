@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Security Model"
+sidebar_title: "Security Model"
 sidebar_current: "docs-internals-security"
 description: |-
   Learn about the security model of Vault.
@@ -101,54 +102,62 @@ to gain access to secret material they are not authorized to. This is an interna
 threat if the attacker is already permitted some level of access to Vault and is
 able to authenticate.
 
-When a client first authenticates with Vault, an auth method is used to
-verify the identity of the client and to return a list of associated ACL policies.
-This association is configured by operators of Vault ahead of time. For example,
-GitHub users in the "engineering" team may be mapped to the "engineering" and "ops"
-Vault policies. Vault then generates a client token which is a randomly generated
-UUID and maps it to the policy list. This client token is then returned to the client.
+When a client first authenticates with Vault, an auth method is used to verify
+the identity of the client and to return a list of associated ACL policies.
+This association is configured by operators of Vault ahead of time. For
+example, GitHub users in the "engineering" team may be mapped to the
+"engineering" and "ops" Vault policies. Vault then generates a client token
+which is a randomly generated, serialized value and maps it to the policy list.
+This client token is then returned to the client.
 
-On each request a client provides this token. Vault then uses it to check that the token
-is valid and has not been revoked or expired, and generates an ACL based on the associated
-policies. Vault uses a strict default deny or whitelist enforcement. This means unless
-an associated policy allows for a given action, it will be denied. Each policy specifies
-a level of access granted to a path in Vault. When the policies are merged (if multiple
-policies are associated with a client), the highest access level permitted is used.
-For example, if the "engineering" policy permits read/update access to the "eng/" path,
-and the "ops" policy permits read access to the "ops/" path, then the user gets the
-union of those. Policy is matched using the most specific defined policy, which may be
-an exact match or the longest-prefix match glob pattern.
+On each request a client provides this token. Vault then uses it to check that
+the token is valid and has not been revoked or expired, and generates an ACL
+based on the associated policies. Vault uses a strict default deny or whitelist
+enforcement. This means unless an associated policy allows for a given action,
+it will be denied. Each policy specifies a level of access granted to a path in
+Vault. When the policies are merged (if multiple policies are associated with a
+client), the highest access level permitted is used.  For example, if the
+"engineering" policy permits read/update access to the "eng/" path, and the
+"ops" policy permits read access to the "ops/" path, then the user gets the
+union of those. Policy is matched using the most specific defined policy, which
+may be an exact match or the longest-prefix match glob pattern.
 
 Certain operations are only permitted by "root" users, which is a distinguished
-policy built into Vault. This is similar to the concept of a root user on a Unix system
-or an Administrator on Windows. Although clients could be provided with root tokens
-or associated with the root policy, instead Vault supports the notion of "sudo" privilege.
-As part of a policy, users may be granted "sudo" privileges to certain paths, so that
-they can still perform security sensitive operations without being granted global
-root access to Vault.
+policy built into Vault. This is similar to the concept of a root user on a
+Unix system or an Administrator on Windows. Although clients could be provided
+with root tokens or associated with the root policy, instead Vault supports the
+notion of "sudo" privilege.  As part of a policy, users may be granted "sudo"
+privileges to certain paths, so that they can still perform security sensitive
+operations without being granted global root access to Vault.
 
-Lastly, Vault supports using a [Two-man rule](https://en.wikipedia.org/wiki/Two-man_rule) for
-unsealing using [Shamir's Secret Sharing technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).
-When Vault is started, it starts in an _sealed_ state. This means that the encryption key
-needed to read and write from the storage backend is not yet known. The process of unsealing
-requires providing the master key so that the encryption key can be retrieved. The risk of distributing
-the master key is that a single malicious actor with access to it can decrypt the entire
-Vault. Instead, Shamir's technique allows us to split the master key into multiple shares or parts.
-The number of shares and the threshold needed is configurable, but by default Vault generates
-5 shares, any 3 of which must be provided to reconstruct the master key.
+Lastly, Vault supports using a [Two-man
+rule](https://en.wikipedia.org/wiki/Two-man_rule) for unsealing using [Shamir's
+Secret Sharing
+technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).  When Vault
+is started, it starts in an _sealed_ state. This means that the encryption key
+needed to read and write from the storage backend is not yet known. The process
+of unsealing requires providing the master key so that the encryption key can
+be retrieved. The risk of distributing the master key is that a single
+malicious actor with access to it can decrypt the entire Vault. Instead,
+Shamir's technique allows us to split the master key into multiple shares or
+parts.  The number of shares and the threshold needed is configurable, but by
+default Vault generates 5 shares, any 3 of which must be provided to
+reconstruct the master key.
 
-By using a secret sharing technique, we avoid the need to place absolute trust in the holder
-of the master key, and avoid storing the master key at all. The master key is only
-retrievable by reconstructing the shares. The shares are not useful for making any requests
-to Vault, and can only be used for unsealing. Once unsealed the standard ACL mechanisms
-are used for all requests.
+By using a secret sharing technique, we avoid the need to place absolute trust
+in the holder of the master key, and avoid storing the master key at all. The
+master key is only retrievable by reconstructing the shares. The shares are not
+useful for making any requests to Vault, and can only be used for unsealing.
+Once unsealed the standard ACL mechanisms are used for all requests.
 
-To make an analogy, a bank puts security deposit boxes inside of a vault.
-Each security deposit box has a key, while the vault door has both a combination and a key.
-The vault is encased in steel and concrete so that the door is the only practical entrance.
-The analogy to Vault, is that the cryptosystem is the steel and concrete protecting the data.
-While you could tunnel through the concrete or brute force the encryption keys, it would be
-prohibitively time consuming. Opening the bank vault requires two-factors: the key and the combination.
-Similarly, Vault requires multiple shares be provided to reconstruct the master key.
-Once unsealed, each security deposit boxes still requires the owner provide a key, and similarly
-the Vault ACL system protects all the secrets stored.
+To make an analogy, a bank puts security deposit boxes inside of a vault.  Each
+security deposit box has a key, while the vault door has both a combination and
+a key.  The vault is encased in steel and concrete so that the door is the only
+practical entrance.  The analogy to Vault, is that the cryptosystem is the
+steel and concrete protecting the data.  While you could tunnel through the
+concrete or brute force the encryption keys, it would be prohibitively time
+consuming. Opening the bank vault requires two-factors: the key and the
+combination.  Similarly, Vault requires multiple shares be provided to
+reconstruct the master key.  Once unsealed, each security deposit boxes still
+requires the owner provide a key, and similarly the Vault ACL system protects
+all the secrets stored.

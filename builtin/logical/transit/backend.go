@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -46,6 +46,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			b.pathVerify(),
 			b.pathBackup(),
 			b.pathRestore(),
+			b.pathTrim(),
 		},
 
 		Secrets:     []*framework.Secret{},

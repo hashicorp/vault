@@ -1,0 +1,19 @@
+<label for="time-{{elementId}}" class="is-label {{labelClass}}">{{labelText}}</label>
+<MessageError @errorMessage={{errorMessage}} data-test-ttl-error />
+<div class="field is-grouped">
+  <div class="control is-expanded">
+    <input data-test-ttl-value value={{time}} id="time-{{elementId}}" type="text" name="time" class="input" oninput={{action 'changedValue' 'time'}}
+      pattern="[0-9]*" />
+  </div>
+  <div class="control is-expanded">
+    <div class="select is-fullwidth">
+      <select data-test-ttl-unit name="unit" id="unit" onchange={{action 'changedValue' 'unit'}}>
+        {{#each unitOptions as |unitOption|}}
+          <option selected={{eq unit unitOption.value}} value={{unitOption.value}}>
+            {{unitOption.label}}
+          </option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+</div>

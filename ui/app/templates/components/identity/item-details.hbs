@@ -1,38 +1,37 @@
-{{#if model.disabled}}
-  <div class="box is-shadowless is-marginless">
-    {{#message-in-page type="warning" yieldWithoutColumn=true messageClass="message-body is-marginless" data-test-disabled-warning=true}}
-      <div class="column">
-        <strong>Attention</strong> This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked.
-      </div>
+<div class="box is-shadowless is-marginless is-fullwidth">
+  {{#if model.disabled}}
+    <AlertBanner
+      @type="warning"
+      @title="Attention"
+      @message="This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
+      data-test-disabled-warning>
       {{#if model.canEdit}}
-        <div class="column is-flex-v-centered is-narrow">
-          <button type="button" class="button is-orange box" {{action "enable" model}} data-test-enable=true>
-            Enable
-          </button>
-        </div>
+        <button onclick={{action 'enable' model}} type="button" class="link" data-test-enable=true>
+          Enable
+        </button>
       {{/if}}
-    {{/message-in-page}}
-  </div>
-{{/if}}
-{{info-table-row label="Name" value=model.name data-test-identity-item-name=true}}
-{{info-table-row label="Type" value=model.type }}
-{{info-table-row label="ID" value=model.id }}
-{{#info-table-row label="Merged Ids" value=model.mergedEntityIds }}
-  <div>
-    {{#each model.mergedEntityIds as |id|}}
-      <div>
-        <code class="has-text-black">{{id}}</code>
-      </div>
-    {{/each}}
-  </div>
-{{/info-table-row}}
-{{#info-table-row label="Created" value=model.creationTime}}
-  <time datetime={{model.creationTime}} title={{model.creationTime}}>
-    {{moment-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
-  </time>
-{{/info-table-row}}
-{{#info-table-row label="Last Updated" value=model.lastUpdateTime}}
-  <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
-    {{moment-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
-  </time>
-{{/info-table-row}}
+    </AlertBanner>
+  {{/if}}
+  {{info-table-row label="Name" value=model.name data-test-identity-item-name=true}}
+  {{info-table-row label="Type" value=model.type }}
+  {{info-table-row label="ID" value=model.id }}
+  {{#info-table-row label="Merged Ids" value=model.mergedEntityIds }}
+    <div>
+      {{#each model.mergedEntityIds as |id|}}
+        <div>
+          <code class="has-text-black">{{id}}</code>
+        </div>
+      {{/each}}
+    </div>
+  {{/info-table-row}}
+  {{#info-table-row label="Created" value=model.creationTime}}
+    <time datetime={{model.creationTime}} title={{model.creationTime}}>
+      {{date-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
+    </time>
+  {{/info-table-row}}
+  {{#info-table-row label="Last Updated" value=model.lastUpdateTime}}
+    <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
+      {{date-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
+    </time>
+  {{/info-table-row}}
+</div>

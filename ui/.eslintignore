@@ -8,6 +8,7 @@
 
 # dependencies
 /bower_components/
+/stories/
 
 # misc
 /coverage/
@@ -16,3 +17,5 @@
 /.node_modules.ember-try/
 /bower.json.ember-try
 /package.json.ember-try
+
+/tests/helpers/vault-keys.js

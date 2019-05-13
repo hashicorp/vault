@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Static Secrets - Guides"
+sidebar_title: "Static Secrets"
 sidebar_current: "guides-secret-mgmt-static-secrets"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying
@@ -124,7 +125,7 @@ You will perform the following:
 1. [Generate a token for apps](#step4)
 1. [Retrieve the secrets](#step5)
 
-![Personas Introduction](/assets/images/vault-static-secrets.png)
+![Personas Introduction](/img/vault-static-secrets.png)
 
 Step 1 through 4 are performed by `devops` persona.  Step 5 describes the
 commands that `apps` persona runs to read secrets from Vault.
@@ -457,7 +458,7 @@ consumer of the API key may be different from the consumer of the root
 certificate. Then each persona would have a policy based on what it needs to
 access.
 
-![Personas Introduction](/assets/images/vault-static-secrets2.png)
+![Personas Introduction](/img/vault-static-secrets2.png)
 
 
 

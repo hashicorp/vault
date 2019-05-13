@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "server - Command"
+sidebar_title: "<code>server</code>"
 sidebar_current: "docs-commands-server"
 description: |-
   The "server" command starts a Vault server that responds to API requests. By
@@ -70,3 +71,5 @@ flags](/docs/commands/index.html) included on all commands.
 - `-dev-root-token-id` `(string: "")` - Initial root token. This only applies
   when running in "dev" mode. This can also be specified via the
   `VAULT_DEV_ROOT_TOKEN_ID` environment variable.
+
+- `-dev-plugin-dir` `(string: "")` - Directory from which plugins are allowed to be loaded. Only applies in "dev" mode, it will automatically register all the plugins in the provided directory.

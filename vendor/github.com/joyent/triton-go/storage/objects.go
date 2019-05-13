@@ -10,6 +10,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -25,6 +26,56 @@ import (
 
 type ObjectsClient struct {
 	client *client.Client
+}
+
+// AbortMpuInput represents parameters to an AbortMpu operation
+type AbortMpuInput struct {
+	PartsDirectoryPath string
+}
+
+func (s *ObjectsClient) AbortMultipartUpload(ctx context.Context, input *AbortMpuInput) error {
+	return abortMpu(*s, ctx, input)
+}
+
+// CommitMpuInput represents parameters to a CommitMpu operation
+type CommitMpuInput struct {
+	Id      string
+	Headers map[string]string
+	Body    CommitMpuBody
+}
+
+// CommitMpuBody represents the body of a CommitMpu request
+type CommitMpuBody struct {
+	Parts []string `json:"parts"`
+}
+
+func (s *ObjectsClient) CommitMultipartUpload(ctx context.Context, input *CommitMpuInput) error {
+	return commitMpu(*s, ctx, input)
+}
+
+// CreateMpuInput represents parameters to a CreateMpu operation.
+type CreateMpuInput struct {
+	Body            CreateMpuBody
+	ContentLength   uint64
+	ContentMD5      string
+	DurabilityLevel uint64
+	ForceInsert     bool //Force the creation of the directory tree
+}
+
+// CreateMpuOutput represents the response from a CreateMpu operation
+type CreateMpuOutput struct {
+	Id             string `json:"id"`
+	PartsDirectory string `json:"partsDirectory"`
+}
+
+// CreateMpuBody represents the body of a CreateMpu request.
+type CreateMpuBody struct {
+	ObjectPath string            `json:"objectPath"`
+	Headers    map[string]string `json:"headers,omitempty"`
+}
+
+func (s *ObjectsClient) CreateMultipartUpload(ctx context.Context, input *CreateMpuInput) (*CreateMpuOutput, error) {
+	return createMpu(*s, ctx, input)
 }
 
 // GetObjectInput represents parameters to a GetObject operation.
@@ -205,6 +256,48 @@ func (s *ObjectsClient) Delete(ctx context.Context, input *DeleteObjectInput) er
 	return nil
 }
 
+// GetMpuInput represents parameters to a GetMpu operation
+type GetMpuInput struct {
+	PartsDirectoryPath string
+}
+
+type GetMpuHeaders struct {
+	ContentLength int64  `json:"content-length"`
+	ContentMd5    string `json:"content-md5"`
+}
+
+type GetMpuOutput struct {
+	Id             string        `json:"id"`
+	State          string        `json:"state"`
+	PartsDirectory string        `json:"partsDirectory"`
+	TargetObject   string        `json:"targetObject"`
+	Headers        GetMpuHeaders `json:"headers"`
+	NumCopies      int64         `json:"numCopies"`
+	CreationTimeMs int64         `json:"creationTimeMs"`
+}
+
+func (s *ObjectsClient) GetMultipartUpload(ctx context.Context, input *GetMpuInput) (*GetMpuOutput, error) {
+	return getMpu(*s, ctx, input)
+}
+
+type ListMpuPartsInput struct {
+	Id string
+}
+
+type ListMpuPart struct {
+	ETag       string
+	PartNumber int
+	Size       int64
+}
+
+type ListMpuPartsOutput struct {
+	Parts []ListMpuPart
+}
+
+func (s *ObjectsClient) ListMultipartUploadParts(ctx context.Context, input *ListMpuPartsInput) (*ListMpuPartsOutput, error) {
+	return listMpuParts(*s, ctx, input)
+}
+
 // PutObjectMetadataInput represents parameters to a PutObjectMetadata operation.
 type PutObjectMetadataInput struct {
 	ObjectPath  string
@@ -266,7 +359,6 @@ type PutObjectInput struct {
 
 func (s *ObjectsClient) Put(ctx context.Context, input *PutObjectInput) error {
 	absPath := absFileInput(s.client.AccountName, input.ObjectPath)
-
 	if input.ForceInsert {
 		absDirName := _AbsCleanPath(path.Dir(string(absPath)))
 		exists, err := checkDirectoryTreeExists(*s, ctx, absDirName)
@@ -283,6 +375,24 @@ func (s *ObjectsClient) Put(ctx context.Context, input *PutObjectInput) error {
 	}
 
 	return putObject(*s, ctx, input, absPath)
+}
+
+// UploadPartInput represents parameters to a UploadPart operation.
+type UploadPartInput struct {
+	Id           string
+	PartNum      uint64
+	ContentMD5   string
+	Headers      map[string]string
+	ObjectReader io.Reader
+}
+
+// UploadPartOutput represents the response from a
+type UploadPartOutput struct {
+	Part string `json:"part"`
+}
+
+func (s *ObjectsClient) UploadPart(ctx context.Context, input *UploadPartInput) (*UploadPartOutput, error) {
+	return uploadPart(*s, ctx, input)
 }
 
 // _AbsCleanPath is an internal type that means the input has been
@@ -375,10 +485,226 @@ func createDirectory(c ObjectsClient, ctx context.Context, absPath _AbsCleanPath
 	return nil
 }
 
+func abortMpu(c ObjectsClient, ctx context.Context, input *AbortMpuInput) error {
+	reqInput := client.RequestInput{
+		Method:  http.MethodPost,
+		Path:    input.PartsDirectoryPath + "/abort",
+		Headers: &http.Header{},
+		Body:    nil,
+	}
+	respBody, _, err := c.client.ExecuteRequestStorage(ctx, reqInput)
+	if err != nil {
+		return errors.Wrap(err, "unable to abort mpu")
+	}
+
+	if respBody != nil {
+		defer respBody.Close()
+	}
+
+	return nil
+}
+
+func commitMpu(c ObjectsClient, ctx context.Context, input *CommitMpuInput) error {
+	headers := &http.Header{}
+	for key, value := range input.Headers {
+		headers.Set(key, value)
+	}
+
+	// The mpu directory prefix length is derived from the final character
+	// in the mpu identifier which we'll call P. The mpu prefix itself is
+	// the first P characters of the mpu identifier. In order to derive the
+	// correct directory structure we need to parse this information from
+	// the mpu identifier
+	id := input.Id
+	idLength := len(id)
+	prefixLen, err := strconv.Atoi(id[idLength-1 : idLength])
+	if err != nil {
+		return errors.Wrap(err, "unable to commit mpu due to invalid mpu prefix length")
+	}
+	prefix := id[:prefixLen]
+	partPath := "/" + c.client.AccountName + "/uploads/" + prefix + "/" + input.Id + "/commit"
+
+	reqInput := client.RequestInput{
+		Method:  http.MethodPost,
+		Path:    partPath,
+		Headers: headers,
+		Body:    input.Body,
+	}
+	respBody, _, err := c.client.ExecuteRequestStorage(ctx, reqInput)
+	if err != nil {
+		return errors.Wrap(err, "unable to commit mpu")
+	}
+
+	if respBody != nil {
+		defer respBody.Close()
+	}
+
+	return nil
+}
+
+func createMpu(c ObjectsClient, ctx context.Context, input *CreateMpuInput) (*CreateMpuOutput, error) {
+	absPath := absFileInput(c.client.AccountName, input.Body.ObjectPath)
+
+	// Because some clients will be treating Manta like S3, they will
+	// include slashes in object names which we'll need to convert to
+	// directories
+	if input.ForceInsert {
+		absDirName := _AbsCleanPath(path.Dir(string(absPath)))
+		exists, _ := checkDirectoryTreeExists(c, ctx, absDirName)
+		if !exists {
+			err := createDirectory(c, ctx, absDirName)
+			if err != nil {
+				return nil, errors.Wrap(err, "unable to create directory for create mpu operation")
+			}
+		}
+	}
+	headers := &http.Header{}
+	for key, value := range input.Body.Headers {
+		headers.Set(key, value)
+	}
+	if input.DurabilityLevel != 0 {
+		headers.Set("Durability-Level", strconv.FormatUint(input.DurabilityLevel, 10))
+	}
+	if input.ContentLength != 0 {
+		headers.Set("Content-Length", strconv.FormatUint(input.ContentLength, 10))
+	}
+	if input.ContentMD5 != "" {
+		headers.Set("Content-MD5", input.ContentMD5)
+	}
+
+	input.Body.ObjectPath = string(absPath)
+	reqInput := client.RequestInput{
+		Method:  http.MethodPost,
+		Path:    "/" + c.client.AccountName + "/uploads",
+		Headers: headers,
+		Body:    input.Body,
+	}
+	respBody, _, err := c.client.ExecuteRequestStorage(ctx, reqInput)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create mpu")
+	}
+	if respBody != nil {
+		defer respBody.Close()
+	}
+
+	response := &CreateMpuOutput{}
+	decoder := json.NewDecoder(respBody)
+	if err = decoder.Decode(&response); err != nil {
+		return nil, errors.Wrap(err, "unable to decode create mpu response")
+	}
+
+	return response, nil
+}
+
+func getMpu(c ObjectsClient, ctx context.Context, input *GetMpuInput) (*GetMpuOutput, error) {
+	headers := &http.Header{}
+
+	reqInput := client.RequestInput{
+		Method:  http.MethodGet,
+		Path:    input.PartsDirectoryPath + "/state",
+		Headers: headers,
+	}
+	respBody, _, err := c.client.ExecuteRequestStorage(ctx, reqInput)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get mpu")
+	}
+
+	response := &GetMpuOutput{}
+	decoder := json.NewDecoder(respBody)
+	if err = decoder.Decode(&response); err != nil {
+		return nil, errors.Wrap(err, "unable to decode get mpu response")
+	}
+
+	return response, nil
+}
+
+func listMpuParts(c ObjectsClient, ctx context.Context, input *ListMpuPartsInput) (*ListMpuPartsOutput, error) {
+	id := input.Id
+	idLength := len(id)
+	prefixLen, err := strconv.Atoi(id[idLength-1 : idLength])
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to upload part")
+	}
+	prefix := id[:prefixLen]
+	partPath := "/" + c.client.AccountName + "/uploads/" + prefix + "/" + input.Id + "/"
+	listDirInput := ListDirectoryInput{
+		DirectoryName: partPath,
+	}
+
+	dirClient := &DirectoryClient{
+		client: c.client,
+	}
+
+	listDirOutput, err := dirClient.List(ctx, &listDirInput)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to list mpu parts")
+	}
+
+	var parts []ListMpuPart
+	for num, part := range listDirOutput.Entries {
+		parts = append(parts, ListMpuPart{
+			ETag:       part.ETag,
+			PartNumber: num,
+			Size:       int64(part.Size),
+		})
+	}
+
+	listMpuPartsOutput := &ListMpuPartsOutput{
+		Parts: parts,
+	}
+
+	return listMpuPartsOutput, nil
+}
+
+func uploadPart(c ObjectsClient, ctx context.Context, input *UploadPartInput) (*UploadPartOutput, error) {
+	headers := &http.Header{}
+	for key, value := range input.Headers {
+		headers.Set(key, value)
+	}
+
+	if input.ContentMD5 != "" {
+		headers.Set("Content-MD5", input.ContentMD5)
+	}
+
+	// The mpu directory prefix length is derived from the final character
+	// in the mpu identifier which we'll call P. The mpu prefix itself is
+	// the first P characters of the mpu identifier. In order to derive the
+	// correct directory structure we need to parse this information from
+	// the mpu identifier
+	id := input.Id
+	idLength := len(id)
+	partNum := strconv.FormatUint(input.PartNum, 10)
+	prefixLen, err := strconv.Atoi(id[idLength-1 : idLength])
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to upload part due to invalid mpu prefix length")
+	}
+	prefix := id[:prefixLen]
+	partPath := "/" + c.client.AccountName + "/uploads/" + prefix + "/" + input.Id + "/" + partNum
+
+	reqInput := client.RequestNoEncodeInput{
+		Method:  http.MethodPut,
+		Path:    partPath,
+		Headers: headers,
+		Body:    input.ObjectReader,
+	}
+	respBody, respHeader, err := c.client.ExecuteRequestNoEncode(ctx, reqInput)
+	if respBody != nil {
+		defer respBody.Close()
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to upload part")
+	}
+
+	uploadPartOutput := &UploadPartOutput{
+		Part: respHeader.Get("Etag"),
+	}
+	return uploadPartOutput, nil
+}
+
 func checkDirectoryTreeExists(c ObjectsClient, ctx context.Context, absPath _AbsCleanPath) (bool, error) {
 	exists, err := c.IsDir(ctx, string(absPath))
 	if err != nil {
-		if tt.IsResourceNotFoundError(err) {
+		if tt.IsResourceNotFoundError(err) || tt.IsStatusNotFoundCode(err) {
 			return false, nil
 		}
 		return false, err

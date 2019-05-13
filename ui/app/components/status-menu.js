@@ -7,19 +7,25 @@ export default Component.extend({
   currentCluster: service('current-cluster'),
   cluster: alias('currentCluster.cluster'),
   auth: service(),
+  store: service(),
+  media: service(),
+  version: service(),
   type: 'cluster',
   itemTag: null,
   partialName: computed('type', function() {
-    let type = this.get('type');
-    let partial = type === 'replication-status' ? 'replication' : type;
-    return `partials/status/${partial}`;
+    return `partials/status/${this.type}`;
   }),
   glyphName: computed('type', function() {
     const glyphs = {
-      cluster: 'unlocked',
-      user: 'android-person',
-      'replication-status': 'replication',
+      cluster: 'status-indicator',
+      user: 'user-square-outline',
     };
-    return glyphs[this.get('type')];
+    return glyphs[this.type];
+  }),
+  activeCluster: computed('auth.activeCluster', function() {
+    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
+  }),
+  currentToken: computed('auth.currentToken', function() {
+    return this.get('auth.currentToken');
   }),
 });

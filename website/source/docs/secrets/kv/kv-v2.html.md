@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
+sidebar_title: "K/V Version 2"
 sidebar_current: "docs-secrets-kv-v2"
 description: |-
   The KV secrets engine can store arbitrary secrets.
@@ -14,7 +15,7 @@ configured physical storage for Vault.
 Key names must always be strings. If you write non-string values directly via
 the CLI, they will be converted into strings. However, you can preserve
 non-string values by writing the key/value pairs to Vault from a JSON file or
-using the HTTP API. 
+using the HTTP API.
 
 This secrets engine honors the distinction between the `create` and `update`
 capabilities inside ACL policies.
@@ -29,6 +30,12 @@ A v2 `kv` secrets engine can be enabled by:
 
 ```
 $ vault secrets enable -version=2 kv
+```
+
+Or, you can pass `kv-v2` as the secrets engine type:
+
+```
+$ vault secrets enable kv-v2
 ```
 
 Additionally, when running a dev-mode server, the v2 `kv` secrets engine is enabled by default at the
@@ -234,7 +241,7 @@ allows for writing keys with arbitrary values.
     deletion_time    n/a
     destroyed        false
     version          1
-    
+
     ====== Data ======
     Key         Value
     ---         -----
@@ -247,7 +254,7 @@ When deleting data the standard `vault kv delete` command will perform a
 soft delete. It will mark the version as deleted and populate a `deletion_time`
 timestamp. Soft deletes do not remove the underlying version data from storage,
 which allows the version to be undeleted. The `vault kv undelete` commmand
-handles undeleting versions. 
+handles undeleting versions.
 
 A version's data is permanently deleted only when the key has more versions than
 are allowed by the max-versions setting, or when using `vault kv destroy`. When
@@ -259,7 +266,7 @@ See the commands below for more information:
 
 1. The latest version of a key can be deleted with the delete command, this also
    takes a `-versions` flag to delete prior versions:
-    
+
     ```
     $ vault kv delete secret/my-secret
     Success! Data deleted (if it existed) at: secret/my-secret
@@ -279,7 +286,7 @@ See the commands below for more information:
     deletion_time    n/a
     destroyed        false
     version          2
-    
+
     ====== Data ======
     Key         Value
     ---         -----
@@ -302,7 +309,7 @@ be permanently removed.
 See the commands below for more information:
 
 1. All metadata and versions for a key can be viewed:
-    
+
     ```
     $ vault kv metadata get secret/my-secret
     ======= Metadata =======
@@ -320,7 +327,7 @@ See the commands below for more information:
     created_time     2018-03-30T22:16:39.808909557Z
     deletion_time    n/a
     destroyed        false
-    
+
     ====== Version 2 ======
     Key              Value
     ---              -----

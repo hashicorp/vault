@@ -1,0 +1,50 @@
+.content-wrap {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  flex: 1 0 auto;
+  position: relative;
+  width: 100%;
+
+  @media (min-width: 940px) {
+    flex-direction: row;
+    margin-top: 72px;
+    margin-bottom: 72px;
+  }
+}
+
+#inner {
+  margin: 64px 0;
+  overflow: auto;
+  width: 100%;
+
+  @media (min-width: 940px) {
+    flex: 1;
+    margin: 0;
+  }
+
+  & .g-content {
+    @media (max-width: 939px) {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    & > h1:first-child {
+      margin-top: 0;
+    }
+  }
+
+  & .g-section-header {
+    margin-bottom: 100px;
+  }
+
+  /* TODO: this should be applied in global styles, temporary override here */
+  & pre,
+  & code {
+    font-size: 0.875em;
+  }
+
+  & pre code {
+    font-size: 1em;
+  }
+}

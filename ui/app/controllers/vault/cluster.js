@@ -6,6 +6,8 @@ export default Controller.extend({
   auth: service(),
   store: service(),
   media: service(),
+  router: service(),
+  permissions: service(),
   namespaceService: service('namespace'),
 
   vaultVersion: service('version'),
@@ -22,6 +24,7 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
+  /* eslint-disable-next-line ember/no-observers */
   onQPChange: observer('namespaceQueryParam', function() {
     this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
   }),
@@ -38,6 +41,7 @@ export default Controller.extend({
   }),
 
   showNav: computed(
+    'router.currentRouteName',
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
@@ -49,7 +53,11 @@ export default Controller.extend({
       ) {
         return false;
       }
-      if (this.get('activeClusterName') && this.get('auth.currentToken')) {
+      if (
+        this.activeClusterName &&
+        this.auth.currentToken &&
+        this.router.currentRouteName !== 'vault.cluster.auth'
+      ) {
         return true;
       }
     }

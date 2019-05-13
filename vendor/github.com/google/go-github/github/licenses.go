@@ -67,9 +67,6 @@ func (s *LicensesService) List(ctx context.Context) ([]*License, *Response, erro
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeLicensesPreview)
-
 	var licenses []*License
 	resp, err := s.client.Do(ctx, req, &licenses)
 	if err != nil {
@@ -89,9 +86,6 @@ func (s *LicensesService) Get(ctx context.Context, licenseName string) (*License
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	license := new(License)
 	resp, err := s.client.Do(ctx, req, license)

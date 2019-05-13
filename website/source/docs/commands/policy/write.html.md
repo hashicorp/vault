@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy write - Command"
+sidebar_title: "<code>write</code>"
 sidebar_current: "docs-commands-policy-write"
 description: |-
   The "policy write" command uploads a policy with name NAME from the contents

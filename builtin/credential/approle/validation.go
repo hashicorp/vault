@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // secretIDStorageEntry represents the information stored in storage

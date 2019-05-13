@@ -35,9 +35,9 @@ export default DS.RESTAdapter.extend({
     let headers = {};
     if (token && !options.unauthenticated) {
       headers['X-Vault-Token'] = token;
-      if (options.wrapTTL) {
-        headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
-      }
+    }
+    if (options.wrapTTL) {
+      headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
     let namespace =
       typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
@@ -51,10 +51,7 @@ export default DS.RESTAdapter.extend({
     this.addHeaders(url, options);
     const isPolling = POLLING_URLS.some(str => url.includes(str));
     if (!isPolling) {
-      this.get('auth').setLastFetch(Date.now());
-    }
-    if (this.get('auth.shouldRenew')) {
-      this.get('auth').renew();
+      this.auth.setLastFetch(Date.now());
     }
     options.timeout = 60000;
     return options;
@@ -66,7 +63,7 @@ export default DS.RESTAdapter.extend({
     let options = passedOptions;
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
-    // if we have a control group token that matches the intendedUrl,
+    // if we have a Control Group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
     // To do this, we rewrite the function args

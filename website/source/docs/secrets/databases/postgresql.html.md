@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PostgreSQL - Database - Secrets Engines"
+sidebar_title: "PostgreSQL"
 sidebar_current: "docs-secrets-databases-postgresql"
 description: |-
   PostgreSQL is one of the supported plugins for the database secrets engine.

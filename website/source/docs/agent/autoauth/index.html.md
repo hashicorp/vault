@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth"
+sidebar_title: "Auto-Auth"
 sidebar_current: "docs-agent-autoauth"
 description: |-
   Vault Agent's Auto-Auth functionality allows easy and automatic

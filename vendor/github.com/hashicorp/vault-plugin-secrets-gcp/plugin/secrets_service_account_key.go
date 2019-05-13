@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iam/v1"
 )
 
@@ -35,7 +35,7 @@ func secretServiceAccountKey(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretKeyRenew,
-		Revoke: secretKeyRevoke,
+		Revoke: b.secretKeyRevoke,
 	}
 }
 
@@ -138,7 +138,7 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	}
 
 	// Verify service account key still exists.
-	iamAdmin, err := newIamAdmin(ctx, req.Storage)
+	iamAdmin, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("could not confirm key still exists in GCP"), nil
 	}
@@ -148,13 +148,13 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	return nil, nil
 }
 
-func secretKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyNameRaw, ok := req.Secret.InternalData["key_name"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing key_name internal data")
 	}
 
-	iamAdmin, err := newIamAdmin(ctx, req.Storage)
+	iamAdmin, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -176,7 +176,7 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 		cfg = &config{}
 	}
 
-	iamC, err := newIamAdmin(ctx, s)
+	iamC, err := b.IAMClient(s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
 	}
@@ -213,23 +213,11 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	return resp, nil
 }
 
-const pathTokenHelpSyn = `Generate an OAuth2 access token under a specific role set.`
-const pathTokenHelpDesc = `
-This path will generate a new OAuth2 access token for accessing GCP APIs.
-A role set, binding IAM roles to specific GCP resources, will be specified 
-by name - for example, if this backend is mounted at "gcp",
-then "gcp/token/deploy" would generate tokens for the "deploy" role set.
-
-On the backend, each roleset is associated with a service account. 
-The token will be associated with this service account. Tokens have a 
-short-term lease (1-hour) associated with them but cannot be renewed.
-`
-
 const pathServiceAccountKeySyn = `Generate an service account private key under a specific role set.`
 const pathServiceAccountKeyDesc = `
 This path will generate a new service account private key for accessing GCP APIs.
-A role set, binding IAM roles to specific GCP resources, will be specified 
-by name - for example, if this backend is mounted at "gcp", then "gcp/key/deploy" 
+A role set, binding IAM roles to specific GCP resources, will be specified
+by name - for example, if this backend is mounted at "gcp", then "gcp/key/deploy"
 would generate service account keys for the "deploy" role set.
 
 On the backend, each roleset is associated with a service account under

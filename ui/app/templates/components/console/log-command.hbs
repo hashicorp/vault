@@ -1,1 +1,2 @@
-<pre class="console-ui-command">{{i-con glyph="chevron-right" size=12}}{{content}}</pre>
+{{!-- using Icon here instead of Chevron because two nested tagless components results in a rendered line break between the tags breaking the layout in the <pre> --}}
+<pre class="console-ui-command"><Icon @glyph="chevron-right" aria-hidden="true" />{{content}}</pre>

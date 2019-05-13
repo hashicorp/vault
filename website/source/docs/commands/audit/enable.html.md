@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "audit enable - Command"
+sidebar_title: "<code>enable</code>"
 sidebar_current: "docs-commands-audit-enable"
 description: |-
   The "audit enable" command enables an audit device at a given path.

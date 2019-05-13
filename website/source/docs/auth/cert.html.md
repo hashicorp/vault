@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TLS Certificates - Auth Methods"
+sidebar_title: "TLS Certificates"
 sidebar_current: "docs-auth-cert"
 description: |-
   The "cert" auth method allows users to authenticate with Vault using TLS client certificates.

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Okta - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-okta"
+sidebar_title: "Okta"
+sidebar_current: "api-http-auth-okta"
 description: |-
   This is the API documentation for the Vault Okta auth method.
 ---
@@ -21,9 +22,9 @@ please update your API calls accordingly.
 Configures the connection parameters for Okta. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/okta/config`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/okta/config`          |
 
 ### Parameters
 
@@ -64,9 +65,9 @@ $ curl \
 
 Reads the Okta configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/okta/config`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/okta/config`          |
 
 ### Sample Request
 
@@ -99,9 +100,9 @@ $ curl \
 
 List the users configurated in the Okta method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/okta/users`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/okta/users`           |
 
 ### Sample Request
 
@@ -135,9 +136,9 @@ $ curl \
 
 Registers a new user and maps a set of policies to it.  
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/okta/users/:username` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/okta/users/:username` |
 
 ### Parameters
 
@@ -168,9 +169,9 @@ $ curl \
 
 Reads the properties of an existing username.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/okta/users/:username` | `200 application/json`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/okta/users/:username` |
 
 ### Parameters
 
@@ -207,9 +208,9 @@ $ curl \
 
 Deletes an existing username from the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/auth/okta/users/:username` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/auth/okta/users/:username` |
 
 ### Parameters
 
@@ -228,9 +229,9 @@ $ curl \
 
 List the groups configurated in the Okta method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/okta/groups`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/okta/groups`           |
 
 ### Sample Request
 
@@ -264,9 +265,9 @@ $ curl \
 
 Registers a new group and maps a set of policies to it.  
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/okta/groups/:name` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/okta/groups/:name` |
 
 ### Parameters
 
@@ -296,9 +297,9 @@ $ curl \
 
 Reads the properties of an existing group.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/okta/groups/:name`     | `200 application/json`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/okta/groups/:name`     |
 
 ### Parameters
 
@@ -334,9 +335,9 @@ $ curl \
 
 Deletes an existing group from the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/auth/okta/groups/:name` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/auth/okta/groups/:name` |
 
 ### Parameters
 
@@ -355,9 +356,9 @@ $ curl \
 
 Login with the username and password.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/okta/login/:username` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/okta/login/:username` |
 
 ### Parameters
 

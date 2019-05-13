@@ -13,13 +13,13 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -123,7 +123,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.TestContext(), me, true)
+	err := c.enableAudit(namespace.RootContext(nil), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestCore_EnableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.TestContext(), me, true)
+	err := c.enableAudit(namespace.RootContext(nil), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 				UUID:        "abcd",
 				Accessor:    "noop-abcd",
 				NamespaceID: namespace.RootNamespaceID,
-				namespace:   namespace.TestNamespace(),
+				namespace:   namespace.RootNamespace,
 			},
 			&MountEntry{
 				Table:       auditTableType,
@@ -271,7 +271,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 				UUID:        "bcde",
 				Accessor:    "noop-bcde",
 				NamespaceID: namespace.RootNamespaceID,
-				namespace:   namespace.TestNamespace(),
+				namespace:   namespace.RootNamespace,
 			},
 		},
 	}
@@ -339,7 +339,7 @@ func TestCore_DisableAudit(t *testing.T) {
 		}, nil
 	}
 
-	existed, err := c.disableAudit(namespace.TestContext(), "foo", true)
+	existed, err := c.disableAudit(namespace.RootContext(nil), "foo", true)
 	if existed && err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
@@ -349,12 +349,12 @@ func TestCore_DisableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableAudit(namespace.TestContext(), me, true)
+	err = c.enableAudit(namespace.RootContext(nil), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	existed, err = c.disableAudit(namespace.TestContext(), "foo", true)
+	existed, err = c.disableAudit(namespace.RootContext(nil), "foo", true)
 	if !existed || err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}

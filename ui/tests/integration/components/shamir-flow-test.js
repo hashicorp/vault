@@ -38,7 +38,11 @@ module('Integration | Component | shamir flow', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{shamir-flow formText="like whoa"}}`);
 
-    assert.equal(find('form p').textContent.trim(), 'like whoa', 'renders formText inline');
+    assert.equal(
+      find('form [data-test-form-text]').textContent.trim(),
+      'like whoa',
+      'renders formText inline'
+    );
 
     await render(hbs`
       {{#shamir-flow formText="like whoa"}}
@@ -47,7 +51,11 @@ module('Integration | Component | shamir flow', function(hooks) {
     `);
 
     assert.equal(findAll('.shamir-progress').length, 0, 'renders no progress bar for no progress');
-    assert.equal(find('form p').textContent.trim(), 'whoa again', 'renders the block, not formText');
+    assert.equal(
+      find('form [data-test-form-text]').textContent.trim(),
+      'whoa again',
+      'renders the block, not formText'
+    );
 
     await render(hbs`
       {{shamir-flow progress=1 threshold=5}}

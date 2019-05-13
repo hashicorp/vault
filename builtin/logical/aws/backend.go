@@ -8,8 +8,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -48,7 +48,7 @@ func Backend() *backend {
 		},
 
 		WALRollback:       b.walRollback,
-		WALRollbackMinAge: 5 * time.Minute,
+		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
 	}
 
@@ -135,3 +135,5 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 
 	return b.stsClient, nil
 }
+
+const minAwsUserRollbackAge = 5 * time.Minute

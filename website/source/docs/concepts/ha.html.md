@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "High Availability"
+sidebar_title: "High Availability"
 sidebar_current: "docs-concepts-ha"
 description: |-
   Vault can be highly available, allowing you to run multiple Vaults to protect against outages.

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AliCloud - Auth Methods"
+sidebar_title: "AliCloud"
 sidebar_current: "docs-auth-alicloud"
 description: |-
   The AliCloud auth method allows automated authentication of AliCloud entities.

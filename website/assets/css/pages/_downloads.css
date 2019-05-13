@@ -1,0 +1,25 @@
+#download-vault {
+  & .content-wrap {
+    margin-bottom: 118px;
+
+    @media (max-width: 1199px) {
+      margin-bottom: 104px;
+    }
+
+    @media (max-width: 767px) {
+      margin-bottom: 0px;
+    }
+  }
+}
+
+#beta1-1-0 {
+  margin-bottom: 40px;
+
+  @media (max-width: 1199px) {
+    text-align: center;
+  }
+
+  & p:last-child {
+    margin: 0px;
+  }
+}

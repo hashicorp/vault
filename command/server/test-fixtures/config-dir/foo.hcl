@@ -5,3 +5,5 @@ backend "consul" {
     foo = "bar"
     disable_clustering = "true"
 }
+
+disable_clustering = false

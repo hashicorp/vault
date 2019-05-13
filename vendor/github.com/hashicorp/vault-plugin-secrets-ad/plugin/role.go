@@ -14,7 +14,7 @@ type backendRole struct {
 func (r *backendRole) Map() map[string]interface{} {
 	m := map[string]interface{}{
 		"service_account_name": r.ServiceAccountName,
-		"ttl": r.TTL,
+		"ttl":                  r.TTL,
 	}
 
 	var unset time.Time

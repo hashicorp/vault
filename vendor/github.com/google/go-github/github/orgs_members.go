@@ -59,7 +59,7 @@ type ListMembersOptions struct {
 	// Possible values are:
 	//     all - all members of the organization, regardless of role
 	//     admin - organization owners
-	//     member - non-organization members
+	//     member - non-owner organization members
 	//
 	// Default is "all".
 	Role string `url:"role,omitempty"`

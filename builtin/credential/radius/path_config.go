@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -15,6 +15,7 @@ func pathConfig(b *backend) *framework.Path {
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "RADIUS server host",
+				DisplayName: "Host",
 			},
 
 			"port": &framework.FieldSchema{
@@ -29,7 +30,8 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
+				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: empty)",
+				DisplayName: "Policies for unregistered users",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -45,6 +47,13 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeInt,
 				Default:     10,
 				Description: "RADIUS NAS port field (default: 10)",
+				DisplayName: "NAS Port",
+			},
+			"nas_identifier": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "RADIUS NAS Identifier field (optional)",
+				DisplayName: "NAS Identifier",
 			},
 		},
 
@@ -110,6 +119,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 			"dial_timeout":               cfg.DialTimeout,
 			"read_timeout":               cfg.ReadTimeout,
 			"nas_port":                   cfg.NasPort,
+			"nas_identifier":             cfg.NasIdentifier,
 		},
 	}
 	return resp, nil
@@ -190,6 +200,13 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 		cfg.NasPort = d.Get("nas_port").(int)
 	}
 
+	nasIdentifier, ok := d.GetOk("nas_identifier")
+	if ok {
+		cfg.NasIdentifier = nasIdentifier.(string)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.NasIdentifier = d.Get("nas_identifier").(string)
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -209,6 +226,7 @@ type ConfigEntry struct {
 	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort                  int      `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
+	NasIdentifier            string   `json:"nas_identifier" structs:"nas_identifier" mapstructure:"nas_identifier"`
 }
 
 const pathConfigHelpSyn = `

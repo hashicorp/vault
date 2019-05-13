@@ -100,12 +100,9 @@
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = [
-    "libcontainer/system",
-    "libcontainer/user"
-  ]
-  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
-  version = "v0.1.1"
+  packages = ["libcontainer/user"]
+  revision = "4fc53a81fb7c994640722ac585fa9ca548971871"
+  version = "v1.0.0-rc5"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -158,6 +155,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "95d554d5ae62459254ca289a2df0b679873ddc996e12976ee3ea2ef7c8e03a9c"
+  inputs-digest = "ce3e40911a2efdcfab33674e377c5716d75d23634f117f139c38c99157705f7c"
   solver-name = "gps-cdcl"
   solver-version = 1

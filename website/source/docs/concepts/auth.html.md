@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Authentication"
+sidebar_title: "Authentication"
 sidebar_current: "docs-concepts-auth"
 description: |-
   Before performing any operation with Vault, the connecting client must be authenticated.

@@ -10,6 +10,7 @@
   class="list-item-row"
   data-test-secret-link=item.id
   tagName="div"
+  encode=true
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
@@ -23,11 +24,10 @@
         (query-params action="issue")
         class="has-text-black has-text-weight-semibold"
       }}
-      {{i-con
-        glyph="role"
-        size=14
+      <Icon
+        @glyph="user-square-outline"
         class="has-text-grey-light is-pulled-left"
-      }}
+      />
       <div class="role-item-details">
         <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
       </div>

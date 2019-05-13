@@ -11,8 +11,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
@@ -34,10 +35,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
@@ -116,7 +114,7 @@ func TestBackend_basic(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -140,7 +138,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -171,7 +169,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			// This will also validate the query
@@ -196,7 +194,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -227,7 +225,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRoleWithRevocationSQL(t, "web", testRole, defaultRevocationSQL, false),

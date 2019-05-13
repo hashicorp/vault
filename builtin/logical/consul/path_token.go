@@ -7,8 +7,12 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	tokenPolicyType = "token"
 )
 
 func pathToken(b *backend) *framework.Path {
@@ -48,7 +52,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the consul client
-	c, userErr, intErr := client(ctx, req.Storage)
+	c, userErr, intErr := b.client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -62,11 +66,41 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	writeOpts := &api.WriteOptions{}
 	writeOpts = writeOpts.WithContext(ctx)
 
-	// Create it
-	token, _, err := c.ACL().Create(&api.ACLEntry{
-		Name:  tokenName,
-		Type:  result.TokenType,
-		Rules: result.Policy,
+	// Create an ACLEntry for Consul pre 1.4
+	if (result.Policy != "" && result.TokenType == "client") ||
+		(result.Policy == "" && result.TokenType == "management") {
+		token, _, err := c.ACL().Create(&api.ACLEntry{
+			Name:  tokenName,
+			Type:  result.TokenType,
+			Rules: result.Policy,
+		}, writeOpts)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		// Use the helper to create the secret
+		s := b.Secret(SecretTokenType).Response(map[string]interface{}{
+			"token": token,
+		}, map[string]interface{}{
+			"token": token,
+			"role":  role,
+		})
+		s.Secret.TTL = result.TTL
+		s.Secret.MaxTTL = result.MaxTTL
+		return s, nil
+	}
+
+	//Create an ACLToken for Consul 1.4 and above
+	var policyLink = []*api.ACLTokenPolicyLink{}
+	for _, policyName := range result.Policies {
+		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
+			Name: policyName,
+		})
+	}
+	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
+		Description: tokenName,
+		Policies:    policyLink,
+		Local:       result.Local,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -74,12 +108,16 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
-		"token": token,
+		"token":    token.SecretID,
+		"accessor": token.AccessorID,
+		"local":    token.Local,
 	}, map[string]interface{}{
-		"token": token,
-		"role":  role,
+		"token":   token.AccessorID,
+		"role":    role,
+		"version": tokenPolicyType,
 	})
-	s.Secret.TTL = result.Lease
+	s.Secret.TTL = result.TTL
+	s.Secret.MaxTTL = result.MaxTTL
 
 	return s, nil
 }

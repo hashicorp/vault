@@ -17,11 +17,12 @@ limitations under the License.
 package spanner
 
 import (
+	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"golang.org/x/net/context"
-
+	"cloud.google.com/go/internal/trace"
 	"google.golang.org/api/iterator"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc"
@@ -46,6 +47,8 @@ type txReadEnv interface {
 type txReadOnly struct {
 	// read-transaction environment for performing transactional read operations.
 	txReadEnv
+
+	sequenceNumber int64 // Atomic. Only needed for DML statements, but used for all.
 }
 
 // errSessionClosed returns error for using a recycled/destroyed session
@@ -78,8 +81,8 @@ type ReadOptions struct {
 // ReadWithOptions returns a RowIterator for reading multiple rows from the database.
 // Pass a ReadOptions to modify the read operation.
 func (t *txReadOnly) ReadWithOptions(ctx context.Context, table string, keys KeySet, columns []string, opts *ReadOptions) (ri *RowIterator) {
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.Read")
-	defer func() { traceEndSpan(ctx, ri.err) }()
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Read")
+	defer func() { trace.EndSpan(ctx, ri.err) }()
 	var (
 		sh  *sessionHandle
 		ts  *sppb.TransactionSelector
@@ -159,7 +162,7 @@ func (t *txReadOnly) Query(ctx context.Context, statement Statement) *RowIterato
 	return t.query(ctx, statement, sppb.ExecuteSqlRequest_NORMAL)
 }
 
-// Query executes a query against the database. It returns a RowIterator
+// Query executes a SQL statement against the database. It returns a RowIterator
 // for retrieving the resulting rows. The RowIterator will also be populated
 // with a query plan and execution statistics.
 func (t *txReadOnly) QueryWithStats(ctx context.Context, statement Statement) *RowIterator {
@@ -169,6 +172,7 @@ func (t *txReadOnly) QueryWithStats(ctx context.Context, statement Statement) *R
 // AnalyzeQuery returns the query plan for statement.
 func (t *txReadOnly) AnalyzeQuery(ctx context.Context, statement Statement) (*sppb.QueryPlan, error) {
 	iter := t.query(ctx, statement, sppb.ExecuteSqlRequest_PLAN)
+	defer iter.Stop()
 	for {
 		_, err := iter.Next()
 		if err == iterator.Done {
@@ -185,31 +189,13 @@ func (t *txReadOnly) AnalyzeQuery(ctx context.Context, statement Statement) (*sp
 }
 
 func (t *txReadOnly) query(ctx context.Context, statement Statement, mode sppb.ExecuteSqlRequest_QueryMode) (ri *RowIterator) {
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.Query")
-	defer func() { traceEndSpan(ctx, ri.err) }()
-	var (
-		sh  *sessionHandle
-		ts  *sppb.TransactionSelector
-		err error
-	)
-	if sh, ts, err = t.acquire(ctx); err != nil {
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Query")
+	defer func() { trace.EndSpan(ctx, ri.err) }()
+	req, sh, err := t.prepareExecuteSQL(ctx, statement, mode)
+	if err != nil {
 		return &RowIterator{err: err}
 	}
-	// Cloud Spanner will return "Session not found" on bad sessions.
-	sid, client := sh.getID(), sh.getClient()
-	if sid == "" || client == nil {
-		// Might happen if transaction is closed in the middle of a API call.
-		return &RowIterator{err: errSessionClosed(sh)}
-	}
-	req := &sppb.ExecuteSqlRequest{
-		Session:     sid,
-		Transaction: ts,
-		Sql:         statement.SQL,
-		QueryMode:   mode,
-	}
-	if err := statement.bindParams(req); err != nil {
-		return &RowIterator{err: err}
-	}
+	client := sh.getClient()
 	return stream(
 		contextWithOutgoingMetadata(ctx, sh.getMetadata()),
 		func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
@@ -218,6 +204,33 @@ func (t *txReadOnly) query(ctx context.Context, statement Statement, mode sppb.E
 		},
 		t.setTimestamp,
 		t.release)
+}
+
+func (t *txReadOnly) prepareExecuteSQL(ctx context.Context, stmt Statement, mode sppb.ExecuteSqlRequest_QueryMode) (*sppb.ExecuteSqlRequest, *sessionHandle, error) {
+	sh, ts, err := t.acquire(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Cloud Spanner will return "Session not found" on bad sessions.
+	sid := sh.getID()
+	if sid == "" {
+		// Might happen if transaction is closed in the middle of a API call.
+		return nil, nil, errSessionClosed(sh)
+	}
+	params, paramTypes, err := stmt.convertParams()
+	if err != nil {
+		return nil, nil, err
+	}
+	req := &sppb.ExecuteSqlRequest{
+		Session:     sid,
+		Transaction: ts,
+		Sql:         stmt.SQL,
+		QueryMode:   mode,
+		Seqno:       atomic.AddInt64(&t.sequenceNumber, 1),
+		Params:      params,
+		ParamTypes:  paramTypes,
+	}
+	return req, sh, nil
 }
 
 // txState is the status of a transaction.
@@ -237,11 +250,6 @@ const (
 // errRtsUnavailable returns error for read transaction's read timestamp being unavailable.
 func errRtsUnavailable() error {
 	return spannerErrorf(codes.Internal, "read timestamp is unavailable")
-}
-
-// errTxNotInitialized returns error for using an uninitialized transaction.
-func errTxNotInitialized() error {
-	return spannerErrorf(codes.InvalidArgument, "cannot use a uninitialized transaction")
 }
 
 // errTxClosed returns error for using a closed transaction.
@@ -550,9 +558,9 @@ func (t *ReadOnlyTransaction) WithTimestampBound(tb TimestampBound) *ReadOnlyTra
 // ReadWriteTransaction provides a locking read-write transaction.
 //
 // This type of transaction is the only way to write data into Cloud Spanner;
-// (*Client).Apply and (*Client).ApplyAtLeastOnce use transactions
-// internally. These transactions rely on pessimistic locking and, if
-// necessary, two-phase commit. Locking read-write transactions may abort,
+// (*Client).Apply, (*Client).ApplyAtLeastOnce, (*Client).PartitionedUpdate use
+// transactions internally. These transactions rely on pessimistic locking and,
+// if necessary, two-phase commit. Locking read-write transactions may abort,
 // requiring the application to retry. However, the interface exposed by
 // (*Client).ReadWriteTransaction eliminates the need for applications to write
 // retry loops explicitly.
@@ -645,6 +653,85 @@ func (t *ReadWriteTransaction) BufferWrite(ms []*Mutation) error {
 	}
 	t.wb = append(t.wb, ms...)
 	return nil
+}
+
+// Update executes a DML statement against the database. It returns the number of
+// affected rows.
+// Update returns an error if the statement is a query. However, the
+// query is executed, and any data read will be validated upon commit.
+func (t *ReadWriteTransaction) Update(ctx context.Context, stmt Statement) (rowCount int64, err error) {
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Update")
+	defer func() { trace.EndSpan(ctx, err) }()
+	req, sh, err := t.prepareExecuteSQL(ctx, stmt, sppb.ExecuteSqlRequest_NORMAL)
+	if err != nil {
+		return 0, err
+	}
+	resultSet, err := sh.getClient().ExecuteSql(ctx, req)
+	if err != nil {
+		return 0, err
+	}
+	if resultSet.Stats == nil {
+		return 0, spannerErrorf(codes.InvalidArgument, "query passed to Update: %q", stmt.SQL)
+	}
+	return extractRowCount(resultSet.Stats)
+}
+
+// BatchUpdate groups one or more DML statements and sends them to Spanner in a
+// single RPC. This is an efficient way to execute multiple DML statements.
+//
+// A slice of counts is returned, where each count represents the number of
+// affected rows for the given query at the same index. If an error occurs,
+// counts will be returned up to the query that encountered the error.
+func (t *ReadWriteTransaction) BatchUpdate(ctx context.Context, stmts []Statement) (_ []int64, err error) {
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.BatchUpdate")
+	defer func() { trace.EndSpan(ctx, err) }()
+
+	sh, ts, err := t.acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Cloud Spanner will return "Session not found" on bad sessions.
+	sid := sh.getID()
+	if sid == "" {
+		// Might happen if transaction is closed in the middle of a API call.
+		return nil, errSessionClosed(sh)
+	}
+
+	var sppbStmts []*sppb.ExecuteBatchDmlRequest_Statement
+	for _, st := range stmts {
+		params, paramTypes, err := st.convertParams()
+		if err != nil {
+			return nil, err
+		}
+		sppbStmts = append(sppbStmts, &sppb.ExecuteBatchDmlRequest_Statement{
+			Sql:        st.SQL,
+			Params:     params,
+			ParamTypes: paramTypes,
+		})
+	}
+
+	resp, err := sh.getClient().ExecuteBatchDml(ctx, &sppb.ExecuteBatchDmlRequest{
+		Session:     sh.getID(),
+		Transaction: ts,
+		Statements:  sppbStmts,
+		Seqno:       atomic.AddInt64(&t.sequenceNumber, 1),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var counts []int64
+	for _, rs := range resp.ResultSets {
+		count, err := extractRowCount(rs.Stats)
+		if err != nil {
+			return nil, err
+		}
+		counts = append(counts, count)
+	}
+	if resp.Status.Code != 0 {
+		return counts, spannerErrorf(codes.Code(uint32(resp.Status.Code)), resp.Status.Message)
+	}
+	return counts, nil
 }
 
 // acquire implements txReadEnv.acquire.
@@ -775,7 +862,6 @@ func (t *ReadWriteTransaction) rollback(ctx context.Context) {
 	if shouldDropSession(err) {
 		t.sh.destroy()
 	}
-	return
 }
 
 // runInTransaction executes f under a read-write transaction context.

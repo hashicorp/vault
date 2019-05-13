@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "In-Memory - Storage Backends - Configuration"
+sidebar_title: "In-Memory"
 sidebar_current: "docs-configuration-storage-in-memory"
 description: |-
   The In-Memory storage backend is used to persist Vault's data entirely

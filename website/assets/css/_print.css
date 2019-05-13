@@ -1,0 +1,133 @@
+@media print {
+  *,
+  *:before,
+  *:after {
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Hide nav elements from print */
+  .g-mega-nav,
+  .g-product-subnav,
+  .g-footer,
+  .g-docs-sidenav {
+    display: none;
+  }
+
+  /* Add border around code blocks */
+  div.highlight {
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+
+    & pre.highlight {
+      margin: 0;
+    }
+  }
+
+  /* Hide anchor links */
+  .anchor {
+    display: none !important;
+  }
+
+  /* Display link address in brackets */
+  /* Some overrides here because of the way we handle link hover on screens */
+  a[href]:after {
+    content: ' (' attr(href) ')' !important;
+    font-size: 90%;
+    position: static !important;
+    opacity: 1 !important;
+    text-decoration: none !important;
+  }
+
+  .g-content {
+    & p code {
+      /* Restore background grey on inline code */
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    & pre code {
+      color: black !important;
+
+      & span {
+        color: black !important;
+      }
+    }
+
+    & p {
+      page-break-inside: avoid !important;
+    }
+
+    /* Let code blocks wrap if needed */
+    & pre > code {
+      white-space: normal;
+    }
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline !important;
+  }
+
+  abbr[title]:after {
+    content: ' (' attr(title) ')';
+  }
+
+  a[href^='#']:after,
+  a[href^='javascript:']:after {
+    content: '';
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+    page-break-inside: avoid;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  .label {
+    border: 1px solid #000;
+  }
+
+  .table,
+  #inner table {
+    border-collapse: collapse !important;
+  }
+
+  .table td,
+  #inner table td,
+  .table th,
+  #inner table th {
+    background-color: #fff !important;
+  }
+
+  .table-bordered th,
+  .table-bordered td {
+    border: 1px solid #ddd !important;
+  }
+}

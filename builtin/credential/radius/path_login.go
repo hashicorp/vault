@@ -11,9 +11,9 @@ import (
 	"layeh.com/radius"
 	. "layeh.com/radius/rfc2865"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -144,6 +144,9 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 	packet := radius.New(radius.CodeAccessRequest, []byte(cfg.Secret))
 	UserName_SetString(packet, username)
 	UserPassword_SetString(packet, password)
+	if cfg.NasIdentifier != "" {
+		NASIdentifier_AddString(packet, cfg.NasIdentifier)
+	}
 	packet.Add(5, radius.NewInteger(uint32(cfg.NasPort)))
 
 	client := radius.Client{

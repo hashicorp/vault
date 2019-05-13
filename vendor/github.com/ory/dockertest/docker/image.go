@@ -463,6 +463,7 @@ type BuildImageOptions struct {
 	Labels              map[string]string  `qs:"labels"`
 	InputStream         io.Reader          `qs:"-"`
 	OutputStream        io.Writer          `qs:"-"`
+	ErrorStream         io.Writer          `qs:"-"`
 	Remote              string             `qs:"remote"`
 	Auth                AuthConfiguration  `qs:"-"` // for older docker X-Registry-Auth header
 	AuthConfigs         AuthConfigurations `qs:"-"` // for newer docker X-Registry-Config header
@@ -553,6 +554,7 @@ func (c *Client) BuildImage(opts BuildImageOptions) error {
 		headers:           headers,
 		in:                opts.InputStream,
 		stdout:            opts.OutputStream,
+		stderr:            opts.ErrorStream,
 		inactivityTimeout: opts.InactivityTimeout,
 		context:           opts.Context,
 	})

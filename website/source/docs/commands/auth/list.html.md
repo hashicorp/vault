@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth list - Command"
+sidebar_title: "<code>list</code>"
 sidebar_current: "docs-commands-auth-list"
 description: |-
   The "auth list" command lists the auth methods enabled. The output lists the

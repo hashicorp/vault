@@ -34,6 +34,8 @@ func shouldRetry(err error) bool {
 		// Unfortunately the error type is unexported, so we resort to string
 		// matching.
 		return strings.Contains(e.Error(), "REFUSED_STREAM")
+	case interface{ Temporary() bool }:
+		return e.Temporary()
 	default:
 		return false
 	}

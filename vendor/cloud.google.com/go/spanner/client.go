@@ -17,14 +17,14 @@ limitations under the License.
 package spanner
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"sync/atomic"
 	"time"
 
+	"cloud.google.com/go/internal/trace"
 	"cloud.google.com/go/internal/version"
-	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 	gtransport "google.golang.org/api/transport/grpc"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
@@ -69,9 +69,12 @@ func validDatabaseName(db string) error {
 // client is safe to use concurrently, except for its Close method.
 type Client struct {
 	// rr must be accessed through atomic operations.
-	rr       uint32
-	conns    []*grpc.ClientConn
-	clients  []sppb.SpannerClient
+	rr uint32
+	// TODO(deklerk): we should not keep multiple ClientConns / SpannerClients. Instead, we should
+	// have a single ClientConn that has many connections: https://github.com/googleapis/google-api-go-client/blob/003c13302b3ea5ae44344459ba080364bd46155f/internal/pool.go
+	conns   []*grpc.ClientConn
+	clients []sppb.SpannerClient
+
 	database string
 	// Metadata to be sent with each request.
 	md           metadata.MD
@@ -85,7 +88,6 @@ type ClientConfig struct {
 	// NumChannels is the number of gRPC channels.
 	// If zero, a reasonable default is used based on the execution environment.
 	NumChannels int
-	co          []option.ClientOption
 	// SessionPoolConfig is the configuration for session pool.
 	SessionPoolConfig
 	// SessionLabels for the sessions created by this client.
@@ -118,8 +120,8 @@ func NewClient(ctx context.Context, database string, opts ...option.ClientOption
 // NewClientWithConfig creates a client to a database. A valid database name has the
 // form projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID.
 func NewClientWithConfig(ctx context.Context, database string, config ClientConfig, opts ...option.ClientOption) (c *Client, err error) {
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.NewClient")
-	defer func() { traceEndSpan(ctx, err) }()
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.NewClient")
+	defer func() { trace.EndSpan(ctx, err) }()
 
 	// Validate database path.
 	if err := validDatabaseName(database); err != nil {
@@ -159,6 +161,8 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 	if config.MaxBurst == 0 {
 		config.MaxBurst = 10
 	}
+	// TODO(deklerk) This should be replaced with a balancer with config.NumChannels
+	// connections, instead of config.NumChannels clientconns.
 	for i := 0; i < config.NumChannels; i++ {
 		conn, err := gtransport.Dial(ctx, allOpts...)
 		if err != nil {
@@ -252,26 +256,12 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 	)
 	defer func() {
 		if err != nil && sh != nil {
-			e := runRetryable(ctx, func(ctx context.Context) error {
-				_, e := s.client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: s.getID()})
-				return e
-			})
-			if e != nil {
-				log.Printf("Failed to delete session %v. Error: %v", s.getID(), e)
-			}
+			s.delete(ctx)
 		}
 	}()
 	// create session
 	sc := c.rrNext()
-	err = runRetryable(ctx, func(ctx context.Context) error {
-		sid, e := sc.CreateSession(ctx, &sppb.CreateSessionRequest{Database: c.database, Session: &sppb.Session{Labels: c.sessionLabels}})
-		if e != nil {
-			return e
-		}
-		// If no error, construct the new session.
-		s = &session{valid: true, client: sc, id: sid.Name, createTime: time.Now(), md: c.md}
-		return nil
-	})
+	s, err = createSession(ctx, sc, c.database, c.sessionLabels, c.md)
 	if err != nil {
 		return nil, err
 	}
@@ -352,18 +342,21 @@ func checkNestedTxn(ctx context.Context) error {
 // The function f will be called one or more times. It must not maintain
 // any state between calls.
 //
-// If the transaction cannot be committed or if f returns an IsAborted error,
+// If the transaction cannot be committed or if f returns an ABORTED error,
 // ReadWriteTransaction will call f again. It will continue to call f until the
 // transaction can be committed or the Context times out or is cancelled.  If f
-// returns an error other than IsAborted, ReadWriteTransaction will abort the
+// returns an error other than ABORTED, ReadWriteTransaction will abort the
 // transaction and return the error.
 //
 // To limit the number of retries, set a deadline on the Context rather than
 // using a fixed limit on the number of attempts. ReadWriteTransaction will
 // retry as needed until that deadline is met.
+//
+// See https://godoc.org/cloud.google.com/go/spanner#ReadWriteTransaction for
+// more details.
 func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (commitTimestamp time.Time, err error) {
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransaction")
-	defer func() { traceEndSpan(ctx, err) }()
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.ReadWriteTransaction")
+	defer func() { trace.EndSpan(ctx, err) }()
 	if err := checkNestedTxn(ctx); err != nil {
 		return time.Time{}, err
 	}
@@ -393,7 +386,7 @@ func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Contex
 			}
 		}
 		t.txReadOnly.txReadEnv = t
-		tracePrintf(ctx, map[string]interface{}{"transactionID": string(sh.getTransactionID())},
+		trace.TracePrintf(ctx, map[string]interface{}{"transactionID": string(sh.getTransactionID())},
 			"Starting transaction attempt")
 		if err = t.begin(ctx); err != nil {
 			// Mask error from begin operation as retryable error.
@@ -446,8 +439,8 @@ func (c *Client) Apply(ctx context.Context, ms []*Mutation, opts ...ApplyOption)
 		})
 	}
 
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.Apply")
-	defer func() { traceEndSpan(ctx, err) }()
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Apply")
+	defer func() { trace.EndSpan(ctx, err) }()
 	t := &writeOnlyTransaction{c.idleSessions}
 	return t.applyAtLeastOnce(ctx, ms...)
 }

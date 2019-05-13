@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator unseal - Command"
+sidebar_title: "<code>unseal</code>"
 sidebar_current: "docs-commands-operator-unseal"
 description: |-
   The "operator unseal" allows the user to provide a portion of the master key
@@ -57,6 +58,8 @@ flags](/docs/commands/index.html) included on all commands.
   `VAULT_FORMAT` environment variable.
 
 ### Command Options
+
+- `-migrate` `(bool: false)` - Indicate that this share is provided with the intent that it is part of a seal migration process.
 
 - `-reset` `(bool: false)` - Discard any previously entered keys to the unseal
   process.

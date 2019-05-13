@@ -1,10 +1,10 @@
 import { schedule, debounce } from '@ember/runloop';
-import { observer } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 const routeFor = function(type, mode) {
   const MODES = {
@@ -43,16 +43,24 @@ export default Component.extend(FocusOnInsertMixin, {
   filterMatchesKey: null,
   firstPartialMatch: null,
 
-  transitionToRoute: function() {
-    this.get('router').transitionTo(...arguments);
+  transitionToRoute(...args) {
+    let params = args.map((param, index) => {
+      if (index === 0 || typeof param !== 'string') {
+        return param;
+      }
+      return encodePath(param);
+    });
+
+    this.get('router').transitionTo(...params);
   },
 
   shouldFocus: false,
 
-  focusFilter: observer('filter', function() {
+  didReceiveAttrs() {
+    this._super(...arguments);
     if (!this.get('filter')) return;
     schedule('afterRender', this, 'forceFocus');
-  }).on('didInsertElement'),
+  },
 
   keyForNav(key) {
     if (this.get('mode') !== 'secrets-cert') {
@@ -61,8 +69,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return `cert/${key}`;
   },
   onEnter: function(val) {
-    let baseKey = this.get('baseKey');
-    let mode = this.get('mode');
+    let { baseKey, mode } = this;
     let extraParams = this.get('extraNavParams');
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
@@ -78,7 +85,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
-            initialKey: val.replace(this.keyForNav(baseKey), ''),
+            initialKey: val,
           },
         });
       } else {
@@ -163,8 +170,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleInput: function(event) {
-      var filter = event.target.value;
+    handleInput: function(filter) {
       this.get('filterDidChange')(filter);
       debounce(this, 'filterUpdated', filter, 200);
     },
@@ -173,14 +179,15 @@ export default Component.extend(FocusOnInsertMixin, {
       this.get('filterFocusDidChange')(isFocused);
     },
 
-    handleKeyPress: function(val, event) {
+    handleKeyPress: function(event) {
       if (event.keyCode === keys.TAB) {
         this.onTab(event);
       }
     },
 
-    handleKeyUp: function(val, event) {
+    handleKeyUp: function(event) {
       var keyCode = event.keyCode;
+      let val = event.target.value;
       if (keyCode === keys.ENTER) {
         this.onEnter(val);
       }

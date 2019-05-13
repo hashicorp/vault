@@ -30,6 +30,8 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type) {
-    return this.ajax(this.buildURL(type.modelName), 'GET', { data: { list: true } });
+    return this.ajax(this.buildURL(type.modelName), 'GET', {
+      data: { list: true },
+    });
   },
 });

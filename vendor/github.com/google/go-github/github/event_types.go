@@ -7,6 +7,38 @@
 
 package github
 
+// CheckRunEvent is triggered when a check run is "created", "updated", or "re-requested".
+// The Webhook event name is "check_run".
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#checkrunevent
+type CheckRunEvent struct {
+	CheckRun *CheckRun `json:"check_run,omitempty"`
+	// The action performed. Can be "created", "updated" or "re-requested".
+	Action *string `json:"action,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo         *Repository   `json:"repository,omitempty"`
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
+// CheckSuiteEvent is triggered when a check suite is "completed", "requested", or "re-requested".
+// The Webhook event name is "check_suite".
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#checksuiteevent
+type CheckSuiteEvent struct {
+	CheckSuite *CheckSuite `json:"check_suite,omitempty"`
+	// The action performed. Can be "completed", "requested" or "re-requested".
+	Action *string `json:"action,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo         *Repository   `json:"repository,omitempty"`
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
 // CommitCommentEvent is triggered when a commit comment is created.
 // The Webhook event name is "commit_comment".
 //
@@ -599,6 +631,7 @@ func (p PushEventCommit) String() string {
 // PushEventRepository represents the repo object in a PushEvent payload.
 type PushEventRepository struct {
 	ID              *int64              `json:"id,omitempty"`
+	NodeID          *string             `json:"node_id,omitempty"`
 	Name            *string             `json:"name,omitempty"`
 	FullName        *string             `json:"full_name,omitempty"`
 	Owner           *PushEventRepoOwner `json:"owner,omitempty"`

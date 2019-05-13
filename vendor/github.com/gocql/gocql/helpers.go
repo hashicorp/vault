@@ -7,6 +7,7 @@ package gocql
 import (
 	"fmt"
 	"math/big"
+	"net"
 	"reflect"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ func goType(t TypeInfo) reflect.Type {
 		return reflect.TypeOf(*new(string))
 	case TypeBigInt, TypeCounter:
 		return reflect.TypeOf(*new(int64))
+	case TypeTime:
+		return reflect.TypeOf(*new(time.Duration))
 	case TypeTimestamp:
 		return reflect.TypeOf(*new(time.Time))
 	case TypeBlob:
@@ -59,6 +62,8 @@ func goType(t TypeInfo) reflect.Type {
 		return reflect.TypeOf(make(map[string]interface{}))
 	case TypeDate:
 		return reflect.TypeOf(*new(time.Time))
+	case TypeDuration:
+		return reflect.TypeOf(*new(Duration))
 	default:
 		return nil
 	}
@@ -88,6 +93,10 @@ func getCassandraBaseType(name string) Type {
 		return TypeFloat
 	case "int":
 		return TypeInt
+	case "tinyint":
+		return TypeTinyInt
+	case "time":
+		return TypeTime
 	case "timestamp":
 		return TypeTimestamp
 	case "uuid":
@@ -129,18 +138,20 @@ func getCassandraType(name string) TypeInfo {
 			Elem:       getCassandraType(strings.TrimPrefix(name[:len(name)-1], "list<")),
 		}
 	} else if strings.HasPrefix(name, "map<") {
-		names := strings.Split(strings.TrimPrefix(name[:len(name)-1], "map<"), ", ")
+		names := splitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "map<"))
 		if len(names) != 2 {
-			panic(fmt.Sprintf("invalid map type: %v", name))
+			Logger.Printf("Error parsing map type, it has %d subelements, expecting 2\n", len(names))
+			return NativeType{
+				typ: TypeCustom,
+			}
 		}
-
 		return CollectionType{
 			NativeType: NativeType{typ: TypeMap},
 			Key:        getCassandraType(names[0]),
 			Elem:       getCassandraType(names[1]),
 		}
 	} else if strings.HasPrefix(name, "tuple<") {
-		names := strings.Split(strings.TrimPrefix(name[:len(name)-1], "tuple<"), ", ")
+		names := splitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "tuple<"))
 		types := make([]TypeInfo, len(names))
 
 		for i, name := range names {
@@ -156,6 +167,48 @@ func getCassandraType(name string) TypeInfo {
 			typ: getCassandraBaseType(name),
 		}
 	}
+}
+
+func splitCompositeTypes(name string) []string {
+	if !strings.Contains(name, "<") {
+		return strings.Split(name, ", ")
+	}
+	var parts []string
+	lessCount := 0
+	segment := ""
+	for _, char := range name {
+		if char == ',' && lessCount == 0 {
+			if segment != "" {
+				parts = append(parts, strings.TrimSpace(segment))
+			}
+			segment = ""
+			continue
+		}
+		segment += string(char)
+		if char == '<' {
+			lessCount++
+		} else if char == '>' {
+			lessCount--
+		}
+	}
+	if segment != "" {
+		parts = append(parts, strings.TrimSpace(segment))
+	}
+	return parts
+}
+
+func apacheToCassandraType(t string) string {
+	t = strings.Replace(t, apacheCassandraTypePrefix, "", -1)
+	t = strings.Replace(t, "(", "<", -1)
+	t = strings.Replace(t, ")", ">", -1)
+	types := strings.FieldsFunc(t, func(r rune) bool {
+		return r == '<' || r == '>' || r == ','
+	})
+	for _, typ := range types {
+		t = strings.Replace(t, typ, getApacheCassandraType(typ).String(), -1)
+	}
+	// This is done so it exactly matches what Cassandra returns
+	return strings.Replace(t, ",", ", ", -1)
 }
 
 func getApacheCassandraType(class string) Type {
@@ -182,6 +235,8 @@ func getApacheCassandraType(class string) Type {
 		return TypeSmallInt
 	case "ByteType":
 		return TypeTinyInt
+	case "TimeType":
+		return TypeTime
 	case "DateType", "TimestampType":
 		return TypeTimestamp
 	case "UUIDType", "LexicalUUIDType":
@@ -202,6 +257,8 @@ func getApacheCassandraType(class string) Type {
 		return TypeSet
 	case "TupleType":
 		return TypeTuple
+	case "DurationType":
+		return TypeDuration
 	default:
 		return TypeCustom
 	}
@@ -362,4 +419,14 @@ func copyBytes(p []byte) []byte {
 	b := make([]byte, len(p))
 	copy(b, p)
 	return b
+}
+
+var failDNS = false
+
+func LookupIP(host string) ([]net.IP, error) {
+	if failDNS {
+		return nil, &net.DNSError{}
+	}
+	return net.LookupIP(host)
+
 }

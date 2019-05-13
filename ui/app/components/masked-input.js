@@ -2,8 +2,30 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import autosize from 'autosize';
 
+/**
+ * @module MaskedInput
+ * `MaskedInput` components are textarea inputs where the input is hidden. They are used to enter sensitive information like passwords.
+ *
+ * @example
+ * <MaskedInput
+ *  @value={{attr.options.defaultValue}}
+ *  @placeholder="secret"
+ *  @allowCopy={{true}}
+ *  @onChange={{action "someAction"}}
+ * />
+ *
+ * @param [value] {String} - The value to display in the input.
+ * @param [placeholder=value] {String} - The placeholder to display before the user has entered any input.
+ * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
+ * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
+ * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
+ *
+ *
+ */
+
 export default Component.extend({
   value: null,
+  placeholder: 'value',
   didInsertElement() {
     this._super(...arguments);
     autosize(this.element.querySelector('textarea'));
@@ -42,8 +64,9 @@ export default Component.extend({
       this.toggleProperty('isMasked');
     },
     updateValue(e) {
-      this.set('value', e.target.value);
-      this.onChange();
+      let value = e.target.value;
+      this.set('value', value);
+      this.onChange(value);
     },
   },
 });

@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -35,10 +35,6 @@ type OperatorGenerateRootCommand struct {
 	flagNonce       string
 	flagGenerateOTP bool
 	flagDRToken     bool
-
-	// Deprecation
-	// TODO: remove in 0.9.0
-	flagGenOTP bool
 
 	testStdin io.Reader // for tests
 }
@@ -179,15 +175,6 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 			"must be provided with each unseal key.",
 	})
 
-	// Deprecations: prefer longer-form, descriptive flags
-	// TODO: remove in 0.9.0
-	f.BoolVar(&BoolVar{
-		Name:    "genotp", // -generate-otp
-		Target:  &c.flagGenOTP,
-		Default: false,
-		Hidden:  true,
-	})
-
 	return set
 }
 
@@ -211,18 +198,6 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	if len(args) > 1 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
-	}
-
-	// Deprecations
-	// TODO: remove in 0.9.0
-	switch {
-	case c.flagGenOTP:
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -gen-otp flag is deprecated. Please use the -generate-otp flag " +
-					"instead."))
-		}
-		c.flagGenerateOTP = c.flagGenOTP
 	}
 
 	client, err := c.Client()
@@ -286,7 +261,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, drToken bo
 		return base64.StdEncoding.EncodeToString(buf), 0
 
 	default:
-		otp, err := base62.Random(status.OTPLength, true)
+		otp, err := base62.Random(status.OTPLength)
 		if err != nil {
 			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
 			return "", 2

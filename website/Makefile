@@ -1,35 +1,30 @@
-VERSION?="0.3.34"
+configure-cache:
+	@mkdir -p tmp/cache
 
-build:
+build: configure-cache
 	@echo "==> Starting build in Docker..."
 	@docker run \
 		--interactive \
 		--rm \
 		--tty \
-		--volume "$(shell pwd):/website" \
-		-e "ENV=production" \
-		hashicorp/middleman-hashicorp:${VERSION} \
-		bundle exec middleman build --verbose --clean
+		--volume "$(shell pwd):/opt/buildhome/repo" \
+		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
+		--env "ENV=production" \
+		netlify/build \
+		build "sh bootstrap.sh && middleman build --verbose"
 
-website:
+website: configure-cache
 	@echo "==> Starting website in Docker..."
 	@docker run \
 		--interactive \
 		--rm \
 		--tty \
+		--volume "$(shell pwd):/opt/buildhome/repo" \
+		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
 		--publish "4567:4567" \
 		--publish "35729:35729" \
-		--volume "$(shell pwd):/website" \
-		hashicorp/middleman-hashicorp:${VERSION}
+		--env "ENV=production" \
+		netlify/build \
+		build "sh bootstrap.sh && middleman"
 
-update-deps:
-	@echo "==> Updating deps..."
-	@docker run \
-		--interactive \
-		--rm \
-		--tty \
-		--volume "$(shell pwd):/website" \
-		hashicorp/middleman-hashicorp:${VERSION} \
-		bundle update
-
-.PHONY: build website
+.PHONY: configure-cache build website

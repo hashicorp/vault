@@ -18,15 +18,17 @@ package spanner
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/internal/protostruct"
+	"cloud.google.com/go/internal/trace"
+	"cloud.google.com/go/spanner/internal/backoff"
 	proto "github.com/golang/protobuf/proto"
 	proto3 "github.com/golang/protobuf/ptypes/struct"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
@@ -47,7 +49,7 @@ func errEarlyReadEnd() error {
 // Cloud Spanner.
 func stream(ctx context.Context, rpc func(ct context.Context, resumeToken []byte) (streamingReceiver, error), setTimestamp func(time.Time), release func(error)) *RowIterator {
 	ctx, cancel := context.WithCancel(ctx)
-	ctx = traceStartSpan(ctx, "cloud.google.com/go/spanner.RowIterator")
+	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.RowIterator")
 	return &RowIterator{
 		streamd:      newResumableStreamDecoder(ctx, rpc),
 		rowd:         &partialResultSetDecoder{},
@@ -67,6 +69,10 @@ type RowIterator struct {
 	// if QueryWithStats was called.
 	QueryStats map[string]interface{}
 
+	// For a DML statement, the number of rows affected. For PDML, this is a lower bound.
+	// Available for DML statements after RowIterator.Next returns iterator.Done.
+	RowCount int64
+
 	streamd      *resumableStreamDecoder
 	rowd         *partialResultSetDecoder
 	setTimestamp func(time.Time)
@@ -74,6 +80,7 @@ type RowIterator struct {
 	cancel       func()
 	err          error
 	rows         []*Row
+	sawStats     bool
 }
 
 // Next returns the next result. Its second return value is iterator.Done if
@@ -86,8 +93,16 @@ func (r *RowIterator) Next() (*Row, error) {
 	for len(r.rows) == 0 && r.streamd.next() {
 		prs := r.streamd.get()
 		if prs.Stats != nil {
+			r.sawStats = true
 			r.QueryPlan = prs.Stats.QueryPlan
 			r.QueryStats = protostruct.DecodeToMap(prs.Stats.QueryStats)
+			if prs.Stats.RowCount != nil {
+				rc, err := extractRowCount(prs.Stats)
+				if err != nil {
+					return nil, err
+				}
+				r.RowCount = rc
+			}
 		}
 		r.rows, r.err = r.rowd.add(prs)
 		if r.err != nil {
@@ -111,6 +126,20 @@ func (r *RowIterator) Next() (*Row, error) {
 		r.err = iterator.Done
 	}
 	return nil, r.err
+}
+
+func extractRowCount(stats *sppb.ResultSetStats) (int64, error) {
+	if stats.RowCount == nil {
+		return 0, spannerErrorf(codes.Internal, "missing RowCount")
+	}
+	switch rc := stats.RowCount.(type) {
+	case *sppb.ResultSetStats_RowCountExact:
+		return rc.RowCountExact, nil
+	case *sppb.ResultSetStats_RowCountLowerBound:
+		return rc.RowCountLowerBound, nil
+	default:
+		return 0, spannerErrorf(codes.Internal, "unknown RowCount type %T", stats.RowCount)
+	}
 }
 
 // Do calls the provided function once in sequence for each row in the iteration.  If the
@@ -140,7 +169,7 @@ func (r *RowIterator) Do(f func(r *Row) error) error {
 // Stop terminates the iteration. It should be called after you finish using the iterator.
 func (r *RowIterator) Stop() {
 	if r.streamd != nil {
-		defer traceEndSpan(r.streamd.ctx, r.err)
+		defer trace.EndSpan(r.streamd.ctx, r.err)
 	}
 	if r.cancel != nil {
 		r.cancel()
@@ -282,7 +311,7 @@ type resumableStreamDecoder struct {
 	// err is the last error resumableStreamDecoder has encountered so far.
 	err error
 	// backoff to compute delays between retries.
-	backoff exponentialBackoff
+	backoff backoff.ExponentialBackoff
 }
 
 // newResumableStreamDecoder creates a new resumeableStreamDecoder instance.
@@ -290,10 +319,10 @@ type resumableStreamDecoder struct {
 // beginning at the restartToken if non-nil.
 func newResumableStreamDecoder(ctx context.Context, rpc func(ct context.Context, restartToken []byte) (streamingReceiver, error)) *resumableStreamDecoder {
 	return &resumableStreamDecoder{
-		ctx: ctx,
-		rpc: rpc,
+		ctx:                         ctx,
+		rpc:                         rpc,
 		maxBytesBetweenResumeTokens: atomic.LoadInt32(&maxBytesBetweenResumeTokens),
-		backoff:                     defaultBackoff,
+		backoff:                     backoff.DefaultBackoff,
 	}
 }
 
@@ -316,7 +345,7 @@ func (d *resumableStreamDecoder) isNewResumeToken(rt []byte) bool {
 	if rt == nil {
 		return false
 	}
-	if bytes.Compare(rt, d.resumeToken) == 0 {
+	if bytes.Equal(rt, d.resumeToken) {
 		return false
 	}
 	return true
@@ -503,8 +532,8 @@ func (d *resumableStreamDecoder) resetBackOff() {
 
 // doBackoff does an exponential backoff sleep.
 func (d *resumableStreamDecoder) doBackOff() {
-	delay := d.backoff.delay(d.retryCount)
-	tracePrintf(d.ctx, nil, "Backing off stream read for %s", delay)
+	delay := d.backoff.Delay(d.retryCount)
+	trace.TracePrintf(d.ctx, nil, "Backing off stream read for %s", delay)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 	d.retryCount++

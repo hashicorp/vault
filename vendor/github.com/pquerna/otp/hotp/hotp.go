@@ -167,6 +167,10 @@ func Generate(opts GenerateOpts) (*otp.Key, error) {
 		opts.SecretSize = 10
 	}
 
+	if opts.Digits == 0 {
+		opts.Digits = otp.DigitsSix
+	}
+
 	// otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example
 
 	v := url.Values{}

@@ -4,7 +4,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
 import authPage from 'vault/tests/pages/auth';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | settings/mount-secret-backend', function(hooks) {
   setupApplicationTest(hooks);
@@ -24,17 +23,15 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await page.visit();
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
-    await withFlash(
-      page
-        .next()
-        .path(path)
-        .toggleOptions()
-        .defaultTTLVal(defaultTTLHours)
-        .defaultTTLUnit('h')
-        .maxTTLVal(maxTTLHours)
-        .maxTTLUnit('h')
-        .submit()
-    );
+    await page
+      .next()
+      .path(path)
+      .toggleOptions()
+      .defaultTTLVal(defaultTTLHours)
+      .defaultTTLUnit('h')
+      .maxTTLVal(maxTTLHours)
+      .maxTTLUnit('h')
+      .submit();
     await configPage.visit({ backend: path });
     assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');

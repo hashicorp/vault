@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Encryption as a Service - Guides"
+sidebar_title: "Encryption as a Service"
 sidebar_current: "guides-encryption-transit"
 description: |-
   HashiCorp Vault's transit secrets engine handles cryptographic functions on data in-transit. It can also viewed as _encryption as a service_.
@@ -62,7 +63,7 @@ AES 256-bit CBC encryption (TLS in transit). Even if an attacker were able to
 access the raw data, they would only have encrypted bits. This means attackers
 would need to compromise multiple systems before exfiltrating data.
 
-![Encryption as a Service](/assets/images/vault-encryption.png)
+![Encryption as a Service](/img/vault-encryption.png)
 
 This guide demonstrates the basics of the `transit` secrets engine.
 
@@ -188,12 +189,12 @@ Open a web browser and launch the Vault UI (e.g. http://127.0.0.1:8200/ui) and t
 
 1. Select **Enable new engine** and select **Transit** from **Secrets engine type**
 drop-down list.
-  ![Enable new engine](/assets/images/vault-secrets-enable.png)
+  ![Enable new engine](/img/vault-secrets-enable.png)
 
 1. Click **Enable Engine**.
 
 1. Select **Create encryption key** and enter `orders` in the **Name** field.
-  ![Create a key](/assets/images/vault-transit-1.png)
+  ![Create a key](/img/vault-transit-1.png)
 
 1. Click **Create encryption key** to complete.
 
@@ -280,11 +281,11 @@ database) or pass it to another application.
 1. Select the **orders** encryption key.
 
 1. Select **Key actions**.
-  ![Key action](/assets/images/vault-transit-2.png)
+  ![Key action](/img/vault-transit-2.png)
 
 1. Make sure that **Encrypt** is selected under **TRANSIT ACTIONS**, and then
 enter "credit-card-number" in the **Plaintext** field.
-  ![Encrypt plaintext](/assets/images/vault-transit-3.png)
+  ![Encrypt plaintext](/img/vault-transit-3.png)
 
 1. Click **Encode to base64** to encode the plaintext.
 
@@ -292,7 +293,7 @@ enter "credit-card-number" in the **Plaintext** field.
   Vault does *NOT* store any of this data. The output you received is the
 ciphertext. You can click **Copy** to copy the resulting ciphertext and store it
 at the desired location (e.g. MySQL database) or pass it to another application.
-![Encrypt plaintext](/assets/images/vault-transit-4.png)
+![Encrypt plaintext](/img/vault-transit-4.png)
 
 
 
@@ -365,7 +366,7 @@ credit-card-number
 
 1. Make sure that **Decrypt** is selected under **TRANSIT ACTIONS**, and then
 enter the ciphertext you wish to decrypt.
-  ![Decrypt ciphertext](/assets/images/vault-transit-5.png)
+  ![Decrypt ciphertext](/img/vault-transit-5.png)
 
 1. Click **Decrypt**.
 

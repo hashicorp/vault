@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Starting the Server - Getting Started"
-sidebar_current: "gettingstarted-devserver"
+sidebar_title: "Starting the Server"
+sidebar_current: "gettingstarted-dev-server"
 description: |-
   After installing Vault, the next step is to start the server.
 ---
@@ -71,15 +72,15 @@ and root access key. **Do not run a dev server in production!**
 
 With the dev server running, do the following three things before anything else:
 
-  1. Launch a new terminal session.
+1.  Launch a new terminal session.
 
-  2. Copy and run the `export VAULT_ADDR ...` command from the terminal
-     output. This will configure the Vault client to talk to our dev server.
+2.  Copy and run the `export VAULT_ADDR ...` command from the terminal
+    output. This will configure the Vault client to talk to our dev server.
 
-  3. Save the unseal key somewhere. Don't worry about _how_ to save this
-     securely. For now, just save it anywhere.
+3.  Save the unseal key somewhere. Don't worry about _how_ to save this
+    securely. For now, just save it anywhere.
 
-  4. Do the same as step 3, but with the root token. We'll use this later.
+4.  Do the same as step 3, but with the root token. We'll use this later.
 
 ## Verify the Server is Running
 

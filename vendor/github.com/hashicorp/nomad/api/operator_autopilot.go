@@ -59,7 +59,7 @@ func (u *AutopilotConfiguration) MarshalJSON() ([]byte, error) {
 	}{
 		LastContactThreshold:    u.LastContactThreshold.String(),
 		ServerStabilizationTime: u.ServerStabilizationTime.String(),
-		Alias: (*Alias)(u),
+		Alias:                   (*Alias)(u),
 	})
 }
 

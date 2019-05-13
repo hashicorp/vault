@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Socket - Audit Devices"
+sidebar_title: "Socket"
 sidebar_current: "docs-audit-socket"
 description: |-
   The "socket" audit device writes audit writes to a TCP or UDP socket.

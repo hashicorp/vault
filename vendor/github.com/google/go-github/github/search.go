@@ -8,7 +8,9 @@ package github
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 
 	qs "github.com/google/go-querystring/query"
 )
@@ -221,11 +223,15 @@ func (s *SearchService) search(ctx context.Context, searchType string, parameter
 	if err != nil {
 		return nil, err
 	}
-	params.Set("q", parameters.Query)
+	q := strings.Replace(parameters.Query, " ", "+", -1)
 	if parameters.RepositoryID != nil {
 		params.Set("repository_id", strconv.FormatInt(*parameters.RepositoryID, 10))
 	}
-	u := fmt.Sprintf("search/%s?%s", searchType, params.Encode())
+	query := "q=" + url.PathEscape(q)
+	if v := params.Encode(); v != "" {
+		query = query + "&" + v
+	}
+	u := fmt.Sprintf("search/%s?%s", searchType, query)
 
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/internal/ui/mounts - HTTP API"
-sidebar_current: "docs-http-system-internal-ui-mounts"
+sidebar_title: "<code>/sys/internal/ui/mounts</code>"
+sidebar_current: "api-http-system-internal-ui-mounts"
 description: |-
   The `/sys/internal/ui/mounts` endpoint is used to manage mount listing visibility.
 ---
@@ -21,9 +22,9 @@ compatibility for this endpoint.
 
 This endpoint lists all enabled auth methods.
 
-| Method |           Path            |        Produces        |
-| :----- | :------------------------ | :--------------------- |
-| `GET`  | `/sys/internal/ui/mounts` | `200 application/json` |
+| Method |           Path            |
+| :------------------------ | :--------------------- |
+| `GET`  | `/sys/internal/ui/mounts` |
 
 
 ### Sample Request

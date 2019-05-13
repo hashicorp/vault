@@ -25,4 +25,23 @@ module('Unit | Util | trim right', function() {
 
     assert.equal(trimmedName, 'my-file-name-is-cool.json');
   });
+
+  test('it allows the last extension to also be part of the file name', function(assert) {
+    const trimmedName = trimRight('my-policy.hcl', ['.json', '.txt', '.hcl', '.policy']);
+
+    assert.equal(trimmedName, 'my-policy');
+  });
+
+  test('it allows the last extension to also be part of the file name and the extenstion', function(assert) {
+    const trimmedName = trimRight('my-policy.policy', ['.json', '.txt', '.hcl', '.policy']);
+
+    assert.equal(trimmedName, 'my-policy');
+  });
+
+  test('it passes endings into the regex unescaped when passing false as the third arg', function(assert) {
+    const trimmedName = trimRight('my-policypolicy', ['.json', '.txt', '.hcl', '.policy'], false);
+
+    // the . gets interpreted as regex wildcard so it also trims the y character
+    assert.equal(trimmedName, 'my-polic');
+  });
 });

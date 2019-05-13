@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PKI - Secrets Engines"
+sidebar_title: "PKI (Certificates)"
 sidebar_current: "docs-secrets-pki"
 description: |-
   The PKI secrets engine for Vault generates TLS certificates.

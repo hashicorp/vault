@@ -231,6 +231,4 @@ func main() {
 
 ```
 
-Unless otherwise noted, the source files are distributed under the BSD-style license found in the LICENSE file.
-
-[![codecov](https://codecov.io/gh/maier/circonus-gometrics/branch/master/graph/badge.svg)](https://codecov.io/gh/maier/circonus-gometrics)
+Unless otherwise noted, the source files are distributed under the BSD-style license found in the [LICENSE](LICENSE) file.

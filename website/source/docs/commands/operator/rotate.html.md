@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator rotate - Command"
+sidebar_title: "<code>rotate</code>"
 sidebar_current: "docs-commands-operator-rotate"
 description: |-
   The "operator rotate" rotates the underlying encryption key which is used to

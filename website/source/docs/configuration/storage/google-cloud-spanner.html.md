@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud Spanner - Storage Backends - Configuration"
+sidebar_title: "Google Cloud Spanner"
 sidebar_current: "docs-configuration-storage-spanner"
 description: |-
   The Google Cloud Spanner storage backend is used to persist Vault's data in

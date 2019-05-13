@@ -36,7 +36,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	splitStr := strings.Split(p.String, "{{")
 
 	if len(splitStr) >= 1 {
-		if strings.Index(splitStr[0], "}}") != -1 {
+		if strings.Contains(splitStr[0], "}}") {
 			return false, "", ErrUnbalancedTemplatingCharacter
 		}
 		if len(splitStr) == 1 {

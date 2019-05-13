@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secure Introduction of Vault Clients - Guides"
+sidebar_title: "Secure Introduction of Vault Clients"
 sidebar_current: "guides-identity-secure-intro"
 description: |-
   This introductory guide walk through the mechanism of Vault clients to
@@ -21,7 +22,7 @@ authenticated with the trust established by the successful distribution and user
 of that first secret. Getting the first secret to the consumer, is the ***secure
 introduction*** challenge.
 
-![Secure Introduction](/assets/images/vault-secure-intro-1.png)
+![Secure Introduction](/img/vault-secure-intro-1.png)
 
 The Vault authentication process verifies the secret consumer's identity and
 then generate a **token** to associate with that identity.
@@ -43,7 +44,7 @@ introduction?
 Vault's auth methods perform authentication of its client and assigning a set of
 policies which defines the permitted operations for the client.
 
-![Auth Method](/assets/images/vault-auth-method.png)
+![Auth Method](/img/vault-auth-method.png)
 
 There are three basic approaches to securely authenticate a secret consumer:
 
@@ -64,7 +65,7 @@ interacting with the underlying platform. After the client identity is verified,
 Vault returns a token to the client that is bound to their identity and policies
 that grant access to secrets.
 
-![Platform Integration](/assets/images/vault-secure-intro-2.png)
+![Platform Integration](/img/vault-secure-intro-2.png)
 
 For example, suppose we have an application running on a virtual machine in AWS
 EC2. When that instance is started, an IAM token is provided via the machine
@@ -81,7 +82,7 @@ client are made with the associated token, allowing Vault to efficiently
 authenticate the client and check for proper authorizations when consuming
 secrets.
 
-![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)
+![Vault AWS EC2 Authentication Flow](/img/vault-aws-ec2-auth-flow.png)
 
 
 ### Use Case
@@ -103,7 +104,7 @@ already authenticated against Vault with privileged permissions. The
 orchestrator launches new applications and inject a mechanism they can use to
 authenticate (e.g. AppRole, PKI cert, token, etc) with Vault.
 
-![Trusted Orchestrator](/assets/images/vault-secure-intro-3.png)
+![Trusted Orchestrator](/img/vault-secure-intro-3.png)
 
 For example, suppose [Terraform](https://www.terraform.io/) is being used as a
 trusted orchestrator. This means Terraform already has a Vault token, with
@@ -118,7 +119,7 @@ is acting as a trusted orchestrator and extending trust to the new machine. The
 new machine, or application running on it, can use the injected credentials to
 authenticate against Vault.
 
-![AppRole auth method workflow](/assets/images/vault-secure-intro-4.png)
+![AppRole auth method workflow](/img/vault-secure-intro-4.png)
 
 
 ### Use Case
@@ -151,7 +152,7 @@ methods](/docs/agent/autoauth/methods/index.html)
 longer allowed
 - Designed with robustness and fault tolerance
 
-![Vault Agent](/assets/images/vault-secure-intro-5.png)
+![Vault Agent](/img/vault-secure-intro-5.png)
 
 To leverage this feature, run the vault binary in agent mode (`vault agent
 -config=<config_file>`) on the client. The agent configuration file must specify

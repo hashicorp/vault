@@ -1,0 +1,127 @@
+{{#if (and (eq replicationMode 'dr') (eq model.replicationAttrs.modeForUrl 'secondary'))}}
+  <div class="box is-marginless is-shadowless">
+    <p>
+      This cluster is currently running as a DR Replication Secondary.
+      Promote the cluster to a primary by entering DR Operation Token.
+    </p>
+    <div class="field">
+      <label for="dr_operation_token" class="is-label">
+        DR Operation Token
+      </label>
+      <div class="control">
+        {{input class="input" id="dr_operation_token" name="dr_operation_token" value=dr_operation_token}}
+      </div>
+    </div>
+    <ToggleButton
+      @class="is-block"
+      @toggleAttr="showOptions"
+      @toggleTarget={{this}}
+      @openLabel="Hide options"
+      @closedLabel="Options"
+      />
+    {{#if showOptions}}
+      <div class="box is-marginless">
+        <div class="field">
+          <label for="primary_cluster_addr" class="is-label">
+            Primary cluster address <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
+          </div>
+          <p class="help">
+            Overrides the cluster address that the primary gives to secondary nodes.
+          </p>
+        </div>
+
+        <div class="field">
+          <div class="b-checkbox">
+            <input type="checkbox"
+            id="forcePromote"
+            class="styled"
+            checked={{force}}
+            onchange={{action (mut force) value="target.checked"}}
+            />
+            <label for="forcePromote" class="is-label">
+              Force promotion of this cluster
+            </label>
+          </div>
+          <AlertInline
+            @type="warning"
+            @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+            promotes the cluster even if certain safety checks fail."
+          />
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  <div class="box is-marginless is-shadowless">
+   <div class="field">
+    <div class="control">
+      {{#confirm-action
+        buttonClasses="button is-primary"
+        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash dr_operation_token=dr_operation_token primary_cluster_addr=primary_cluster_addr force=force))
+        confirmMessage="Are you sure you want to promote this cluster?"
+        confirmButtonText="Promote cluster"
+        cancelButtonText="Cancel"
+        }}
+        Promote cluster
+      {{/confirm-action}}
+    </div>
+   </div>
+ </div>
+{{else}}
+  <h4 class="title is-5 is-marginless">
+    Promote cluster
+  </h4>
+  <div class="content">
+    <p>Promote the cluster to primary.
+    <AlertInline
+      @type="warning"
+      @message="Vault Replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
+        If the cluster has a primary, be sure to demote it before promoting a secondary."
+    />
+    </p>
+    <div class="field">
+      <label for="primary_cluster_addr" class="is-label">
+        Primary cluster address <em class="is-optional">(optional)</em>
+      </label>
+      <div class="control">
+        {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
+      </div>
+      <p class="help has-text-grey">
+        Overrides the cluster address that the primary gives to secondary nodes.
+      </p>
+    </div>
+    <div class="field">
+      <div class="b-checkbox">
+        <input type="checkbox"
+        id="forcePromote"
+        class="styled"
+        checked={{force}}
+        onchange={{action (mut force) value="target.checked"}}
+        />
+        <label for="forcePromote" class="is-label">
+          Force promotion of this cluster
+        </label>
+      </div>
+      <AlertInline
+        @type="warning"
+        @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+          promotes the cluster even if certain safety checks fail."
+      />
+    </div>
+  </div>
+  <div class="field">
+    <div class="control">
+      {{#confirm-action
+        buttonClasses="button is-primary"
+        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash primary_cluster_addr=primary_cluster_addr force=force))
+        confirmMessage="Are you sure you want to promote this cluster?"
+        confirmButtonText="Promote cluster"
+        cancelButtonText="Cancel"
+        }}
+        Promote cluster
+      {{/confirm-action}}
+    </div>
+  </div>
+{{/if}}

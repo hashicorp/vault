@@ -20,6 +20,10 @@ func (s *SealAccess) StoredKeysSupported() bool {
 	return s.seal.StoredKeysSupported()
 }
 
+func (s *SealAccess) BarrierType() string {
+	return s.seal.BarrierType()
+}
+
 func (s *SealAccess) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	return s.seal.BarrierConfig(ctx)
 }

@@ -31,4 +31,11 @@ export default Fragment.extend({
     helpText: 'Headers to whitelist and pass from the request to the backend',
     editType: 'stringArray',
   }),
+  tokenType: attr('string', {
+    label: 'Token Type',
+    helpText:
+      "The type of token that should be generated via this role. Can be `service`, `batch`, or `default` to use the mount's default (which unless changed will be `service` tokens).",
+    possibleValues: ['default', 'batch', 'service'],
+    defaultFormValue: 'default',
+  }),
 });

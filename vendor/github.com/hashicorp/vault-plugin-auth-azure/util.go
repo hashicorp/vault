@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Using the same time parsing logic from https://github.com/coreos/go-oidc

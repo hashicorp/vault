@@ -1,7 +1,11 @@
-<PopupMenu>
-  <nav class="menu">
-    <ul class="menu-list">
-      {{yield item}}
-    </ul>
-  </nav>
-</PopupMenu>
+{{#if hasMenu}}
+  <PopupMenu>
+    <nav class="menu">
+      <ul class="menu-list">
+        {{yield item}}
+      </ul>
+    </nav>
+  </PopupMenu>
+{{else}}
+  {{yield item}}
+{{/if}}

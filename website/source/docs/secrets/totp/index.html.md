@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TOTP - Secrets Engines"
+sidebar_title: "TOTP"
 sidebar_current: "docs-secrets-totp"
 description: |-
   The TOTP secrets engine for Vault generates time-based one-time use passwords.

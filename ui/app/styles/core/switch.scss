@@ -1,27 +1,35 @@
-.switch[type="checkbox"] {
+.switch[type='checkbox'] {
   &.is-small {
     + label {
-      font-size: $size-9;
+      font-size: $size-8;
       font-weight: bold;
-      padding-left: $size-9 * 2.5;
+      padding-left: $size-8 * 2.5;
       margin: 0 0.25rem;
       &::before {
-        top: $size-9 / 5;
-        height: $size-9;
-        width: $size-9 * 2;
+        top: $size-8 / 5;
+        height: $size-8;
+        width: $size-8 * 2;
       }
       &::after {
-        width: $size-9 * 0.68;
-        height: $size-9 * 0.68;
-        left: .15rem;
-        top: $size-9 / 2.5;
+        width: $size-8 * 0.8;
+        height: $size-8 * 0.8;
+        transform: translateX(0.15rem);
+        left: 0;
+        top: $size-8/ 4;
       }
     }
     &:checked + label::after {
-      left: ($size-9 * 2) - ($size-9 * 0.9);
+      left: 0;
+      transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
     }
   }
 }
-.switch[type="checkbox"]:focus + label {
+.switch[type='checkbox'].is-small + label::after {
+  will-change: left;
+}
+.switch[type='checkbox']:focus + label {
   box-shadow: 0 0 1px $blue;
+}
+.switch[type='checkbox'].is-success:checked + label::before {
+  background: $blue;
 }

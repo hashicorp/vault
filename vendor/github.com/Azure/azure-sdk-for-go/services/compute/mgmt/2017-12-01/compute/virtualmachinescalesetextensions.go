@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -41,11 +42,22 @@ func NewVirtualMachineScaleSetExtensionsClientWithBaseURI(baseURI string, subscr
 }
 
 // CreateOrUpdate the operation to create or update an extension.
-//
-// resourceGroupName is the name of the resource group. VMScaleSetName is the name of the VM scale set where the
-// extension should be create or updated. vmssExtensionName is the name of the VM scale set extension.
-// extensionParameters is parameters supplied to the Create VM scale set Extension operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMScaleSetName - the name of the VM scale set where the extension should be create or updated.
+// vmssExtensionName - the name of the VM scale set extension.
+// extensionParameters - parameters supplied to the Create VM scale set Extension operation.
 func (client VirtualMachineScaleSetExtensionsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, VMScaleSetName string, vmssExtensionName string, extensionParameters VirtualMachineScaleSetExtension) (result VirtualMachineScaleSetExtensionsCreateOrUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineScaleSetExtensionsClient.CreateOrUpdate")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, VMScaleSetName, vmssExtensionName, extensionParameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsClient", "CreateOrUpdate", nil, "Failure preparing request")
@@ -88,15 +100,13 @@ func (client VirtualMachineScaleSetExtensionsClient) CreateOrUpdatePreparer(ctx 
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client VirtualMachineScaleSetExtensionsClient) CreateOrUpdateSender(req *http.Request) (future VirtualMachineScaleSetExtensionsCreateOrUpdateFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -114,10 +124,21 @@ func (client VirtualMachineScaleSetExtensionsClient) CreateOrUpdateResponder(res
 }
 
 // Delete the operation to delete the extension.
-//
-// resourceGroupName is the name of the resource group. VMScaleSetName is the name of the VM scale set where the
-// extension should be deleted. vmssExtensionName is the name of the VM scale set extension.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMScaleSetName - the name of the VM scale set where the extension should be deleted.
+// vmssExtensionName - the name of the VM scale set extension.
 func (client VirtualMachineScaleSetExtensionsClient) Delete(ctx context.Context, resourceGroupName string, VMScaleSetName string, vmssExtensionName string) (result VirtualMachineScaleSetExtensionsDeleteFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineScaleSetExtensionsClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, resourceGroupName, VMScaleSetName, vmssExtensionName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsClient", "Delete", nil, "Failure preparing request")
@@ -158,15 +179,13 @@ func (client VirtualMachineScaleSetExtensionsClient) DeletePreparer(ctx context.
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client VirtualMachineScaleSetExtensionsClient) DeleteSender(req *http.Request) (future VirtualMachineScaleSetExtensionsDeleteFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -184,11 +203,22 @@ func (client VirtualMachineScaleSetExtensionsClient) DeleteResponder(resp *http.
 }
 
 // Get the operation to get the extension.
-//
-// resourceGroupName is the name of the resource group. VMScaleSetName is the name of the VM scale set containing
-// the extension. vmssExtensionName is the name of the VM scale set extension. expand is the expand expression to
-// apply on the operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMScaleSetName - the name of the VM scale set containing the extension.
+// vmssExtensionName - the name of the VM scale set extension.
+// expand - the expand expression to apply on the operation.
 func (client VirtualMachineScaleSetExtensionsClient) Get(ctx context.Context, resourceGroupName string, VMScaleSetName string, vmssExtensionName string, expand string) (result VirtualMachineScaleSetExtension, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineScaleSetExtensionsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, resourceGroupName, VMScaleSetName, vmssExtensionName, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsClient", "Get", nil, "Failure preparing request")
@@ -256,10 +286,20 @@ func (client VirtualMachineScaleSetExtensionsClient) GetResponder(resp *http.Res
 }
 
 // List gets a list of all extensions in a VM scale set.
-//
-// resourceGroupName is the name of the resource group. VMScaleSetName is the name of the VM scale set containing
-// the extension.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMScaleSetName - the name of the VM scale set containing the extension.
 func (client VirtualMachineScaleSetExtensionsClient) List(ctx context.Context, resourceGroupName string, VMScaleSetName string) (result VirtualMachineScaleSetExtensionListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineScaleSetExtensionsClient.List")
+		defer func() {
+			sc := -1
+			if result.vmsselr.Response.Response != nil {
+				sc = result.vmsselr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx, resourceGroupName, VMScaleSetName)
 	if err != nil {
@@ -324,8 +364,8 @@ func (client VirtualMachineScaleSetExtensionsClient) ListResponder(resp *http.Re
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client VirtualMachineScaleSetExtensionsClient) listNextResults(lastResults VirtualMachineScaleSetExtensionListResult) (result VirtualMachineScaleSetExtensionListResult, err error) {
-	req, err := lastResults.virtualMachineScaleSetExtensionListResultPreparer()
+func (client VirtualMachineScaleSetExtensionsClient) listNextResults(ctx context.Context, lastResults VirtualMachineScaleSetExtensionListResult) (result VirtualMachineScaleSetExtensionListResult, err error) {
+	req, err := lastResults.virtualMachineScaleSetExtensionListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetExtensionsClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -346,6 +386,16 @@ func (client VirtualMachineScaleSetExtensionsClient) listNextResults(lastResults
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client VirtualMachineScaleSetExtensionsClient) ListComplete(ctx context.Context, resourceGroupName string, VMScaleSetName string) (result VirtualMachineScaleSetExtensionListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineScaleSetExtensionsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx, resourceGroupName, VMScaleSetName)
 	return
 }

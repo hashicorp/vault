@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Sentinel - Guides"
+sidebar_title: "Sentinel Policies"
 sidebar_current: "guides-identity-sentinel"
 description: |-
   Vault Enterprise supports Sentinel to provide a rich set of access control
@@ -494,7 +495,7 @@ then login.
 1. Enter **`secret/accounting/*`** in the **Paths** field, and then click
 **Create Policy**.
 
-  ![EGP](/assets/images/vault-sentinel-1.png)
+  ![EGP](/img/vault-sentinel-1.png)
 
 1. Select **Endpoint Governing Policies** again, and then **Create EGP policy**.
 
@@ -596,7 +597,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Select **Delete** from the policy menu for `business-hrs`.
 
-    ![Delete EGP](/assets/images/vault-sentinel-2.png)
+    ![Delete EGP](/img/vault-sentinel-2.png)
 
 1. When prompted, click **Delete** again to confirm.
 

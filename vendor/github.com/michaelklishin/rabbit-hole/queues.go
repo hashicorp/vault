@@ -95,6 +95,18 @@ type QueueInfo struct {
 	OwnerPidDetails OwnerPidDetails `json:"owner_pid_details"`
 
 	BackingQueueStatus BackingQueueStatus `json:"backing_queue_status"`
+
+	ActiveConsumers int64 `json:"active_consumers"`
+}
+
+type PagedQueueInfo struct {
+	Page          int         `json:"page"`
+	PageCount     int         `json:"page_count"`
+	PageSize      int         `json:"page_size"`
+	FilteredCount int         `json:"filtered_count"`
+	ItemCount     int         `json:"item_count"`
+	TotalCount    int         `json:"total_count"`
+	Items         []QueueInfo `json:"items"`
 }
 
 type DetailedQueueInfo QueueInfo
@@ -193,6 +205,20 @@ func (c *Client) ListQueuesWithParameters(params url.Values) (rec []QueueInfo, e
 	return rec, nil
 }
 
+func (c *Client) PagedListQueuesWithParameters(params url.Values) (rec PagedQueueInfo, err error) {
+	req, err := newGETRequestWithParameters(c, "queues", params)
+	if err != nil {
+		return PagedQueueInfo{}, err
+	}
+
+	if err = executeAndParseRequest(c, req, &rec); err != nil {
+		return PagedQueueInfo{}, err
+	}
+
+	return rec, nil
+
+}
+
 //
 // GET /api/queues/{vhost}
 //
@@ -249,9 +275,10 @@ func (c *Client) GetQueueWithParameters(vhost, queue string, qs url.Values) (rec
 //
 
 type QueueSettings struct {
+	Type       string                 `json:"type"`
 	Durable    bool                   `json:"durable"`
-	AutoDelete bool                   `json:"auto_delete"`
-	Arguments  map[string]interface{} `json:"arguments"`
+	AutoDelete bool                   `json:"auto_delete,omitempty"`
+	Arguments  map[string]interface{} `json:"arguments,omitempty"`
 }
 
 func (c *Client) DeclareQueue(vhost, queue string, info QueueSettings) (res *http.Response, err error) {

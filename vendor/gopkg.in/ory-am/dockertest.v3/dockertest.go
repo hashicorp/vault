@@ -88,6 +88,16 @@ func (r *Resource) Close() error {
 	return r.pool.Purge(r)
 }
 
+// Expire sets a resource's associated container to terminate after a period has passed
+func (r *Resource) Expire(seconds uint) error {
+	go func() {
+		if err := r.pool.Client.StopContainer(r.Container.ID, seconds); err != nil {
+			// Error handling?
+		}
+	}()
+	return nil
+}
+
 // NewTLSPool creates a new pool given an endpoint and the certificate path. This is required for endpoints that
 // require TLS communication.
 func NewTLSPool(endpoint, certpath string) (*Pool, error) {
@@ -160,14 +170,20 @@ type RunOptions struct {
 	Links        []string
 	ExposedPorts []string
 	ExtraHosts   []string
+	CapAdd       []string
+	SecurityOpt  []string
+	DNS          []string
 	WorkingDir   string
+	NetworkID    string
 	Labels       map[string]string
 	Auth         dc.AuthConfiguration
 	PortBindings map[dc.Port][]dc.PortBinding
+	Privileged   bool
 }
 
-// BuildAndRunWithOptions builds and starts a docker container
-func (d *Pool) BuildAndRunWithOptions(dockerfilePath string, opts *RunOptions) (*Resource, error) {
+// BuildAndRunWithOptions builds and starts a docker container.
+// Optional modifier functions can be passed in order to change the hostconfig values not covered in RunOptions
+func (d *Pool) BuildAndRunWithOptions(dockerfilePath string, opts *RunOptions, hcOpts ...func(*dc.HostConfig)) (*Resource, error) {
 	// Set the Dockerfile folder as build context
 	dir, file := filepath.Split(dockerfilePath)
 
@@ -184,7 +200,7 @@ func (d *Pool) BuildAndRunWithOptions(dockerfilePath string, opts *RunOptions) (
 
 	opts.Repository = opts.Name
 
-	return d.RunWithOptions(opts)
+	return d.RunWithOptions(opts, hcOpts...)
 }
 
 // BuildAndRun builds and starts a docker container
@@ -193,9 +209,13 @@ func (d *Pool) BuildAndRun(name, dockerfilePath string, env []string) (*Resource
 }
 
 // RunWithOptions starts a docker container.
+// Optional modifier functions can be passed in order to change the hostconfig values not covered in RunOptions
 //
 // pool.Run(&RunOptions{Repository: "mongo", Cmd: []string{"mongod", "--smallfiles"}})
-func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
+// pool.Run(&RunOptions{Repository: "mongo", Cmd: []string{"mongod", "--smallfiles"}}, func(hostConfig *dc.HostConfig) {
+//			hostConfig.ShmSize = shmemsize
+//		})
+func (d *Pool) RunWithOptions(opts *RunOptions, hcOpts ...func(*dc.HostConfig)) (*Resource, error) {
 	repository := opts.Repository
 	tag := opts.Tag
 	env := opts.Env
@@ -230,6 +250,13 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 		tag = "latest"
 	}
 
+	networkingConfig := dc.NetworkingConfig{
+		EndpointsConfig: map[string]*dc.EndpointConfig{},
+	}
+	if opts.NetworkID != "" {
+		networkingConfig.EndpointsConfig[opts.NetworkID] = &dc.EndpointConfig{}
+	}
+
 	_, err := d.Client.InspectImage(fmt.Sprintf("%s:%s", repository, tag))
 	if err != nil {
 		if err := d.Client.PullImage(dc.PullImageOptions{
@@ -238,6 +265,22 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 		}, opts.Auth); err != nil {
 			return nil, errors.Wrap(err, "")
 		}
+	}
+
+	hostConfig := dc.HostConfig{
+		PublishAllPorts: true,
+		Binds:           opts.Mounts,
+		Links:           opts.Links,
+		PortBindings:    opts.PortBindings,
+		ExtraHosts:      opts.ExtraHosts,
+		CapAdd:          opts.CapAdd,
+		SecurityOpt:     opts.SecurityOpt,
+		Privileged:      opts.Privileged,
+		DNS:             opts.DNS,
+	}
+
+	for _, hostConfigOption := range hcOpts {
+		hostConfigOption(&hostConfig)
 	}
 
 	c, err := d.Client.CreateContainer(dc.CreateContainerOptions{
@@ -252,14 +295,10 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 			ExposedPorts: exp,
 			WorkingDir:   wd,
 			Labels:       opts.Labels,
+			StopSignal:   "SIGWINCH", // to support timeouts
 		},
-		HostConfig: &dc.HostConfig{
-			PublishAllPorts: true,
-			Binds:           opts.Mounts,
-			Links:           opts.Links,
-			PortBindings:    opts.PortBindings,
-			ExtraHosts:      opts.ExtraHosts,
-		},
+		HostConfig:       &hostConfig,
+		NetworkingConfig: &networkingConfig,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "")
@@ -285,6 +324,34 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 // pool.Run("mysql", "5.3", []string{"FOO=BAR", "BAR=BAZ"})
 func (d *Pool) Run(repository, tag string, env []string) (*Resource, error) {
 	return d.RunWithOptions(&RunOptions{Repository: repository, Tag: tag, Env: env})
+}
+
+// RemoveContainerByName find a container with the given name and removes it if present
+func (d *Pool) RemoveContainerByName(containerName string) error {
+	containers, err := d.Client.ListContainers(dc.ListContainersOptions{
+		All: true,
+		Filters: map[string][]string{
+			"name": []string{containerName},
+		},
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Error while listing containers with name %s", containerName)
+	}
+
+	if len(containers) == 0 {
+		return nil
+	}
+
+	err = d.Client.RemoveContainer(dc.RemoveContainerOptions{
+		ID:            containers[0].ID,
+		Force:         true,
+		RemoveVolumes: true,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Error while removing container with name %s", containerName)
+	}
+
+	return nil
 }
 
 // Purge removes a container and linked volumes from docker.

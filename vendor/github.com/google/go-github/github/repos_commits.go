@@ -218,7 +218,7 @@ func (s *RepositoriesService) GetCommitSHA1(ctx context.Context, owner, repo, re
 // CompareCommits compares a range of commits with each other.
 // todo: support media formats - https://github.com/google/go-github/issues/6
 //
-// GitHub API docs: https://developer.github.com/v3/repos/commits/index.html#compare-two-commits
+// GitHub API docs: https://developer.github.com/v3/repos/commits/#compare-two-commits
 func (s *RepositoriesService) CompareCommits(ctx context.Context, owner, repo string, base, head string) (*CommitsComparison, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/compare/%v...%v", owner, repo, base, head)
 

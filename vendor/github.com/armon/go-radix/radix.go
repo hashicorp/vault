@@ -44,13 +44,13 @@ func (n *node) addEdge(e edge) {
 	n.edges.Sort()
 }
 
-func (n *node) replaceEdge(e edge) {
+func (n *node) updateEdge(label byte, node *node) {
 	num := len(n.edges)
 	idx := sort.Search(num, func(i int) bool {
-		return n.edges[i].label >= e.label
+		return n.edges[i].label >= label
 	})
-	if idx < num && n.edges[idx].label == e.label {
-		n.edges[idx].node = e.node
+	if idx < num && n.edges[idx].label == label {
+		n.edges[idx].node = node
 		return
 	}
 	panic("replacing missing edge")
@@ -198,10 +198,7 @@ func (t *Tree) Insert(s string, v interface{}) (interface{}, bool) {
 		child := &node{
 			prefix: search[:commonPrefix],
 		}
-		parent.replaceEdge(edge{
-			label: search[0],
-			node:  child,
-		})
+		parent.updateEdge(search[0], child)
 
 		// Restore the existing node
 		child.addEdge(edge{

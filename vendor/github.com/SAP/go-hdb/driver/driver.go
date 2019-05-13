@@ -33,7 +33,7 @@ import (
 )
 
 // DriverVersion is the version number of the hdb driver.
-const DriverVersion = "0.12.1"
+const DriverVersion = "0.14.1"
 
 // DriverName is the driver name to use with sql.Open for hdb databases.
 const DriverName = "hdb"
@@ -79,6 +79,7 @@ const (
 	pingQuery          = "select 1 from dummy"
 	isolationLevelStmt = "set transaction isolation level %s"
 	accessModeStmt     = "set transaction %s"
+	sessionVariable    = "set %s=%s"
 )
 
 // bulk statement
@@ -108,7 +109,8 @@ func init() {
 
 //  check if driver implements all required interfaces
 var (
-	_ driver.Driver = (*hdbDrv)(nil)
+	_ driver.Driver        = (*hdbDrv)(nil)
+	_ driver.DriverContext = (*hdbDrv)(nil)
 )
 
 type hdbDrv struct{}
@@ -119,6 +121,10 @@ func (d *hdbDrv) Open(dsn string) (driver.Conn, error) {
 		return nil, err
 	}
 	return connector.Connect(context.Background())
+}
+
+func (d *hdbDrv) OpenConnector(dsn string) (driver.Connector, error) {
+	return NewDSNConnector(dsn)
 }
 
 // database connection
@@ -148,7 +154,23 @@ func newConn(ctx context.Context, c *Connector) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &conn{session: session}, nil
+	conn := &conn{session: session}
+	if err := conn.init(ctx, c.sessionVariables); err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (c *conn) init(ctx context.Context, sv SessionVariables) error {
+	if sv == nil {
+		return nil
+	}
+	for k, v := range sv {
+		if _, err := c.ExecContext(ctx, fmt.Sprintf(sessionVariable, fmt.Sprintf("'%s'", k), fmt.Sprintf("'%s'", v)), nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Azure - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-azure"
+sidebar_title: "Azure"
+sidebar_current: "api-http-auth-azure"
 description: |-
   This is the API documentation for the Vault Azure authentication
   method plugin.
@@ -23,9 +24,9 @@ Configures the credentials required for the plugin to perform API calls
 to Azure. These credentials will be used to query the metadata about the
 virtual machine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/azure/config`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/azure/config`         |
 
 ### Parameters
 
@@ -60,9 +61,9 @@ $ curl \
 
 Returns the previously configured config, including credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/azure/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/azure/config`           |
 
 ### Sample Request
 
@@ -91,9 +92,9 @@ $ curl \
 
 Deletes the previously configured Azure config and credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/azure/config`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/azure/config`         |
 
 ### Sample Request
 
@@ -111,9 +112,9 @@ that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/azure/role/:name`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/azure/role/:name`       |
 
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
@@ -172,9 +173,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/azure/role/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/azure/role/:name`      |
 
 ### Parameters
 
@@ -215,9 +216,9 @@ $ curl \
 
 Lists all the roles that are registered with the plugin.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/azure/roles`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/azure/roles`          |
 
 ### Sample Request
 
@@ -246,9 +247,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/azure/role/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/azure/role/:name`     |
 
 ### Parameters
 
@@ -269,9 +270,9 @@ Fetch a token. This endpoint takes a signed JSON Web Token (JWT) and
 a role name for some entity. It verifies the JWT signature to authenticate that
 entity and then authorizes the entity for the given role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/azure/login`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/azure/login`          |
 
 ### Sample Payload
 

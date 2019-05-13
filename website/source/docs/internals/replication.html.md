@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Replication"
+sidebar_title: "Replication"
 sidebar_current: "docs-internals-replication"
 description: |-
   Learn about the details of multi-datacenter replication within Vault.

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Syslog - Audit Devices"
+sidebar_title: "Syslog"
 sidebar_current: "docs-audit-syslog"
 description: |-
   The "syslog" audit device writes audit logs to syslog.

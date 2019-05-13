@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets move - Command"
+sidebar_title: "<code>move</code>"
 sidebar_current: "docs-commands-secrets-move"
 description: |-
   The "secrets move" command moves an existing secrets engine to a new path. Any

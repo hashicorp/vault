@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/audit - HTTP API"
-sidebar_current: "docs-http-system-audit/"
+sidebar_title: "<code>/sys/audit</code>"
+sidebar_current: "api-http-system-audit/"
 description: |-
   The `/sys/audit` endpoint is used to enable and disable audit devices.
 ---
@@ -20,9 +21,9 @@ available audit devices).
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/audit`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/audit`                 |
 
 ### Sample Request
 
@@ -54,9 +55,9 @@ single word name or a more complex, nested path.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/audit/:path`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/audit/:path`           |
 
 ### Parameters
 
@@ -105,9 +106,9 @@ This endpoint disables the audit device at the given path.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/audit/:path`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/audit/:path`           |
 
 ### Parameters
 

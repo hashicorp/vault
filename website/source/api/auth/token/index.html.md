@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Token - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-token"
+sidebar_title: "Tokens"
+sidebar_current: "api-http-auth-token"
 description: |-
   This is the API documentation for the Vault token auth method.
 ---
@@ -18,9 +19,9 @@ This endpoint lists token accessor. This requires `sudo` capability, and access
 to it should be tightly controlled as the accessors can be used to revoke very
 large numbers of tokens and their associated leases at once.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/token/accessors`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/token/accessors`      |
 
 ### Sample Request
 
@@ -59,16 +60,16 @@ token is not required to create an orphan token (otherwise set with the
 be created against the specified role name; this may override options set
 during this call.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/create`         | `200 application/json` |
-| `POST`   | `/auth/token/create-orphan`  | `200 application/json` |
-| `POST`   | `/auth/token/create/:role_name`  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/create`         |
+| `POST`   | `/auth/token/create-orphan`  |
+| `POST`   | `/auth/token/create/:role_name`  |
 
 ### Parameters
 
 - `id` `(string: "")` – The ID of the client token. Can only be specified by a
-  root token.  Otherwise, the token ID is a randomly generated UUID.
+  root token.  Otherwise, the token ID is a randomly generated value.
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.
@@ -83,10 +84,12 @@ during this call.
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
-- `ttl` `(string: "")`  -The TTL period of the token, provided as "1h", where
+- `ttl` `(string: "")` - The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
   [default lease TTL](/docs/configuration/index.html), or indefinitely if the
   root policy is used.
+- `type` `(string: "")` - The token type. Can be "batch" or "service". Defaults
+  to the type specified by the role configuration named by `role_name`.
 - `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
   max TTL set upon it. This maximum token TTL *cannot* be changed later, and
   unlike with normal tokens, updates to the system/mount max TTL value will
@@ -149,9 +152,9 @@ $ curl \
 
 Returns information about the client token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`  | `/auth/token/lookup`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`  | `/auth/token/lookup`          |
 
 ### Parameters
 
@@ -212,9 +215,9 @@ $ curl \
 
 Returns information about the current client token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/token/lookup-self`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/token/lookup-self`     |
 
 ### Sample Request
 
@@ -261,9 +264,9 @@ $ curl \
 
 Returns information about the client token from the accessor.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`  | `/auth/token/lookup-accessor`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`  | `/auth/token/lookup-accessor`          |
 
 ### Parameters
 
@@ -326,9 +329,9 @@ Renews a lease associated with a token. This is used to prevent the expiration
 of a token, and the automatic revocation of it. Token renewal is possible only
 if there is a lease associated with it.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/renew`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/renew`          |
 
 ### Parameters
 
@@ -380,9 +383,9 @@ Renews a lease associated with the calling token. This is used to prevent the
 expiration of a token, and the automatic revocation of it. Token renewal is
 possible only if there is a lease associated with it.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/renew-self`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/renew-self`     |
 
 ### Parameters
 
@@ -431,9 +434,9 @@ $ curl \
 Revokes a token and all child tokens. When the token is revoked, all dynamic secrets
 generated with it are also revoked.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke`         | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/revoke`         |
 
 ### Parameters
 
@@ -462,9 +465,9 @@ $ curl \
 Revokes the token used to call it and all child tokens. When the token is
 revoked, all dynamic secrets generated with it are also revoked.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke-self`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/revoke-self`     |
 
 ### Sample Request
 
@@ -481,9 +484,9 @@ Revoke the token associated with the accessor and all the child tokens.  This is
 meant for purposes where there is no access to token ID but there is need to
 revoke a token and its children.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke-accessor` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/revoke-accessor` |
 
 ### Parameters
 
@@ -514,9 +517,9 @@ generated with it are also revoked. All child tokens are orphaned, but can be
 revoked sub-sequently using `/auth/token/revoke/`. This is a root-protected
 endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke-orphan`          | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/revoke-orphan`          |
 
 ### Parameters
 
@@ -545,9 +548,9 @@ $ curl \
 
 Fetches the named role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/token/roles/:role_name`| `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/token/roles/:role_name`|
 
 ### Parameters
 
@@ -589,9 +592,9 @@ $ curl \
 
 List available token roles.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/token/roles`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/token/roles`          |
 
 ### Sample Request
 
@@ -625,9 +628,9 @@ endpoints. The role name is also included in the token path, allowing all
 tokens created against a role to be revoked using the
 `/sys/leases/revoke-prefix` endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/roles/:role_name` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/roles/:role_name` |
 
 ### Parameters
 
@@ -673,6 +676,12 @@ tokens created against a role to be revoked using the
   current role value at each usage; it is set on the token itself. Root tokens
   with no TTL will not be bound by these CIDRs; root tokens with TTLs will be
   bound by these CIDRs.
+- `token_type` `(string: "")` – Specifies the type of tokens that should be
+  returned by the role. If either `service` or `batch` is specified, that kind
+  of token will always be returned. If `default-service`, `service` tokens will
+  be returned unless the client requests a `batch` type token at token creation
+  time. If `default-batch`, `batch` tokens will be returned unless the client
+  requests a `service` type token at token creation time.
 
 ### Sample Payload
 
@@ -700,9 +709,9 @@ $ curl \
 
 This endpoint deletes the named token role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/token/roles/:role_name` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/token/roles/:role_name` |
 
 ### Parameters
 
@@ -724,9 +733,9 @@ in the token store. Generally, running this is not needed unless upgrade
 notes or support personnel suggest it. This may perform a lot of I/O to the
 storage method so should be used sparingly.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/tidy`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/tidy`           |
 
 ### Sample Request
 

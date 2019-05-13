@@ -21,19 +21,21 @@ func (c *PluginCommand) Help() string {
 Usage: vault plugin <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's plugins and the
-  plugin catalog. Here are a few examples of the plugin commands:
+  plugin catalog. The plugin catalog is divided into three types: "auth", 
+  "database", and "secret" plugins. A type must be specified on each call. Here 
+  are a few examples of the plugin commands.
 
-  List all available plugins in the catalog:
+  List all available plugins in the catalog of a particular type:
 
-      $ vault plugin list
+      $ vault plugin list database
 
-  Register a new plugin to the catalog:
+  Register a new plugin to the catalog as a particular type:
 
-      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin
+      $ vault plugin register -sha256=d3f0a8b... auth my-custom-plugin
 
-  Get information about a plugin in the catalog:
+  Get information about a plugin in the catalog listed under a particular type:
 
-      $ vault plugin info my-custom-plugin
+      $ vault plugin info auth my-custom-plugin
 
   Please see the individual subcommand help for detailed usage information.
 `

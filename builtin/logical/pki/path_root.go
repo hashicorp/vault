@@ -7,14 +7,15 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
@@ -139,12 +140,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	input := &dataBundle{
+	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(ctx, b, input, true)
+	parsedBundle, err := generateCert(ctx, b, input, nil, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -296,13 +297,12 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		role.MaxPathLength = &maxPathLength
 	}
 
-	input := &dataBundle{
-		req:           req,
-		apiData:       data,
-		signingBundle: signingBundle,
-		role:          role,
+	input := &inputBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
 	}
-	parsedBundle, err := signCert(b, input, true, useCSRValues)
+	parsedBundle, err := signCert(b, input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -420,7 +420,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
-	urls := &urlEntries{}
+	urls := &certutil.URLEntries{}
 	if signingBundle.URLs != nil {
 		urls = signingBundle.URLs
 	}

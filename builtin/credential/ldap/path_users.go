@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUsersList(b *backend) *framework.Path {
@@ -148,11 +148,14 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	users, err := req.Storage.List(ctx, "user/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "user/")
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(users), nil
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "user/")
+	}
+	return logical.ListResponse(keys), nil
 }
 
 type UserEntry struct {
@@ -161,7 +164,7 @@ type UserEntry struct {
 }
 
 const pathUserHelpSyn = `
-Manage additional groups for users allowed to authenticate.
+Manage users allowed to authenticate.
 `
 
 const pathUserHelpDesc = `

@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -40,11 +41,22 @@ func NewVirtualMachineExtensionsClientWithBaseURI(baseURI string, subscriptionID
 }
 
 // CreateOrUpdate the operation to create or update the extension.
-//
-// resourceGroupName is the name of the resource group. VMName is the name of the virtual machine where the
-// extension should be create or updated. VMExtensionName is the name of the virtual machine extension.
-// extensionParameters is parameters supplied to the Create Virtual Machine Extension operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMName - the name of the virtual machine where the extension should be created or updated.
+// VMExtensionName - the name of the virtual machine extension.
+// extensionParameters - parameters supplied to the Create Virtual Machine Extension operation.
 func (client VirtualMachineExtensionsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, VMName string, VMExtensionName string, extensionParameters VirtualMachineExtension) (result VirtualMachineExtensionsCreateOrUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineExtensionsClient.CreateOrUpdate")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, VMName, VMExtensionName, extensionParameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsClient", "CreateOrUpdate", nil, "Failure preparing request")
@@ -87,15 +99,13 @@ func (client VirtualMachineExtensionsClient) CreateOrUpdatePreparer(ctx context.
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client VirtualMachineExtensionsClient) CreateOrUpdateSender(req *http.Request) (future VirtualMachineExtensionsCreateOrUpdateFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -113,10 +123,21 @@ func (client VirtualMachineExtensionsClient) CreateOrUpdateResponder(resp *http.
 }
 
 // Delete the operation to delete the extension.
-//
-// resourceGroupName is the name of the resource group. VMName is the name of the virtual machine where the
-// extension should be deleted. VMExtensionName is the name of the virtual machine extension.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMName - the name of the virtual machine where the extension should be deleted.
+// VMExtensionName - the name of the virtual machine extension.
 func (client VirtualMachineExtensionsClient) Delete(ctx context.Context, resourceGroupName string, VMName string, VMExtensionName string) (result VirtualMachineExtensionsDeleteFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineExtensionsClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, resourceGroupName, VMName, VMExtensionName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsClient", "Delete", nil, "Failure preparing request")
@@ -157,15 +178,13 @@ func (client VirtualMachineExtensionsClient) DeletePreparer(ctx context.Context,
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client VirtualMachineExtensionsClient) DeleteSender(req *http.Request) (future VirtualMachineExtensionsDeleteFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -183,11 +202,22 @@ func (client VirtualMachineExtensionsClient) DeleteResponder(resp *http.Response
 }
 
 // Get the operation to get the extension.
-//
-// resourceGroupName is the name of the resource group. VMName is the name of the virtual machine containing the
-// extension. VMExtensionName is the name of the virtual machine extension. expand is the expand expression to
-// apply on the operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMName - the name of the virtual machine containing the extension.
+// VMExtensionName - the name of the virtual machine extension.
+// expand - the expand expression to apply on the operation.
 func (client VirtualMachineExtensionsClient) Get(ctx context.Context, resourceGroupName string, VMName string, VMExtensionName string, expand string) (result VirtualMachineExtension, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineExtensionsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, resourceGroupName, VMName, VMExtensionName, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsClient", "Get", nil, "Failure preparing request")
@@ -244,6 +274,88 @@ func (client VirtualMachineExtensionsClient) GetSender(req *http.Request) (*http
 // GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
 func (client VirtualMachineExtensionsClient) GetResponder(resp *http.Response) (result VirtualMachineExtension, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// Update the operation to update the extension.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMName - the name of the virtual machine where the extension should be updated.
+// VMExtensionName - the name of the virtual machine extension.
+// extensionParameters - parameters supplied to the Update Virtual Machine Extension operation.
+func (client VirtualMachineExtensionsClient) Update(ctx context.Context, resourceGroupName string, VMName string, VMExtensionName string, extensionParameters VirtualMachineExtensionUpdate) (result VirtualMachineExtensionsUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineExtensionsClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, VMName, VMExtensionName, extensionParameters)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsClient", "Update", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.UpdateSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachineExtensionsClient", "Update", result.Response(), "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// UpdatePreparer prepares the Update request.
+func (client VirtualMachineExtensionsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, VMName string, VMExtensionName string, extensionParameters VirtualMachineExtensionUpdate) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"vmExtensionName":   autorest.Encode("path", VMExtensionName),
+		"vmName":            autorest.Encode("path", VMName),
+	}
+
+	const APIVersion = "2017-12-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
+		autorest.AsPatch(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions/{vmExtensionName}", pathParameters),
+		autorest.WithJSON(extensionParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// UpdateSender sends the Update request. The method will close the
+// http.Response Body if it receives an error.
+func (client VirtualMachineExtensionsClient) UpdateSender(req *http.Request) (future VirtualMachineExtensionsUpdateFuture, err error) {
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
+	return
+}
+
+// UpdateResponder handles the response to the Update request. The method always
+// closes the http.Response Body.
+func (client VirtualMachineExtensionsClient) UpdateResponder(resp *http.Response) (result VirtualMachineExtension, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),

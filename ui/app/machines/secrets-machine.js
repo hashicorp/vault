@@ -43,7 +43,7 @@ export default {
             cond: type => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type => ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp'].includes(type),
+            cond: type => ['kv'].includes(type),
           },
           encryption: {
             cond: type => type === 'transit',
@@ -108,7 +108,7 @@ export default {
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           secret: {
-            cond: type => ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp'].includes(type),
+            cond: type => ['kv'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           encryption: {
