@@ -14,10 +14,11 @@
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
     {{/if}}
   </label>
-  {{#power-select
+  {{#power-select-with-create
     options=options
     onchange=(action "selectOption")
-    placeholderComponent="search-select-placeholder"
+    oncreate=(action "createOption")
+    placeholderComponent=(component "search-select-placeholder")
     renderInPlace=true
     searchField="searchText"
     verticalPosition="below" as |option|
@@ -30,7 +31,7 @@
     {{else}}
       {{option.id}}
     {{/if}}
-  {{/power-select}}
+  {{/power-select-with-create}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
       <li class="search-select-list-item" data-test-selected-option="true">

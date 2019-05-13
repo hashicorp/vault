@@ -81,6 +81,10 @@ export default Component.extend({
     onChange(val) {
       this.onChange(val);
     },
+    createOption(optionId) {
+      let newOption = { name: optionId, id: optionId };
+      this.selectedOptions.pushObject(newOption);
+    },
     selectOption(option) {
       this.selectedOptions.pushObject(option);
       this.options.removeObject(option);
