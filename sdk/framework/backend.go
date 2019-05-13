@@ -422,18 +422,23 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 // WAL rollback operation.
 func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Response is not expected from the periodic operation.
-	var merr error
+	var resp *logical.Response
+
+	merr := new(multierror.Error)
 	if b.PeriodicFunc != nil {
 		if err := b.PeriodicFunc(ctx, req); err != nil {
 			merr = multierror.Append(merr, err)
 		}
 	}
 
-	resp, err := b.handleWALRollback(ctx, req)
-	if err != nil {
-		merr = multierror.Append(merr, err)
+	if b.WALRollback != nil {
+		var err error
+		resp, err = b.handleWALRollback(ctx, req)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		}
 	}
-	return resp, merr
+	return resp, merr.ErrorOrNil()
 }
 
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
