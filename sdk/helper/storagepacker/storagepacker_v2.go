@@ -57,14 +57,8 @@ type Config struct {
 type StoragePackerV2 struct {
 	*Config
 	storageLocks []*locksutil.LockEntry
-	bucketsCache *radix.Tree
 
-	// Note that we're slightly loosy-goosy with this lock. The reason is that
-	// outside of an identity store upgrade case, only PutItem will ever write
-	// a bucket, and that will always fetch a lock on the bucket first. This
-	// will also cover the sharding case since you'd get the parent lock first.
-	// So we can get away with only locking just when modifying, because we
-	// should already be locked in terms of an entry overwriting itself.
+	bucketsCache     *radix.Tree
 	bucketsCacheLock sync.RWMutex
 
 	queueMode     uint32
