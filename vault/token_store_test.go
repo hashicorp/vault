@@ -13,12 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-sockaddr"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	hclog "github.com/hashicorp/go-hclog"
+	sockaddr "github.com/hashicorp/go-sockaddr"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -2721,7 +2720,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 			"period":                 "72h",
 			"path_suffix":            "happenin",
 			"bound_cidrs":            []string{"0.0.0.0/0"},
-			"allowed_entity_aliases": []string{"test1", "test2"},
+			"allowed_entity_aliases": []string{"test1", "test2", entityAliasName},
 		},
 	})
 	if err != nil || (resp != nil && resp.IsError()) {

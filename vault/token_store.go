@@ -17,10 +17,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-sockaddr"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/go-multierror"
+	metrics "github.com/armon/go-metrics"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1827,11 +1827,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
-			countCubbyholeKeys,
-			deletedCountAccessorEmptyToken,
-			deletedCountAccessorInvalidToken,
-			deletedCountInvalidTokenInAccessor,
-			deletedCountInvalidCubbyholeKey int64
+				countCubbyholeKeys,
+				deletedCountAccessorEmptyToken,
+				deletedCountAccessorInvalidToken,
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
 
 			validCubbyholeKeys := make(map[string]bool)
 
@@ -2219,6 +2219,11 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
+		// Check if provided entity alias name is in the allowed entity aliases list
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+		}
+
 		// Get mount accessor which is required to lookup entity alias
 		mountValidationResp := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
 		if mountValidationResp == nil {
@@ -2252,11 +2257,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			// Set new entity id
 			overwriteEntityID = newEntity.ID
 		default:
-			// Check if provided entity alias name is in the allowed entity aliases list
-			if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
-				return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
-			}
-
 			// Lookup entity
 			entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 			if err != nil {
