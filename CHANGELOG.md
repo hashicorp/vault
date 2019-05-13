@@ -203,7 +203,7 @@ IMPROVEMENTS:
  * core/metrics: Prometheus pull support using a new sys/metrics endpoint. [GH-5308]
  * core: On non-windows platforms a SIGUSR2 will make the server log a dump of
    all running goroutines' stack traces for debugging purposes [GH-6240]
- * replication: The inital replication indexing process on newly initialized or upgraded
+ * replication: The initial replication indexing process on newly initialized or upgraded
    clusters now runs asynchronously
  * sentinel: Add token namespace id and path, available in rules as 
    token.namespace.id and token.namespace.path
