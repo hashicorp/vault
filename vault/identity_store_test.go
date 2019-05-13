@@ -11,7 +11,7 @@ import (
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/storagepacker"
+	sp "github.com/hashicorp/vault/sdk/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -82,7 +82,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item := &storagepacker.Item{
+	item := &sp.Item{
 		ID:      entity2.ID,
 		Message: entity2Any,
 	}

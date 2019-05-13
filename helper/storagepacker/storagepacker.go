@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	sp "github.com/hashicorp/vault/sdk/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -38,7 +39,7 @@ func (s *StoragePacker) View() logical.Storage {
 }
 
 // GetBucket returns a bucket for a given key
-func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
+func (s *StoragePacker) GetBucket(key string) (*sp.Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -64,48 +65,13 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 		uncompressedData = storageEntry.Value
 	}
 
-	var bucket Bucket
+	var bucket sp.Bucket
 	err = proto.Unmarshal(uncompressedData, &bucket)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 	}
 
 	return &bucket, nil
-}
-
-// upsert either inserts a new item into the bucket or updates an existing one
-// if an item with a matching key is already present.
-func (s *Bucket) upsert(item *Item) error {
-	if s == nil {
-		return fmt.Errorf("nil storage bucket")
-	}
-
-	if item == nil {
-		return fmt.Errorf("nil item")
-	}
-
-	if item.ID == "" {
-		return fmt.Errorf("missing item ID")
-	}
-
-	// Look for an item with matching key and don't modify the collection while
-	// iterating
-	foundIdx := -1
-	for itemIdx, bucketItems := range s.Items {
-		if bucketItems.ID == item.ID {
-			foundIdx = itemIdx
-			break
-		}
-	}
-
-	// If there is no match, append the item, otherwise update it
-	if foundIdx == -1 {
-		s.Items = append(s.Items, item)
-	} else {
-		s.Items[foundIdx] = item
-	}
-
-	return nil
 }
 
 // BucketKey returns the storage key of the bucket where the given item will be
@@ -147,7 +113,7 @@ func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 		uncompressedData = storageEntry.Value
 	}
 
-	var bucket Bucket
+	var bucket sp.Bucket
 	err = proto.Unmarshal(uncompressedData, &bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed decoding packed storage entry: {{err}}", err)
@@ -177,7 +143,7 @@ func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 	return nil
 }
 
-func (s *StoragePacker) PutBucket(bucket *Bucket) error {
+func (s *StoragePacker) PutBucket(bucket *sp.Bucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -216,7 +182,7 @@ func (s *StoragePacker) PutBucket(bucket *Bucket) error {
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
+func (s *StoragePacker) GetItem(itemID string) (*sp.Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -243,7 +209,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores the given item in its respective bucket
-func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
+func (s *StoragePacker) PutItem(_ context.Context, item *sp.Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -255,7 +221,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 	var err error
 	bucketKey := s.BucketKey(item.ID)
 
-	bucket := &Bucket{
+	bucket := &sp.Bucket{
 		Key: bucketKey,
 	}
 
@@ -272,10 +238,43 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 		return errwrap.Wrapf("failed to read packed storage bucket entry: {{err}}", err)
 	}
 
+	bucketUpsert := func(bucket *sp.Bucket, item *sp.Item) error {
+		if bucket == nil {
+			return fmt.Errorf("nil storage bucket")
+		}
+
+		if item == nil {
+			return fmt.Errorf("nil item")
+		}
+
+		if item.ID == "" {
+			return fmt.Errorf("missing item ID")
+		}
+
+		// Look for an item with matching key and don't modify the collection while
+		// iterating
+		foundIdx := -1
+		for itemIdx, bucketItems := range bucket.Items {
+			if bucketItems.ID == item.ID {
+				foundIdx = itemIdx
+				break
+			}
+		}
+
+		// If there is no match, append the item, otherwise update it
+		if foundIdx == -1 {
+			bucket.Items = append(bucket.Items, item)
+		} else {
+			bucket.Items[foundIdx] = item
+		}
+
+		return nil
+	}
+
 	if storageEntry == nil {
 		// If the bucket entry does not exist, this will be the only item the
 		// bucket that is going to be persisted.
-		bucket.Items = []*Item{
+		bucket.Items = []*sp.Item{
 			item,
 		}
 	} else {
@@ -292,7 +291,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 			return errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 		}
 
-		err = bucket.upsert(item)
+		err = bucketUpsert(bucket, item)
 		if err != nil {
 			return errwrap.Wrapf("failed to update entry in packed storage entry: {{err}}", err)
 		}

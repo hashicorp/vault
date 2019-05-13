@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	sp "github.com/hashicorp/vault/sdk/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -190,7 +191,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 	// Buffer these channels to prevent deadlocks
 	errs := make(chan error, len(existing))
-	result := make(chan *storagepacker.Bucket, len(existing))
+	result := make(chan *sp.Bucket, len(existing))
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -419,7 +420,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			if err != nil {
 				return err
 			}
-			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
+			err = i.entityPacker.PutItem(ctx, &sp.Item{
 				ID:      previousEntity.ID,
 				Message: marshaledPreviousEntity,
 			})
@@ -440,7 +441,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		if err != nil {
 			return err
 		}
-		item := &storagepacker.Item{
+		item := &sp.Item{
 			ID:      entity.ID,
 			Message: entityAsAny,
 		}
@@ -1391,7 +1392,7 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 			return err
 		}
 
-		item := &storagepacker.Item{
+		item := &sp.Item{
 			ID:      group.ID,
 			Message: groupAsAny,
 		}

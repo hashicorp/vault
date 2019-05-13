@@ -11,9 +11,9 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	sp "github.com/hashicorp/vault/sdk/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -728,7 +728,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		if err != nil {
 			return nil, err
 		}
-		item := &storagepacker.Item{
+		item := &sp.Item{
 			ID:      toEntity.ID,
 			Message: toEntityAsAny,
 		}

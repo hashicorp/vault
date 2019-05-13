@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/helper/storagepacker";
+option go_package = "github.com/hashicorp/vault/sdk/helper/storagepacker";
 
 package storagepacker;
 
@@ -14,8 +14,11 @@ message Item {
 	// described above, the caller *must not* rely on this value to be
 	// consistent with what they passed in.
 	string id = 1;
-	// message is the contents of the item
+	// Message holds the contents of the item
+	// Deprecated: Use 'Data' instead
 	google.protobuf.Any message = 2;
+	// Data holds the contents of the item. Used in storage packer v2.
+	bytes data = 3;
 }
 
 // Bucket is a construct to hold multiple items within itself. This
@@ -30,5 +33,5 @@ message Bucket {
 	// Items holds the items contained within this bucket. Used by v1.
 	repeated Item items = 2;
 	// ItemMap stores a mapping of item ID to message. Used by v2.
-	map <string, google.protobuf.Any> item_map = 3;
+	map <string, bytes> item_map = 3;
 }

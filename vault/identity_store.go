@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	sp "github.com/hashicorp/vault/sdk/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -250,7 +251,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
+func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sp.Item) (*identity.Entity, error) {
 	if item == nil {
 		return nil, fmt.Errorf("nil item")
 	}
@@ -316,7 +317,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 			return nil, err
 		}
 
-		item := &storagepacker.Item{
+		item := &sp.Item{
 			ID:      entity.ID,
 			Message: entityAsAny,
 		}
@@ -335,7 +336,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	return &entity, nil
 }
 
-func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*identity.Group, error) {
+func (i *IdentityStore) parseGroupFromBucketItem(item *sp.Item) (*identity.Group, error) {
 	if item == nil {
 		return nil, fmt.Errorf("nil item")
 	}
