@@ -324,7 +324,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 // loadStaticWALs reads WAL entries at backend initialization. WAL entries are
 // created during the normal rotation process to ensure data integrity, in the
 // event that Vault fails to store the results (due to power failure, disk
-// failure, et. al.) If WAL entries for static account rotation are round,
+// failure, et. al.) If WAL entries for static account rotation exist,
 // attempt to re-set the password for the role given the NewPassword stored in
 // the WAL. If the matching Role does not exist, the Role's LastVaultRotation is
 // newer than the WAL, or the Role does not have a static account, delete the
