@@ -33,7 +33,7 @@ func BenchmarkStoragePackerV2(b *testing.B) {
 
 	ctx := namespace.RootContext(nil)
 
-	ctx := context.Background()
+	ctx = context.Background()
 
 	for i := 0; i < b.N; i++ {
 		itemID, err := uuid.GenerateUUID()
@@ -83,7 +83,8 @@ func TestStoragePackerV2(t *testing.T) {
 
 	// Persist a storage entry
 	item1 := &Item{
-		ID: "item1",
+		ID:   "item1",
+		Data: []byte("data1"),
 	}
 
 	ctx := namespace.RootContext(nil)
@@ -159,15 +160,15 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 		Policies:        []string{"policy1", "policy2"},
 	}
 
-	marshaledEntity, err := ptypes.MarshalAny(entity)
+	marshaledBytes, err := proto.Marshal(entity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ctx := namespace.RootContext(nil)
+	ctx = namespace.RootContext(nil)
 	err = storagePacker.PutItem(ctx, &Item{
-		ID:      entity.ID,
-		Message: marshaledEntity,
+		ID:   entity.ID,
+		Data: marshaledBytes,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +180,7 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 	}
 
 	var itemDecoded identity.Entity
-	err = ptypes.UnmarshalAny(itemFetched.Message, &itemDecoded)
+	err = proto.Unmarshal(itemFetched.Data, &itemDecoded)
 	if err != nil {
 		t.Fatal(err)
 	}
