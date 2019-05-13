@@ -64,7 +64,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 
 	// load queue and kickoff new periodic ticker
-	go b.initQueue(ctx, conf)
+	go b.initQueue(conf)
 	return b, nil
 }
 
@@ -282,7 +282,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 // not wait for success or failure of it's tasks before continuing. This is to
 // avoid blocking the mount process while loading and evaluating existing roles,
 // etc.
-func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
+func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
 	// verify this mount is on the primary server, or is a local mount. If not, do
 	// not create a queue or launch a ticker. Both processing the WAL list and
 	// populating the queue are done sequentially and before launching a
@@ -301,12 +301,12 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		if b.credRotationQueue == nil {
 			b.credRotationQueue = queue.New()
 		}
-		b.Unlock()
 
 		// create a context with a cancel method for processing any WAL entries and
 		// populating the queue
 		ctx, cancel := context.WithCancel(context.Background())
 		b.cancelQueue = cancel
+		b.Unlock()
 
 		// search through WAL for any rotations that were interrupted
 		if err := b.loadStaticWALs(ctx, conf); err != nil {
@@ -635,7 +635,9 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		} else {
 			// highest priority item does not need rotation, so we push it back on
 			// the queue and break the loop
-			b.pushItem(item)
+			if err := b.pushItem(item); err != nil {
+				b.logger.Warn("unable to push item on to queue", "error", err)
+			}
 			break
 		}
 	}
@@ -656,8 +658,8 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 	}
 
 	var walEntry setCredentialsWAL
-	if mapErr := mapstructure.Decode(wal.Data, &walEntry); err != nil {
-		b.Logger().Warn("error decoding walEntry", mapErr.Error())
+	if err = mapstructure.Decode(wal.Data, &walEntry); err != nil {
+		b.Logger().Warn("error decoding walEntry", err.Error())
 		return nil
 	}
 
