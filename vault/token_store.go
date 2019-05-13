@@ -397,12 +397,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified both will be retained but 'token_bound_cidrs' will take precedence.",
 				Deprecated:  true,
 			},
-
-			"token_max_num_uses": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Description: "The maximum number of times a token issued from this role can be used",
-				Deprecated:  true,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -2243,10 +2237,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// Update num_uses which is equal to req.Data["num_uses"] at this point
 		// 0 means unlimited so 1 is actually less than 0
 		switch {
-		case role.TokenMaxNumUses > 0 && te.NumUses == 0:
-			te.NumUses = role.TokenMaxNumUses
-		case role.TokenMaxNumUses < te.NumUses:
-			te.NumUses = role.TokenMaxNumUses
+		case role.TokenNumUses > 0 && te.NumUses == 0:
+			te.NumUses = role.TokenNumUses
+		case role.TokenNumUses < te.NumUses:
+			te.NumUses = role.TokenNumUses
 		default:
 		}
 
@@ -2985,7 +2979,6 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"path_suffix":            role.PathSuffix,
 			"renewable":              role.Renewable,
 			"token_type":             role.TokenType.String(),
-			"token_max_num_uses":     role.TokenMaxNumUses,
 		},
 	}
 
@@ -2994,6 +2987,9 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 	}
 	if len(role.BoundCIDRs) > 0 {
 		resp.Data["bound_cidrs"] = role.BoundCIDRs
+	}
+	if role.TokenNumUses > 0 {
+		resp.Data["token_num_uses"] = role.TokenNumUses
 	}
 
 	return resp, nil
@@ -3167,9 +3163,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	}
 
 	// no legacy version without the token_ prefix to check for
-	tokenMaxNumUses, ok := data.GetOk("token_max_num_uses")
+	tokenNumUses, ok := data.GetOk("token_num_uses")
 	if ok {
-		entry.TokenMaxNumUses = tokenMaxNumUses.(int)
+		entry.TokenNumUses = tokenNumUses.(int)
 	}
 
 	// Run validity checks on token type

@@ -40,7 +40,7 @@ type TokenParams struct {
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
 
 	// The maximum number of times a token issued from this role may be used.
-	TokenMaxNumUses int `json:"token_max_num_uses" mapstructure:"token_max_num_uses"`
+	TokenNumUses int `json:"token_num_uses,omitempty" mapstructure:"token_num_uses,omitempty"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would
@@ -105,9 +105,9 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Description: "The initial ttl of the token to generate",
 		},
 
-		"token_max_num_uses": &framework.FieldSchema{
+		"token_num_uses": &framework.FieldSchema{
 			Type:        framework.TypeInt,
-			Description: "The maximum number of times a token issued from this role may be used.",
+			Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 		},
 	}
 }
@@ -175,11 +175,11 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
 	}
 
-	if tokenMaxNumUses, ok := d.GetOk("token_max_num_uses"); ok {
-		t.TokenMaxNumUses = tokenMaxNumUses.(int)
+	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
+		t.TokenNumUses = tokenNumUses.(int)
 	}
-	if t.TokenMaxNumUses < 0 {
-		return errors.New("'token_max_num_uses' cannot be negative")
+	if t.TokenNumUses < 0 {
+		return errors.New("'token_num_uses' cannot be negative")
 	}
 
 	return nil
@@ -194,7 +194,7 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_policies"] = t.TokenPolicies
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = t.TokenTTL.Seconds()
-	m["token_max_num_uses"] = t.TokenMaxNumUses
+	m["token_num_uses"] = t.TokenNumUses
 }
 
 func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
@@ -206,7 +206,7 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.Policies = t.TokenPolicies
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
-	auth.NumUses = t.TokenMaxNumUses
+	auth.NumUses = t.TokenNumUses
 }
 
 const (
