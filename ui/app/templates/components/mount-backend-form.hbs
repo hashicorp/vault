@@ -3,10 +3,9 @@
     <h1 class="title is-3" data-test-mount-form-header="true">
       {{#if showEnable}}
         {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
-          <ICon
-            @size="24"
-            @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}}
-            @class="has-text-grey-light"
+          <Icon
+            @glyph={{or typeInfo.glyph typeInfo.type}}
+            class="has-text-grey-light hs-icon-l"
            />
 
           {{#if (eq mountType "auth")}}
@@ -56,11 +55,9 @@
               data-test-mount-type-radio
               data-test-mount-type={{type.type}}
             >
-              <ICon
-                @size="36"
-                @excludeIconClass={{true}}
-                @glyph={{concat "enable/" (or type.glyph type.type)}}
-                @class="has-text-grey-light"
+              <Icon
+                @glyph={{or type.glyph type.type}}
+                class="has-text-grey-light hs-icon-xl"
                />
 
               {{type.displayName}}

@@ -49,7 +49,7 @@
                 {{#link-to "vault.cluster.replication"}}
                   <div class="level is-mobile">
                     <span class="level-left">Learn more</span>
-                    <ICon @glyph="edition-enterprise" @size="16" @class="level-right" />
+                    <Icon @glyph="edition-enterprise" @class="level-right" />
                   </div>
                 {{/link-to}}
               </li>
@@ -60,7 +60,7 @@
                 }}
                   <div class="level is-mobile">
                     <span class="level-left">Enable</span>
-                    <ICon @glyph="neutral-circled-outline" @size="16" @class="has-text-grey-light level-right" />
+                    <Icon @glyph="minus-circle-outline" @class="has-text-grey-light level-right" />
                   </div>
                 {{/link-to}}
               </li>
@@ -81,7 +81,7 @@
               {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
                 <div class="level is-mobile">
                   <span class="level-left">See details</span>
-                  <ICon @glyph="chevron-right" @size="12" @class="has-text-grey-light level-right" />
+                  <Chevron class="has-text-grey-light level-right" />
                 </div>
               {{/link-to}}
             </li>
@@ -104,14 +104,14 @@
                 }}
                   <div class="level is-mobile">
                     <span class="level-left">Unsealed</span>
-                    <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+                    <Icon @glyph="check-circle-outline" class="has-text-success level-right" />
                   </div>
                 {{/link-to}}
               {{else}}
                 <span class="menu-item">
                   <div class="level is-mobile">
                     <span class="level-left">Unsealed</span>
-                    <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+                    <Icon @glyph="check-circle-outline" class="has-text-success level-right" />
                   </div>
                 </span>
               {{/if}}
@@ -119,7 +119,7 @@
               <span class="menu-item">
                 <div class="level is-mobile">
                   <span class="level-left has-text-danger">Sealed</span>
-                  <ICon @glyph="close-circled-outline" @size="16" @class="has-text-danger level-right" />
+                  <Icon @glyph="cancel-circle-outline" class="has-text-danger level-right" />
                 </div>
               </span>
             {{/if}}

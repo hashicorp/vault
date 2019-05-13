@@ -37,8 +37,8 @@
           confirmMessage=(concat "Are you sure you want to delete " model.id "?")
           data-test-policy-delete=true
         }}
-            Delete
-            <ICon @glyph="chevron-right" @size=12 />
+          Delete
+          <Chevron @isButton={{true}} />
         {{/confirm-action}}
       {{/if}}
     </ToolbarActions>
