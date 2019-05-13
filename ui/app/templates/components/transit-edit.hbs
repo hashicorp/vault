@@ -19,36 +19,6 @@
       {{/if}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      {{#if (eq mode "show") }}
-        {{#if (or capabilities.canUpdate capabilities.canDelete)}}
-          <div class="control">
-            {{#secret-link
-              secret=key.id
-              mode="edit"
-              replace=true
-              class="button has-icon-right is-ghost is-compact"
-              }}
-              Edit encryption key
-              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-        <div class="control">
-          {{#secret-link
-            mode="actions"
-            secret=key.id
-            class="button has-icon-right is-ghost is-compact"
-            data-test-transit-key-actions-link=true
-          }}
-            Key actions
-            {{i-con glyph="chevron-right" size=11}}
-          {{/secret-link}}
-        </div>
-      {{/if}}
-    </div>
-  </p.levelRight>
 </PageHeader>
 
 {{partial (concat 'partials/transit-form-' mode)}}

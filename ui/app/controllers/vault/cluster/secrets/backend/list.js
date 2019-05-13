@@ -16,6 +16,10 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 
+  isConfigurableTab: computed('isCertTab', 'isConfigure', function() {
+    return this.get('isCertTab') || this.get('isConfigure');
+  }),
+
   actions: {
     chooseAction(action) {
       this.set('selectedAction', action);
