@@ -722,6 +722,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		return output, err
 	}
 
+	db.RLock()
+	defer db.RUnlock()
+
 	// Use password from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
@@ -734,9 +737,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 	output.Password = newPassword
-
-	db.RLock()
-	defer db.RUnlock()
 
 	config := dbplugin.StaticUserConfig{
 		Username: input.Role.StaticAccount.Username,
