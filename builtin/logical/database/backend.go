@@ -585,8 +585,8 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			continue
 		}
 
+		// if "now" is greater than the Item priority, then it needs to be rotated
 		if time.Now().Unix() > item.Priority {
-			// We've found our first item not in need of rotation
 			input := &setStaticAccountInput{
 				RoleName: item.Key,
 				Role:     role,
@@ -605,8 +605,8 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			resp, err := b.setStaticAccount(ctx, s, input)
 			if err != nil {
 				b.logger.Warn("unable to rotate credentials in periodic function", "error", err)
-				// update the priority to re-try this rotation and re-add the item to
-				// the queue
+				// Increment the priority enough so that the next call to this method
+				// likely will not attempt to rotate it, as a back-off of sorts
 				item.Priority = time.Now().Add(10 * time.Second).Unix()
 
 				// preserve the WALID if it was returned
@@ -693,13 +693,16 @@ type setStaticAccountOutput struct {
 // - sets new password for the static account
 // - uses WAL for ensuring passwords are not lost if storage to Vault fails
 //
-// This method does not preform any operations on the priority queue. Those
+// This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
 func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
 	// lvr is the known LastVaultRotation
 	var lvr time.Time
 	var merr error
 	// re-use WAL ID if present, otherwise PUT a new WAL
+	if input == nil {
+		input = &setStaticAccountInput{}
+	}
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
