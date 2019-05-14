@@ -2682,6 +2682,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":      "happenin",
 		"bound_cidrs":      []string{"0.0.0.0/0"},
 		"explicit_max_ttl": "2h",
+		"token_num_uses":   123,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2717,6 +2718,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_explicit_max_ttl": int64(7200),
 		"renewable":              true,
 		"token_type":             "default-service",
+		"token_num_uses":         123,
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -2741,6 +2743,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":      "happenin",
 		"renewable":        false,
 		"explicit_max_ttl": "80h",
+		"token_num_uses":   0,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -3990,6 +3993,99 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
 		}
 	}
+}
+
+func testTokenStore_NumUses_ErrorCheckHelper(t *testing.T, resp *logical.Response, err error) {
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("response was nil")
+	}
+	if resp.Auth == nil {
+		t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func testTokenStore_NumUses_SelfLookupHelper(t *testing.T, core *Core, clientToken string, expectedNumUses int) {
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/lookup-self")
+	req.ClientToken = clientToken
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Just used the token, this should decrement the num_uses counter
+	expectedNumUses = expectedNumUses - 1
+	actualNumUses := resp.Data["num_uses"].(int)
+
+	if actualNumUses != expectedNumUses {
+		t.Fatalf("num_uses mismatch (expected %d, got %d)", expectedNumUses, actualNumUses)
+	}
+}
+func TestTokenStore_NumUses(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	roleNumUses := 10
+	lesserNumUses := 5
+	greaterNumUses := 15
+
+	// Create a test role setting token_num_uses
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"token_num_uses": roleNumUses,
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// Generate some tokens from the test role
+	req.ClientToken = root
+	req.Path = "auth/token/create/test"
+
+	// first token, num_uses is expected to come from the role
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	noOverrideToken := resp.Auth.ClientToken
+
+	// second token, override num_uses with a lesser value, this should become the value
+	// applied to the token
+	req.Data = map[string]interface{}{
+		"num_uses": lesserNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	lesserOverrideToken := resp.Auth.ClientToken
+
+	// third token, override num_uses with a greater value, the value
+	// applied to the token should come from the role
+	req.Data = map[string]interface{}{
+		"num_uses": greaterNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	greaterOverrideToken := resp.Auth.ClientToken
+
+	// fourth token, override num_uses with a zero value, a num_uses value of zero
+	// has an internal meaning of unlimited so num_uses == 1 is actually less than
+	// num_uses == 0. In this case, the lesser value of the role should be applied.
+	req.Data = map[string]interface{}{
+		"num_uses": 0,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	zeroOverrideToken := resp.Auth.ClientToken
+
+	testTokenStore_NumUses_SelfLookupHelper(t, core, noOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, lesserOverrideToken, lesserNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, greaterOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, zeroOverrideToken, roleNumUses)
 }
 
 func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
