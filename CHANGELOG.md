@@ -35,6 +35,7 @@ IMPROVEMENTS:
  
 BUG FIXES: 
 
+ * auth/jwt: Fix bound constraint checking so `bound_claims` alone satisfy the requirement [JWT-49]
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
  * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
