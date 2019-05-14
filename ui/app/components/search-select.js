@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { singularize } from 'ember-inflector';
 
 export default Component.extend({
   'data-test-component': 'search-select',
@@ -94,6 +95,9 @@ export default Component.extend({
       this.selectedOptions.removeObject(selected);
       this.options.pushObject(selected);
       this.handleChange();
+    },
+    constructSuggestion(term) {
+      return `Add new ${singularize(this.label)}: ${term}`;
     },
   },
 });

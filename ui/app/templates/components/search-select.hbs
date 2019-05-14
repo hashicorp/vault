@@ -21,7 +21,8 @@
     placeholderComponent=(component "search-select-placeholder")
     renderInPlace=true
     searchField="searchText"
-    verticalPosition="below" as |option|
+    verticalPosition="below"
+    buildSuggestion=(action "constructSuggestion") as |option term|
   }}
     {{#if shouldRenderName}}
       {{option.name}}
