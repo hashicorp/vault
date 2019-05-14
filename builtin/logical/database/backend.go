@@ -784,6 +784,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// cleanup WAL after successfully rotating and pushing new item on to queue
 	if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
 		merr = multierror.Append(merr, err)
+		return output, merr
 	}
 
 	// the WAL has been deleted, return new setStaticAccountOutput without it
