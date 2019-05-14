@@ -40,7 +40,7 @@ type TokenParams struct {
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
 
 	// The maximum number of times a token issued from this role may be used.
-	TokenNumUses int `json:"token_num_uses,omitempty" mapstructure:"token_num_uses,omitempty"`
+	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would

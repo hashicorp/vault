@@ -4031,8 +4031,8 @@ func TestTokenStore_NumUses(t *testing.T) {
 	lesserNumUses := 5
 	greaterNumUses := 15
 
-	// Create a test role setting token_num_uses
-	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	// Create a test role with limited token_num_uses
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test-limited-uses")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
 		"token_num_uses": roleNumUses,
@@ -4045,11 +4045,21 @@ func TestTokenStore_NumUses(t *testing.T) {
 		t.Fatalf("expected a nil response")
 	}
 
-	// Generate some tokens from the test role
-	req.ClientToken = root
-	req.Path = "auth/token/create/test"
+	// Create a test role with unlimited token_num_uses
+	req.Path = "auth/token/roles/test-unlimited-uses"
+	req.Data = map[string]interface{}{}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
 
-	// first token, num_uses is expected to come from the role
+	// Generate some tokens from the test roles
+	req.Path = "auth/token/create/test-limited-uses"
+
+	// first token, num_uses is expected to come from the limited uses role
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
 	noOverrideToken := resp.Auth.ClientToken
@@ -4064,7 +4074,7 @@ func TestTokenStore_NumUses(t *testing.T) {
 	lesserOverrideToken := resp.Auth.ClientToken
 
 	// third token, override num_uses with a greater value, the value
-	// applied to the token should come from the role
+	// applied to the token should come from the limited uses role
 	req.Data = map[string]interface{}{
 		"num_uses": greaterNumUses,
 	}
@@ -4074,7 +4084,7 @@ func TestTokenStore_NumUses(t *testing.T) {
 
 	// fourth token, override num_uses with a zero value, a num_uses value of zero
 	// has an internal meaning of unlimited so num_uses == 1 is actually less than
-	// num_uses == 0. In this case, the lesser value of the role should be applied.
+	// num_uses == 0. In this case, the lesser value of the limited-uses role should be applied.
 	req.Data = map[string]interface{}{
 		"num_uses": 0,
 	}
@@ -4082,10 +4092,21 @@ func TestTokenStore_NumUses(t *testing.T) {
 	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
 	zeroOverrideToken := resp.Auth.ClientToken
 
+	// fifth token, override num_uses with a value from a role that has unlimited num_uses. num_uses
+	// should be the specified num_uses parameter at the create endpoint
+	req.Path = "auth/token/create/test-unlimited-uses"
+	req.Data = map[string]interface{}{
+		"num_uses": lesserNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	unlimitedRoleOverrideToken := resp.Auth.ClientToken
+
 	testTokenStore_NumUses_SelfLookupHelper(t, core, noOverrideToken, roleNumUses)
 	testTokenStore_NumUses_SelfLookupHelper(t, core, lesserOverrideToken, lesserNumUses)
 	testTokenStore_NumUses_SelfLookupHelper(t, core, greaterOverrideToken, roleNumUses)
 	testTokenStore_NumUses_SelfLookupHelper(t, core, zeroOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, unlimitedRoleOverrideToken, lesserNumUses)
 }
 
 func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {

@@ -2234,14 +2234,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			renewable = false
 		}
 
-		// Update num_uses which is equal to req.Data["num_uses"] at this point
+		// Update te.NumUses which is equal to req.Data["num_uses"] at this point
 		// 0 means unlimited so 1 is actually less than 0
 		switch {
-		case role.TokenNumUses > 0 && te.NumUses == 0:
+		case role.TokenNumUses == 0:
+		case te.NumUses == 0:
 			te.NumUses = role.TokenNumUses
 		case role.TokenNumUses < te.NumUses:
 			te.NumUses = role.TokenNumUses
-		default:
 		}
 
 		if role.PathSuffix != "" {
