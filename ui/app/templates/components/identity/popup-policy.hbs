@@ -15,8 +15,8 @@
         <ConfirmAction
           @buttonClasses="link is-destroy"
           @confirmButtonText="Remove"
-          @onConfirmAction={{concat "Are you sure you want to remove " policyName "?"}}
-          @confirmMessage={{concat "Are you sure you want to remove " policyName "?"}}
+          @confirmMessage="This policy may affect permissions to access Vault data."
+          @onConfirmAction={{action "performTransaction" model policyName}}
         >
           Remove from {{model.identityType}}
         </ConfirmAction>

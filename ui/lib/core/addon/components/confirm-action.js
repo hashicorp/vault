@@ -14,29 +14,31 @@ import hbs from 'htmlbars-inline-precompile';
  *  </ConfirmAction>
  * ```
  *
- * @property {Func} onConfirmAction=null - The action to take upon confirming.
- * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display upon confirming.
+ * @property {Func} [onConfirmAction=null] - The action to take upon confirming.
+ * @property {String} [confirmTitle=Delete this?] - The title to display when confirming.
+ * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display when confirming.
  * @property {String} [confirmButtonText=Delete] - The confirm button text.
  * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @property {String} [disabledTitle=Can't delete this yet] - The title to display when the button is disabled.
  * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
  *
  */
 
 export default Component.extend({
-  tagName: 'span',
   classNames: ['confirm-action'],
   layout: hbs`
     {{#basic-dropdown class="popup-menu" horizontalPosition=horizontalPosition verticalPosition=verticalPosition onOpen=(action "toggleConfirm") onClose=(action "toggleConfirm") as |d|}}
       {{#d.trigger
         tagName="button"
+        type="button"
         class=(concat buttonClasses " popup-menu-trigger" (if d.isOpen " is-active"))
         disabled=disabled
         data-test-confirm-action-trigger="true"
       }}
         {{yield}}
-        {{#if (eq buttonClasses 'toolbar-link') ~}}
+        {{#if (eq buttonClasses 'toolbar-link')}}
           <Icon @glyph="chevron-{{if showConfirm 'up' 'down'}}" />
-        {{~/if}}
+        {{/if}}
       {{/d.trigger}}
       {{#d.content class=(concat "popup-menu-content")}}
         <div class="box confirm-action-message">
@@ -74,7 +76,7 @@ export default Component.extend({
   `,
   buttonText: 'Delete',
   confirmTitle: 'Delete this?',
-  confirmMessage: 'This data will be permenantly deleted.',
+  confirmMessage: 'You will not be able to recover it later.',
   confirmButtonText: 'Delete',
   cancelButtonText: 'Cancel',
   disabledTitle: "Can't delete this yet",

@@ -31,10 +31,11 @@
             </li>
             <li class="action">
               <ConfirmAction
-                @onConfirmAction={{action "revokeToken"}}
-                @confirmMessage={{concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?"}}
-                @confirmButtonText="Revoke"
                 @buttonClasses="button link is-destroy"
+                @confirmTitle={{concat "Revoke " (get auth 'authData.displayName') "?"}}
+                @confirmMessage={{concat "You will not be able to log in again with this token."}}
+                @confirmButtonText="Revoke"
+                @onConfirmAction={{action "revokeToken"}}
               >
                 Revoke token
               </ConfirmAction>
@@ -42,10 +43,11 @@
           {{else}}
             <li class="action text-right">
               <ConfirmAction
-                @onConfirmAction={{action "revokeToken"}}
-                @confirmMessage={{concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?"}}
-                @confirmButtonText="Revoke"
                 @buttonClasses="button link is-destroy"
+                @confirmTitle={{concat "Revoke " (get auth 'authData.displayName') "?"}}
+                @confirmMessage={{concat "You will not be able to log in again with this token."}}
+                @confirmButtonText="Revoke"
+                @onConfirmAction={{action "revokeToken"}}
               >
                 Revoke token
               </ConfirmAction>

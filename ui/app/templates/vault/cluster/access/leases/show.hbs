@@ -71,9 +71,11 @@
   <div class="field">{{!-- needs to be here to push over the button --}}</div>
   {{#if capabilities.revoke.canUpdate}}
     <ConfirmAction
+      @buttonClasses="button is-ghost"
+      @confirmTitle="Revoke this?"
+      @confirmMessage={{concat "All leases under this one will also be removed"}}
+      @confirmButtonText="Confirm"
       @onConfirmAction={{action "revokeLease" model}}
-      @confirmMessage={{concat "Are you sure you want to revoke this lease?"}}
-      @confirmButtonText="Confirm revocation"
       data-test-lease-revoke="true"
     >
       Revoke lease

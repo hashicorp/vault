@@ -4,9 +4,10 @@
       <li class="action">
         <ConfirmAction
           @buttonClasses="link is-destroy"
+          @confirmTitle="Remove metadata?"
+          @confirmMessage="This data may be used outside of Vault."
           @confirmButtonText="Remove"
-          @onConfirmAction={{action "performTransaction" model key }}
-          @confirmMessage={{concat "Are you sure you want to remove " key "?"}}
+          @onConfirmAction={{action "performTransaction" model key}}
         >
           Remove
         </ConfirmAction>

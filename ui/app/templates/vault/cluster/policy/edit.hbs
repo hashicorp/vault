@@ -33,8 +33,8 @@
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
+          @confirmMessage="This may affect access to Vault data."
           @onConfirmAction={{action "deletePolicy" model}}
-          @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
           data-test-policy-delete="true"
         >
           Delete

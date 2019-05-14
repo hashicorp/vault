@@ -66,9 +66,10 @@
                       {{else if (eq identityType 'entity')}}
                         <ConfirmAction
                           @buttonClasses="link is-destroy"
+                          @confirmTitle="Disable this?"
+                          @confirmMessage="Associated tokens will not be revoked, but cannot be used"
                           @confirmButtonText="Disable"
                           @onConfirmAction={{action "toggleDisabled" item}}
-                          @confirmMessage={{concat "Are you sure you want to disable " item.id "?"}}
                         >
                           Disable
                         </ConfirmAction>
@@ -80,7 +81,6 @@
                       <ConfirmAction
                         @buttonClasses="link is-destroy"
                         @onConfirmAction={{action "delete" item}}
-                        @confirmMessage={{concat "Are you sure you want to delete " item.id "?"}}
                         data-test-item-delete="true"
                       >
                         Delete

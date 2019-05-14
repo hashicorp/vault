@@ -53,13 +53,10 @@
         {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
           <ConfirmAction
             @buttonClasses="toolbar-link"
+            @confirmTitle="Disable this?"
+            @confirmMessage={{concat "All leases under this one will also be removed and disregard any errors encountered."}}
+            @confirmButtonText="Revoke"
             @onConfirmAction={{action "revokePrefix" baseKey.id true}}
-            @confirmMessage={{concat
-              "Confirming removes all leases under "
-              baseKey.id
-              " and disregards any errors encountered."
-            }}
-            @confirmButtonText={{concat "Revoke " baseKey.id}}
           >
             Force revoke prefix
           </ConfirmAction>
@@ -69,9 +66,10 @@
         {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
           <ConfirmAction
             @buttonClasses="toolbar-link"
+            @confirmTitle="Revoke this?"
+            @confirmMessage={{concat "All leases under this one will also be removed"}}
+            @confirmButtonText="Revoke"
             @onConfirmAction={{action "revokePrefix" baseKey.id}}
-            @confirmMessage={{concat "Confirming will remove all leases under " baseKey.id}}
-            @confirmButtonText={{concat "Revoke " baseKey.id}}
             data-test-lease-revoke-prefix="true"
           >
             Revoke prefix

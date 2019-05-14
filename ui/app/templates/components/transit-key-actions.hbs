@@ -2,10 +2,10 @@
   {{#if key.canRotate}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
+      @confirmTitle="Rotate this key?"
+      @confirmMessage="After rotation, new plaintext requests will be encrypted with the new version of the key."
+      @confirmButtonText="Rotate"
       @onConfirmAction={{action "doSubmit"}}
-      @confirmMessage={{concat 'Are you sure you want to rotate "' key.id '"?'}}
-      @confirmButtonText="Confirm rotation"
-      @cancelButtonText="Cancel"
       data-test-transit-key-rotate="true"
     >
       Rotate encryption key

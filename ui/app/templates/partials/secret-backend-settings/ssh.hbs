@@ -30,8 +30,8 @@
     <div class="control">
       <ConfirmAction
         @buttonClasses="button"
+        @confirmMessage="This will remove the CA certificate information."
         @onConfirmAction={{action "saveConfig" (hash delete=true)}}
-        @confirmMessage={{concat "This will delete the current CA keys associated with this backend. Are you sure you want to delete them?"}}
       >
         Delete
       </ConfirmAction>

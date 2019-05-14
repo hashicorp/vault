@@ -11,7 +11,8 @@
           <ConfirmAction
             @buttonClasses="link is-destroy"
             @onConfirmAction={{action "delete" item}}
-            @confirmMessage={{concat "Are you sure you want to revoke " item.id "?"}}
+            @confirmTitle="Revoke this cert?"
+            @confirmMessage="This may affect access to Vault data."
             @confirmButtonText="Revoke"
             data-test-cert-revoke-delete={{item.id}}
           >

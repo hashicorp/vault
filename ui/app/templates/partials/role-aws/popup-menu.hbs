@@ -45,7 +45,6 @@
             <ConfirmAction
               @buttonClasses="button is-ghost"
               @onConfirmAction={{action "delete" item}}
-              @confirmMessage={{concat "Are you sure you want to delete " item.id "?"}}
               data-test-aws-role-delete={{item.id}}
             >
               Delete

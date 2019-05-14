@@ -61,7 +61,6 @@
             <ConfirmAction
               @buttonClasses="link is-destroy"
               @onConfirmAction={{action "delete" item}}
-              @confirmMessage={{concat "Are you sure you want to delete " item.id "?"}}
               data-test-ssh-role-delete={{item.id}}
             >
               Delete

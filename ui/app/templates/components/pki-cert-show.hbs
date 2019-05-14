@@ -51,7 +51,8 @@
     <ConfirmAction
       @buttonClasses="button"
       @onConfirmAction={{action "delete"}}
-      @confirmMessage={{concat "Are you sure you want to revoke " model.id "?"}}
+      @confirmTitle="Revoke this cert?"
+      @confirmMessage="This may affect access to Vault data."
       @confirmButtonText="Revoke"
     >
       Revoke

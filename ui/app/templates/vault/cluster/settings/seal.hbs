@@ -19,10 +19,11 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <ConfirmAction
       @buttonClasses="button is-primary"
-      @onConfirmAction={{action "seal"}}
-      @confirmMessage={{concat "Are you sure you want to seal " model.cluster.name "?"}}
+      @confirmTitle="Seal this cluster?"
+      @confirmMessage="You will not be able to read or write any data until the cluster is unsealed again."
       @confirmButtonText="Seal"
       @horizontalPosition="auto-left"
+      @onConfirmAction={{action "seal"}}
       data-test-seal="true"
     >
       Seal

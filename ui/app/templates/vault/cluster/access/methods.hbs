@@ -74,15 +74,10 @@
                   <li class="action">
                     <ConfirmAction
                       @buttonClasses="link is-destroy"
-                      @onConfirmAction={{perform disableMethod method}}
-                      @confirmMessage={{concat
-                        "Are you sure you want to disable the "
-                        method.id
-                        " Auth Method at "
-                        method.path
-                        "?"
-                      }}
+                      @confirmTitle="Disable method?"
+                      @confirmMessage="This may affect access to Vault data."
                       @confirmButtonText="Disable"
+                      @onConfirmAction={{perform disableMethod method}}
                     >
                       Disable
                     </ConfirmAction>

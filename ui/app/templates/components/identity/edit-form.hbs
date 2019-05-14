@@ -38,7 +38,6 @@
         <ConfirmAction
           @buttonClasses="button is-ghost"
           @onConfirmAction={{action "deleteItem" model}}
-          @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
           data-test-entity-item-delete="true"
         >
             Delete

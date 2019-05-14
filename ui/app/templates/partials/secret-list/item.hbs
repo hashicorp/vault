@@ -81,8 +81,8 @@
                   <li class="action">
                     <ConfirmAction
                       @buttonClasses="link is-destroy"
+                      @confirmMessage="This will permanently delete this secret and all its versions."
                       @onConfirmAction={{action "delete" item "secret"}}
-                      @confirmMessage={{concat "Are you sure you want to permanently delete " item.id " and all its versions?"}}
                       data-test-v2-kv-delete={{item.id}}
                     >
                       {{if backendModel.isV2KV

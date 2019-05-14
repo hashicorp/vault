@@ -37,6 +37,7 @@
           <ConfirmAction
             @buttonClasses="link is-destroy"
             @confirmButtonText="Remove"
+            @confirmMessage="Any engines or mounts in this namespace will also be removed."
             @onConfirmAction={{action
               (perform
                 Item.callMethod
@@ -47,7 +48,6 @@
                 (action "refreshNamespaceList")
               )
             }}
-            @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
           >
             Delete
           </ConfirmAction>
