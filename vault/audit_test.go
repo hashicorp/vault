@@ -27,15 +27,15 @@ type NoopAudit struct {
 	Config         *audit.BackendConfig
 	ReqErr         error
 	ReqAuth        []*logical.Auth
-	Req            []*logical.Request
+	Req            []interface{}
 	ReqHeaders     []map[string][]string
 	ReqNonHMACKeys []string
 	ReqErrs        []error
 
 	RespErr            error
 	RespAuth           []*logical.Auth
-	RespReq            []*logical.Request
-	Resp               []*logical.Response
+	RespReq            []interface{}
+	Resp               []interface{}
 	RespNonHMACKeys    []string
 	RespReqNonHMACKeys []string
 	RespErrs           []error
@@ -44,16 +44,18 @@ type NoopAudit struct {
 	saltMutex sync.RWMutex
 }
 
-func (n *NoopAudit) LogRequest(ctx context.Context, in *audit.LogInput) error {
+func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.ReqAuth = append(n.ReqAuth, in.Auth)
 	n.Req = append(n.Req, in.Request)
-	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
+	if req, ok := in.Request.(*logical.Request); ok {
+		n.ReqHeaders = append(n.ReqHeaders, req.Headers)
+	}
 	n.ReqNonHMACKeys = in.NonHMACReqDataKeys
 	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
 	return n.ReqErr
 }
 
-func (n *NoopAudit) LogResponse(ctx context.Context, in *audit.LogInput) error {
+func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	n.RespAuth = append(n.RespAuth, in.Auth)
 	n.RespReq = append(n.RespReq, in.Request)
 	n.Resp = append(n.Resp, in.Response)
@@ -483,7 +485,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
 		OuterErr: reqErrs,
@@ -507,7 +509,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	logInput = &audit.LogInput{
+	logInput = &logical.LogInput{
 		Auth:    auth,
 		Request: req,
 	}
@@ -579,7 +581,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
 		Response: respCopy,
@@ -607,7 +609,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.RespErr = fmt.Errorf("failed")
-	logInput = &audit.LogInput{
+	logInput = &logical.LogInput{
 		Auth:     auth,
 		Request:  req,
 		Response: resp,
@@ -668,7 +670,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	headersConf.add(context.Background(), "X-Test-Header", false)
 	headersConf.add(context.Background(), "X-Vault-Header", false)
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:     auth,
 		Request:  reqCopy,
 		OuterErr: respErr,
@@ -685,13 +687,13 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 
 	for _, a := range []*NoopAudit{a1, a2} {
 		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
-			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
+			t.Fatalf("Bad audited headers: %#v", a.Req[0])
 		}
 	}
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	logInput = &audit.LogInput{
+	logInput = &logical.LogInput{
 		Auth:     auth,
 		Request:  req,
 		OuterErr: respErr,

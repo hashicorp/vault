@@ -505,3 +505,15 @@ func defaultAuditTable() *MountTable {
 	}
 	return table
 }
+
+type genericAuditor struct {
+	c *Core
+}
+
+func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
+	return g.c.auditBroker.LogRequest(ctx, input, nil)
+}
+
+func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
+	return g.c.auditBroker.LogResponse(ctx, input, nil)
+}

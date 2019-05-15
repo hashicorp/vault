@@ -70,6 +70,10 @@ type SystemView interface {
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
 
+type ExtendedSystemView interface {
+	Auditor() Auditor
+}
+
 type StaticSystemView struct {
 	DefaultLeaseTTLVal  time.Duration
 	MaxLeaseTTLVal      time.Duration

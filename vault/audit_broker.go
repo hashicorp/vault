@@ -10,6 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type backendEntry struct {
@@ -86,16 +87,25 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
 
 	var retErr *multierror.Error
+	var path string
+	var headers map[string][]string
+	if req, ok := in.Request.(*logical.Request); ok {
+		path = req.Path
+		headers = req.Headers
+		defer func() {
+			req.Headers = headers
+		}()
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", path, "error", r)
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -114,21 +124,18 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 	//	return
 	//}
 
-	headers := in.Request.Headers
-	defer func() {
-		in.Request.Headers = headers
-	}()
-
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
-		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
-		if thErr != nil {
-			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
-			continue
+		if req, ok := in.Request.(*logical.Request); ok {
+			req.Headers = nil
+			transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
+			if thErr != nil {
+				a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
+				continue
+			}
+			req.Headers = transHeaders
 		}
-		in.Request.Headers = transHeaders
 
 		start := time.Now()
 		lrErr := be.backend.LogRequest(ctx, in)
@@ -148,16 +155,25 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
-func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
 
 	var retErr *multierror.Error
+	var path string
+	var headers map[string][]string
+	if req, ok := in.Request.(*logical.Request); ok {
+		path = req.Path
+		headers = req.Headers
+		defer func() {
+			req.Headers = headers
+		}()
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", path, "error", r)
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -170,21 +186,18 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, heade
 		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
 	}()
 
-	headers := in.Request.Headers
-	defer func() {
-		in.Request.Headers = headers
-	}()
-
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
-		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
-		if thErr != nil {
-			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
-			continue
+		if req, ok := in.Request.(*logical.Request); ok {
+			req.Headers = nil
+			transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
+			if thErr != nil {
+				a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
+				continue
+			}
+			req.Headers = transHeaders
 		}
-		in.Request.Headers = transHeaders
 
 		start := time.Now()
 		lrErr := be.backend.LogResponse(ctx, in)

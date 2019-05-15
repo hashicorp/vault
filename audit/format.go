@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -30,7 +31,7 @@ type AuditFormatter struct {
 
 var _ Formatter = (*AuditFormatter)(nil)
 
-func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to request-audit a nil request")
 	}
@@ -48,18 +49,27 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
+	var req *logical.Request
+	switch t := in.Request.(type) {
+	case logical.OptMarshaler:
+		return f.formatGenericRequest(ctx, w, config, in)
+	case *logical.Request:
+		req = t
+	default:
+		return fmt.Errorf("unknown LogInput.Request type")
+	}
+
 	// Set these to the input values at first
 	auth := in.Auth
-	req := in.Request
 
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
-			in.Request.Connection.ConnState = nil
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
 			defer func() {
-				in.Request.Connection.ConnState = origState
+				req.Connection.ConnState = origState
 			}()
 		}
 
@@ -167,7 +177,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
 }
 
-func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to response-audit a nil request")
 	}
@@ -187,17 +197,36 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 	// Set these to the input values at first
 	auth := in.Auth
-	req := in.Request
-	resp := in.Response
+	var req *logical.Request
+	var resp *logical.Response
+
+	switch t := in.Request.(type) {
+	case logical.OptMarshaler:
+		var ok bool
+		_, ok = in.Response.(logical.OptMarshaler)
+		if !ok {
+			return fmt.Errorf("unknown or mismatched LogInput.Response type")
+		}
+		return f.formatGenericResponse(ctx, w, config, in)
+	case *logical.Request:
+		req = t
+		var ok bool
+		resp, ok = in.Response.(*logical.Response)
+		if !ok {
+			return fmt.Errorf("unknown or mismatched LogInput.Response type")
+		}
+	default:
+		return fmt.Errorf("unknown LogInput.Request type")
+	}
 
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
-			in.Request.Connection.ConnState = nil
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
 			defer func() {
-				in.Request.Connection.ConnState = origState
+				req.Connection.ConnState = origState
 			}()
 		}
 
@@ -390,11 +419,90 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	return f.AuditFormatWriter.WriteResponse(w, respEntry)
 }
 
+func (f *AuditFormatter) formatGenericRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+	salt, err := f.Salt(ctx)
+	if err != nil {
+		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+	}
+
+	req := in.Request.(logical.OptMarshaler)
+
+	var errString string
+	if in.OuterErr != nil {
+		errString = in.OuterErr.Error()
+	}
+
+	opts := &logical.MarshalOptions{
+		ValueHasher: salt.GetIdentifiedHMAC,
+	}
+	mreq, err := req.MarshalJSONWithOptions(opts)
+	if err != nil {
+		return errwrap.Wrapf("error marshalling request: {{err}}", err)
+	}
+	reqEntry := &AuditRequestEntry{
+		Type:  in.Type,
+		Error: errString,
+		Request: AuditRequest{
+			Data: json.RawMessage(mreq),
+		},
+	}
+
+	if !config.OmitTime {
+		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+
+	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
+}
+
+func (f *AuditFormatter) formatGenericResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+	salt, err := f.Salt(ctx)
+	if err != nil {
+		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+	}
+
+	req := in.Request.(logical.OptMarshaler)
+	resp := in.Response.(logical.OptMarshaler)
+
+	var errString string
+	if in.OuterErr != nil {
+		errString = in.OuterErr.Error()
+	}
+
+	opts := &logical.MarshalOptions{
+		ValueHasher: salt.GetIdentifiedHMAC,
+	}
+	mreq, err := req.MarshalJSONWithOptions(opts)
+	if err != nil {
+		return errwrap.Wrapf("error marshalling request: {{err}}", err)
+	}
+	mresp, err := resp.MarshalJSONWithOptions(opts)
+	if err != nil {
+		return errwrap.Wrapf("error marshalling response: {{err}}", err)
+	}
+
+	respEntry := &AuditResponseEntry{
+		Type:  in.Type,
+		Error: errString,
+		Request: AuditRequest{
+			Data: json.RawMessage(mreq),
+		},
+		Response: AuditResponse{
+			Data: json.RawMessage(mresp),
+		},
+	}
+
+	if !config.OmitTime {
+		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+
+	return f.AuditFormatWriter.WriteResponse(w, respEntry)
+}
+
 // AuditRequestEntry is the structure of a request audit log entry in Audit.
 type AuditRequestEntry struct {
 	Time    string       `json:"time,omitempty"`
 	Type    string       `json:"type"`
-	Auth    AuditAuth    `json:"auth"`
+	Auth    AuditAuth    `json:"auth,omitempty"`
 	Request AuditRequest `json:"request"`
 	Error   string       `json:"error"`
 }
@@ -403,31 +511,31 @@ type AuditRequestEntry struct {
 type AuditResponseEntry struct {
 	Time     string        `json:"time,omitempty"`
 	Type     string        `json:"type"`
-	Auth     AuditAuth     `json:"auth"`
+	Auth     AuditAuth     `json:"auth,omitempty"`
 	Request  AuditRequest  `json:"request"`
 	Response AuditResponse `json:"response"`
 	Error    string        `json:"error"`
 }
 
 type AuditRequest struct {
-	ID                  string                 `json:"id"`
-	ReplicationCluster  string                 `json:"replication_cluster,omitempty"`
-	Operation           logical.Operation      `json:"operation"`
-	ClientToken         string                 `json:"client_token"`
-	ClientTokenAccessor string                 `json:"client_token_accessor"`
-	Namespace           AuditNamespace         `json:"namespace"`
-	Path                string                 `json:"path"`
-	Data                map[string]interface{} `json:"data"`
-	PolicyOverride      bool                   `json:"policy_override"`
-	RemoteAddr          string                 `json:"remote_address"`
-	WrapTTL             int                    `json:"wrap_ttl"`
-	Headers             map[string][]string    `json:"headers"`
+	ID                  string              `json:"id"`
+	ReplicationCluster  string              `json:"replication_cluster,omitempty"`
+	Operation           logical.Operation   `json:"operation"`
+	ClientToken         string              `json:"client_token"`
+	ClientTokenAccessor string              `json:"client_token_accessor"`
+	Namespace           AuditNamespace      `json:"namespace"`
+	Path                string              `json:"path"`
+	Data                interface{}         `json:"data"`
+	PolicyOverride      bool                `json:"policy_override"`
+	RemoteAddr          string              `json:"remote_address"`
+	WrapTTL             int                 `json:"wrap_ttl"`
+	Headers             map[string][]string `json:"headers"`
 }
 
 type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
-	Data     map[string]interface{} `json:"data,omitempty"`
+	Data     interface{}            `json:"data,omitempty"`
 	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`

@@ -1233,7 +1233,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		auth.TokenType = te.Type
 	}
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:    auth,
 		Request: req,
 	}
