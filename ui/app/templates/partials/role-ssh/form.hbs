@@ -46,13 +46,5 @@
         Cancel
       {{/secret-link}}
     </div>
-    {{#if (and (eq mode 'edit') model.canDelete)}}
-      <ConfirmAction
-        @buttonClasses="button is-ghost"
-        @onConfirmAction={{action "delete"}}
-      >
-        Delete
-      </ConfirmAction>
-    {{/if}}
   </div>
 </form>

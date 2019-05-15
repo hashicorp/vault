@@ -43,7 +43,7 @@
         {{#if item.canDelete}}
           <li class="action">
             <ConfirmAction
-              @buttonClasses="button is-ghost"
+              @buttonClasses="link is-destroy"
               @onConfirmAction={{action "delete" item}}
               data-test-aws-role-delete={{item.id}}
             >

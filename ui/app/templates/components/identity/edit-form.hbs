@@ -1,3 +1,17 @@
+{{#if (and (eq mode "edit") model.canDelete)}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action "deleteItem" model}}
+        data-test-entity-item-delete="true"
+      >
+        Delete
+      </ConfirmAction>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
 <form {{action (perform save) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
@@ -34,14 +48,5 @@
         {{/if}}
       </div>
     </div>
-      {{#if (and (eq mode "edit") model.canDelete)}}
-        <ConfirmAction
-          @buttonClasses="button is-ghost"
-          @onConfirmAction={{action "deleteItem" model}}
-          data-test-entity-item-delete="true"
-        >
-            Delete
-        </ConfirmAction>
-      {{/if}}
   </div>
 </form>
