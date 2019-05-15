@@ -2,7 +2,11 @@
 {{outlet}}
   <footer class="footer has-text-grey has-text-centered">
     <span class="is-inline-block">
-      <Icon @glyph="hashicorp" aria-hidden="true" class="hs-icon-l has-text-grey-light" />
+      <Icon
+        @glyph="hashicorp"
+        @size="l"
+        aria-hidden="true"
+        class="has-text-grey-light" />
       &copy; {{date-format (now) "YYYY"}} HashiCorp
     </span>
     <span>
