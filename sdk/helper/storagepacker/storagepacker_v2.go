@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"sort"
 )
 
 const (
@@ -114,6 +115,57 @@ func GetItemIDHash(itemID string) string {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(itemID))
 }
 
+func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []string) error {
+	// If we crash while writing out new buckets created by sharding,
+	// we will have version N of the bucket in storage, and version N+1
+	// represented in the sub-buckets.
+	//
+	// To bring these two into alignment, we can roll back to version N.
+	// It might be possible to foll forward in some cases (particularly if
+	// only one item can be added at a time?) but the crash must have
+	// occurred before PutBucket() returned, so the new data need not be saved.
+	//
+	// If we load a bucket that has sub-buckets but is non-empty,
+	// delete all of the sub-buckets.  (The current implementation recurses
+	// so there may be more than one level of sub-buckets created by shardBucket.)
+
+	// Visit the buckets using inorder traversal, parents before children.
+	sort.Strings(keys)
+
+	var nonemptyParent string
+	nonemptyParent = "NOT_A_PREFIX"
+
+	for _, key := range keys {
+		if strings.HasPrefix(key, nonemptyParent) {
+			// FIXME: can I give more context about the storage path?
+			s.Logger.Warn("Detected shadowed bucket, removing", "key", key, "parent", nonemptyParent)
+			s.BucketStorageView.Delete(ctx, key)
+			continue
+		}
+
+		// Read from the underlying view
+		storageEntry, err := s.BucketStorageView.Get(ctx, key)
+		if err != nil {
+			return errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
+		}
+		if storageEntry == nil {
+			return fmt.Errorf("no data found at bucket %s", key)
+		}
+		bucket, err := s.DecodeBucket(storageEntry)
+		if err != nil {
+			return err
+		}
+		if bucket.ItemMap != nil {
+			nonemptyParent = key
+		}
+
+		s.bucketsCacheLock.Lock()
+		s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
+		s.bucketsCacheLock.Unlock()
+	}
+	return nil
+}
+
 func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 	var retErr error
 	s.prewarmCache.Do(func() {
@@ -122,28 +174,7 @@ func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 			retErr = err
 			return
 		}
-		for _, key := range diskBuckets {
-			// Read from the underlying view
-			storageEntry, err := s.BucketStorageView.Get(ctx, key)
-			if err != nil {
-				retErr = errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
-				return
-			}
-			if storageEntry == nil {
-				retErr = fmt.Errorf("no data found at bucket %s", key)
-				return
-			}
-
-			bucket, err := s.DecodeBucket(storageEntry)
-			if err != nil {
-				retErr = err
-				return
-			}
-
-			s.bucketsCacheLock.Lock()
-			s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
-			s.bucketsCacheLock.Unlock()
-		}
+		retErr = s.visitDiskBucketsInOrder(ctx, diskBuckets)
 	})
 	if retErr != nil {
 		return nil, retErr
