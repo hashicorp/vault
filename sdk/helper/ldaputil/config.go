@@ -116,7 +116,7 @@ Default: cn`,
 			Type:          framework.TypeString,
 			Default:       "tls12",
 			Description:   "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
-			DisplayName:   "Maxumum TLS Version",
+			DisplayName:   "Maximum TLS Version",
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
