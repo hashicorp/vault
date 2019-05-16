@@ -14,7 +14,12 @@
         <td class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</td>
         <td>{{c.total}}</td>
         {{#if showChangeColumn}}
-          <td data-test-change="{{c.change}}">{{c.change}}</td>
+          <td data-test-change="{{c.percentChange}}">
+            {{#if c.percentChange}}
+              <Icon @glyph={{c.glyph}} />
+              {{c.percentChange}}%
+            {{/if}}
+          </td>
         {{/if}}
       </tr>
     {{/each}}

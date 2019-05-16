@@ -36,8 +36,14 @@ export default Component.extend({
 
       counters.forEach(month => {
         if (previousMonthVal) {
-          const change = (((month.total - previousMonthVal) / month.total) * 100).toFixed(1);
-          const newCounter = Object.assign({ change }, month);
+          const percentChange = (((month.total - previousMonthVal) / month.total) * 100).toFixed(1);
+          let glyph;
+          if (percentChange > 0) {
+            glyph = 'arrow-up';
+          } else if (percentChange < 0) {
+            glyph = 'arrow-down';
+          }
+          const newCounter = Object.assign({ percentChange, glyph }, month);
           countersWithPercentChange.push(newCounter);
         } else {
           // we're looking at the first counter in the list, so there is no % change value.
