@@ -1,7 +1,9 @@
 .http-requests-table {
-  & thead {
-    box-shadow: 0 1px 0 $grey-light, 0 -1px 0 $grey-light;
-    margin: 0;
-    padding: 0 $size-6 0 0;
+  & tr {
+    border-bottom: 1px solid $grey-light;
+  }
+
+  & td {
+    padding: $spacing-s;
   }
 }
