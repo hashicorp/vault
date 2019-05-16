@@ -34,4 +34,7 @@ message Bucket {
 	repeated Item items = 2;
 	// ItemMap stores a mapping of item ID to message. Used by v2.
 	map <string, bytes> item_map = 3;
+	// Has this bucket been emptied into sub-buckets? Used by v2.
+	// If has_shards is true then item_map should be empty.
+	bool has_shards = 4;
 }

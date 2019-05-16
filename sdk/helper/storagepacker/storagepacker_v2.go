@@ -58,10 +58,6 @@ type Config struct {
 // * Hold the storageLock for the duration of any read or write operation on a given
 //   bucket. The storageLock is idetermined by the "cache key" of the bucket, which
 //   omits all of the '/'s.
-//
-// Invariant: a Bucket has a nil ItemMap if it has child shards.
-// Its ItemMap is non-nil if it is merely empty. This lets us
-// tell whether a bucket has been split since we first retrieved it.
 type StoragePackerV2 struct {
 	*Config
 	storageLocks []*locksutil.LockEntry
@@ -75,8 +71,7 @@ type StoragePackerV2 struct {
 	// disableSharding is used for tests
 	disableSharding bool
 
-	// Ensures we only process one sharding at a time, so that we can't grab
-	// the same locks for the child buckets
+	// Ensures we only process one sharding at a time.
 	shardLock sync.RWMutex
 
 	prewarmCache sync.Once
@@ -113,7 +108,8 @@ func (s *StoragePackerV2) lockBucket(key string, acquire lockOperation, release 
 
 		bucket := bucketRaw.(*LockedBucket)
 		acquire(bucket)
-		if bucket.ItemMap != nil {
+		if !bucket.HasShards {
+			// Found a leaf bucket.
 			// Lock still held on return
 			return bucket, true, nil
 		} else if keyPrefix != lastCacheKey {
@@ -121,8 +117,10 @@ func (s *StoragePackerV2) lockBucket(key string, acquire lockOperation, release 
 			lastCacheKey = keyPrefix
 			release(bucket)
 		} else {
+			finalKey := bucket.Key
 			release(bucket)
-			return nil, true, errors.New("Bucket " + bucket.Key + " has nil ItemMap")
+			return nil, true, fmt.Errorf("Bucket %s has shards but no longer prefix found.",
+				finalKey)
 		}
 	}
 	// Not possible
@@ -223,8 +221,9 @@ func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, creat
 	bucket = &LockedBucket{
 		LockEntry: lock,
 		Bucket: &Bucket{
-			Key:     firstBucketKey,
-			ItemMap: make(map[string][]byte),
+			Key:       firstBucketKey,
+			ItemMap:   make(map[string][]byte),
+			HasShards: false,
 		},
 	}
 	s.bucketsCacheLock.Lock()
@@ -285,8 +284,7 @@ func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []st
 	// Visit the buckets using inorder traversal, parents before children.
 	sort.Strings(keys)
 
-	var nonemptyParent string
-	nonemptyParent = "NOT_A_PREFIX"
+	nonemptyParent := "NOT_A_PREFIX"
 
 	for _, key := range keys {
 		if strings.HasPrefix(key, nonemptyParent) {
@@ -308,7 +306,7 @@ func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []st
 		if err != nil {
 			return err
 		}
-		if bucket.ItemMap != nil {
+		if !bucket.HasShards {
 			nonemptyParent = key
 		}
 
@@ -470,8 +468,9 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 		shardedBucket := &LockedBucket{
 			LockEntry: lock,
 			Bucket: &Bucket{
-				Key:     fmt.Sprintf("%s/%s", bucket.Key, shardKey),
-				ItemMap: make(map[string][]byte),
+				Key:       fmt.Sprintf("%s/%s", bucket.Key, shardKey),
+				ItemMap:   make(map[string][]byte),
+				HasShards: false,
 			},
 		}
 		shards[shardKey] = shardedBucket
@@ -533,9 +532,11 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	// this bucket and block on the lock.
 	origBucketItemMap := bucket.ItemMap
 	bucket.ItemMap = nil
+	bucket.HasShards = true
 	if err := s.storeBucket(ctx, bucket, false); err != nil {
 		retErr = multierror.Append(retErr, err)
 		bucket.ItemMap = origBucketItemMap
+		bucket.HasShards = false
 		cleanupStorage()
 		cleanupCache()
 		return retErr
