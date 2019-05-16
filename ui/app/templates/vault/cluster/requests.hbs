@@ -10,6 +10,8 @@
   {{!--
     <HttpRequestsBarChart @counters=counters />
   --}}
+
+    <AlertInline @type="info" @message="Metrics are recorded only for interactions that produce or use a Vault token." />
     <HttpRequestsTable @counters={{model.counters}} />
 {{else}}
   <EmptyState @title={{'There were no requests recorded'}}/>
