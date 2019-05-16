@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import waitForError from 'vault/tests/helpers/wait-for-error';
 
 module('Integration | Component | icon', function(hooks) {
   setupRenderingTest(hooks);
@@ -18,5 +19,13 @@ module('Integration | Component | icon', function(hooks) {
 
     await render(hbs`<Icon class="al" aria-label="Testing" />`);
     assert.dom('.al').hasAttribute('aria-label', 'Testing', 'renders aria-label');
+
+    await render(hbs`<Icon @glyph="vault-logo" @size="s"/>`);
+    assert.dom('.hs-icon').hasClass('hs-icon-s', 'adds the size class');
+
+    let promise = waitForError();
+    render(hbs`<Icon @glyph="vault-logo" @size="no"/>`);
+    let err = await promise;
+    assert.ok(err.message.includes('The size property of'), "errors when passed a size that's not allowed");
   });
 });
