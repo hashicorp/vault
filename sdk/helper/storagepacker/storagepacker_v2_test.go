@@ -442,7 +442,7 @@ func TestStoragePackerV2_Recurse(t *testing.T) {
 	for idx, item := range allItems {
 		err := storagePacker1.PutItem(ctx, item)
 		if err != nil {
-			t.Fatalf("Error inserting key %v %v: %v", idx, item, err)
+			t.Fatalf("Error inserting key %v %v: %v", idx, item.ID, err)
 		}
 	}
 
@@ -450,4 +450,154 @@ func TestStoragePackerV2_Recurse(t *testing.T) {
 
 	storagePacker2 := createStoragePacker(t, storage)
 	checkAllItems(t, storagePacker2, ctx, allItems)
+}
+
+func TestStoragePackerV2_Race(t *testing.T) {
+	n := 200
+	ids := [][]string{
+		generateLotsOfCollidingIDs(200, "00"),
+		generateLotsOfCollidingIDs(200, "10"),
+	}
+
+	storage := logical.InmemStorageWithMaxSize(10000)
+	storagePacker1 := createStoragePacker(t, storage)
+	ctx := namespace.RootContext(nil)
+
+	allItems := make([]*Item, n*2)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   ids[i/n][i%n],
+			Data: incompressibleData(1000),
+		}
+	}
+
+	done := make(chan bool)
+
+	writer := func(items []*Item) {
+		for _, item := range items {
+			err := storagePacker1.PutItem(ctx, item)
+			if err != nil {
+				t.Errorf("Error inserting key %v: %v", item.ID, err)
+			}
+		}
+		done <- true
+	}
+	go writer(allItems[:n])
+	go writer(allItems[n:])
+
+	_ = <-done
+	_ = <-done
+
+	checkAllItems(t, storagePacker1, ctx, allItems)
+}
+
+func TestStoragePackerV2_BucketOperations(t *testing.T) {
+	ids := generateLotsOfCollidingIDs(80, "00")
+
+	storage := logical.InmemStorageWithMaxSize(10000)
+	storagePacker1 := createStoragePacker(t, storage)
+	ctx := namespace.RootContext(nil)
+
+	allItems := make([]*Item, 80)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   ids[i],
+			Data: incompressibleData(1000),
+		}
+	}
+
+	// Get bucket 00 from initially empty storage
+	bucket, err := storagePacker1.GetBucket(ctx, "00", false)
+	if err != nil {
+		t.Fatalf("GetBucket error: %v", err)
+	}
+	if bucket != nil {
+		t.Fatalf("GetBucket created a bucket it shouldn't have.")
+	}
+
+	// Put one item in to create it
+	err = storagePacker1.PutItem(ctx, allItems[0])
+	if err != nil {
+		t.Fatalf("Error inserting key %v: %v", allItems[0].ID, err)
+	}
+
+	// Get bucket 00 again (should hit in cache)
+	bucket, err = storagePacker1.GetBucket(ctx, "00", false)
+	if err != nil {
+		t.Fatalf("GetBucket error: %v", err)
+	}
+	if bucket == nil {
+		t.Fatalf("GetBucket didn't find bucket.")
+	}
+	if bucket.Key != "00" {
+		t.Fatalf("GetBucket mismatched key.")
+	}
+
+	// Get bucket 00 again (force cache miss)
+	bucket, err = storagePacker1.GetBucket(ctx, "00", true)
+	if err != nil {
+		t.Fatalf("GetBucket error: %v", err)
+	}
+	if bucket == nil {
+		t.Fatalf("GetBucket didn't find bucket.")
+	}
+	if bucket.Key != "00" {
+		t.Fatalf("GetBucket mismatched key.")
+	}
+
+	bucket.Lock()
+	for _, item := range allItems {
+		itemHash := GetItemIDHash(item.ID)
+		bucket.ItemMap[itemHash] = item.Data
+	}
+	bucket.Unlock()
+
+	err = storagePacker1.PutBucket(ctx, bucket)
+	if err != nil {
+		t.Fatalf("PutBucket error: %v", err)
+	}
+
+	itemHash := GetItemIDHash(allItems[0].ID)
+	// Get the shard containing that first key
+	bucket, err = storagePacker1.GetBucket(ctx, itemHash, false)
+	if err != nil {
+		t.Fatalf("GetBucket error: %v", err)
+	}
+	if bucket == nil {
+		t.Fatalf("GetBucket didn't find bucket.")
+	}
+	key00x := storagePacker1.GetCacheKey(bucket.Key)
+	if !strings.HasPrefix(itemHash, key00x) {
+		t.Fatalf("GetBucket mismatched key, itemHash=%v bucket.Key=%v", itemHash, bucket.Key)
+	}
+
+	t.Logf("Deleting bucket %v", bucket.Key)
+
+	// Delete the whole bucket
+	err = storagePacker1.DeleteBucket(ctx, bucket.Key)
+	if err != nil {
+		t.Fatalf("DeleteBucket error: %v", err)
+	}
+
+	// Now, every key should still be present except those matching the deleted bucket key
+	for idx, item := range allItems {
+		itemHash := GetItemIDHash(item.ID)
+		storedItem, err := storagePacker1.GetItem(ctx, item.ID)
+		if err != nil {
+			t.Errorf("Error retrieving item %v hash %v: %v",
+				idx, itemHash, err)
+		} else if strings.HasPrefix(itemHash, key00x) {
+			// Should have been deleted
+			if storedItem != nil {
+				t.Errorf("Item %v hash %v is still present", idx, itemHash)
+			}
+		} else {
+			if storedItem == nil {
+				t.Errorf("Nil item %v hash %v", idx, itemHash)
+			} else if !bytes.Equal(storedItem.Data, item.Data) {
+				t.Errorf("Item %v ash %v: data mismatch", idx, itemHash)
+			}
+		}
+	}
+
 }
