@@ -368,7 +368,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.StaticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
