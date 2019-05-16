@@ -27,4 +27,25 @@ export default Component.extend({
     const { counters } = this;
     return counters && counters.length > 1;
   }),
+  countersWithChange: computed('counters', function() {
+    const { counters } = this;
+
+    if (counters) {
+      let countersWithPercentChange = [];
+      let previousMonthVal;
+
+      counters.forEach(month => {
+        if (previousMonthVal) {
+          const change = (((month.total - previousMonthVal) / month.total) * 100).toFixed(1);
+          const newCounter = Object.assign({ change }, month);
+          countersWithPercentChange.push(newCounter);
+        } else {
+          // we're looking at the first counter in the list, so there is no % change value.
+          countersWithPercentChange.push(month);
+          previousMonthVal = month.total;
+        }
+      });
+      return countersWithPercentChange;
+    }
+  }),
 });
