@@ -145,7 +145,6 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	// Return the secret
 
 	// Execute each query
 	for _, stmt := range stmts {
