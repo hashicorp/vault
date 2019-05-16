@@ -141,8 +141,10 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	itemRaw := heap.Remove(&pq.data, item.index)
 	delete(pq.dataMap, key)
 
-	if i, ok := itemRaw.(*Item); ok {
-		return i, nil
+	if itemRaw != nil {
+		if i, ok := itemRaw.(*Item); ok {
+			return i, nil
+		}
 	}
 
 	return nil, nil
