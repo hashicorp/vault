@@ -48,4 +48,10 @@ module('Integration | Component | http-requests-table', function(hooks) {
 
     assert.ok(this.element.textContent.includes('Change'));
   });
+
+  // test('it shows the percent change between each time window', async function(assert) {
+  //   await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
+  //   const expected = '-11.1';
+  //   assert.ok(true);
+  // });
 });
