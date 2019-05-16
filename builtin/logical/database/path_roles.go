@@ -323,7 +323,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
 
-	role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
