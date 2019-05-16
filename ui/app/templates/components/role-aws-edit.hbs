@@ -33,7 +33,7 @@
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
-      {{#if (and model.canGenerate (or model.canDelete model.canUpdate))}}
+      {{#if (and model.canGenerate (or model.canDelete model.canEdit))}}
         <div class="toolbar-separator" />
       {{/if}}
       {{#if model.canDelete}}
@@ -44,7 +44,7 @@
           Delete role
         </ConfirmAction>
       {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{#if model.canEdit}}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"

@@ -1,5 +1,4 @@
 import Component from '@ember/component';
-import hbs from 'htmlbars-inline-precompile';
 import layout from '../templates/components/confirm-action';
 
 /**
@@ -27,7 +26,8 @@ import layout from '../templates/components/confirm-action';
 
 export default Component.extend({
   layout,
-  classNames: ['confirm-action'],
+  tagName: '',
+  supportsDataTestProperties: true,
   buttonText: 'Delete',
   confirmTitle: 'Delete this?',
   confirmMessage: 'You will not be able to recover it later.',
