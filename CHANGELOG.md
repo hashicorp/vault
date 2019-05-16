@@ -29,6 +29,8 @@ FEATURES:
 IMPROVEMENTS: 
 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
+ * auth/jwt: `bound_claims` will now match received claims that are lists if any element
+   of the list is one of the expected values [JWT-50]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
