@@ -53,10 +53,10 @@ type Config struct {
 // when they exceed the imposed limit.
 //
 // The locking discipline for StoragePackerV2:
-// * Acquire locks in the order storageLocks < shardLock < bucketsCacheLock to avoid
+// * Acquire locks in the order storageLocks < bucketsCacheLock to avoid
 //   deadlock.
 // * Hold the storageLock for the duration of any read or write operation on a given
-//   bucket. The storageLock is idetermined by the "cache key" of the bucket, which
+//   bucket. The storageLock is determined by the "cache key" of the bucket, which
 //   omits all of the '/'s.
 type StoragePackerV2 struct {
 	*Config
@@ -70,9 +70,6 @@ type StoragePackerV2 struct {
 
 	// disableSharding is used for tests
 	disableSharding bool
-
-	// Ensures we only process one sharding at a time.
-	shardLock sync.RWMutex
 
 	prewarmCache sync.Once
 }
@@ -438,7 +435,7 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 	bucket.Lock()
 	defer bucket.Unlock()
 
-	if err := s.storeBucket(ctx, bucket, true); err != nil {
+	if err := s.storeBucket(ctx, bucket); err != nil {
 		return errwrap.Wrapf("failed at high level bucket put: {{err}}", err)
 	}
 
@@ -449,12 +446,7 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 	return nil
 }
 
-func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string, allowLocking bool) error {
-	if allowLocking {
-		s.shardLock.Lock()
-		defer s.shardLock.Unlock()
-	}
-
+func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string) error {
 	numShards := int(math.Pow(2.0, float64(s.BucketShardBits)))
 
 	// Create the shards
@@ -509,9 +501,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	}
 	for k, v := range shards {
 		s.Logger.Trace("storing bucket", "shard", k)
-		// allowLocking = false because we might recursively break
-		// up one of the shards
-		if err := s.storeBucket(ctx, v, false); err != nil {
+		if err := s.storeBucket(ctx, v); err != nil {
 			s.Logger.Debug("encountered error", "shard", k)
 			retErr = multierror.Append(retErr, err)
 			cleanupStorage()
@@ -533,7 +523,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	origBucketItemMap := bucket.ItemMap
 	bucket.ItemMap = nil
 	bucket.HasShards = true
-	if err := s.storeBucket(ctx, bucket, false); err != nil {
+	if err := s.storeBucket(ctx, bucket); err != nil {
 		retErr = multierror.Append(retErr, err)
 		bucket.ItemMap = origBucketItemMap
 		bucket.HasShards = false
@@ -554,7 +544,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket, allowLocking bool) error {
+func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket) error {
 	if atomic.LoadUint32(&s.queueMode) == 1 {
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
@@ -579,7 +569,7 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), physical.ErrValueTooLarge) && !s.disableSharding {
-			err = s.shardBucket(ctx, bucket, s.GetCacheKey(bucket.Key), allowLocking)
+			err = s.shardBucket(ctx, bucket, s.GetCacheKey(bucket.Key))
 		}
 		if err != nil {
 			return errwrap.Wrapf("failed to persist packed storage entry: {{err}}", err)
@@ -612,7 +602,7 @@ func (s *StoragePackerV2) DeleteBucket(ctx context.Context, key string) error {
 	}
 
 	bucket.ItemMap = make(map[string][]byte)
-	if err := s.storeBucket(ctx, bucket, true); err != nil {
+	if err := s.storeBucket(ctx, bucket); err != nil {
 		return errwrap.Wrapf("failed to write deleted bucket: {{err}}", err)
 	}
 	return nil
@@ -678,7 +668,7 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
 	}
 
 	delete(bucket.ItemMap, itemHash)
-	return s.storeBucket(ctx, bucket, true)
+	return s.storeBucket(ctx, bucket)
 }
 
 // GetItem fetches the storage entry for a given key from its corresponding
@@ -759,7 +749,7 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 	}
 
 	// Persist the result
-	return s.storeBucket(ctx, bucket, true)
+	return s.storeBucket(ctx, bucket)
 }
 
 // NewStoragePackerV2 creates a new storage packer for a given view
@@ -853,7 +843,7 @@ func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 func (s *StoragePackerV2) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
-		lErr := s.storeBucket(ctx, value.(*LockedBucket), true)
+		lErr := s.storeBucket(ctx, value.(*LockedBucket))
 		if lErr != nil {
 			err = multierror.Append(err, lErr)
 		}
