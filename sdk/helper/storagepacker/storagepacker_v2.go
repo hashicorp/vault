@@ -150,19 +150,28 @@ func (s *StoragePackerV2) lockBucketForWrite(key string) (bucket *LockedBucket, 
 	return s.lockBucket(key, writeAcquire, writeRelease)
 }
 
+// Return the topmost bucket in the tree for a given key.
+// Used as a defult if the cache is empty or bypassed.
+func (s *StoragePackerV2) firstKey(key string) (string, error) {
+	cacheKey := s.GetCacheKey(key)
+	rootShardLength := s.BaseBucketBits / 4
+	if len(cacheKey) < rootShardLength {
+		return cacheKey, errors.New("Key too short.")
+	}
+	return cacheKey[0 : s.BaseBucketBits/4], nil
+}
+
 // If an entry is not found in bucketsCache, it might be because it's never
 // been created. Try to load it from storage first, then create it if desired.
 // This only works for the first tier of buckets, without the cache we cant'
 // tell how long the prefix should be.
 // FIXME: what cases does loading from storage cover?
 // Will return with a write lock held, or nil if no storage exists.
-func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, create bool, skipCache bool) (bucket *LockedBucket, err error) {
-	cacheKey := s.GetCacheKey(key)
-	rootShardLength := s.BaseBucketBits / 4
-	if len(cacheKey) < rootShardLength {
-		return nil, errors.New("Key too short.")
+func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, create bool) (bucket *LockedBucket, err error) {
+	firstBucketKey, err := s.firstKey(key)
+	if err != nil {
+		return nil, err
 	}
-	firstBucketKey := cacheKey[0 : s.BaseBucketBits/4]
 
 	// Grab the lock for this not-yet-existent bucket
 	lock := locksutil.LockForKey(s.storageLocks, firstBucketKey)
@@ -173,7 +182,7 @@ func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, creat
 	_, _, found := s.bucketsCache.LongestPrefix(firstBucketKey)
 	s.bucketsCacheLock.RUnlock()
 
-	if found && !skipCache {
+	if found {
 		// OK, we found it but it is the right bucket after all?
 		// For example, the bucket could have been created *and* split since
 		// we got the initial cache miss.
@@ -337,22 +346,55 @@ func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 
 // Get returns a bucket for a given key
 func (s *StoragePackerV2) GetBucket(ctx context.Context, key string, skipCache bool) (*LockedBucket, error) {
-	bucket, found, err := s.lockBucketForRead(key)
-	if err != nil {
-		return nil, err
+	if key == "" {
+		return nil, errors.New("missing bucket key")
 	}
-	if found {
-		bucket.RUnlock()
-		if !skipCache {
+
+	if !skipCache {
+		bucket, found, err := s.lockBucketForRead(key)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			bucket.RUnlock()
 			return bucket, nil
 		}
+		// Try to read from storage, but don't create if missing
+		bucket, err = s.handleCacheMiss(ctx, key, false)
+		if bucket != nil {
+			bucket.Unlock()
+		}
+		return bucket, err
 	}
-	// Don't create if missing
-	bucket, err = s.handleCacheMiss(ctx, key, false, skipCache)
+
+	// Read directly from storage
+	// FIXME: in the cases where we want skipCache = true, why do we trust
+	// the cache to point us at the right bucket? Would it be better to
+	// walk the possible prefixes?
+	bucket, found, err := s.lockBucketForRead(key)
 	if bucket != nil {
-		bucket.Unlock()
+		defer bucket.RUnlock()
 	}
-	return bucket, err
+
+	var storageKey string
+	if found {
+		storageKey = bucket.Key
+	} else {
+		storageKey, err = s.firstKey(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+	storageEntry, err := s.BucketStorageView.Get(ctx, storageKey)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
+	}
+	if storageEntry == nil {
+		return nil, nil
+	}
+
+	// FIXME: add to cache like the previous version did? Why?
+	return s.DecodeBucket(storageEntry)
 }
 
 // NOTE: Don't put inserting into the cache here, as that will mess with
@@ -614,7 +656,7 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
 		return err
 	}
 	if !found {
-		bucket, err = s.handleCacheMiss(ctx, key, false, false)
+		bucket, err = s.handleCacheMiss(ctx, key, false)
 		if err != nil {
 			return err
 		}
@@ -655,7 +697,7 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 		defer bucket.RUnlock()
 	} else {
 		// Don't create, don't skip cache
-		bucket, err = s.handleCacheMiss(ctx, key, false, false)
+		bucket, err = s.handleCacheMiss(ctx, key, false)
 		if err != nil {
 			return nil, err
 		}
@@ -704,7 +746,7 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 	}
 	if !found {
 		// Create, don't skip cache
-		bucket, err = s.handleCacheMiss(ctx, key, true, false)
+		bucket, err = s.handleCacheMiss(ctx, key, true)
 		if err != nil {
 			return err
 		}

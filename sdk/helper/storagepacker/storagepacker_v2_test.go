@@ -328,7 +328,22 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 	if bucketKey000 != "00/0" {
 		t.Fatalf("Unexpected key for shard %v", bucketKey000)
 	}
+
 	bucket000, err := storagePacker1.GetBucket(ctx, bucketKey000, false)
+	if err != nil {
+		t.Fatalf("Key %v error %v", bucketKey000, err)
+	}
+	if bucket000.Key != "00/0" {
+		t.Fatalf("Unexpected key for bucket %v", bucket000.Key)
+	}
+	if len(bucket000.Bucket.ItemMap) != 4 {
+		t.Errorf("Post-split bucket %v contains %v items.",
+			bucket000.Bucket.Key,
+			len(bucket000.Bucket.ItemMap))
+	}
+
+	// Try bypassing cache too.
+	bucket000, err = storagePacker1.GetBucket(ctx, bucketKey000, true)
 	if err != nil {
 		t.Fatalf("Key %v error %v", bucketKey000, err)
 	}
