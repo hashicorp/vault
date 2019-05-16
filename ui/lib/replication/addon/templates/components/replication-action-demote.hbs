@@ -7,15 +7,15 @@
       (not model.performance.replicationDisabled)
     )
   }}
-  
+
     <div data-test-demote-warning>
       <AlertInline
         @type="danger"
         @message="Demoting this DR primary cluster
           would result in a DR secondary and in that mode Vault is read-only. This
-          cluster is also currently operating as a Performance 
+          cluster is also currently operating as a Performance
           capitalize model.performance.modeForUrl}}, demoting it will leave your
-          replication setup without a performance primary cluster until a new 
+          replication setup without a performance primary cluster until a new
           cluster is promoted."
       />
     </div>
@@ -32,15 +32,16 @@
 </div>
 <div class="field">
   <div class="control">
-    {{#confirm-action
-      buttonClasses="button is-primary"
-      onConfirmAction=(action "onSubmit" "demote" model.replicationAttrs.modeForUrl)
-      confirmMessage="Are you sure you want to demote this cluster?"
-      confirmButtonText="Demote cluster"
-      cancelButtonText="Cancel"
-      data-test-replication-demote=true
-      }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Demote this cluster?"
+      @confirmMessage="This will affect how your Vault data is replicated."
+      @confirmButtonText="Demote"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "onSubmit" "demote" model.replicationAttrs.modeForUrl}}
+      data-test-replication-demote="true"
+    >
       Demote cluster
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 </div>

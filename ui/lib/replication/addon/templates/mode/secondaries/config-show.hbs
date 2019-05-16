@@ -1,3 +1,22 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if model.config.mode}}
+      <ToolbarLink
+        @params={{array "mode.secondaries.config-edit" model.config.id}}
+        @data-test-replication-link="edit-mount-config"
+      >
+        Edit config
+      </ToolbarLink>
+    {{else}}
+      <ToolbarLink
+        @params={{array "mode.secondaries.config-create" model.config.id}}
+        @data-test-replication-link="create-mount-config"
+      >
+        Create config
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 <div class="box is-fullwidth is-shadowless is-marginless">
   <h4 class="title is-5 is-marginless">
     Mount filter config for <code>{{model.config.id}}</code>
@@ -18,31 +37,7 @@
   </div>
 {{else}}
   <EmptyState
-    @title="Performance Mount Filtering is not configured for this secondary"
+    @title="No config yet"
+    @message="Performance Mount Filtering is not configured for this secondary"
   />
 {{/if}}
-<div class="field is-fullwidth box is-shadowless">
-  {{#if model.config.mode}}
-    <div class="control">
-      {{#link-to
-        "mode.secondaries.config-edit"
-        model.config.id
-        class="button"
-        data-test-replication-link="edit-mount-config"
-        }}
-        Edit
-      {{/link-to}}
-    </div>
-  {{else}}
-    <div class="control">
-      {{#link-to
-        "mode.secondaries.config-create"
-        model.config.id
-        class="button"
-        data-test-replication-link="create-mount-config"
-        }}
-        Create
-      {{/link-to}}
-    </div>
-  {{/if}}
-</div>

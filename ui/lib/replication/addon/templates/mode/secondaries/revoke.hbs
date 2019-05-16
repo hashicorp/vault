@@ -17,18 +17,18 @@
 </div>
 <div class="field is-grouped box is-fullwidth is-bottomless">
   <div class="control">
-    {{#confirm-action
-      onConfirmAction=(action "onSubmit" "revoke-secondary" "primary" (hash id=id))
-      confirmMessage=(concat "Are you sure you want to revoke " id "?")
-      disabledMessage="A secondary ID is required perform revocation."
-      buttonClasses="is-primary button"
-      confirmButtonText="Revoke"
-      cancelButtonText="Cancel"
-      showConfirm=isRevoking
-      disabled=(not id)
-    }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Revoke token?"
+      @confirmMessage="This will revoke this secondary token."
+      @confirmButtonText="Revoke"
+      @disabled={{not id}}
+      @disabledMessage="A secondary ID is required perform revocation."
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=id)}}
+    >
       Revoke
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
   <div class="control">
     {{#unless isRevoking}}
