@@ -4,13 +4,18 @@
       Authentication Methods
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#link-to 'vault.cluster.settings.auth.enable' class="button has-icon-right is-ghost is-compact"}}
-      Enable new method
-      {{i-con glyph="chevron-right" size=11}}
-    {{/link-to}}
-  </p.levelRight>
 </PageHeader>
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @type="add"
+      @params={{array 'vault.cluster.settings.auth.enable'}}
+    >
+      Enable new method
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
 
 {{#each (sort-by "path" model) as |method|}}
   <div
@@ -22,15 +27,18 @@
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
             <T.trigger>
-              <ICon @glyph={{concat "enable/"
-                (if
+              <Icon
+                @glyph={{if
                   (or
                     (find-by "type" method.methodType (mountable-auth-methods))
                     (eq method.methodType "token")
                   )
                   method.methodType
                   "auth"
-                )}} @size=24 @class="has-text-grey-light"/>
+                }}
+                @size="l"
+                class="has-text-grey-light"
+                />
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">

@@ -48,15 +48,14 @@ type PriorityQueue struct {
 	// for finding specific items. dataMap is kept in sync with the data slice
 	dataMap map[string]*Item
 
-	// mapMutex is used to facilitate read/write locks on the dataMap
-	sync.Mutex
+	// lock is a read/write mutex, and used to facilitate read/write locks on the
+	// data and dataMap fields
+	lock sync.RWMutex
 }
 
 // queue is the internal data structure used to satisfy heap.Interface. This
 // prevents users from calling Pop and Push heap methods directly
 type queue []*Item
-
-var _ heap.Interface = &queue{}
 
 // Item is something managed in the priority queue
 type Item struct {
@@ -76,18 +75,23 @@ type Item struct {
 }
 
 // Len returns the count of items in the Priority Queue
-func (pq *PriorityQueue) Len() int { return pq.data.Len() }
+func (pq *PriorityQueue) Len() int {
+	pq.lock.RLock()
+	defer pq.lock.RUnlock()
+	return pq.data.Len()
+}
 
 // Pop pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
 func (pq *PriorityQueue) Pop() (*Item, error) {
-	pq.Lock()
-	defer pq.Unlock()
-
 	if pq.Len() == 0 {
 		return nil, ErrEmpty
 	}
+
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
+
 	item := heap.Pop(&pq.data).(*Item)
 	delete(pq.dataMap, item.Key)
 	return item, nil
@@ -103,8 +107,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 		return errors.New("error adding item: Item Key is required")
 	}
 
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
 
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
@@ -125,8 +129,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 // from the queue if found. Returns ErrItemNotFound(key) if not found. This
 // method must fix the queue after removal.
 func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
 
 	item, ok := pq.dataMap[key]
 	if !ok {
@@ -137,8 +141,10 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	itemRaw := heap.Remove(&pq.data, item.index)
 	delete(pq.dataMap, key)
 
-	if i, ok := itemRaw.(*Item); ok {
-		return i, nil
+	if itemRaw != nil {
+		if i, ok := itemRaw.(*Item); ok {
+			return i, nil
+		}
 	}
 
 	return nil, nil

@@ -7,6 +7,8 @@
   - [Running / Development](#running--development)
     - [Code Generators](#code-generators)
     - [Running Tests](#running-tests)
+      - [Automated Cross-Browser Testing](#automated-cross-browser-testing)
+        - [Running Browserstack Locally](#running-browserstack-locally)
     - [Linting](#linting)
     - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
   - [Vault Storybook](#vault-storybook)
@@ -71,6 +73,17 @@ acceptance tests then run, proxing requests back to that server.
 - `yarn run test-oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
+- `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
+
+#### Automated Cross-Browser Testing
+
+Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`. 
+
+##### Running Browserstack Locally
+
+To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build. 
+
+To run the tests locally in a browser other than IE11, swap out `launch_in_ci: ['BS_IE_11']` inside `testem.browserstack.js`.
 
 ### Linting
 
@@ -157,3 +170,4 @@ It is important to add all new components into Storybook and to keep the story a
 - [Storybook for Ember Live Example](https://storybooks-ember.netlify.com/?path=/story/addon-centered--button)
 - [Storybook Addons](https://github.com/storybooks/storybook/tree/master/addons/)
 - [Storybook Docs](https://storybook.js.org/docs/basics/introduction/)
+- [Browserstack Automate](https://automate.browserstack.com/)

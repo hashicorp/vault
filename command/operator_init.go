@@ -30,6 +30,7 @@ type OperatorInitCommand struct {
 	flagRecoveryShares    int
 	flagRecoveryThreshold int
 	flagRecoveryPGPKeys   []string
+	flagStoredShares      int
 
 	// Consul
 	flagConsulAuto    bool
@@ -139,6 +140,13 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"key.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "stored-shares",
+		Target:  &c.flagStoredShares,
+		Default: -1,
+		Usage:   "DEPRECATED: This flag does nothing. It will be removed in Vault 1.3.",
+	})
+
 	// Consul Options
 	f = set.NewFlagSet("Consul Options")
 
@@ -218,6 +226,10 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	if len(args) > 0 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
 		return 1
+	}
+
+	if c.flagStoredShares != -1 {
+		c.UI.Warn("-stored-shares has no effect and will be removed in Vault 1.3.\n")
 	}
 
 	// Build the initial init request

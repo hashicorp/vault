@@ -1,14 +1,16 @@
 {{#link-to "vault.cluster.secrets" (query-params namespace=normalizedNamespace)
   class=(concat "is-block " class)
 }}
-  {{#if hasBlock}}
+  {{#if (has-block)}}
     {{yield}}
   {{else}}
     <div class="level is-mobile">
       <span class="level-left">{{namespaceDisplay}}</span>
-      <button type="button" class="button is-ghost icon level-right">
-        <ICon @glyph="chevron-right" @size="12" @class="has-text-grey" />
-      </button>
+      <span class="level-right">
+        <button type="button" class="button is-ghost icon">
+          <Chevron @isButton={{true}} class="has-text-grey" />
+        </button>
+      </span>
     </div>
   {{/if}}
 {{/link-to}}

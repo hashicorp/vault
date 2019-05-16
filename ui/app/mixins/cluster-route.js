@@ -13,6 +13,7 @@ export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
 
 export default Mixin.create({
   auth: service(),
+  store: service(),
 
   transitionToTargetRoute(transition) {
     const targetRoute = this.targetRouteName(transition);
@@ -28,7 +29,7 @@ export default Mixin.create({
   },
 
   clusterModel() {
-    return this.modelFor(CLUSTER);
+    return this.modelFor(CLUSTER) || this.store.peekRecord('cluster', 'vault');
   },
 
   authToken() {

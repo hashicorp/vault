@@ -1,5 +1,5 @@
 <div class="field">
-  <p class="control has-icons-left has-icons-right">
+  <p class="control has-icons-left">
   <input
     class="filter input"
     disabled={{disabled}}
@@ -9,11 +9,10 @@
 
     oninput={{action "handleInput" value="target.value"}}
     onkeyup={{action "handleKeyUp" }}
-    onkeydown={{action "handleKeyPress"}} 
+    onkeydown={{action "handleKeyPress"}}
     onfocus={{action "setFilterFocused" true}}
     onblur={{action "setFilterFocused" false}}
-   /> 
-
-    {{i-con glyph="ios-search-strong" class="is-left has-text-grey" size=18}}
+   />
+    <Icon @glyph="search" @size="l" class="search-icon has-text-grey-light" />
   </p>
 </div>

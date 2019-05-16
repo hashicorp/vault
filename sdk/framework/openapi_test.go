@@ -151,8 +151,8 @@ func TestOpenAPI_Regex(t *testing.T) {
 
 func TestOpenAPI_ExpandPattern(t *testing.T) {
 	tests := []struct {
-		in_pattern   string
-		out_pathlets []string
+		inPattern   string
+		outPathlets []string
 	}{
 		{"rekey/backup", []string{"rekey/backup"}},
 		{"rekey/backup$", []string{"rekey/backup"}},
@@ -203,10 +203,10 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		out := expandPattern(test.in_pattern)
+		out := expandPattern(test.inPattern)
 		sort.Strings(out)
-		if !reflect.DeepEqual(out, test.out_pathlets) {
-			t.Fatalf("Test %d: Expected %v got %v", i, test.out_pathlets, out)
+		if !reflect.DeepEqual(out, test.outPathlets) {
+			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, out)
 		}
 	}
 }
@@ -266,7 +266,10 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			Root:            test.rootPaths,
 			Unauthenticated: test.unauthPaths,
 		}
-		documentPath(&path, sp, logical.TypeLogical, doc)
+		err := documentPath(&path, sp, logical.TypeLogical, doc)
+		if err != nil {
+			t.Fatal(err)
+		}
 		result := test.root
 		if doc.Paths["/"+test.pattern].Sudo != result {
 			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
@@ -288,11 +291,11 @@ func TestOpenAPI_Paths(t *testing.T) {
 			Pattern: "lookup/" + GenericNameRegex("id"),
 
 			Fields: map[string]*FieldSchema{
-				"id": &FieldSchema{
+				"id": {
 					Type:        TypeString,
 					Description: "My id parameter",
 				},
-				"token": &FieldSchema{
+				"token": {
 					Type:        TypeString,
 					Description: "My token",
 				},
@@ -442,8 +445,14 @@ func TestOpenAPI_OperationID(t *testing.T) {
 
 	for _, context := range []string{"", "bar"} {
 		doc := NewOASDocument()
-		documentPath(path1, nil, logical.TypeLogical, doc)
-		documentPath(path2, nil, logical.TypeLogical, doc)
+		err := documentPath(path1, nil, logical.TypeLogical, doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = documentPath(path2, nil, logical.TypeLogical, doc)
+		if err != nil {
+			t.Fatal(err)
+		}
 		doc.CreateOperationIDs(context)
 
 		tests := []struct {
@@ -500,7 +509,10 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument()
-	documentPath(p, nil, logical.TypeLogical, docOrig)
+	err := documentPath(p, nil, logical.TypeLogical, docOrig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	docJSON := mustJSONMarshal(t, docOrig)
 

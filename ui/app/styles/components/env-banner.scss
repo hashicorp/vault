@@ -1,10 +1,24 @@
 .env-banner {
-  &,
-  &:not(:last-child):not(:last-child) {
+  align-self: center;
+  border-radius: 3rem;
+  background: linear-gradient(135deg, $blue, $purple);
+  animation: env-banner-color-rotate 8s infinite linear alternate;
+  color: $white;
+  margin-top: -20px;
+
+  .hs-icon {
     margin: 0;
   }
 
-  .level-item {
-    padding: $size-10 $size-8;
+  .notification {
+    background-color: transparent;
+    line-height: 1.66;
+    padding: 0 $spacing-s;
+  }
+}
+
+@keyframes env-banner-color-rotate {
+  100% {
+    filter: hue-rotate(105deg);
   }
 }
