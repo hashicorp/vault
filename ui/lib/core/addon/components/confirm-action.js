@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
+import layout from '../templates/components/confirm-action';
 
 /**
  * @module ConfirmAction
@@ -25,55 +26,8 @@ import hbs from 'htmlbars-inline-precompile';
  */
 
 export default Component.extend({
+  layout,
   classNames: ['confirm-action'],
-  layout: hbs`
-    {{#basic-dropdown class="popup-menu" horizontalPosition=horizontalPosition verticalPosition=verticalPosition onOpen=(action "toggleConfirm") onClose=(action "toggleConfirm") as |d|}}
-      {{#d.trigger
-        tagName="button"
-        type="button"
-        class=(concat buttonClasses " popup-menu-trigger" (if d.isOpen " is-active"))
-        disabled=disabled
-        data-test-confirm-action-trigger="true"
-      }}
-        {{yield}}
-        {{#if (eq buttonClasses 'toolbar-link')}}
-          <Chevron @direction={{if showConfirm 'up' 'down'}} />
-        {{/if}}
-      {{/d.trigger}}
-      {{#d.content class=(concat "popup-menu-content")}}
-        <div class="box confirm-action-message">
-          <div class="message is-highlight">
-            <div class="message-title">
-              <Icon @glyph="alert-triangle" />
-              {{if disabled disabledTitle confirmTitle}}
-            </div>
-            <p>
-              {{if disabled disabledMessage confirmMessage}}
-            </p>
-          </div>
-          <div class="confirm-action-options">
-            <button
-              type="button"
-              disabled={{disabled}}
-              class="link is-destroy"
-              data-test-confirm-button="true"
-              {{action 'onConfirm'}}
-            >
-              {{confirmButtonText}}
-            </button>
-            <button
-              type="button"
-              class="link"
-              data-test-confirm-cancel-button="true"
-              {{action d.actions.close}}
-            >
-              {{cancelButtonText}}
-            </button>
-          </div>
-        </div>
-      {{/d.content}}
-    {{/basic-dropdown}}
-  `,
   buttonText: 'Delete',
   confirmTitle: 'Delete this?',
   confirmMessage: 'You will not be able to recover it later.',
