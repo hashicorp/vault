@@ -325,9 +325,15 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 
 	// Verify split occurred, get new key
 	bucketKey000 := storagePacker1.BucketStorageKeyForItemID(ids[0][0])
-	bucket000, err := storagePacker1.GetBucket(ctx, bucketKey000, true)
+	if bucketKey000 != "00/0" {
+		t.Fatalf("Unexpected key for shard %v", bucketKey000)
+	}
+	bucket000, err := storagePacker1.GetBucket(ctx, bucketKey000, false)
 	if err != nil {
 		t.Fatalf("Key %v error %v", bucketKey000, err)
+	}
+	if bucket000.Key != "00/0" {
+		t.Fatalf("Unexpected key for bucket %v", bucket000.Key)
 	}
 	if len(bucket000.Bucket.ItemMap) != 4 {
 		t.Errorf("Post-split bucket %v contains %v items.",
@@ -335,7 +341,7 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 			len(bucket000.Bucket.ItemMap))
 	}
 
-	// Delete storage 3 through F, and get replace the new storage entry
+	// Delete storage 3 through F, and replace the new storage entry
 	// with the old one
 	for _, shard := range []string{"3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"} {
 		storagePacker1.BucketStorageView.Delete(ctx, "00/"+shard)

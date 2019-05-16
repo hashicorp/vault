@@ -554,19 +554,24 @@ func (s *StoragePackerV2) DeleteBucket(ctx context.Context, key string) error {
 		return fmt.Errorf("missing key")
 	}
 
-	cacheKey := s.GetCacheKey(key)
-	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
-	lock.Lock()
-	defer lock.Unlock()
+	bucket, found, err := s.lockBucketForWrite(key)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
+	defer bucket.Unlock()
 
-	if err := s.BucketStorageView.Delete(ctx, key); err != nil {
-		return errwrap.Wrapf("failed to delete packed storage entry: {{err}}", err)
+	if bucket.ItemMap == nil {
+		// Could do a recursive delete instead.
+		return fmt.Errorf("Bucket %s has shards, no items deleted.", bucket.Key)
 	}
 
-	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Delete(cacheKey)
-	s.bucketsCacheLock.Unlock()
-
+	bucket.ItemMap = make(map[string][]byte)
+	if err := s.storeBucket(ctx, bucket, true); err != nil {
+		return errwrap.Wrapf("failed to write deleted bucket: {{err}}", err)
+	}
 	return nil
 }
 
@@ -585,6 +590,7 @@ func (s *LockedBucket) upsert(item *Item) error {
 		return fmt.Errorf("missing item ID")
 	}
 
+	// FIXME: disallow this case to preserve the tree invariant?
 	if s.ItemMap == nil {
 		s.ItemMap = make(map[string][]byte)
 	}
