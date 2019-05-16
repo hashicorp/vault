@@ -368,27 +368,22 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, name)
+	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
 
-	if role == nil {
-		role = &roleEntry{}
-	}
-
-	if err := pathRoleCreateUpdateCommon(ctx, role, req.Operation, data); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	// createRole is a boolean to indicate if this is a new role creation. This
-	// is used to ensure we do not allow an existing role to be "migrated" to
-	// role with a static account. If createRole is false and static_account
-	// data is given, return an error
+	// createRole is a boolean to indicate if this is a new role creation. This is
+	// can be used later by database plugins that distinguish between creating and
+	// updating roles, and may use seperate statements depending on the context.
 	createRole := req.Operation == logical.CreateOperation
 	if role == nil {
 		role = &roleEntry{}
 		createRole = true
+	}
+
+	if err := pathRoleCreateUpdateCommon(ctx, role, req.Operation, data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	// Static Account information
