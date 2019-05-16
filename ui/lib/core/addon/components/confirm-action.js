@@ -37,7 +37,7 @@ export default Component.extend({
       }}
         {{yield}}
         {{#if (eq buttonClasses 'toolbar-link')}}
-          <Icon @glyph="chevron-{{if showConfirm 'up' 'down'}}" />
+          <Chevron @direction={{if showConfirm 'up' 'down'}} />
         {{/if}}
       {{/d.trigger}}
       {{#d.content class=(concat "popup-menu-content")}}

@@ -3,7 +3,7 @@
     <ConfirmAction
       @buttonClasses="toolbar-link"
       @confirmTitle="Rotate this key?"
-      @confirmMessage="After rotation, new plaintext requests will be encrypted with the new version of the key."
+      @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
       @confirmButtonText="Rotate"
       @onConfirmAction={{action "doSubmit"}}
       data-test-transit-key-rotate="true"

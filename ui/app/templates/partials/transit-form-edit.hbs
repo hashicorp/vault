@@ -76,7 +76,7 @@
               disabled={{requestInFlight}}
               class="button is-primary {{if requestInFlight 'is-loading'}}"
             >
-              Update encryption key
+              Update transit key
             </button>
           </div>
         {{/if}}
@@ -95,7 +95,7 @@
           @buttonClasses="button"
           @onConfirmAction={{action "deleteKey"}}
         >
-          Delete encryption key
+          Delete transit key
         </ConfirmAction>
       {{/if}}
     </div>

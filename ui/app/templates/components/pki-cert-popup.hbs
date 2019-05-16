@@ -12,7 +12,7 @@
             @buttonClasses="link is-destroy"
             @onConfirmAction={{action "delete" item}}
             @confirmTitle="Revoke this cert?"
-            @confirmMessage="This may affect access to Vault data."
+            @confirmMessage="Any services using this cert may be affected."
             @confirmButtonText="Revoke"
             data-test-cert-revoke-delete={{item.id}}
           >
