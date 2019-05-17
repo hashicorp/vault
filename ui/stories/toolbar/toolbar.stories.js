@@ -9,59 +9,68 @@ storiesOf('Toolbar/', module)
   .addDecorator(withKnobs())
   .add(`Toolbar`, () => ({
     template: hbs`
-        <h5 class="title is-5">Toolbar</h5>
+      <h5 class="title is-5">Toolbar</h5>
+      <section class="box is-fullwidth is-shadowless">
+        <h5 class="title is-6">Example for list views</h5>
         <Toolbar>
-          {{#if (eq example "List")}}
-            <ToolbarFilters>
-              <div class="control has-icons-left">
-                <input class="filter input" placeholder="Filter keys" type="text">
-                <Icon @glyph="search" class="search-icon has-text-grey-light hs-icon-l" />
-              </div>
-            </ToolbarFilters>
-            <ToolbarActions>
-              <ToolbarLink
-                @type="add"
-                @params={{array "#"}}
-              >
-                Add item
-              </ToolbarLink>
-            </ToolbarActions>
-          {{/if}}
-          {{#if (eq example "Show")}}
-            <ToolbarActions>
-              <ToolbarLink
-                @params={{array "#"}}
-              >
-                Delete
-              </ToolbarLink>
-              <ToolbarLink
-                @params={{array "#"}}
-              >
-                Edit
-              </ToolbarLink>
-            </ToolbarActions>
-          {{/if}}
-          {{#if (eq example "Code editor")}}
-            <ToolbarFilters>
-              <div class="control">
-                <input
-                  id="json"
-                  type="checkbox"
-                  name="json"
-                  class="switch is-rounded is-success is-small"
-                />
-                <label for="json" class="has-text-grey">JSON</label>
-              </div>
-            </ToolbarFilters>
-            <ToolbarActions>
-              <ToolbarLink
-                @params={{array "#"}}
-              >
-                Copy
-              </ToolbarLink>
-            </ToolbarActions>
-          {{/if}}
+          <ToolbarFilters>
+            <div class="control has-icons-left">
+              <input class="filter input" placeholder="Filter keys" type="text">
+              <Icon @glyph="search" class="search-icon has-text-grey-light hs-icon-l" />
+            </div>
+          </ToolbarFilters>
+          <ToolbarActions>
+            <ToolbarLink
+              @type="add"
+              @params={{array ""}}
+            >
+              Add item
+            </ToolbarLink>
+          </ToolbarActions>
         </Toolbar>
+      </section>
+
+      <section class="box is-fullwidth is-shadowless">
+        <h5 class="title is-6">Example for show views</h5>
+        <Toolbar>
+          <ToolbarActions>
+            <ConfirmAction
+              @buttonClasses="toolbar-link"
+            >
+              Delete
+            </ConfirmAction>
+            <ToolbarLink
+              @params={{array ""}}
+            >
+              Edit
+            </ToolbarLink>
+          </ToolbarActions>
+        </Toolbar>
+      </section>
+
+      <section class="box is-fullwidth is-shadowless">
+        <h5 class="title is-6">Example for code editor</h5>
+        <Toolbar>
+          <ToolbarFilters>
+            <div class="control">
+              <input
+                id="json"
+                type="checkbox"
+                name="json"
+                class="switch is-rounded is-success is-small"
+              />
+              <label for="json" class="has-text-grey">JSON</label>
+            </div>
+          </ToolbarFilters>
+          <ToolbarActions>
+            <ToolbarLink
+              @params={{array ""}}
+            >
+              Copy
+            </ToolbarLink>
+          </ToolbarActions>
+        </Toolbar>
+      </section>
     `,
     context: {
       example: select('Example', ['List', 'Show', 'Code editor'], 'List'),
