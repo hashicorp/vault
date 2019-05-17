@@ -402,7 +402,8 @@ $ curl \
 
 This endpoint creates or updates a static role definition. Static Roles are a
 1-to-1 mapping of a Vault Role to a user in a database which are automatically
-rotated based on the configured `rotation_period`. 
+rotated based on the configured `rotation_period`. Not all databases support
+Static Roles, please see the database-specific documentation.
 
 ~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 

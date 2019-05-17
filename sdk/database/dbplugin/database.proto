@@ -84,9 +84,9 @@ message GenerateCredentialsResponse {
 }
 
 message StaticUserConfig{
-	string Username = 1;
-	string Password = 2;
-	bool Create = 3;
+	string username = 1;
+	string password = 2;
+	bool create = 3;
 }
 
 message SetCredentialsRequest {

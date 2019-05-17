@@ -315,13 +315,8 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 	defer close(quitCh)
 	defer cancel()
 
-	// TODO: Question: CreateUser takes the CreateUserRequest and splits the
-	// statements and the config. Here we just pass on the request without
-	// splitting anything
 	resp, err := c.client.GenerateCredentials(ctx, &Empty{})
-
 	if err != nil {
-		// Fall back to old call if not implemented
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			return "", ErrPluginStaticUnsupported
