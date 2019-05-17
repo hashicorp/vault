@@ -555,10 +555,7 @@ type staticAccount struct {
 	Password string `json:"password"`
 
 	// LastVaultRotation represents the last time Vault rotated the password
-	// PasswordLastSet represents the last time a manual password rotation was
-	// preformed, using the Vault endpoint
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
-	PasswordLastSet   time.Time `json:"password_last_set"`
 
 	// RotationPeriod is number in seconds between each rotation, effectively a
 	// "time to live". This value is compared to the LastVaultRotation to
