@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -305,7 +306,7 @@ func pathRoleReadCommon(role *roleEntry) map[string]interface{} {
 
 func (b *databaseBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := databaseRolePath
-	if req.Path == "static-roles/" {
+	if strings.HasPrefix(req.Path, "static-roles") {
 		path = databaseStaticRolePath
 	}
 	entries, err := req.Storage.List(ctx, path)
