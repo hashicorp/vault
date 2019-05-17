@@ -216,8 +216,6 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, databaseConfigPath):
 		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.ClearConnection(name)
-	case strings.HasPrefix(key, databaseStaticRolePath):
-		b.invalidateQueue()
 	}
 }
 
@@ -791,7 +789,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
 
-// pushItem wraps the internal queue's PushItem call, to make sure a queue is
+// pushItem wraps the internal queue's Push call, to make sure a queue is
 // actually available. This is needed because both runTicker and initQueue
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) pushItem(item *queue.Item) error {
@@ -814,4 +812,28 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 	b.credRotationQueue = queue.New()
 
 	return b.credRotationQueue.Push(item)
+}
+
+// popItem wraps the internal queue's Pop call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
+func (b *databaseBackend) popItem() (*queue.Item, error) {
+	b.RLock()
+	defer b.RUnlock()
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.Pop()
+	}
+	return nil, queue.ErrEmpty
+}
+
+// popItemByKey wraps the internal queue's PopByKey call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
+func (b *databaseBackend) popByKey(name string) (*queue.Item, error) {
+	b.RLock()
+	defer b.RUnlock()
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.PopByKey(name)
+	}
+	return nil, queue.ErrEmpty
 }
