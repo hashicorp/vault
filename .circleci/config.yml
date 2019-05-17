@@ -117,6 +117,21 @@ jobs:
       - store_test_results:
           path: ui/test-results
 
+  test-ember:
+    docker:
+      - image: *NODE_IMAGE
+    steps:
+      - checkout
+      - restore_cache:
+          key: *YARN_LOCK_CACHE_KEY
+      - attach_workspace:
+          at: .
+      - run:
+          name: Test Ember
+          command: |
+            set -eux -o pipefail
+            make ember-ci-test
+
   test-go:
     machine: true
     environment:
@@ -201,5 +216,8 @@ workflows:
             - install-ui-dependencies
             - build-go-dev
       - test-go:
+          requires:
+            - build-go-dev
+      - test-ember:
           requires:
             - build-go-dev
