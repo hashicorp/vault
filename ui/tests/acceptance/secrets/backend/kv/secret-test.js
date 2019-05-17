@@ -192,17 +192,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('version 2 with restricted policy still allows creation', async function(assert) {
     let backend = 'kv-v2';
-    const V2_POLICY = `'
+    const V2_POLICY = `
       path "kv-v2/metadata/*" {
         capabilities = ["list"]
       }
       path "kv-v2/data/secret" {
         capabilities = ["create", "read", "update"]
       }
-    '`;
+    `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
@@ -220,17 +220,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('version 2 with restricted policy still allows edit', async function(assert) {
     let backend = 'kv-v2';
-    const V2_POLICY = `'
+    const V2_POLICY = `
       path "kv-v2/metadata/*" {
         capabilities = ["list"]
       }
       path "kv-v2/data/secret" {
         capabilities = ["create", "read", "update"]
       }
-    '`;
+    `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
@@ -326,16 +326,16 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   let setupNoRead = async function(backend, canReadMeta = false) {
-    const V2_WRITE_ONLY_POLICY = `'
+    const V2_WRITE_ONLY_POLICY = `
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
       path "${backend}/+" {
         capabilities = ["list"]
       }
-    '`;
+    `;
 
-    const V2_WRITE_WITH_META_READ_POLICY = `'
+    const V2_WRITE_WITH_META_READ_POLICY = `
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
@@ -345,12 +345,12 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       path "${backend}/+" {
         capabilities = ["list"]
       }
-    '`;
-    const V1_WRITE_ONLY_POLICY = `'
+    `;
+    const V1_WRITE_ONLY_POLICY = `
      path "${backend}/+" {
         capabilities = ["create", "update", "list"]
       }
-    '`;
+    `;
 
     let policy;
     if (backend === 'kv-v2' && canReadMeta) {
@@ -364,7 +364,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       // disable any kv previously enabled kv
       `delete sys/mounts/${backend}`,
       `write sys/mounts/${backend} type=kv options=version=${backend === 'kv-v2' ? 2 : 1}`,
-      `write sys/policies/acl/${backend} policy=${policy}`,
+      `write sys/policies/acl/${backend} policy=${btoa(policy)}`,
       `write -field=client_token auth/token/create policies=${backend}`,
     ]);
 
