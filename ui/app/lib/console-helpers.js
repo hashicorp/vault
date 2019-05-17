@@ -56,14 +56,11 @@ export function executeUICommand(command, logAndOutput, clearLog, toggleFullscre
 }
 
 export function parseCommand(command, shouldThrow) {
-  // encode everything but spaces
-  let cmd = encodeURIComponent(command).replace(/%20/g, decodeURIComponent);
-  let args = argTokenizer(cmd);
+  let args = argTokenizer(command);
   if (args[0] === 'vault') {
     args.shift();
   }
 
-  args = args.map(decodeURIComponent);
   let [method, ...rest] = args;
   let path;
   let flags = [];
@@ -74,7 +71,17 @@ export function parseCommand(command, shouldThrow) {
       flags.push(arg);
     } else {
       if (path) {
-        data.push(arg);
+        let strippedArg = arg
+          // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
+          .split(/=(.+)/)
+          // remove " at the beginning and end of each item
+          .map(item => item.replace(/^"|"$/gi, ''))
+          // if there were quotes, there's an empty string as the last member in the array that we don't want,
+          // so filter it out
+          .filter(str => str !== '')
+          // glue the data back together
+          .join('=');
+        data.push(strippedArg);
       } else {
         path = arg;
       }
