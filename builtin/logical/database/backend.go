@@ -564,7 +564,7 @@ type setCredentialsWAL struct {
 // based on the current time.
 func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Storage) error {
 	for {
-		item, err := b.credRotationQueue.Pop()
+		item, err := b.popItem()
 		if err != nil {
 			if err == queue.ErrEmpty {
 				return nil
