@@ -49,7 +49,7 @@ Examples of an availability zone in this context are:
 ##### Region
 A geographically separate collection of one or more availability zones. A region would host one or more Vault clusters. There is no defined maximum latency requirement between regions in Vault architecture. A single Vault cluster would not be spread across multiple regions.
 
-## Design Summary
+## <a name="design"></a>Design Summary
 
 This design is the recommended architecture for production environments, as it provides flexibility and resilience.
 
@@ -60,7 +60,7 @@ It is also recommended that Consul be run using TLS.
 
 -> Refer to the online documentation to learn more about running [Consul in encrypted mode](https://www.consul.io/docs/agent/options.html#encrypt).
 
-### Network Connectivity Details
+### <a name="network-connectivity-details"></a>Network Connectivity Details
 ![Network Connectivity Details](/img/vault-ra-network.png)
 
 The following table outlines the network traffic requirements for Vault cluster nodes.
@@ -82,7 +82,7 @@ Using a separate Consul service discovery cluster DNS as service discovery to re
 All of these options are explored more in the Vault [Deployment Guide](/guides/operations/deployment-guide.html).
 
 
-### Failure Tolerance
+### <a name="failure-tolerance"></a>Failure Tolerance
 
 Vault is designed to handle different failure scenarios that have different probabilities. When deploying a Vault cluster, the failure tolerance that you require should be considered and designed for.
 In OSS Vault the recommended number of instances is 3 in a cluster as any more would have limited value. In Vault Enterprise the recommended number is also 3 in a cluster, but more can be used if they were performance replicas to help with workload.
@@ -105,18 +105,18 @@ Please see the Recommended Patterns on Vault Replication for a full description 
 
 Because of the constraints listed above, the recommended architecture is with Vault and Consul Enterprise distributed across three availability zones within a cluster and for clusters to be replicated across regions using DR and Performance replication. There are also several “Best Case” architecture solutions for one and two Availability Zones and also for Consul OSS. These are not the recommended architecture, but are the best solutions if your deployment is restricted by Consul version or number of availability zones.
 
-## Recommended Architecture
+## <a name="recommended-architecture"></a>Recommended Architecture
 The architecture below is the recommended best approach to Vault deployment and should be the target architecture for any installation. This is split into two parts:
 - Vault cluster - This is the recommended architecture for a vault cluster as a single entity, but should also utilise replication as per the second diagram
 - Vault replication - This is the recommended architecture for multiple vault clusters to allow for regional, performance and disaster recovery.
 
-### Single Region Deployment (Enterprise)
+### <a name="single-region"></a>Single Region Deployment (Enterprise)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-3_az_ent.png)
 
 In this scenario, the nodes in the Vault and associated Consul cluster are hosted between three Availability Zones. This solution has an n-2 at the node level for Vault and an n-3 at the node level for Consul. At the Availability Zone level, Vault is at n-2 and Consul at n-1. This differs from the OSS design in that the Consul cluster has six nodes with three of them as a [non-voting member](https://www.consul.io/docs/agent/options.html#_non_voting_server)s. If any Zone were to fail a non-voting member would be promoted by Autopilot to become a full member and so maintain Quorum.
 
-### Multiple Region Deployment (Enterprise)
+### <a name="multiple-region"></a>Multiple Region Deployment (Enterprise)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-full-replication.png)
 
@@ -130,36 +130,36 @@ Failure of a Performance Replica would result in its DR cluster being promoted t
 Another advantage of this architecture is that namespaces, secrets and authentication methods can be limited to different clusters so that secrets can be maintained within a region if this is required for governance purposes.
 The pattern in Region 2 and 3 could be repeated multiple times, though there would unlikely be the need for further DR replicas if there were more regions.
 
-## Best Case Architecture
+## <a name="best-case-architecture"></a>Best Case Architecture
 In some deployments there may be insurmountable restrictions that mean the recommended architecture is not possible. This could be due to lack of availability zones or because of using Vault OSS. In these cases, the architectures below detail the best case options available.  
 Note that in these following architectures the Consul leader could be any of the five Consul server nodes and the Vault active node could be any of the three Vault nodes
 
-### Deployment of Vault in one Availability Zone (all)
+### <a name="single-zone"></a>Deployment of Vault in one Availability Zone (all)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-1-az.png)
 In this scenario, all nodes in the Vault and associated Consul cluster are hosted within one Availability Zone. This solution has a single point of failure at the availability zone level, but an n-2 at the node level for both Consul and Vault.  
 This is not Hashicorp recommended architecture for production systems are there is no redundancy at the Availability Zone level. Also there is no DR capability and so as a minimum this should at least have a DR replica in a separate Region.
 
-### Deployment of Vault in two Availability Zones (OSS)
+### <a name="two-zone-oss"></a>Deployment of Vault in two Availability Zones (OSS)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-2-az.png)
 
 In this scenario, the nodes in the Vault and associated Consul cluster are hosted between two Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-1 for Vault at the Availability Zone level, but the addition of an Availability Zone does not significantly increase the availability of the Consul cluster. This is because the Raft protocol requires a quorum of (n/2)+1 and if Zone B were to fail in the above diagram then the cluster would not be quorate and so would also fail.  
 This is not Hashicorp recommended architecture for production systems are there is only partial redundancy at the Availability Zone level and an Availability Zone failure may or may not result in an outage.
 
-### Deployment of Vault in two Availability Zones (Enterprise)
+### <a name="two-zone-enterprise"></a>Deployment of Vault in two Availability Zones (Enterprise)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-2-az-ent.png)
 
 In this scenario, the nodes in the Vault and associated Consul cluster are hosted between two Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-1 for Vault and Consul at the Availability Zone level. This differs from the OSS design in that the Consul cluster has six nodes with one of them as a non-voting member. If Zone B were to fail the non-voting member would be promoted by Autopilot to become a full member and so maintain Quorum. This configuration option is only available in the Enterprise version of Consul.
 
-### Deployment of Vault in three Availability Zones (OSS)
+### <a name="three-zone-oss"></a>Deployment of Vault in three Availability Zones (OSS)
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-3-az.png)
 
 In this scenario, the nodes in the Vault and associated Consul cluster are hosted between three Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-2 for Vault at the Availability Zone level. This also has an n-1 at the Availability Zone level for Consul and as such is considered the most resilient of all architectures for a single Vault cluster with a Consul storage backend for the OSS product.
 
-## Vault Replication (Enterprise Only)
+## <a name="vault-replication"></a>Vault Replication (Enterprise Only)
 In these architectures the “Vault Cluster” (Primary, Secondary (Performance, Disaster Recovery)) is illustrated as a single entity, and would be one of the single clusters detailed above based on your number of Availability Zones. Multiple Vault clusters acting as a single Vault solution and replicating between them is available in Enterprise Vault only. OSS Vault can be set up in multiple clusters, but they would each be individual Vault solutions and would not support replication between clusters.  
 The [Vault documentation](https://www.vaultproject.io/docs/enterprise/replication/index.html) provides more detailed information on the replication capabilities within Vault Enterprise.
 
@@ -188,7 +188,7 @@ Using replication with Vault clusters integrated with HSM devices for automated 
 - If a performance primary cluster does NOT utilize an HSM (uses Shamir secret sharing method), the clusters within that replication set can be mixed, such that some may use an HSM, others may use Shamir.
 - For the sake of this discussion, the cloud auto-unseal feature is treated as an HSM.
 
-### Deployment System Requirements
+### <a name="deployment-system-requirements"></a>Deployment System Requirements
 
 The following table provides guidelines for server sizing. Of particular note is
 the strong recommendation to avoid non-fixed performance CPUs, or "Burstable
@@ -216,7 +216,7 @@ CPU" in AWS terms, such as T-series instances.
 |       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
 |       |          |                 |           | **GCE:** n1-standard-16, n1-standard-32    |
 
-### Hardware Considerations
+### <a name="hardware-considerations"></a>Hardware Considerations
 
 The small size category would be appropriate for most initial production
 deployments, or for development/testing environments.  
@@ -267,9 +267,9 @@ in some cloud providers.
 provides guidance on best practices for a production hardened deployment of
 Vault.
 
-## Load Balancing
+## <a name="load-balancing"></a>Load Balancing
 
-### <a name="consul-lb"></a>Load Balancing Using Consul Interface
+### Load Balancing Using Consul Interface
 
 Consul can provide load balancing capabilities, but it requires that any Vault
 clients are Consul aware. This means that a client can either utilize Consul DNS
@@ -281,7 +281,7 @@ the request could be forwarded to Consul for the actual IP address response.
 The operation can be completely transparent to legacy applications and would
 operate just as a typical DNS resolution operation.
 
-### <a name="external-lb"></a>Load Balancing Using External Load Balancer
+### Load Balancing Using External Load Balancer
 
 ![Vault Behind a Load Balancer](/img/vault-ref-arch-9.png)
 
@@ -324,7 +324,7 @@ or load balancer;
 and [PROXY v1](https://www.vaultproject.io/docs/configuration/listener/tcp.html#proxy_protocol_authorized_addrs).  Both require a trusted load balancer and require IP address whitelisting to
 adhere to security best practices.
 
-## Additional References
+## <a name="additional-references"></a>Additional References
 
 - Vault [architecture](/docs/internals/architecture.html) documentation explains
 each Vault component
