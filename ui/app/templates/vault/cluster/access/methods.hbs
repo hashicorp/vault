@@ -75,19 +75,15 @@
 
                 {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
                   <li class="action">
-                    {{#confirm-action
-                      confirmButtonClasses="button is-primary"
-                      buttonClasses="link is-destroy"
-                      onConfirmAction=(perform disableMethod method)
-                      confirmMessage=(concat "Are you sure you want to disable the " method.id " Auth Method at " method.path "?")
-                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash method.id)))
-                      class=(if (get this (concat "shouldDelete-" (dot-to-dash method.id))) "message is-block is-warning is-outline")
-                      containerClasses="message-body is-block"
-                      messageClasses="is-block"
-                      confirmButtonText="Disable"
-                    }}
+                    <ConfirmAction
+                      @buttonClasses="link is-destroy"
+                      @confirmTitle="Disable method?"
+                      @confirmMessage="This may affect access to Vault data."
+                      @confirmButtonText="Disable"
+                      @onConfirmAction={{perform disableMethod method}}
+                    >
                       Disable
-                    {{/confirm-action}}
+                    </ConfirmAction>
                   </li>
                 {{/if}}
               </ul>

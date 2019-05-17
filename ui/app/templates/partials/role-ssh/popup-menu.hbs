@@ -30,6 +30,27 @@
           </li>
         {{/if}}
       {{/if}}
+      {{#if item.canEditZeroAddress}}
+        {{#if item.zeroAddress}}
+          <li class="action">
+            <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
+              {{if (get this (concat "loading-" item.id)) 'is-loading'}} " {{action "toggleZeroAddress" item backendModel}}>
+              Disable Zero Address
+            </button>
+          </li>
+        {{else}}
+          <li class="action">
+            <button
+              type="button"
+              disabled={{get this (concat "loading-" item.id)}}
+              class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
+              {{action "toggleZeroAddress" item backendModel}}
+            >
+              Enable Zero Address
+            </button>
+          </li>
+        {{/if}}
+      {{/if}}
       {{#if item.updatePath.isPending}}
         <li class="action">
           <button disabled type="button" class="link button is-loading is-transparent">
@@ -58,40 +79,13 @@
         {{/if}}
         {{#if item.canDelete}}
           <li class="action">
-            {{#confirm-action
-              confirmButtonClasses="button is-primary"
-              buttonClasses="link is-destroy"
-              onConfirmAction=(action "delete" item)
-              confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-              showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-              class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-              containerClasses="message-body is-block"
-              messageClasses="is-block"
-              data-test-ssh-role-delete=item.id
-            }}
-              Delete
-            {{/confirm-action}}
-          </li>
-        {{/if}}
-      {{/if}}
-      {{#if item.canEditZeroAddress}}
-        {{#if item.zeroAddress}}
-          <li class="action">
-            <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
-              {{if (get this (concat "loading-" item.id)) 'is-loading'}} " {{action "toggleZeroAddress" item backendModel}}>
-              Disable Zero Address
-            </button>
-          </li>
-        {{else}}
-          <li class="action">
-            <button
-              type="button"
-              disabled={{get this (concat "loading-" item.id)}}
-              class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
-              {{action "toggleZeroAddress" item backendModel}}
+            <ConfirmAction
+              @buttonClasses="link is-destroy"
+              @onConfirmAction={{action "delete" item}}
+              data-test-ssh-role-delete={{item.id}}
             >
-              Enable Zero Address
-            </button>
+              Delete
+            </ConfirmAction>
           </li>
         {{/if}}
       {{/if}}

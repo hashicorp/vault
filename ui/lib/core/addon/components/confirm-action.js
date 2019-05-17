@@ -1,5 +1,5 @@
 import Component from '@ember/component';
-import hbs from 'htmlbars-inline-precompile';
+import layout from '../templates/components/confirm-action';
 
 /**
  * @module ConfirmAction
@@ -14,50 +14,31 @@ import hbs from 'htmlbars-inline-precompile';
  *  </ConfirmAction>
  * ```
  *
- * @property {Func} onConfirmAction=null - The action to take upon confirming.
- * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display upon confirming.
+ * @property {Func} [onConfirmAction=null] - The action to take upon confirming.
+ * @property {String} [confirmTitle=Delete this?] - The title to display when confirming.
+ * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display when confirming.
  * @property {String} [confirmButtonText=Delete] - The confirm button text.
  * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @property {String} [disabledTitle=Can't delete this yet] - The title to display when the button is disabled.
  * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
  *
  */
 
 export default Component.extend({
-  tagName: 'span',
-  classNames: ['confirm-action'],
-  layout: hbs`
-    {{#if showConfirm ~}}
-      <span class={{containerClasses}}>
-        <span class={{concat 'confirm-action-text ' messageClasses}}>{{if disabled disabledMessage confirmMessage}}</span>
-        <button {{action 'onConfirm'}} disabled={{disabled}} class={{confirmButtonClasses}} type="button" data-test-confirm-button=true>{{confirmButtonText}}</button>
-        <button {{action 'toggleConfirm'}} type="button" class={{cancelButtonClasses}} data-test-confirm-cancel-button=true>{{cancelButtonText}}</button>
-      </span>
-    {{else}}
-      <button
-        class={{buttonClasses}}
-        type="button"
-        disabled={{disabled}}
-        data-test-confirm-action-trigger=true
-        {{action 'toggleConfirm'}}
-      >
-        {{yield}}
-      </button>
-    {{~/if}}
-  `,
-
-  disabled: false,
-  disabledMessage: 'Complete the form to complete this action',
-  showConfirm: false,
-  messageClasses: 'is-size-8 has-text-grey',
-  confirmButtonClasses: 'is-danger is-outlined button',
-  containerClasses: '',
-  buttonClasses: 'button',
+  layout,
+  tagName: '',
+  supportsDataTestProperties: true,
   buttonText: 'Delete',
-  confirmMessage: 'Are you sure you want to do this?',
+  confirmTitle: 'Delete this?',
+  confirmMessage: 'You will not be able to recover it later.',
   confirmButtonText: 'Delete',
-  cancelButtonClasses: 'button',
   cancelButtonText: 'Cancel',
-  // the action to take when we confirm
+  disabledTitle: "Can't delete this yet",
+  disabledMessage: 'Complete the form to complete this action',
+  horizontalPosition: 'auto-right',
+  verticalPosition: 'below',
+  disabled: false,
+  showConfirm: false,
   onConfirmAction: null,
 
   actions: {

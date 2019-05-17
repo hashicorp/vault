@@ -31,15 +31,14 @@
       </ToolbarLink>
       <div class="toolbar-separator" />
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
-        {{#confirm-action
-          buttonClasses="toolbar-link"
-          onConfirmAction=(action "deletePolicy" model)
-          confirmMessage=(concat "Are you sure you want to delete " model.id "?")
-          data-test-policy-delete=true
-        }}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @confirmMessage="This may affect access to Vault data."
+          @onConfirmAction={{action "deletePolicy" model}}
+          data-test-policy-delete="true"
+        >
           Delete
-          <Chevron @isButton={{true}} />
-        {{/confirm-action}}
+        </ConfirmAction>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
