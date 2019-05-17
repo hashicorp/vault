@@ -16,7 +16,7 @@ import (
 
 var (
 	ErrPluginShutdown          = errors.New("plugin shutdown")
-	ErrPluginStaticUnsupported = errors.New("backend/version does not support Static Accounts")
+	ErrPluginStaticUnsupported = errors.New("database plugin does not support Static Accounts")
 )
 
 // ---- gRPC Server domain ----
