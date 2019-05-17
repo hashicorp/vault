@@ -6,7 +6,7 @@ sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
-ea_version: 1.0
+ea_version: 1.1
 ---
 
 # Vault Reference Architecture
@@ -17,58 +17,176 @@ that should be adapted to accommodate the specific needs of each implementation.
 
 The following topics are addressed in this guide:
 
-- [Deployment Topology within One Datacenter](#one-dc)
+- [Design Summary](#design)
     - [Network Connectivity](#network-connectivity-details)
-    - [Deployment System Requirements](#deployment-system-requirements)
+    - [Failure Tolerance](#failure-tolerance)
+- [Recommended Architecture](#recommended-architecture)
+    - [Single Region Deployment](#single-region)
+    - [Multiple Region Deployment](#multiple-region)
+- [Best Case Architecture](#best-case-architecture)
+    - [Single Availability Zone](#single-zone)
+    - [Two Availability Zones - OSS](#two-zone-oss)
+    - [Two Availability Zones - Enterprise](#two-zone-enterprise)
+    - [Three Availability Zones - OSS](#three-zone-oss)
+- [Vault Replication](#vault-replication)  
+- [Deployment System Requirements](#deployment-system-requirements)
     - [Hardware Considerations](#hardware-considerations)
     - [Load Balancing](#load-balancing)
-    - [High Availability](#high-availability)
-- [Deployment Topology for Multiple Datacenters](#multi-dc)
-    - [Vault Replication](#vault-replication)
 - [Additional References](#additional-references)
 
--> This document assumes Vault uses Consul as the [storage
-backend](/docs/internals/architecture.html) since that is the recommended
-storage backend for production deployments.
+## Glossary
+##### Vault Cluster
+A Vault cluster is a set of Vault processes that together run a Vault service. These Vault processes could be running on physical or virtual servers, or in containers.
+##### Consul storage backend cluster
+HashiCorp recommends and supports Consul being used as the storage backend for Vault. A Consul cluster is a set of Consul server processes that together run a Consul service. These Consul processes could be running on physical or virtual servers, or in containers.
+##### Availability Zone
+A single failure domain on a location level that hosts part of, or all of a Vault cluster. The latency between availability zones should be < 8ms for a round trip. A single Vault cluster may be spread across multiple availability zones.
+Examples of an availability zone in this context are:
+- An isolated datacenter
+- An isolated cage in a datacenter if it is isolated from other cages by all other means (power, network, etc)
+- An availability zone in AWS, Azure or GCP
 
-## <a name="one-dc"></a>Deployment Topology within One Datacenter
+##### Region
+A geographically separate collection of one or more availability zones. A region would host one or more Vault clusters. There is no defined maximum latency requirement between regions in Vault architecture. A single Vault cluster would not be spread across multiple regions.
 
-This section explains how to deploy a Vault open source cluster in one datacenter.
-Support for [multiple datacenters](#multi-dc) is included in Vault Enterprise through
-cluster replication.
+## Design Summary
 
-### Reference Diagram
+This design is the recommended architecture for production environments, as it provides flexibility and resilience.
 
-Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.html)
-![Reference diagram](/img/vault-ref-arch-2.png)
+It is a major architecture recommendation that the Consul servers are separate from the Vault servers and that the Consul cluster is only used as a storage backend for Vault and not for other Consul-focused functionality (eg service segmentation and service discovery) which can introduce unpredictable resource utilisation. Separating Vault and Consul allows each to have a system that can be sized appropriately in terms of CPU, memory and disk. Consul is a memory intensive application and so separating it to its own resources is advantageous to prevent resource contention or starvation. Dedicating a Consul cluster as a Vault storage backend is also advantageous as this allows the Consul cluster to be upgraded only as required to improve Vault storage backend functionality. This is likely to be much less frequently than a Consul cluster that is also used for service discovery and service segmentation.
 
-#### Design Summary
-
-This design is the recommended architecture for production environments, as it
-provides flexibility and resilience. Consul servers are separate
-from the Vault servers so that software upgrades are easier to perform. Additionally,
-separate Consul and Vault servers allows for separate sizing for each.
-Vault to Consul backend connectivity is over HTTP and should be
-secured with TLS as well as a Consul token to provide encryption of all traffic.  
+Vault to Consul backend connectivity is over HTTP and should be secured with TLS as well as a Consul token to provide encryption of all traffic. See the Vault [Deployment Guide](/guides/operations/deployment-guide.html) for more information. As the Consul cluster for Vault storage may be used in addition and separate to a Consul cluster for service discovery, it is recommended that the storage Consul process be run on non-default ports so that it does not conflict with other Consul functionality. Setting the Consul storage cluster to run on 7xxx ports and using this as the storage port in the Vault configuration will achieve this.
+It is also recommended that Consul be run using TLS.
 
 -> Refer to the online documentation to learn more about running [Consul in encrypted mode](https://www.consul.io/docs/agent/options.html#encrypt).
 
-#### Failure Tolerance
+### Network Connectivity Details
+![Network Connectivity Details](/img/vault-ra-network.png)
 
-Typical distribution in a cloud environment is to spread Consul/Vault nodes into
-separate Availability Zones (AZs) within a high bandwidth, low latency network,
-such as an AWS Region. The diagram below shows Vault and Consul spread between
-AZs, with Consul servers in Redundancy Zone configurations, promoting a single
-voting member per AZ, providing both Zone and Node level failure protection.  
+The following table outlines the network traffic requirements for Vault cluster nodes.
+
+| Source | Destination | port | protocol | Direction | Purpose |
+|-------|----------|-----------------|-----------|-----------------|-----------|
+| Consul clients and servers | Consul Server | 7300 | tcp | incoming | Server RPC |
+| Consul clients | Consul clients | 7301 | tcp and udp | bidirectional | Lan gossip communications |
+| Vault clients | Vault servers | 8200 | tcp | incomming | Vault API |
+| Vault servers | Vault servers | 8201 | tcp | bidirectional | Vault replication traffic, request forwarding |
+
+##### Alternative Network Configurations
+Vault can be configured in several separate ways for communications between the Vault and Consul Clusters.
+Using host IP addresses or hostnames that are resolvable via standard named subsystem.
+Using loadbalancer IP addresses or hostnames that are resolvable via standard named subsystem.
+Using the attached Consul cluster DNS as service discovery to resolve Vault endpoints.
+Using a separate Consul service discovery cluster DNS as service discovery to resolve Vault endpoints.
+
+All of these options are explored more in the Vault [Deployment Guide](/guides/operations/deployment-guide.html).
+
+
+### Failure Tolerance
+
+Vault is designed to handle different failure scenarios that have different probabilities. When deploying a Vault cluster, the failure tolerance that you require should be considered and designed for.
+In OSS Vault the recommended number of instances is 3 in a cluster as any more would have limited value. In Vault Enterprise the recommended number is also 3 in a cluster, but more can be used if they were performance replicas to help with workload.
+The Consul cluster is from one to seven instances. It is recommended that the Consul cluster is at least five instances that are dedicated to performing backend storage functions for the Vault cluster only.
 
 -> Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election.html).
 
-![Failure tolerance|40%](/img/vault-ref-arch-3.png)
+#### Node
+The Vault and Consul cluster software allows for a failure domain at the node level by having replication within the cluster. Vault achieves this by replicating all data to all nodes within the cluster and standby servers in Vault and one of the Vault servers obtaining a lock within the data store to become the leader. If at any time the leader is lost then another Vault node will seamlessly take its place as the leader. To achieve n-2 redundancy (where the loss of 2 objects within the failure domain can be tolerated), an ideal size for a Vault cluster would be 3.
+Consul achieves replication and leadership through the use of its consensus and gossip protocols. In these protocols, a leader is elected by consensus and so a quorum of active servers must always exist. To achieve n-2 redundancy, an ideal size of a Consul cluster is 5.
+See Consul Internals for more details.
+#### Availability Zone
+Typical distribution in a cloud environment is to spread Consul/Vault nodes into separate Availability Zones (AZs) within a high bandwidth, low latency network, such as an AWS Region, however this may not be possible in a datacenter installation where there is only one DC within the level of latency required.
+It is important to understand a shift in requirement or best practices that has come about as a result of the shift towards greater utilization of highly distributed systems such as Consul. When operating environments comprised of distributed systems, a shift is required in the redundancy coefficient of underlying components. Consul relies upon consensus negotiation to organize and replicate information and so the environment must provide 3 unique resilient paths in order to provide meaningful reliability. Essentially, a consensus system requires a simple majority of nodes to be available at any time. In the example of 3 nodes, you must have 2 available. If those 3 nodes are places in two failure domains, there is a 50% chance that losing a single failure domain would result in a complete outage.
+#### Region
+To protect against a failure at the region level, Vault enterprise offers two types of replication that can address this.
+Disaster Recovery Replication
+Performance Replication
+Please see the Recommended Patterns on Vault Replication for a full description of these options.
 
+Because of the constraints listed above, the recommended architecture is with Vault and Consul Enterprise distributed across three availability zones within a cluster and for clusters to be replicated across regions using DR and Performance replication. There are also several “Best Case” architecture solutions for one and two Availability Zones and also for Consul OSS. These are not the recommended architecture, but are the best solutions if your deployment is restricted by Consul version or number of availability zones.
 
-### Network Connectivity Details
+## Recommended Architecture
+The architecture below is the recommended best approach to Vault deployment and should be the target architecture for any installation. This is split into two parts:
+- Vault cluster - This is the recommended architecture for a vault cluster as a single entity, but should also utilise replication as per the second diagram
+- Vault replication - This is the recommended architecture for multiple vault clusters to allow for regional, performance and disaster recovery.
 
-![Network Connectivity Details](/img/vault-ref-arch.png)
+### Single Region Deployment (Enterprise)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-3_az_ent.png)
+
+In this scenario, the nodes in the Vault and associated Consul cluster are hosted between three Availability Zones. This solution has an n-2 at the node level for Vault and an n-3 at the node level for Consul. At the Availability Zone level, Vault is at n-2 and Consul at n-1. This differs from the OSS design in that the Consul cluster has six nodes with three of them as a [non-voting member](https://www.consul.io/docs/agent/options.html#_non_voting_server)s. If any Zone were to fail a non-voting member would be promoted by Autopilot to become a full member and so maintain Quorum.
+
+### Multiple Region Deployment (Enterprise)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-full-replication.png)
+
+In this scenario, there is one Primary Vault cluster with a DR cluster and three Performance Replicas each with a DR cluster of its own. Each cluster has its associated Consul cluster for storage backend.  
+In this setup it is recommended that the Primary Vault cluster be only used for handling replication and cluster leadership and should not be used for client connections of secrets. All client connections should go through the associated regional Performance Replica. This architecture allows for n-2 at the region level provided all secrets and secret engines are replicated across all clusters.
+Failure of Region 1 would require one of the DR clusters to be promoted to primary.  
+Failure of any region would result in all identities that have authenticated with Vault to have to re-authenticate with a PR in another region and this would involve additional work on the application logic side to handle.  
+The advantage of this architecture over the previous one is that failure at the cluster level.  
+Failure of the Primary cluster would result in the promotion of one of the DR clusters.  
+Failure of a Performance Replica would result in its DR cluster being promoted to a Performance Replica and there would not need to be further logic in the client applications as all tokens and leases are also replicated in a DR replica.  
+Another advantage of this architecture is that namespaces, secrets and authentication methods can be limited to different clusters so that secrets can be maintained within a region if this is required for governance purposes.
+The pattern in Region 2 and 3 could be repeated multiple times, though there would unlikely be the need for further DR replicas if there were more regions.
+
+## Best Case Architecture
+In some deployments there may be insurmountable restrictions that mean the recommended architecture is not possible. This could be due to lack of availability zones or because of using Vault OSS. In these cases, the architectures below detail the best case options available.  
+Note that in these following architectures the Consul leader could be any of the five Consul server nodes and the Vault active node could be any of the three Vault nodes
+
+### Deployment of Vault in one Availability Zone (all)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-1-az.png)
+In this scenario, all nodes in the Vault and associated Consul cluster are hosted within one Availability Zone. This solution has a single point of failure at the availability zone level, but an n-2 at the node level for both Consul and Vault.  
+This is not Hashicorp recommended architecture for production systems are there is no redundancy at the Availability Zone level. Also there is no DR capability and so as a minimum this should at least have a DR replica in a separate Region.
+
+### Deployment of Vault in two Availability Zones (OSS)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-2-az.png)
+
+In this scenario, the nodes in the Vault and associated Consul cluster are hosted between two Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-1 for Vault at the Availability Zone level, but the addition of an Availability Zone does not significantly increase the availability of the Consul cluster. This is because the Raft protocol requires a quorum of (n/2)+1 and if Zone B were to fail in the above diagram then the cluster would not be quorate and so would also fail.  
+This is not Hashicorp recommended architecture for production systems are there is only partial redundancy at the Availability Zone level and an Availability Zone failure may or may not result in an outage.
+
+### Deployment of Vault in two Availability Zones (Enterprise)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-2-az-ent.png)
+
+In this scenario, the nodes in the Vault and associated Consul cluster are hosted between two Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-1 for Vault and Consul at the Availability Zone level. This differs from the OSS design in that the Consul cluster has six nodes with one of them as a non-voting member. If Zone B were to fail the non-voting member would be promoted by Autopilot to become a full member and so maintain Quorum. This configuration option is only available in the Enterprise version of Consul.
+
+### Deployment of Vault in three Availability Zones (OSS)
+##### Reference Diagram
+![Reference Diagram](/img/vault-ra-3-az.png)
+
+In this scenario, the nodes in the Vault and associated Consul cluster are hosted between three Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-2 for Vault at the Availability Zone level. This also has an n-1 at the Availability Zone level for Consul and as such is considered the most resilient of all architectures for a single Vault cluster with a Consul storage backend for the OSS product.
+
+## Vault Replication (Enterprise Only)
+In these architectures the “Vault Cluster” (Primary, Secondary (Performance, Disaster Recovery)) is illustrated as a single entity, and would be one of the single clusters detailed above based on your number of Availability Zones. Multiple Vault clusters acting as a single Vault solution and replicating between them is available in Enterprise Vault only. OSS Vault can be set up in multiple clusters, but they would each be individual Vault solutions and would not support replication between clusters.  
+The [Vault documentation](https://www.vaultproject.io/docs/enterprise/replication/index.html) provides more detailed information on the replication capabilities within Vault Enterprise.
+
+#### Performance Replication
+Vault performance replication allows for secrets management across many sites. Secrets, authentication methods, authorization policies and other details are replicated to be active and available in multiple locations.
+
+NOTE: Refer to the [Vault Mount Filter guide](https://learn.hashicorp.com/vault/operations/mount-filter) about filtering out secret engines from being replicated across regions.
+
+#### Disaster Recovery Replication
+Vault disaster recovery replication ensures that a standby Vault cluster is kept synchronised with an active Vault cluster. This mode of replication includes data such as ephemeral authentication tokens, time-based token information as well as token usage data. This provides for aggressive recovery point objective in environments where preventing loss of ephemeral operational data is of the utmost concern.  
+NOTE: Refer to the [Vault Disaster Recovery Setup guide](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery.html) for additional information.
+##### Corruption or Sabotage Disaster Recovery
+Another common scenario to protect against, more prevalent in cloud environments that provide very high levels of intrinsic resiliency, might be the purposeful or accidental corruption of data and configuration, and or a loss of cloud account control. Vault's DR Replication is designed to replicate live data, which would propagate intentional or accidental data corruption or deletion. To protect against these possibilities, you should backup Vault's storage backend. This is supported through the Consul Snapshot feature, which can be automated for regular archival backups. A cold site or new infrastructure could be re-hydrated from a Consul snapshot.
+
+NOTE: Refer to the online documentation to learn more about [Consul snapshots](https://www.consul.io/docs/commands/snapshot.html)
+
+#### Replication Notes
+There is no set limit on number of clusters within a replication set. Largest deployments today are in the 30+ cluster range.  
+Any cluster within a Performance replication set can act as a Disaster Recovery primary cluster.  
+A cluster within a Performance replication set can also replicate to multiple Disaster Recovery secondary clusters.  
+While a Vault cluster can possess a replication role (or roles), there are no special considerations required in terms of infrastructure, and clusters can assume (or be promoted) to another role. Special circumstances related to mount filters and HSM usage may limit swapping of roles, but those are based on specific organisation configurations.
+#### Considerations Related to Unseal proxy_protocol_behavior
+Using replication with Vault clusters integrated with HSM devices for automated unseal operations has some details that should be understood during the planning phase.
+
+- If a performance primary cluster utilises an HSM, all other clusters within that replication set must use an HSM as well.
+- If a performance primary cluster does NOT utilize an HSM (uses Shamir secret sharing method), the clusters within that replication set can be mixed, such that some may use an HSM, others may use Shamir.
+- For the sake of this discussion, the cloud auto-unseal feature is treated as an HSM.
 
 ### Deployment System Requirements
 
@@ -205,121 +323,6 @@ or load balancer;
 [X-Forwarded-For Headers](https://www.vaultproject.io/docs/configuration/listener/tcp.html#x_forwarded_for_authorized_addrs)
 and [PROXY v1](https://www.vaultproject.io/docs/configuration/listener/tcp.html#proxy_protocol_authorized_addrs).  Both require a trusted load balancer and require IP address whitelisting to
 adhere to security best practices.
-
-### High Availability
-
-A Vault cluster is the highly-available unit of deployment within one
-datacenter. A recommended approach is three Vault servers with a Consul storage
-backend. With this configuration, during a Vault server outage, failover is
-handled immediately without human intervention.
-
-To learn more about setting up your Vault servers in HA mode, read [_Vault HA
-with Consul_](/guides/operations/vault-ha-consul.html) guide.
-
-> High-availability with [Performance Standby
-Nodes](/guides/operations/performance-nodes.html) and data-locality across
-datacenters requires Vault Enterprise.
-
-
-## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
-
-<img src="/img/vault-ref-arch-6.png">
-
-### Vault Replication
-
-~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
-
-HashiCorp Vault Enterprise provides two modes of replication, **performance**
-and **disaster recovery**. The [Vault
-documentation](/docs/enterprise/replication/index.html) provides more detailed
-information on the replication capabilities within Vault Enterprise.
-
-![Replication Pattern](/img/vault-ref-arch-8.png)
-
-#### Performance Replication
-
-Vault performance replication allows for secrets management across many sites.
-Secrets, authentication methods, authorization policies and other details are
-replicated to be active and available in multiple locations.
-
--> Refer to the [Vault Mount Filter](/guides/operations/mount-filter.html) guide
-about filtering out secret engines from being replicated across regions.
-
-#### Disaster Recovery Replication
-
-Vault disaster recovery replication ensures that a standby Vault cluster is kept
-synchronized with an active Vault cluster.  This mode of replication includes
-data such as ephemeral authentication tokens, time-based token information as
-well as token usage data. This provides for aggressive recovery point objective
-in environments where preventing loss of ephemeral operational data is of the
-utmost concern.
-
-#### Cross-Region Disaster Recovery
-
-If your disaster recovery strategy is to plan for a loss of an entire data
-center, the following diagram illustrates a possible replication scenario.
-
-![Replication Pattern](/img/vault-ref-arch-4.png)
-
-In this scenario, if the Vault cluster in Region A fails and you promote the DR
-cluster in Region B to be the new primary, your applications will need to read
-and write secrets from the Vault cluster in Region B. This may or may not raise
-an issue for your applications, but you need to take that into a consideration
-during the planning.
-
-
-#### In-Region Disaster Recovery
-
-If your disaster recovery strategy is to plan for a loss of a cluster but not the
-entire data center, the following diagram illustrates a possible replication
-scenario.
-
-![Replication Pattern](/img/vault-ref-arch-7.png)
-
--> Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery.html) guide for additional information.
-
-#### Corruption or Sabotage Disaster Recovery
-
-Another common scenario to protect against, more prevalent in cloud environments
-that provide very high levels of intrinsic resiliency, might be the purposeful
-or accidental corruption of data and configuration, and or a loss of cloud account
-control.  Vault's DR Replication is designed to replicate live data, which would
-propagate intentional or accidental data corruption or deletion.  To protect against
-these possibilities, you should backup Vault's storage backend.  This is supported
-through the Consul Snapshot feature, which can be automated for regular archival
-backups.  A cold site or new infrastructure could be re-hydrated from a Consul
-snapshot.  
-
--> Refer to the online documentation to learn more about [Consul snapshots](https://www.consul.io/docs/commands/snapshot.html).
-
-#### Replication Notes
-
-- There is no set limit on number of clusters within a replication set. Largest
-deployments today are in the 30+ cluster range.
-- Any cluster within a Performance replication set can act as a Disaster
-Recovery primary cluster.
-- A cluster within a Performance replication set can also replicate to multiple
-Disaster Recovery secondary clusters.
-- While a Vault cluster can possess a replication role (or roles), there are no
-special considerations required in terms of infrastructure, and clusters can
-assume (or be promoted) to another role. Special circumstances related to mount
-filters and HSM usage may limit swapping of roles, but those are based on
-specific organization configurations.
-
-#### Considerations Related to Unseal proxy_protocol_behavior
-
-Using replication with Vault clusters integrated with HSM devices for automated
-unseal operations has some details that should be understood during the planning
-phase.
-
-- If a **performance** primary cluster utilizes an HSM, all other clusters
-within that replication set must use an HSM as well.
-- If a **performance** primary cluster does NOT utilize an HSM (uses Shamir
-  secret sharing method), the clusters within that replication set can be mixed,
-  such that some may use an HSM, others may use Shamir.
-
-For sake of this discussion, the cloud auto-unseal feature is treated as an
-HSM.
 
 ## Additional References
 
