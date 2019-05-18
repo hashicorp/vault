@@ -93,6 +93,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		groupPaths(i),
 		lookupPaths(i),
 		upgradePaths(i),
+		oidcPaths(i),
 	)
 }
 
