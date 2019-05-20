@@ -327,16 +327,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 	}
 
 	// loop through WAL keys and process any rotation ones
-	var merr error
 	for _, walID := range keys {
-		// allow cancellation from context
-		select {
-		case <-ctx.Done():
-			b.Logger().Info("loading WAL entries cancelled")
-			return nil, merr
-		default:
-		}
-
 		walEntry := b.findStaticWAL(ctx, s, walID)
 		if walEntry == nil {
 			continue
@@ -344,58 +335,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 		walEntry.walID = walID
 		walMap[walEntry.RoleName] = walEntry
 
-		// // load matching role and verify
-		// role, err := b.StaticRole(ctx, conf.StorageView, walEntry.RoleName)
-		// if err != nil {
-		// 	b.Logger().Warn("error loading role", err)
-		// 	merr = multierror.Append(merr, err)
-		// 	continue
-		// }
-
-		// if role == nil || role.StaticAccount == nil {
-		// 	b.Logger().Warn("role or static account not found")
-		// 	if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-		// 		b.Logger().Warn("error deleting WAL for role with no static account", err.Error())
-		// 		merr = multierror.Append(merr, err)
-		// 	}
-		// 	continue
-		// }
-
-		// if role.StaticAccount.LastVaultRotation.After(walEntry.LastVaultRotation) {
-		// 	// role password has been rotated since the WAL was created, so let's
-		// 	// delete this
-		// 	if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-		// 		b.Logger().Warn("error deleting WAL for role with newer rotation date", err.Error())
-		// 		merr = multierror.Append(merr, err)
-		// 	}
-		// 	continue
-		// }
-
-		// setStaticAccount which will attempt to set the password and
-		// delete the WAL if successful
-		// resp, err := b.setStaticAccount(ctx, conf.StorageView, &setStaticAccountInput{
-		// 	RoleName: walEntry.RoleName,
-		// 	Role:     role,
-		// 	WALID:    walID,
-		// 	Password: walEntry.NewPassword,
-		// })
-		// if err != nil {
-		// 	// if response contains a WALID, create an item to push to the queue with
-		// 	// a backoff time and include the WAL ID
-		// 	merr = multierror.Append(merr, err)
-		// 	if resp != nil && resp.WALID != "" {
-		// 		// The rotation failed to save, so add to the rotation with the WAL ID
-		// 		if err := b.pushItem(&queue.Item{
-		// 			Key:      walEntry.RoleName,
-		// 			Value:    walID,
-		// 			Priority: walEntry.LastVaultRotation.Add(time.Second * 60).Unix(),
-		// 		}); err != nil {
-		// 			b.Logger().Warn("error pushing item on to queue after failed WAL restore", err)
-		// 			merr = multierror.Append(merr, err)
-		// 		}
-		// 	}
-		// }
-	} // end range keys
+	}
 	return
 }
 
