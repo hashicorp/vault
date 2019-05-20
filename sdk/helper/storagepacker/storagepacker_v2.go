@@ -283,6 +283,8 @@ func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []st
 
 	nonemptyParent := "NOT_A_PREFIX"
 
+	s.bucketsCacheLock.Lock()
+	defer s.bucketsCacheLock.Unlock()
 	for _, key := range keys {
 		if strings.HasPrefix(key, nonemptyParent) {
 			// FIXME: can I give more context about the storage path?
@@ -307,9 +309,7 @@ func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []st
 			nonemptyParent = key
 		}
 
-		s.bucketsCacheLock.Lock()
 		s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
-		s.bucketsCacheLock.Unlock()
 	}
 	return nil
 }
