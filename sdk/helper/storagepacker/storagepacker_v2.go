@@ -116,7 +116,7 @@ func (s *StoragePackerV2) lockBucket(key string, acquire lockOperation, release 
 		} else {
 			finalKey := bucket.Key
 			release(bucket)
-			return nil, true, fmt.Errorf("Bucket %s has shards but no longer prefix found.",
+			return nil, true, fmt.Errorf("bucket %s has shards but no longer prefix found",
 				finalKey)
 		}
 	}
@@ -189,7 +189,7 @@ func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, creat
 			return nil, err
 		}
 		if !found {
-			return nil, errors.New("Bucket found in handleCacheMiss disappeared.")
+			return nil, errors.New("bucket found in handleCacheMiss disappeared.")
 		}
 		return bucket, nil
 	}
@@ -286,7 +286,7 @@ func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []st
 	for _, key := range keys {
 		if strings.HasPrefix(key, nonemptyParent) {
 			// FIXME: can I give more context about the storage path?
-			s.Logger.Warn("Detected shadowed bucket, removing", "key", key, "parent", nonemptyParent)
+			s.Logger.Warn("detected shadowed bucket, removing", "key", key, "parent", nonemptyParent)
 			s.BucketStorageView.Delete(ctx, key)
 			continue
 		}
@@ -598,7 +598,7 @@ func (s *StoragePackerV2) DeleteBucket(ctx context.Context, key string) error {
 
 	if bucket.ItemMap == nil {
 		// Could do a recursive delete instead.
-		return fmt.Errorf("Bucket %s has shards, no items deleted.", bucket.Key)
+		return fmt.Errorf("bucket %s has shards, no items deleted.", bucket.Key)
 	}
 
 	bucket.ItemMap = make(map[string][]byte)
