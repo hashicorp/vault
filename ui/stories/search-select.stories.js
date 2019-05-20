@@ -6,10 +6,6 @@ import { withKnobs, text, select } from '@storybook/addon-knobs';
 
 const onChange = (value) => alert(`New value is "${value}"`);
 const models = ["identity/groups"];
-const options = {
-  'No Selections': [],
-  'With Selections': [{ name: "my-group", id: "123dsafdsarf" }, { name: "other-1", id: "gr0283" }],
-};
 
 storiesOf('SearchSelect/', module)
   .addParameters({ options: { showPanel: true } })
