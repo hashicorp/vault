@@ -130,7 +130,7 @@ jobs:
           name: Run BrowserStack tests
           command: |
             set -eux -o pipefail
-            make ember-ci-test
+            make test-ui-browserstack
 
   test-go:
     machine: true

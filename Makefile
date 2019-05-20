@@ -128,7 +128,11 @@ test-ember:
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
-ember-ci-test:
+ember-ci-test: # Deprecated, to be removed soon.
+	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
+	@exit 1
+
+test-ui-browserstack:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests in Browserstack"
