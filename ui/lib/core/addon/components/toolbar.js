@@ -4,7 +4,13 @@
  *
  * @example
  * ```js
- * <Toolbar>Toolbar Content</Toolbar>
+ * <Toolbar>
+ *   <ToolbarActions>
+ *     <ToolbarSecretLink @params={{array 'vault.cluster.policies.create'}} @type="add">
+ *       Create policy
+ *     </ToolbarSecretLink>
+ *   </ToolbarActions>
+ * </Toolbar>
  * ```
  *
  */

@@ -1,10 +1,17 @@
 /**
  * @module ToolbarActions
- * `ToolbarActions` components are containers for Toolbar actions.
+ * `ToolbarActions` is a container for toolbar links such as "Add item".
+ * It should only be used inside of `Toolbar`.
  *
  * @example
  * ```js
- * <ToolbarActions>Toolbar Actions</ToolbarActions>
+ * <Toolbar>
+ *   <ToolbarActions>
+ *     <ToolbarLink @params={{array 'vault.cluster.policy.edit'}}>
+ *       Edit policy
+ *     </ToolbarLink>
+ *   </ToolbarActions>
+ * </Toolbar>
  * ```
  *
  */

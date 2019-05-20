@@ -14,7 +14,7 @@ storiesOf('Toolbar/', module)
           <ToolbarFilters>
             <div class="control has-icons-left">
               <input class="filter input" placeholder="Filter keys" type="text">
-              <Icon @glyph="search" class="search-icon has-text-grey-light hs-icon-l" />
+              <Icon @glyph="search" @size="l" class="search-icon has-text-grey-light" />
             </div>
             <div class="toolbar-separator"/>
             <div class="control">
