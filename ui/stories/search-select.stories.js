@@ -2,10 +2,15 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './search-select.md';
-import { withKnobs, text } from '@storybook/addon-knobs';
+import { withKnobs, text, select } from '@storybook/addon-knobs';
 
 const onChange = (value) => alert(`New value is "${value}"`);
 const models = ["identity/groups"];
+const options = {
+  'No Selections': [],
+  'With Selections': [{ name: "my-group", id: "123dsafdsarf" }, { name: "other-1", id: "gr0283" }],
+};
+
 storiesOf('SearchSelect/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
@@ -16,12 +21,15 @@ storiesOf('SearchSelect/', module)
         @id="groups" 
         @models={{models}} 
         @onChange={{onChange}} 
+        @inputValue={{inputValue}}
         @label={{label}}
         @fallbackComponent="string-list" 
         @staticOptions={{staticOptions}}/>
     `,
     context: {
-      label: text("Label", "Groups"),
+      label: text("Label", "Group IDs"),
+      helpText: text("Help Tooltip Text", "Group IDs to associate with this entity"),
+      inputValue: [],
       models: models,
       onChange: onChange,
       staticOptions: [{ name: "my-group", id: "123dsafdsarf" }, { name: "my-other-group", id: "45ssadd435" }, { name: "example-1", id: "5678" }, { name: "group-2", id: "gro09283" }],
