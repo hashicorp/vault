@@ -1,6 +1,7 @@
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import escapeStringRegexp from 'escape-string-regexp';
+import commonPrefix from 'vault/utils/common-prefix';
 
 export default Mixin.create({
   queryParams: {
@@ -26,11 +27,20 @@ export default Mixin.create({
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');
     var re = new RegExp('^' + escapeStringRegexp(filter));
-    return filterMatchesKey
-      ? null
-      : content.find(function(key) {
-          return re.test(key.get('id'));
-        });
+    let matchSet = content.filter(key => re.test(key.id));
+    let match = matchSet.firstObject;
+
+    if (filterMatchesKey || !match) {
+      return null;
+    }
+
+    let sharedPrefix = commonPrefix(content);
+    // if we already are filtering the prefix, then next we want
+    // the exact match
+    if (filter === sharedPrefix || matchSet.length === 1) {
+      return match;
+    }
+    return { id: sharedPrefix };
   }),
 
   actions: {
