@@ -220,4 +220,5 @@ workflows:
             - build-go-dev
       - test-ember:
           requires:
+            - install-ui-dependencies
             - build-go-dev
