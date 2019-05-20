@@ -378,7 +378,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 }
 
-func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
+func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -421,7 +421,7 @@ func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
 
 	// non-static role
 	data = map[string]interface{}{
-		"name":                  "plugin-role-normal",
+		"name":                  "plugin-role-test",
 		"db_name":               "plugin-test",
 		"creation_statements":   testRoleStaticCreate,
 		"rotation_statements":   testRoleStaticUpdate,
@@ -432,7 +432,7 @@ func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
 
 	req = &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "roles/plugin-role-normal",
+		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -442,20 +442,27 @@ func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// Read the role
-	data = map[string]interface{}{}
+	// create a static role with the same name, and expect failure
+	// static role
+	data = map[string]interface{}{
+		"name":                  "plugin-role-test",
+		"db_name":               "plugin-test",
+		"creation_statements":   testRoleStaticCreate,
+		"rotation_statements":   testRoleStaticUpdate,
+		"revocation_statements": defaultRevocationSQL,
+		"username":              "testusername",
+	}
+
 	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "roles/plugin-role-normal",
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
+
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-	if _, ok := resp.Data["static_account"]; ok {
-		t.Fatalf("expected no static account, got: %#v", resp.Data["static_account"])
+	if err == nil || (resp == nil || !resp.IsError()) {
+		t.Fatalf("expected error, got none")
 	}
 }
 
