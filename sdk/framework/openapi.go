@@ -98,11 +98,12 @@ type OASLicense struct {
 }
 
 type OASPathItem struct {
-	Description     string         `json:"description,omitempty"`
-	Parameters      []OASParameter `json:"parameters,omitempty"`
-	Sudo            bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Unauthenticated bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported bool           `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
+	Description       string         `json:"description,omitempty"`
+	Parameters        []OASParameter `json:"parameters,omitempty"`
+	Sudo              bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Unauthenticated   bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
+	CreateSupported   bool           `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
+	DisplayNavigation bool           `json:"x-vault-displayNavigation,omitempty" mapstructure:"x-vault-displayNavigation"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -117,14 +118,15 @@ func NewOASOperation() *OASOperation {
 }
 
 type OASOperation struct {
-	Summary     string               `json:"summary,omitempty"`
-	Description string               `json:"description,omitempty"`
-	OperationID string               `json:"operationId,omitempty"`
-	Tags        []string             `json:"tags,omitempty"`
-	Parameters  []OASParameter       `json:"parameters,omitempty"`
-	RequestBody *OASRequestBody      `json:"requestBody,omitempty"`
-	Responses   map[int]*OASResponse `json:"responses"`
-	Deprecated  bool                 `json:"deprecated,omitempty"`
+	Summary       string               `json:"summary,omitempty"`
+	Description   string               `json:"description,omitempty"`
+	OperationID   string               `json:"operationId,omitempty"`
+	Tags          []string             `json:"tags,omitempty"`
+	Parameters    []OASParameter       `json:"parameters,omitempty"`
+	RequestBody   *OASRequestBody      `json:"requestBody,omitempty"`
+	Responses     map[int]*OASResponse `json:"responses"`
+	Deprecated    bool                 `json:"deprecated,omitempty"`
+	DisplayAction string               `json:"x-vault-displayAction,omitempty"`
 }
 
 type OASParameter struct {
@@ -166,6 +168,7 @@ type OASSchema struct {
 	DisplayName      string        `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
 	DisplayValue     interface{}   `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
 	DisplaySensitive bool          `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
+	DisplayGroup     string        `json:"x-vault-displayGroup,omitempty" mapstructure:"x-vault-displayGroup,omitempty"`
 }
 
 type OASResponse struct {
@@ -230,6 +233,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
+		pi.DisplayNavigation = p.DisplayNavigation
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -270,6 +274,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					DisplayName:      field.DisplayName,
 					DisplayValue:     field.DisplayValue,
 					DisplaySensitive: field.DisplaySensitive,
+					DisplayGroup:     field.DisplayGroup,
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -309,6 +314,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated
+			op.DisplayAction = props.DisplayAction
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -335,6 +341,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						DisplayName:      field.DisplayName,
 						DisplayValue:     field.DisplayValue,
 						DisplaySensitive: field.DisplaySensitive,
+						DisplayGroup:     field.DisplayGroup,
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{

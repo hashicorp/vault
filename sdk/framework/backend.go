@@ -543,6 +543,9 @@ type FieldSchema struct {
 
 	// DisplaySensitive indicates that the value should be masked by default in the UI.
 	DisplaySensitive bool
+
+	// DisplayGroup is the suggested UI group to place this field in.
+	DisplayGroup string
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise

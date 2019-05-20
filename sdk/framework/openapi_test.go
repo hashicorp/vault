@@ -342,6 +342,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 					DisplayName:      "Age",
 					DisplayValue:     7,
 					DisplaySensitive: true,
+					DisplayGroup:     "Some Group",
 				},
 				"x-abc-token": {
 					Type:          TypeHeader,
@@ -362,12 +363,14 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description: "My Description",
 				},
 				logical.UpdateOperation: &PathOperation{
-					Summary:     "Update Summary",
-					Description: "Update Description",
+					Summary:       "Update Summary",
+					Description:   "Update Description",
+					DisplayAction: "Save",
 				},
 				logical.CreateOperation: &PathOperation{
-					Summary:     "Create Summary",
-					Description: "Create Description",
+					Summary:       "Create Summary",
+					Description:   "Create Description",
+					DisplayAction: "Save",
 				},
 				logical.ListOperation: &PathOperation{
 					Summary:     "List Summary",
@@ -378,6 +381,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Unpublished: true,
 				},
 			},
+			DisplayNavigation: true,
 		}
 
 		sp := &logical.Paths{

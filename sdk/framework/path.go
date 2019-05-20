@@ -112,6 +112,10 @@ type Path struct {
 	// be automatically line-wrapped at 80 characters.
 	HelpSynopsis    string
 	HelpDescription string
+
+	// Display* members are available to provide hints for UI and documentation
+	// generators. They will be included in OpenAPI output if set.
+	DisplayNavigation bool
 }
 
 // OperationHandler defines and describes a specific operation handler.
@@ -148,6 +152,10 @@ type OperationProperties struct {
 
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
+
+	// Display* members are available to provide hints for UI and documentation
+	// generators. They will be included in OpenAPI output if set.
+	DisplayAction string
 }
 
 // RequestExample is example of request data.
@@ -169,13 +177,14 @@ type Response struct {
 
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
-	Callback    OperationFunc
-	Summary     string
-	Description string
-	Examples    []RequestExample
-	Responses   map[int][]Response
-	Unpublished bool
-	Deprecated  bool
+	Callback      OperationFunc
+	Summary       string
+	Description   string
+	Examples      []RequestExample
+	Responses     map[int][]Response
+	Unpublished   bool
+	Deprecated    bool
+	DisplayAction string
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -184,12 +193,13 @@ func (p *PathOperation) Handler() OperationFunc {
 
 func (p *PathOperation) Properties() OperationProperties {
 	return OperationProperties{
-		Summary:     strings.TrimSpace(p.Summary),
-		Description: strings.TrimSpace(p.Description),
-		Responses:   p.Responses,
-		Examples:    p.Examples,
-		Unpublished: p.Unpublished,
-		Deprecated:  p.Deprecated,
+		Summary:       strings.TrimSpace(p.Summary),
+		Description:   strings.TrimSpace(p.Description),
+		Responses:     p.Responses,
+		Examples:      p.Examples,
+		Unpublished:   p.Unpublished,
+		Deprecated:    p.Deprecated,
+		DisplayAction: p.DisplayAction,
 	}
 }
 
