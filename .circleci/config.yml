@@ -127,7 +127,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Test Ember
+          name: Run BrowserStack tests
           command: |
             set -eux -o pipefail
             make ember-ci-test
