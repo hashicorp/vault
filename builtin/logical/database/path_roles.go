@@ -234,7 +234,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 	}
 
 	// remove the item from the queue
-	_, _ = b.popByKey(name)
+	_, _ = b.popItemByKey(name)
 
 	return nil, nil
 }
@@ -378,22 +378,14 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	// updating roles, and may use seperate statements depending on the context.
 	createRole := req.Operation == logical.CreateOperation
 	if role == nil {
-		role = &roleEntry{}
+		role = &roleEntry{
+			StaticAccount: &staticAccount{},
+		}
 		createRole = true
 	}
 
 	if err := pathRoleCreateUpdateCommon(ctx, role, req.Operation, data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	// Static Account information
-	// If we're updating and there is no static account, error. If we're
-	// creating, add an empty static account
-	if role.StaticAccount == nil {
-		if !createRole {
-			return logical.ErrorResponse("cannot change an existing role to a static account"), nil
-		}
-		role.StaticAccount = &staticAccount{}
 	}
 
 	username := data.Get("username").(string)
@@ -469,7 +461,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 		// In case this is an update, remove any previous version of the item from
 		// the queue
-		b.popByKey(name)
+		b.popItemByKey(name)
 	}
 
 	// Add their rotation to the queue
