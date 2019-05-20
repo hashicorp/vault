@@ -306,11 +306,6 @@ func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
 		b.cancelQueue = cancel
 		b.Unlock()
 
-		// search through WAL for any rotations that were interrupted
-		if err := b.loadStaticWALs(ctx, conf); err != nil {
-			b.Logger().Warn("error(s) loading WAL entries into queue: ", err.Error())
-		}
-
 		// load roles and populate queue with static accounts
 		b.populateQueue(ctx, conf.StorageView)
 
@@ -319,22 +314,16 @@ func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
 	}
 }
 
-// loadStaticWALs reads WAL entries at backend initialization. WAL entries are
-// created during the normal rotation process to ensure data integrity, in the
-// event that Vault fails to store the results (due to power failure, disk
-// failure, et. al.) If WAL entries for static account rotation exist,
-// attempt to re-set the password for the role given the NewPassword stored in
-// the WAL. If the matching Role does not exist, the Role's LastVaultRotation is
-// newer than the WAL, or the Role does not have a static account, delete the
-// WAL.
-func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.BackendConfig) error {
-	keys, err := framework.ListWAL(ctx, conf.StorageView)
+// loadStaticWALs reads WAL entries and returns a map of roles and their
+// setCredentialsWAL, if found.
+func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage) (walMap map[string]*setCredentialsWAL, err error) {
+	keys, err := framework.ListWAL(ctx, s)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(keys) == 0 {
 		b.Logger().Debug("no WAL entries found")
-		return nil
+		return nil, nil
 	}
 
 	// loop through WAL keys and process any rotation ones
@@ -344,68 +333,70 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 		select {
 		case <-ctx.Done():
 			b.Logger().Info("loading WAL entries cancelled")
-			return merr
+			return nil, merr
 		default:
 		}
 
-		walEntry := b.findStaticWAL(ctx, conf.StorageView, walID)
+		walEntry := b.findStaticWAL(ctx, s, walID)
 		if walEntry == nil {
 			continue
 		}
+		walEntry.walID = walID
+		walMap[walEntry.RoleName] = walEntry
 
-		// load matching role and verify
-		role, err := b.StaticRole(ctx, conf.StorageView, walEntry.RoleName)
-		if err != nil {
-			b.Logger().Warn("error loading role", err)
-			merr = multierror.Append(merr, err)
-			continue
-		}
+		// // load matching role and verify
+		// role, err := b.StaticRole(ctx, conf.StorageView, walEntry.RoleName)
+		// if err != nil {
+		// 	b.Logger().Warn("error loading role", err)
+		// 	merr = multierror.Append(merr, err)
+		// 	continue
+		// }
 
-		if role == nil || role.StaticAccount == nil {
-			b.Logger().Warn("role or static account not found")
-			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with no static account", err.Error())
-				merr = multierror.Append(merr, err)
-			}
-			continue
-		}
+		// if role == nil || role.StaticAccount == nil {
+		// 	b.Logger().Warn("role or static account not found")
+		// 	if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+		// 		b.Logger().Warn("error deleting WAL for role with no static account", err.Error())
+		// 		merr = multierror.Append(merr, err)
+		// 	}
+		// 	continue
+		// }
 
-		if role.StaticAccount.LastVaultRotation.After(walEntry.LastVaultRotation) {
-			// role password has been rotated since the WAL was created, so let's
-			// delete this
-			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with newer rotation date", err.Error())
-				merr = multierror.Append(merr, err)
-			}
-			continue
-		}
+		// if role.StaticAccount.LastVaultRotation.After(walEntry.LastVaultRotation) {
+		// 	// role password has been rotated since the WAL was created, so let's
+		// 	// delete this
+		// 	if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+		// 		b.Logger().Warn("error deleting WAL for role with newer rotation date", err.Error())
+		// 		merr = multierror.Append(merr, err)
+		// 	}
+		// 	continue
+		// }
 
 		// setStaticAccount which will attempt to set the password and
 		// delete the WAL if successful
-		resp, err := b.setStaticAccount(ctx, conf.StorageView, &setStaticAccountInput{
-			RoleName: walEntry.RoleName,
-			Role:     role,
-			WALID:    walID,
-			Password: walEntry.NewPassword,
-		})
-		if err != nil {
-			// if response contains a WALID, create an item to push to the queue with
-			// a backoff time and include the WAL ID
-			merr = multierror.Append(merr, err)
-			if resp != nil && resp.WALID != "" {
-				// The rotation failed to save, so add to the rotation with the WAL ID
-				if err := b.pushItem(&queue.Item{
-					Key:      walEntry.RoleName,
-					Value:    walID,
-					Priority: walEntry.LastVaultRotation.Add(time.Second * 60).Unix(),
-				}); err != nil {
-					b.Logger().Warn("error pushing item on to queue after failed WAL restore", err)
-					merr = multierror.Append(merr, err)
-				}
-			}
-		}
+		// resp, err := b.setStaticAccount(ctx, conf.StorageView, &setStaticAccountInput{
+		// 	RoleName: walEntry.RoleName,
+		// 	Role:     role,
+		// 	WALID:    walID,
+		// 	Password: walEntry.NewPassword,
+		// })
+		// if err != nil {
+		// 	// if response contains a WALID, create an item to push to the queue with
+		// 	// a backoff time and include the WAL ID
+		// 	merr = multierror.Append(merr, err)
+		// 	if resp != nil && resp.WALID != "" {
+		// 		// The rotation failed to save, so add to the rotation with the WAL ID
+		// 		if err := b.pushItem(&queue.Item{
+		// 			Key:      walEntry.RoleName,
+		// 			Value:    walID,
+		// 			Priority: walEntry.LastVaultRotation.Add(time.Second * 60).Unix(),
+		// 		}); err != nil {
+		// 			b.Logger().Warn("error pushing item on to queue after failed WAL restore", err)
+		// 			merr = multierror.Append(merr, err)
+		// 		}
+		// 	}
+		// }
 	} // end range keys
-	return merr
+	return
 }
 
 // invalidateQueue cancels any background queue loading and destroys the queue.
@@ -493,6 +484,12 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 	log := b.Logger()
 	log.Info("populating role rotation queue")
 
+	// build map of role name / wal entries
+	walMap, err := b.loadStaticWALs(ctx, s)
+	if err != nil {
+		log.Warn("unable to load rotation WALs", "error", err)
+	}
+
 	roles, err := s.List(ctx, databaseStaticRolePath)
 	if err != nil {
 		log.Warn("unable to list role for enqueueing", "error", err)
@@ -515,11 +512,18 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		if role == nil || role.StaticAccount == nil {
 			continue
 		}
-
-		if err := b.pushItem(&queue.Item{
+		item := queue.Item{
 			Key:      roleName,
 			Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
-		}); err != nil {
+		}
+
+		// check if role name is in map
+		if walEntry, ok := walMap[roleName]; ok {
+			item.Value = walEntry.walID
+			item.Priority = time.Now().Unix()
+		}
+
+		if err := b.pushItem(&item); err != nil {
 			log.Warn("unable to enqueue item", "error", err, "role", roleName)
 		}
 	}
@@ -553,6 +557,8 @@ type setCredentialsWAL struct {
 
 	LastVaultRotation time.Time
 	Statements        dbplugin.Statements
+
+	walID string
 }
 
 // rotateCredentials sets a new password for a static account. This method is
