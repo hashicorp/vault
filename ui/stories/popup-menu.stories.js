@@ -9,7 +9,17 @@ storiesOf('PopupMenu/', module)
   .add(`PopupMenu`, () => ({
     template: hbs`
         <h5 class="title is-5">Popup Menu</h5>
-        <PopupMenu/>
+        <PopupMenu>
+          <nav class="menu">
+            <ul class="menu-list">
+              <li class="action">
+                <button type="button" class="button link">
+                  Popup content goes here!
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </PopupMenu>
     `,
     context: {},
   }),
