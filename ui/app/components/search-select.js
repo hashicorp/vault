@@ -86,9 +86,10 @@ export default Component.extend({
           return;
         }
         //special case for storybook
-        if (this.storyOptions) {
-          let options = this.storyOptions;
+        if (this.staticOptions) {
+          let options = this.staticOptions;
           this.formatOptions(options);
+          return;
         }
         throw err;
       }
@@ -120,8 +121,12 @@ export default Component.extend({
       this.options.pushObject(selected);
       this.handleChange();
     },
-    constructSuggestion(term) {
-      return `Add new ${singularize(this.label)}: ${term}`;
+    constructSuggestion(id) {
+      return `Add new ${singularize(this.label)}: ${id}`;
+    },
+    hideCreateOptionOnSameID(id) {
+      let existingOption = this.options.findBy('id', id) || this.options.findBy('name', id);
+      return !existingOption;
     },
   },
 });

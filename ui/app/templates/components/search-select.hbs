@@ -4,11 +4,10 @@
     label=label
     onChange=(action "onChange")
     inputValue=inputValue
-    warning=warning
     helpText=helpText
   }}
 {{else}}
-  <label for="{{name}}" class="title is-4" data-test-field-label>
+  <label class="title is-4" data-test-field-label>
     {{label}}
     {{#if helpText}}
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
@@ -22,7 +21,8 @@
     renderInPlace=true
     searchField="searchText"
     verticalPosition="below"
-    buildSuggestion=(action "constructSuggestion") as |option term|
+    showCreateWhen=(action "hideCreateOptionOnSameID")
+    buildSuggestion=(action "constructSuggestion") as |option|
   }}
     {{#if shouldRenderName}}
       {{option.name}}
@@ -45,12 +45,8 @@
           {{selected.id}}
         {{/if}}
         <div class="control">
-          <button
-            type="button"
-            class="button is-ghost"
-            data-test-selected-list-button="delete"
-            {{action "discardSelection" selected}}
-          >
+          <button type="button" class="button is-ghost" data-test-selected-list-button="delete"
+            {{action "discardSelection" selected}}>
             <Icon @glyph="trash" />
           </button>
         </div>

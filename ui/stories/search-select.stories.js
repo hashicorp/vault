@@ -5,29 +5,26 @@ import notes from './search-select.md';
 import { withKnobs, text } from '@storybook/addon-knobs';
 
 const onChange = (value) => alert(`New value is "${value}"`);
-const models = ["policies/acl"];
+const models = ["identity/groups"];
 storiesOf('SearchSelect/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
   .add(`SearchSelect`, () => ({
     template: hbs`
-        <h5 class="title is-5">Search Select</h5>
-        <SearchSelect 
-          @id="policies" 
-          @models={{models}} 
-          @onChange={{onChange}} 
-          @helpText={{helpText}} 
-          @label={{label}}
-          @fallbackComponent="string-list" 
-          @storyOptions={{storyOptions}}
-        />
+      <h5 class="title is-5">Search Select</h5>
+      <SearchSelect 
+        @id="groups" 
+        @models={{models}} 
+        @onChange={{onChange}} 
+        @label={{label}}
+        @fallbackComponent="string-list" 
+        @staticOptions={{staticOptions}}/>
     `,
     context: {
-      label: text("Label", "Policies"),
-      helpText: text("Help Tooltip Text", "Policies associated with this group"),
+      label: text("Label", "Groups"),
       models: models,
       onChange: onChange,
-      storyOptions: [{ id: "my-policy" }, { id: "my-other-policy" }, { id: "123" }, { id: "example-1" }]
+      staticOptions: [{ name: "my-group", id: "123dsafdsarf" }, { name: "my-other-group", id: "45ssadd435" }, { name: "example-1", id: "5678" }, { name: "group-2", id: "gro09283" }],
     },
   }),
     { notes }
