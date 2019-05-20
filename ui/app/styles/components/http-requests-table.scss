@@ -6,4 +6,12 @@
   & td {
     padding: $spacing-s;
   }
+
+  & .arrow-up {
+    transform: rotate(45deg);
+  }
+
+  & .arrow-down {
+    transform: rotate(-45deg);
+  }
 }
