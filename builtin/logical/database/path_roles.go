@@ -322,6 +322,14 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
+	// exists, err := b.pathRoleExistenceCheck(ctx,req,data)
+	exists, err := b.pathStaticRoleExistenceCheck(ctx, req, data)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return logical.ErrorResponse("Role and Static Role names must be unique"), nil
+	}
 
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
@@ -366,6 +374,14 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
+	}
+
+	exists, err := b.pathRoleExistenceCheck(ctx, req, data)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return logical.ErrorResponse("Role and Static Role names must be unique"), nil
 	}
 
 	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
