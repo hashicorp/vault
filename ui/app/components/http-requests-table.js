@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { assign } from '@ember/polyfills';
 
 /**
  * @module HttpRequestsTable
@@ -23,35 +24,28 @@ import { computed } from '@ember/object';
 export default Component.extend({
   classNames: ['http-requests-table'],
   counters: null,
-  showChangeColumn: computed('counters', function() {
-    const { counters } = this;
-    return counters && counters.length > 1;
-  }),
   countersWithChange: computed('counters', function() {
-    const { counters } = this;
+    let counters = this.counters || [];
+    let countersWithPercentChange = [];
+    let previousMonthVal;
 
-    if (counters) {
-      let countersWithPercentChange = [];
-      let previousMonthVal;
-
-      counters.forEach(month => {
-        if (previousMonthVal) {
-          const percentChange = (((month.total - previousMonthVal) / month.total) * 100).toFixed(1);
-          let glyph;
-          if (percentChange > 0) {
-            glyph = 'arrow-up';
-          } else if (percentChange < 0) {
-            glyph = 'arrow-down';
-          }
-          const newCounter = Object.assign({ percentChange, glyph }, month);
-          countersWithPercentChange.push(newCounter);
-        } else {
-          // we're looking at the first counter in the list, so there is no % change value.
-          countersWithPercentChange.push(month);
-          previousMonthVal = month.total;
+    counters.forEach(month => {
+      if (previousMonthVal) {
+        const percentChange = (((month.total - previousMonthVal) / month.total) * 100).toFixed(1);
+        let glyph;
+        if (percentChange > 0) {
+          glyph = 'arrow-up';
+        } else if (percentChange < 0) {
+          glyph = 'arrow-down';
         }
-      });
-      return countersWithPercentChange;
-    }
+        const newCounter = assign({ percentChange, glyph }, month);
+        countersWithPercentChange.push(newCounter);
+      } else {
+        // we're looking at the first counter in the list, so there is no % change value.
+        countersWithPercentChange.push(month);
+        previousMonthVal = month.total;
+      }
+    });
+    return countersWithPercentChange;
   }),
 });
