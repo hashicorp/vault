@@ -264,7 +264,7 @@ func GetItemIDHash(itemID string) string {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(itemID))
 }
 
-func (s *StoragePackerV2) visitDiskBucketsInOrder(ctx context.Context, keys []string) error {
+func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []string) error {
 	// If we crash while writing out new buckets created by sharding,
 	// we will have version N of the bucket in storage, and version N+1
 	// represented in the sub-buckets.
@@ -322,7 +322,7 @@ func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 			retErr = err
 			return
 		}
-		retErr = s.visitDiskBucketsInOrder(ctx, diskBuckets)
+		retErr = s.preloadBucketsFromDisk(ctx, diskBuckets)
 	})
 	if retErr != nil {
 		return nil, retErr
