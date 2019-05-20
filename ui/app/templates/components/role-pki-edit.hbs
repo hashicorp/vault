@@ -21,19 +21,9 @@
   </p.levelLeft>
 </PageHeader>
 
-<Toolbar>
-  <ToolbarActions>
-    {{#if (eq mode "show") }}
-      {{#if (or model.canUpdate model.canDelete)}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit role
-        </ToolbarSecretLink>
-      {{/if}}
+{{#if (eq mode "show") }}
+  <Toolbar>
+    <ToolbarActions>
       {{#if model.canGenerate}}
         <ToolbarSecretLink
           @secret={{model.id}}
@@ -54,9 +44,31 @@
           Sign Certificate
         </ToolbarSecretLink>
       {{/if}}
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
+      {{#if (and (or model.canGenerate model.canSign) (or model.canDelete model.canEdit))}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+          data-test-role-delete="true"
+        >
+          Delete role
+        </ConfirmAction>
+      {{/if}}
+      {{#if model.canEdit}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="edit"
+          @data-test-edit-link=true
+          @replace=true
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
 
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
   {{partial 'partials/role-pki/form'}}

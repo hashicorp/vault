@@ -39,7 +39,7 @@
         {{#if (eq initialReplicationMode 'dr')}}
           <h3 class="title is-flex-center is-5 is-marginless">
             <Icon
-              class="hs-icon-xl"
+              @size="xl"
               aria-hidden="true"
               @glyph="replication"
             />
@@ -51,7 +51,7 @@
         {{else if (eq initialReplicationMode 'performance')}}
           <h3 class="title is-flex-center is-5 is-marginless">
             <Icon
-              class="hs-icon-xl"
+              @size="xl"
               aria-hidden="true"
               @glyph="perf-replication"
             />
@@ -80,7 +80,7 @@
               <div>
                 <h3 class="box-label-header title is-6">
                   <Icon
-                    class="hs-icon-xl"
+                    @size="xl"
                     aria-hidden="true"
                     @glyph="replication"
                   />
@@ -106,7 +106,7 @@
               <div>
                 <h3 class="box-label-header title is-6">
                   <Icon
-                    class="hs-icon-xl"
+                    @size="xl"
                     aria-hidden="true"
                     @glyph="perf-replication"
                   />
@@ -286,7 +286,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
       <Icon
-        class="hs-icon-xl"
+        @size="xl"
         aria-hidden="true"
         @glyph="replication"
       />
@@ -315,7 +315,7 @@
   <div class="box is-bottomless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
       <Icon
-        class="hs-icon-xl"
+        @size="xl"
         aria-hidden="true"
         @glyph="perf-replication"
       />

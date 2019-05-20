@@ -8,7 +8,10 @@ description: |-
 # OIDC Provider Configuration
 
 This page collects high-level setup steps on how to configure an OIDC application for various
-providers. These providers are often highly configurable and you should become familiar with their
+providers. For more general usage and operation information, see the
+[Vault JWT/OIDC method documentation](https://www.vaultproject.io/docs/auth/jwt.html).
+
+OIDC providers are often highly configurable and you should become familiar with their
 recommended settings and best practices. The instructions below are intended only to help you get
 started. Corrections and additions may be submitted via the [Vault Github repository](https://github.com/hashicorp/vault).
 

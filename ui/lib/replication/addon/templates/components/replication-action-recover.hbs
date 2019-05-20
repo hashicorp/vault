@@ -9,15 +9,15 @@
 </div>
 <div class="field">
   <div class="control">
-    {{#confirm-action
-      buttonClasses="button is-primary"
-      onConfirmAction=(action "onSubmit" "recover")
-      confirmMessage="Are you sure you want to initiate cluster recovery?"
-      confirmButtonText="Begin recovery"
-      cancelButtonText="Cancel"
-      }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Begin recovery?"
+      @confirmMessage="This will attempt to recover to continue syncing."
+      @confirmButtonText="Recover"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "onSubmit" "recover"}}
+    >
       Recover
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 </div>
-

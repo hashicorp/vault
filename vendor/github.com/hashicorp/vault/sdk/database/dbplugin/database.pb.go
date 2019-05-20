@@ -9,8 +9,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -843,35 +841,6 @@ type DatabaseServer interface {
 	Init(context.Context, *InitRequest) (*InitResponse, error)
 	Close(context.Context, *Empty) (*Empty, error)
 	Initialize(context.Context, *InitializeRequest) (*Empty, error)
-}
-
-// UnimplementedDatabaseServer can be embedded to have forward compatible implementations.
-type UnimplementedDatabaseServer struct {
-}
-
-func (*UnimplementedDatabaseServer) Type(ctx context.Context, req *Empty) (*TypeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
-}
-func (*UnimplementedDatabaseServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
-}
-func (*UnimplementedDatabaseServer) RenewUser(ctx context.Context, req *RenewUserRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RenewUser not implemented")
-}
-func (*UnimplementedDatabaseServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RevokeUser not implemented")
-}
-func (*UnimplementedDatabaseServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RotateRootCredentials not implemented")
-}
-func (*UnimplementedDatabaseServer) Init(ctx context.Context, req *InitRequest) (*InitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Init not implemented")
-}
-func (*UnimplementedDatabaseServer) Close(ctx context.Context, req *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
-}
-func (*UnimplementedDatabaseServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
 }
 
 func RegisterDatabaseServer(s *grpc.Server, srv DatabaseServer) {

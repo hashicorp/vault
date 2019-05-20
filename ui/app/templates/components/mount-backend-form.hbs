@@ -5,7 +5,8 @@
         {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
           <Icon
             @glyph={{or typeInfo.glyph typeInfo.type}}
-            class="has-text-grey-light hs-icon-l"
+            @size="l"
+            class="has-text-grey-light"
            />
 
           {{#if (eq mountType "auth")}}
@@ -57,7 +58,8 @@
             >
               <Icon
                 @glyph={{or type.glyph type.type}}
-                class="has-text-grey-light hs-icon-xl"
+                @size="xl"
+                class="has-text-grey-light"
                />
 
               {{type.displayName}}

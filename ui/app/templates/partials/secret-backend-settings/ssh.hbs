@@ -28,14 +28,13 @@
       {{/copy-button}}
     </div>
     <div class="control">
-      {{#confirm-action
-        buttonClasses="button"
-        onConfirmAction=(action "saveConfig" (hash delete=true))
-        confirmMessage=(concat "This will delete the current CA keys associated with this backend. Are you sure you want to delete them?")
-        cancelButtonText="Cancel"
-      }}
+      <ConfirmAction
+        @buttonClasses="button"
+        @confirmMessage="This will remove the CA certificate information."
+        @onConfirmAction={{action "saveConfig" (hash delete=true)}}
+      >
         Delete
-      {{/confirm-action}}
+      </ConfirmAction>
     </div>
   </div>
 {{else}}

@@ -10,67 +10,59 @@ references:
     GO_VERSION: 1.12.4  # Pin Go to patch version (ex: 1.2.3)
     GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
 
+  cache:
+    go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
+    yarn-lock: &YARN_LOCK_CACHE_KEY yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+
 jobs:
   install-ui-dependencies:
     docker:
       - image: *NODE_IMAGE
-    working_directory: /src/vault/ui
+    working_directory: /src
     steps:
-      - checkout:
-          path: /src/vault
+      - checkout
       - restore_cache:
-          key: yarn-lock-{{ checksum "yarn.lock" }}
+          key: *YARN_LOCK_CACHE_KEY
       - run:
           name: Install UI dependencies
           command: |
             set -eux -o pipefail
 
+            cd ui
             yarn install --ignore-optional
             npm rebuild node-sass
       - save_cache:
-          key: yarn-lock-{{ checksum "yarn.lock" }}
-          paths:
-            - node_modules
-      - persist_to_workspace:
-          root: ..
+          key: *YARN_LOCK_CACHE_KEY
           paths:
             - ui/node_modules
 
-  go-mod-vendor:
+  go-mod-download:
     docker:
       - image: *GOLANG_IMAGE
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /src
     steps:
       - checkout
       - restore_cache:
-          key: go-vendor-modules-v1-{{ checksum "vendor/modules.txt" }}
+          key: *GO_SUM_CACHE_KEY
       - run:
-          name: Fix git url config
-          command: git config --local url."git@github.com:".insteadof https://github.com/
+          name: Download Go modules
+          command: go mod download
       - run:
-          name: Check go mod vendor
-          command: |
-            GO111MODULE=on go mod vendor
-            out=$(git status vendor --porcelain)
-            if [ "$out" != "" ] ; then
-              echo "'go mod vendor' was not clean! Please check go modules for updates (notably api and sdk)"
-              echo "output was:"
-              echo "$out"
-              exit 1
-            fi
+          name: Verify checksums of Go modules
+          command: go mod verify
       - save_cache:
-          key: go-vendor-modules-v1-{{ checksum "vendor/modules.txt" }}
+          key: *GO_SUM_CACHE_KEY
           paths:
-            - /root/.cache/go-build
+            - /go/pkg/mod
 
   build-go-dev:
     docker:
       - image: *GOLANG_IMAGE
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /src
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - restore_cache:
+          key: *GO_SUM_CACHE_KEY
       - run:
           name: Build dev binary
           command: |
@@ -90,13 +82,14 @@ jobs:
   test-ui:
     docker:
       - image: *NODE_IMAGE
-    working_directory: /src/vault/ui
+    working_directory: /src
     resource_class: medium+
     steps:
-      - checkout:
-          path: /src/vault
+      - checkout
+      - restore_cache:
+          key: *YARN_LOCK_CACHE_KEY
       - attach_workspace:
-          at: ..
+          at: .
       - run:
           name: Test UI
           command: |
@@ -113,15 +106,16 @@ jobs:
             rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
             # Add ./bin to the PATH so vault binary can be run by Ember tests
-            export PATH="${PWD}"/../bin:${PATH}
+            export PATH="${PWD}"/bin:${PATH}
 
             # Run Ember tests
+            cd ui
             mkdir -p test-results/qunit
             yarn run test-oss
       - store_artifacts:
-          path: test-results
+          path: ui/test-results
       - store_test_results:
-          path: test-results
+          path: ui/test-results
 
   test-go:
     machine: true
@@ -129,11 +123,18 @@ jobs:
       <<: *ENVIRONMENT
       GO_TAGS:
     parallelism: 2
-    working_directory: ~/go/src/github.com/hashicorp/vault
+    working_directory: ~/src
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - run:
+          name: Allow circleci user to restore Go modules cache
+          command: |
+            set -eux -o pipefail
+
+            sudo mkdir /go
+            sudo chown -R circleci:circleci /go
+      - restore_cache:
+          key: *GO_SUM_CACHE_KEY
       - run:
           name: Run Go tests
           command: |
@@ -144,7 +145,7 @@ jobs:
             sudo rm -rf /usr/local/go
             sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
             rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-            export GOPATH="${HOME}/go"
+            export GOPATH=/go
             export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
             # Install CircleCI CLI
@@ -190,10 +191,10 @@ workflows:
   ci:
     jobs:
       - install-ui-dependencies
-      - go-mod-vendor
+      - go-mod-download
       - build-go-dev:
           requires:
-            - go-mod-vendor
+            - go-mod-download
       - test-ui:
           requires:
             - install-ui-dependencies

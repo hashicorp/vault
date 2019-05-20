@@ -44,8 +44,13 @@
 </div>
 <div class="field">
   <div class="control">
-    {{#confirm-action
-      onConfirmAction=(action
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Disable this cluster?"
+      @confirmMessage="Data in this cluster will no longer be replicated."
+      @confirmButtonText="Disable"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action
         "onSubmit"
         "disable"
         (if
@@ -53,14 +58,10 @@
           mode
           model.replicationAttrs.modeForUrl
         )
-      )
-      buttonClasses="button is-primary"
-      confirmMessage=(concat "Are you sure you want to disable Replication on this cluster?")
-      confirmButtonText="Disable"
-      cancelButtonText="Cancel"
-      data-test-disable-replication=true
       }}
+      data-test-disable-replication="true"
+    >
       Disable Replication
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 </div>
