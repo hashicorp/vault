@@ -132,7 +132,16 @@ ember-ci-test: # Deprecated, to be removed soon.
 	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
 	@exit 1
 
-test-ui-browserstack:
+check-vault-in-path:
+	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
+		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
+		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
+
+check-browserstack-creds:
+	@[ -n "$$BROWSERSTACK_ACCESS_KEY" ] || { echo "BROWSERSTACK_ACCESS_KEY not set"; exit 1; }
+	@[ -n "$$BROWSERSTACK_USERNAME" ] || { echo "BROWSERSTACK_USERNAME not set"; exit 1; }
+
+test-ui-browserstack: check-vault-in-path check-browserstack-creds
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests in Browserstack"
@@ -208,6 +217,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
