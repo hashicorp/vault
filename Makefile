@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.11
-CGO_ENABLED=0
+CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
 	BUILD_TAGS+=foundationdb
