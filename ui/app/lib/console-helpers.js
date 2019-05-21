@@ -74,8 +74,8 @@ export function parseCommand(command, shouldThrow) {
         let strippedArg = arg
           // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
           .split(/=(.+)/)
-          // remove " at the beginning and end of each item
-          .map(item => item.replace(/^"|"$/gi, ''))
+          // remove matched wrapping " or ' from each item
+          .map(item => item.replace(/^("|')(.+)(\1)$/, '$2'))
           // if there were quotes, there's an empty string as the last member in the array that we don't want,
           // so filter it out
           .filter(str => str !== '')
