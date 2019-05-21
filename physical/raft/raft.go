@@ -576,8 +576,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 }
 
 func (l *RaftLock) Unlock() error {
-	// TODO: how do you stepdown a node?
-	return nil
+	return l.b.raft.LeadershipTransfer().Error()
 }
 
 func (l *RaftLock) Value() (bool, string, error) {

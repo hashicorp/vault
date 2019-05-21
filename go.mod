@@ -6,13 +6,14 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/raft => ../raft
+
 require (
 	cloud.google.com/go v0.37.4
 	github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 // indirect
 	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v11.7.1+incompatible
-	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
@@ -21,7 +22,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190412020505-60e2075261b6
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
+	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
 	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
@@ -32,8 +33,6 @@ require (
 	github.com/boombuler/barcode v1.0.0 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
-	github.com/circonus-labs/circonus-gometrics v2.2.7+incompatible // indirect
-	github.com/circonus-labs/circonusllhist v0.1.3 // indirect
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
@@ -62,9 +61,9 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
-	github.com/hashicorp/go-hclog v0.8.0
+	github.com/hashicorp/go-hclog v0.9.1
 	github.com/hashicorp/go-memdb v1.0.0
-	github.com/hashicorp/go-msgpack v0.5.3
+	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-rootcerts v1.0.0
 	github.com/hashicorp/go-sockaddr v1.0.2
@@ -124,7 +123,6 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
-	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
