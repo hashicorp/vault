@@ -1,4 +1,8 @@
 .http-requests-table {
+  & .is-collapsed {
+    visibility: collapse;
+  }
+
   & tbody th {
     vertical-align: inherit;
   }
