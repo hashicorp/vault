@@ -254,8 +254,6 @@ func (w *hashWalker) Struct(v reflect.Value) error {
 
 	// Second to last element of w.loc is location that contains this struct.
 	switch w.loc[len(w.loc)-2] {
-	case reflectwalk.MapKey:
-		return errors.New("time.Time value in a map key cannot be hashed for audits")
 	case reflectwalk.MapValue:
 		// Create a string value of the time. IMPORTANT: this must never change
 		// across Vault versions or the hash value of equivalent time.Time will

@@ -330,19 +330,21 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 
 	now := time.Now()
 	cases := []struct {
-		Input       map[string]interface{}
-		Output      map[string]interface{}
-		ExpectError bool
+		Input  map[string]interface{}
+		Output map[string]interface{}
 	}{
-		// Should error on map keys of type time.Time.
+		// Should not touch map keys of type time.Time.
 		{
 			map[string]interface{}{
 				"hello": map[time.Time]struct{}{
 					now: {},
 				},
 			},
-			map[string]interface{}{},
-			true,
+			map[string]interface{}{
+				"hello": map[time.Time]struct{}{
+					now: {},
+				},
+			},
 		},
 		// Should handle map values of type time.Time.
 		{
@@ -352,7 +354,6 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 			map[string]interface{}{
 				"hello": now.Format(time.RFC3339Nano),
 			},
-			false,
 		},
 		// Should handle slice values of type time.Time.
 		{
@@ -362,7 +363,6 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 			map[string]interface{}{
 				"hello": []interface{}{"foobar", now.Format(time.RFC3339Nano), "foo2bar"},
 			},
-			false,
 		},
 	}
 
@@ -370,11 +370,10 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 		err := HashStructure(tc.Input, func(s string) string {
 			return s + replaceText
 		}, []string{})
-		goterr := err != nil
-		if tc.ExpectError != goterr {
-			t.Fatalf("ExpectError=%v, err: %v\n\n%#v", tc.ExpectError, err, tc.Input)
+		if err != nil {
+			t.Fatalf("err: %v\n\n%#v", err, tc.Input)
 		}
-		if !tc.ExpectError && !reflect.DeepEqual(tc.Input, tc.Output) {
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
 			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
 		}
 	}
