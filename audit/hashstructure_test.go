@@ -230,8 +230,8 @@ func TestHashWalker(t *testing.T) {
 	replaceText := "foo"
 
 	cases := []struct {
-		Input  interface{}
-		Output interface{}
+		Input  map[string]interface{}
+		Output map[string]interface{}
 	}{
 		{
 			map[string]interface{}{
@@ -260,6 +260,61 @@ func TestHashWalker(t *testing.T) {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
 		}
 		if !reflect.DeepEqual(output, tc.Output) {
+			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
+		}
+	}
+}
+
+func TestHashWalker_TimeStructs(t *testing.T) {
+	replaceText := "bar"
+
+	now := time.Now()
+	cases := []struct {
+		Input       map[string]interface{}
+		Output      map[string]interface{}
+		ExpectError bool
+	}{
+		// Should error on map keys of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": map[time.Time]struct{}{
+					now: {},
+				},
+			},
+			map[string]interface{}{},
+			true,
+		},
+		// Should handle map values of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": now,
+			},
+			map[string]interface{}{
+				"hello": now.Format(time.RFC3339Nano),
+			},
+			false,
+		},
+		// Should handle slice values of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": []interface{}{"foo", now, "foo2"},
+			},
+			map[string]interface{}{
+				"hello": []interface{}{"foobar", now.Format(time.RFC3339Nano), "foo2bar"},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := HashStructure(tc.Input, func(s string) string {
+			return s + replaceText
+		}, []string{})
+		goterr := err != nil
+		if tc.ExpectError != goterr {
+			t.Fatalf("ExpectError=%v, err: %v\n\n%#v", tc.ExpectError, err, tc.Input)
+		}
+		if !tc.ExpectError && !reflect.DeepEqual(output, tc.Output) {
 			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
 		}
 	}

@@ -3,7 +3,6 @@ package audit
 import (
 	"errors"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -108,18 +107,18 @@ func Hash(salter *salt.Salt, raw interface{}, nonHMACDataKeys []string) error {
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) (interface{}, error) {
-	s, err := copystructure.Copy(s)
+func HashStructure(s map[string]interface{}, cb HashCallback, ignoredKeys []string) (interface{}, error) {
+	scopy, err := copystructure.Copy(s)
 	if err != nil {
 		return nil, err
 	}
 
 	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
-	if err := reflectwalk.Walk(s, walker); err != nil {
+	if err := reflectwalk.Walk(scopy, walker); err != nil {
 		return nil, err
 	}
 
-	return s, nil
+	return scopy, nil
 }
 
 // HashCallback is the callback called for HashStructure to hash
@@ -138,14 +137,23 @@ type hashWalker struct {
 	// IgnoreKeys are the keys that wont have the HashCallback applied
 	IgnoredKeys []string
 
-	key         []string
-	lastValue   reflect.Value
-	loc         reflectwalk.Location
-	cs          []reflect.Value
-	csKey       []reflect.Value
-	csData      interface{}
-	sliceIndex  int
-	unknownKeys []string
+	// MapElem appends the key itself (not the reflect.Value) to key.
+	// The last element in key is the most recently entered map key.
+	// Since Exit pops the last element of key, only nesting to another
+	// structure increases the size of this slice.
+	key       []string
+	lastValue reflect.Value
+	// Enter appends to loc and exit pops loc. The last element of loc is thus
+	// the current location.
+	loc []reflectwalk.Location
+	// Map and Slice append to cs, Exit pops the last element off cs.
+	// The last element in cs is the most recently entered map or slice.
+	cs []reflect.Value
+	// MapElem and SliceElem append to csKey. The last element in csKey is the
+	// most recently entered map key or slice index. Since Exit pops the last
+	// element of csKey, only nesting to another structure increases the size of
+	// this slice.
+	csKey []reflect.Value
 }
 
 // hashTimeType stores a pre-computed reflect.Type for a time.Time so
@@ -155,12 +163,12 @@ type hashWalker struct {
 var hashTimeType = reflect.TypeOf(time.Time{})
 
 func (w *hashWalker) Enter(loc reflectwalk.Location) error {
-	w.loc = loc
+	w.loc = append(w.loc, loc)
 	return nil
 }
 
 func (w *hashWalker) Exit(loc reflectwalk.Location) error {
-	w.loc = reflectwalk.None
+	w.loc = w.loc[:len(w.loc)-1]
 
 	switch loc {
 	case reflectwalk.Map:
@@ -183,7 +191,6 @@ func (w *hashWalker) Map(m reflect.Value) error {
 }
 
 func (w *hashWalker) MapElem(m, k, v reflect.Value) error {
-	w.csData = k
 	w.csKey = append(w.csKey, k)
 	w.key = append(w.key, k.String())
 	w.lastValue = v
@@ -197,7 +204,6 @@ func (w *hashWalker) Slice(s reflect.Value) error {
 
 func (w *hashWalker) SliceElem(i int, elem reflect.Value) error {
 	w.csKey = append(w.csKey, reflect.ValueOf(i))
-	w.sliceIndex = i
 	return nil
 }
 
@@ -207,20 +213,39 @@ func (w *hashWalker) Struct(v reflect.Value) error {
 		return nil
 	}
 
-	// If we aren't in a map value, return an error to prevent a panic
-	if v.Interface() != w.lastValue.Interface() {
-		return errors.New("time.Time value in a non map key cannot be hashed for audits")
+	if len(w.loc) < 2 {
+		// The last element of w.loc is reflectwalk.Struct, by definition.
+		// If len(w.loc) == 1 that means hashWalker.Walk was given a struct
+		// value and this is the very first step in the walk, and we don't
+		// currently support structs as inputs,
+		return errors.New("structs as direct inputs not supported")
 	}
 
-	// Create a string value of the time. IMPORTANT: this must never change
-	// across Vault versions or the hash value of equivalent time.Time will
-	// change.
-	strVal := v.Interface().(time.Time).Format(time.RFC3339Nano)
+	// Second to last element of w.loc is location that contains this struct.
+	switch w.loc[len(w.loc)-2] {
+	case reflectwalk.MapKey:
+		return errors.New("time.Time value in a map key cannot be hashed for audits")
+	case reflectwalk.MapValue:
+		// Create a string value of the time. IMPORTANT: this must never change
+		// across Vault versions or the hash value of equivalent time.Time will
+		// change.
+		strVal := v.Interface().(time.Time).Format(time.RFC3339Nano)
 
-	// Set the map value to the string instead of the time.Time object
-	m := w.cs[len(w.cs)-1]
-	mk := w.csData.(reflect.Value)
-	m.SetMapIndex(mk, reflect.ValueOf(strVal))
+		// Set the map value to the string instead of the time.Time object
+		m := w.cs[len(w.cs)-1]
+		mk := w.csKey[len(w.cs)-1]
+		m.SetMapIndex(mk, reflect.ValueOf(strVal))
+	case reflectwalk.SliceElem:
+		// Create a string value of the time. IMPORTANT: this must never change
+		// across Vault versions or the hash value of equivalent time.Time will
+		// change.
+		strVal := v.Interface().(time.Time).Format(time.RFC3339Nano)
+
+		// Set the map value to the string instead of the time.Time object
+		s := w.cs[len(w.cs)-1]
+		si := int(w.csKey[len(w.cs)-1].Int())
+		s.Slice(si, si+1).Index(0).Set(reflect.ValueOf(strVal))
+	}
 
 	// Skip this entry so that we don't walk the struct.
 	return reflectwalk.SkipEntry
@@ -230,13 +255,15 @@ func (w *hashWalker) StructField(reflect.StructField, reflect.Value) error {
 	return nil
 }
 
+// Primitive calls Callback to transform strings in-place, except for map keys.
+// Strings hiding within interfaces are also transformed.
 func (w *hashWalker) Primitive(v reflect.Value) error {
 	if w.Callback == nil {
 		return nil
 	}
 
 	// We don't touch map keys
-	if w.loc == reflectwalk.MapKey {
+	if w.loc[len(w.loc)-1] == reflectwalk.MapKey {
 		return nil
 	}
 
@@ -244,7 +271,6 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 
 	// We only care about strings
 	if v.Kind() == reflect.Interface {
-		setV = v
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.String {
@@ -260,24 +286,12 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 	replaceVal := w.Callback(v.String())
 
 	resultVal := reflect.ValueOf(replaceVal)
-	switch w.loc {
-	case reflectwalk.MapKey:
-		m := w.cs[len(w.cs)-1]
-
-		// Delete the old value
-		var zero reflect.Value
-		m.SetMapIndex(w.csData.(reflect.Value), zero)
-
-		// Set the new key with the existing value
-		m.SetMapIndex(resultVal, w.lastValue)
-
-		// Set the key to be the new key
-		w.csData = resultVal
+	switch w.loc[len(w.loc)-1] {
 	case reflectwalk.MapValue:
 		// If we're in a map, then the only way to set a map value is
 		// to set it directly.
 		m := w.cs[len(w.cs)-1]
-		mk := w.csData.(reflect.Value)
+		mk := w.csKey[len(w.cs)-1]
 		m.SetMapIndex(mk, resultVal)
 	default:
 		// Otherwise, we should be addressable
@@ -285,35 +299,4 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 	}
 
 	return nil
-}
-
-func (w *hashWalker) removeCurrent() {
-	// Append the key to the unknown keys
-	w.unknownKeys = append(w.unknownKeys, strings.Join(w.key, "."))
-
-	for i := 1; i <= len(w.cs); i++ {
-		c := w.cs[len(w.cs)-i]
-		switch c.Kind() {
-		case reflect.Map:
-			// Zero value so that we delete the map key
-			var val reflect.Value
-
-			// Get the key and delete it
-			k := w.csData.(reflect.Value)
-			c.SetMapIndex(k, val)
-			return
-		}
-	}
-
-	panic("No container found for removeCurrent")
-}
-
-func (w *hashWalker) replaceCurrent(v reflect.Value) {
-	c := w.cs[len(w.cs)-2]
-	switch c.Kind() {
-	case reflect.Map:
-		// Get the key and delete it
-		k := w.csKey[len(w.csKey)-1]
-		c.SetMapIndex(k, v)
-	}
 }
