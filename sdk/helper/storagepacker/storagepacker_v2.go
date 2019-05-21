@@ -214,7 +214,6 @@ func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []str
 	defer s.bucketsCacheLock.Unlock()
 	for _, key := range keys {
 		if strings.HasPrefix(key, nonemptyParent) {
-			// FIXME: can I give more context about the storage path?
 			s.Logger.Warn("detected shadowed bucket, removing", "key", key, "parent", nonemptyParent)
 			s.BucketStorageView.Delete(ctx, key)
 			continue
@@ -354,9 +353,18 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 		return fmt.Errorf("missing key")
 	}
 
-	// FIXME: don't trust the passed-in object?
-	bucket.Lock()
-	defer bucket.Unlock()
+	// Don't trust the passed-in lock, validate that we get the correct
+	// lock first.  But, we're still trusting that it's a valid key for the bucket
+	// (that the bucket we're replacing hasn't been sharded.)
+	cacheKey := s.GetCacheKey(bucket.Key)
+	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if lock != bucket.LockEntry {
+		s.Logger.Warn("bad lock in PutBucket, replacing with the correct one")
+		bucket.LockEntry = lock
+	}
 
 	if err := s.storeBucket(ctx, bucket); err != nil {
 		return errwrap.Wrapf("failed at high level bucket put: {{err}}", err)

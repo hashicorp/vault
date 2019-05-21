@@ -12,6 +12,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"math/rand"
 	"strings"
@@ -686,4 +687,34 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 	if b.ItemMap == nil {
 		t.Fatalf("upsert didn't create ItemMap")
 	}
+}
+
+func TestStoragePackerV2_PutBucketErrors(t *testing.T) {
+	storagePacker := getStoragePacker(t)
+
+	key := "00"
+	b := &LockedBucket{
+		Bucket: &Bucket{
+			Key:       key,
+			Items:     []*Item{},
+			ItemMap:   nil,
+			HasShards: false,
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	err := storagePacker.PutBucket(ctx, b)
+	if err != nil {
+		t.Fatalf("PutBucket error: %v", err)
+	}
+
+	b2, err := storagePacker.GetBucket(ctx, key, false)
+	if err != nil {
+		t.Fatalf("GetBucket error: %v", err)
+	}
+	expectedLock := locksutil.LockForKey(storagePacker.storageLocks, key)
+	if b2.LockEntry != expectedLock {
+		t.Fatalf("PutBucket didn't ensure correct lock.")
+	}
+
 }
