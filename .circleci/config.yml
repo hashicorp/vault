@@ -124,6 +124,7 @@ jobs:
       GO_TAGS:
     parallelism: 2
     working_directory: ~/src
+    no_output_timeout: 20m
     steps:
       - checkout
       - run:
