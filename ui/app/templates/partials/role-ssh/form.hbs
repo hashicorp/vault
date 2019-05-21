@@ -2,27 +2,29 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
     <NamespaceReminder @mode={{mode}} @noun="SSH role" />
-    {{#with (if (eq model.keyType 'otp') 3 4) as |numRequired|}}
-      {{#each (take numRequired model.attrsForKeyType) as |attr|}}
-        {{#unless (and (eq mode 'edit') (eq attr.name 'name'))}}
-          {{partial "partials/form-field-from-model"}}
-        {{/unless}}
-      {{/each}}
-      {{toggle-button
-        toggleAttr="showOptions"
-        toggleTarget=this
-        openLabel="Hide options"
-        closedLabel="More options"
-        data-test-toggle-more="true"
-      }}
-      {{#if showOptions}}
-        <div class="box is-marginless">
-          {{#each (drop numRequired model.attrsForKeyType) as |attr|}}
+    {{#if model.attrsForKeyType}}
+      {{#with (if (eq model.keyType 'otp') 3 4) as |numRequired|}}
+        {{#each (take numRequired model.attrsForKeyType) as |attr|}}
+          {{#unless (and (eq mode 'edit') (eq attr.name 'name'))}}
             {{partial "partials/form-field-from-model"}}
-          {{/each}}
-        </div>
-      {{/if}}
-    {{/with}}
+          {{/unless}}
+        {{/each}}
+        {{toggle-button
+          toggleAttr="showOptions"
+          toggleTarget=this
+          openLabel="Hide options"
+          closedLabel="More options"
+          data-test-toggle-more="true"
+        }}
+        {{#if showOptions}}
+          <div class="box is-marginless">
+            {{#each (drop numRequired model.attrsForKeyType) as |attr|}}
+              {{partial "partials/form-field-from-model"}}
+            {{/each}}
+          </div>
+        {{/if}}
+      {{/with}}
+    {{/if}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">

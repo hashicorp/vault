@@ -44,9 +44,8 @@ export default Component.extend(FocusOnInsertMixin, {
 
   willDestroyElement() {
     this._super(...arguments);
-    const model = this.get('model');
-    if (get(model, 'isError')) {
-      model.rollbackAttributes();
+    if (this.model && this.model.isError) {
+      this.model.rollbackAttributes();
     }
   },
 
