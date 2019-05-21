@@ -28,7 +28,7 @@ module('Integration | Component | http-requests-table', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
 
-    assert.ok(this.element.textContent.trim());
+    assert.dom('.http-requests-table').exists();
   });
 
   test('it does not show Change column with less than one month of data', async function(assert) {
@@ -40,13 +40,14 @@ module('Integration | Component | http-requests-table', function(hooks) {
     ];
     await render(hbs`<HttpRequestsTable @counters={{one_month_counter}}/>`);
 
-    assert.notOk(this.element.textContent.includes('Change'));
+    assert.dom('.http-requests-table').exists();
+    assert.dom('[data-test-change]').doesNotExist();
   });
 
   test('it shows Change column for more than one month of data', async function(assert) {
     await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
 
-    assert.ok(this.element.textContent.includes('Change'));
+    assert.dom('[data-test-change]').exists();
   });
 
   test('it shows the percent change between each time window', async function(assert) {
