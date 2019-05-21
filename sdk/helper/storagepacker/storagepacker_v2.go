@@ -100,6 +100,8 @@ func (s *StoragePackerV2) lockBucket(key string, acquire lockOperation, release 
 		s.bucketsCacheLock.RUnlock()
 
 		if !found {
+			// If an entry is not found in bucketsCache, it's because
+			// the corresponding bucket was never created.
 			return nil, false, nil
 		}
 
@@ -145,6 +147,10 @@ func (s *StoragePackerV2) lockBucketForWrite(key string) (bucket *LockedBucket, 
 	return s.lockBucket(key, writeAcquire, writeRelease)
 }
 
+func (s *StoragePackerV2) BucketsView() *logical.StorageView {
+	return s.BucketStorageView
+}
+
 // Return the topmost bucket in the tree for a given key.
 // Used as a defult if the cache is empty or bypassed.
 func (s *StoragePackerV2) firstKey(key string) (string, error) {
@@ -154,85 +160,6 @@ func (s *StoragePackerV2) firstKey(key string) (string, error) {
 		return cacheKey, errors.New("Key too short.")
 	}
 	return cacheKey[0 : s.BaseBucketBits/4], nil
-}
-
-// If an entry is not found in bucketsCache, it might be because it's never
-// been created. Try to load it from storage first, then create it if desired.
-// This only works for the first tier of buckets, without the cache we cant'
-// tell how long the prefix should be.
-// FIXME: what cases does loading from storage cover?
-// Will return with a write lock held, or nil if no storage exists.
-func (s *StoragePackerV2) handleCacheMiss(ctx context.Context, key string, create bool) (bucket *LockedBucket, err error) {
-	firstBucketKey, err := s.firstKey(key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Grab the lock for this not-yet-existent bucket
-	lock := locksutil.LockForKey(s.storageLocks, firstBucketKey)
-	lock.Lock()
-
-	// Re-check radix tree (since the bucket could be there now.)
-	s.bucketsCacheLock.RLock()
-	_, _, found := s.bucketsCache.LongestPrefix(firstBucketKey)
-	s.bucketsCacheLock.RUnlock()
-
-	if found {
-		// OK, we found it but it is the right bucket after all?
-		// For example, the bucket could have been created *and* split since
-		// we got the initial cache miss.
-		// Time to start over and do the lookup again.
-		// (This will be safe if the cache only grows, never shrinks.)
-		lock.Unlock()
-		bucket, found, err := s.lockBucketForWrite(key) // original key!
-		if err != nil {
-			return nil, err
-		}
-		if !found {
-			return nil, errors.New("bucket found in handleCacheMiss disappeared.")
-		}
-		return bucket, nil
-	}
-
-	// Read from the underlying view
-	storageEntry, err := s.BucketStorageView.Get(ctx, firstBucketKey)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
-	}
-	if storageEntry != nil {
-		bucket, err := s.DecodeBucket(storageEntry)
-		if err != nil {
-			return nil, err
-		}
-		// TODO: check that the lock created is the same?
-
-		s.bucketsCacheLock.Lock()
-		s.bucketsCache.Insert(firstBucketKey, bucket)
-		s.bucketsCacheLock.Unlock()
-		return bucket, nil
-	}
-	if !create {
-		lock.Unlock()
-		return nil, nil
-	}
-	bucket = &LockedBucket{
-		LockEntry: lock,
-		Bucket: &Bucket{
-			Key:       firstBucketKey,
-			ItemMap:   make(map[string][]byte),
-			HasShards: false,
-		},
-	}
-	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Insert(firstBucketKey, bucket)
-	s.bucketsCacheLock.Unlock()
-
-	// Not yet persisted, we will do that after the first upsert
-	return bucket, nil
-}
-
-func (s *StoragePackerV2) BucketsView() *logical.StorageView {
-	return s.BucketStorageView
 }
 
 func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
@@ -353,13 +280,9 @@ func (s *StoragePackerV2) GetBucket(ctx context.Context, key string, skipCache b
 		if found {
 			bucket.RUnlock()
 			return bucket, nil
+		} else {
+			return nil, nil
 		}
-		// Try to read from storage, but don't create if missing
-		bucket, err = s.handleCacheMiss(ctx, key, false)
-		if bucket != nil {
-			bucket.Unlock()
-		}
-		return bucket, err
 	}
 
 	// Read directly from storage
@@ -647,16 +570,11 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
 		return err
 	}
 	if !found {
-		bucket, err = s.handleCacheMiss(ctx, key, false)
-		if err != nil {
-			return err
-		}
-		if bucket == nil {
-			return nil
-		}
+		return nil
 	}
 	defer bucket.Unlock()
-	if len(bucket.ItemMap) == 0 {
+
+	if bucket.ItemMap == nil || len(bucket.ItemMap) == 0 {
 		return nil
 	}
 
@@ -683,21 +601,12 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 	if err != nil {
 		return nil, err
 	}
-	if found {
-		// Have a read-lock in this case
-		defer bucket.RUnlock()
-	} else {
-		// Don't create, don't skip cache
-		bucket, err = s.handleCacheMiss(ctx, key, false)
-		if err != nil {
-			return nil, err
-		}
-		// But a write-lock in this one, FIXME?
-		// The write-lock ensures only one read from storage
-		defer bucket.Unlock()
+	if !found {
+		return nil, nil
 	}
+	defer bucket.RUnlock()
 
-	if len(bucket.ItemMap) == 0 {
+	if bucket.ItemMap == nil || len(bucket.ItemMap) == 0 {
 		return nil, nil
 	}
 
@@ -710,6 +619,49 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 		ID:   itemID,
 		Data: data,
 	}, nil
+}
+
+func (s *StoragePackerV2) createAndLockBucket(key string) (*LockedBucket, error) {
+	// Grab the lock for this not-yet-existent bucket (must be at at the root level)
+	firstBucketKey, err := s.firstKey(key)
+	if err != nil {
+		return nil, err
+	}
+	lock := locksutil.LockForKey(s.storageLocks, firstBucketKey)
+	lock.Lock()
+
+	// Re-check radix tree (since the bucket could have been independently created
+	// while we were waiting for its lock.)
+	s.bucketsCacheLock.RLock()
+	_, _, found := s.bucketsCache.LongestPrefix(firstBucketKey)
+	s.bucketsCacheLock.RUnlock()
+
+	if found {
+		// We lost the race, that's OK, get the real version,
+		// using the original lookup method
+		lock.Unlock()
+		bucket, found, err := s.lockBucketForWrite(key)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("bucket for %v appeared and then disappeared", key)
+		}
+		return bucket, nil
+	}
+
+	bucket := &LockedBucket{
+		LockEntry: lock,
+		Bucket: &Bucket{
+			Key:       firstBucketKey,
+			ItemMap:   make(map[string][]byte),
+			HasShards: false,
+		},
+	}
+	s.bucketsCacheLock.Lock()
+	s.bucketsCache.Insert(firstBucketKey, bucket)
+	s.bucketsCacheLock.Unlock()
+	return bucket, nil
 }
 
 // PutItem stores a storage entry in its corresponding bucket
@@ -731,13 +683,12 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 	}
 
 	key := GetItemIDHash(item.ID)
-	bucket, found, err := s.lockBucketForWrite(key)
+	bucket, found, err := s.lockBucketForWrite(key) // returns with lock held
 	if err != nil {
 		return err
 	}
 	if !found {
-		// Create, don't skip cache
-		bucket, err = s.handleCacheMiss(ctx, key, true)
+		bucket, err = s.createAndLockBucket(key) // returns with lock held
 		if err != nil {
 			return err
 		}

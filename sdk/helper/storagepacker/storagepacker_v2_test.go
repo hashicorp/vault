@@ -473,13 +473,7 @@ func TestStoragePackerV2_Recurse(t *testing.T) {
 	checkAllItems(t, storagePacker2, ctx, allItems)
 }
 
-func TestStoragePackerV2_Race(t *testing.T) {
-	n := 200
-	ids := [][]string{
-		generateLotsOfCollidingIDs(200, "00"),
-		generateLotsOfCollidingIDs(200, "10"),
-	}
-
+func run_concurrentTest(t *testing.T, n int, ids [][]string) {
 	storage := logical.InmemStorageWithMaxSize(10000)
 	storagePacker1 := createStoragePacker(t, storage)
 	ctx := namespace.RootContext(nil)
@@ -510,6 +504,24 @@ func TestStoragePackerV2_Race(t *testing.T) {
 	_ = <-done
 
 	checkAllItems(t, storagePacker1, ctx, allItems)
+}
+
+func TestStoragePackerV2_PartitionedInserts(t *testing.T) {
+	n := 200
+	ids := [][]string{
+		generateLotsOfCollidingIDs(n, "00"),
+		generateLotsOfCollidingIDs(n, "10"),
+	}
+	run_concurrentTest(t, n, ids)
+}
+
+func TestStoragePackerV2_ConcurrentInserts(t *testing.T) {
+	n := 200
+	ids := [][]string{
+		generateLotsOfCollidingIDs(n, "00"),
+		generateLotsOfCollidingIDs(n, "00"),
+	}
+	run_concurrentTest(t, n, ids)
 }
 
 func TestStoragePackerV2_BucketOperations(t *testing.T) {
