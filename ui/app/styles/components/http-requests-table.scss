@@ -1,4 +1,8 @@
 .http-requests-table {
+  & tbody th {
+    vertical-align: inherit;
+  }
+
   & tr {
     border-bottom: 1px solid $grey-light;
   }

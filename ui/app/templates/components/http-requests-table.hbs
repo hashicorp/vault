@@ -1,18 +1,19 @@
 <div class="http-requests-table">
   <table class="is-fullwidth">
+    <caption>HTTP Request Volume</caption>
     <thead class="has-text-grey-dark has-text-weight-semibold">
       <tr>
-        <td>Month</td>
-        <td>Requests</td>
+        <th scope="col">Month</th>
+        <th scope="col">Requests</th>
         {{#if (gt counters.length 1)}}
-          <td>Change</td>
+          <th scope="col">Change</th>
         {{/if}}
       </tr>
     </thead>
     <tbody>
       {{#each countersWithChange as |c|}}
         <tr>
-          <td class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</td>
+          <th scope="row" class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</th>
           <td>{{c.total}}</td>
           {{#if (gt counters.length 1)}}
             <td data-test-change="{{c.percentChange}}">
