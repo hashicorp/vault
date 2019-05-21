@@ -1,6 +1,6 @@
-import Route from '@ember/routing/route';
+import ClusterRouteBase from './cluster-route-base';
 
-export default Route.extend({
+export default ClusterRouteBase.extend({
   model() {
     return this.store.queryRecord('requests', {});
   },
