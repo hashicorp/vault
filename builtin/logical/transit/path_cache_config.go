@@ -50,7 +50,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 	}
 
 	// store cache size
-	entry, err := logical.StorageEntryJSON("config/cache-size", &configCacheSize{
+	entry, err := logical.StorageEntryJSON("config/cache", &configCache{
 		Size: cacheSize,
 	})
 	if err != nil {
@@ -67,7 +67,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 	return resp, nil
 }
 
-type configCacheSize struct {
+type configCache struct {
 	Size int `json:"size"`
 }
 

@@ -52,7 +52,7 @@ func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 }
 
 func Test_KeyUpgrade(t *testing.T) {
-	lockManagerWithCache, _ := NewLockManager(false, 0)
+	lockManagerWithCache, _ := NewLockManager(true, 0)
 	lockManagerWithoutCache, _ := NewLockManager(false, 0)
 	testKeyUpgradeCommon(t, lockManagerWithCache)
 	testKeyUpgradeCommon(t, lockManagerWithoutCache)
@@ -99,7 +99,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
-	lockManagerWithCache, _ := NewLockManager(false, 0)
+	lockManagerWithCache, _ := NewLockManager(true, 0)
 	lockManagerWithoutCache, _ := NewLockManager(false, 0)
 	testArchivingUpgradeCommon(t, lockManagerWithCache)
 	testArchivingUpgradeCommon(t, lockManagerWithoutCache)
@@ -259,7 +259,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 }
 
 func Test_Archiving(t *testing.T) {
-	lockManagerWithCache, _ := NewLockManager(false, 0)
+	lockManagerWithCache, _ := NewLockManager(true, 0)
 	lockManagerWithoutCache, _ := NewLockManager(false, 0)
 	testArchivingUpgradeCommon(t, lockManagerWithCache)
 	testArchivingUpgradeCommon(t, lockManagerWithoutCache)

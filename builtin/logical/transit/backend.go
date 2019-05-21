@@ -87,16 +87,16 @@ type backend struct {
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
 	size := 0
-	entry, err := s.Get(ctx, "config/cache-size")
+	entry, err := s.Get(ctx, "config/cache")
 	if err != nil {
 		return 0, err
 	}
 	if entry != nil {
-		var storedCacheSize configCacheSize
-		if err := entry.DecodeJSON(&storedCacheSize); err != nil {
+		var storedCache configCache
+		if err := entry.DecodeJSON(&storedCache); err != nil {
 			return 0, err
 		}
-		size = storedCacheSize.Size
+		size = storedCache.Size
 	}
 	return size, nil
 }
