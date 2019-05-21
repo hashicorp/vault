@@ -37,6 +37,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
@@ -1312,6 +1313,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				coreConfig.AuditBackends[k] = v
 			}
 		}
+		if len(coreConfig.AuditBackends) == 0 {
+			coreConfig.AuditBackends = map[string]audit.Factory{
+				"file": auditFile.Factory,
+			}
+		}
 		if base.Logger != nil {
 			coreConfig.Logger = base.Logger
 		}
@@ -1529,6 +1535,27 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatal(err)
 		}
 		testCluster.ID = cluster.ID
+
+		// Enable auditing.
+		auditReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: testCluster.RootToken,
+			Path:        "sys/audit/file",
+			Data: map[string]interface{}{
+				"type": "file",
+				"options": map[string]string{
+					"file_path": "discard",
+				},
+			},
+		}
+		resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if resp.IsError() {
+			t.Fatal(err)
+		}
 	}
 
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
