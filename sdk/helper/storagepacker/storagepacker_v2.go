@@ -546,7 +546,10 @@ func (s *LockedBucket) upsert(item *Item) error {
 		return fmt.Errorf("missing item ID")
 	}
 
-	// FIXME: disallow this case to preserve the tree invariant?
+	if s.HasShards {
+		return fmt.Errorf("upserting item into sharded bucket")
+	}
+
 	if s.ItemMap == nil {
 		s.ItemMap = make(map[string][]byte)
 	}

@@ -632,5 +632,58 @@ func TestStoragePackerV2_BucketOperations(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestStoragePackerV2_UpsertErrors(t *testing.T) {
+	b := &LockedBucket{
+		Bucket: &Bucket{
+			Key:       "00",
+			Items:     []*Item{},
+			ItemMap:   nil,
+			HasShards: false,
+		},
+	}
+
+	item := &Item{
+		ID:      "abcdef",
+		Message: nil,
+		Data:    []byte{0, 1, 2, 3, 4},
+	}
+
+	var nilBucket *LockedBucket
+	nilBucket = nil
+	err := nilBucket.upsert(item)
+	if err == nil {
+		t.Fatalf("no error on nil receiver")
+	}
+
+	err = b.upsert(nil)
+	if err == nil {
+		t.Fatalf("no error on nil item")
+	}
+
+	baditem := &Item{
+		ID:      "",
+		Message: nil,
+		Data:    []byte{0, 1, 2, 3, 4},
+	}
+	err = b.upsert(baditem)
+	if err == nil {
+		t.Fatalf("no error on empty ID")
+	}
+
+	b.HasShards = true
+	err = b.upsert(item)
+	if err == nil {
+		t.Fatalf("no error sharded bucket")
+	}
+
+	b.HasShards = false
+	err = b.upsert(item)
+	if err != nil {
+		t.Fatalf("upsert expected to succeed on nil ItemMap: %v", err)
+	}
+	if b.ItemMap == nil {
+		t.Fatalf("upsert didn't create ItemMap")
+	}
 }
