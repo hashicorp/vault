@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
 export default Component.extend({
-  layout: hbs`{{#if hasBlock}} {{yield}} {{else}} {{actionText}} {{/if}}`,
+  layout: hbs`{{#if (has-block)}} {{yield}} {{else}} {{actionText}} {{/if}}`,
   tagName: 'a',
   role: 'button',
   attributeBindings: ['role', 'download', 'href'],

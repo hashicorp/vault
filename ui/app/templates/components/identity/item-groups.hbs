@@ -2,11 +2,11 @@
   {{#each model.directGroupIds as |gid|}}
     {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
       class="list-item-row"
-    }}{{i-con
-        glyph='folder'
-        size=14
+    }}<Icon
+        @glyph="folder-outline"
         class="has-text-grey-light"
-        }}{{gid}}{{/link-to}}
+      />{{gid}}
+    {{/link-to}}
   {{/each}}
   {{#each model.inheritedGroupIds as |gid|}}
     {{#linked-block
@@ -15,11 +15,10 @@
     }}
       {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
          class="has-text-black"
-      }}{{i-con
-          glyph='folder'
-          size=14
+      }}<Icon
+          @glyph="folder-outline"
           class="has-text-grey-light"
-          }}{{gid}}
+        />{{gid}}
       {{/link-to}}
       <span class="tag has-text-grey is-size-8">inherited</span>
     {{/linked-block}}

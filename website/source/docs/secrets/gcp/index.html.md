@@ -382,7 +382,7 @@ secrets engines behave, but it is for good reasons:
 
 GCP IAM has a hard limit (currently 10) on the number of Service Account keys.
 Attempts to generate more keys will result in an error. If you find yourself
-running into this limit, consider the follwing:
+running into this limit, consider the following:
 
 - Have shorter TTLs or revoke access earlier. If you are not using past Service
   Account keys, consider rotating and freeing quota earlier.

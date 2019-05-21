@@ -1,0 +1,17 @@
+{{#if loading}}
+  <LayoutLoading />
+{{else}}
+  <MessageError @errors={{errors}} />
+  {{#each (if selectedAction (array selectedAction) (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)) as |replicationAction index|}}
+    {{#if (get model (concat 'can' (camelize replicationAction)))}}
+      <div class="box is-fullwidth is-marginless {{if (gt index 0) 'is-bottomless' 'is-shadowless'}}">
+        {{component (concat 'replication-action-' replicationAction)
+          onSubmit=(action "onSubmit")
+          replicationMode=replicationMode
+          model=model
+          replicationDisplayMode=replicationDisplayMode
+        }}
+      </div>
+    {{/if}}
+  {{/each}}
+{{/if}}

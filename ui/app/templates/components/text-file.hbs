@@ -45,7 +45,7 @@
         <label class="file-label">
           <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-text-file-input=true>
           <span class="file-cta button">
-            {{i-con glyph="upload" class="has-light-grey-text" size=16}}
+            <Icon @glyph="upload" class="has-light-grey-text" />
             Choose a file…
           </span>
           <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
@@ -57,7 +57,7 @@
           </span>
           {{#if file.fileName}}
             <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear=true>
-              <ICon @glyph="close-circled-outline" @size=16 />
+              <Icon @glyph="cancel-circle-outline" />
             </button>
           {{/if}}
         </label>
