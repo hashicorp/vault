@@ -18,107 +18,138 @@ func HashString(salter *salt.Salt, data string) string {
 	return salter.GetIdentifiedHMAC(data)
 }
 
-// Hash will hash the given type. This has built-in support for auth,
-// requests, and responses. If it is a type that isn't recognized, then
-// it will be passed through.
-//
-// The structure is modified in-place.
-func Hash(salter *salt.Salt, raw interface{}, nonHMACDataKeys []string) error {
+// Hash will copy and hash the given type. This has built-in support for auth,
+// requests, responses, and ResponseWrapInfo. If it is given a type that isn't
+// recognized, then it will be passed through unchanged.
+func HashAuth(salter *salt.Salt, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
+	if in == nil {
+		return nil, nil
+	}
+
 	fn := salter.GetIdentifiedHMAC
+	auth := *in
 
-	switch s := raw.(type) {
-	case *logical.Auth:
-		if s == nil {
-			return nil
-		}
-		if s.ClientToken != "" {
-			s.ClientToken = fn(s.ClientToken)
-		}
-		if s.Accessor != "" {
-			s.Accessor = fn(s.Accessor)
-		}
+	if auth.ClientToken != "" {
+		auth.ClientToken = fn(auth.ClientToken)
+	}
+	if HMACAccessor && auth.Accessor != "" {
+		auth.Accessor = fn(auth.Accessor)
+	}
+	return &auth, nil
+}
 
-	case *logical.Request:
-		if s == nil {
-			return nil
-		}
-		if s.Auth != nil {
-			if err := Hash(salter, s.Auth, nil); err != nil {
-				return err
-			}
-		}
+func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
+	if in == nil {
+		return nil, nil
+	}
 
-		if s.ClientToken != "" {
-			s.ClientToken = fn(s.ClientToken)
-		}
+	fn := salter.GetIdentifiedHMAC
+	req := *in
 
-		if s.ClientTokenAccessor != "" {
-			s.ClientTokenAccessor = fn(s.ClientTokenAccessor)
-		}
-
-		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
+	if req.Auth != nil {
+		cp, err := copystructure.Copy(req.Auth)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		s.Data = data.(map[string]interface{})
-
-	case *logical.Response:
-		if s == nil {
-			return nil
-		}
-
-		if s.Auth != nil {
-			if err := Hash(salter, s.Auth, nil); err != nil {
-				return err
-			}
-		}
-
-		if s.WrapInfo != nil {
-			if err := Hash(salter, s.WrapInfo, nil); err != nil {
-				return err
-			}
-		}
-
-		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
+		req.Auth, err = HashAuth(salter, cp.(*logical.Auth), HMACAccessor)
 		if err != nil {
-			return err
-		}
-
-		s.Data = data.(map[string]interface{})
-
-	case *wrapping.ResponseWrapInfo:
-		if s == nil {
-			return nil
-		}
-
-		s.Token = fn(s.Token)
-		s.Accessor = fn(s.Accessor)
-
-		if s.WrappedAccessor != "" {
-			s.WrappedAccessor = fn(s.WrappedAccessor)
+			return nil, err
 		}
 	}
 
-	return nil
+	if req.Data != nil {
+		cp, err := copystructure.Copy(req.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		if req.ClientToken != "" {
+			req.ClientToken = fn(req.ClientToken)
+		}
+		if HMACAccessor && req.ClientTokenAccessor != "" {
+			req.ClientTokenAccessor = fn(req.ClientTokenAccessor)
+		}
+		if err := HashStructure(cp.(map[string]interface{}), fn, nonHMACDataKeys); err != nil {
+			return nil, err
+		}
+		req.Data = cp.(map[string]interface{})
+	}
+
+	return &req, nil
+}
+
+func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Response, error) {
+	if in == nil {
+		return nil, nil
+	}
+
+	fn := salter.GetIdentifiedHMAC
+	resp := *in
+
+	if resp.Auth != nil {
+		cp, err := copystructure.Copy(resp.Auth)
+		if err != nil {
+			return nil, err
+		}
+
+		resp.Auth, err = HashAuth(salter, cp.(*logical.Auth), HMACAccessor)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if resp.Data != nil {
+		cp, err := copystructure.Copy(resp.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := HashStructure(cp.(map[string]interface{}), fn, nonHMACDataKeys); err != nil {
+			return nil, err
+		}
+		resp.Data = cp.(map[string]interface{})
+	}
+
+	if resp.WrapInfo != nil {
+		var err error
+		resp.WrapInfo, err = HashWrapInfo(salter, resp.WrapInfo, HMACAccessor)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &resp, nil
+}
+
+func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
+	if in == nil {
+		return nil, nil
+	}
+
+	fn := salter.GetIdentifiedHMAC
+	wrapinfo := *in
+
+	wrapinfo.Token = fn(wrapinfo.Token)
+
+	if HMACAccessor {
+		wrapinfo.Accessor = fn(wrapinfo.Accessor)
+
+		if wrapinfo.WrappedAccessor != "" {
+			wrapinfo.WrappedAccessor = fn(wrapinfo.WrappedAccessor)
+		}
+	}
+
+	return &wrapinfo, nil
 }
 
 // HashStructure takes an interface and hashes all the values within
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s map[string]interface{}, cb HashCallback, ignoredKeys []string) (interface{}, error) {
-	scopy, err := copystructure.Copy(s)
-	if err != nil {
-		return nil, err
-	}
-
+func HashStructure(s map[string]interface{}, cb HashCallback, ignoredKeys []string) error {
 	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
-	if err := reflectwalk.Walk(scopy, walker); err != nil {
-		return nil, err
-	}
-
-	return scopy, nil
+	return reflectwalk.Walk(s, walker)
 }
 
 // HashCallback is the callback called for HashStructure to hash

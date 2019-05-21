@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/go-test/deep"
 	"reflect"
 	"testing"
 	"time"
@@ -111,19 +112,67 @@ func TestHashString(t *testing.T) {
 	}
 }
 
-func TestHash(t *testing.T) {
-	now := time.Now()
-
+func TestHashAuth(t *testing.T) {
 	cases := []struct {
-		Input           interface{}
-		Output          interface{}
-		NonHMACDataKeys []string
+		Input        *logical.Auth
+		Output       *logical.Auth
+		HMACAccessor bool
 	}{
 		{
 			&logical.Auth{ClientToken: "foo"},
 			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
-			nil,
+			false,
 		},
+		{
+			&logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 1 * time.Hour,
+				},
+
+				ClientToken: "foo",
+			},
+			&logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 1 * time.Hour,
+				},
+
+				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+			},
+			false,
+		},
+	}
+
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	for _, tc := range cases {
+		input := fmt.Sprintf("%#v", tc.Input)
+		out, err := HashAuth(localSalt, tc.Input, tc.HMACAccessor)
+		if err != nil {
+			t.Fatalf("err: %s\n\n%s", err, input)
+		}
+		if !reflect.DeepEqual(out, tc.Output) {
+			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, out, tc.Output)
+		}
+	}
+}
+
+func TestHashRequest(t *testing.T) {
+	cases := []struct {
+		Input           *logical.Request
+		Output          *logical.Request
+		NonHMACDataKeys []string
+		HMACAccessor    bool
+	}{
 		{
 			&logical.Request{
 				Data: map[string]interface{}{
@@ -140,7 +189,43 @@ func TestHash(t *testing.T) {
 				},
 			},
 			[]string{"baz"},
+			false,
 		},
+	}
+
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	for _, tc := range cases {
+		input := fmt.Sprintf("%#v", tc.Input)
+		out, err := HashRequest(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		if err != nil {
+			t.Fatalf("err: %s\n\n%s", err, input)
+		}
+		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
+		}
+	}
+}
+
+func TestHashResponse(t *testing.T) {
+	now := time.Now()
+
+	cases := []struct {
+		Input           *logical.Response
+		Output          *logical.Response
+		NonHMACDataKeys []string
+		HMACAccessor    bool
+	}{
 		{
 			&logical.Response{
 				Data: map[string]interface{}{
@@ -173,28 +258,7 @@ func TestHash(t *testing.T) {
 				},
 			},
 			[]string{"baz"},
-		},
-		{
-			"foo",
-			"foo",
-			nil,
-		},
-		{
-			&logical.Auth{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 1 * time.Hour,
-				},
-
-				ClientToken: "foo",
-			},
-			&logical.Auth{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 1 * time.Hour,
-				},
-
-				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
-			},
-			nil,
+			true,
 		},
 	}
 
@@ -212,16 +276,12 @@ func TestHash(t *testing.T) {
 	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		if err := Hash(localSalt, tc.Input, tc.NonHMACDataKeys); err != nil {
+		out, err := HashResponse(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if _, ok := tc.Input.(*logical.Response); ok {
-			if !reflect.DeepEqual(tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo) {
-				t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo)
-			}
-		}
-		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input, tc.Output)
+		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
 		}
 	}
 }
@@ -253,14 +313,14 @@ func TestHashWalker(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := HashStructure(tc.Input, func(string) string {
+		err := HashStructure(tc.Input, func(string) string {
 			return replaceText
 		}, []string{})
 		if err != nil {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
 		}
-		if !reflect.DeepEqual(output, tc.Output) {
-			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
 		}
 	}
 }
@@ -307,15 +367,15 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := HashStructure(tc.Input, func(s string) string {
+		err := HashStructure(tc.Input, func(s string) string {
 			return s + replaceText
 		}, []string{})
 		goterr := err != nil
 		if tc.ExpectError != goterr {
 			t.Fatalf("ExpectError=%v, err: %v\n\n%#v", tc.ExpectError, err, tc.Input)
 		}
-		if !tc.ExpectError && !reflect.DeepEqual(output, tc.Output) {
-			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
+		if !tc.ExpectError && !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
 		}
 	}
 }

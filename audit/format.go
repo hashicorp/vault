@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/copystructure"
 )
 
 type AuditFormatWriter interface {
@@ -48,68 +47,23 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
-	// Set these to the input values at first
-	auth := in.Auth
-	req := in.Request
-
-	if !config.Raw {
-		// Before we copy the structure we must nil out some data
-		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
-			in.Request.Connection.ConnState = nil
-			defer func() {
-				in.Request.Connection.ConnState = origState
-			}()
-		}
-
-		// Copy the auth structure
-		if in.Auth != nil {
-			cp, err := copystructure.Copy(in.Auth)
-			if err != nil {
-				return err
-			}
-			auth = cp.(*logical.Auth)
-		}
-
-		cp, err := copystructure.Copy(in.Request)
-		if err != nil {
-			return err
-		}
-		req = cp.(*logical.Request)
-
-		// Hash any sensitive information
-		if auth != nil {
-			// Cache and restore accessor in the auth
-			var authAccessor string
-			if !config.HMACAccessor && auth.Accessor != "" {
-				authAccessor = auth.Accessor
-			}
-			if err := Hash(salt, auth, nil); err != nil {
-				return err
-			}
-			if authAccessor != "" {
-				auth.Accessor = authAccessor
-			}
-		}
-
-		// Cache and restore accessor in the request
-		var clientTokenAccessor string
-		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
-			clientTokenAccessor = req.ClientTokenAccessor
-		}
-		if err := Hash(salt, req, in.NonHMACReqDataKeys); err != nil {
-			return err
-		}
-		if clientTokenAccessor != "" {
-			req.ClientTokenAccessor = clientTokenAccessor
-		}
-	}
-
-	// If auth is nil, make an empty one
+	req, auth := in.Request, in.Auth
 	if auth == nil {
 		auth = new(logical.Auth)
 	}
+
+	if !config.Raw {
+		auth, err = HashAuth(salt, auth, config.HMACAccessor)
+		if err != nil {
+			return err
+		}
+
+		req, err = HashRequest(salt, req, config.HMACAccessor, in.NonHMACReqDataKeys)
+		if err != nil {
+			return err
+		}
+	}
+
 	var errString string
 	if in.OuterErr != nil {
 		errString = in.OuterErr.Error()
@@ -186,104 +140,31 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	}
 
 	// Set these to the input values at first
-	auth := in.Auth
-	req := in.Request
-	resp := in.Response
-
-	if !config.Raw {
-		// Before we copy the structure we must nil out some data
-		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
-			in.Request.Connection.ConnState = nil
-			defer func() {
-				in.Request.Connection.ConnState = origState
-			}()
-		}
-
-		// Copy the auth structure
-		if in.Auth != nil {
-			cp, err := copystructure.Copy(in.Auth)
-			if err != nil {
-				return err
-			}
-			auth = cp.(*logical.Auth)
-		}
-
-		cp, err := copystructure.Copy(in.Request)
-		if err != nil {
-			return err
-		}
-		req = cp.(*logical.Request)
-
-		if in.Response != nil {
-			cp, err := copystructure.Copy(in.Response)
-			if err != nil {
-				return err
-			}
-			resp = cp.(*logical.Response)
-		}
-
-		// Hash any sensitive information
-
-		// Cache and restore accessor in the auth
-		if auth != nil {
-			var accessor string
-			if !config.HMACAccessor && auth.Accessor != "" {
-				accessor = auth.Accessor
-			}
-			if err := Hash(salt, auth, nil); err != nil {
-				return err
-			}
-			if accessor != "" {
-				auth.Accessor = accessor
-			}
-		}
-
-		// Cache and restore accessor in the request
-		var clientTokenAccessor string
-		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
-			clientTokenAccessor = req.ClientTokenAccessor
-		}
-		if err := Hash(salt, req, in.NonHMACReqDataKeys); err != nil {
-			return err
-		}
-		if clientTokenAccessor != "" {
-			req.ClientTokenAccessor = clientTokenAccessor
-		}
-
-		// Cache and restore accessor in the response
-		if resp != nil {
-			var accessor, wrappedAccessor, wrappingAccessor string
-			if !config.HMACAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
-				accessor = resp.Auth.Accessor
-			}
-			if !config.HMACAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
-				wrappedAccessor = resp.WrapInfo.WrappedAccessor
-				wrappingAccessor = resp.WrapInfo.Accessor
-			}
-			if err := Hash(salt, resp, in.NonHMACRespDataKeys); err != nil {
-				return err
-			}
-			if accessor != "" {
-				resp.Auth.Accessor = accessor
-			}
-			if wrappedAccessor != "" {
-				resp.WrapInfo.WrappedAccessor = wrappedAccessor
-			}
-			if wrappingAccessor != "" {
-				resp.WrapInfo.Accessor = wrappingAccessor
-			}
-		}
-	}
-
-	// If things are nil, make empty to avoid panics
+	auth, req, resp := in.Auth, in.Request, in.Response
 	if auth == nil {
 		auth = new(logical.Auth)
 	}
 	if resp == nil {
 		resp = new(logical.Response)
 	}
+
+	if !config.Raw {
+		auth, err = HashAuth(salt, auth, config.HMACAccessor)
+		if err != nil {
+			return err
+		}
+
+		req, err = HashRequest(salt, req, config.HMACAccessor, in.NonHMACReqDataKeys)
+		if err != nil {
+			return err
+		}
+
+		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys)
+		if err != nil {
+			return err
+		}
+	}
+
 	var errString string
 	if in.OuterErr != nil {
 		errString = in.OuterErr.Error()
