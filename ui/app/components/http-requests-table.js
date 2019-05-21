@@ -4,21 +4,20 @@ import { assign } from '@ember/polyfills';
 
 /**
  * @module HttpRequestsTable
- * HttpRequestsTable components render a table with the total number of HTTP Requests to a Vault server per month.
+ * `HttpRequestsTable` components render a table with the total number of HTTP Requests to a Vault server per month.
  *
  * @example
  * ```js
- * const COUNTERS = [
+ * <HttpRequestsTable @counters={{counters}} />
+ * ```
+ *
+ * @param counters=null {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests` endpoint which looks like:
+ * COUNTERS = [
  *    {
  *       "start_time": "2019-05-01T00:00:00Z",
  *       "total": 50
  *     }
  * ]
- *
- * <HttpRequestsTable @counters={{COUNTERS}} />
- * ```
- *
- * @param counters {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests` endpoint.
  */
 
 export default Component.extend({
