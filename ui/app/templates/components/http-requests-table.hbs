@@ -1,27 +1,29 @@
-<table class="is-fullwidth">
-  <thead class="has-text-grey-dark has-text-weight-semibold">
-    <tr>
-      <td>Month</td>
-      <td>Requests</td>
-      {{#if (gt counters.length 1)}}
-        <td>Change</td>
-      {{/if}}
-    </tr>
-  </thead>
-  <tbody>
-    {{#each countersWithChange as |c|}}
+<div class="http-requests-table">
+  <table class="is-fullwidth">
+    <thead class="has-text-grey-dark has-text-weight-semibold">
       <tr>
-        <td class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</td>
-        <td>{{c.total}}</td>
+        <td>Month</td>
+        <td>Requests</td>
         {{#if (gt counters.length 1)}}
-          <td data-test-change="{{c.percentChange}}">
-            {{#if c.percentChange}}
-              <Icon @glyph={{c.glyph}} class={{c.glyph}}/>
-              {{c.percentChange}}%
-            {{/if}}
-          </td>
+          <td>Change</td>
         {{/if}}
       </tr>
-    {{/each}}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {{#each countersWithChange as |c|}}
+        <tr>
+          <td class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</td>
+          <td>{{c.total}}</td>
+          {{#if (gt counters.length 1)}}
+            <td data-test-change="{{c.percentChange}}">
+              {{#if c.percentChange}}
+                <Icon @glyph={{c.glyph}} class={{c.glyph}}/>
+                {{c.percentChange}}%
+              {{/if}}
+            </td>
+          {{/if}}
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

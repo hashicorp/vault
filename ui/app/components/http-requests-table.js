@@ -22,7 +22,7 @@ import { assign } from '@ember/polyfills';
  */
 
 export default Component.extend({
-  classNames: ['http-requests-table'],
+  tagName: '',
   counters: null,
   countersWithChange: computed('counters', function() {
     let counters = this.counters || [];
