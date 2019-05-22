@@ -384,7 +384,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 	respType := in.Type
 	if respType == "" {
-		respType = "request"
+		respType = "response"
 	}
 	respEntry := &AuditResponseEntry{
 		Type:  respType,
