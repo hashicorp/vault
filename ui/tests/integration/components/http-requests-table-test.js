@@ -38,6 +38,8 @@ module('Integration | Component | http-requests-table', function(hooks) {
         total: 50,
       },
     ];
+    this.set('one_month_counter', one_month_counter);
+
     await render(hbs`<HttpRequestsTable @counters={{one_month_counter}}/>`);
 
     assert.dom('.http-requests-table').exists();
