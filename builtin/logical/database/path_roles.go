@@ -148,7 +148,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                                         Requires "rotation_period" to be specified`,
 				},
 				"rotation_period": {
-					Type: framework.TypeDurationSecond, 
+					Type: framework.TypeDurationSecond,
 					Description: `Period for automatic
                                         credential rotation of the given username. Not valid unless used with
                                         "username".`,
@@ -422,10 +422,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	if ok {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
-		if rotationPeriodSeconds < 5 {
+		if rotationPeriodSeconds < queueTickSeconds {
 			// If rotation frequency is specified, and this is an update, the value
-			// must be at least 5 seconds because our periodic func runs about once a
-			// minute.
+			// must be at least that of the constant queueTickSeconds (5 seconds at
+			// time of writing), otherwise we wont be able to rotate in time
 			return logical.ErrorResponse("rotation_period must be 5 seconds or more"), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second

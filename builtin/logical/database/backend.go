@@ -29,7 +29,8 @@ const (
 	databaseStaticRolePath = "static-role/"
 
 	// interval to check the queue for items needing rotation
-	queueTickInterval = 5 * time.Second
+	queueTickSeconds  = 5
+	queueTickInterval = queueTickSeconds * time.Second
 
 	// wal storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
