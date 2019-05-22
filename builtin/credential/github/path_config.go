@@ -25,7 +25,8 @@ func pathConfig(b *backend) *framework.Path {
 				Description: `The API endpoint to use. Useful if you
 are running GitHub Enterprise or an
 API-compatible authentication server.`,
-				DisplayName: "Base URL",
+				DisplayName:  "Base URL",
+				DisplayGroup: "GitHub Options",
 			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,

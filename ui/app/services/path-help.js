@@ -161,6 +161,7 @@ export default Service.extend({
           type: params[0].schema.type,
           description: params[0].description,
           isId: true,
+          fieldGroup: 'default',
         };
       }
       const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
@@ -214,13 +215,12 @@ export default Service.extend({
     return this.getProps(helpUrl, backend).then(props => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       newModel = newModel.extend(attrs, { newFields });
-
       //if our newModel doesn't have fieldGroups already
-      //we need to create them (add all fields to default group)
+      //we need to create them
       try {
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
-          const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
+          fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
         }
       } catch (err) {
@@ -230,5 +230,29 @@ export default Service.extend({
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
+  },
+  getFieldGroups(newModel) {
+    let groups = {
+      default: [],
+    };
+    let fieldGroups = [];
+    newModel.attributes.forEach(attr => {
+      //if the attr comes in with a fieldGroup from OpenAPI,
+      //add it to that group
+      if (attr.options.fieldGroup) {
+        if (groups[attr.options.fieldGroup]) {
+          groups[attr.options.fieldGroup].push(attr.name);
+        } else {
+          groups[attr.options.fieldGroup] = [attr.name];
+        }
+      } else {
+        //otherwise just add that attr to the default group
+        groups.default.push(attr.name);
+      }
+    });
+    for (let group in groups) {
+      fieldGroups.push({ [group]: groups[group] });
+    }
+    return fieldToAttrs(newModel, fieldGroups);
   },
 });
