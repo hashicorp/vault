@@ -21,6 +21,18 @@ type dynamicSystemView struct {
 	mountEntry *MountEntry
 }
 
+type extendedSystemView struct {
+	dynamicSystemView
+}
+
+func (e extendedSystemView) Auditor() logical.Auditor {
+	return genericAuditor{
+		mountType: e.mountEntry.Type,
+		namespace: e.mountEntry.Namespace(),
+		c:         e.core,
+	}
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
