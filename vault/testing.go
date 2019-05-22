@@ -1313,11 +1313,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				coreConfig.AuditBackends[k] = v
 			}
 		}
-		if len(coreConfig.AuditBackends) == 0 {
-			coreConfig.AuditBackends = map[string]audit.Factory{
-				"file": auditFile.Factory,
-			}
-		}
 		if base.Logger != nil {
 			coreConfig.Logger = base.Logger
 		}
@@ -1328,6 +1323,14 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
+	}
+
+	addAuditBackend := len(base.AuditBackends) == 0
+
+	if addAuditBackend {
+		coreConfig.AuditBackends = map[string]audit.Factory{
+			"file": auditFile.Factory,
+		}
 	}
 
 	if coreConfig.Physical == nil {
@@ -1536,25 +1539,27 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		testCluster.ID = cluster.ID
 
-		// Enable auditing.
-		auditReq := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: testCluster.RootToken,
-			Path:        "sys/audit/file",
-			Data: map[string]interface{}{
-				"type": "file",
-				"options": map[string]string{
-					"file_path": "discard",
+		if addAuditBackend {
+			// Enable auditing.
+			auditReq := &logical.Request{
+				Operation:   logical.UpdateOperation,
+				ClientToken: testCluster.RootToken,
+				Path:        "sys/audit/file",
+				Data: map[string]interface{}{
+					"type": "file",
+					"options": map[string]string{
+						"file_path": "discard",
+					},
 				},
-			},
-		}
-		resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+			}
+			resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		if resp.IsError() {
-			t.Fatal(err)
+			if resp.IsError() {
+				t.Fatal(err)
+			}
 		}
 	}
 
