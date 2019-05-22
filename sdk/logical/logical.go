@@ -124,3 +124,8 @@ type Paths struct {
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	SealWrapStorage []string
 }
+
+type Auditor interface {
+	AuditRequest(ctx context.Context, input *LogInput) error
+	AuditResponse(ctx context.Context, input *LogInput) error
+}
