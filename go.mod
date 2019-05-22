@@ -113,14 +113,10 @@ require (
 	github.com/pquerna/otp v1.1.0
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 	github.com/prometheus/common v0.2.0
-	github.com/rs/zerolog v1.14.3 // indirect
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
-	github.com/sean-/conswriter v0.0.0-20180208195008-f5ae3917a627 // indirect
-	github.com/sean-/pager v0.0.0-20180208200047-666be9bf53b5 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
-	github.com/spf13/viper v1.3.2 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
