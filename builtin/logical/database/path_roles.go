@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -431,19 +430,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 	}
 
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid rotation_period: %s", err)), nil
-	}
-
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
 		role.Statements.Rotation = rotationStmtsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
-
-	// if len(role.Statements.Rotation) == 0 {
-	// 	return logical.ErrorResponse("rotation_statements is a required field for static accounts"), nil
-	// }
 
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation

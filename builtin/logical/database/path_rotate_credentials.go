@@ -109,7 +109,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 		if role == nil {
-			return logical.ErrorResponse("cannot rotate credentials of non-static accounts"), nil
+			return logical.ErrorResponse("no static role found for role name"), nil
 		}
 
 		if role.StaticAccount != nil {
