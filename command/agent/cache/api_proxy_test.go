@@ -48,8 +48,8 @@ func TestAPIProxy(t *testing.T) {
 }
 
 func TestAPIProxy_queryParams(t *testing.T) {
-	// Set up a caching agent that points to a standby node for our particular test
-	// that needs to query sys/health?standbyok=true on a standby
+	// Set up an agent that points to a standby node for this particular test
+	// since it needs to proxy a /sys/health?standbyok=true request to a standby
 	cleanup, client, _, _ := setupClusterAndAgentOnStandby(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
