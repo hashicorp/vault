@@ -584,7 +584,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 // amount of time to process. This can result in a negative TTL time while the
 // rotation function processes the Static Role and performs the rotation. If the
 // TTL is negative, zero is returned. Users should not trust passwords with a
-// Zero TTL, as they are likely in the process of being rotated an will quickly
+// Zero TTL, as they are likely in the process of being rotated and will quickly
 // be invalidated.
 func (s *staticAccount) PasswordTTL() time.Duration {
 	next := s.NextRotationTime()
