@@ -466,6 +466,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		walEntry := walMap[roleName]
 		if role == nil || role.StaticAccount == nil {
 			if walEntry != nil {
+				// no static role exists for this wal entry, delete it
 				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
@@ -602,7 +603,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
 
 			// preserve the WALID if it was returned
-			if resp.WALID != "" {
+			if resp != nil && resp.WALID != "" {
 				item.Value = resp.WALID
 			}
 
@@ -692,10 +693,10 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	var lvr time.Time
 	var merr error
-	// re-use WAL ID if present, otherwise PUT a new WAL
 	if input == nil {
-		input = &setStaticAccountInput{}
+		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
+	// re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
