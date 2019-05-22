@@ -1,0 +1,9 @@
+.http-requests-bar-chart {
+  border-style: solid;
+  border-width: 0px 1px 1px 0px;
+  border-color: $grey-light;
+
+  & .bar {
+    fill: $blue;
+  }
+}

@@ -6,9 +6,7 @@
   </p.levelLeft>
 </PageHeader>
 
-{{!--
-  <HttpRequestsBarChart @counters=counters />
---}}
 
+<HttpRequestsBarChart @data={{model.counters}} />
 <AlertInline @type="info" @message="Metrics are recorded only for interactions that produce or use a Vault token." />
 <HttpRequestsTable @counters={{model.counters}} />
