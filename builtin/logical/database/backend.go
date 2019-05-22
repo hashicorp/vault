@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -316,7 +315,7 @@ func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
 
 // loadStaticWALs reads WAL entries and returns a map of roles and their
 // setCredentialsWAL, if found.
-func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage) (walMap map[string]*setCredentialsWAL, err error) {
+func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage) (map[string]*setCredentialsWAL, error) {
 	keys, err := framework.ListWAL(ctx, s)
 	if err != nil {
 		return nil, err
@@ -326,17 +325,32 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 		return nil, nil
 	}
 
+	walMap := make(map[string]*setCredentialsWAL)
 	// loop through WAL keys and process any rotation ones
 	for _, walID := range keys {
 		walEntry := b.findStaticWAL(ctx, s, walID)
 		if walEntry == nil {
 			continue
 		}
+
+		// verify the static role still exists
+		roleName := walEntry.RoleName
+		role, err := b.StaticRole(ctx, s, roleName)
+		if err != nil {
+			b.Logger().Warn("unable to read static role", "error", err, "role", roleName)
+			continue
+		}
+		if role == nil || role.StaticAccount == nil {
+			if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
+				b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
+			}
+			continue
+		}
+
 		walEntry.walID = walID
 		walMap[walEntry.RoleName] = walEntry
-
 	}
-	return
+	return walMap, nil
 }
 
 // invalidateQueue cancels any background queue loading and destroys the queue.
@@ -449,7 +463,13 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			log.Warn("unable to read static role", "error", err, "role", roleName)
 			continue
 		}
+		walEntry := walMap[roleName]
 		if role == nil || role.StaticAccount == nil {
+			if walEntry != nil {
+				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
+					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
+				}
+			}
 			continue
 		}
 		item := queue.Item{
@@ -458,9 +478,19 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		}
 
 		// check if role name is in map
-		if walEntry, ok := walMap[roleName]; ok {
-			item.Value = walEntry.walID
-			item.Priority = time.Now().Unix()
+		if walEntry != nil {
+			// check walEntry last vault time
+			if !walEntry.LastVaultRotation.IsZero() && walEntry.LastVaultRotation.Before(role.StaticAccount.LastVaultRotation) {
+				// WAL's last vault rotation record is older than the role's data, so
+				// delete and move on
+				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
+					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
+				}
+			} else {
+				log.Info("adjusting priority for Role")
+				item.Value = walEntry.walID
+				item.Priority = time.Now().Unix()
+			}
 		}
 
 		if err := b.pushItem(&item); err != nil {
@@ -496,7 +526,6 @@ type setCredentialsWAL struct {
 	Username    string
 
 	LastVaultRotation time.Time
-	Statements        dbplugin.Statements
 
 	walID string
 }
@@ -612,11 +641,20 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 		return nil
 	}
 
-	var walEntry setCredentialsWAL
-	if err = mapstructure.Decode(wal.Data, &walEntry); err != nil {
+	data := wal.Data.(map[string]interface{})
+	walEntry := setCredentialsWAL{
+		walID:       id,
+		NewPassword: data["NewPassword"].(string),
+		OldPassword: data["OldPassword"].(string),
+		RoleName:    data["RoleName"].(string),
+		Username:    data["Username"].(string),
+	}
+	lvr, err := time.Parse(time.RFC3339, data["LastVaultRotation"].(string))
+	if err != nil {
 		b.Logger().Warn("error decoding walEntry", err.Error())
 		return nil
 	}
+	walEntry.LastVaultRotation = lvr
 
 	return &walEntry
 }
@@ -704,7 +742,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			Username:          config.Username,
 			NewPassword:       config.Password,
 			OldPassword:       input.Role.StaticAccount.Password,
-			Statements:        input.Role.Statements,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {

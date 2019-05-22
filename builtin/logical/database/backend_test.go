@@ -1601,9 +1601,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 	}
 	defer b.Cleanup(ctx)
 
-	cleanup, _ := preparePostgresTestContainer(t, config.StorageView, b)
-	defer cleanup()
-
 	time.Sleep(5 * time.Second)
 	bd := b.(*databaseBackend)
 	if bd.credRotationQueue == nil {
@@ -1615,6 +1612,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatalf("expected zero queue items, got: %d", bd.credRotationQueue.Len())
 	}
 
+	// time.Sleep(15 * time.Second)
 	assertWALCount(t, config.StorageView, 0)
 }
 
@@ -1651,6 +1649,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		"allowed_roles":     []string{"*"},
 		"name":              "plugin-test",
 	}
+
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
@@ -1708,6 +1707,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		RoleName:          roleName,
 		NewPassword:       walPassword,
 		LastVaultRotation: oldRotationTime,
+		Username:          "statictest",
 	})
 	if err != nil {
 		t.Fatalf("error with PutWAL: %s", err)
@@ -1726,10 +1726,10 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	}
 	defer b.Cleanup(ctx)
 
-	// allow enough time for loadStaticWALs to work after boot
+	// allow enough time for populateQueue to work after boot
 	time.Sleep(time.Second * 12)
 
-	// loadStaticWALs should have processed the entry and removed the WAL log by now
+	// populateQueue should have processed the entry
 	assertWALCount(t, config.StorageView, 0)
 
 	// Read the role
@@ -1754,7 +1754,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatal("last vault rotation time not greater than role creation time")
 	}
 
-	// grab initial password to verify it doesn't change
+	// grab password to verify it didn't change
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-creds/" + roleName,
