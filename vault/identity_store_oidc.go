@@ -159,34 +159,10 @@ func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
 		privWebKey, pubWebKey := keyRing.GenerateWebKeys()
 		signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
 
-		// key, _ := rsa.GenerateKey(rand.Reader, 2048)
-		// keyID, err := uuid.GenerateUUID(0
-		// if err != nil {
-		// 	return nil, err
-		// }
-
-		// priv := &jose.JSONWebKey{
-		// 	Key:       key,
-		// 	KeyID:     keyID,
-		// 	Algorithm: "RS256",
-		// 	Use:       "sig",
-		// }
-		// pub := &jose.JSONWebKey{
-		// 	Key:       key.Public(),
-		// 	KeyID:     keyID, // needed?
-		// 	Algorithm: "RS256",
-		// 	Use:       "sig",
-		// }
-
-		// payload, err := json.Marshal(idToken)
-		// signedIDToken, err := signPayload(priv, jose.RS256, payload)
-
 		jwks := jose.JSONWebKeySet{
 			Keys: make([]jose.JSONWebKey, 1),
 		}
 		jwks.Keys[0] = *pubWebKey
-
-		//data2, err := json.MarshalIndent(jwks, "", "  ")
 
 		return &logical.Response{
 			Data: map[string]interface{}{
