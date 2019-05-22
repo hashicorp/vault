@@ -63,8 +63,13 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		return nil, err
 	}
 
+	b.credRotationQueue = queue.New()
+	// create a context with a cancel method for processing any WAL entries and
+	// populating the queue
+	ctx, cancel := context.WithCancel(ctx)
+	b.cancelQueue = cancel
 	// load queue and kickoff new periodic ticker
-	go b.initQueue(conf)
+	go b.initQueue(ctx, conf)
 	return b, nil
 }
 
@@ -280,7 +285,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 // not wait for success or failure of it's tasks before continuing. This is to
 // avoid blocking the mount process while loading and evaluating existing roles,
 // etc.
-func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
+func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
 	// verify this mount is on the primary server, or is a local mount. If not, do
 	// not create a queue or launch a ticker. Both processing the WAL list and
 	// populating the queue are done sequentially and before launching a
@@ -294,17 +299,6 @@ func (b *databaseBackend) initQueue(conf *logical.BackendConfig) {
 		// Sleep a few seconds to allow Vault to mount and complete setup, so
 		// that we can write to storage
 		time.Sleep(3 * time.Second)
-
-		b.Lock()
-		if b.credRotationQueue == nil {
-			b.credRotationQueue = queue.New()
-		}
-
-		// create a context with a cancel method for processing any WAL entries and
-		// populating the queue
-		ctx, cancel := context.WithCancel(context.Background())
-		b.cancelQueue = cancel
-		b.Unlock()
 
 		// load roles and populate queue with static accounts
 		b.populateQueue(ctx, conf.StorageView)
@@ -796,18 +790,9 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 	if b.credRotationQueue != nil {
 		return b.credRotationQueue.Push(item)
 	}
-	// Upgrade lock
-	b.RUnlock()
-	b.Lock()
-	unlockFunc = b.Unlock
 
-	// check again
-	if b.credRotationQueue != nil {
-		return b.credRotationQueue.Push(item)
-	}
-	b.credRotationQueue = queue.New()
-
-	return b.credRotationQueue.Push(item)
+	b.Logger().Warn("no queue found during push item")
+	return nil
 }
 
 // popItem wraps the internal queue's Pop call, to make sure a queue is
