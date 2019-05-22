@@ -1,0 +1,14 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      HTTP Request Volume
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{!--
+  <HttpRequestsBarChart @counters=counters />
+--}}
+
+<AlertInline @type="info" @message="Metrics are recorded only for interactions that produce or use a Vault token." />
+<HttpRequestsTable @counters={{model.counters}} />
