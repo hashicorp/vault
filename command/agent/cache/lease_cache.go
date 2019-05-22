@@ -202,11 +202,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// in between this upgrade so we can simply return that. Otherwise, this request
 	// will be the one performing the cache write.
 	if sendResp != nil {
-		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return sendResp, nil
 	}
 
-	c.logger.Debug("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
+	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)
@@ -254,7 +254,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// Fast path for responses with no secrets
 	if secret == nil {
-		c.logger.Debug("pass-through response; no secret in response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; no secret in response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
@@ -265,14 +265,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	if !secret.Renewable && !tokenRenewable {
-		c.logger.Debug("pass-through response; secret not renewable", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; secret not renewable", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
 	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
-		c.logger.Debug("processing lease response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 		if err != nil {
 			return nil, err
@@ -280,7 +280,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// If the lease belongs to a token that is not managed by the agent,
 		// return the response without caching it.
 		if entry == nil {
-			c.logger.Debug("pass-through lease response; token not managed by agent", "path", req.Request.URL.Path, "method", req.Request.Method)
+			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
 			return resp, nil
 		}
 
@@ -291,7 +291,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.LeaseToken = req.Token
 
 	case secret.Auth != nil:
-		c.logger.Debug("processing auth response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("processing auth response", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 		// Check if this token creation request resulted in a non-orphan token, and if so
 		// correctly set the parentCtx to the request's token context.
@@ -304,11 +304,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			// If parent token is not managed by the agent, child shouldn't be
 			// either.
 			if entry == nil {
-				c.logger.Debug("pass-through auth response; parent token not managed by agent", "path", req.Request.URL.Path, "method", req.Request.Method)
+				c.logger.Debug("pass-through auth response; parent token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
 				return resp, nil
 			}
 
-			c.logger.Debug("setting parent context", "path", req.Request.URL.Path, "method", req.Request.Method)
+			c.logger.Debug("setting parent context", "method", req.Request.Method, "path", req.Request.URL.Path)
 			parentCtx = entry.RenewCtxInfo.Ctx
 
 			entry.TokenParent = req.Token
@@ -321,7 +321,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	default:
 		// We shouldn't be hitting this, but will err on the side of caution and
 		// simply proxy.
-		c.logger.Debug("pass-through response; secret without lease and token", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; secret without lease and token", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
@@ -353,7 +353,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Store the index in the cache
-	c.logger.Debug("storing response into the cache", "path", req.Request.URL.Path, "method", req.Request.Method)
+	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 	err = c.db.Set(index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
@@ -378,7 +378,7 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 	defer func() {
 		id := ctx.Value(contextIndexID).(string)
-		c.logger.Debug("evicting index from cache", "id", id, "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("evicting index from cache", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
 		err := c.db.Evict(cachememdb.IndexNameID, id)
 		if err != nil {
 			c.logger.Error("failed to evict index", "id", id, "error", err)
@@ -402,7 +402,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		return
 	}
 
-	c.logger.Debug("initiating renewal", "path", req.Request.URL.Path, "method", req.Request.Method)
+	c.logger.Debug("initiating renewal", "method", req.Request.Method, "path", req.Request.URL.Path)
 	go renewer.Renew()
 	defer renewer.Stop()
 
