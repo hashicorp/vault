@@ -213,7 +213,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	defer func() {
 		tx.Rollback()
 	}()
-	// Return the secret
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
