@@ -38,6 +38,8 @@ IMPROVEMENTS:
    Icon component [GH-6736]
  * ui: Lazy loading parts of the application so that the total initial payload is 
    smaller [GH-6718]
+ * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
+   is one [GH-6759]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
