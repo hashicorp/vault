@@ -120,13 +120,12 @@ In this scenario, the nodes in the Vault and associated Consul clusters are host
 ##### Reference Diagram Resilience against Region Failure
 ![Reference Diagram](/img/vault-ra-full-replication_region.png)
 
-In this scenario,the clusters are replicated to guard against a full region failure. There is one Primary Vault cluster(cluster A) with its DR cluster (cluster B) and three Performance Replicas(clusters C, D, and E) each with a DR cluster of its own (cluster F, G, H)  in a different Region. Each cluster has its associated Consul cluster for storage backend.  
-In this setup the Primary Vault cluster can be used for handling replication and cluster leadership only and not used for client connections of secrets, or it can serve secrets if desired. All client connections should go through the associated regional Performance Replica.  
+In this scenario, the clusters are replicated to guard against a full region failure. There are three  Performance Replica Vault clusters (clusters A, B, C) each with its own DR cluster (clusters D, E, F) in a different Region. Each cluster has its associated Consul cluster for storage backend.  
 This architecture allows for n-2 at the region level provided all secrets and secret engines are replicated across all clusters.   
-Failure of the full Region 1 would require the DR cluster of the primary to be promoted to primary and the DR cluster of the Region 1 Performance replica to be promoted to a PR. Once this was done the Vault solution would be fully functional with some loss of redundancy till the Region 1 was restored.   Applications would not have to re-authenticate as the DR cluster for each failed cluster would contain all leases and tokens.
+Failure of the full Region 1 would require the DR cluster F to be promoted. Once this was done the Vault solution would be fully functional with some loss of redundancy till the Region 1 was restored.   Applications would not have to re-authenticate as the DR cluster for each failed cluster would contain all leases and tokens.
 
 ##### Reference Diagram Resilience against Cluster Failure
-![Reference Diagram](/img/vault-ra-full-replication.png)
+![Reference Diagram](/img/vault-ra-full-replication_no_region.png)
 This solution has full resilience at a cluster level, but does not guard against region failure as the DR clusters for the Performance replicas are in the same region. There are certain use-cases where this is the preferred method where data cannot be replicated to other regions due to governance restrictions such as GDPR. Also some infrastructure frameworks may not have the ability to route application traffic to different Regions.
 
 
@@ -151,7 +150,10 @@ This is not Hashicorp recommended architecture for production systems are there 
 ##### Reference Diagram
 ![Reference Diagram](/img/vault-ra-2-az-ent.png)
 
-In this scenario, the nodes in the Vault and associated Consul cluster are hosted between two Availability Zones. This solution has an n-2 at the node level for Vault and Consul and n-1 for Vault and Consul at the Availability Zone level. This differs from the OSS design in that the Consul cluster has six nodes with one of them as a non-voting member. If Zone B were to fail the non-voting member would be promoted by Autopilot to become a full member and so maintain Quorum. This configuration option is only available in the Enterprise version of Consul.
+Due to the need to maintain quoracy in the Consul cluster, having only 2 Availability Zones is not ideal. There is no way to spread a consul cluster across two AZs with any guarantee of added resiliency. The best case solution in Vault enterprise is to treat the two AZs as regions and have separate Vault clusters in each.  
+The secondary Vault cluster can either be a Performance Replica or a DR Replica, each having their own advantages:
+* PR secondary: If the Vault address is managed by Consul or by a load balancer then a failure of either cluster will result in the traffic being directed to the other cluster with no outage, providing there is logic in your application or the Vault agent to manage re-requesting tokens that are not replicated between the clusters.
+* DR secondary: In this case the failure of the primary cluster will result in the need for operator intervention to promote the DR to the primary, but as all leases and tokens are replicated, there would be no need for any additional logic in the application to handle this.
 
 ### <a name="three-zone-oss"></a>Deployment of Vault in three Availability Zones (OSS)
 ##### Reference Diagram
