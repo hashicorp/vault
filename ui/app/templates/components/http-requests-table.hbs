@@ -1,7 +1,7 @@
 <div class="http-requests-table">
   <table class="is-fullwidth">
     <caption class="is-collapsed">HTTP Request Volume</caption>
-    <thead class="has-text-grey-dark has-text-weight-semibold">
+    <thead class="has-text-weight-semibold">
       <tr>
         <th scope="col">Month</th>
         <th scope="col">Requests</th>
@@ -11,15 +11,17 @@
       </tr>
     </thead>
     <tbody>
-      {{#each countersWithChange as |c|}}
+      {{#each (reverse countersWithChange) as |c|}}
         <tr>
-          <th scope="row" class="has-text-black has-text-weight-semibold">{{ date-format c.start_time 'MMMM YYYY' }}</th>
+          <th scope="row" class="has-text-black">{{ date-format c.start_time 'MMMM YYYY' }}</th>
           <td>{{c.total}}</td>
           {{#if (gt counters.length 1)}}
-            <td data-test-change="{{c.percentChange}}">
+            <td class="has-text-grey-dark percent-change" data-test-change="{{c.percentChange}}">
               {{#if c.percentChange}}
                 <Icon @glyph={{c.glyph}} class={{c.glyph}}/>
                 {{c.percentChange}}%
+              {{else}}
+                <Icon @glyph="minus-plain" />
               {{/if}}
             </td>
           {{/if}}
