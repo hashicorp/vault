@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 references:
   images:
@@ -255,7 +255,7 @@ jobs:
           path: test-results
 
 workflows:
-  version: 2
+  version: 2.1
 
   ci:
     jobs:
