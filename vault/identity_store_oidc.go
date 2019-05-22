@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -155,10 +156,11 @@ func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
 
 		// signing
 		keyRing, _ := i.createKeyRing("foo")
-		signedIdToken, _ := keyRing.SignIdToken(idToken)
+		privWebKey, pubWebKey := keyRing.GenerateWebKeys()
+		signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
 
 		// key, _ := rsa.GenerateKey(rand.Reader, 2048)
-		// keyID, err := uuid.GenerateUUID()
+		// keyID, err := uuid.GenerateUUID(0
 		// if err != nil {
 		// 	return nil, err
 		// }
@@ -176,27 +178,20 @@ func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
 		// 	Use:       "sig",
 		// }
 
-		pub := &jose.JSONWebKey{
-			Key:       keyRing.keys[keyRing.insertKeyAt].key.Public(),
-			KeyID:     keyID, // needed?
-			Algorithm: "RS256",
-			Use:       "sig",
-		}
-
 		// payload, err := json.Marshal(idToken)
 		// signedIDToken, err := signPayload(priv, jose.RS256, payload)
 
 		jwks := jose.JSONWebKeySet{
 			Keys: make([]jose.JSONWebKey, 1),
 		}
-		jwks.Keys[0] = *pub
+		jwks.Keys[0] = *pubWebKey
 
 		//data2, err := json.MarshalIndent(jwks, "", "  ")
 
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"token": signedIdToken,
-				// "pub":   jwks,
+				"pub":   jwks,
 			},
 		}, nil
 	}
@@ -219,16 +214,17 @@ func signPayload(key *jose.JSONWebKey, alg jose.SignatureAlgorithm, payload []by
 // --- --- KEY SIGNING FUNCTIONALITY --- ---
 
 type keyRing struct {
-	insertKeyAt  int
-	name         string
-	numberOfKeys int
-	keyTTL       time.Duration
-	keys         []keyRingKey
+	mostRecentKeyAt int // locates the most recent key within keys, -1 means that there is no key in the key ring
+	name            string
+	numberOfKeys    int
+	keyTTL          time.Duration
+	keys            []keyRingKey
 }
 
 type keyRingKey struct {
 	createdAt time.Time
 	key       *rsa.PrivateKey
+	id        string
 }
 
 // TODO
@@ -242,15 +238,12 @@ func (i *IdentityStore) emptyKeyRing() *keyRing {
 	numberOfKeys := 4
 	keyTTL := 6 * time.Hour
 	return &keyRing{
-		insertKeyAt:  0,
-		numberOfKeys: numberOfKeys,
-		keyTTL:       keyTTL,
-		keys:         make([]keyRingKey, numberOfKeys, numberOfKeys),
+		mostRecentKeyAt: -1,
+		numberOfKeys:    numberOfKeys,
+		keyTTL:          keyTTL,
+		keys:            make([]keyRingKey, numberOfKeys, numberOfKeys),
 	}
 }
-
-// Functions for key signing
-// Function for validation
 
 // Create a keyRing
 func (i *IdentityStore) createKeyRing(name string) (*keyRing, error) {
@@ -258,16 +251,14 @@ func (i *IdentityStore) createKeyRing(name string) (*keyRing, error) {
 	// retrieve configurations - hardcoded for now
 	kr := i.emptyKeyRing()
 	kr.name = name
+	kr.Rotate()
 	// store keyring
 	return kr, nil
 }
 
-// Create a key
-// func
-
 // RotateIfRequired performs a rotate if the current key is outdated
 func (kr *keyRing) RotateIfRequired() error {
-	expireAt := kr.keys[kr.insertKeyAt].createdAt.Add(kr.keyTTL)
+	expireAt := kr.keys[kr.mostRecentKeyAt].createdAt.Add(kr.keyTTL)
 	now := time.Now().UTC().Round(time.Millisecond)
 	if now.After(expireAt) {
 		err := kr.Rotate()
@@ -284,14 +275,28 @@ func (kr *keyRing) Rotate() error {
 	if err != nil {
 		return err
 	}
-	kr.keys[kr.insertKeyAt].key = key
-	kr.keys[kr.insertKeyAt].createdAt = time.Now().UTC().Round(time.Millisecond)
-	kr.insertKeyAt = (kr.insertKeyAt + 1) % len(kr.keys)
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+
+	var insertInKeyRingAt int
+	switch {
+	case kr.mostRecentKeyAt < 0:
+		insertInKeyRingAt = 0
+	case kr.mostRecentKeyAt >= 0:
+		insertInKeyRingAt = (kr.mostRecentKeyAt + 1) % len(kr.keys)
+	}
+
+	kr.keys[insertInKeyRingAt].key = key
+	kr.keys[insertInKeyRingAt].createdAt = time.Now().UTC().Round(time.Millisecond)
+	kr.keys[insertInKeyRingAt].id = id
+	kr.mostRecentKeyAt = insertInKeyRingAt
 	return nil
 }
 
-// Sign a payload with a keyRing
-func (kr *keyRing) SignIdToken(token idToken) (string, error) {
+//Sign a payload with a keyRing
+func (kr *keyRing) SignIdToken(webKey *jose.JSONWebKey, token idToken) (string, error) {
 	err := kr.RotateIfRequired()
 	if err != nil {
 		return "", err
@@ -302,7 +307,7 @@ func (kr *keyRing) SignIdToken(token idToken) (string, error) {
 		return "", err
 	}
 
-	signingKey := jose.SigningKey{Key: kr.keys[kr.insertKeyAt].key, Algorithm: jose.RS256}
+	signingKey := jose.SigningKey{Key: webKey, Algorithm: jose.SignatureAlgorithm(webKey.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
 	if err != nil {
 		return "", fmt.Errorf("new signier: %v", err)
@@ -314,17 +319,21 @@ func (kr *keyRing) SignIdToken(token idToken) (string, error) {
 	return signature.CompactSerialize()
 }
 
-func (kr *keyRing)
+func (kr *keyRing) GenerateWebKeys() (priv *jose.JSONWebKey, pub *jose.JSONWebKey) {
+	kr.RotateIfRequired()
+	keyRingKey := kr.keys[kr.mostRecentKeyAt]
 
-	// priv := &jose.JSONWebKey{
-		// 	Key:       key,
-		// 	KeyID:     keyID,
-		// 	Algorithm: "RS256",
-		// 	Use:       "sig",
-		// }
-		// pub := &jose.JSONWebKey{
-		// 	Key:       key.Public(),
-		// 	KeyID:     keyID, // needed?
-		// 	Algorithm: "RS256",
-		// 	Use:       "sig",
-		// }
+	priv = &jose.JSONWebKey{
+		Key:       keyRingKey.key,
+		KeyID:     keyRingKey.id,
+		Algorithm: string(jose.RS256),
+		Use:       "sig",
+	}
+	pub = &jose.JSONWebKey{
+		Key:       keyRingKey.key.Public(),
+		KeyID:     keyRingKey.id,
+		Algorithm: string(jose.RS256),
+		Use:       "sig",
+	}
+	return
+}
