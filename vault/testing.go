@@ -1323,10 +1323,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
+
 	}
 
-	addAuditBackend := len(base.AuditBackends) == 0
-
+	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
 		coreConfig.AuditBackends = map[string]audit.Factory{
 			"file": auditFile.Factory,
