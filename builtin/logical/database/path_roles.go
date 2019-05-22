@@ -322,7 +322,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
-	// exists, err := b.pathRoleExistenceCheck(ctx,req,data)
+
 	exists, err := b.pathStaticRoleExistenceCheck(ctx, req, data)
 	if err != nil {
 		return nil, err
@@ -479,7 +479,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}); err != nil {
 		return nil, err
 	}
-	// END create/update static account
 
 	return nil, nil
 }
