@@ -693,7 +693,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	var lvr time.Time
 	var merr error
-	if input == nil {
+	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
 	// re-use WAL ID if present, otherwise PUT a new WAL
