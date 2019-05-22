@@ -41,56 +41,8 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
-			Pattern: "roles/" + framework.GenericNameRegex("name"),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
-
-				"db_name": {
-					Type:        framework.TypeString,
-					Description: "Name of the database this role acts on.",
-				},
-				"creation_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements executed to
-                                create and configure a user. See the plugin's API page for more
-                                information on support and formatting for this parameter.`,
-				},
-				"revocation_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                to revoke a user. See the plugin's API page for more information
-                                on support and formatting for this parameter.`,
-				},
-				"renew_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                to renew a user. Not every plugin type will support this
-                                functionality. See the plugin's API page for more information on
-                                support and formatting for this parameter. `,
-				},
-				"rollback_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                rollback a create operation in the event of an error. Not every
-                                plugin type will support this functionality. See the plugin's
-                                API page for more information on support and formatting for this
-                                parameter.`,
-				},
-
-				"default_ttl": {
-					Type:        framework.TypeDurationSecond,
-					Description: "Default ttl for role.",
-				},
-
-				"max_ttl": {
-					Type:        framework.TypeDurationSecond,
-					Description: "Maximum time a credential is valid for",
-				},
-			},
-
+			Pattern:        "roles/" + framework.GenericNameRegex("name"),
+			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathRoleRead,
@@ -104,63 +56,8 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 		},
 
 		&framework.Path{
-			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
-				"db_name": {
-					Type:        framework.TypeString,
-					Description: "Name of the database this role acts on.",
-				},
-				"creation_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements executed to
-                                create and configure a user. See the plugin's API page for more
-                                information on support and formatting for this parameter.`,
-				},
-				"revocation_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                to revoke a user. See the plugin's API page for more information
-                                on support and formatting for this parameter.`,
-				},
-				"renew_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                to renew a user. Not every plugin type will support this
-                                functionality. See the plugin's API page for more information on
-                                support and formatting for this parameter. `,
-				},
-				"rollback_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed
-                                        rollback a create operation in the event of an error. Not every plugin
-                                        type will support this functionality. See the plugin's API page for
-                                        more information on support and formatting for this parameter.`,
-				},
-
-				"username": {
-					Type: framework.TypeString,
-					Description: `Name of the static user account for Vault to manage.
-                                        Requires "rotation_period" to be specified`,
-				},
-				"rotation_period": {
-					Type: framework.TypeDurationSecond,
-					Description: `Period for automatic
-                                        credential rotation of the given username. Not valid unless used with
-                                        "username".`,
-				},
-				"rotation_statements": {
-					Type: framework.TypeStringSlice,
-					Description: `Specifies the database statements to be executed to
-                                        rotate the accounts credentials. Not every plugin type will support
-                                        this functionality. See the plugin's API page for more information on
-                                        support and formatting for this parameter.`,
-				},
-			},
-
+			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
+			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathStaticRoleRead,
@@ -173,6 +70,104 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathStaticRoleHelpDesc,
 		},
 	}
+}
+
+func fieldsForType(roleType string) map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{
+		"name": {
+			Type:        framework.TypeString,
+			Description: "Name of the role.",
+		},
+		"db_name": {
+			Type:        framework.TypeString,
+			Description: "Name of the database this role acts on.",
+		},
+		"creation_statements": {
+			Type: framework.TypeStringSlice,
+			Description: `Specifies the database statements executed to
+	create and configure a user. See the plugin's API page for more
+	information on support and formatting for this parameter.`,
+		},
+		"revocation_statements": {
+			Type: framework.TypeStringSlice,
+			Description: `Specifies the database statements to be executed
+	to revoke a user. See the plugin's API page for more information
+	on support and formatting for this parameter.`,
+		},
+		"renew_statements": {
+			Type: framework.TypeStringSlice,
+			Description: `Specifies the database statements to be executed
+	to renew a user. Not every plugin type will support this
+	functionality. See the plugin's API page for more information on
+	support and formatting for this parameter. `,
+		},
+		"rollback_statements": {
+			Type: framework.TypeStringSlice,
+			Description: `Specifies the database statements to be executed
+	rollback a create operation in the event of an error. Not every plugin
+	type will support this functionality. See the plugin's API page for
+	more information on support and formatting for this parameter.`,
+		},
+	}
+
+	// get the fields that are specific to the type of role, and add them to the
+	// common fields
+	var typeFields map[string]*framework.FieldSchema
+	switch roleType {
+	case databaseStaticRolePath:
+		typeFields = staticFields()
+	default:
+		typeFields = dynamicFields()
+	}
+
+	for k, v := range typeFields {
+		fields[k] = v
+	}
+
+	return fields
+}
+
+// dynamicFields returns a map of key and field schema items that are specific
+// only to dynamic roles
+func dynamicFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{
+		"default_ttl": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Default ttl for role.",
+		},
+
+		"max_ttl": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Maximum time a credential is valid for",
+		},
+	}
+	return fields
+}
+
+// staticFields returns a map of key and field schema items that are specific
+// only to static roles
+func staticFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{
+		"username": {
+			Type: framework.TypeString,
+			Description: `Name of the static user account for Vault to manage.
+	Requires "rotation_period" to be specified`,
+		},
+		"rotation_period": {
+			Type: framework.TypeDurationSecond,
+			Description: `Period for automatic
+	credential rotation of the given username. Not valid unless used with
+	"username".`,
+		},
+		"rotation_statements": {
+			Type: framework.TypeStringSlice,
+			Description: `Specifies the database statements to be executed to
+	rotate the accounts credentials. Not every plugin type will support
+	this functionality. See the plugin's API page for more information on
+	support and formatting for this parameter.`,
+		},
+	}
+	return fields
 }
 
 func (b *databaseBackend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {

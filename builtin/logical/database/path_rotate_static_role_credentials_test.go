@@ -255,7 +255,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 		t.Fatalf("expected error rotating non-static role")
 	}
 
-	if resp.Error().Error() != "cannot rotate credentials of non-static accounts" {
+	if resp.Error().Error() != "no static role found for role name" {
 		t.Fatalf("wrong error message: %s", err)
 	}
 }
