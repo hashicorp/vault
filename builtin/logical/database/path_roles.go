@@ -148,7 +148,8 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                                         Requires "rotation_period" to be specified`,
 				},
 				"rotation_period": {
-					Type: framework.TypeDurationSecond, Description: `Period for automatic
+					Type: framework.TypeDurationSecond, 
+					Description: `Period for automatic
                                         credential rotation of the given username. Not valid unless used with
                                         "username".`,
 				},
