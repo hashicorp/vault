@@ -124,7 +124,6 @@ jobs:
       GO_TAGS:
     parallelism: 2
     working_directory: ~/src
-    no_output_timeout: 20m
     steps:
       - checkout
       - run:
@@ -138,6 +137,7 @@ jobs:
           key: *GO_SUM_CACHE_KEY
       - run:
           name: Run Go tests
+          no_output_timeout: 20m
           command: |
             set -eux -o pipefail
 
