@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/sdk/helper/storagepacker";
+
+package storagepacker;
+
+import "google/protobuf/any.proto";
+
+// Item represents an entry that gets inserted into the storage packer
+message Item {
+	// ID must be provided by the caller; the same value, if used with GetItem,
+	// can be used to fetch the item. However, when iterating through a bucket,
+	// this ID will be an internal ID. In other words, outside of the use-case
+	// described above, the caller *must not* rely on this value to be
+	// consistent with what they passed in.
+	string id = 1;
+	// Message holds the contents of the item
+	// Deprecated: Use 'Data' instead
+	google.protobuf.Any message = 2;
+	// Data holds the contents of the item. Used in storage packer v2.
+	bytes data = 3;
+}
+
+// Bucket is a construct to hold multiple items within itself. This
+// abstraction contains multiple buckets of the same kind within itself and
+// shares amont them the items that get inserted. When the bucket as a whole
+// gets too big to hold more items, the contained buckets gets pushed out only
+// to become independent buckets. Hence, this can grow infinitely in terms of
+// storage space for items that get inserted.
+message Bucket {
+	// Key is the storage path where the bucket gets stored
+	string key = 1;
+	// Items holds the items contained within this bucket. Used by v1.
+	repeated Item items = 2;
+	// ItemMap stores a mapping of item ID to message. Used by v2.
+	map <string, bytes> item_map = 3;
+	// Has this bucket been emptied into sub-buckets? Used by v2.
+	// If has_shards is true then item_map should be empty.
+	bool has_shards = 4;
+}
