@@ -72,6 +72,10 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 	}
 }
 
+// fieldsForType returns a map of string/FieldSchema items for the given role
+// type. The purpose is to keep the shared fields between dynamic and static
+// roles consistent, and allow for each type to override or provide their own
+// specific fields
 func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 	fields := map[string]*framework.FieldSchema{
 		"name": {
