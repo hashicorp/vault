@@ -106,12 +106,12 @@ This endpoint enables a new secrets engine at the given path.
   - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
     to whitelist, allowing a plugin to include them in the response.
 
-  - `options` `(map<string|string>: nil)` - Specifies mount type specific options
-    that are passed to the backend.
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend.
 
-    *Key/Value (KV)*
-    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
-      KV v2.
+  *Key/Value (KV)*
+  - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+    KV v2.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
