@@ -90,11 +90,11 @@ certificate. When users or machines generate credentials, they are generated
 against this role:
 
     ```text
-    $ vault write pki/roles/my-role \
+    $ vault write pki/roles/example-dot-com \
         allowed_domains=my-website.com \
         allow_subdomains=true \
         max_ttl=72h
-    Success! Data written to: pki/roles/my-role
+    Success! Data written to: pki/roles/example-dot-com
     ```
 
 ## Usage
@@ -106,7 +106,7 @@ the proper permission, it can generate credentials.
 of the role:
 
     ```text
-    $ vault write pki/issue/my-role \
+    $ vault write pki/issue/example-dot-com \
         common_name=www.my-website.com
 
     Key                 Value
