@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import d3 from 'd3-selection';
 import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
+import d3Format from 'd3-format';
 import d3TimeFormat from 'd3-time-format';
 
 /**
@@ -20,15 +21,15 @@ import d3TimeFormat from 'd3-time-format';
 const COUNTERS = [
   {
     start_time: '2019-05-01T00:00:00Z',
-    total: 50,
+    total: 50000,
   },
   {
     start_time: '2019-04-01T00:00:00Z',
-    total: 45,
+    total: 4500,
   },
   {
     start_time: '2019-03-01T00:00:00Z',
-    total: 55,
+    total: 550000,
   },
 ];
 
@@ -85,16 +86,20 @@ export default Component.extend({
       // how tall chart should be when we render it
       .range([height, 0]);
 
+    // parse the start times so the ticks display properly
+    dataIn.forEach(counter => {
+      counter.start_time = d3TimeFormat.isoParse(counter.start_time);
+    });
     const xScale = d3Scale
       .scaleBand()
       .domain(dataIn.map(c => c.start_time))
       // how wide it should be
-      .range([0, width])
+      .rangeRound([0, width], 0.05)
       // what % of total width it should reserve for whitespace between the bars
       .paddingInner(0.04);
 
-    const yAxis = d3Axis.axisLeft(yScale).ticks(3);
-    const xAxis = d3Axis.axisBottom(xScale).tickFormat(d3TimeFormat.timeFormat('%Y-%m-%d'));
+    const yAxis = d3Axis.axisLeft(yScale).ticks(3, ',.0f');
+    const xAxis = d3Axis.axisBottom(xScale).tickFormat(d3TimeFormat.timeFormat('%b %Y'));
 
     const xAxis_g = svgContainer
       .append('g')
