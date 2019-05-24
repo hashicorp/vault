@@ -155,7 +155,8 @@
     "paths": [
       "lib/core",
       "lib/css",
-      "lib/replication"
+      "lib/replication",
+      "lib/kmip"
     ]
   },
   "dependencies": {}
