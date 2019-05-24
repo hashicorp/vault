@@ -124,6 +124,9 @@ Router.map(function() {
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
+
+      this.mount('kmip');
+
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });
