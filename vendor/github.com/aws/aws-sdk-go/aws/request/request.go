@@ -588,7 +588,7 @@ func shouldRetryCancel(err error) bool {
 		return err.Temporary()
 	case nil:
 		// `awserr.Error.OrigErr()` can be nil, meaning there was an error but
-		// because we don't know the cause, it is marked as retriable. See
+		// because we don't know the cause, it is marked as retryable. See
 		// TestRequest4xxUnretryable for an example.
 		return true
 	default:
