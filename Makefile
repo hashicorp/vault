@@ -14,7 +14,8 @@ EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.11
+GO_VERSION_MIN=1.12
+GO111MODULE=on
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
