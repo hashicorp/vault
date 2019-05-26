@@ -233,6 +233,12 @@ updated with the new attributes.
 - `user_path` `(string)` - The path for the user name. Valid only when
   `credential_type` is `iam_user`. Default is `/`
 
+- `permissions_boundary_arn` `(string)` - The ARN of the [AWS Permissions
+  Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+  to attach to IAM users created in the role. Valid only when `credential_type`
+  is `iam_user`. If not specified, then no permissions boundary policy will be
+  attached.
+
 Legacy parameters:
 
 These parameters are supported for backwards compatibility only. They cannot be

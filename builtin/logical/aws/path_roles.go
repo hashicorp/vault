@@ -82,6 +82,12 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				DisplayName: "Max TTL",
 			},
 
+			"permissions_boundary_arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "ARN of an IAM policy to attach as a permissions boundary on IAM user credentials; only valid when credential_type is" + iamUserCred,
+				DisplayName: "Permissions Boundary ARN",
+			},
+
 			"arn": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
@@ -271,6 +277,22 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.UserPath = userPathRaw.(string)
 	}
 
+	if permissionsBoundaryARNRaw, ok := d.GetOk("permissions_boundary_arn"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with permissions_boundary_arn"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
+			return logical.ErrorResponse(fmt.Sprintf("permissions_boundary_arn parameter only valid for %s credential type", iamUserCred)), nil
+		}
+		permissionsBoundaryARN := permissionsBoundaryARNRaw.(string)
+		if permissionsBoundaryARN != "" {
+			if err = validateAWSManagedPolicy(permissionsBoundaryARN); err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid permissions_boundary_arn parameter: %v", err)), nil
+			}
+		}
+		roleEntry.PermissionsBoundaryARN = permissionsBoundaryARN
+	}
+
 	if roleEntry.MaxSTSTTL > 0 &&
 		roleEntry.DefaultSTSTTL > 0 &&
 		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
@@ -428,6 +450,20 @@ func upgradeLegacyPolicyEntry(entry string) *awsRoleEntry {
 	return newRoleEntry
 }
 
+func validateAWSManagedPolicy(policyARN string) error {
+	parsedARN, err := arn.Parse(policyARN)
+	if err != nil {
+		return err
+	}
+	if parsedARN.Service != "iam" {
+		return fmt.Errorf("expected a service of iam but got %s", parsedARN.Service)
+	}
+	if !strings.HasPrefix(parsedARN.Resource, "policy/") {
+		return fmt.Errorf("expected a resource type of policy but got %s", parsedARN.Resource)
+	}
+	return nil
+}
+
 func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("empty role name")
@@ -459,17 +495,19 @@ type awsRoleEntry struct {
 	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string        `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
+	PermissionsBoundaryARN   string        `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 	respData := map[string]interface{}{
-		"credential_type": strings.Join(r.CredentialTypes, ","),
-		"policy_arns":     r.PolicyArns,
-		"role_arns":       r.RoleArns,
-		"policy_document": r.PolicyDocument,
-		"default_sts_ttl": int64(r.DefaultSTSTTL.Seconds()),
-		"max_sts_ttl":     int64(r.MaxSTSTTL.Seconds()),
-		"user_path":       r.UserPath,
+		"credential_type":          strings.Join(r.CredentialTypes, ","),
+		"policy_arns":              r.PolicyArns,
+		"role_arns":                r.RoleArns,
+		"policy_document":          r.PolicyDocument,
+		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
+		"user_path":                r.UserPath,
+		"permissions_boundary_arn": r.PermissionsBoundaryARN,
 	}
 
 	if r.InvalidData != "" {

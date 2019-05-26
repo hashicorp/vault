@@ -213,3 +213,107 @@ func TestUserPathValidity(t *testing.T) {
 		})
 	}
 }
+
+func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
+	roleName := "test_perm_boundary"
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	permissionsBoundaryARN := "arn:aws:iam::aws:policy/EC2FullAccess"
+
+	roleData := map[string]interface{}{
+		"credential_type":          iamUserCred,
+		"policy_arns":              []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
+		"permissions_boundary_arn": permissionsBoundaryARN,
+	}
+	request := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + roleName,
+		Storage:   config.StorageView,
+		Data:      roleData,
+	}
+	resp, err := b.HandleRequest(context.Background(), request)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: role creation failed. resp:%#v\nerr:%v", resp, err)
+	}
+
+	request = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + roleName,
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(context.Background(), request)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: reading role failed. resp:%#v\nerr:%v", resp, err)
+	}
+	if resp.Data["credential_type"] != iamUserCred {
+		t.Errorf("bad: expected credential_type of %s, got %s instead", iamUserCred, resp.Data["credential_type"])
+	}
+	if resp.Data["permissions_boundary_arn"] != permissionsBoundaryARN {
+		t.Errorf("bad: expected permissions_boundary_arn of %s, got %s instead", permissionsBoundaryARN, resp.Data["permissions_boundary_arn"])
+	}
+}
+
+func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"credential_type":          assumedRoleCred, // only iamUserCred supported with permissions_boundary_arn
+		"role_arns":                []string{"arn:aws:iam::123456789012:role/VaultRole"},
+		"permissions_boundary_arn": "arn:aws:iam::aws:policy/FooBar",
+	}
+	request := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test_perm_boundary",
+		Storage:   config.StorageView,
+		Data:      roleData,
+	}
+	resp, err := b.HandleRequest(context.Background(), request)
+	if err == nil && (resp == nil || !resp.IsError()) {
+		t.Fatalf("bad: expected role creation to fail due to bad credential_type, but it didn't. resp:%#v\nerr:%v", resp, err)
+	}
+
+	roleData = map[string]interface{}{
+		"credential_type":          iamUserCred,
+		"policy_arns":              []string{"arn:aws:iam::aws:role/AdministratorAccess"},
+		"permissions_boundary_arn": "arn:aws:notiam::aws:policy/FooBar",
+	}
+	request.Data = roleData
+	resp, err = b.HandleRequest(context.Background(), request)
+	if err == nil && (resp == nil || !resp.IsError()) {
+		t.Fatalf("bad: expected role creation to fail due to malformed permissions_boundary_arn, but it didn't. resp:%#v\nerr:%v", resp, err)
+	}
+}
+
+func TestValidateAWSManagedPolicy(t *testing.T) {
+	expectErr := func(arn string) {
+		err := validateAWSManagedPolicy(arn)
+		if err == nil {
+			t.Errorf("bad: expected arn of %s to return an error but it didn't", arn)
+		}
+	}
+
+	expectErr("not_an_arn")
+	expectErr("notarn:aws:iam::aws:policy/FooBar")
+	expectErr("arn:aws:notiam::aws:policy/FooBar")
+	expectErr("arn:aws:iam::aws:notpolicy/FooBar")
+	expectErr("arn:aws:iam::aws:policynot/FooBar")
+
+	arn := "arn:aws:iam::aws:policy/FooBar"
+	err := validateAWSManagedPolicy(arn)
+	if err != nil {
+		t.Errorf("bad: expected arn of %s to not return an error but it did: %#v", arn, err)
+	}
+}
