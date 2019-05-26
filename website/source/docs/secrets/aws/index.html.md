@@ -227,10 +227,10 @@ user, you can use a policy like:
       ],
       "Condition": {
         "StringEquals": {
-	  "iam:PermissionsBoundary": [
-	    "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:policy/PolicyName"
-	  ]
-	}
+          "iam:PermissionsBoundary": [
+            "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:policy/PolicyName"
+          ]
+        }
       }
     }
   ]
