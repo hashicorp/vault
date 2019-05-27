@@ -56,8 +56,11 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"policy_arns": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+				Type: framework.TypeCommaStringSlice,
+				Description: fmt.Sprintf(`ARNs of AWS policies. Behavior varies by credential_type. When credential_type is
+%s, then it will attach the specified policies to the generated IAM user.
+When credential_type is %s or %s, the policies will be passed as the
+PolicyArns parameter, acting as a filter on permissions available.`, iamUserCred, assumedRoleCred, federationTokenCred),
 				DisplayName: "Policy ARNs",
 			},
 
@@ -291,11 +294,12 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("did not supply credential_type"), nil
 	}
 
+	if strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) && roleEntry.PolicyDocument == "" && len(roleEntry.PolicyArns) == 0 {
+		return logical.ErrorResponse("must specify one of policy_document or policy_arns when credential_type is federation_token"), nil
+	}
+
 	if len(roleEntry.RoleArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) {
 		return logical.ErrorResponse(fmt.Sprintf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred)), nil
-	}
-	if len(roleEntry.PolicyArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
-		return logical.ErrorResponse(fmt.Sprintf("cannot supply policy_arns when credential_type isn't %s", iamUserCred)), nil
 	}
 
 	err = setAwsRole(ctx, req.Storage, roleName, roleEntry)

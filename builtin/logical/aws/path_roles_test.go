@@ -69,6 +69,31 @@ func TestBackend_PathListRoles(t *testing.T) {
 	}
 }
 
+func TestBackend_RefuseDangerousFederationTokenConfig(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"credential_type": federationTokenCred,
+	}
+	roleReq := &logical.Request{
+		Path:      "roles/test",
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Data:      roleData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), roleReq)
+	if err == nil && (resp == nil || !resp.IsError()) {
+		t.Fatalf("bad: expected creating dangerous role config to fail, but it didn't")
+	}
+}
+
 func TestUpgradeLegacyPolicyEntry(t *testing.T) {
 	var input string
 	var expected awsRoleEntry
