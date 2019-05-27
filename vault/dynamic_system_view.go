@@ -224,8 +224,9 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 
 	// Return a subset of the data
 	ret := &logical.Entity{
-		ID:   entity.ID,
-		Name: entity.Name,
+		ID:       entity.ID,
+		Name:     entity.Name,
+		Disabled: entity.Disabled,
 	}
 
 	if entity.Metadata != nil {
