@@ -176,6 +176,7 @@
         data-test-input={{attr.name}}
         id={{attr.name}}
         autocomplete="off"
+        spellcheck="false"
         value={{or (get model valuePath) attr.options.defaultValue}}
         oninput={{action
           (action "setAndBroadcast" valuePath)

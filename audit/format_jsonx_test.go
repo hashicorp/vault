@@ -113,7 +113,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			OmitTime:     true,
 			HMACAccessor: false,
 		}
-		in := &LogInput{
+		in := &logical.LogInput{
 			Auth:     tc.Auth,
 			Request:  tc.Req,
 			OuterErr: tc.Err,

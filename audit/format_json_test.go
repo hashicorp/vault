@@ -101,7 +101,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		config := FormatterConfig{
 			HMACAccessor: false,
 		}
-		in := &LogInput{
+		in := &logical.LogInput{
 			Auth:     tc.Auth,
 			Request:  tc.Req,
 			OuterErr: tc.Err,

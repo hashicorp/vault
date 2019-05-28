@@ -28,13 +28,24 @@ FEATURES:
 
 IMPROVEMENTS: 
 
+ * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
+ * auth/jwt: `bound_claims` will now match received claims that are lists if any element
+   of the list is one of the expected values [JWT-50]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
+ * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
+   of the Confirm Action component [GH-6741], and using a new set of glyphs for our 
+   Icon component [GH-6736]
+ * ui: Lazy loading parts of the application so that the total initial payload is 
+   smaller [GH-6718]
+ * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
+   is one [GH-6759]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
 
+ * auth/jwt: Fix bound constraint checking so `bound_claims` satisfies the requirement [JWT-49]
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
  * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
@@ -52,6 +63,7 @@ BUG FIXES:
    new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
+ * ui: fix web cli parsing when using quoted values [GH-6755]
 
 ## 1.1.2 (April 18th, 2019)
 

@@ -22,7 +22,7 @@
 
   .input,
   .select {
-    min-width: 160px;
+    min-width: 190px;
   }
 }
 
@@ -87,6 +87,11 @@
 
   &:active {
     box-shadow: none;
+  }
+
+  &.popup-menu-trigger {
+    height: 2.5rem;
+    padding: $size-10 $size-8;
   }
 }
 

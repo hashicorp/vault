@@ -23,7 +23,7 @@
   </Toolbar>
   {{#if model.replicationAttrs.knownSecondaries.length}}
     {{#each model.replicationAttrs.knownSecondaries as |secondary|}}
-      <div class="box is-shadowless is-marginless" data-test-secondary-name={{secondary}}>
+      <div class="list-item-row" data-test-secondary-name={{secondary}}>
         <div class="columns is-mobile">
           <div class="column is-10">
             {{secondary}}
@@ -33,29 +33,25 @@
               {{#popup-menu name="secondary-details"}}
                 <nav class="menu">
                   <ul class="menu-list">
-                    {{#if model.canRevokeSecondary}}
-                      <li class="action">
-                        {{#confirm-action
-                          onConfirmAction=(action "onSubmit" "revoke-secondary" "primary" (hash id=secondary))
-                          confirmMessage=(concat "Are you sure you want to revoke " secondary "?")
-                          confirmButtonText="Revoke"
-                          cancelButtonText="Cancel"
-                          buttonClasses="button link is-destroy"
-                          confirmButtonClasses="is-danger is-outlined button"
-                          showConfirm=(get this (concat secondary '-isRevoking'))
-                          containerClasses="is-block"
-                          messageClasses="box is-shadowless is-marginless"
-                          class=(if (get this (concat secondary '-isRevoking')) "is-block ")
-                        }}
-                          Revoke
-                        {{/confirm-action}}
-                      </li>
-                    {{/if}}
                     {{#if (eq replicationMode 'performance')}}
                       <li class="action">
                         {{#link-to "mode.secondaries.config-show" replicationMode secondary data-test-replication-mount-filter-link=true}}
                           Mount filter config
                         {{/link-to}}
+                      </li>
+                    {{/if}}
+                    {{#if model.canRevokeSecondary}}
+                      <li class="action">
+                        <ConfirmAction
+                          @buttonClasses="button link is-destroy"
+                          @confirmTitle="Revoke token?"
+                          @confirmMessage="This will revoke this secondary token."
+                          @confirmButtonText="Revoke"
+                          @horizontalPosition="auto-left"
+                          @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
+                        >
+                          Revoke
+                        </ConfirmAction>
                       </li>
                     {{/if}}
                   </ul>

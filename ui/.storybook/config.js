@@ -29,6 +29,9 @@ addDecorator(storyFn => {
   assign(element.style, styles.style);
 
   const innerElement = document.createElement('div');
+  const wormhole = document.createElement('div');
+  wormhole.setAttribute('id', 'ember-basic-dropdown-wormhole');
+  innerElement.appendChild(wormhole);
 
   element.appendChild(innerElement);
   innerElement.appendTo = function appendTo(el) {

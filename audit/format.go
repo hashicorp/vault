@@ -2,6 +2,8 @@ package audit
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -30,7 +32,7 @@ type AuditFormatter struct {
 
 var _ Formatter = (*AuditFormatter)(nil)
 
-func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to request-audit a nil request")
 	}
@@ -51,15 +53,19 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	// Set these to the input values at first
 	auth := in.Auth
 	req := in.Request
+	var connState *tls.ConnectionState
+
+	if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
+		connState = in.Request.Connection.ConnState
+	}
 
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
+		if connState != nil {
 			in.Request.Connection.ConnState = nil
 			defer func() {
-				in.Request.Connection.ConnState = origState
+				in.Request.Connection.ConnState = connState
 			}()
 		}
 
@@ -77,6 +83,17 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			return err
 		}
 		req = cp.(*logical.Request)
+		for k, v := range req.Data {
+			if o, ok := v.(logical.OptMarshaler); ok {
+				marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
+					ValueHasher: salt.GetIdentifiedHMAC,
+				})
+				if err != nil {
+					return err
+				}
+				req.Data[k] = json.RawMessage(marshaled)
+			}
+		}
 
 		// Hash any sensitive information
 		if auth != nil {
@@ -120,8 +137,12 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		return err
 	}
 
+	reqType := in.Type
+	if reqType == "" {
+		reqType = "request"
+	}
 	reqEntry := &AuditRequestEntry{
-		Type:  "request",
+		Type:  reqType,
 		Error: errString,
 
 		Auth: &AuditAuth{
@@ -147,12 +168,13 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
-			Path:               req.Path,
-			Data:               req.Data,
-			PolicyOverride:     req.PolicyOverride,
-			RemoteAddr:         getRemoteAddr(req),
-			ReplicationCluster: req.ReplicationCluster,
-			Headers:            req.Headers,
+			Path:                          req.Path,
+			Data:                          req.Data,
+			PolicyOverride:                req.PolicyOverride,
+			RemoteAddr:                    getRemoteAddr(req),
+			ReplicationCluster:            req.ReplicationCluster,
+			Headers:                       req.Headers,
+			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
 	}
 
@@ -167,7 +189,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
 }
 
-func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to response-audit a nil request")
 	}
@@ -189,15 +211,19 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	auth := in.Auth
 	req := in.Request
 	resp := in.Response
+	var connState *tls.ConnectionState
+
+	if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
+		connState = in.Request.Connection.ConnState
+	}
 
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-			origState := in.Request.Connection.ConnState
+		if connState != nil {
 			in.Request.Connection.ConnState = nil
 			defer func() {
-				in.Request.Connection.ConnState = origState
+				in.Request.Connection.ConnState = connState
 			}()
 		}
 
@@ -215,6 +241,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			return err
 		}
 		req = cp.(*logical.Request)
+		for k, v := range req.Data {
+			if o, ok := v.(logical.OptMarshaler); ok {
+				marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
+					ValueHasher: salt.GetIdentifiedHMAC,
+				})
+				if err != nil {
+					return err
+				}
+				req.Data[k] = json.RawMessage(marshaled)
+			}
+		}
 
 		if in.Response != nil {
 			cp, err := copystructure.Copy(in.Response)
@@ -222,6 +259,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 				return err
 			}
 			resp = cp.(*logical.Response)
+			for k, v := range resp.Data {
+				if o, ok := v.(logical.OptMarshaler); ok {
+					marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
+						ValueHasher: salt.GetIdentifiedHMAC,
+					})
+					if err != nil {
+						return err
+					}
+					resp.Data[k] = json.RawMessage(marshaled)
+				}
+			}
 		}
 
 		// Hash any sensitive information
@@ -334,8 +382,12 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		}
 	}
 
+	respType := in.Type
+	if respType == "" {
+		respType = "response"
+	}
 	respEntry := &AuditResponseEntry{
-		Type:  "response",
+		Type:  respType,
 		Error: errString,
 		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
@@ -360,12 +412,13 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
-			Path:               req.Path,
-			Data:               req.Data,
-			PolicyOverride:     req.PolicyOverride,
-			RemoteAddr:         getRemoteAddr(req),
-			ReplicationCluster: req.ReplicationCluster,
-			Headers:            req.Headers,
+			Path:                          req.Path,
+			Data:                          req.Data,
+			PolicyOverride:                req.PolicyOverride,
+			RemoteAddr:                    getRemoteAddr(req),
+			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
+			ReplicationCluster:            req.ReplicationCluster,
+			Headers:                       req.Headers,
 		},
 
 		Response: &AuditResponse{
@@ -422,6 +475,7 @@ type AuditRequest struct {
 	RemoteAddr          string                 `json:"remote_address,omitempty"`
 	WrapTTL             int                    `json:"wrap_ttl,omitempty"`
 	Headers             map[string][]string    `json:"headers,omitempty"`
+  ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
 type AuditResponse struct {
@@ -473,6 +527,14 @@ func getRemoteAddr(req *logical.Request) string {
 		return req.Connection.RemoteAddr
 	}
 	return ""
+}
+
+func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
+	if connState == nil || len(connState.VerifiedChains) == 0 || len(connState.VerifiedChains[0]) == 0 {
+		return ""
+	}
+
+	return connState.VerifiedChains[0][0].SerialNumber.String()
 }
 
 // parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
