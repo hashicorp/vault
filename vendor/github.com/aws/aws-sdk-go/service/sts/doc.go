@@ -9,14 +9,6 @@
 // This guide provides descriptions of the STS API. For more detailed information
 // about using this service, go to Temporary Security Credentials (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html).
 //
-// As an alternative to using the API, you can use one of the AWS SDKs, which
-// consist of libraries and sample code for various programming languages and
-// platforms (Java, Ruby, .NET, iOS, Android, etc.). The SDKs provide a convenient
-// way to create programmatic access to STS. For example, the SDKs take care
-// of cryptographically signing requests, managing errors, and retrying requests
-// automatically. For information about the AWS SDKs, including how to download
-// and install them, see the Tools for Amazon Web Services page (http://aws.amazon.com/tools/).
-//
 // For information about setting up signatures and authorization through the
 // API, go to Signing AWS API Requests (https://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html)
 // in the AWS General Reference. For general information about the Query API,
@@ -53,11 +45,11 @@
 // in the IAM User Guide.
 //
 // After you activate a Region for use with AWS STS, you can direct AWS STS
-// API calls to that Region. AWS STS recommends that you use both the setRegion
-// and setEndpoint methods to make calls to a Regional endpoint. You can use
-// the setRegion method alone for manually enabled Regions, such as Asia Pacific
-// (Hong Kong). In this case, the calls are directed to the STS Regional endpoint.
-// However, if you use the setRegion method alone for Regions enabled by default,
+// API calls to that Region. AWS STS recommends that you provide both the Region
+// and endpoint when you make calls to a Regional endpoint. You can provide
+// the Region alone for manually enabled Regions, such as Asia Pacific (Hong
+// Kong). In this case, the calls are directed to the STS Regional endpoint.
+// However, if you provide the Region alone for Regions enabled by default,
 // the calls are directed to the global endpoint of https://sts.amazonaws.com.
 //
 // To view the list of AWS STS endpoints and whether they are active by default,
