@@ -145,7 +145,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		Type:  reqType,
 		Error: errString,
 
-		Auth: AuditAuth{
+		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
@@ -159,12 +159,12 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			TokenType:                 auth.TokenType.String(),
 		},
 
-		Request: AuditRequest{
+		Request: &AuditRequest{
 			ID:                  req.ID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
-			Namespace: AuditNamespace{
+			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
@@ -389,7 +389,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	respEntry := &AuditResponseEntry{
 		Type:  respType,
 		Error: errString,
-		Auth: AuditAuth{
+		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
@@ -403,12 +403,12 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			TokenType:                 auth.TokenType.String(),
 		},
 
-		Request: AuditRequest{
+		Request: &AuditRequest{
 			ID:                  req.ID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
-			Namespace: AuditNamespace{
+			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
@@ -421,7 +421,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Headers:                       req.Headers,
 		},
 
-		Response: AuditResponse{
+		Response: &AuditResponse{
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
@@ -445,37 +445,37 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 // AuditRequestEntry is the structure of a request audit log entry in Audit.
 type AuditRequestEntry struct {
-	Time    string       `json:"time,omitempty"`
-	Type    string       `json:"type"`
-	Auth    AuditAuth    `json:"auth"`
-	Request AuditRequest `json:"request"`
-	Error   string       `json:"error"`
+	Time    string        `json:"time,omitempty"`
+	Type    string        `json:"type,omitempty"`
+	Auth    *AuditAuth    `json:"auth,omitempty"`
+	Request *AuditRequest `json:"request,omitempty"`
+	Error   string        `json:"error,omitempty"`
 }
 
 // AuditResponseEntry is the structure of a response audit log entry in Audit.
 type AuditResponseEntry struct {
-	Time     string        `json:"time,omitempty"`
-	Type     string        `json:"type"`
-	Auth     AuditAuth     `json:"auth"`
-	Request  AuditRequest  `json:"request"`
-	Response AuditResponse `json:"response"`
-	Error    string        `json:"error"`
+	Time     string         `json:"time,omitempty"`
+	Type     string         `json:"type,omitempty"`
+	Auth     *AuditAuth     `json:"auth,omitempty"`
+	Request  *AuditRequest  `json:"request,omitempty"`
+	Response *AuditResponse `json:"response,omitempty"`
+	Error    string         `json:"error,omitempty"`
 }
 
 type AuditRequest struct {
-	ID                            string                 `json:"id"`
-	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
-	Operation                     logical.Operation      `json:"operation"`
-	ClientToken                   string                 `json:"client_token"`
-	ClientTokenAccessor           string                 `json:"client_token_accessor"`
-	Namespace                     AuditNamespace         `json:"namespace"`
-	Path                          string                 `json:"path"`
-	Data                          map[string]interface{} `json:"data"`
-	PolicyOverride                bool                   `json:"policy_override"`
-	RemoteAddr                    string                 `json:"remote_address"`
-	WrapTTL                       int                    `json:"wrap_ttl"`
-	Headers                       map[string][]string    `json:"headers"`
-	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	ID                  string                 `json:"id,omitempty"`
+	ReplicationCluster  string                 `json:"replication_cluster,omitempty"`
+	Operation           logical.Operation      `json:"operation,omitempty"`
+	ClientToken         string                 `json:"client_token,omitempty"`
+	ClientTokenAccessor string                 `json:"client_token_accessor,omitempty"`
+	Namespace           *AuditNamespace        `json:"namespace,omitempty"`
+	Path                string                 `json:"path,omitempty"`
+	Data                map[string]interface{} `json:"data,omitempty"`
+	PolicyOverride      bool                   `json:"policy_override,omitempty"`
+	RemoteAddr          string                 `json:"remote_address,omitempty"`
+	WrapTTL             int                    `json:"wrap_ttl,omitempty"`
+	Headers             map[string][]string    `json:"headers,omitempty"`
+  ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
 type AuditResponse struct {
@@ -485,40 +485,40 @@ type AuditResponse struct {
 	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string    `json:"headers"`
+	Headers  map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
-	ClientToken               string              `json:"client_token"`
-	Accessor                  string              `json:"accessor"`
-	DisplayName               string              `json:"display_name"`
-	Policies                  []string            `json:"policies"`
+	ClientToken               string              `json:"client_token,omitempty"`
+	Accessor                  string              `json:"accessor,omitempty"`
+	DisplayName               string              `json:"display_name,omitempty"`
+	Policies                  []string            `json:"policies,omitempty"`
 	TokenPolicies             []string            `json:"token_policies,omitempty"`
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
-	Metadata                  map[string]string   `json:"metadata"`
+	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
-	EntityID                  string              `json:"entity_id"`
-	TokenType                 string              `json:"token_type"`
+	EntityID                  string              `json:"entity_id,omitempty"`
+	TokenType                 string              `json:"token_type,omitempty"`
 }
 
 type AuditSecret struct {
-	LeaseID string `json:"lease_id"`
+	LeaseID string `json:"lease_id,omitempty"`
 }
 
 type AuditResponseWrapInfo struct {
-	TTL             int    `json:"ttl"`
-	Token           string `json:"token"`
-	Accessor        string `json:"accessor"`
-	CreationTime    string `json:"creation_time"`
-	CreationPath    string `json:"creation_path"`
+	TTL             int    `json:"ttl,omitempty"`
+	Token           string `json:"token,omitempty"`
+	Accessor        string `json:"accessor,omitempty"`
+	CreationTime    string `json:"creation_time,omitempty"`
+	CreationPath    string `json:"creation_path,omitempty"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 
 type AuditNamespace struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
+	ID   string `json:"id,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
