@@ -2219,8 +2219,25 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
+		// Check if the allowed entity aliases list contains a matching glob pattern
+		matchByGlob := false
+		for _, allowedAlias := range role.AllowedEntityAliases {
+			if !strings.Contains(allowedAlias, "*") {
+				continue
+			}
+
+			// Remove asterisk
+			allowedAlias = strings.ReplaceAll(allowedAlias, "*", "")
+
+			// Check if it matches
+			if strings.HasPrefix(data.EntityAlias, allowedAlias) {
+				matchByGlob = true
+				break
+			}
+		}
+
 		// Check if provided entity alias name is in the allowed entity aliases list
-		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) && !matchByGlob {
 			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 
