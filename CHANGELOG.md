@@ -28,6 +28,7 @@ FEATURES:
 
 IMPROVEMENTS: 
 
+ * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
@@ -38,6 +39,8 @@ IMPROVEMENTS:
    Icon component [GH-6736]
  * ui: Lazy loading parts of the application so that the total initial payload is 
    smaller [GH-6718]
+ * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
+   is one [GH-6759]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
@@ -60,6 +63,7 @@ BUG FIXES:
    new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
+ * ui: fix web cli parsing when using quoted values [GH-6755]
 
 ## 1.1.2 (April 18th, 2019)
 

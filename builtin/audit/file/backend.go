@@ -172,7 +172,7 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
+func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
@@ -202,7 +202,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
 	return b.formatter.FormatRequest(ctx, b.f, b.formatConfig, in)
 }
 
-func (b *Backend) LogResponse(ctx context.Context, in *audit.LogInput) error {
+func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()

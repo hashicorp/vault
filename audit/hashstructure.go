@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"time"
@@ -58,25 +59,52 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 		}
 	}
 
-	if req.Data != nil {
-		cp, err := copystructure.Copy(req.Data)
-		if err != nil {
-			return nil, err
-		}
-
-		if req.ClientToken != "" {
-			req.ClientToken = fn(req.ClientToken)
-		}
-		if HMACAccessor && req.ClientTokenAccessor != "" {
-			req.ClientTokenAccessor = fn(req.ClientTokenAccessor)
-		}
-		if err := HashStructure(cp.(map[string]interface{}), fn, nonHMACDataKeys); err != nil {
-			return nil, err
-		}
-		req.Data = cp.(map[string]interface{})
+	if req.ClientToken != "" {
+		req.ClientToken = fn(req.ClientToken)
+	}
+	if HMACAccessor && req.ClientTokenAccessor != "" {
+		req.ClientTokenAccessor = fn(req.ClientTokenAccessor)
 	}
 
+	data, err := hashMap(fn, req.Data, nonHMACDataKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Data = data
 	return &req, nil
+}
+
+func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKeys []string) (map[string]interface{}, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	newData := make(map[string]interface{}, len(data))
+	for k, v := range data {
+		if o, ok := v.(logical.OptMarshaler); ok {
+			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
+				ValueHasher: fn,
+			})
+			if err != nil {
+				return nil, err
+			}
+			newData[k] = json.RawMessage(marshaled)
+		} else if strutil.StrListContains(nonHMACDataKeys, k) {
+			newData[k] = v
+		} else {
+			v, err := copystructure.Copy(v)
+			if err != nil {
+				return nil, err
+			}
+			if err := HashStructure(v, fn); err != nil {
+				return nil, err
+			}
+			newData[k] = v
+		}
+	}
+
+	return newData, nil
 }
 
 func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Response, error) {
@@ -99,17 +127,11 @@ func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, no
 		}
 	}
 
-	if resp.Data != nil {
-		cp, err := copystructure.Copy(resp.Data)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := HashStructure(cp.(map[string]interface{}), fn, nonHMACDataKeys); err != nil {
-			return nil, err
-		}
-		resp.Data = cp.(map[string]interface{})
+	data, err := hashMap(fn, resp.Data, nonHMACDataKeys)
+	if err != nil {
+		return nil, err
 	}
+	resp.Data = data
 
 	if resp.WrapInfo != nil {
 		var err error
@@ -147,8 +169,8 @@ func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s map[string]interface{}, cb HashCallback, ignoredKeys []string) error {
-	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
+func HashStructure(s interface{}, cb HashCallback) error {
+	walker := &hashWalker{Callback: cb}
 	return reflectwalk.Walk(s, walker)
 }
 
@@ -164,9 +186,6 @@ type hashWalker struct {
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
 	Callback HashCallback
-
-	// IgnoreKeys are the keys that wont have the HashCallback applied
-	IgnoredKeys []string
 
 	// MapElem appends the key itself (not the reflect.Value) to key.
 	// The last element in key is the most recently entered map key.
@@ -303,12 +322,6 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.String {
-		return nil
-	}
-
-	// See if the current key is part of the ignored keys
-	currentKey := w.key[len(w.key)-1]
-	if strutil.StrListContains(w.IgnoredKeys, currentKey) {
 		return nil
 	}
 

@@ -1198,9 +1198,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
-	return dynamicSystemView{
-		core:       c,
-		mountEntry: entry,
+	return extendedSystemView{
+		dynamicSystemView{
+			core:       c,
+			mountEntry: entry,
+		},
 	}
 }
 
