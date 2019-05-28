@@ -463,19 +463,19 @@ type AuditResponseEntry struct {
 }
 
 type AuditRequest struct {
-	ID                  string                 `json:"id,omitempty"`
-	ReplicationCluster  string                 `json:"replication_cluster,omitempty"`
-	Operation           logical.Operation      `json:"operation,omitempty"`
-	ClientToken         string                 `json:"client_token,omitempty"`
-	ClientTokenAccessor string                 `json:"client_token_accessor,omitempty"`
-	Namespace           *AuditNamespace        `json:"namespace,omitempty"`
-	Path                string                 `json:"path,omitempty"`
-	Data                map[string]interface{} `json:"data,omitempty"`
-	PolicyOverride      bool                   `json:"policy_override,omitempty"`
-	RemoteAddr          string                 `json:"remote_address,omitempty"`
-	WrapTTL             int                    `json:"wrap_ttl,omitempty"`
-	Headers             map[string][]string    `json:"headers,omitempty"`
-  ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	ID                            string                 `json:"id,omitempty"`
+	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
+	Operation                     logical.Operation      `json:"operation,omitempty"`
+	ClientToken                   string                 `json:"client_token,omitempty"`
+	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
+	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
+	Path                          string                 `json:"path,omitempty"`
+	Data                          map[string]interface{} `json:"data,omitempty"`
+	PolicyOverride                bool                   `json:"policy_override,omitempty"`
+	RemoteAddr                    string                 `json:"remote_address,omitempty"`
+	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
+	Headers                       map[string][]string    `json:"headers,omitempty"`
+	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
 type AuditResponse struct {
