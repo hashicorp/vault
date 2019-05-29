@@ -86,6 +86,16 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		getTokenInput.PolicyArns = convertPolicyARNs(policyARNs)
 	}
 
+	// If neither a policy document nor policy ARNs are specified, then GetFederationToken will
+	// return credentials equivalent to that of the Vault server itself. The role creation code
+	// will prevent new roles from being created with this condition, but it's possible that
+	// existing roles could exist like that. When getTokenInput.Policy was being set unconditionally
+	// an empty policy document would caused an error from AWS, so now explicitly check for and
+	// error out
+	if policy == "" && len(policyARNs) == 0 {
+		return logical.ErrorResponse(fmt.Sprintf("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred)), nil
+	}
+
 	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
 
 	if err != nil {
