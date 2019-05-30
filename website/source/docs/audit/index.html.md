@@ -74,7 +74,7 @@ audit logs are critically important and ignoring blocked requests opens
 an avenue for attack.
 
 Be absolutely certain that your audit devices cannot block and monitor for
-blocked requests with [related telemetry](/docs/internals/telemetry.html#vault-audit-log_request_failure).
+failed requests with [related telemetry](/docs/internals/telemetry.html#vault-audit-log_request_failure).
 
 ## API
 
