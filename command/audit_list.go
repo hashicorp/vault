@@ -98,7 +98,7 @@ func (c *AuditListCommand) Run(args []string) int {
 	case "table":
 		if len(audits) == 0 {
 			c.UI.Output(fmt.Sprintf("No audit devices are enabled."))
-			return 0
+			return 2
 		}
 
 		if c.flagDetailed {
