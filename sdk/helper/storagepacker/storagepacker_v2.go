@@ -2,7 +2,6 @@ package storagepacker
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -16,7 +15,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -55,13 +53,17 @@ type Config struct {
 // The locking discipline for StoragePackerV2:
 // * Acquire locks in the order storageLocks < bucketsCacheLock to avoid
 //   deadlock.
-// * Hold the storageLock for the duration of any read or write operation on a given
+// * Hold the storageLock for the duration of any read, write, or reshard operation on a given
 //   bucket. The storageLock is determined by the "cache key" of the bucket, which
 //   omits all of the '/'s.
+// * Acquire locks for multiple buckets in the order defined by locksutil.
 type StoragePackerV2 struct {
 	*Config
 	storageLocks []*locksutil.LockEntry
 
+	// The bucketsCache stores LockedBucket objects.
+	// For simplicity, the radix tree should cover the entire
+	// range of BaseBucketBits.
 	bucketsCache     *radix.Tree
 	bucketsCacheLock sync.RWMutex
 
@@ -74,16 +76,15 @@ type StoragePackerV2 struct {
 	prewarmCache sync.Once
 }
 
-// LockedBucket embeds a bucket and its corresponding lock to ensure thread
-// safety
 type LockedBucket struct {
-	*locksutil.LockEntry
 	*Bucket
+	*locksutil.LockEntry
 }
 
 type lockOperation func(*LockedBucket)
 
-// Safely identify the bucket for a given key, and aquire its storage lock
+// Safely identify the buckets for a given set of keys, and acquire the correspodning storage locks.
+//
 // The key may be the full hash of the item ID, or a prefix, with a bucket Key with embedded /'s
 // The cache may initially be empty, so "not found" is acceptable, and needs to be handled
 // by deciding whether to create the bucket.
@@ -151,17 +152,6 @@ func (s *StoragePackerV2) BucketsView() *logical.StorageView {
 	return s.BucketStorageView
 }
 
-// Return the topmost bucket in the tree for a given key.
-// Used as a defult if the cache is empty or bypassed.
-func (s *StoragePackerV2) firstKey(key string) (string, error) {
-	cacheKey := s.GetCacheKey(key)
-	rootShardLength := s.BaseBucketBits / 4
-	if len(cacheKey) < rootShardLength {
-		return cacheKey, errors.New("Key too short.")
-	}
-	return cacheKey[0 : s.BaseBucketBits/4], nil
-}
-
 func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
 	hexVal := GetItemIDHash(itemID)
 
@@ -181,14 +171,6 @@ func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
 
 func (s *StoragePackerV2) BucketKey(itemID string) string {
 	return s.GetCacheKey(s.BucketStorageKeyForItemID(itemID))
-}
-
-func (s *StoragePackerV2) GetCacheKey(key string) string {
-	return strings.Replace(key, "/", "", -1)
-}
-
-func GetItemIDHash(itemID string) string {
-	return hex.EncodeToString(cryptoutil.Blake2b256Hash(itemID))
 }
 
 func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []string) error {
