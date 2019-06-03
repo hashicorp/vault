@@ -1163,8 +1163,8 @@ func TestBackend_email_singleCert(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "example.com",
 		},
-		EmailAddresses:    []string{"valid@example.com"},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		EmailAddresses: []string{"valid@example.com"},
+		IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 		ExtKeyUsage: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageServerAuth,
 			x509.ExtKeyUsageClientAuth,

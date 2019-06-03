@@ -70,6 +70,10 @@ type SystemView interface {
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
 
+type ExtendedSystemView interface {
+	Auditor() Auditor
+}
+
 type StaticSystemView struct {
 	DefaultLeaseTTLVal  time.Duration
 	MaxLeaseTTLVal      time.Duration
@@ -84,6 +88,20 @@ type StaticSystemView struct {
 	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
+}
+
+type noopAuditor struct{}
+
+func (a noopAuditor) AuditRequest(ctx context.Context, input *LogInput) error {
+	return nil
+}
+
+func (a noopAuditor) AuditResponse(ctx context.Context, input *LogInput) error {
+	return nil
+}
+
+func (d StaticSystemView) Auditor() Auditor {
+	return noopAuditor{}
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {

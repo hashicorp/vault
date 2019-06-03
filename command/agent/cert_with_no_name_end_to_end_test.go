@@ -116,8 +116,8 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 	}
 
 	ahConfig := &auth.AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
-		Client: client,
+		Logger:                       logger.Named("auth.handler"),
+		Client:                       client,
 		EnableReauthOnNewCredentials: true,
 	}
 	if ahWrapping {

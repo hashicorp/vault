@@ -27,7 +27,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     return logout.visit();
   });
 
-  const POLICY = `'
+  const POLICY = `
     path "kv/foo" {
       capabilities = ["create", "read", "update", "delete", "list"]
       control_group = {
@@ -40,9 +40,9 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
          }
       }
     }
-  '`;
+  `;
 
-  const AUTHORIZER_POLICY = `'
+  const AUTHORIZER_POLICY = `
     path "sys/control-group/authorize" {
       capabilities = ["update"]
     }
@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     path "sys/control-group/request" {
       capabilities = ["update"]
     }
-  '`;
+  `;
 
   const ADMIN_USER = 'authorizer';
   const ADMIN_PASSWORD = 'test';
@@ -67,8 +67,8 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       `write auth/userpass/users/${ADMIN_USER} password=${ADMIN_PASSWORD} policies=default`,
       `write identity/entity name=${ADMIN_USER} policies=test`,
       // write policies for control group + authorization
-      `write sys/policies/acl/kv-control-group policy=${POLICY}`,
-      `write sys/policies/acl/authorizer policy=${AUTHORIZER_POLICY}`,
+      `write sys/policies/acl/kv-control-group policy=${btoa(POLICY)}`,
+      `write sys/policies/acl/authorizer policy=${btoa(AUTHORIZER_POLICY)}`,
       // read out mount to get the accessor
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
