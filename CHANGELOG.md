@@ -63,6 +63,8 @@ BUG FIXES:
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
  * ui: fix web cli parsing when using quoted values [GH-6755]
+ * ui: fix a namespace workflow mapping identities from external namespaces by allowing
+   arbitrary input in search-select component [GH-6728]
 
 ## 1.1.2 (April 18th, 2019)
 
