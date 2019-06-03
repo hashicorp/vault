@@ -92,15 +92,25 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 			newData[k] = json.RawMessage(marshaled)
 		} else if strutil.StrListContains(nonHMACDataKeys, k) {
 			newData[k] = v
+		} else if t, ok := v.(time.Time); ok {
+			newData[k] = t.Format(time.RFC3339Nano)
 		} else {
-			v, err := copystructure.Copy(v)
-			if err != nil {
-				return nil, err
+			r := reflect.ValueOf(v)
+			switch r.Kind() {
+			case reflect.Bool, reflect.Chan, reflect.Func, reflect.Int, reflect.Invalid:
+				newData[k] = v
+			case reflect.String:
+				newData[k] = fn(r.String())
+			default:
+				v, err := copystructure.Copy(v)
+				if err != nil {
+					return nil, err
+				}
+				if err := HashStructure(v, fn); err != nil {
+					return nil, err
+				}
+				newData[k] = v
 			}
-			if err := HashStructure(v, fn); err != nil {
-				return nil, err
-			}
-			newData[k] = v
 		}
 	}
 
@@ -263,9 +273,9 @@ func (w *hashWalker) Struct(v reflect.Value) error {
 		return nil
 	}
 
-	if len(w.loc) < 2 {
+	if len(w.loc) < 3 {
 		// The last element of w.loc is reflectwalk.Struct, by definition.
-		// If len(w.loc) == 1 that means hashWalker.Walk was given a struct
+		// If len(w.loc) < 3 that means hashWalker.Walk was given a struct
 		// value and this is the very first step in the walk, and we don't
 		// currently support structs as inputs,
 		return errors.New("structs as direct inputs not supported")
@@ -335,6 +345,10 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		m := w.cs[len(w.cs)-1]
 		mk := w.csKey[len(w.cs)-1]
 		m.SetMapIndex(mk, resultVal)
+	case reflectwalk.SliceElem:
+		s := w.cs[len(w.cs)-1]
+		si := int(w.csKey[len(w.cs)-1].Int())
+		s.Slice(si, si+1).Index(0).Set(resultVal)
 	default:
 		// Otherwise, we should be addressable
 		setV.Set(resultVal)

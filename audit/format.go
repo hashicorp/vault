@@ -52,6 +52,9 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	auth := in.Auth
 	req := in.Request
 	var connState *tls.ConnectionState
+	if auth == nil {
+		auth = new(logical.Auth)
+	}
 
 	if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
 		connState = in.Request.Connection.ConnState
