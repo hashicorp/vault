@@ -68,7 +68,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var err error
 	fsm, err := NewFSM(conf, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
 	path, ok := conf["path"]
@@ -137,7 +137,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			case os.IsNotExist(err):
 			default:
 				return nil, err
-
 			}
 		}
 
@@ -206,6 +205,11 @@ func (b *RaftBackend) NodeID() string {
 	return b.localID
 }
 
+// Initialized tells if raft is running or not
+func (b *RaftBackend) Initialized() bool {
+	return b.raft != nil
+}
+
 // Bootstrap prepares the given peers to be part of the raft cluster
 func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	b.l.Lock()
@@ -237,6 +241,8 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 
 // SetupCluster creates a new raft cluster
 func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicalstd.NetworkConfig, clusterListener physicalstd.ClusterHook) error {
+	b.logger.Trace("setting up raft cluster")
+
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -397,7 +403,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	if b.raft == nil {
-		return nil, errors.New("raft storage backend is sealed")
+		return nil, errors.New("raft storage backend is not initialized")
 	}
 
 	future := b.raft.GetConfiguration()
@@ -494,7 +500,7 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return errors.New("raft storage backend is sealed")
+		return errors.New("raft storage backend is not initialized")
 	}
 
 	commandBytes, err := proto.Marshal(command)

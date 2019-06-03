@@ -2,86 +2,124 @@ package shamir
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"errors"
 	"fmt"
-	"sync/atomic"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-// AWSKMSSeal represents credentials and Key information for the KMS Key used to
-// encryption and decryption
+// ShamirSeal implements the seal.Access interface for Shamir unseal
 type ShamirSeal struct {
-	currentKeyID *atomic.Value
-
 	logger log.Logger
+	aead   cipher.AEAD
 }
 
 // Ensure that we are implementing AutoSealAccess
 var _ seal.Access = (*ShamirSeal)(nil)
 
-// NewSeal creates a new AWSKMS seal with the provided logger
+// NewSeal creates a new ShamirSeal with the provided logger
 func NewSeal(logger log.Logger) *ShamirSeal {
-	k := &ShamirSeal{
-		logger:       logger,
-		currentKeyID: new(atomic.Value),
+	seal := &ShamirSeal{
+		logger: logger,
 	}
-	k.currentKeyID.Store("")
-	return k
+	return seal
 }
 
-// SetConfig sets the fields on the AWSKMSSeal object based on
+// SetConfig sets the fields on the ShamirSeal object based on
 // values from the config parameter.
-//
-// Order of precedence AWS values:
-// * Environment variable
-// * Value from Vault configuration file
-// * Instance metadata role (access key and secret key)
-// * Default values
-func (k *ShamirSeal) SetConfig(config map[string]string) (map[string]string, error) {
+func (s *ShamirSeal) SetConfig(config map[string]string) (map[string]string, error) {
 	// Map that holds non-sensitive configuration info
 	sealInfo := make(map[string]string)
+
+	if config == nil || config["key"] == "" {
+		return sealInfo, nil
+	}
+
+	keyB64 := config["key"]
+	key, err := base64.StdEncoding.DecodeString(keyB64)
+	if err != nil {
+		return sealInfo, err
+	}
+
+	aesCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return sealInfo, err
+	}
+
+	aead, err := cipher.NewGCM(aesCipher)
+	if err != nil {
+		return sealInfo, err
+	}
+
+	s.aead = aead
 
 	return sealInfo, nil
 }
 
 // Init is called during core.Initialize. No-op at the moment.
-func (k *ShamirSeal) Init(_ context.Context) error {
+func (s *ShamirSeal) Init(_ context.Context) error {
 	return nil
 }
 
 // Finalize is called during shutdown. This is a no-op since
-// AWSKMSSeal doesn't require any cleanup.
-func (k *ShamirSeal) Finalize(_ context.Context) error {
+// ShamirSeal doesn't require any cleanup.
+func (s *ShamirSeal) Finalize(_ context.Context) error {
 	return nil
 }
 
 // SealType returns the seal type for this particular seal implementation.
-func (k *ShamirSeal) SealType() string {
-	return seal.AWSKMS
+func (s *ShamirSeal) SealType() string {
+	return seal.Shamir
 }
 
 // KeyID returns the last known key id.
-func (k *ShamirSeal) KeyID() string {
-	return k.currentKeyID.Load().(string)
+func (s *ShamirSeal) KeyID() string {
+	return ""
 }
 
-// Encrypt is used to encrypt the master key using the the AWS CMK.
-// This returns the ciphertext, and/or any errors from this
-// call. This should be called after the KMS client has been instantiated.
-func (k *ShamirSeal) Encrypt(_ context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+// Encrypt is used to encrypt the plaintext using the aead held by the seal.
+func (s *ShamirSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
 	if plaintext == nil {
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
 
-	return
+	if s.aead == nil {
+		return nil, errors.New("aead is not configured in the seal")
+	}
+
+	iv, err := uuid.GenerateRandomBytes(12)
+	if err != nil {
+		return nil, err
+	}
+
+	ciphertext := s.aead.Seal(nil, iv, plaintext, nil)
+
+	return &physical.EncryptedBlobInfo{
+		Ciphertext: append(iv, ciphertext...),
+	}, nil
 }
 
-func (k *ShamirSeal) Decrypt(_ context.Context, e *physical.EncryptedBlobInfo) (pt []byte, err error) {
-	if e == nil {
+func (s *ShamirSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+	if in == nil {
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
 
-	return
+	if s.aead == nil {
+		return nil, errors.New("aead is not configured in the seal")
+	}
+
+	iv, ciphertext := in.Ciphertext[:12], in.Ciphertext[12:]
+
+	plaintext, err := s.aead.Open(nil, iv, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
 }

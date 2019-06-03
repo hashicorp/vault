@@ -344,7 +344,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 		}
 
 		// TODO: Make sure the serverID isn't already part of the cluster?
-
 		uuid, err := uuid.GenerateRandomBytes(16)
 		if err != nil {
 			return nil, err
@@ -361,10 +360,15 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 		}
 
 		pendingRaftPeers[serverID] = uuid
+		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"challenge": base64.StdEncoding.EncodeToString(protoBlob),
+				"challenge":   base64.StdEncoding.EncodeToString(protoBlob),
+				"seal_config": sealConfig,
 			},
 		}, nil
 	}

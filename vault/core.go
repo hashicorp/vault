@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -35,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -181,6 +183,14 @@ type Core struct {
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	raftUnseal bool
+
+	raftChallenge *physical.EncryptedBlobInfo
+
+	raftLeaderAddr string
+
+	raftLeaderBarrierConfig *SealConfig
 
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
@@ -829,7 +839,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !init {
+	if !init && !c.isRaftUnseal() {
 		return false, ErrNotInit
 	}
 
@@ -857,7 +867,57 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	if masterKey != nil {
+		if c.seal.BarrierType() == seal.Shamir {
+			_, err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
+				"key": base64.StdEncoding.EncodeToString(masterKey),
+			})
+			if err != nil {
+				return false, err
+			}
+		}
+
+		if c.isRaftUnseal() {
+			if err := c.joinRaftSendAnswer(ctx, c.raftLeaderAddr, c.raftChallenge, c.seal.GetAccess()); err != nil {
+				return false, err
+			}
+
+			go func() {
+				keyringFound := false
+				defer func() {
+					if keyringFound {
+						_, err := c.unsealInternal(ctx, masterKey)
+						if err != nil {
+							c.logger.Error("failed to unseal", "error", err)
+						}
+						// Reset the state
+						c.raftUnseal = false
+						c.raftChallenge = nil
+						c.raftLeaderBarrierConfig = nil
+						c.raftLeaderAddr = ""
+					}
+				}()
+				for {
+					keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
+					if err != nil {
+						c.logger.Error("failed to list physical keys", "error", err)
+						return
+					}
+					if strutil.StrListContains(keys, "keyring") {
+						keyringFound = true
+						return
+					}
+					select {
+					case <-time.After(5 * time.Second):
+					}
+				}
+			}()
+			// Return Vault as sealed since unsealing happens in background
+			// which gets delayed until the data from the leader is streamed to
+			// the follower.
+			return true, nil
+		}
 		return c.unsealInternal(ctx, masterKey)
 	}
 
@@ -889,9 +949,15 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 	var config *SealConfig
 	var err error
-	if seal.RecoveryKeySupported() && (useRecoveryKeys || c.migrationSeal != nil) {
+
+	switch {
+	case seal.RecoveryKeySupported() && (useRecoveryKeys || c.migrationSeal != nil):
 		config, err = seal.RecoveryConfig(ctx)
-	} else {
+	case c.isRaftUnseal():
+		// Ignore follower's seal config and refer to leader's barrier
+		// configuration.
+		config = c.raftLeaderBarrierConfig
+	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
 	if err != nil {
@@ -1081,9 +1147,6 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return false, err
 	}
-	if c.logger.IsInfo() {
-		c.logger.Info("vault is unsealed")
-	}
 
 	if err := preUnsealInternal(ctx, c); err != nil {
 		return false, err
@@ -1132,6 +1195,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 	// Success!
 	atomic.StoreUint32(c.sealed, 0)
+
+	if c.logger.IsInfo() {
+		c.logger.Info("vault is unsealed")
+	}
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
