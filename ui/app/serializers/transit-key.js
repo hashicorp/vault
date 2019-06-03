@@ -26,7 +26,14 @@ export default DS.RESTSerializer.extend({
     let transformedPayload = { [modelName]: secrets };
     // just return the single object because ember is picky
     if (requestType === 'queryRecord') {
-      transformedPayload = { [modelName]: secrets[0] };
+      let model = secrets[0];
+      // timestamps for these two are in seconds...
+      if (model.type === 'aes256-gcm96' || model.type === 'chacha20-poly1305') {
+        for (let version in model.keys) {
+          model.keys[version] = model.keys[version] * 1000;
+        }
+      }
+      transformedPayload = { [modelName]: model };
     }
 
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
