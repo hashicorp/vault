@@ -114,7 +114,41 @@ export default Component.extend({
       .call(yAxis)
       .select('text');
 
-    const bars = svgContainer.selectAll('.bar').data(dataIn);
+    const defs = svgContainer.append('defs');
+
+    const bgGradient = defs
+      .append('linearGradient')
+      .attr('id', 'bg-gradient')
+      .attr('gradientTransform', 'rotate(90)');
+
+    bgGradient
+      .append('stop')
+      // blue
+      .attr('stop-color', '#1563ff')
+      .attr('stop-opacity', '0.8')
+      .attr('offset', '0%');
+    bgGradient
+      .append('stop')
+      //  grey
+      .attr('stop-color', '#1563ff')
+      .attr('stop-opacity', '0.3')
+      .attr('offset', '100%');
+
+    const clipPath = svgContainer.append('g').attr('clip-path', `url(#clip-bar-rects)`);
+
+    clipPath
+      .append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', width)
+      .attr('height', height)
+      .style('fill', 'url(#bg-gradient)');
+
+    const bars = defs
+      .append('clipPath')
+      .attr('id', 'clip-bar-rects')
+      .selectAll('.bar')
+      .data(dataIn);
 
     bars
       // since the initial selection is empty (there are no bar elements yet), instantiate

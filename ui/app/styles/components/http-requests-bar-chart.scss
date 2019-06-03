@@ -1,10 +1,6 @@
 .http-requests-bar-chart {
   overflow: inherit;
 
-  & .bar {
-    fill: $blue;
-  }
-
   .domain,
   .tick > line {
     stroke: $grey;
