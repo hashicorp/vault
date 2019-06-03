@@ -4,7 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './http-requests-table.md';
 
 
-storiesOf('HttpRequestsTable/', module)
+storiesOf('HttpRequests/Table/', module)
   .addParameters({ options: { showPanel: true } })
   .add(`HttpRequestsTable`, () => ({
     template: hbs`
