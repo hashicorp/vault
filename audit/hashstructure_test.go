@@ -315,7 +315,7 @@ func TestHashWalker(t *testing.T) {
 	for _, tc := range cases {
 		err := HashStructure(tc.Input, func(string) string {
 			return replaceText
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
 		}
@@ -369,7 +369,7 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	for _, tc := range cases {
 		err := HashStructure(tc.Input, func(s string) string {
 			return s + replaceText
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("err: %v\n\n%#v", err, tc.Input)
 		}

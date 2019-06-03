@@ -80,8 +80,12 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 		return nil, nil
 	}
 
-	newData := make(map[string]interface{}, len(data))
-	for k, v := range data {
+	copy, err := copystructure.Copy(data)
+	if err != nil {
+		return nil, err
+	}
+	newData := copy.(map[string]interface{})
+	for k, v := range newData {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
 				ValueHasher: fn,
@@ -90,28 +94,11 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 				return nil, err
 			}
 			newData[k] = json.RawMessage(marshaled)
-		} else if strutil.StrListContains(nonHMACDataKeys, k) {
-			newData[k] = v
-		} else if t, ok := v.(time.Time); ok {
-			newData[k] = t.Format(time.RFC3339Nano)
-		} else {
-			r := reflect.ValueOf(v)
-			switch r.Kind() {
-			case reflect.Bool, reflect.Chan, reflect.Func, reflect.Int, reflect.Invalid:
-				newData[k] = v
-			case reflect.String:
-				newData[k] = fn(r.String())
-			default:
-				v, err := copystructure.Copy(v)
-				if err != nil {
-					return nil, err
-				}
-				if err := HashStructure(v, fn); err != nil {
-					return nil, err
-				}
-				newData[k] = v
-			}
 		}
+	}
+
+	if err := HashStructure(newData, fn, nonHMACDataKeys); err != nil {
+		return nil, err
 	}
 
 	return newData, nil
@@ -179,8 +166,8 @@ func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback) error {
-	walker := &hashWalker{Callback: cb}
+func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) error {
+	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	return reflectwalk.Walk(s, walker)
 }
 
@@ -196,7 +183,8 @@ type hashWalker struct {
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
 	Callback HashCallback
-
+	// IgnoreKeys are the keys that wont have the HashCallback applied
+	IgnoredKeys []string
 	// MapElem appends the key itself (not the reflect.Value) to key.
 	// The last element in key is the most recently entered map key.
 	// Since Exit pops the last element of key, only nesting to another
@@ -332,6 +320,12 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.String {
+		return nil
+	}
+
+	// See if the current key is part of the ignored keys
+	currentKey := w.key[len(w.key)-1]
+	if strutil.StrListContains(w.IgnoredKeys, currentKey) {
 		return nil
 	}
 
