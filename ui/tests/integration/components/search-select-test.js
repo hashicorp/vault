@@ -70,7 +70,7 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options[0].text, component.selectedOptionText, 'first object in list is focused');
   });
 
-  test('it filters options when text is entered', async function(assert) {
+  test('it filters options and adds option to create new item when text is entered', async function(assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
@@ -78,7 +78,11 @@ module('Integration | Component | search select', function(hooks) {
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
     await typeInSearch('n');
-    assert.equal(component.options.length, 2, 'shows two options');
+    assert.equal(component.options.length, 3, 'list still shows three options, including the add option');
+    await typeInSearch('ni');
+    assert.equal(component.options.length, 2, 'list shows two options, including the add option');
+    await typeInSearch('nine');
+    assert.equal(component.options.length, 1, 'list shows one option');
   });
 
   test('it moves option from drop down to list when clicked', async function(assert) {
@@ -122,6 +126,27 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options.length, 3, 'shows all options');
   });
 
+  test('it adds created item to list items on create and reinserts into drop down on delete', async function(assert) {
+    const models = ['identity/entity'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await clickTrigger();
+    assert.equal(component.options.length, 3, 'shows all options');
+    await typeInSearch('n');
+    assert.equal(component.options.length, 3, 'list still shows three options, including the add option');
+    await typeInSearch('ni');
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.ok(this.onChange.calledOnce);
+    assert.ok(this.onChange.calledWith(['ni']));
+    await component.deleteButtons.objectAt(0).click();
+    assert.equal(component.selectedOptions.length, 0, 'there are no selected options');
+    assert.ok(this.onChange.calledWith([]));
+    await clickTrigger();
+    assert.equal(component.options.length, 4, 'shows all options, including created option');
+  });
+
   test('it uses fallback component if endpoint 403s', async function(assert) {
     const models = ['policy/rgp'];
     this.set('models', models);
@@ -140,8 +165,8 @@ module('Integration | Component | search select', function(hooks) {
       hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
     );
     await clickTrigger();
-    assert.equal(component.options.length, 1, 'has the disabled no results option');
-    assert.equal(component.options[0].text, 'No results found', 'text of option shows No results found');
+    assert.equal(component.options.length, 1, 'prompts for search to add new options');
+    assert.equal(component.options.objectAt(0).text, 'Type to search', 'text of option shows Type to search');
   });
 
   test('it shows both name and smaller id for identity endpoints', async function(assert) {

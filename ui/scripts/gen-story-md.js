@@ -13,6 +13,7 @@ const component = name
 const options = {
   files: inputFile,
   template: fs.readFileSync('./lib/story-md.hbs', 'utf8'),
+  'example-lang': 'js',
 };
 let md = jsdoc2md.renderSync(options);
 
