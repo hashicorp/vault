@@ -1,4 +1,6 @@
 .http-requests-bar-chart {
+  overflow: inherit;
+
   & .bar {
     fill: $blue;
   }

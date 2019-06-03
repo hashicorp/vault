@@ -98,7 +98,7 @@ export default Component.extend({
       // what % of total width it should reserve for whitespace between the bars
       .paddingInner(0.04);
 
-    const yAxis = d3Axis.axisLeft(yScale).ticks(3, ',.0f');
+    const yAxis = d3Axis.axisLeft(yScale).ticks(3, '.0s');
     const xAxis = d3Axis.axisBottom(xScale).tickFormat(d3TimeFormat.timeFormat('%b %Y'));
 
     const xAxis_g = svgContainer
@@ -116,7 +116,6 @@ export default Component.extend({
       .select('text');
 
     const bars = svgContainer.selectAll('.bar').data(dataIn);
-    const labels = svgContainer.selectAll('.label').data(dataIn);
 
     bars
       // since the initial selection is empty (there are no bar elements yet), instantiate
@@ -130,23 +129,5 @@ export default Component.extend({
       .attr('x', counter => xScale(counter.start_time))
       // 150 is the height of the svg
       .attr('y', counter => yScale(counter.total));
-
-    labels
-      .enter()
-      .append('text')
-      .attr('class', 'label')
-      .attr('x', counter => xScale(counter.start_time) + xScale.bandwidth() / 2)
-      .attr('y', counter => yScale(counter.total) + 15)
-      .attr('dy', '.75em')
-      .text(counter => counter.total)
-      .style('margin', 15)
-      .style('text-anchor', 'middle')
-      .style('fill', '#ccc')
-      .append('rect')
-      .attr('width', 1)
-      .attr('height', 5)
-      .attr('x', counter => xScale(counter.start_time) + xScale.bandwidth() / 2)
-      .attr('y', counter => height)
-      .style('fill', 'blue');
   },
 });
