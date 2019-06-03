@@ -40,6 +40,10 @@
     }
   },
   "devDependencies": {
+    "d3-axis": "^1.0.12",
+    "d3-scale": "^3.0.0",
+    "d3-selection": "^1.4.0",
+    "d3-time-format": "^2.1.3",
     "@ember/jquery": "^0.5.2",
     "@ember/optional-features": "^0.6.3",
     "@hashicorp/structure-icons": "^1.3.0",
@@ -86,7 +90,6 @@
     "ember-concurrency": "^0.10.0",
     "ember-concurrency-test-waiter": "^0.3.1",
     "ember-copy": "^1.0.0",
-    "ember-d3": "^0.5.1",
     "ember-data": "~3.4.0",
     "ember-data-model-fragments": "^3.3.0",
     "ember-engines": "^0.7.0",

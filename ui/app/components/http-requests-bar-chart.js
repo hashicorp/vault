@@ -2,7 +2,6 @@ import Component from '@ember/component';
 import d3 from 'd3-selection';
 import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
-import d3Format from 'd3-format';
 import d3TimeFormat from 'd3-time-format';
 
 /**
