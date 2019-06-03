@@ -97,20 +97,20 @@ export default Component.extend({
       // what % of total width it should reserve for whitespace between the bars
       .paddingInner(0.04);
 
-    const yAxis = d3Axis.axisLeft(yScale).ticks(3, '.0s');
+    const yAxis = d3Axis.axisRight(yScale).ticks(3, '.0s');
     const xAxis = d3Axis.axisBottom(xScale).tickFormat(d3TimeFormat.timeFormat('%b %Y'));
 
     const xAxis_g = svgContainer
       .append('g')
       .attr('class', 'x axis')
-      .attr('transform', 'translate(0,' + height + ')')
+      .attr('transform', `translate(0,${height})`)
       .call(xAxis)
       .select('text');
 
     const yAxis_g = svgContainer
       .append('g')
       .attr('class', 'y axis')
-      .attr('transform', 'translate(0,0)')
+      .attr('transform', `translate(${width}, 0)`)
       .call(yAxis)
       .select('text');
 
