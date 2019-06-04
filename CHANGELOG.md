@@ -5,11 +5,10 @@ CHANGES:
  * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
    will now be preferred over regions set in the enclosing environment.
    This is a _breaking_ change.
- * audit: Several more values in audit logs now are omitted if they are empty.
-   This helps reduce the size of audit log entries by not reproducing keys in
-   each entry that commonly don't contain any value, which can help in cases
-   where audit log entries are above the maximum UDP packet size and others.
-   See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
+ * audit: All values in audit logs now are omitted if they are empty.  This
+   helps reduce the size of audit log entries by not reproducing keys in each
+   entry that commonly don't contain any value, which can help in cases where
+   audit log entries are above the maximum UDP packet size and others.
  * backends: both PeriodicFunc and WALRollback functions will be called if 
    both are provided. Previously WALRollback would only be called if PeriodicFunc 
    was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
@@ -28,6 +27,7 @@ FEATURES:
 
 IMPROVEMENTS: 
 
+ * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
@@ -38,6 +38,8 @@ IMPROVEMENTS:
    Icon component [GH-6736]
  * ui: Lazy loading parts of the application so that the total initial payload is 
    smaller [GH-6718]
+ * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
+   is one [GH-6759]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
@@ -60,6 +62,9 @@ BUG FIXES:
    new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
+ * ui: fix web cli parsing when using quoted values [GH-6755]
+ * ui: fix a namespace workflow mapping identities from external namespaces by allowing
+   arbitrary input in search-select component [GH-6728]
 
 ## 1.1.2 (April 18th, 2019)
 

@@ -291,7 +291,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 ```json
 {
     "role": "dev-role",
-    "redirect_uri": "https://vault.myco.com:8200/vault/ui/auth/jwt/oidc/callback"
+    "redirect_uri": "https://vault.myco.com:8200/ui/vault/auth/jwt/oidc/callback"
 }
 ```
 
@@ -301,7 +301,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://127.0.0.1:8200/v1/auth/oidc/auth_url
+    https://127.0.0.1:8200/v1/auth/jwt/oidc/auth_url
 ```
 
 ### Sample Response
@@ -310,7 +310,7 @@ $ curl \
 {
   "request_id": "c701169c-64f8-26cc-0315-078e8c3ce897",
   "data": {
-    "auth_url": "https://myco.auth0.com/authorize?client_id=r3qXcK2bezU3Sbmh0K16fatW6&nonce=851b69a9bfa5a6a5668111314414e3687891a599&redirect_uri=http%3A%2F%2Flocalhost%3A8300%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=1011e726d24960e09cfca2e04b36b38593cb6a22"
+    "auth_url": "https://myco.auth0.com/authorize?client_id=r3qXcK2bezU3Sbmh0K16fatW6&nonce=851b69a9bfa5a6a5668111314414e3687891a599&redirect_uri=https%3A%2F%2Fvault.myco.com3A8200%2Fui%2Fvault%2Fauth%2Fjwt%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=1011e726d24960e09cfca2e04b36b38593cb6a22"
   },
   ...
 }
