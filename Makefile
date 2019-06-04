@@ -106,8 +106,6 @@ endif
 githooks:
 	@if [ -d .git/hooks ]; then $(INSTALL_GIT_HOOKS); fi
 
-
-
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep: fmtcheck githooks
