@@ -60,7 +60,11 @@ export default Component.extend({
     let formattedOptions = this.selectedOptions.map(option => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
-      return { id: option, name: matchingOption.name, searchText: matchingOption.searchText };
+      return {
+        id: option,
+        name: matchingOption ? matchingOption.name : option,
+        searchText: matchingOption ? matchingOption.searchText : option,
+      };
     });
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
