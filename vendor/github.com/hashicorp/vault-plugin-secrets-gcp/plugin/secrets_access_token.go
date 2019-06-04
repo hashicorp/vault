@@ -51,11 +51,6 @@ func (b *backend) pathAccessToken(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) secretAccessTokenResponse(ctx context.Context, s logical.Storage, rs *RoleSet) (*logical.Response, error) {
-	iamC, err := b.IAMClient(s)
-	if err != nil {
-		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
-	}
-
 	if rs.TokenGen == nil || rs.TokenGen.KeyName == "" {
 		return logical.ErrorResponse("invalid role set has no service account key, must be updated (path roleset/%s/rotate-key) before generating new secrets", rs.Name), nil
 	}
