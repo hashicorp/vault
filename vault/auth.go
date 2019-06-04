@@ -262,7 +262,17 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 	viewPath := entry.ViewPath()
 	switch {
 	case !updateStorage:
-	case c.IsDRSecondary(), entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+		// Don't attempt to clear data, replication will handle this
+	case c.IsDRSecondary():
+		// If we are a dr secondary we want to clear the view, but the provided
+		// view is marked as read only. We use the barrier here to get around
+		// it.
+		if err := logical.ClearView(ctx, NewBarrierView(c.barrier, viewPath)); err != nil {
+			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
+			return err
+		}
+
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(ctx, view); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
