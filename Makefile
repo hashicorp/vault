@@ -97,9 +97,16 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# githooks installs git hooks by linking .hooks/* to .git/hooks/
+ifeq ($(OS),Windows_NT)
+INSTALL_GIT_HOOKS := cp .hooks/* .git/hooks/
+else
+INSTALL_GIT_HOOKS := for H in .hooks/*; do ln -sf ../../$$H .git/hooks/; done
+endif
+
 githooks:
-	@if [ -d .git/hooks ]; then for H in .hooks/*; do ln -sf ../../$$H .git/hooks/; done; fi
+	@if [ -d .git/hooks ]; then $(INSTALL_GIT_HOOKS); fi
+
+
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
