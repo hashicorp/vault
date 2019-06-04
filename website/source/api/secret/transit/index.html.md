@@ -1257,7 +1257,7 @@ $ curl \
 
 This endpoint is used to configure the transit engine's cache. Note that configuration
 changes will not be applied until the transit plugin is reloaded which can be achieved
- using the [`/sys/plugins/reload/backend`](../../system/plugins-reload-backend.html.md#reload-plugins) endpoint.
+ using the [`/sys/plugins/reload/backend`][sys-plugin-reload-backend] endpoint.
 
 | Method   | Path                       |
 | :------------------------- | :--------------------- |
@@ -1311,3 +1311,5 @@ $ curl \
     "cache_size": 0
   },
 ```
+
+[sys-plugin-reload-backend]: /api/system/plugins-reload-backend.html.md#reload-plugins
