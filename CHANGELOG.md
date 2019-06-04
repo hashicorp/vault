@@ -2,14 +2,14 @@
 
 CHANGES:
 
- * Due to underlying changes in Go version 1.12, Vault is now stricter about
-   what characters it will accept in path names. Whereas before it would filter
-   out unprintable characters (and this could be turned off), control
-   characters and other invalid characters are now rejected within Go's HTTP
-   library before the request is passed to Vault, and this cannot be disabled.
-   To continue using these (e.g. for already-written paths), they must be
-   properly percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes `%00`, and
-   so on).
+ * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
+   stricter about what characters it will accept in path names. Whereas before
+   it would filter out unprintable characters (and this could be turned off),
+   control characters and other invalid characters are now rejected within Go's
+   HTTP library before the request is passed to Vault, and this cannot be
+   disabled. To continue using these (e.g. for already-written paths), they
+   must be properly percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes
+   `%00`, and so on).
  * The user-configured regions on the AWSKMS seal stanza will now be preferred
    over regions set in the enclosing environment.  This is a _breaking_ change.
  * All values in audit logs now are omitted if they are empty.  This helps
