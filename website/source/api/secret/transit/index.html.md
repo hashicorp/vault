@@ -1312,4 +1312,4 @@ $ curl \
   },
 ```
 
-[sys-plugin-reload-backend]: /api/system/plugins-reload-backend.html.md#reload-plugins
+[sys-plugin-reload-backend]: /api/system/plugins-reload-backend.html#reload-plugins
