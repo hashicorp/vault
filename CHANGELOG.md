@@ -34,6 +34,8 @@ BUG FIXES:
  * replication: Fix longer than necessary WAL replay during an initial reindex
  * secrets/ad: Make time buffer configurable [AD-35]
  * secrets/gcp: Check for nil config when getting credentials [SGCP-35]
+ * secrets/gcp: Fix error checking in some cases where the returned value could
+   be 403 instead of 404 [SGCP-37]
  * secrets/gcpkms: Disable key rotation when deleting a key [GCPKMS-10]
  * storage/consul: recognize `https://` address even if schema not specified
    [GH-6602]
