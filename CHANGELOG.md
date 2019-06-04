@@ -2,24 +2,31 @@
 
 CHANGES:
 
- * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
-   will now be preferred over regions set in the enclosing environment.
-   This is a _breaking_ change.
- * audit: All values in audit logs now are omitted if they are empty.  This
-   helps reduce the size of audit log entries by not reproducing keys in each
-   entry that commonly don't contain any value, which can help in cases where
-   audit log entries are above the maximum UDP packet size and others.
- * backends: both PeriodicFunc and WALRollback functions will be called if 
-   both are provided. Previously WALRollback would only be called if PeriodicFunc 
-   was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
+ * Due to underlying changes in Go version 1.12, Vault is now stricter about
+   what characters it will accept in path names. Whereas before it would filter
+   out unprintable characters (and this could be turned off), control
+   characters and other invalid characters are now rejected within Go's HTTP
+   library before the request is passed to Vault, and this cannot be disabled.
+   To continue using these (e.g. for already-written paths), they must be
+   properly percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes `%00`, and
+   so on).
+ * The user-configured regions on the AWSKMS seal stanza will now be preferred
+   over regions set in the enclosing environment.  This is a _breaking_ change.
+ * All values in audit logs now are omitted if they are empty.  This helps
+   reduce the size of audit log entries by not reproducing keys in each entry
+   that commonly don't contain any value, which can help in cases where audit
+   log entries are above the maximum UDP packet size and others.
+ * Both PeriodicFunc and WALRollback functions will be called if both are
+   provided. Previously WALRollback would only be called if PeriodicFunc was
+   not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for
    details.
- * Go Modules change: Vault now uses Go Modules to manage dependencies. As a
-   result to both reduce transitive dependencies for API library users and
-   plugin authors, and to work around various conflicts, we have moved various
-   helpers around, mostly under an `sdk/` submodule. A couple of functions have
-   also moved from plugin helper code to the `api/` submodule. If you are a
-   plugin author, take a look at some of our official plugins and the paths
-   they are importing for guidance.
+ * Vault now uses Go's official dependency management system, Go Modules, to
+   manage dependencies. As a result to both reduce transitive dependencies for
+   API library users and plugin authors, and to work around various conflicts,
+   we have moved various helpers around, mostly under an `sdk/` submodule. A
+   couple of functions have also moved from plugin helper code to the `api/`
+   submodule. If you are a plugin author, take a look at some of our official
+   plugins and the paths they are importing for guidance.
 
 FEATURES:
 
