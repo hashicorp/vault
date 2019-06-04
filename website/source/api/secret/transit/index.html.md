@@ -1308,7 +1308,7 @@ $ curl \
 
 ```json
   "data": {
-    "cache_size": 0
+    "size": 0
   },
 ```
 

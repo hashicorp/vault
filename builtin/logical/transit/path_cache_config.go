@@ -88,7 +88,7 @@ func (b *backend) pathCacheConfigRead(ctx context.Context, req *logical.Request,
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"cache_size": storedCacheSize,
+			"size": storedCacheSize,
 		},
 	}
 
