@@ -16,6 +16,12 @@ export default DS.RESTSerializer.extend({
     }
     assign(payload, payload.data);
     delete payload.data;
+    // timestamps for these two are in seconds...
+    if (payload.type === 'aes256-gcm96' || payload.type === 'chacha20-poly1305') {
+      for (let version in payload.keys) {
+        payload.keys[version] = payload.keys[version] * 1000;
+      }
+    }
     return [payload];
   },
 
@@ -26,14 +32,7 @@ export default DS.RESTSerializer.extend({
     let transformedPayload = { [modelName]: secrets };
     // just return the single object because ember is picky
     if (requestType === 'queryRecord') {
-      let model = secrets[0];
-      // timestamps for these two are in seconds...
-      if (model.type === 'aes256-gcm96' || model.type === 'chacha20-poly1305') {
-        for (let version in model.keys) {
-          model.keys[version] = model.keys[version] * 1000;
-        }
-      }
-      transformedPayload = { [modelName]: model };
+      transformedPayload = { [modelName]: secrets[0] };
     }
 
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
