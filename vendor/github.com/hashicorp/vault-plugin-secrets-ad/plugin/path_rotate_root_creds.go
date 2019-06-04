@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 	"math"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 func (b *backend) pathRotateCredentials() *framework.Path {
