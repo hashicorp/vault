@@ -360,11 +360,11 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		targets := make(map[string]bool)
 		for _, metadataKey := range claimMappings {
 			if strutil.StrListContains(reservedMetadata, metadataKey) {
-				return logical.ErrorResponse("metadata key '%s' is reserved and may not be a mapping destination", metadataKey), nil
+				return logical.ErrorResponse("metadata key %q is reserved and may not be a mapping destination", metadataKey), nil
 			}
 
 			if targets[metadataKey] {
-				return logical.ErrorResponse("multiple keys are mapped to metadata key '%s'", metadataKey), nil
+				return logical.ErrorResponse("multiple keys are mapped to metadata key %q", metadataKey), nil
 			}
 			targets[metadataKey] = true
 		}
@@ -401,7 +401,8 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	if roleType != "oidc" {
 		if len(role.BoundAudiences) == 0 &&
 			len(role.BoundCIDRs) == 0 &&
-			role.BoundSubject == "" {
+			role.BoundSubject == "" &&
+			len(role.BoundClaims) == 0 {
 			return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
 		}
 	}

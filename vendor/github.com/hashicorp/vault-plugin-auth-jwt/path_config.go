@@ -76,8 +76,8 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 }
 
 func (b *jwtAuthBackend) config(ctx context.Context, s logical.Storage) (*jwtConfig, error) {
-	b.l.RLock()
-	defer b.l.RUnlock()
+	b.l.Lock()
+	defer b.l.Unlock()
 
 	if b.cachedConfig != nil {
 		return b.cachedConfig, nil

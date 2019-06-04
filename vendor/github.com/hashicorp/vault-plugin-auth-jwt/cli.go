@@ -80,6 +80,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if err != nil {
 		return nil, err
 	}
+	defer listener.Close()
 
 	// Open the default browser to the callback URL.
 	fmt.Fprintf(os.Stderr, "Complete the login via your OIDC provider. Launching browser to:\n\n    %s\n\n\n", authURL)
