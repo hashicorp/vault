@@ -121,7 +121,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:       false,
+		tainted:       mountEntry.Tainted,
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
