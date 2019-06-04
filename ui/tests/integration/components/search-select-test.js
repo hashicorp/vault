@@ -169,6 +169,16 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options.objectAt(0).text, 'Type to search', 'text of option shows Type to search');
   });
 
+  test('it shows items not in the returned response', async function(assert) {
+    const models = ['test'];
+    this.set('models', models);
+    this.set('inputValue', ['test', 'two']);
+    await render(
+      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
+    );
+    assert.equal(component.selectedOptions.length, 2, 'renders inputOptions as selectedOptions');
+  });
+
   test('it shows both name and smaller id for identity endpoints', async function(assert) {
     const models = ['identity/entity'];
     this.set('models', models);
