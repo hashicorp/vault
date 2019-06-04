@@ -25,6 +25,8 @@ BUG FIXES:
  * core: Fix issue where some OpenAPI parameters were incorrectly listed as
    being sent as a header [GH-6679]
  * core: Fix issue that would allow duplicate mount names to be used [GH-6771]
+ * namespaces: Fix behavior when using `root` instead of `root/` as the
+   namespace header value
  * pki: fix a panic when a client submits a null value [GH-5679]
  * replication: Properly update mount entry cache on a secondary to apply all
    new values after a tune
