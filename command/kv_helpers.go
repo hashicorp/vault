@@ -5,11 +5,39 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
+
+// kvData is a helper struct for `listRecursive'.
+type kvData struct {
+	path   string      // Name (path) of the secret.
+	secret *api.Secret // Data belonging to the secret (sub-paths too).
+	err    error       // Errors when fetching the secret (if any).
+}
+
+// kvRecursiveListParams contains a list of parameters
+// to be passed to `kvListRecursive'.
+type kvListRecursiveParams struct {
+	v2     *bool       // Flag to store if the API is v2.
+	client *api.Client // Client object to use for fetching secrets.
+
+	data   []*kvData      // List of all the secrets fetched recursively.
+	depth  int32          // Depth of the recursion.
+	track  int32          // Helper variable to track the recursion depth.
+	filter *regexp.Regexp // Filter to be applied for matching keys.
+
+	wg  sync.WaitGroup // Keep track of launched goroutines.
+	sem chan int32     // Semaphone for throttling goroutines.
+	mux sync.Mutex     // Mutex to append entries to `data'.
+	tck *time.Ticker   // Avoid busy loops when polling for goroutines.
+}
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
 	r := client.NewRequest("GET", "/v1/"+path)
@@ -115,6 +143,10 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 	}
 }
 
+func removePrefixFromVKVPath(p, apiPrefix string) string {
+	return strings.Replace(p, apiPrefix, "", 1)
+}
+
 func getHeaderForMap(header string, data map[string]interface{}) string {
 	maxKey := 0
 	for k := range data {
@@ -149,4 +181,69 @@ func kvParseVersionsFlags(versions []string) []string {
 	}
 
 	return versionsOut
+}
+
+// kvListRecursive is a helper function for listing paths
+// upto a given depth, recursively.
+func kvListRecursive(r *kvListRecursiveParams, base string, sub []interface{}) {
+	defer func() {
+		// Increment the go-routine tracker.
+		atomic.AddInt32(&r.track, 1)
+
+		// Decrement the wait-group count.
+		r.wg.Done()
+	}()
+
+	// Wait in the queue.
+	r.sem <- int32(1)
+
+	// No need to recursively list values that don't have any sub-paths.
+	if !strings.HasSuffix(base, "/") {
+		return
+	}
+
+	// Strip trailing slash, because we want to append
+	// it with each of the children's paths.
+	base = ensureNoTrailingSlash(base)
+
+	// Calculate the recursion depth of this call.
+	d := int32(strings.Count(base, "/"))
+	if *r.v2 {
+		d--
+	}
+
+	// Base case for return.
+	if len(sub) <= 0 || (r.depth != -1 && d >= r.depth) {
+		return
+	}
+
+	var tmp string
+
+	// For each child, construct the new path and call recursively.
+	for _, p := range sub {
+		path := fmt.Sprintf("%s/%s", base, p)
+		secret, err := r.client.Logical().List(path)
+
+		tmp = path
+		if *r.v2 {
+			tmp = removePrefixFromVKVPath(tmp, "metadata/")
+		}
+
+		// Append the entry (that matches the filter) to the list.
+		if r.filter.MatchString(tmp) {
+			r.mux.Lock()
+			r.data = append(r.data, &kvData{tmp, secret, err})
+			r.mux.Unlock()
+		}
+
+		if err != nil {
+			continue
+		}
+
+		// Only call if there are children.
+		if s, ok := extractListData(secret); ok {
+			r.wg.Add(1)
+			go kvListRecursive(r, path, s)
+		}
+	}
 }
