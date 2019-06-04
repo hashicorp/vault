@@ -11,16 +11,19 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * api: Return the EntityID in the secret output [GH-6819]
+ * api: Return the Entity ID in the secret output [GH-6819]
+ * auth/jwt: Consider bound claims when considering if there is at least one
+   bound constraint [JWT-49]
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
  * cli: Add deprecated stored-shares flag back to the init command [GH-6677]
  * cli: Fix a panic when the KV command would return no data [GH-6675]
  * cli: Fix issue causing CLI list operations to not return proper format when 
    there is an empty response [GH-6776]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
- * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
- * core: Fix issue where some OpenAPI parameters were incorrectly listed as being sent
-   as a header [GH-6679]
+ * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of
+   endpoints [GH-6654]
+ * core: Fix issue where some OpenAPI parameters were incorrectly listed as
+   being sent as a header [GH-6679]
  * core: Fix issue that would allow duplicate mount names to be used [GH-6771]
  * pki: fix a panic when a client submits a null value [GH-5679]
  * replication: Properly update mount entry cache on a secondary to apply all
@@ -29,20 +32,26 @@ BUG FIXES:
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
  * replication: Fix longer than necessary WAL replay during an initial reindex
- * replication: Fix error during mount filter invalidation on DR secondary clusters
- * storage/consul: recognize `https://` address even if schema not specified [GH-6602]
- * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
-   constant switching of the active node [GH-6637]
- * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was
-   received from the DynamoDB API [GH-6640]
+ * replication: Fix error during mount filter invalidation on DR secondary
+   clusters
+ * secrets/ad: Make time buffer configurable [AD-35]
+ * secrets/gcp: Check for nil config when getting credentials [SGCP-35]
+ * secrets/gcpkms: Disable key rotation when deleting a key [GCPKMS-10]
+ * storage/consul: recognize `https://` address even if schema not specified
+   [GH-6602]
+ * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA)
+   could cause constant switching of the active node [GH-6637]
+ * storage/dynamodb: Eliminate a high-CPU condition that could occur if an
+   error was received from the DynamoDB API [GH-6640]
  * storage/gcs: Correctly use configured chunk size values [GH-6655]
- * storage/mssql: Use the correct database when pre-created schemas exist [GH-6356]
+ * storage/mssql: Use the correct database when pre-created schemas exist
+   [GH-6356]
  * ui: Fix issue with select arrows on drop down menus [GH-6627]
  * ui: Fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
  * ui: Fix web cli parsing when using quoted values [GH-6755]
- * ui: Fix a namespace workflow mapping identities from external namespaces by allowing
-   arbitrary input in search-select component [GH-6728]
+ * ui: Fix a namespace workflow mapping identities from external namespaces by
+   allowing arbitrary input in search-select component [GH-6728]
 
 
 ## 1.1.2 (April 18th, 2019)
@@ -81,7 +90,7 @@ SECURITY:
 CHANGES:
 
  * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
- * core/acl:  New ordering defines which policy wins when there are multiple 
+ * core/acl: New ordering defines which policy wins when there are multiple 
    inexact matches and at least one path contains `+`. `+*` is now illegal in
    policy paths. The previous behavior simply selected any matching
    segment-wildcard path that matched. [GH-6532]
