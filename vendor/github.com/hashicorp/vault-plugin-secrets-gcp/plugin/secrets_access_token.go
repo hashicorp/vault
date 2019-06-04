@@ -3,7 +3,6 @@ package gcpsecrets
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/iam/v1"
 )
 
 func pathSecretAccessToken(b *backend) *framework.Path {
@@ -42,11 +40,11 @@ func (b *backend) pathAccessToken(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exists", rsName)), nil
+		return logical.ErrorResponse("role set '%s' does not exists", rsName), nil
 	}
 
 	if rs.SecretType != SecretTypeAccessToken {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' cannot generate access tokens (has secret type %s)", rsName, rs.SecretType)), nil
+		return logical.ErrorResponse("role set '%s' cannot generate access tokens (has secret type %s)", rsName, rs.SecretType), nil
 	}
 
 	return b.secretAccessTokenResponse(ctx, req.Storage, rs)
@@ -58,19 +56,13 @@ func (b *backend) secretAccessTokenResponse(ctx context.Context, s logical.Stora
 		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
 	}
 
-	// Verify account still exists
-	_, err = rs.getServiceAccount(iamC)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not get role set service account: %v", err)), nil
-	}
-
 	if rs.TokenGen == nil || rs.TokenGen.KeyName == "" {
-		return logical.ErrorResponse(fmt.Sprintf("invalid role set has no service account key, must be updated (path roleset/%s/rotate-key) before generating new secrets", rs.Name)), nil
+		return logical.ErrorResponse("invalid role set has no service account key, must be updated (path roleset/%s/rotate-key) before generating new secrets", rs.Name), nil
 	}
 
-	token, err := rs.TokenGen.getAccessToken(ctx, iamC)
+	token, err := rs.TokenGen.getAccessToken(ctx)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not generate token: %v", err)), nil
+		return logical.ErrorResponse("unable to generate token - make sure your roleset service account and key are still valid: %v", err), nil
 	}
 
 	return &logical.Response{
@@ -82,15 +74,7 @@ func (b *backend) secretAccessTokenResponse(ctx context.Context, s logical.Stora
 	}, nil
 }
 
-func (tg *TokenGenerator) getAccessToken(ctx context.Context, iamAdmin *iam.Service) (*oauth2.Token, error) {
-	key, err := iamAdmin.Projects.ServiceAccounts.Keys.Get(tg.KeyName).Do()
-	if err != nil {
-		return nil, errwrap.Wrapf("could not verify key used to generate tokens: {{err}}", err)
-	}
-	if key == nil {
-		return nil, errors.New("could not find key used to generate tokens, must update role set")
-	}
-
+func (tg *TokenGenerator) getAccessToken(ctx context.Context) (*oauth2.Token, error) {
 	jsonBytes, err := base64.StdEncoding.DecodeString(tg.B64KeyJSON)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not b64-decode key data: {{err}}", err)
@@ -103,7 +87,7 @@ func (tg *TokenGenerator) getAccessToken(ctx context.Context, iamAdmin *iam.Serv
 
 	tkn, err := cfg.TokenSource(ctx).Token()
 	if err != nil {
-		return nil, errwrap.Wrapf("could not generate token: {{err}}", err)
+		return nil, errwrap.Wrapf("got error while creating OAuth2 token: {{err}}", err)
 	}
 	return tkn, err
 }

@@ -139,13 +139,15 @@ func (b *backend) credentials(s logical.Storage) (*google.Credentials, error) {
 
 		ctx := context.Background()
 
-		config, err := getConfig(ctx, s)
+		cfg, err := getConfig(ctx, s)
 		if err != nil {
 			return nil, err
 		}
-
+		if cfg == nil {
+			cfg = &config{}
+		}
 		// Get creds from the config
-		credBytes := []byte(config.CredentialsRaw)
+		credBytes := []byte(cfg.CredentialsRaw)
 
 		// If credentials were provided, use those. Otherwise fall back to the
 		// default application credentials.
