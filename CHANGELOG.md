@@ -32,8 +32,6 @@ BUG FIXES:
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
  * replication: Fix longer than necessary WAL replay during an initial reindex
- * replication: Fix error during mount filter invalidation on DR secondary
-   clusters
  * secrets/ad: Make time buffer configurable [AD-35]
  * secrets/gcp: Check for nil config when getting credentials [SGCP-35]
  * secrets/gcpkms: Disable key rotation when deleting a key [GCPKMS-10]
