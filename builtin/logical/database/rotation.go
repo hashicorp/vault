@@ -15,6 +15,15 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
+const (
+	// interval to check the queue for items needing rotation
+	queueTickSeconds  = 5
+	queueTickInterval = queueTickSeconds * time.Second
+
+	// wal storage key used for static account rotations
+	staticWALKey = "staticRotationKey"
+)
+
 // populateQueue loads the priority queue with existing static accounts. This
 // occurs at initialization, after any WAL entries of failed or interrupted
 // rotations have been processed. It lists the roles from storage and searches

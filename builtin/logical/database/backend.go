@@ -25,13 +25,6 @@ const (
 	databaseConfigPath     = "database/config/"
 	databaseRolePath       = "role/"
 	databaseStaticRolePath = "static-role/"
-
-	// interval to check the queue for items needing rotation
-	queueTickSeconds  = 5
-	queueTickInterval = queueTickSeconds * time.Second
-
-	// wal storage key used for static account rotations
-	staticWALKey = "staticRotationKey"
 )
 
 type dbPluginInstance struct {
