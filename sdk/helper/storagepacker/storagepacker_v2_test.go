@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"bytes"
+	"fmt"
 	"github.com/go-test/deep"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -12,7 +13,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"math/rand"
 	"strings"
@@ -132,11 +132,7 @@ func TestStoragePackerV2(t *testing.T) {
 	}
 }
 
-func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) {
-	storagePacker := getStoragePacker(t)
-
-	ctx := context.Background()
-
+func getEntity() *identity.Entity {
 	timeNow := ptypes.TimestampNow()
 
 	alias1 := &identity.Alias{
@@ -167,7 +163,15 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 		MergedEntityIDs: []string{"merged_entity_id1", "merged_entity_id2"},
 		Policies:        []string{"policy1", "policy2"},
 	}
+	return entity
+}
 
+func TestStoragePackerV2_SerializeDeserializeComplexItem(t *testing.T) {
+	storagePacker := getStoragePacker(t)
+
+	ctx := context.Background()
+
+	entity := getEntity()
 	marshaledBytes, err := proto.Marshal(entity)
 	if err != nil {
 		t.Fatal(err)
@@ -213,6 +217,15 @@ func TestStoragePackerV2_Recovery(t *testing.T) {
 	err := storagePacker1.PutItem(ctx, item1)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Did configuration get saved?
+	entry, err := storagePacker1.ConfigStorageView.Get(ctx, "config")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatal("No config saved.")
 	}
 
 	// Verify that it can be read back from a second packer backed by the same storage
@@ -304,11 +317,11 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 	}
 
 	// Verify no split yet, key should be 00, check it?
-	bucketKey00 := storagePacker1.BucketStorageKeyForItemID(ids[0][0])
-	bucket00, err := storagePacker1.GetBucket(ctx, bucketKey00, true)
+	bucket00, err := storagePacker1.GetBucket(ctx, ids[0][0])
 	if err != nil {
-		t.Fatalf("Key %v error %v", bucketKey00, err)
+		t.Fatalf("Key %v error %v", ids[0][0], err)
 	}
+	bucketKey00 := bucket00.Key
 	if len(bucket00.Bucket.ItemMap) != 9 {
 		t.Fatalf("Pre-split bucket %v contains %v items.",
 			bucket00.Bucket.Key,
@@ -325,28 +338,9 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 	storagePacker1.PutItem(ctx, allItems[9])
 
 	// Verify split occurred, get new key
-	bucketKey000 := storagePacker1.BucketStorageKeyForItemID(ids[0][0])
-	if bucketKey000 != "00/0" {
-		t.Fatalf("Unexpected key for shard %v", bucketKey000)
-	}
-
-	bucket000, err := storagePacker1.GetBucket(ctx, bucketKey000, false)
+	bucket000, err := storagePacker1.GetBucket(ctx, ids[0][0])
 	if err != nil {
-		t.Fatalf("Key %v error %v", bucketKey000, err)
-	}
-	if bucket000.Key != "00/0" {
-		t.Fatalf("Unexpected key for bucket %v", bucket000.Key)
-	}
-	if len(bucket000.Bucket.ItemMap) != 4 {
-		t.Errorf("Post-split bucket %v contains %v items.",
-			bucket000.Bucket.Key,
-			len(bucket000.Bucket.ItemMap))
-	}
-
-	// Try bypassing cache too.
-	bucket000, err = storagePacker1.GetBucket(ctx, bucketKey000, true)
-	if err != nil {
-		t.Fatalf("Key %v error %v", bucketKey000, err)
+		t.Fatalf("Key %v error %v", ids[0][0], err)
 	}
 	if bucket000.Key != "00/0" {
 		t.Fatalf("Unexpected key for bucket %v", bucket000.Key)
@@ -525,117 +519,202 @@ func TestStoragePackerV2_ConcurrentInserts(t *testing.T) {
 	run_concurrentTest(t, n, ids)
 }
 
-func TestStoragePackerV2_BucketOperations(t *testing.T) {
-	ids := generateLotsOfCollidingIDs(80, "00")
-
+func TestStoragePackerV2_Variadic(t *testing.T) {
 	storage := logical.InmemStorageWithMaxSize(10000)
-	storagePacker1 := createStoragePacker(t, storage)
+	storagePacker := createStoragePacker(t, storage)
 	ctx := namespace.RootContext(nil)
+	n := 257 // Ensure at least one collision
 
-	allItems := make([]*Item, 80)
+	allItems := make([]*Item, n)
+	ids := make([]string, n)
 	for i, _ := range allItems {
+		ids[i] = fmt.Sprintf("test-%d", i)
 		allItems[i] = &Item{
 			ID:   ids[i],
 			Data: incompressibleData(1000),
 		}
 	}
 
-	// Get bucket 00 from initially empty storage
-	bucket, err := storagePacker1.GetBucket(ctx, "00", false)
+	err := storagePacker.PutItem(ctx, allItems...)
 	if err != nil {
-		t.Fatalf("GetBucket error: %v", err)
-	}
-	if bucket != nil {
-		t.Fatalf("GetBucket created a bucket it shouldn't have.")
+		t.Fatalf("error on PutItem: %v", err)
 	}
 
-	// Put one item in to create it
-	err = storagePacker1.PutItem(ctx, allItems[0])
+	requestedIDs := ids[100:150]
+	items, err := storagePacker.GetItems(ctx, requestedIDs...)
 	if err != nil {
-		t.Fatalf("Error inserting key %v: %v", allItems[0].ID, err)
+		t.Fatalf("error on GetItems: %v", err)
 	}
-
-	// Get bucket 00 again (should hit in cache)
-	bucket, err = storagePacker1.GetBucket(ctx, "00", false)
-	if err != nil {
-		t.Fatalf("GetBucket error: %v", err)
+	if len(items) != len(requestedIDs) {
+		t.Fatalf("mismatched response length %v request length %v", len(items), len(requestedIDs))
 	}
-	if bucket == nil {
-		t.Fatalf("GetBucket didn't find bucket.")
-	}
-	if bucket.Key != "00" {
-		t.Fatalf("GetBucket mismatched key.")
-	}
-
-	// Get bucket 00 again (force cache miss)
-	bucket, err = storagePacker1.GetBucket(ctx, "00", true)
-	if err != nil {
-		t.Fatalf("GetBucket error: %v", err)
-	}
-	if bucket == nil {
-		t.Fatalf("GetBucket didn't find bucket.")
-	}
-	if bucket.Key != "00" {
-		t.Fatalf("GetBucket mismatched key.")
-	}
-
-	bucket.Lock()
-	for _, item := range allItems {
-		itemHash := GetItemIDHash(item.ID)
-		bucket.ItemMap[itemHash] = item.Data
-	}
-	bucket.Unlock()
-
-	err = storagePacker1.PutBucket(ctx, bucket)
-	if err != nil {
-		t.Fatalf("PutBucket error: %v", err)
-	}
-
-	itemHash := GetItemIDHash(allItems[0].ID)
-	// Get the shard containing that first key
-	bucket, err = storagePacker1.GetBucket(ctx, itemHash, false)
-	if err != nil {
-		t.Fatalf("GetBucket error: %v", err)
-	}
-	if bucket == nil {
-		t.Fatalf("GetBucket didn't find bucket.")
-	}
-	key00x := storagePacker1.GetCacheKey(bucket.Key)
-	if !strings.HasPrefix(itemHash, key00x) {
-		t.Fatalf("GetBucket mismatched key, itemHash=%v bucket.Key=%v", itemHash, bucket.Key)
-	}
-
-	t.Logf("Deleting bucket %v", bucket.Key)
-
-	// Delete the whole bucket
-	err = storagePacker1.DeleteBucket(ctx, bucket.Key)
-	if err != nil {
-		t.Fatalf("DeleteBucket error: %v", err)
-	}
-
-	// Now, every key should still be present except those matching the deleted bucket key
-	for idx, item := range allItems {
-		itemHash := GetItemIDHash(item.ID)
-		storedItem, err := storagePacker1.GetItem(ctx, item.ID)
-		if err != nil {
-			t.Errorf("Error retrieving item %v hash %v: %v",
-				idx, itemHash, err)
-		} else if strings.HasPrefix(itemHash, key00x) {
-			// Should have been deleted
-			if storedItem != nil {
-				t.Errorf("Item %v hash %v is still present", idx, itemHash)
-			}
-		} else {
-			if storedItem == nil {
-				t.Errorf("Nil item %v hash %v", idx, itemHash)
-			} else if !bytes.Equal(storedItem.Data, item.Data) {
-				t.Errorf("Item %v ash %v: data mismatch", idx, itemHash)
-			}
+	for idx, item := range items {
+		if item == nil {
+			t.Errorf("nil item %v ID %v", idx, requestedIDs[idx])
+		} else if item.ID != requestedIDs[idx] {
+			t.Errorf("mismatched return value on item %v requested %v got %v", idx, requestedIDs[idx], item.ID)
+		} else if !bytes.Equal(allItems[100+idx].Data, item.Data) {
+			t.Errorf("item %v ID %v: data mismatch", idx, item.ID)
 		}
+	}
+
+	toDelete := ids[:100]
+	err = storagePacker.DeleteItem(ctx, toDelete...)
+	if err != nil {
+		t.Fatalf("error on DeleteItem: %v", err)
+	}
+	checkAllItems(t, storagePacker, ctx, allItems[100:])
+
+	requestedIDs = []string{
+		"test-1",            // deleted
+		"test-120",          // still present
+		"test-doesnotexist", // never there to begin with
+	}
+	items, err = storagePacker.GetItems(ctx, requestedIDs...)
+	if err != nil {
+		t.Fatalf("error on GetItems: %v", err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("mismatched response length %v request length %v", len(items), 3)
+	}
+	if items[0] != nil {
+		t.Errorf("test-1 sill present")
+	}
+	if items[1] == nil {
+		t.Errorf("test-120 not present")
+	} else if items[1].ID != "test-120" {
+		t.Errorf("test-120 ID mismatch, got %v", items[1].ID)
+	}
+	if items[2] != nil {
+		t.Errorf("test-doesnotexist reported present")
+	}
+}
+
+func TestStoragePackerV2_CreationErrors(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+	bucketStorageView := logical.NewStorageView(storage, "packer/buckets/v2")
+	configStorageView := logical.NewStorageView(storage, "packer/config")
+	logger := log.New(&log.LoggerOptions{Name: "storagepackertest"})
+
+	cases := []struct {
+		Config *Config
+		Error  string
+	}{
+		{&Config{
+			BucketStorageView: nil,
+			ConfigStorageView: configStorageView,
+			Logger:            logger,
+		}, "nil buckets view"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: nil,
+			Logger:            logger,
+		}, "nil config view"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: configStorageView,
+			Logger:            nil,
+		}, "nil logger"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: configStorageView,
+			Logger:            logger,
+			BaseBucketBits:    -8,
+			BucketShardBits:   4,
+		}, "should be at least 4"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: configStorageView,
+			Logger:            logger,
+			BaseBucketBits:    8,
+			BucketShardBits:   -8,
+		}, "should be at least 4"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: configStorageView,
+			Logger:            logger,
+			BaseBucketBits:    7,
+			BucketShardBits:   4,
+		}, "is not a multiple of 4"},
+		{&Config{
+			BucketStorageView: bucketStorageView,
+			ConfigStorageView: configStorageView,
+			Logger:            logger,
+			BaseBucketBits:    12,
+			BucketShardBits:   2,
+		}, "is not a multiple of 4"},
+	}
+
+	for _, tc := range cases {
+		_, err := NewStoragePackerV2(ctx, tc.Config)
+		if err == nil {
+			t.Fatalf("No error, expected %q", tc.Error)
+		}
+		if !strings.Contains(err.Error(), tc.Error) {
+			t.Fatalf("Error %q didn't match %q", err.Error(), tc.Error)
+		}
+	}
+
+}
+
+func TestStoragePackerV2_PutItemErrors(t *testing.T) {
+	storage := logical.InmemStorageWithMaxSize(10000)
+	storagePacker := createStoragePacker(t, storage)
+	ctx := namespace.RootContext(nil)
+
+	n := 10
+	allItems := make([]*Item, n)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   fmt.Sprintf("test-%d", i),
+			Data: []byte("dontcare"),
+		}
+	}
+
+	entity := getEntity()
+	message, err := ptypes.MarshalAny(entity)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		Which       int
+		Error       string
+		Replacement *Item
+	}{
+		{0, "nil item", nil},
+		{1, "missing ID", &Item{
+			ID:   "",
+			Data: []byte("dontcare")}},
+		{2, "missing data", &Item{
+			ID:   "present",
+			Data: nil}},
+		{3, "deprecated", &Item{
+			ID:      "present",
+			Message: message}},
+		{4, "duplicate", &Item{
+			ID:   "test-1",
+			Data: []byte("dontcare")}},
+	}
+
+	for _, tc := range cases {
+		tmp := allItems[tc.Which]
+		allItems[tc.Which] = tc.Replacement
+		err := storagePacker.PutItem(ctx, allItems...)
+		if err == nil {
+			t.Fatalf("missing error check for %q", tc.Error)
+		}
+		if !strings.Contains(err.Error(), tc.Error) {
+			t.Fatalf("Error %q didn't match %q", err.Error(), tc.Error)
+		}
+		allItems[tc.Which] = tmp
 	}
 }
 
 func TestStoragePackerV2_UpsertErrors(t *testing.T) {
+	id := "123456"
+
 	b := &LockedBucket{
 		Bucket: &Bucket{
 			Key:       "00",
@@ -644,77 +723,49 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 			HasShards: false,
 		},
 	}
-
-	item := &Item{
-		ID:      "abcdef",
-		Message: nil,
-		Data:    []byte{0, 1, 2, 3, 4},
+	item := &itemRequest{
+		ID:  id,
+		Key: GetItemIDHash(id),
+		Value: &Item{
+			ID:      id,
+			Message: nil,
+			Data:    []byte{0, 1, 2, 3, 4},
+		},
+		Bucket: b.Bucket,
+	}
+	p := &partitionedRequests{
+		Bucket:   b,
+		Requests: []*itemRequest{item},
 	}
 
-	var nilBucket *LockedBucket
-	nilBucket = nil
-	err := nilBucket.upsert(item)
+	var nilPR *partitionedRequests
+	nilPR = nil
+	err := nilPR.upsertItems()
 	if err == nil {
 		t.Fatalf("no error on nil receiver")
 	}
 
-	err = b.upsert(nil)
-	if err == nil {
-		t.Fatalf("no error on nil item")
+	p2 := &partitionedRequests{
+		Bucket:   nil,
+		Requests: []*itemRequest{item},
 	}
-
-	baditem := &Item{
-		ID:      "",
-		Message: nil,
-		Data:    []byte{0, 1, 2, 3, 4},
-	}
-	err = b.upsert(baditem)
+	err = p2.upsertItems()
 	if err == nil {
-		t.Fatalf("no error on empty ID")
+		t.Fatalf("no error on nil bucket")
 	}
 
 	b.HasShards = true
-	err = b.upsert(item)
+	err = p.upsertItems()
 	if err == nil {
 		t.Fatalf("no error sharded bucket")
 	}
 
 	b.HasShards = false
-	err = b.upsert(item)
+	err = p.upsertItems()
 	if err != nil {
 		t.Fatalf("upsert expected to succeed on nil ItemMap: %v", err)
 	}
 	if b.ItemMap == nil {
 		t.Fatalf("upsert didn't create ItemMap")
 	}
-}
-
-func TestStoragePackerV2_PutBucketErrors(t *testing.T) {
-	storagePacker := getStoragePacker(t)
-
-	key := "00"
-	b := &LockedBucket{
-		Bucket: &Bucket{
-			Key:       key,
-			Items:     []*Item{},
-			ItemMap:   nil,
-			HasShards: false,
-		},
-	}
-
-	ctx := namespace.RootContext(nil)
-	err := storagePacker.PutBucket(ctx, b)
-	if err != nil {
-		t.Fatalf("PutBucket error: %v", err)
-	}
-
-	b2, err := storagePacker.GetBucket(ctx, key, false)
-	if err != nil {
-		t.Fatalf("GetBucket error: %v", err)
-	}
-	expectedLock := locksutil.LockForKey(storagePacker.storageLocks, key)
-	if b2.LockEntry != expectedLock {
-		t.Fatalf("PutBucket didn't ensure correct lock.")
-	}
-
 }

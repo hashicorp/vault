@@ -1,9 +1,6 @@
 package storagepacker
 
 import (
-	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"math"
 	"testing"
 	"testing/quick"
 )
@@ -50,10 +47,14 @@ func partitionHasAllItems(t *testing.T, partition []*partitionedRequests, ids []
 		for _, r := range p.Requests {
 			_, present := idsRequired[r.ID]
 			if !present {
-				t.Logf("extra or duplicated ID: '%v'", r.ID)
+				t.Logf("extra or duplicated ID: %q", r.ID)
 				return false
 			}
 			delete(idsRequired, r.ID)
+			if r.Bucket != p.Bucket.Bucket {
+				t.Logf("request has mismatched bucket for ID %q", r.ID)
+				return false
+			}
 		}
 	}
 	if len(idsRequired) != 0 {
@@ -63,26 +64,7 @@ func partitionHasAllItems(t *testing.T, partition []*partitionedRequests, ids []
 	return true
 }
 
-// FIXME: this will move into the constructor
-func insertAllBuckets(s *StoragePackerV2) {
-	numBuckets := int(math.Pow(2.0, float64(s.BaseBucketBits)))
-	for i := 0; i < numBuckets; i++ {
-		bucketKey := fmt.Sprintf("%0x", i)
-		lock := locksutil.LockForKey(s.storageLocks, bucketKey)
-		s.bucketsCache.Insert(bucketKey,
-			&LockedBucket{
-				LockEntry: lock,
-				Bucket: &Bucket{
-					Key:       bucketKey,
-					ItemMap:   make(map[string][]byte),
-					HasShards: false,
-				},
-			})
-	}
-
-}
-
-func TestPartitionProperties(t *testing.T) {
+func TestStoragePackerV2_PartitionProperties(t *testing.T) {
 	checkIds := func(ids []string) bool {
 		// Higher-level function should probably check this.
 		if dup, _ := checkForDuplicateIds(ids); dup {
@@ -90,7 +72,6 @@ func TestPartitionProperties(t *testing.T) {
 		}
 
 		s := getStoragePacker(t)
-		insertAllBuckets(s)
 		requests := s.keysForIDs(ids)
 		partition, err := s.partitionRequests(requests)
 		if err != nil {

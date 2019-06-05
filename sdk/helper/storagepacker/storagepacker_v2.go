@@ -81,96 +81,8 @@ type LockedBucket struct {
 	*locksutil.LockEntry
 }
 
-type lockOperation func(*LockedBucket)
-
-// Safely identify the buckets for a given set of keys, and acquire the correspodning storage locks.
-//
-// The key may be the full hash of the item ID, or a prefix, with a bucket Key with embedded /'s
-// The cache may initially be empty, so "not found" is acceptable, and needs to be handled
-// by deciding whether to create the bucket.
-//
-// This function uses the same logic whether we want a read or a write operation.
-// Use the helpers below that set everything up nicely for read locks or write locks.
-func (s *StoragePackerV2) lockBucket(key string, acquire lockOperation, release lockOperation) (bucket *LockedBucket, found bool, err error) {
-	cacheKey := s.GetCacheKey(key)
-	lastCacheKey := ""
-
-	for true {
-		s.bucketsCacheLock.RLock()
-		keyPrefix, bucketRaw, found := s.bucketsCache.LongestPrefix(cacheKey)
-		s.bucketsCacheLock.RUnlock()
-
-		if !found {
-			// If an entry is not found in bucketsCache, it's because
-			// the corresponding bucket was never created.
-			return nil, false, nil
-		}
-
-		bucket := bucketRaw.(*LockedBucket)
-		acquire(bucket)
-		if !bucket.HasShards {
-			// Found a leaf bucket.
-			// Lock still held on return
-			return bucket, true, nil
-		} else if keyPrefix != lastCacheKey {
-			// Try again, we moved down the tree
-			lastCacheKey = keyPrefix
-			release(bucket)
-		} else {
-			finalKey := bucket.Key
-			release(bucket)
-			return nil, true, fmt.Errorf("bucket %s has shards but no longer prefix found",
-				finalKey)
-		}
-	}
-	// Not possible
-	return nil, false, nil
-}
-
-func readAcquire(b *LockedBucket) {
-	b.RLock()
-}
-func readRelease(b *LockedBucket) {
-	b.RUnlock()
-}
-func writeAcquire(b *LockedBucket) {
-	b.Lock()
-}
-func writeRelease(b *LockedBucket) {
-	b.Unlock()
-}
-
-func (s *StoragePackerV2) lockBucketForRead(key string) (bucket *LockedBucket, found bool, err error) {
-	return s.lockBucket(key, readAcquire, readRelease)
-}
-
-func (s *StoragePackerV2) lockBucketForWrite(key string) (bucket *LockedBucket, found bool, err error) {
-	return s.lockBucket(key, writeAcquire, writeRelease)
-}
-
 func (s *StoragePackerV2) BucketsView() *logical.StorageView {
 	return s.BucketStorageView
-}
-
-func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
-	hexVal := GetItemIDHash(itemID)
-
-	s.bucketsCacheLock.RLock()
-	_, bucketRaw, found := s.bucketsCache.LongestPrefix(hexVal)
-	s.bucketsCacheLock.RUnlock()
-
-	if found {
-		return bucketRaw.(*LockedBucket).Key
-	}
-
-	// If we have existing buckets we'd have parsed them in on startup so this
-	// is a fresh storagepacker, so we use the root bits to return a proper
-	// number of chars.
-	return hexVal[0 : s.BaseBucketBits/4]
-}
-
-func (s *StoragePackerV2) BucketKey(itemID string) string {
-	return s.GetCacheKey(s.BucketStorageKeyForItemID(itemID))
 }
 
 func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []string) error {
@@ -219,7 +131,32 @@ func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []str
 
 		s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
 	}
+
+	s.addAllBaseBucketsToCache()
 	return nil
+}
+
+// Ensure all base buckets are present on the cache, even if they
+// are not present in storage.  This simplifies acquiring locks for
+// multiple buckets because every necessary bucket is already present
+// in bucketsCache. We don't have to worry about adding them on-demand
+// in the middle of that process, and if any object is added to these
+// placeholders they'll get saved to stoarge.
+func (s *StoragePackerV2) addAllBaseBucketsToCache() {
+	for _, bucketKey := range s.getAllBaseBucketKeys() {
+		if _, present := s.bucketsCache.Get(bucketKey); !present {
+			lock := locksutil.LockForKey(s.storageLocks, bucketKey)
+			s.bucketsCache.Insert(bucketKey,
+				&LockedBucket{
+					LockEntry: lock,
+					Bucket: &Bucket{
+						Key:       bucketKey,
+						ItemMap:   make(map[string][]byte),
+						HasShards: false,
+					},
+				})
+		}
+	}
 }
 
 func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
@@ -247,58 +184,8 @@ func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 	return ret, nil
 }
 
-// Get returns a bucket for a given key
-func (s *StoragePackerV2) GetBucket(ctx context.Context, key string, skipCache bool) (*LockedBucket, error) {
-	if key == "" {
-		return nil, errors.New("missing bucket key")
-	}
-
-	if !skipCache {
-		bucket, found, err := s.lockBucketForRead(key)
-		if err != nil {
-			return nil, err
-		}
-		if found {
-			bucket.RUnlock()
-			return bucket, nil
-		} else {
-			return nil, nil
-		}
-	}
-
-	// Read directly from storage
-	// FIXME: in the cases where we want skipCache = true, why do we trust
-	// the cache to point us at the right bucket? Would it be better to
-	// walk the possible prefixes?
-	bucket, found, err := s.lockBucketForRead(key)
-	if bucket != nil {
-		defer bucket.RUnlock()
-	}
-
-	var storageKey string
-	if found {
-		storageKey = bucket.Key
-	} else {
-		storageKey, err = s.firstKey(key)
-		if err != nil {
-			return nil, err
-		}
-	}
-	storageEntry, err := s.BucketStorageView.Get(ctx, storageKey)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
-	}
-	if storageEntry == nil {
-		return nil, nil
-	}
-
-	// FIXME: add to cache like the previous version did? Why?
-	return s.DecodeBucket(storageEntry)
-}
-
-// NOTE: Don't put inserting into the cache here, as that will mess with
-// upgrade cases for the identity store as we want to keep the bucket out of
-// the cache until we actually re-store it.
+// Parse a bucket from storage, but don't add it to the cache here.
+// (We may want to read a v1 bucket and upgrade it?)
 func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*LockedBucket, error) {
 	uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
 	if err != nil {
@@ -325,38 +212,22 @@ func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 	return lb, nil
 }
 
-// Put stores a packed bucket entry
-func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) error {
-	if bucket == nil {
-		return fmt.Errorf("nil bucket entry")
+// Raw access to one of the storage buckets.
+// The caller is responsible for acquiring the lock and verifying that the bucket
+// has not been sharded in the meantime.
+func (s *StoragePackerV2) GetBucket(ctx context.Context, bucketKey string) (*LockedBucket, error) {
+	cacheKey := s.GetCacheKey(bucketKey)
+
+	s.bucketsCacheLock.RLock()
+	_, bucketRaw, found := s.bucketsCache.LongestPrefix(cacheKey)
+	s.bucketsCacheLock.RUnlock()
+
+	if found {
+		return bucketRaw.(*LockedBucket), nil
+	} else {
+		return nil, fmt.Errorf("key %q not found in cache", cacheKey)
 	}
 
-	if bucket.Key == "" {
-		return fmt.Errorf("missing key")
-	}
-
-	// Don't trust the passed-in lock, validate that we get the correct
-	// lock first.  But, we're still trusting that it's a valid key for the bucket
-	// (that the bucket we're replacing hasn't been sharded.)
-	cacheKey := s.GetCacheKey(bucket.Key)
-	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
-	lock.Lock()
-	defer lock.Unlock()
-
-	if lock != bucket.LockEntry {
-		s.Logger.Warn("bad lock in PutBucket, replacing with the correct one")
-		bucket.LockEntry = lock
-	}
-
-	if err := s.storeBucket(ctx, bucket); err != nil {
-		return errwrap.Wrapf("failed at high level bucket put: {{err}}", err)
-	}
-
-	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
-	s.bucketsCacheLock.Unlock()
-
-	return nil
 }
 
 func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string) error {
@@ -492,208 +363,189 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket)
 	return nil
 }
 
-// DeleteBucket deletes an entire bucket entry
-// To maintain the tree of shards' invariants, it seems better to maintain the bucket
-// in storage but empty it. FIXME: does this violate the intended use cases?
-func (s *StoragePackerV2) DeleteBucket(ctx context.Context, key string) error {
-	if key == "" {
-		return fmt.Errorf("missing key")
-	}
-
-	bucket, found, err := s.lockBucketForWrite(key)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil
-	}
-	defer bucket.Unlock()
-
-	if bucket.ItemMap == nil {
-		// Could do a recursive delete instead.
-		return fmt.Errorf("bucket %s has shards, no items deleted.", bucket.Key)
-	}
-
-	bucket.ItemMap = make(map[string][]byte)
-	if err := s.storeBucket(ctx, bucket); err != nil {
-		return errwrap.Wrapf("failed to write deleted bucket: {{err}}", err)
-	}
-	return nil
-}
-
 // upsert either inserts a new item into the bucket or updates an existing one
 // if an item with a matching key is already present.
-func (s *LockedBucket) upsert(item *Item) error {
-	if s == nil {
-		return fmt.Errorf("nil storage bucket")
+func (p *partitionedRequests) upsertItems() error {
+	if p == nil {
+		return fmt.Errorf("nil partition")
+	}
+	bucket := p.Bucket
+	if bucket == nil {
+		return fmt.Errorf("nil bucket")
 	}
 
-	if item == nil {
-		return fmt.Errorf("nil item")
-	}
-
-	if item.ID == "" {
-		return fmt.Errorf("missing item ID")
-	}
-
-	if s.HasShards {
+	if bucket.HasShards {
 		return fmt.Errorf("upserting item into sharded bucket")
 	}
-
-	if s.ItemMap == nil {
-		s.ItemMap = make(map[string][]byte)
+	if bucket.ItemMap == nil {
+		bucket.ItemMap = make(map[string][]byte)
 	}
 
-	itemHash := GetItemIDHash(item.ID)
-
-	s.ItemMap[itemHash] = item.Data
+	for _, r := range p.Requests {
+		// Nil data checked earlier
+		bucket.ItemMap[r.Key] = r.Value.Data
+	}
 	return nil
 }
 
-// DeleteItem removes the storage entry which the given key refers to from its
-// corresponding bucket.
-func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
-	if itemID == "" {
-		return fmt.Errorf("empty item ID")
+// Set the value of multiple items, as an efficient but non-atomic operation.
+// Each affected bucket will be written just once.
+// A multierror will be returned if some of the writes fail.
+func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
+	idsSeen := make(map[string]bool, len(items))
+	for idx, item := range items {
+		if item == nil {
+			return fmt.Errorf("nil item at index %v", idx)
+		}
+		if item.ID == "" {
+			return fmt.Errorf("missing ID in item at index %v", idx)
+		}
+		if item.Message != nil {
+			return fmt.Errorf("'Message' is deprecated; use 'Data' instead")
+		}
+		if item.Data == nil {
+			return fmt.Errorf("missing data in item at index %v", idx)
+		}
+		if _, found := idsSeen[item.ID]; found {
+			return fmt.Errorf("duplicate ID %v in item at index %v", item.ID, idx)
+		}
+		idsSeen[item.ID] = true
 	}
 
-	key := GetItemIDHash(itemID)
-	bucket, found, err := s.lockBucketForWrite(key)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil
-	}
-	defer bucket.Unlock()
+	requests := s.keysForItems(items)
 
-	if bucket.ItemMap == nil || len(bucket.ItemMap) == 0 {
-		return nil
+	// Identify the buckets and acquire their corresponding write-locks
+	retryRequired := true
+	var partition []*partitionedRequests
+	for retryRequired {
+		var err error
+		partition, err = s.partitionRequests(requests)
+		if err != nil {
+			return err
+		}
+		retryRequired = s.lockBuckets(partition, false)
+	}
+	defer s.unlockBuckets(partition, false)
+
+	// Update all buckets first
+	for _, p := range partition {
+		if err := p.upsertItems(); err != nil {
+			return errwrap.Wrapf("failed to update storage bucket: {{err}}", err)
+		}
 	}
 
-	itemHash := GetItemIDHash(itemID)
-
-	_, ok := bucket.ItemMap[itemHash]
-	if !ok {
-		return nil
+	// Persist the result (partial application is OK)
+	var merr *multierror.Error
+	for _, p := range partition {
+		if err := s.storeBucket(ctx, p.Bucket); err != nil {
+			merr = multierror.Append(merr, err)
+		}
 	}
-
-	delete(bucket.ItemMap, itemHash)
-	return s.storeBucket(ctx, bucket)
+	return merr.ErrorOrNil()
 }
 
-// GetItem fetches the storage entry for a given key from its corresponding
-// bucket.
+// Delete the items identified by the set of IDs.
+// Deletion of a non-existent ID is not signalled as an error.
+func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) error {
+	requests := s.keysForIDs(itemIDs)
+
+	// Identify the buckets and acquire their corresponding write-locks
+	retryRequired := true
+	var partition []*partitionedRequests
+	for retryRequired {
+		var err error
+		partition, err = s.partitionRequests(requests)
+		if err != nil {
+			return err
+		}
+		retryRequired = s.lockBuckets(partition, false)
+	}
+	defer s.unlockBuckets(partition, false)
+
+	// Update all buckets first
+	for _, p := range partition {
+		if p.Bucket.ItemMap == nil {
+			continue
+		}
+		for _, k := range p.Requests {
+			delete(p.Bucket.ItemMap, k.Key)
+		}
+	}
+
+	// Persist the result (partial application is OK)
+	var merr *multierror.Error
+	for _, p := range partition {
+		if err := s.storeBucket(ctx, p.Bucket); err != nil {
+			merr = multierror.Append(merr, err)
+		}
+	}
+	return merr.ErrorOrNil()
+}
+
+// Retrieve a set of items identified by ID; missing items signal by nil's in
+// the returned slice so that the the request and response lengths are the same.
+func (s *StoragePackerV2) GetItems(ctx context.Context, ids ...string) ([]*Item, error) {
+	requests := s.keysForIDs(ids)
+
+	// Identify the buckets and acquire their corresponding read-locks
+	// If we wanted to increase parallelism, perhaps could lock just one bucket
+	// at a time, but for now it's simpler to just follow the model of
+	// PutItem.
+	retryRequired := true
+	var partition []*partitionedRequests
+	for retryRequired {
+		var err error
+		partition, err = s.partitionRequests(requests)
+		if err != nil {
+			return nil, err
+		}
+		retryRequired = s.lockBuckets(partition, true)
+	}
+	defer s.unlockBuckets(partition, true)
+
+	// Walk each bucket and look for the corresponding keys.
+	// The Value in each request is initialized to nil so no update
+	// is needed if not present.
+	for _, p := range partition {
+		if p.Bucket.ItemMap == nil {
+			continue
+		}
+		for _, req := range p.Requests {
+			data, ok := p.Bucket.ItemMap[req.Key]
+			if ok {
+				req.Value = &Item{
+					ID:   req.ID,
+					Data: data,
+				}
+			}
+		}
+	}
+
+	// Copy just the values to the output
+	items := make([]*Item, len(requests))
+	for i, req := range requests {
+		items[i] = req.Value
+	}
+	return items, nil
+}
+
+// GetItem fetches a single item by ID.
 func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
 
-	key := GetItemIDHash(itemID)
-	bucket, found, err := s.lockBucketForRead(key)
+	singleItem, err := s.GetItems(ctx, itemID)
 	if err != nil {
 		return nil, err
 	}
-	if !found {
-		return nil, nil
-	}
-	defer bucket.RUnlock()
-
-	if bucket.ItemMap == nil || len(bucket.ItemMap) == 0 {
-		return nil, nil
-	}
-
-	data, ok := bucket.ItemMap[key]
-	if !ok {
-		return nil, nil
-	}
-
-	return &Item{
-		ID:   itemID,
-		Data: data,
-	}, nil
+	return singleItem[0], nil
 }
 
-func (s *StoragePackerV2) createAndLockBucket(key string) (*LockedBucket, error) {
-	// Grab the lock for this not-yet-existent bucket (must be at at the root level)
-	firstBucketKey, err := s.firstKey(key)
-	if err != nil {
-		return nil, err
-	}
-	lock := locksutil.LockForKey(s.storageLocks, firstBucketKey)
-	lock.Lock()
-
-	// Re-check radix tree (since the bucket could have been independently created
-	// while we were waiting for its lock.)
-	s.bucketsCacheLock.RLock()
-	_, _, found := s.bucketsCache.LongestPrefix(firstBucketKey)
-	s.bucketsCacheLock.RUnlock()
-
-	if found {
-		// We lost the race, that's OK, get the real version,
-		// using the original lookup method
-		lock.Unlock()
-		bucket, found, err := s.lockBucketForWrite(key)
-		if err != nil {
-			return nil, err
-		}
-		if !found {
-			return nil, fmt.Errorf("bucket for %v appeared and then disappeared", key)
-		}
-		return bucket, nil
-	}
-
-	bucket := &LockedBucket{
-		LockEntry: lock,
-		Bucket: &Bucket{
-			Key:       firstBucketKey,
-			ItemMap:   make(map[string][]byte),
-			HasShards: false,
-		},
-	}
-	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Insert(firstBucketKey, bucket)
-	s.bucketsCacheLock.Unlock()
-	return bucket, nil
-}
-
-// PutItem stores a storage entry in its corresponding bucket
-func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
-	if item == nil {
-		return fmt.Errorf("nil item")
-	}
-
-	if item.ID == "" {
-		return fmt.Errorf("missing ID in item")
-	}
-
-	if item.Data == nil {
-		return fmt.Errorf("missing data in item")
-	}
-
-	if item.Message != nil {
-		return fmt.Errorf("'Message' is deprecated; use 'Data' instead")
-	}
-
-	key := GetItemIDHash(item.ID)
-	bucket, found, err := s.lockBucketForWrite(key) // returns with lock held
-	if err != nil {
-		return err
-	}
-	if !found {
-		bucket, err = s.createAndLockBucket(key) // returns with lock held
-		if err != nil {
-			return err
-		}
-	}
-	defer bucket.Unlock()
-
-	if err := bucket.upsert(item); err != nil {
-		return errwrap.Wrapf("failed to update entry in packed storage entry: {{err}}", err)
-	}
-
-	// Persist the result
-	return s.storeBucket(ctx, bucket)
+// Retrieve the entire set of items as a single slice
+// This *is* an atomic operation.
+func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error) {
+	return nil, nil
 }
 
 // NewStoragePackerV2 creates a new storage packer for a given view
@@ -708,12 +560,16 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 		return nil, fmt.Errorf("nil config view")
 	}
 
+	if config.Logger == nil {
+		return nil, fmt.Errorf("nil logger")
+	}
+
 	if config.BaseBucketBits == 0 {
 		config.BaseBucketBits = defaultBaseBucketBits
 	}
 
 	// At this point, look for an existing saved configuration
-	var needPersist bool
+	needPersist := true
 	entry, err := config.ConfigStorageView.Get(ctx, "config")
 	if err != nil {
 		return nil, errwrap.Wrapf("error checking for existing storagepacker config: {{err}}", err)
@@ -727,9 +583,14 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 		// If we have an existing config, we copy the only thing we need
 		// constant: the bucket base count, so we know how many to expect at
 		// the base level
-		//
-		// The rest of the values can change
 		config.BaseBucketBits = exist.BaseBucketBits
+
+		// The shard count can change, but it might be confusing if we
+		// do so.
+		if config.BucketShardBits != exist.BucketShardBits {
+			config.Logger.Info("BucketShardBits changed to %d from its original value of %d",
+				config.BucketShardBits, exist.BucketShardBits)
+		}
 	}
 
 	if config.BucketShardBits == 0 {
@@ -737,18 +598,18 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 	}
 
 	if config.BaseBucketBits%4 != 0 {
-		return nil, fmt.Errorf("bucket base bits of %d is not a multiple of four", config.BaseBucketBits)
+		return nil, fmt.Errorf("bucket base bits of %d is not a multiple of 4", config.BaseBucketBits)
 	}
 
 	if config.BucketShardBits%4 != 0 {
-		return nil, fmt.Errorf("bucket shard count of %d is not a power of two", config.BucketShardBits)
+		return nil, fmt.Errorf("bucket shard bits of %d is not a multiple of 4", config.BucketShardBits)
 	}
 
 	if config.BaseBucketBits < 4 {
 		return nil, errors.New("bucket base bits should be at least 4")
 	}
 	if config.BucketShardBits < 4 {
-		return nil, errors.New("bucket shard count should at least be 4")
+		return nil, errors.New("bucket shard count should be at least 4")
 	}
 
 	if needPersist {
@@ -784,6 +645,9 @@ func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 	}
 }
 
+// This mechanism doesn't guarantee a consistent ordering of the writes,
+// so if sharding has occurred the resulting storage could be
+// incorrectly recovered.
 func (s *StoragePackerV2) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {

@@ -12,9 +12,11 @@ type partitionedRequests struct {
 	Requests []*itemRequest
 }
 
-// Take the sorted list of requests and partition them by which bucket the
+// Take the list of requests and partition them by which bucket the
 // Key belongs to.
-func (s *StoragePackerV2) partitionRequests(sortedRequests []*itemRequest) ([]*partitionedRequests, error) {
+func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]*partitionedRequests, error) {
+	sortedRequests := sortRequests(unsortedRequests)
+
 	partition := make([]*partitionedRequests, 0)
 	var lastBucket *partitionedRequests
 
