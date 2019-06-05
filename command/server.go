@@ -426,7 +426,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logger = log.New(&log.LoggerOptions{
 			Output:     c.logWriter,
 			Level:      level,
-			JSONFormat: config.LogJson || logging.UseJson(),
+			JSONFormat: config.LogJson || (logging.EnvLogFormat() == logging.JSONFormat),
 		})
 	}
 
