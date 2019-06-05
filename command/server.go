@@ -334,6 +334,57 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Automatically enable dev mode if other dev flags are provided.
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+		c.flagDev = true
+	}
+
+	// Validation
+	if !c.flagDev {
+		switch {
+		case len(c.flagConfigs) == 0:
+			c.UI.Error("Must specify at least one config path using -config")
+			return 1
+		case c.flagDevRootTokenID != "":
+			c.UI.Warn(wrapAtLength(
+				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
+					"Your request has been ignored."))
+			c.flagDevRootTokenID = ""
+		}
+	}
+
+	// Load the configuration
+	var config *server.Config
+	if c.flagDev {
+		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
+		if c.flagDevListenAddr != "" {
+			config.Listeners[0].Config["address"] = c.flagDevListenAddr
+		}
+	}
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
+			return 1
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Ensure at least one config was found.
+	if config == nil {
+		c.UI.Output(wrapAtLength(
+			"No configuration files found. Please provide configurations with the " +
+				"-config flag. If you are supply the path to a directory, please " +
+				"ensure the directory contains files with the .hcl or .json " +
+				"extension."))
+		return 1
+	}
+
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
@@ -377,57 +428,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	allLoggers := []log.Logger{c.logger}
 
-	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
-		c.flagDev = true
-	}
-
-	// Validation
-	if !c.flagDev {
-		switch {
-		case len(c.flagConfigs) == 0:
-			c.UI.Error("Must specify at least one config path using -config")
-			return 1
-		case c.flagDevRootTokenID != "":
-			c.UI.Warn(wrapAtLength(
-				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
-					"Your request has been ignored."))
-			c.flagDevRootTokenID = ""
-		}
-	}
-
-	// Load the configuration
-	var config *server.Config
-	if c.flagDev {
-		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
-		if c.flagDevListenAddr != "" {
-			config.Listeners[0].Config["address"] = c.flagDevListenAddr
-		}
-	}
-	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path, c.logger)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
-			return 1
-		}
-
-		if config == nil {
-			config = current
-		} else {
-			config = config.Merge(current)
-		}
-	}
-
-	// Ensure at least one config was found.
-	if config == nil {
-		c.UI.Output(wrapAtLength(
-			"No configuration files found. Please provide configurations with the " +
-				"-config flag. If you are supply the path to a directory, please " +
-				"ensure the directory contains files with the .hcl or .json " +
-				"extension."))
-		return 1
-	}
-
+	// adjust log level based on config setting
 	if config.LogLevel != "" && logLevelWasNotSet {
 		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 		logLevelString = configLogLevel
@@ -448,6 +449,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
 	allLoggers = append(allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
@@ -1284,7 +1286,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			var config *server.Config
 			var level log.Level
 			for _, path := range c.flagConfigs {
-				current, err := server.LoadConfig(path, c.logger)
+				current, err := server.LoadConfig(path)
 				if err != nil {
 					c.logger.Error("could not reload config", "path", path, "error", err)
 					goto RUNRELOADFUNCS

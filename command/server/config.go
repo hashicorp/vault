@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -424,29 +423,29 @@ func (c *Config) Merge(c2 *Config) *Config {
 
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
-func LoadConfig(path string, logger log.Logger) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path, logger)
+		return LoadConfigDir(path)
 	}
-	return LoadConfigFile(path, logger)
+	return LoadConfigFile(path)
 }
 
 // LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string, logger log.Logger) (*Config, error) {
+func LoadConfigFile(path string) (*Config, error) {
 	// Read the file
 	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfig(string(d), logger)
+	return ParseConfig(string(d))
 }
 
-func ParseConfig(d string, logger log.Logger) (*Config, error) {
+func ParseConfig(d string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -589,7 +588,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
-func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
+func LoadConfigDir(dir string) (*Config, error) {
 	f, err := os.Open(dir)
 	if err != nil {
 		return nil, err
@@ -638,7 +637,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 
 	var result *Config
 	for _, f := range files {
-		config, err := LoadConfigFile(f, logger)
+		config, err := LoadConfigFile(f)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
 		}
