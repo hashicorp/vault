@@ -20,12 +20,14 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
 		Level:      level,
 		Output:     w,
-		JSONFormat: useJson(),
+		JSONFormat: UseJson(),
 	}
 	return log.New(opts)
 }
 
-func useJson() bool {
+// UseJson returns whether there is an environment variable that specifies
+// using JSON format for logging.
+func UseJson() bool {
 	logFormat := os.Getenv("VAULT_LOG_FORMAT")
 	if logFormat == "" {
 		logFormat = os.Getenv("LOGXI_FORMAT")

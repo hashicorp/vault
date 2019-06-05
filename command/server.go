@@ -423,7 +423,11 @@ func (c *ServerCommand) Run(args []string) int {
 			Level:  log.Trace,
 		})
 	} else {
-		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+		c.logger = log.New(&log.LoggerOptions{
+			Output:     c.logWriter,
+			Level:      level,
+			JSONFormat: config.LogJson || logging.UseJson(),
+		})
 	}
 
 	allLoggers := []log.Logger{c.logger}

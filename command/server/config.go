@@ -59,6 +59,9 @@ type Config struct {
 
 	LogLevel string `hcl:"log_level"`
 
+	// LogJson enables log output in a JSON format
+	LogJson bool `hcl:"log_json"`
+
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
@@ -329,6 +332,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 	if c2.LogLevel != "" {
 		result.LogLevel = c2.LogLevel
 	}
+
+	result.LogJson = c.LogJson || c2.LogJson
 
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
