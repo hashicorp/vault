@@ -570,8 +570,8 @@ and EC2 instances in the target account.
 
 The account in which Vault is running (i.e. the master account) must be listed as
 a trusted entity in the IAM Role being assumed on the remote account. The Role itself
-should allow the permissions specified in the (Recommended Vault IAM
-Policy)(#recommended-vault-iam-policy) except it doesn't need any further
+should allow the permissions specified in the [Recommended Vault IAM
+Policy](#recommended-vault-iam-policy) except it doesn't need any further
 `sts:AssumeRole` permissions.
 
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`

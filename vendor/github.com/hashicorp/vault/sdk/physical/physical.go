@@ -23,6 +23,10 @@ const (
 	PutOperation              = "put"
 )
 
+const (
+	ErrValueTooLarge = "put failed due to value being too large"
+)
+
 // ShutdownSignal
 type ShutdownChannel chan struct{}
 

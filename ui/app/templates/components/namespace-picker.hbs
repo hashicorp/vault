@@ -16,11 +16,9 @@
         {{else}}
           <span class="namespace-name is-hidden-tablet">/ (Root)</span>
         {{/if}}
-        <ICon
-          @glyph="chevron-down"
-          @size=8
+        <Chevron
+          @direction="down"
           @class="has-text-white auto-width is-status-chevron"
-          aria-hidden="true"
         />
       </D.trigger>
       <D.content @class="namespace-picker-content">
@@ -28,11 +26,9 @@
           <div class="level-left">
             {{#if (not isUserRootNamespace)}}
               <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link button is-ghost icon">
-                <ICon
-                  @glyph="chevron-left"
-                  @size=12
+                <Chevron
+                  @direction="left"
                   @class="has-text-info"
-                  aria-hidden="true"
                 />
               </NamespaceLink>
             {{/if}}
@@ -49,7 +45,9 @@
           <h5 class="list-header">Current namespace</h5>
           <div class="level is-mobile namespace-link">
             <span class="level-left">{{if namespacePath (concat namespacePath "/") "root"}}</span>
-            <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+            <span class="level-right">
+              <Icon @glyph="check-circle-outline" class="has-text-success" />
+            </span>
           </div>
         </header>
         <div class="namespace-list {{if isAnimating "animated-list"}}">

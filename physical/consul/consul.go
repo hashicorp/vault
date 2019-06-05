@@ -224,6 +224,23 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		if logger.IsDebug() {
 			logger.Debug("config address set", "address", addr)
 		}
+
+		// Copied from the Consul API module; set the Scheme based on
+		// the protocol field if address looks ike a URL.
+		// This can enable the TLS configuration below.
+		parts := strings.SplitN(addr, "://", 2)
+		if len(parts) == 2 {
+			if parts[0] == "http" || parts[0] == "https" {
+				consulConf.Scheme = parts[0]
+				consulConf.Address = parts[1]
+				if logger.IsDebug() {
+					logger.Debug("config address parsed", "scheme", parts[0])
+					logger.Debug("config scheme parsed", "address", parts[1])
+				}
+			} else {
+				return nil, errors.New("address should be host[:port], not URL")
+			}
+		}
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
@@ -237,7 +254,8 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	}
 
 	if consulConf.Scheme == "https" {
-		tlsClientConfig, err := setupTLSConfig(conf)
+		// Use the parsed Address instead of the raw conf['address']
+		tlsClientConfig, err := setupTLSConfig(conf, consulConf.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -300,8 +318,8 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	return c, nil
 }
 
-func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
-	serverName, _, err := net.SplitHostPort(conf["address"])
+func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
+	serverName, _, err := net.SplitHostPort(address)
 	switch {
 	case err == nil:
 	case strings.Contains(err.Error(), "missing port"):
@@ -401,6 +419,9 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 
 	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
+		if strings.Contains(err.Error(), "is too large") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
 		return err
 	}
 	if ok && len(resp.Errors) == 0 {
@@ -431,7 +452,13 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	writeOpts = writeOpts.WithContext(ctx)
 
 	_, err := c.kv.Put(pair, writeOpts)
-	return err
+	if err != nil {
+		if strings.Contains(err.Error(), "Value exceeds") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
+		return err
+	}
+	return nil
 }
 
 // Get is used to fetch an entry

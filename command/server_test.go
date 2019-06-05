@@ -41,19 +41,30 @@ func testRandomPort(tb testing.TB) int {
 	return l.Addr().(*net.TCPAddr).Port
 }
 
-func testBaseHCL(tb testing.TB) string {
+func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
 
 	return strings.TrimSpace(fmt.Sprintf(`
 		disable_mlock = true
 		listener "tcp" {
-		  address     = "127.0.0.1:%d"
-		  tls_disable = "true"
+			address     = "127.0.0.1:%d"
+			tls_disable = "true"
+			%s
 		}
-	`, testRandomPort(tb)))
+	`, testRandomPort(tb), listenerExtras))
 }
 
 const (
+	goodListenerTimeouts = `http_read_header_timeout = 12
+			http_read_timeout = "34s"
+			http_write_timeout = "56m"
+			http_idle_timeout = "78h"`
+
+	badListenerReadHeaderTimeout = `http_read_header_timeout = "12km"`
+	badListenerReadTimeout       = `http_read_timeout = "34日"`
+	badListenerWriteTimeout      = `http_write_timeout = "56lbs"`
+	badListenerIdleTimeout       = `http_idle_timeout = "78gophers"`
+
 	inmemHCL = `
 backend "inmem_ha" {
   advertise_addr       = "http://127.0.0.1:8200"
@@ -204,24 +215,63 @@ func TestServer(t *testing.T) {
 		contents string
 		exp      string
 		code     int
+		flag     string
 	}{
 		{
 			"common_ha",
-			testBaseHCL(t) + inmemHCL,
+			testBaseHCL(t, "") + inmemHCL,
 			"(HA available)",
 			0,
+			"-test-verify-only",
 		},
 		{
 			"separate_ha",
-			testBaseHCL(t) + inmemHCL + haInmemHCL,
+			testBaseHCL(t, "") + inmemHCL + haInmemHCL,
 			"HA Storage:",
 			0,
+			"-test-verify-only",
 		},
 		{
 			"bad_separate_ha",
-			testBaseHCL(t) + inmemHCL + badHAInmemHCL,
+			testBaseHCL(t, "") + inmemHCL + badHAInmemHCL,
 			"Specified HA storage does not support HA",
 			1,
+			"-test-verify-only",
+		},
+		{
+			"good_listener_timeout_config",
+			testBaseHCL(t, goodListenerTimeouts) + inmemHCL,
+			"",
+			0,
+			"-test-server-config",
+		},
+		{
+			"bad_listener_read_header_timeout_config",
+			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
+			"Could not parse a time value for http_read_header_timeout",
+			1,
+			"-test-server-config",
+		},
+		{
+			"bad_listener_read_timeout_config",
+			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
+			"Could not parse a time value for http_read_timeout",
+			1,
+			"-test-server-config",
+		},
+		{
+			"bad_listener_write_timeout_config",
+			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
+			"Could not parse a time value for http_write_timeout",
+			1,
+			"-test-server-config",
+		},
+		{
+			"bad_listener_idle_timeout_config",
+			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
+			"Could not parse a time value for http_idle_timeout",
+			1,
+			"-test-server-config",
 		},
 	}
 
@@ -242,7 +292,7 @@ func TestServer(t *testing.T) {
 
 			code := cmd.Run([]string{
 				"-config", f.Name(),
-				"-test-verify-only",
+				tc.flag,
 			})
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
 			if code != tc.code {

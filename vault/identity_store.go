@@ -109,13 +109,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.entityPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
-			return
-		}
-
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -124,9 +117,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// entry key of the entity bucket. Fetch all the entities that
 		// belong to this bucket using the hash value. Remove these entities
 		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		entitiesFetched, err := i.MemDBEntitiesByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
 			return
 		}
 
@@ -183,20 +176,13 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, groupBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.groupPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
-			return
-		}
-
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		groupsFetched, err := i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch groups using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch groups using the bucket key", "key", key)
 			return
 		}
 
@@ -251,7 +237,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				}
 
 				// Only update MemDB and don't touch the storage
-				err = i.UpsertGroupInTxn(txn, group, false)
+				err = i.UpsertGroupInTxn(ctx, txn, group, false)
 				if err != nil {
 					i.logger.Error("failed to update group in MemDB", "error", err)
 					return
@@ -294,7 +280,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.LastUpdateTime = oldEntity.LastUpdateTime
 		entity.MergedEntityIDs = oldEntity.MergedEntityIDs
 		entity.Policies = oldEntity.Policies
-		entity.BucketKeyHash = oldEntity.BucketKeyHash
+		entity.BucketKey = oldEntity.BucketKeyHash
 		entity.MFASecrets = oldEntity.MFASecrets
 		// Copy each alias individually since the format of aliases were
 		// also different
@@ -336,7 +322,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		}
 
 		// Store the entity with new format
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err
 		}

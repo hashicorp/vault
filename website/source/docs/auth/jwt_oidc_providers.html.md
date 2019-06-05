@@ -8,7 +8,10 @@ description: |-
 # OIDC Provider Configuration
 
 This page collects high-level setup steps on how to configure an OIDC application for various
-providers. These providers are often highly configurable and you should become familiar with their
+providers. For more general usage and operation information, see the
+[Vault JWT/OIDC method documentation](https://www.vaultproject.io/docs/auth/jwt.html).
+
+OIDC providers are often highly configurable and you should become familiar with their
 recommended settings and best practices. The instructions below are intended only to help you get
 started. Corrections and additions may be submitted via the [Vault Github repository](https://github.com/hashicorp/vault).
 
@@ -62,3 +65,5 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 1. Visit Applications > Add Application (Web).
 1. Configure Login redirect URIs. Save.
 1. Save client ID and secret.
+
+Note your policy will need `oidc_scopes` to include `profile` to get a full profile ("[Fat Token](https://support.okta.com/help/s/article/Okta-Groups-or-Attribute-Missing-from-Id-Token)"). You will also need to configure bound audience along the lines of `"bound_audiences": ["api://default", "0a4........."]` if you are using the default authorization server.

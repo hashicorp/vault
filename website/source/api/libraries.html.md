@@ -149,6 +149,10 @@ $ pip install hvac
 $ pip install async-hvac
 ```
 
+### R
+
+* [vaultr](https://github.com/vimc/vaultr)
+
 ### Rust
 
 * [HashicorpVault](https://crates.io/crates/hashicorp_vault)
