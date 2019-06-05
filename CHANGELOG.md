@@ -55,7 +55,6 @@ BUG FIXES:
  * ui: Fix a namespace workflow mapping identities from external namespaces by
    allowing arbitrary input in search-select component [GH-6728]
 
-
 ## 1.1.2 (April 18th, 2019)
 
 This is a bug fix release containing the two items below. It is otherwise
