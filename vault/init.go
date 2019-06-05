@@ -146,6 +146,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// If we have clustered storage, set it up now
 	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
+		// TODO: do we need to start cluster listener here? I think yes so we
+		// can get the correct cluster port in the event :0 is used. Unless we
+		// use a address provider?
 		if err := c.startClusterListener(ctx); err != nil {
 			return nil, errwrap.Wrapf("could not start cluster listener: {{err}}", err)
 		}

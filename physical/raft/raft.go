@@ -35,22 +35,52 @@ var (
 	snapshotsRetained = 2
 )
 
+// RaftBackend implements the backend interfaces and uses the raft protocol to
+// persist writes to the FSM.
 type RaftBackend struct {
 	logger log.Logger
 	conf   map[string]string
 	l      sync.RWMutex
 
-	fsm             *FSM
-	raft            *raft.Raft
-	raftNotifyCh    chan bool
-	raftLayer       *raftLayer
-	raftTransport   raft.Transport
-	snapStore       raft.SnapshotStore
-	logStore        raft.LogStore
-	stableStore     raft.StableStore
+	// fsm is the state store for vault's data
+	fsm *FSM
+
+	// raft is the instance of raft we will operate on.
+	raft *raft.Raft
+
+	// raftNotifyCh is used to receive updates about leadership changes
+	// regarding this node.
+	raftNotifyCh chan bool
+
+	// raftLayer is the network layer used to connect the nodes in the raft
+	// cluster.
+	raftLayer *raftLayer
+
+	// raftTransport is the transport layer that the raft library uses for RPC
+	// communication.
+	raftTransport raft.Transport
+
+	// snapStore is our snapshot mechanism.
+	snapStore raft.SnapshotStore
+
+	// logStore is used by the raft library to store the raft logs in durable
+	// storage.
+	logStore raft.LogStore
+
+	// stableStore is used by the raft library to store additional metadata in
+	// durable storage.
+	stableStore raft.StableStore
+
+	// bootstrapConfig is only set when this node needs to be bootstrapped upon
+	// startup.
 	bootstrapConfig *raft.Configuration
 
+	// dataDir is the location on the local filesystem that raft and FSM data
+	// will be stored.
 	dataDir string
+
+	// localID is the ID for this node. This can either be configured in the
+	// config file, via a file on disk, or is otherwise randomly generated.
 	localID string
 }
 
@@ -115,7 +145,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := raft.NewFileSnapshotStore(path, snapshotsRetained, nil)
+		snapshots, err := NewBoltSnapshotStore(path, snapshotsRetained, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
@@ -127,6 +157,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		// Determine the local node ID
 		localID = conf["node_id"]
 
+		// If not set in the config check the "node-id" file.
 		if len(localID) == 0 {
 			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
 			switch {
@@ -140,6 +171,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			}
 		}
 
+		// If the file didn't exist generate a UUID and persist it to tne
+		// "node-id" file.
 		if len(localID) == 0 {
 			id, err := uuid.GenerateUUID()
 			if err != nil {
@@ -195,6 +228,7 @@ type RaftConfigurationResponse struct {
 	Index uint64 `json:"index"`
 }
 
+// Peer defines the ID and Adress for a given member of the raft cluster.
 type Peer struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
@@ -235,11 +269,13 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 		}
 	}
 
+	// Store the config for later use
 	b.bootstrapConfig = raftConfig
 	return nil
 }
 
-// SetupCluster creates a new raft cluster
+// SetupCluster starts the raft cluster and enables the networking needed for
+// the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicalstd.NetworkConfig, clusterListener physicalstd.ClusterHook) error {
 	b.logger.Trace("setting up raft cluster")
 
@@ -256,10 +292,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 		return errors.New("no local node id configured")
 	}
 
+	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	// Make sure we set the LogOutput.
-	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
-	//raftConfig.Logger = logger
+	raftConfig.Logger = b.logger
 	raftConfig.SnapshotThreshold = 100
 	raftConfig.TrailingLogs = 100
 	raftConfig.ElectionTimeout = raftConfig.ElectionTimeout * 5
@@ -268,8 +303,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 
 	switch {
 	case networkConfig == nil:
+		// If we don't have a provided network config we use an in-memory one.
+		// This allows us to bootstrap a node without bringing up a cluster
+		// network. This will be true during bootstrap and dev modes.
 		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(clusterListener.Addr().String()))
 	default:
+		// Load the base TLS config from the cluster listener.
 		baseTLSConfig, err := clusterListener.TLSConfig(ctx)
 		if err != nil {
 			return err
@@ -301,18 +340,23 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	// If we have a bootstrapConfig set we should bootstrap now.
 	if b.bootstrapConfig != nil {
 		bootstrapConfig := b.bootstrapConfig
+		// Unset the bootstrap config
 		b.bootstrapConfig = nil
 
+		// Bootstrap raft with our known cluster members.
 		if err := raft.BootstrapCluster(raftConfig, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *bootstrapConfig); err != nil {
 			return err
 		}
+		// If we are the only node we should start as the leader.
 		if len(bootstrapConfig.Servers) == 1 {
 			raftConfig.StartAsLeader = true
 		}
 	}
 
 	// Setup the Raft store.
+	b.fsm.SetNoopRestore(true)
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	b.fsm.SetNoopRestore(false)
 	if err != nil {
 		return err
 	}
@@ -342,6 +386,8 @@ func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) e
 	return future.Error()
 }
 
+// RemovePeer removes the given peer ID from the raft cluster. If the node is
+// ourselves we will give up leadership.
 func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -469,7 +515,7 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 	return b.fsm.List(ctx, prefix)
 }
 
-// Transaction applies all the given operations into a single command and
+// Transaction applies all the given operations into a single log and
 // applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	command := &LogData{
@@ -495,6 +541,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	return b.applyLog(ctx, command)
 }
 
+// applyLog will take a given log command and apply it to the raft log. applyLog
+// doesn't return until the log has been applied to a quorum of servers and is
+// persisted to the local FSM.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -514,7 +563,7 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
-	if !applyFuture.Response().(*FSMApplyResponse).Success {
+	if resp, ok := applyFuture.Response().(*FSMApplyResponse); !ok || !resp.Success {
 		return errors.New("could not apply data")
 	}
 
@@ -533,6 +582,9 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	}, nil
 }
 
+// RaftLock implements the physical Lock interface and enables HA for this
+// backend. The Lock uses the raftNotifyCh for receiving leadership edge
+// triggers. Vault's active duty matches raft's leadership.
 type RaftLock struct {
 	key   string
 	value []byte
@@ -540,6 +592,8 @@ type RaftLock struct {
 	b *RaftBackend
 }
 
+// monitorLeadership waits until we receive an update on the raftNotifyCh and
+// closes the leaderLost channel.
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
@@ -552,6 +606,8 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}) <-chan struct{} {
 	return leaderLost
 }
 
+// Lock blocks until we become leader or are shutdown. It returns a channel that
+// is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	for {
 		select {
@@ -581,10 +637,12 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	return nil, nil
 }
 
+// Unlock gives up leadership.
 func (l *RaftLock) Unlock() error {
 	return l.b.raft.LeadershipTransfer().Error()
 }
 
+// Value reads the value of the lock. This informs us who is currently leader.
 func (l *RaftLock) Value() (bool, string, error) {
 	e, err := l.b.Get(context.Background(), l.key)
 	if err != nil {

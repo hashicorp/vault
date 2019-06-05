@@ -19,10 +19,19 @@ import (
 	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
+// Make sure raftLayer satisfies the raft.StreamLayer interface
+var _ raft.StreamLayer = (*raftLayer)(nil)
+
+// Make sure raftLayer satisfies the cluster.Handler and cluster.Client
+// interfaces
+var _ cluster.Handler = (*raftLayer)(nil)
+var _ cluster.Client = (*raftLayer)(nil)
+
 // RaftLayer implements the raft.StreamLayer interface,
-// so that we can use a single RPC layer for Raft and Nomad
+// so that we can use a single RPC layer for Raft and Vault
 type raftLayer struct {
 	// Addr is the listener address to return
 	addr net.Addr
@@ -47,6 +56,8 @@ type raftLayer struct {
 	baseTLSConfig *tls.Config
 }
 
+// NewRaftLayer creates a new raftLayer object. It parses the TLS information
+// from the network config.
 func NewRaftLayer(logger log.Logger, conf *physicalstd.NetworkConfig, baseTLSConfig *tls.Config) (*raftLayer, error) {
 	switch {
 	case conf.Addr == nil:
@@ -132,10 +143,12 @@ func (l *raftLayer) ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Ce
 	}, nil
 }
 
+// CALookup returns the CA to use when validating this connection.
 func (l *raftLayer) CALookup(context.Context) (*x509.Certificate, error) {
 	return l.parsedCert, nil
 }
 
+// Stop shutsdown the raft layer.
 func (l *raftLayer) Stop() error {
 	l.Close()
 	return nil
@@ -185,22 +198,6 @@ func (l *raftLayer) Close() error {
 	return nil
 }
 
-/*
-// getTLSWrapper is used to retrieve the current TLS wrapper
-func (l *RaftLayer) getTLSWrapper() tlsutil.Wrapper {
-	l.tlsWrapLock.RLock()
-	defer l.tlsWrapLock.RUnlock()
-	return l.tlsWrap
-}
-
-// ReloadTLS swaps the TLS wrapper. This is useful when upgrading or
-// downgrading TLS connections.
-func (l *RaftLayer) ReloadTLS(tlsWrap tlsutil.Wrapper) {
-	l.tlsWrapLock.Lock()
-	defer l.tlsWrapLock.Unlock()
-	l.tlsWrap = tlsWrap
-}
-*/
 // Addr is used to return the address of the listener
 func (l *raftLayer) Addr() net.Addr {
 	return l.addr
