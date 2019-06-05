@@ -16,9 +16,11 @@ found in the sidebar._
 
 !> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
-Vault binary back to what it was before will NOT be sufficient enough. If you
-need to roll back to a previous version of Vault, you should roll back your data
-store as well.
+newly-installed Vault binary with the previous version will not cleanly
+downgrade Vault, as upgrades may perform changes to the underlying data
+structure that make the data incompatible with a downgrade. If you need to roll
+back to a previous version of Vault, you should roll back your data store as
+well.
 
 ## Testing the Upgrade
 
