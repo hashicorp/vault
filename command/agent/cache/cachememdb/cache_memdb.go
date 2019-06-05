@@ -134,7 +134,6 @@ func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, 
 	}
 
 	txn := c.db.Load().(*memdb.MemDB).Txn(false)
-	defer txn.Abort()
 
 	raw, err := txn.First(tableNameIndexer, indexName, indexValues...)
 	if err != nil {
@@ -182,7 +181,6 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 
 	// Get all the objects
 	txn := c.db.Load().(*memdb.MemDB).Txn(false)
-	defer txn.Abort()
 
 	iter, err := txn.Get(tableNameIndexer, indexName, indexValues...)
 	if err != nil {
