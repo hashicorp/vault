@@ -14,9 +14,11 @@ These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
 found in the sidebar._
 
-**Always** back up your data before upgrading! Vault does not make
-backwards-compatibility guarantees for its data store. If you need to roll back
-to a previous version of Vault, you should roll back your data store as well.
+!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+make backward-compatibility guarantees for its data store. Simply replacing the
+Vault binary back to what it was before will NOT be sufficient enough. If you
+need to roll back to a previous version of Vault, you should roll back your data
+store as well.
 
 ## Testing the Upgrade
 
