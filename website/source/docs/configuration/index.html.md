@@ -112,6 +112,9 @@ to specify where the configuration is.
   parameters). Not all parts of Vault's logging can have its level be changed
   dynamically this way; in particular, secrets/auth plugins are currently not
   updated dynamically. Supported log levels: Trace, Debug, Error, Warn, Info.
+  
+- `log_format` `(string: "")` – Specifies the log format to use; overridden by
+  CLI and env var parameters. Supported log formats: Standard, Json.
 
 - `default_lease_ttl` `(string: "768h")` – Specifies the default lease duration
   for tokens and secrets. This is specified using a label suffix like `"30s"` or
