@@ -49,6 +49,19 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	return log.New(opts)
 }
 
+// SpecifyLogFormat returns a LogFormat by checking each of the provided formats, and
+// returning the first one that is not unspecified.  If all of the paramters
+// are unspecified, return UnspecifiedFormat.
+func SpecifyLogFormat(formats ...LogFormat) LogFormat {
+
+	for _, format := range formats {
+		if format != UnspecifiedFormat {
+			return format
+		}
+	}
+	return UnspecifiedFormat
+}
+
 // ParseLogFormat parses the log format from the provided string.
 func ParseLogFormat(format string) (LogFormat, error) {
 

@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -59,8 +59,9 @@ type Config struct {
 
 	LogLevel string `hcl:"log_level"`
 
-	// LogJson enables log output in a JSON format
-	LogJson bool `hcl:"log_json"`
+	// LogFormat specifies the log format.  Valid values are "standard" and "json".  The values are case-insenstive.
+	// If no log format is specified, then standard format will be used.
+	LogFormat string `hcl:"log_format"`
 
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
@@ -333,7 +334,10 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LogLevel = c2.LogLevel
 	}
 
-	result.LogJson = c.LogJson || c2.LogJson
+	result.LogFormat = c.LogFormat
+	if c2.LogFormat != "" {
+		result.LogFormat = c2.LogFormat
+	}
 
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {

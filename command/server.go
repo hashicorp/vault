@@ -416,6 +416,13 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	configFormat, err := logging.ParseLogFormat(config.LogFormat)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	logFormat := logging.SpecifyLogFormat(logging.EnvLogFormat(), configFormat) // cmd > env > config
+
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = log.New(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
@@ -426,7 +433,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logger = log.New(&log.LoggerOptions{
 			Output:     c.logWriter,
 			Level:      level,
-			JSONFormat: config.LogJson || (logging.EnvLogFormat() == logging.JSONFormat),
+			JSONFormat: logFormat == logging.JSONFormat,
 		})
 	}
 
