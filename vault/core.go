@@ -1662,6 +1662,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
+			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
+				// Go through the loop again, this time the stop channel case
+				// should trigger
+				continue
+			}
 			if c.perfStandby {
 				syncCounter(c)
 			} else {
@@ -1670,6 +1675,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 					c.logger.Error("writing request counters to barrier", "err", err)
 				}
 			}
+			c.stateLock.RUnlock()
 
 		case <-stopCh:
 			return
