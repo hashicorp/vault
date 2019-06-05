@@ -88,6 +88,7 @@ type ServerCommand struct {
 	// new stuff
 	flagConfigs        []string
 	flagLogLevel       string
+	flagLogFormat      string
 	flagDev            bool
 	flagDevRootTokenID string
 	flagDevListenAddr  string
@@ -171,6 +172,17 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.flagLogFormat,
+		Default: notSetValue,
+		// EnvVar can't be "VAULT_LOG_FORMAT", because more than one env var name is supported
+		// for backwards compatibility reasons.
+		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
+		Completion: complete.PredictSet("standard", "json"),
+		Usage:      "Log format. Supported values are \"standard\" and \"json\".",
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -416,12 +428,26 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	configFormat, err := logging.ParseLogFormat(config.LogFormat)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
+	logFormat := logging.UnspecifiedFormat
+	if c.flagLogFormat != notSetValue {
+		var err error
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
 	}
-	logFormat := logging.SpecifyLogFormat(logging.EnvLogFormat(), configFormat) // cmd > env > config
+	if logFormat == logging.UnspecifiedFormat {
+		logFormat = logging.ParseEnvLogFormat()
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		var err error
+		logFormat, err = logging.ParseLogFormat(config.LogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+	}
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = log.New(&log.LoggerOptions{

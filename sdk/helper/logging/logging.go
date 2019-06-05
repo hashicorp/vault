@@ -44,22 +44,9 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
 		Level:      level,
 		Output:     w,
-		JSONFormat: EnvLogFormat() == JSONFormat,
+		JSONFormat: ParseEnvLogFormat() == JSONFormat,
 	}
 	return log.New(opts)
-}
-
-// SpecifyLogFormat returns a LogFormat by checking each of the provided formats, and
-// returning the first one that is not unspecified.  If all of the paramters
-// are unspecified, return UnspecifiedFormat.
-func SpecifyLogFormat(formats ...LogFormat) LogFormat {
-
-	for _, format := range formats {
-		if format != UnspecifiedFormat {
-			return format
-		}
-	}
-	return UnspecifiedFormat
 }
 
 // ParseLogFormat parses the log format from the provided string.
@@ -77,9 +64,8 @@ func ParseLogFormat(format string) (LogFormat, error) {
 	}
 }
 
-// EnvLogFormat returns whether there is an environment variable that specifies
-// the log format.  Currently the only log format that can be specified is JSON.
-func EnvLogFormat() LogFormat {
+// ParseEnvLogFormat parses the log format from an environment variable.
+func ParseEnvLogFormat() LogFormat {
 	logFormat := os.Getenv("VAULT_LOG_FORMAT")
 	if logFormat == "" {
 		logFormat = os.Getenv("LOGXI_FORMAT")
@@ -87,6 +73,8 @@ func EnvLogFormat() LogFormat {
 	switch strings.ToLower(logFormat) {
 	case "json", "vault_json", "vault-json", "vaultjson":
 		return JSONFormat
+	case "standard":
+		return StandardFormat
 	default:
 		return UnspecifiedFormat
 	}

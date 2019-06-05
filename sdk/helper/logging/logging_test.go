@@ -6,29 +6,6 @@ import (
 	"testing"
 )
 
-func Test_SpecifyLogFormat(t *testing.T) {
-
-	result := SpecifyLogFormat(JSONFormat)
-	if result != JSONFormat {
-		t.Errorf("expected %s, got %s", JSONFormat, result)
-	}
-
-	result = SpecifyLogFormat(StandardFormat, JSONFormat)
-	if result != StandardFormat {
-		t.Errorf("expected %s, got %s", StandardFormat, result)
-	}
-
-	result = SpecifyLogFormat(UnspecifiedFormat, StandardFormat)
-	if result != StandardFormat {
-		t.Errorf("expected %s, got %s", StandardFormat, result)
-	}
-
-	result = SpecifyLogFormat(UnspecifiedFormat, UnspecifiedFormat)
-	if result != UnspecifiedFormat {
-		t.Errorf("expected %s, got %s", UnspecifiedFormat, result)
-	}
-}
-
 func Test_ParseLogFormat(t *testing.T) {
 
 	type testData struct {
