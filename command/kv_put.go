@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -16,8 +17,9 @@ var _ cli.CommandAutocomplete = (*KVPutCommand)(nil)
 type KVPutCommand struct {
 	*BaseCommand
 
-	flagCAS   int
-	testStdin io.Reader // for tests
+	flagCAS        int
+	flagVersionTTL time.Duration
+	testStdin      io.Reader // for tests
 }
 
 func (c *KVPutCommand) Synopsis() string {
@@ -69,6 +71,19 @@ func (c *KVPutCommand) Flags() *FlagSets {
 		doesn’t exist. If the index is non-zero the write will only be allowed
 		if the key’s current version matches the version specified in the cas
 		parameter.`,
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "version-ttl",
+		Target:     &c.flagVersionTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: `Specifies the length of time before this version is
+		deleted. If not set, the metadata's version-ttl is used. Cannot be
+		greater than the metadata's version-ttl. The version-ttl is
+		specified as a numeric string with a suffix like "30s" or
+		"3h25m19s".`,
 	})
 
 	return set
@@ -136,6 +151,10 @@ func (c *KVPutCommand) Run(args []string) int {
 
 		if c.flagCAS > -1 {
 			data["options"].(map[string]interface{})["cas"] = c.flagCAS
+		}
+
+		if c.flagVersionTTL > 0 {
+			data["options"].(map[string]interface{})["version_ttl"] = c.flagVersionTTL.String()
 		}
 	}
 

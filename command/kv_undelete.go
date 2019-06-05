@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -14,7 +15,8 @@ var _ cli.CommandAutocomplete = (*KVUndeleteCommand)(nil)
 type KVUndeleteCommand struct {
 	*BaseCommand
 
-	flagVersions []string
+	flagVersions   []string
+	flagVersionTTL time.Duration
 }
 
 func (c *KVUndeleteCommand) Synopsis() string {
@@ -29,7 +31,7 @@ Usage: vault kv undelete [options] KEY
   This restores the data, allowing it to be returned on get requests.
 
   To undelete version 3 of key "foo":
-  
+
       $ vault kv undelete -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -49,6 +51,19 @@ func (c *KVUndeleteCommand) Flags() *FlagSets {
 		Target:  &c.flagVersions,
 		Default: nil,
 		Usage:   `Specifies the version numbers to undelete.`,
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "version-ttl",
+		Target:     &c.flagVersionTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: `Specifies the length of time before these versions will be
+		deleted. If not set, the metadata's version-ttl is used. Cannot be
+		greater than the metadata's version-ttl. The version-ttl is
+		specified as a numeric string with a suffix like "30s" or
+		"3h25m19s".`,
 	})
 
 	return set
@@ -105,6 +120,10 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 	path = addPrefixToVKVPath(path, mountPath, "undelete")
 	data := map[string]interface{}{
 		"versions": kvParseVersionsFlags(c.flagVersions),
+	}
+
+	if c.flagVersionTTL > 0 {
+		data["version_ttl"] = c.flagVersionTTL.String()
 	}
 
 	secret, err := client.Logical().Write(path, data)
