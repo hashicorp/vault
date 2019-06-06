@@ -104,6 +104,11 @@ prep: fmtcheck
 	@go generate $(go list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
+ci-config:
+	@$(MAKE) -C .circleci
+ci-verify:
+	@$(MAKE) -C .circleci ci-verify
+
 # bootstrap the build by downloading additional tools
 bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
