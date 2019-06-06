@@ -58,7 +58,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
-	github.com/hashicorp/go-hclog v0.8.0
+	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-memdb v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-rootcerts v1.0.0
@@ -74,13 +74,14 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
-	github.com/hashicorp/vault/api v1.0.1
+	github.com/hashicorp/vault/api v1.0.2
 	github.com/hashicorp/vault/sdk v0.1.11
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
