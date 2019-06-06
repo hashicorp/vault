@@ -16,6 +16,9 @@ message Entity {
 
 	// Metadata represents the custom data tied to this entity
 	map<string, string> metadata = 4;
+    
+    // Disabled is true if the entity is disabled.
+    bool disabled = 5;
 }
 
 message Alias {

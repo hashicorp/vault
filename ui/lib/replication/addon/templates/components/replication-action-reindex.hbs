@@ -9,14 +9,15 @@
 </div>
 <div class="field">
   <div class="control">
-    {{#confirm-action
-      buttonClasses="button is-primary"
-      onConfirmAction=(action "onSubmit" "reindex")
-      confirmMessage="Are you sure you want to initiate cluster reindex?"
-      confirmButtonText="Begin reindex"
-      cancelButtonText="Cancel"
-      }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Begin reindex?"
+      @confirmMessage="This will initiate reindexing of the local data storage."
+      @confirmButtonText="Reindex"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "onSubmit" "reindex"}}
+    >
       Reindex
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 </div>

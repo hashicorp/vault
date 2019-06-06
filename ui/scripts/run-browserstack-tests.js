@@ -16,8 +16,8 @@ function run(command, args = []) {
 }
 
 (async function() {
-  await run('ember', ['browserstack:connect']);
   try {
+    await run('ember', ['browserstack:connect']);
     try {
       await run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
 

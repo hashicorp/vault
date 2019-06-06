@@ -87,25 +87,4 @@ module('Integration | Component | edit form', function(hooks) {
       assert.equal(flash.success.callCount, 1, 'calls flash message success');
     });
   });
-
-  test('it calls flash message fns on delete', async function(assert) {
-    let model = createModel();
-    let onSave = () => {
-      return resolve();
-    };
-    this.set('model', model);
-    this.set('onSave', onSave);
-    let saveSpy = sinon.spy(this, 'onSave');
-
-    await render(hbs`{{edit-form model=model onSave=onSave}}`);
-    await component.deleteButton();
-    await component.deleteConfirm();
-
-    later(() => run.cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(saveSpy.calledOnce, 'calls onSave');
-      assert.equal(saveSpy.getCall(0).args[0].saveType, 'destroyRecord');
-      assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
-    });
-  });
 });

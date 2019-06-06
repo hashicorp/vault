@@ -2,7 +2,8 @@
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
       <Icon
-        class="hs-icon-l {{alertType.glyphClass}}"
+        @size="l"
+        class="{{alertType.glyphClass}}"
         aria-hidden=true
         @glyph={{alertType.glyph}}
       />

@@ -2,25 +2,31 @@
 
 CHANGES:
 
- * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
-   will now be preferred over regions set in the enclosing environment.
-   This is a _breaking_ change.
- * audit: Several more values in audit logs now are omitted if they are empty.
-   This helps reduce the size of audit log entries by not reproducing keys in
-   each entry that commonly don't contain any value, which can help in cases
-   where audit log entries are above the maximum UDP packet size and others.
-   See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
- * backends: both PeriodicFunc and WALRollback functions will be called if 
-   both are provided. Previously WALRollback would only be called if PeriodicFunc 
-   was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
+ * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
+   stricter about what characters it will accept in path names. Whereas before
+   it would filter out unprintable characters (and this could be turned off),
+   control characters and other invalid characters are now rejected within Go's
+   HTTP library before the request is passed to Vault, and this cannot be
+   disabled. To continue using these (e.g. for already-written paths), they
+   must be properly percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes
+   `%00`, and so on).
+ * The user-configured regions on the AWSKMS seal stanza will now be preferred
+   over regions set in the enclosing environment.  This is a _breaking_ change.
+ * All values in audit logs now are omitted if they are empty.  This helps
+   reduce the size of audit log entries by not reproducing keys in each entry
+   that commonly don't contain any value, which can help in cases where audit
+   log entries are above the maximum UDP packet size and others.
+ * Both PeriodicFunc and WALRollback functions will be called if both are
+   provided. Previously WALRollback would only be called if PeriodicFunc was
+   not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for
    details.
- * Go Modules change: Vault now uses Go Modules to manage dependencies. As a
-   result to both reduce transitive dependencies for API library users and
-   plugin authors, and to work around various conflicts, we have moved various
-   helpers around, mostly under an `sdk/` submodule. A couple of functions have
-   also moved from plugin helper code to the `api/` submodule. If you are a
-   plugin author, take a look at some of our official plugins and the paths
-   they are importing for guidance.
+ * Vault now uses Go's official dependency management system, Go Modules, to
+   manage dependencies. As a result to both reduce transitive dependencies for
+   API library users and plugin authors, and to work around various conflicts,
+   we have moved various helpers around, mostly under an `sdk/` submodule. A
+   couple of functions have also moved from plugin helper code to the `api/`
+   submodule. If you are a plugin author, take a look at some of our official
+   plugins and the paths they are importing for guidance.
 
 FEATURES:
 
@@ -28,11 +34,19 @@ FEATURES:
 
 IMPROVEMENTS: 
 
+ * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
+ * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
+   of the Confirm Action component [GH-6741], and using a new set of glyphs for our 
+   Icon component [GH-6736]
+ * ui: Lazy loading parts of the application so that the total initial payload is 
+   smaller [GH-6718]
+ * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
+   is one [GH-6759]
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
@@ -55,6 +69,9 @@ BUG FIXES:
    new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
+ * ui: fix web cli parsing when using quoted values [GH-6755]
+ * ui: fix a namespace workflow mapping identities from external namespaces by allowing
+   arbitrary input in search-select component [GH-6728]
 
 ## 1.1.2 (April 18th, 2019)
 

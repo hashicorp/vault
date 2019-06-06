@@ -11,11 +11,6 @@ export default create({
   name: fillable('[data-test-input="name"]'),
   CIDR: fillable('[data-test-input="cidrList"]'),
   save: clickable('[data-test-role-ssh-create]'),
-  deleteBtn: clickable('[data-test-confirm-action-trigger]'),
-  confirmBtn: clickable('[data-test-confirm-button]'),
-  deleteRole() {
-    return this.deleteBtn().confirmBtn();
-  },
 
   async createOTPRole(name) {
     await this.toggleMore()

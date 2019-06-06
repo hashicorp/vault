@@ -253,13 +253,6 @@ func TestServer(t *testing.T) {
 			"-test-server-config",
 		},
 		{
-			"bad_listener_read_header_timeout_config",
-			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
-			"Could not parse a time value for http_read_header_timeout",
-			1,
-			"-test-server-config",
-		},
-		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
 			"Could not parse a time value for http_read_timeout",

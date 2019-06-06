@@ -51,39 +51,29 @@
     {{#if (not-eq baseKey.id '')}}
       <div class="control">
         {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
-          {{#confirm-action
-            buttonClasses="button is-ghost is-compact"
-            onConfirmAction=(action "revokePrefix" baseKey.id true)
-            confirmMessage= (concat
-            "Confirming removes all leases under "
-            baseKey.id
-            " and disregards any errors encountered."
-            )
-            confirmButtonText=(concat "Revoke " baseKey.id)
-            confirmButtonClasses="button is-danger is-outlined is-compact"
-            cancelButtonText="Cancel"
-            cancelButtonClasses="button is-outlined is-compact"
-            showConfirm=confirmingForceRevoke
-            }}
+          <ConfirmAction
+            @buttonClasses="toolbar-link"
+            @confirmTitle="Disable this?"
+            @confirmMessage={{concat "All leases under this one will also be removed and disregard any errors encountered."}}
+            @confirmButtonText="Revoke"
+            @onConfirmAction={{action "revokePrefix" baseKey.id true}}
+          >
             Force revoke prefix
-          {{/confirm-action}}
+          </ConfirmAction>
         {{/if}}
       </div>
       <div class="control">
         {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
-          {{#confirm-action
-            buttonClasses="button is-ghost is-compact"
-            onConfirmAction=(action "revokePrefix" baseKey.id)
-            confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
-            confirmButtonText=(concat "Revoke " baseKey.id)
-            confirmButtonClasses="button is-danger is-outlined is-compact"
-            cancelButtonText="Cancel"
-            cancelButtonClasses="button is-outlined is-compact"
-            showConfirm=confirmingRevoke
-            data-test-lease-revoke-prefix=true
-            }}
+          <ConfirmAction
+            @buttonClasses="toolbar-link"
+            @confirmTitle="Revoke this?"
+            @confirmMessage={{concat "All leases under this one will also be removed"}}
+            @confirmButtonText="Revoke"
+            @onConfirmAction={{action "revokePrefix" baseKey.id}}
+            data-test-lease-revoke-prefix="true"
+          >
             Revoke prefix
-          {{/confirm-action}}
+          </ConfirmAction>
         {{/if}}
       </div>
     {{/if}}
