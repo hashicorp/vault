@@ -25,16 +25,18 @@ type StoragePacker interface {
 	// Retrieve the entire set of items as a single slice
 	// This *is* an atomic operation.
 	AllItems(context.Context) ([]*Item, error)
+
+	// Defer writes until FlushQueue is called
+	// For correctness, the caller must prevent concurrent access
+	// during flushing or while turing queue mode back off.
+	SetQueueMode(bool)
+	FlushQueue(context.Context) error
 }
 
 /*
 
 // Is the given storage path controlled by this StoragePacker?
 func (s *StoragePackerV2) MatchingStorage(path string) bool
-
-// Retrieve the entire set of items as a single slice
-// This *is* an atomic operation.
-func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error)
 
 // Given a storage path (to a bucket) and new contents, return
 // "present": all items present in the new bucket
@@ -43,8 +45,5 @@ func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error)
 // wrote them; for recovery from the Merkle tree this will not be the case.
 func (s *StoragePackerV2) InvalidateItems(context.Context, path string, newValu []byte) (present []*Item, deleted []*Item, error)
 
-// Defer writes until FlushQueue is called
-func (s *StoragePackerV2) SetQueueMode(enabled bool)
-func (s *StoragePackerV2) FlushQueue(context.Context) error
 
 */

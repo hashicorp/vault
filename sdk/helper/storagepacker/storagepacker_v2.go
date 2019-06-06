@@ -257,18 +257,19 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 
 	parentPrefix := s.GetCacheKey(bucket.Key)
 	// Resilver the items
-	for k, v := range bucket.ItemMap {
-		itemKey := strings.TrimPrefix(k, parentPrefix)[0 : s.BucketShardBits/4]
-		s.Logger.Trace("resilvering item", "parent_prefix", parentPrefix, "item_id", k, "item_key", itemKey)
+	for id, v := range bucket.ItemMap {
+		key := GetItemIDHash(id)
+		shardKey := strings.TrimPrefix(key, parentPrefix)[0 : s.BucketShardBits/4]
+		s.Logger.Trace("resilvering item", "parent_prefix", parentPrefix, "item_id", id, "shard", shardKey)
 		// Sanity check
-		childBucket, ok := shards[itemKey]
+		childBucket, ok := shards[shardKey]
 		if !ok {
 			// We didn't complete sharding so don't make other parts of the
 			// code think that it completed
-			s.Logger.Error("failed to find sharded storagepacker bucket", "bucket_key", bucket.Key, "item_key", itemKey)
+			s.Logger.Error("failed to find sharded storagepacker bucket", "bucket_key", bucket.Key, "shard", shardKey)
 			return errors.New("failed to shard storagepacker bucket")
 		}
-		childBucket.ItemMap[k] = v
+		childBucket.ItemMap[id] = v
 	}
 
 	s.Logger.Debug("storing sharded buckets")
@@ -285,17 +286,12 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	}
 	for k, v := range shards {
 		s.Logger.Trace("storing bucket", "shard", k)
+		// Avoid queuing mode, go directly to "store" not "persist"
 		if err := s.storeBucket(ctx, v); err != nil {
 			s.Logger.Debug("encountered error", "shard", k)
 			retErr = multierror.Append(retErr, err)
 			cleanupStorage()
 			return retErr
-		}
-	}
-
-	cleanupCache := func() {
-		for _, v := range shards {
-			s.bucketsCache.Delete(s.GetCacheKey(v.Key))
 		}
 	}
 
@@ -312,7 +308,6 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 		bucket.ItemMap = origBucketItemMap
 		bucket.HasShards = false
 		cleanupStorage()
-		cleanupCache()
 		return retErr
 	}
 
@@ -327,13 +322,18 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	return retErr.ErrorOrNil()
 }
 
-// storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket) error {
+// Put a bucket into persistent storage, or at least enqueue it.
+// Expect that the bucket is already locked at this point.
+func (s *StoragePackerV2) persistBucket(ctx context.Context, bucket *LockedBucket) error {
 	if atomic.LoadUint32(&s.queueMode) == 1 {
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
 	}
+	return s.storeBucket(ctx, bucket)
+}
 
+// storeBucket actually stores the bucket.
+func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket) error {
 	marshaledBucket, err := proto.Marshal(bucket.Bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed to marshal bucket: {{err}}", err)
@@ -383,7 +383,7 @@ func (p *partitionedRequests) upsertItems() error {
 
 	for _, r := range p.Requests {
 		// Nil data checked earlier
-		bucket.ItemMap[r.Key] = r.Value.Data
+		bucket.ItemMap[r.ID] = r.Value.Data
 	}
 	return nil
 }
@@ -437,7 +437,7 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 	// Persist the result (partial application is OK)
 	var merr *multierror.Error
 	for _, p := range partition {
-		if err := s.storeBucket(ctx, p.Bucket); err != nil {
+		if err := s.persistBucket(ctx, p.Bucket); err != nil {
 			merr = multierror.Append(merr, err)
 		}
 	}
@@ -468,14 +468,14 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) err
 			continue
 		}
 		for _, k := range p.Requests {
-			delete(p.Bucket.ItemMap, k.Key)
+			delete(p.Bucket.ItemMap, k.ID)
 		}
 	}
 
 	// Persist the result (partial application is OK)
 	var merr *multierror.Error
 	for _, p := range partition {
-		if err := s.storeBucket(ctx, p.Bucket); err != nil {
+		if err := s.persistBucket(ctx, p.Bucket); err != nil {
 			merr = multierror.Append(merr, err)
 		}
 	}
@@ -511,7 +511,7 @@ func (s *StoragePackerV2) GetItems(ctx context.Context, ids ...string) ([]*Item,
 			continue
 		}
 		for _, req := range p.Requests {
-			data, ok := p.Bucket.ItemMap[req.Key]
+			data, ok := p.Bucket.ItemMap[req.ID]
 			if ok {
 				req.Value = &Item{
 					ID:   req.ID,
@@ -545,7 +545,36 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 // Retrieve the entire set of items as a single slice
 // This *is* an atomic operation.
 func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error) {
-	return nil, nil
+	// Acquire all the locks ahead of time (and in order)
+	for _, l := range s.storageLocks {
+		l.RLock()
+	}
+	defer func() {
+		for _, l := range s.storageLocks {
+			l.RUnlock()
+		}
+	}()
+
+	items := make([]*Item, 0)
+
+	s.bucketsCacheLock.RLock()
+	defer s.bucketsCacheLock.RUnlock()
+
+	s.bucketsCache.Walk(func(s string, v interface{}) bool {
+		bucket := v.(*LockedBucket)
+		if bucket.HasShards || bucket.ItemMap == nil {
+			return false
+		}
+		for id, data := range bucket.ItemMap {
+			items = append(items, &Item{
+				ID:   id,
+				Data: data,
+			})
+		}
+		return false
+	})
+
+	return items, nil
 }
 
 // NewStoragePackerV2 creates a new storage packer for a given view
@@ -651,7 +680,8 @@ func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 func (s *StoragePackerV2) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
-		lErr := s.storeBucket(ctx, value.(*LockedBucket))
+		bucket := value.(*LockedBucket)
+		lErr := s.storeBucket(ctx, bucket)
 		if lErr != nil {
 			err = multierror.Append(err, lErr)
 		}

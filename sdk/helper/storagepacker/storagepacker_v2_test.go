@@ -14,12 +14,14 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"math/rand"
 	"strings"
 )
 
 func createStoragePacker(tb testing.TB, storage logical.Storage) *StoragePackerV2 {
-	storageView := logical.NewStorageView(storage, "packer/buckets/v2")
+	storageView := logical.NewStorageView(storage, "packer/buckets/")
 	storagePacker, err := NewStoragePackerV2(context.Background(), &Config{
 		BucketStorageView: storageView,
 		ConfigStorageView: logical.NewStorageView(storage, "packer/config"),
@@ -414,8 +416,8 @@ func checkAllItems(t *testing.T, storagePacker *StoragePackerV2, ctx context.Con
 			t.Errorf("Error retrieving item %v ID %v: %v",
 				idx, item.ID, err)
 		} else if storedItem == nil {
-			t.Errorf("Nil item %v ID %v",
-				idx, item.ID)
+			t.Errorf("Nil item %v ID %v Key %v",
+				idx, item.ID, GetItemIDHash(item.ID))
 		} else if !bytes.Equal(storedItem.Data, item.Data) {
 			t.Errorf("Item %v ID %v: data mismatch",
 				idx, item.ID)
@@ -588,6 +590,124 @@ func TestStoragePackerV2_Variadic(t *testing.T) {
 	if items[2] != nil {
 		t.Errorf("test-doesnotexist reported present")
 	}
+}
+
+func checkReturnedItems(t *testing.T, allItems []*Item, returnedItems []*Item) {
+	itemsById := make(map[string]*Item, len(allItems))
+
+	for _, item := range allItems {
+		itemsById[item.ID] = item
+	}
+
+	for _, item := range returnedItems {
+		if item == nil {
+			t.Fatalf("nil item in list")
+			return
+		}
+		orig, found := itemsById[item.ID]
+		if !found {
+			t.Errorf("item %q unexpectedly present or duplicated", item.ID)
+		} else if !bytes.Equal(orig.Data, item.Data) {
+			t.Errorf("item %q: data mismatch", item.ID)
+		}
+		delete(itemsById, item.ID)
+	}
+
+	// should be empty
+	for k, _ := range itemsById {
+		t.Errorf("item %q not found in returned list", k)
+	}
+}
+
+func TestStoragePackerV2_AllItems(t *testing.T) {
+	storage := logical.InmemStorageWithMaxSize(10000)
+	storagePacker := createStoragePacker(t, storage)
+	ctx := namespace.RootContext(nil)
+
+	ids := append(generateLotsOfCollidingIDs(12, "00"),
+		generateLotsOfCollidingIDs(20, "1")...)
+	n := len(ids)
+
+	allItems := make([]*Item, n)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   ids[i],
+			Data: incompressibleData(1000),
+		}
+	}
+
+	err := storagePacker.PutItem(ctx, allItems...)
+	if err != nil {
+		t.Fatalf("error on PutItem: %+v", err)
+	}
+
+	stored, err := storagePacker.AllItems(ctx)
+	if err != nil {
+		t.Fatalf("error on AllItems: %+v", err)
+	}
+
+	checkReturnedItems(t, allItems, stored)
+
+	storagePacker2 := createStoragePacker(t, storage)
+	stored, err = storagePacker2.AllItems(ctx)
+	if err != nil {
+		t.Fatalf("error on recovered AllItems: %+v", err)
+	}
+
+	checkReturnedItems(t, allItems, stored)
+}
+
+func TestStoragePackerV2_Queued(t *testing.T) {
+	storage := logical.InmemStorageWithMaxSize(10000)
+	storagePacker := createStoragePacker(t, storage)
+	ctx := namespace.RootContext(nil)
+
+	numBatches := 2
+	batchSize := 80
+	n := numBatches * batchSize
+
+	allItems := make([]*Item, n)
+	ids := make([]string, n)
+	for i, _ := range allItems {
+		ids[i] = fmt.Sprintf("test-%d", i)
+		allItems[i] = &Item{
+			ID:   ids[i],
+			Data: incompressibleData(100),
+		}
+	}
+
+	storagePacker.SetQueueMode(true)
+
+	for b := 1; b < numBatches; b++ {
+		startIdx := b * batchSize
+		endIdx := (b + 1) * batchSize
+		err := storagePacker.PutItem(ctx, allItems[startIdx:endIdx]...)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	diskBuckets, err := logical.CollectKeys(ctx, storagePacker.BucketStorageView)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diskBuckets) != 0 {
+		t.Fatal("storage buckets exist even though queue mode is off")
+	}
+
+	err = storagePacker.FlushQueue(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	storagePacker.SetQueueMode(false)
+	storagePacker.PutItem(ctx, allItems[:batchSize]...)
+	checkAllItems(t, storagePacker, ctx, allItems)
+
+	// Recover into second object to verify persistence
+	storagePacker2 := createStoragePacker(t, storage)
+	checkAllItems(t, storagePacker2, ctx, allItems)
+
 }
 
 func TestStoragePackerV2_CreationErrors(t *testing.T) {
@@ -768,4 +888,160 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 	if b.ItemMap == nil {
 		t.Fatalf("upsert didn't create ItemMap")
 	}
+}
+
+// A clone of InMemStorage that fails on particular paths, for testing sharding
+type FailingInmemStorage struct {
+	underlying   physical.Backend
+	suffixToFail string
+	t            *testing.T
+}
+
+func NewFailingStorage(t *testing.T) *FailingInmemStorage {
+	conf := make(map[string]string)
+	conf["max_value_size"] = "10000"
+	phy, _ := inmem.NewInmem(conf, nil)
+	return &FailingInmemStorage{
+		underlying:   phy,
+		suffixToFail: "", // default: everything
+		t:            t,
+	}
+}
+
+func (s *FailingInmemStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	if strings.Contains(key, s.suffixToFail) {
+		return nil, fmt.Errorf("Failing for test purposes.")
+	}
+
+	entry, err := s.underlying.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	return &logical.StorageEntry{
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
+	}, nil
+}
+
+func (s *FailingInmemStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	s.t.Logf("Put %v\n", entry.Key)
+	// Don't fail the put that would fail with a too large exception
+	if len(entry.Value) <= 10000 && strings.HasSuffix(entry.Key, s.suffixToFail) {
+		return fmt.Errorf("Failing for test purposes.")
+	}
+
+	return s.underlying.Put(ctx, &physical.Entry{
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
+	})
+}
+
+func (s *FailingInmemStorage) Delete(ctx context.Context, key string) error {
+	s.t.Logf("Delete %v\n", key)
+	if strings.HasSuffix(key, s.suffixToFail) {
+		return fmt.Errorf("Failing for test purposes.")
+	}
+
+	return s.underlying.Delete(ctx, key)
+}
+
+func (s *FailingInmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
+	return s.underlying.List(ctx, prefix)
+}
+
+func testFailedPutWhileSharding(t *testing.T, storagePacker *StoragePackerV2, allItems []*Item) {
+	ctx := namespace.RootContext(nil)
+	err := storagePacker.PutItem(ctx, allItems...)
+	if err == nil {
+		t.Fatalf("error not signalled to PutItem")
+	} else {
+		t.Logf("PutItem error: %+v", err)
+	}
+
+	// Check that no intermediate buckets are hanging around in cache or storage
+	bucket, err := storagePacker.GetBucket(ctx, "0000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bucket.Key != "00" {
+		t.Fatalf("unexpected bucket key %q", bucket.Key)
+	}
+
+	list, err := storagePacker.BucketStorageView.List(ctx, "00/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) > 0 {
+		t.Fatalf("expected empty list of storage objects, got %v", list)
+	}
+}
+
+func TestStoragePackerV2_StorageErrors(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	storage := NewFailingStorage(t)
+	storage.suffixToFail = "DOESNTMATCH"
+	storagePacker := createStoragePacker(t, storage)
+
+	backend := storage.underlying.(*inmem.InmemBackend)
+	backend.FailPut(true)
+	err := storagePacker.PutItem(ctx, &Item{ID: "test", Data: []byte("test")})
+	if err == nil {
+		t.Fatalf("Error not signalled to PutItem")
+	} else {
+		t.Logf("PutItem error: %+v", err)
+	}
+
+	backend.FailPut(false)
+	err = storagePacker.PutItem(ctx, &Item{ID: "test", Data: []byte("test")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	backend.FailPut(true)
+	err = storagePacker.DeleteItem(ctx, "test")
+	if err == nil {
+		t.Fatalf("Error not signalled to DeleteItem")
+	} else {
+		t.Logf("DeleteItem error: %+v", err)
+	}
+
+	// Created from generateLotsOfCollidingIDs(10, "0000")
+	ids := []string{
+		"0000rZdeLoTTuouIGnsMpqYZqgwWzUpOLKXgRuEV",
+		"0000qToiiioByTRsjmBpfkAbsQtSdRTPfVqDGohJ",
+		"0000evHgpGImPYdBHIDmSrBGIHafnjgiMCVJypSJ",
+		"0000HUdnRbChiiPYrUBUEhwDvRoDeeyjEKaEVifJ",
+		"0000fUPXeNVBIIUhzzalccCzzFMTjohWoCjMFbLq",
+		"0000YZZGZSdHTLCnqXkhHytkMKrsFidIQRTBywWr",
+		"0000OosvkBZTwMPHQkPWbvHFhQwhDAJKUEVjUaAg",
+		"0000NHPWdQSmtkbKKfFEazXbPorbFgSidSrubKcK",
+		"0000llbJsqIorLwuqjWruVtiLEPYTyZXttzjNLLL",
+		"0000IkgtiWeZAzjFUalTJoYfeSeLGIILKoIuaiJV",
+	}
+
+	allItems := make([]*Item, 10)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   ids[i],
+			Data: incompressibleData(1000),
+		}
+	}
+
+	backend.FailPut(false)
+	// Induce failure on one of the leaf shards created
+	storage.suffixToFail = "00/0/0/c"
+	testFailedPutWhileSharding(t, storagePacker, allItems)
+
+	// Induce failure on the root bucket instead
+	// This causes the test to fail because cleanup only does
+	// the immediate shards, not the ones below those.
+	/*
+		storage.suffixToFail = "00"
+		testFailedPutWhileSharding(t, storagePacker, allItems)
+	*/
 }
