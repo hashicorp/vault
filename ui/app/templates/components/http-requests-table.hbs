@@ -14,7 +14,7 @@
       {{#each (reverse countersWithChange) as |c|}}
         <tr>
           <th scope="row" class="has-text-black">{{ date-format c.start_time 'MMMM YYYY' }}</th>
-          <td>{{c.total}}</td>
+          <td>{{format-number c.total}}</td>
           {{#if (gt counters.length 1)}}
             <td class="has-text-grey-dark percent-change" data-test-change="{{c.percentChange}}">
               {{#if c.percentChange}}
