@@ -2,22 +2,134 @@ package vault
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
 
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// types
 type audience []string
+type signingAlgorithm int
 
+const (
+	rs256 signingAlgorithm = iota
+)
+
+type key struct {
+	name             string
+	signingAlgorithm signingAlgorithm
+	ttl              time.Duration
+	rotationPeriod   time.Duration
+	keyRing          jose.JSONWebKeySet
+}
+
+// oidcPaths returns the API endpoints supported to operate on OIDC tokens:
+// oidc/key/:key - Create a new key named key
+func oidcPaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{
+		// {
+		// 	Pattern: "oidc/token",
+		// 	Callbacks: map[logical.Operation]framework.OperationFunc{
+		// 		logical.UpdateOperation: i.handleOIDCGenerateIDToken(),
+		// 	},
+
+		// 	HelpSynopsis:    "HelpSynopsis here",
+		// 	HelpDescription: "HelpDecription here",
+		// },
+
+		{
+			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the key",
+				},
+
+				"rotation_period": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "How often to generate a new keypair. Defaults to 6h",
+					Default:     "6h",
+				},
+
+				"ttl": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "TTL of generated keys. After expiration they will be deleted from the keyring and tokens generated with them will be invalid. Defaults to 24h.",
+					Default:     "24h",
+				},
+
+				"algorithm": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
+					Default:     "RS256",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.CreateOperation: i.handleOIDCCreateKey(),
+			},
+
+			HelpSynopsis:    "oidc/key/:key help synopsis here",
+			HelpDescription: "oidc/key/:key help description here",
+		},
+	}
+}
+
+//handleOIDCCreateKey is used to create a new key
+func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+		// parse parameters
+		nameInput := d.Get("name").(string)
+		rotationPeriodInput := d.Get("rotation_period").(string)
+		ttlInput := d.Get("ttl").(string)
+		algorithmInput := d.Get("algorithm").(string)
+		// check inputs
+		// check that this named key doesn't already exist
+		rotationPeriod, err := parseutil.ParseDurationSecond(rotationPeriodInput)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse provided rotation_period of: %s", rotationPeriodInput)
+		}
+
+		ttl, err := parseutil.ParseDurationSecond(ttlInput)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse provided ttl of: %s", ttlInput)
+		}
+
+		var algorithm signingAlgorithm
+		switch algorithmInput {
+		case "RS256":
+			algorithm = rs256
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unknown signing algorithm %q", algorithmInput)), logical.ErrInvalidRequest
+		}
+
+		// create key
+		key := &key{
+			name:             nameInput,
+			signingAlgorithm: algorithm,
+			rotationPeriod:   rotationPeriod,
+			ttl:              ttl,
+			keyRing:          jose.JSONWebKeySet{make([]jose.JSONWebKey, 0)},
+		}
+
+		// store key
+		entry, err := logical.StorageEntryJSON("config/key/"+name, key)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+}
+
+/*
 type idToken struct {
 	// ---- OIDC CLAIMS WITH NOTES FROM SPEC ----
 	// required fields
@@ -50,7 +162,6 @@ type idToken struct {
 
 	// maybe userpass auth is a lower level than approle or userpass ent with mfa enabled...
 	// here is one spec...
-	/* From [NIST_SP800-63] .
 
 	+--------------------------+---------+---------+---------+---------+
 	| Token Type               | Level 1 | Level 2 | Level 3 | Level 4 |
@@ -79,7 +190,6 @@ type idToken struct {
 	 |                        |         |         |         |         |
 	 | Session hijacking      |         |         |         | X       |
 	 +------------------------+---------+---------+---------+---------+
-	*/
 	AuthenticationMethodsReference string `json:"amr,omitempty"`
 	// I think this is only useful if downstream services will be making decisions based on what auth method was used to acquire a Vault token
 	// which is something that we are trying to abstract away in using entityID as our sub. Think we can remove this.
@@ -104,22 +214,9 @@ type idToken struct {
 
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/token - To register generate a new odic token
-// oidc/??? -
-func oidcPaths(i *IdentityStore) []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern: "oidc/token",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleOIDCGenerateIDToken(),
-			},
+// oidc/key/:key - Create a new keyring
 
-			HelpSynopsis:    "HelpSynopsis here",
-			HelpDescription: "HelpDecription here",
-		},
-	}
-}
-
-// handleOIDCGenerate is used to generate an OIDC token
+//handleOIDCGenerate is used to generate an OIDC token
 func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		// Get entity linked to the requesting token
@@ -187,15 +284,16 @@ func signPayload(key *jose.JSONWebKey, alg jose.SignatureAlgorithm, payload []by
 	return signature.CompactSerialize()
 }
 
+
 // --- --- KEY SIGNING FUNCTIONALITY --- ---
 
-type keyRing struct {
-	mostRecentKeyAt int // locates the most recent key within keys, -1 means that there is no key in the key ring
-	name            string
-	numberOfKeys    int
-	keyTTL          time.Duration
-	keys            []keyRingKey
-}
+// type keyRing struct {
+// 	mostRecentKeyAt int // locates the most recent key within keys, -1 means that there is no key in the key ring
+// 	name            string
+// 	numberOfKeys    int
+// 	keyTTL          time.Duration
+// 	keys            []keyRingKey
+// }
 
 type keyRingKey struct {
 	createdAt time.Time
@@ -313,3 +411,4 @@ func (kr *keyRing) GenerateWebKeys() (priv *jose.JSONWebKey, pub *jose.JSONWebKe
 	}
 	return
 }
+*/
