@@ -17,10 +17,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 
-	metrics "github.com/armon/go-metrics"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1827,11 +1827,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
-				countCubbyholeKeys,
-				deletedCountAccessorEmptyToken,
-				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor,
-				deletedCountInvalidCubbyholeKey int64
+			countCubbyholeKeys,
+			deletedCountAccessorEmptyToken,
+			deletedCountAccessorInvalidToken,
+			deletedCountInvalidTokenInAccessor,
+			deletedCountInvalidCubbyholeKey int64
 
 			validCubbyholeKeys := make(map[string]bool)
 
@@ -2219,9 +2219,16 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
-		// Check if the allowed entity aliases list contains a matching glob pattern
-		matchByGlob := false
+		// Check if provided entity alias name is in the allowed entity aliases list
+		match := false
 		for _, allowedAlias := range role.AllowedEntityAliases {
+			// Check if there is a match
+			if strings.EqualFold(allowedAlias, data.EntityAlias) {
+				match = true
+				break
+			}
+
+			// Only continue when this allowed alias is a glob pattern
 			if !strings.Contains(allowedAlias, "*") {
 				continue
 			}
@@ -2230,14 +2237,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			allowedAlias = strings.ReplaceAll(allowedAlias, "*", "")
 
 			// Check if it matches
-			if strings.HasPrefix(data.EntityAlias, allowedAlias) {
-				matchByGlob = true
+			if strings.HasPrefix(strings.ToLower(data.EntityAlias), strings.ToLower(allowedAlias)) {
+				match = true
 				break
 			}
 		}
 
-		// Check if provided entity alias name is in the allowed entity aliases list
-		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) && !matchByGlob {
+		// Throw an error if it does not match
+		if !match {
 			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 
@@ -2247,12 +2254,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("auth token mount accessor not found"), nil
 		}
 
-		// Verify that the alias exist
-		aliasByFactors, err := ts.core.identityStore.MemDBAliasByFactors(mountValidationResp.Accessor, data.EntityAlias, false, false)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
 		// Create alias for later processing
 		alias := &logical.Alias{
 			Name:          data.EntityAlias,
@@ -2260,37 +2261,22 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			MountType:     mountValidationResp.Type,
 		}
 
-		switch {
-		case aliasByFactors == nil:
-			// Entity alias does not exist. Create a new entity and entity alias
-			newEntity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
-			if err != nil {
-				return logical.ErrorResponse(err.Error()), nil
-			}
-			if newEntity == nil {
-				return logical.ErrorResponse("failed to create new entity for given entity alias"), nil
-			}
-
-			// Set new entity id
-			overwriteEntityID = newEntity.ID
-		default:
-			// Lookup entity
-			entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
-			if err != nil {
-				return logical.ErrorResponse(err.Error()), nil
-			}
-			if entity == nil {
-				return logical.ErrorResponse("failed to lookup entity from given entity alias"), nil
-			}
-
-			// Validate that the entity is not disabled
-			if entity.Disabled {
-				return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
-			}
-
-			// Set new entity id
-			overwriteEntityID = entity.ID
+		// Create or fetch entity from entity alias
+		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
+		if entity == nil {
+			return logical.ErrorResponse("failed to create or fetch entity from given entity alias"), nil
+		}
+
+		// Validate that the entity is not disabled
+		if entity.Disabled {
+			return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
+		}
+
+		// Set new entity id
+		overwriteEntityID = entity.ID
 	}
 
 	// Setup the token entry
