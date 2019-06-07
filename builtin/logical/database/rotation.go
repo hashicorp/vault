@@ -184,7 +184,10 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		// If there is a WAL entry related to this Role, the corresponding WAL ID
 		// should be stored in the Item's Value field.
 		if walID, ok := item.Value.(string); ok {
-			walEntry := b.findStaticWAL(ctx, s, walID)
+			walEntry, err := b.findStaticWAL(ctx, s, walID)
+			if err != nil {
+				b.logger.Error("error finding static WAL", "error", err)
+			}
 			if walEntry != nil && walEntry.NewPassword != "" {
 				input.Password = walEntry.NewPassword
 				input.WALID = walID
@@ -227,15 +230,14 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 
 // findStaticWAL loads a WAL entry by ID. If found, only return the WAL if it
 // is of type staticWALKey, otherwise return nil
-func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) *setCredentialsWAL {
+func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) (*setCredentialsWAL, error) {
 	wal, err := framework.GetWAL(ctx, s, id)
 	if err != nil {
-		b.Logger().Error("error reading WAL", "id", id, "error", err)
-		return nil
+		return nil, err
 	}
 
 	if wal == nil || wal.Kind != staticWALKey {
-		return nil
+		return nil, nil
 	}
 
 	data := wal.Data.(map[string]interface{})
@@ -248,12 +250,11 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 	}
 	lvr, err := time.Parse(time.RFC3339, data["LastVaultRotation"].(string))
 	if err != nil {
-		b.Logger().Warn("error decoding walEntry", err.Error())
-		return nil
+		return nil, err
 	}
 	walEntry.LastVaultRotation = lvr
 
-	return &walEntry
+	return &walEntry, nil
 }
 
 type setStaticAccountInput struct {
@@ -428,7 +429,11 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 	walMap := make(map[string]*setCredentialsWAL)
 	// Loop through WAL keys and process any rotation ones
 	for _, walID := range keys {
-		walEntry := b.findStaticWAL(ctx, s, walID)
+		walEntry, err := b.findStaticWAL(ctx, s, walID)
+		if err != nil {
+			b.Logger().Error("error loading static WAL", "id", walID, "error", err)
+			continue
+		}
 		if walEntry == nil {
 			continue
 		}
