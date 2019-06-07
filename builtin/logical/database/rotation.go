@@ -157,7 +157,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		// validate the role still exists
 		role, err := b.StaticRole(ctx, s, item.Key)
 		if err != nil {
-			b.logger.Warn("unable load role", "role", item.Key, "error", err)
+			b.logger.Error("unable load role", "role", item.Key, "error", err)
 			continue
 		}
 		if role == nil {
