@@ -15,9 +15,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -2768,11 +2768,10 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 	}
 }
 
-func TestTokenStore_HandleRequest_CreateToken_GlobPatternEntityAlias(t *testing.T) {
+func TestTokenStore_HandleRequest_CreateToken_GlobPattern_MultipleAsterisk_EntityAlias(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
-	i := core.identityStore
 	ctx := namespace.RootContext(nil)
-	entityAliasGlobPattern := "testentity*"
+	entityAliasGlobPattern := "*testentity*"
 	entityAliasName := "testentity12345"
 	testRoleName := "test"
 
@@ -2801,35 +2800,11 @@ func TestTokenStore_HandleRequest_CreateToken_GlobPatternEntityAlias(t *testing.
 			"entity_alias": entityAliasName,
 		},
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	if err == nil {
+		t.Fatal("err is nil but should be 'invalid request'")
 	}
-	if resp == nil {
-		t.Fatal("expected a response")
-	}
-
-	// Read the new entity
-	resp, err = i.HandleRequest(ctx, &logical.Request{
-		Path:      "entity/id/" + resp.Auth.EntityID,
-		Operation: logical.ReadOperation,
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-
-	// Get the attached alias information
-	aliases := resp.Data["aliases"].([]interface{})
-	if len(aliases) != 1 {
-		t.Fatalf("expected only one alias but got %d; Aliases: %#v", len(aliases), aliases)
-	}
-	alias := &identity.Alias{}
-	if err := mapstructure.Decode(aliases[0], alias); err != nil {
-		t.Fatal(err)
-	}
-
-	// Validate
-	if alias.Name != entityAliasName {
-		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, alias.Name)
+	if !strings.Contains(err.Error(), "invalid request") {
+		t.Fatalf("err should contain 'invalid request' but is '%s'", err.Error())
 	}
 }
 
@@ -2837,64 +2812,88 @@ func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
-	entityAliasGlobPattern := "*"
-	entityAliasName := "testentity12345"
 	testRoleName := "test"
 
-	// Create token role
-	resp, err := core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/roles/" + testRoleName,
-		ClientToken: root,
-		Operation:   logical.CreateOperation,
-		Data: map[string]interface{}{
-			"period":                 "72h",
-			"path_suffix":            "happening",
-			"bound_cidrs":            []string{"0.0.0.0/0"},
-			"allowed_entity_aliases": []string{"test1", "test2", entityAliasGlobPattern},
+	tests := []struct {
+		name        string
+		globPattern string
+		aliasName   string
+	}{
+		{
+			name:        "prefix-asterisk",
+			globPattern: "*-web",
+			aliasName:   "department-web",
 		},
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-
-	// Create token with non existing entity alias
-	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/create/" + testRoleName,
-		Operation:   logical.UpdateOperation,
-		ClientToken: root,
-		Data: map[string]interface{}{
-			"entity_alias": entityAliasName,
+		{
+			name:        "suffix-asterisk",
+			globPattern: "web-*",
+			aliasName:   "web-department",
 		},
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-	if resp == nil {
-		t.Fatal("expected a response")
-	}
-
-	// Read the new entity
-	resp, err = i.HandleRequest(ctx, &logical.Request{
-		Path:      "entity/id/" + resp.Auth.EntityID,
-		Operation: logical.ReadOperation,
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		{
+			name:        "middle-asterisk",
+			globPattern: "web-*-web",
+			aliasName:   "web-department-web",
+		},
 	}
 
-	// Get the attached alias information
-	aliases := resp.Data["aliases"].([]interface{})
-	if len(aliases) != 1 {
-		t.Fatalf("expected only one alias but got %d; Aliases: %#v", len(aliases), aliases)
-	}
-	alias := &identity.Alias{}
-	if err := mapstructure.Decode(aliases[0], alias); err != nil {
-		t.Fatal(err)
-	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Create token role
+			resp, err := core.HandleRequest(ctx, &logical.Request{
+				Path:        "auth/token/roles/" + testRoleName,
+				ClientToken: root,
+				Operation:   logical.CreateOperation,
+				Data: map[string]interface{}{
+					"period":                 "72h",
+					"path_suffix":            "happening",
+					"bound_cidrs":            []string{"0.0.0.0/0"},
+					"allowed_entity_aliases": []string{"test1", "test2", test.globPattern},
+				},
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err: %v\nresp: %#v", err, resp)
+			}
 
-	// Validate
-	if alias.Name != entityAliasName {
-		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, alias.Name)
+			// Create token with non existing entity alias
+			resp, err = core.HandleRequest(ctx, &logical.Request{
+				Path:        "auth/token/create/" + testRoleName,
+				Operation:   logical.UpdateOperation,
+				ClientToken: root,
+				Data: map[string]interface{}{
+					"entity_alias": test.aliasName,
+				},
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+			}
+			if resp == nil {
+				t.Fatal("expected a response")
+			}
+
+			// Read the new entity
+			resp, err = i.HandleRequest(ctx, &logical.Request{
+				Path:      "entity/id/" + resp.Auth.EntityID,
+				Operation: logical.ReadOperation,
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+			}
+
+			// Get the attached alias information
+			aliases := resp.Data["aliases"].([]interface{})
+			if len(aliases) != 1 {
+				t.Fatalf("expected only one alias but got %d; Aliases: %#v", len(aliases), aliases)
+			}
+			alias := &identity.Alias{}
+			if err := mapstructure.Decode(aliases[0], alias); err != nil {
+				t.Fatal(err)
+			}
+
+			// Validate
+			if alias.Name != test.aliasName {
+				t.Fatalf("alias name should be '%s' but is '%s'", test.aliasName, alias.Name)
+			}
+		})
 	}
 }
 

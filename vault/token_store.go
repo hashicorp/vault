@@ -2233,14 +2233,27 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 				continue
 			}
 
-			// Remove asterisk
-			allowedAlias = strings.ReplaceAll(allowedAlias, "*", "")
+			// Split by asterisk to get prefix and suffix
+			split := strings.Split(allowedAlias, "*")
 
-			// Check if it matches
-			if strings.HasPrefix(strings.ToLower(data.EntityAlias), strings.ToLower(allowedAlias)) {
-				match = true
-				break
+			// Multiple asterisks are not allowed. Skip this invalid glob pattern.
+			if len(split) != 2 {
+				continue
 			}
+
+			// Check if prefix matches
+			if !strings.HasPrefix(data.EntityAlias, split[0]) {
+				continue
+			}
+
+			// Check if suffix matches
+			if !strings.HasSuffix(data.EntityAlias, split[1]) {
+				continue
+			}
+
+			// Found a match
+			match = true
+			break
 		}
 
 		// Throw an error if it does not match
