@@ -102,6 +102,8 @@ vet:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@go generate $(go list ./... | grep -v /vendor/)
+	@# Remove old (now broken) husky git hooks.
+	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 ci-config:
