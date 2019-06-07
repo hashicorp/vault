@@ -203,7 +203,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			}
 
 			if err := b.pushItem(item); err != nil {
-				b.logger.Warn("unable to push item on to queue", "error", err)
+				b.logger.Error("unable to push item on to queue", "error", err)
 			}
 			// go to next item
 			continue
