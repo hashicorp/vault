@@ -11,6 +11,7 @@ import (
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
@@ -32,6 +33,7 @@ var (
 	raftLogCacheSize = 512
 
 	raftState         = "raft/"
+	peersFileName     = "peers.json"
 	snapshotsRetained = 2
 )
 
@@ -355,6 +357,36 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
+
+	raftPath := filepath.Join(b.dataDir, raftState)
+	peersFile := filepath.Join(raftPath, peersFileName)
+	_, err := os.Stat(peersFile)
+	if err == nil {
+		b.logger.Info("raft recovery initiated", "recovery_file", peersFileName)
+
+		recoveryConfig, err := raft.ReadConfigJSON(peersFile)
+		if err != nil {
+			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
+		}
+
+		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
+		if err != nil {
+			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
+		}
+
+		err = os.Remove(peersFile)
+		if err != nil {
+			return errwrap.Wrapf("raft recovery failed to delete peers.json; please delete manually: {{err}}", err)
+		}
+		b.logger.Info("raft recovery deleted peers.json")
+
+		err = b.fsm.StoreConfig(1, recoveryConfig)
+		if err != nil {
+			return errwrap.Wrapf("raft recovery failed to store config: {{err}}", err)
+		}
+	}
+
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {

@@ -208,9 +208,10 @@ func (l *raftLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net
 
 	tlsConfig := l.baseTLSConfig.Clone()
 
-	l.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
 	tlsConfig.NextProtos = []string{consts.RaftStorageALPN}
 	tlsConfig.ServerName = l.parsedCert.Subject.CommonName
+
+	l.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
 
 	pool := x509.NewCertPool()
 	pool.AddCert(l.parsedCert)

@@ -95,13 +95,9 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
-		_, err := tx.CreateBucketIfNotExists(dataBucketName)
+		b, err := tx.CreateBucketIfNotExists(dataBucketName)
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %v", err)
-		}
-		b, err := tx.CreateBucketIfNotExists(configBucketName)
-		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
 		}
 
 		// Read in our latest index and term and populate it inmemory
@@ -159,6 +155,14 @@ func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
 		Term:  atomic.LoadUint64(f.latestTerm),
 		Index: atomic.LoadUint64(f.latestIndex),
 	}, f.latestConfig.Load().(*ConfigurationValue)
+}
+
+func (f *FSM) witnessIndex(i *IndexValue) {
+	seen, _ := f.LatestState()
+	if seen.Index < i.Index {
+		atomic.StoreUint64(f.latestIndex, i.Index)
+		atomic.StoreUint64(f.latestTerm, i.Term)
+	}
 }
 
 // Delete deletes the given key from the bolt file.
@@ -345,7 +349,6 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		return nil
 	})
 	if err != nil {
-		fmt.Println("failed to store data")
 		panic("failed to store data")
 	}
 
@@ -512,12 +515,17 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 	f.l.RLock()
 	defer f.l.RUnlock()
 
+	var indexBytes []byte
 	latestIndex, _ := f.LatestState()
-	latestIndex.Index = index
-	indexBytes, err := proto.Marshal(latestIndex)
-	if err != nil {
-		fmt.Println(err)
-		return err
+	// Only write the new index if we are advancing the pointer
+	if index > latestIndex.Index {
+		latestIndex.Index = index
+
+		var err error
+		indexBytes, err = proto.Marshal(latestIndex)
+		if err != nil {
+			return err
+		}
 	}
 
 	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
@@ -535,9 +543,11 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 			}
 
 			// TODO: benchmark so we can know how much time this adds
-			err = b.Put(latestIndexKey, indexBytes)
-			if err != nil {
-				return err
+			if len(indexBytes) > 0 {
+				err = b.Put(latestIndexKey, indexBytes)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -547,7 +557,7 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 		}
 	}
 
-	atomic.StoreUint64(f.latestIndex, index)
+	f.witnessIndex(latestIndex)
 	f.latestConfig.Store(protoConfig)
 
 	return nil
