@@ -55,21 +55,44 @@ type PolicyRequest struct {
 
 type LockManager struct {
 	useCache bool
-	// If caching is enabled, the map of name to in-memory policy cache
-	cache sync.Map
-
+	cache    Cache
 	keyLocks []*locksutil.LockEntry
 }
 
-func NewLockManager(cacheDisabled bool) *LockManager {
+func NewLockManager(useCache bool, cacheSize int) (*LockManager, error) {
+	// determine the type of cache to create
+	var cache Cache
+	switch {
+	case !useCache:
+	case cacheSize < 0:
+		return nil, errors.New("cache size must be greater or equal to zero")
+	case cacheSize == 0:
+		cache = NewTransitSyncMap()
+	case cacheSize > 0:
+		newLRUCache, err := NewTransitLRU(cacheSize)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create cache: {{err}}", err)
+		}
+		cache = newLRUCache
+	}
+
 	lm := &LockManager{
-		useCache: !cacheDisabled,
+		useCache: useCache,
+		cache:    cache,
 		keyLocks: locksutil.CreateLocks(),
 	}
-	return lm
+
+	return lm, nil
 }
 
-func (lm *LockManager) CacheActive() bool {
+func (lm *LockManager) GetCacheSize() int {
+	if !lm.useCache {
+		return 0
+	}
+	return lm.cache.Size()
+}
+
+func (lm *LockManager) GetUseCache() bool {
 	return lm.useCache
 }
 
@@ -178,7 +201,6 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		lm.cache.Store(name, keyData.Policy)
 	}
-
 	return nil
 }
 
@@ -186,7 +208,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	var p *Policy
 	var err error
 
-	// Backup writes information about when the bacup took place, so we get an
+	// Backup writes information about when the backup took place, so we get an
 	// exclusive lock here
 	lock := locksutil.LockForKey(lm.keyLocks, name)
 	lock.Lock()
