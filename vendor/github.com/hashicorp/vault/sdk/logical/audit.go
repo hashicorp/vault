@@ -3,8 +3,8 @@ package logical
 type LogInput struct {
 	Type                string
 	Auth                *Auth
-	Request             interface{}
-	Response            interface{}
+	Request             *Request
+	Response            *Response
 	OuterErr            error
 	NonHMACReqDataKeys  []string
 	NonHMACRespDataKeys []string

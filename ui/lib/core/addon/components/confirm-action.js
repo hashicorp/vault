@@ -16,11 +16,9 @@ import layout from '../templates/components/confirm-action';
  *
  * @property {Func} [onConfirmAction=null] - The action to take upon confirming.
  * @property {String} [confirmTitle=Delete this?] - The title to display when confirming.
- * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display when confirming.
+ * @property {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
  * @property {String} [confirmButtonText=Delete] - The confirm button text.
  * @property {String} [cancelButtonText=Cancel] - The cancel button text.
- * @property {String} [disabledTitle=Can't delete this yet] - The title to display when the button is disabled.
- * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
  *
  */
 
@@ -33,8 +31,6 @@ export default Component.extend({
   confirmMessage: 'You will not be able to recover it later.',
   confirmButtonText: 'Delete',
   cancelButtonText: 'Cancel',
-  disabledTitle: "Can't delete this yet",
-  disabledMessage: 'Complete the form to complete this action',
   horizontalPosition: 'auto-right',
   verticalPosition: 'below',
   disabled: false,

@@ -95,7 +95,7 @@ path "secret/foo" {
 ```
 
 When this policy is assigned to a token, the token can read from `"secret/foo"`.
-However, the token could not update or delete `"secret/foo"`, since the
+However, the token cannot update or delete `"secret/foo"`, since the
 capabilities do not allow it. Because policies are **deny by default**, the
 token would have no other access in Vault.
 
