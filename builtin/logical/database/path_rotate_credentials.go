@@ -112,39 +112,38 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return logical.ErrorResponse("no static role found for role name"), nil
 		}
 
-		if role.StaticAccount != nil {
-			// In create/update of static accounts, we only care if the operation
-			// err'd , and this call does not return credentials
-			item, err := b.popFromRotationQueueByKey(name)
-			if err != nil {
-				item = &queue.Item{
-					Key: name,
-				}
-			}
-
-			resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-				RoleName: name,
-				Role:     role,
-			})
-			if err != nil {
-				b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
-				// Update the priority to re-try this rotation and re-add the item to
-				// the queue
-				item.Priority = time.Now().Add(10 * time.Second).Unix()
-
-				// Preserve the WALID if it was returned
-				if resp.WALID != "" {
-					item.Value = resp.WALID
-				}
-			} else {
-				item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
-			}
-
-			// Add their rotation to the queue
-			if err := b.pushItem(item); err != nil {
-				return nil, err
+		// In create/update of static accounts, we only care if the operation
+		// err'd , and this call does not return credentials
+		item, err := b.popFromRotationQueueByKey(name)
+		if err != nil {
+			item = &queue.Item{
+				Key: name,
 			}
 		}
+
+		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+			RoleName: name,
+			Role:     role,
+		})
+		if err != nil {
+			b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
+			// Update the priority to re-try this rotation and re-add the item to
+			// the queue
+			item.Priority = time.Now().Add(10 * time.Second).Unix()
+
+			// Preserve the WALID if it was returned
+			if resp.WALID != "" {
+				item.Value = resp.WALID
+			}
+		} else {
+			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+		}
+
+		// Add their rotation to the queue
+		if err := b.pushItem(item); err != nil {
+			return nil, err
+		}
+
 		return nil, nil
 	}
 }
