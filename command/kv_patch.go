@@ -119,8 +119,9 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	// First, do a read
-	curOutputCurl := client.OutputCurlString() // we don't want to see curl output for the read request
+	// First, do a read.
+	// Note that we don't want to see curl output for the read request.
+	curOutputCurl := client.OutputCurlString()
 	client.SetOutputCurlString(false)
 	secret, err := kvReadRequest(client, path, nil)
 	client.SetOutputCurlString(curOutputCurl)
