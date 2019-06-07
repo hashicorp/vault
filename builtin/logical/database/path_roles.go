@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -233,7 +234,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 	}
 
 	// remove the item from the queue
-	_, _ = b.popItemByKey(name)
+	_, _ = b.popFromRotationQueueByKey(name)
 
 	return nil, nil
 }
@@ -468,7 +469,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 		// In case this is an update, remove any previous version of the item from
 		// the queue
-		b.popItemByKey(name)
+		b.popFromRotationQueueByKey(name)
 	}
 
 	// Add their rotation to the queue

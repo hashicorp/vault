@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -141,7 +142,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			return nil
 		default:
 		}
-		item, err := b.popItem()
+		item, err := b.popFromRotationQueue()
 		if err != nil {
 			if err == queue.ErrEmpty {
 				return nil
@@ -377,4 +378,117 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	// the WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
+}
+
+// initQueue preforms the necessary checks and initializations needed to preform
+// automatic credential rotation for roles associated with static accounts. This
+// method verifies if a queue is needed (primary server or local mount), and if
+// so initializes the queue and launches a go-routine to periodically invoke a
+// method to preform the rotations.
+//
+// initQueue is invoked by the Factory method in a go-routine. The Factory does
+// not wait for success or failure of it's tasks before continuing. This is to
+// avoid blocking the mount process while loading and evaluating existing roles,
+// etc.
+func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
+	// verify this mount is on the primary server, or is a local mount. If not, do
+	// not create a queue or launch a ticker. Both processing the WAL list and
+	// populating the queue are done sequentially and before launching a
+	// go-routine to run the periodic ticker.
+	replicationState := conf.System.ReplicationState()
+	if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
+		b.Logger().Info("initializing database rotation queue")
+
+		// Sleep a few seconds to allow Vault to mount and complete setup, so
+		// that we can write to storage
+		time.Sleep(3 * time.Second)
+
+		// load roles and populate queue with static accounts
+		b.populateQueue(ctx, conf.StorageView)
+
+		// launch ticker
+		go b.runTicker(ctx, conf.StorageView)
+	}
+}
+
+// loadStaticWALs reads WAL entries and returns a map of roles and their
+// setCredentialsWAL, if found.
+func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage) (map[string]*setCredentialsWAL, error) {
+	keys, err := framework.ListWAL(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		b.Logger().Debug("no WAL entries found")
+		return nil, nil
+	}
+
+	walMap := make(map[string]*setCredentialsWAL)
+	// loop through WAL keys and process any rotation ones
+	for _, walID := range keys {
+		walEntry := b.findStaticWAL(ctx, s, walID)
+		if walEntry == nil {
+			continue
+		}
+
+		// verify the static role still exists
+		roleName := walEntry.RoleName
+		role, err := b.StaticRole(ctx, s, roleName)
+		if err != nil {
+			b.Logger().Warn("unable to read static role", "error", err, "role", roleName)
+			continue
+		}
+		if role == nil || role.StaticAccount == nil {
+			if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
+				b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
+			}
+			continue
+		}
+
+		walEntry.walID = walID
+		walMap[walEntry.RoleName] = walEntry
+	}
+	return walMap, nil
+}
+
+// pushItem wraps the internal queue's Push call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
+func (b *databaseBackend) pushItem(item *queue.Item) error {
+	b.RLock()
+	unlockFunc := b.RUnlock
+	defer func() { unlockFunc() }()
+
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.Push(item)
+	}
+
+	b.Logger().Warn("no queue found during push item")
+	return nil
+}
+
+// popFromRotationQueue wraps the internal queue's Pop call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
+func (b *databaseBackend) popFromRotationQueue() (*queue.Item, error) {
+	b.RLock()
+	defer b.RUnlock()
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.Pop()
+	}
+	return nil, queue.ErrEmpty
+}
+
+// popFromRotationQueueByKey wraps the internal queue's PopByKey call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
+func (b *databaseBackend) popFromRotationQueueByKey(name string) (*queue.Item, error) {
+	b.RLock()
+	defer b.RUnlock()
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.PopByKey(name)
+	}
+	return nil, queue.ErrEmpty
 }
