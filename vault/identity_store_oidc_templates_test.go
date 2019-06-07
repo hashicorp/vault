@@ -7,33 +7,41 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 )
 
-func Test_OIDC_TestABC(t *testing.T) {
-	ent1 := identity.Entity{
-		ID:   "abc-123",
-		Name: "Entity Name",
-		Metadata: map[string]string{
-			"color": "green",
-			"size":  "small",
-		},
-		Aliases: []*identity.Alias{
-			{
-				Name: "aws_123",
-				Metadata: map[string]string{
-					"region": "west",
-				},
+var testEntity = &identity.Entity{
+	ID:   "abc-123",
+	Name: "Entity Name",
+	Metadata: map[string]string{
+		"color": "green",
+		"size":  "small",
+	},
+	Aliases: []*identity.Alias{
+		{
+			Name: "aws_123",
+			Metadata: map[string]string{
+				"region": "west",
 			},
 		},
-	}
+	},
+}
+
+var testGroups = []*identity.Group{
+	{ID: "a08b0c02", Name: "g1"},
+	{ID: "239bef91", Name: "g2"},
+}
+
+func Test_OIDC_TestABC(t *testing.T) {
 	tpl := `
 {
   "alias_claims": {
     "id": "{{identity.entity.id}}",
     "region": "west",
-    "stuff": "{{identity.entity.metadata}}"
+    "stuff": "{{identity.entity.metadata}}",
+    "groups": "{{identity.entity.group_names}}",
+    "group_ids": "{{identity.entity.group_ids}}"
   }
 }
 `
-	out, err := ABC(tpl, ent1)
+	out, err := ABC(tpl, testEntity, testGroups)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +51,9 @@ func Test_OIDC_TestABC(t *testing.T) {
   "alias_claims": {
     "id": "abc-123",
     "region": "west",
-    "stuff": {"color":"green","size":"small"}
+    "stuff": {"color":"green","size":"small"},
+    "groups": ["g1","g2"],
+    "group_ids": ["a08b0c02","239bef91"]
   }
 }
 `
@@ -54,56 +64,58 @@ func Test_OIDC_TestABC(t *testing.T) {
 }
 
 func Test_OIDC_classifyParameters(t *testing.T) {
-	ent1 := identity.Entity{
-		ID:   "abc-123",
-		Name: "Entity Name",
-		Metadata: map[string]string{
-			"color": "green",
-			"size":  "small",
-		},
-		Aliases: []*identity.Alias{
-			{
-				Name: "aws_123",
-				Metadata: map[string]string{
-					"region": "west",
-				},
-			},
-		},
-	}
 	tests := []struct {
 		s         string
-		entity    identity.Entity
+		entity    *identity.Entity
+		groups    []*identity.Group
 		expResult string
 		expErr    bool
 	}{
 		{
 			s:         "identity.entity.id",
-			entity:    ent1,
+			entity:    testEntity,
 			expResult: `"abc-123"`,
 		},
 		{
 			s:         "identity.entity.name",
-			entity:    ent1,
+			entity:    testEntity,
 			expResult: `"Entity Name"`,
 		},
 		{
 			s:         "identity.entity.metadata",
-			entity:    ent1,
+			entity:    testEntity,
 			expResult: `{"color":"green","size":"small"}`,
 		},
 		{
 			s:         "identity.entity.metadata.size",
-			entity:    ent1,
+			entity:    testEntity,
 			expResult: `"small"`,
 		},
 		{
 			s:         "identity.entity.aliases.aws_123.metadata.region",
-			entity:    ent1,
+			entity:    testEntity,
 			expResult: `"west"`,
+		},
+		{
+			s:         "identity.entity.aliases.aws_123.metadata.region",
+			entity:    testEntity,
+			expResult: `"west"`,
+		},
+		{
+			s:         "identity.entity.group_names",
+			entity:    testEntity,
+			groups:    testGroups,
+			expResult: `["g1","g2"]`,
+		},
+		{
+			s:         "identity.entity.group_ids",
+			entity:    testEntity,
+			groups:    testGroups,
+			expResult: `["a08b0c02","239bef91"]`,
 		},
 	}
 	for _, tt := range tests {
-		gotResult, err := classifyParameters(tt.entity, tt.s)
+		gotResult, err := classifyParameters(tt.entity, tt.groups, tt.s)
 		if (err != nil) != tt.expErr {
 			t.Errorf("classifyParameters() error = %v, expErr %v", err, tt.expErr)
 			return

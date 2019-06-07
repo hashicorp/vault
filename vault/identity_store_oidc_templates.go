@@ -15,7 +15,6 @@ var re = regexp.MustCompile(`"{{(\S+)}}"`)
 
 const (
 	text = iota
-	obj
 	handler
 )
 
@@ -40,14 +39,6 @@ func (t *parsedTemplate) addText(s string) {
 	t.chunks = append(t.chunks, c)
 }
 
-//func (t *parsedTemplate) addStringParam(name string) {
-//	t.chunks = append(t.chunks, chunk{
-//		chunkType: str,
-//		variable:  name,
-//		dflt:      `""`,
-//	})
-//}
-
 func (t *parsedTemplate) addMatcher(f hFunc) {
 	t.chunks = append(t.chunks, chunk{
 		chunkType: handler,
@@ -55,19 +46,13 @@ func (t *parsedTemplate) addMatcher(f hFunc) {
 	})
 }
 
-func (t *parsedTemplate) render(entity identity.Entity) string {
+func (t *parsedTemplate) render(entity *identity.Entity) string {
 	var out strings.Builder
 
 	for _, c := range t.chunks {
 		switch c.chunkType {
 		case text:
 			out.WriteString(c.value)
-		//case str:
-		//	if c.variable == "identity.entity.id" {
-		//		out.WriteString(fmt.Sprintf(`"%s"`, entity.ID))
-		//	} else {
-		//		out.WriteString(c.dflt)
-		//	}
 		case handler:
 			out.WriteString(c.matcher(entity))
 		}
@@ -76,7 +61,7 @@ func (t *parsedTemplate) render(entity identity.Entity) string {
 	return out.String()
 }
 
-func ABC(tpl string, e identity.Entity) (string, error) {
+func ABC(tpl string, e *identity.Entity, groups []*identity.Group) (string, error) {
 	var out map[string]interface{}
 	var pt parsedTemplate
 
@@ -92,15 +77,15 @@ func ABC(tpl string, e identity.Entity) (string, error) {
 		pt.addText(tpl[i:m[0]])
 
 		v := tpl[m[2]:m[3]]
-		q.Q(v)
+		q.Q()
 
 		var f hFunc
 		for _, p := range patterns {
 			m := p.pattern.FindStringSubmatch(v)
 			if len(m) > 0 {
 				//q.Q(v, p.pattern)
-				f = func(entity identity.Entity) string {
-					return p.handler(entity, m[1:])
+				f = func(entity *identity.Entity) string {
+					return p.handler(entity, groups, m[1:])
 				}
 				break
 			}
@@ -139,11 +124,12 @@ identity.groups.<group id>.metadata
 identity.groups.<group id>.metadata.<key>
 */
 
-type hFunc func(identity.Entity) string
+type hFunc func(*identity.Entity) string
+type handlerFunc func(*identity.Entity, []*identity.Group, []string) string
 
 type matcher struct {
 	pattern *regexp.Regexp
-	handler func(identity.Entity, []string) string
+	handler handlerFunc
 }
 
 // TODO: maybe get rid of this
@@ -161,19 +147,19 @@ func reFmt(s string) string {
 var patterns = []matcher{
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.id")),
-		handler: func(e identity.Entity, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
 			return quote(e.ID)
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.name")),
-		handler: func(e identity.Entity, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
 			return quote(e.Name)
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.metadata")),
-		handler: func(e identity.Entity, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
 			d, err := json.Marshal(e.Metadata)
 			if err == nil {
 				return string(d)
@@ -183,15 +169,14 @@ var patterns = []matcher{
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.metadata.<param>`)),
-		handler: func(e identity.Entity, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
 			return quote(e.Metadata[v[0]])
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.aliases.<param>.metadata.<param>`)),
-		handler: func(e identity.Entity, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
 			name, key := v[0], v[1]
-			q.Q(name, key)
 			for _, alias := range e.Aliases {
 				if alias.Name == name {
 					return quote(alias.Metadata[key])
@@ -200,13 +185,47 @@ var patterns = []matcher{
 			return quote("")
 		},
 	},
+	{
+		pattern: regexp.MustCompile(reFmt(`identity.entity.group_names`)),
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
+			return groupsToList(groups, "name")
+		},
+	},
+	{
+		pattern: regexp.MustCompile(reFmt(`identity.entity.group_ids`)),
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
+			return groupsToList(groups, "id")
+		},
+	},
 }
 
-func classifyParameters(entity identity.Entity, s string) (result string, err error) {
+func groupsToList(groups []*identity.Group, element string) string {
+	var out strings.Builder
+
+	out.WriteString("[")
+	for i, g := range groups {
+		var v string
+		switch element {
+		case "name":
+			v = g.Name
+		case "id":
+			v = g.ID
+		}
+		out.WriteString(quote(v))
+		if i < len(groups)-1 {
+			out.WriteString(",")
+		}
+	}
+	out.WriteString("]")
+
+	return out.String()
+}
+
+func classifyParameters(entity *identity.Entity, groups []*identity.Group, s string) (result string, err error) {
 	p := findPattern(s)
 	if p != nil {
 		m := p.pattern.FindStringSubmatch(s)
-		result = p.handler(entity, m[1:])
+		result = p.handler(entity, groups, m[1:])
 	}
 	return result, nil
 }
