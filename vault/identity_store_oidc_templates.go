@@ -20,6 +20,7 @@ const (
 	text = iota
 	str
 	obj
+	handler
 )
 
 type parsedTemplate struct {
@@ -32,6 +33,7 @@ type chunk struct {
 	value    string
 	dflt     string
 	variable string
+	matcher  hFunc
 }
 
 func (t *parsedTemplate) addText(s string) {
@@ -50,6 +52,13 @@ func (t *parsedTemplate) addStringParam(name string) {
 	})
 }
 
+func (t *parsedTemplate) addMatcher(f hFunc) {
+	t.chunks = append(t.chunks, chunk{
+		chunkType: handler,
+		matcher:   f,
+	})
+}
+
 func (t *parsedTemplate) render(entity identity.Entity) string {
 	var out strings.Builder
 
@@ -63,6 +72,8 @@ func (t *parsedTemplate) render(entity identity.Entity) string {
 			} else {
 				out.WriteString(c.dflt)
 			}
+		case handler:
+			out.WriteString(c.matcher(entity))
 		}
 	}
 
@@ -87,8 +98,20 @@ func ABC(tpl string, e identity.Entity) (map[string]interface{}, error) {
 		pt.addText(tpl[i:m[0]])
 
 		v := tpl[m[2]:m[3]]
-		if v == "identity.entity.id" {
-			pt.addStringParam("identity.entity.id")
+
+		var f hFunc
+		for _, p := range patterns {
+			m := p.pattern.FindStringSubmatch(v)
+			if len(m) > 0 {
+				f = func(entity identity.Entity) string {
+					return p.handler(entity, m[1:])
+				}
+				break
+			}
+		}
+
+		if f != nil {
+			pt.addMatcher(f)
 		} else {
 			pt.addText(v)
 		}
@@ -97,10 +120,7 @@ func ABC(tpl string, e identity.Entity) (map[string]interface{}, error) {
 	}
 	pt.addText(tpl[i:])
 
-	ent := identity.Entity{
-		ID: "abc-123",
-	}
-	q.Q(pt.render(ent))
+	q.Q(pt.render(e))
 
 	//walkTest()
 
@@ -149,22 +169,29 @@ identity.groups.<group id>.metadata
 identity.groups.<group id>.metadata.<key>
 */
 
+type hFunc func(identity.Entity) string
+
 type matcher struct {
 	pattern *regexp.Regexp
 	handler func(identity.Entity, []string) string
+}
+
+// TODO: get rid of this
+func quote(s string) string {
+	return fmt.Sprintf(`"%s"`, s)
 }
 
 var patterns = []matcher{
 	{
 		pattern: regexp.MustCompile(`^identity\.entity\.id$`),
 		handler: func(e identity.Entity, v []string) string {
-			return e.ID
+			return quote(e.ID)
 		},
 	},
 	{
 		pattern: regexp.MustCompile(`^identity\.entity\.name$`),
 		handler: func(e identity.Entity, v []string) string {
-			return e.Name
+			return quote(e.Name)
 		},
 	},
 	{
@@ -174,13 +201,13 @@ var patterns = []matcher{
 			if err == nil {
 				return string(d)
 			}
-			return ""
+			return `{}`
 		},
 	},
 	{
 		pattern: regexp.MustCompile(`^identity\.entity\.metadata\.(\S+)$`),
 		handler: func(e identity.Entity, v []string) string {
-			return e.Metadata[v[0]]
+			return quote(e.Metadata[v[0]])
 		},
 	},
 	{
@@ -189,22 +216,30 @@ var patterns = []matcher{
 			name, key := v[0], v[1]
 			for _, alias := range e.Aliases {
 				if alias.Name == name {
-					return alias.Metadata[key]
+					return quote(alias.Metadata[key])
 				}
 			}
-			return ""
+			return quote("")
 		},
 	},
 }
 
 func classifyParameters(entity identity.Entity, s string) (result string, err error) {
+	p := findPattern(s)
+	if p != nil {
+		m := p.pattern.FindStringSubmatch(s)
+		result = p.handler(entity, m[1:])
+	}
+	return result, nil
+}
+
+func findPattern(s string) *matcher {
 	for _, p := range patterns {
 		m := p.pattern.FindStringSubmatch(s)
 		if len(m) > 0 {
-			result = p.handler(entity, m[1:])
-			break
+			return &p
 		}
 	}
 
-	return result, err
+	return nil
 }
