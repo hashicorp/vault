@@ -229,7 +229,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) *setCredentialsWAL {
 	wal, err := framework.GetWAL(ctx, s, id)
 	if err != nil {
-		b.Logger().Warn("error reading WAL", "id", id, "error", err)
+		b.Logger().Error("error reading WAL", "id", id, "error", err)
 		return nil
 	}
 
