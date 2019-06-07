@@ -192,7 +192,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 
 		resp, err := b.setStaticAccount(ctx, s, input)
 		if err != nil {
-			b.logger.Warn("unable to rotate credentials in periodic function", "error", err)
+			b.logger.Error("unable to rotate credentials in periodic function", "error", err)
 			// Increment the priority enough so that the next call to this method
 			// likely will not attempt to rotate it, as a back-off of sorts
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
