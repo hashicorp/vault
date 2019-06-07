@@ -130,7 +130,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 	// backend. If the user exists, use the rotation statements, using the default
 	// ones if there are none provided
 	stmts := statements.Creation
-	if exists == true {
+	if exists {
 		stmts = statements.Rotation
 		if len(stmts) == 0 {
 			stmts = []string{defaultPostgresRotateCredentialsSQL}
@@ -350,7 +350,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 		return err
 	}
 
-	if exists == false {
+	if !exists {
 		return nil
 	}
 

@@ -345,7 +345,6 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, 
 		// Fall back to old call if not implemented
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
-			// TODO: a better or const error type here
 			return "", "", ErrPluginStaticUnsupported
 		}
 
