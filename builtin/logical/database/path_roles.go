@@ -202,6 +202,10 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 
 func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
+
+	// Remove the item from the queue
+	_, _ = b.popFromRotationQueueByKey(name)
+
 	// If this role is a static account, we need to revoke the user from the
 	// database
 	role, err := b.StaticRole(ctx, req.Storage, name)
@@ -232,9 +236,6 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 	if err != nil {
 		return nil, err
 	}
-
-	// Remove the item from the queue
-	_, _ = b.popFromRotationQueueByKey(name)
 
 	return nil, nil
 }
