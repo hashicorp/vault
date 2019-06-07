@@ -117,14 +117,14 @@ func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
 // setCredentialsWAL is used to store information in a WAL that can retry a
 // credential setting or rotation in the event of partial failure.
 type setCredentialsWAL struct {
-	NewPassword string
-	OldPassword string
-	RoleName    string
-	Username    string
+	NewPassword string `json:"new_password"`
+	OldPassword string `json:"old_password"`
+	RoleName    string `json:"role_name"`
+	Username    string `json:"username"`
 
-	LastVaultRotation time.Time
+	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
-	walID string
+	walID string `json:"wal_id"`
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -243,12 +243,12 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 	data := wal.Data.(map[string]interface{})
 	walEntry := setCredentialsWAL{
 		walID:       id,
-		NewPassword: data["NewPassword"].(string),
-		OldPassword: data["OldPassword"].(string),
-		RoleName:    data["RoleName"].(string),
-		Username:    data["Username"].(string),
+		NewPassword: data["new_password"].(string),
+		OldPassword: data["old_password"].(string),
+		RoleName:    data["role_name"].(string),
+		Username:    data["username"].(string),
 	}
-	lvr, err := time.Parse(time.RFC3339, data["LastVaultRotation"].(string))
+	lvr, err := time.Parse(time.RFC3339, data["last_vault_rotation"].(string))
 	if err != nil {
 		return nil, err
 	}
