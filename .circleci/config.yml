@@ -61,7 +61,7 @@ jobs:
           mkdir ./pkg
 
           # Build dev binary
-          make bootstrap entdev
+          make bootstrap dev
         name: Build dev binary
     - persist_to_workspace:
         paths:
@@ -378,7 +378,7 @@ workflows:
 #           mkdir ./pkg
 # 
 #           # Build dev binary
-#           make bootstrap entdev
+#           make bootstrap dev
 #         name: Build dev binary
 #     - persist_to_workspace:
 #         paths:

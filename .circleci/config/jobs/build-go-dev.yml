@@ -14,7 +14,7 @@ steps:
         mkdir ./pkg
 
         # Build dev binary
-        make bootstrap entdev
+        make bootstrap dev
   - persist_to_workspace:
       root: .
       paths:
