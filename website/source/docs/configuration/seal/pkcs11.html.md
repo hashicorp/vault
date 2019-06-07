@@ -135,7 +135,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   `CKM_RSA_PKCS_OAEP` and `CKM_RSA_PKCS`.  May also be specified by the 
   `VAULT_HSM_RSA_ENCRYPT_LOCAL` environment variable.
 
-- `rsa_oaep_hash` `(string: "sha256")`: Specifiy the hash algorithm to use for RSA
+- `rsa_oaep_hash` `(string: "sha256")`: Specify the hash algorithm to use for RSA
   with OAEP padding.  Valid values are sha1, sha224, sha256, sha384, and sha512. 
   Available for mechanism `CKM_RSA_PKCS_OAEP`.  May also be specified by the 
   `VAULT_HSM_RSA_OAEP_HASH` environment variable.

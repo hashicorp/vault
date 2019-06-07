@@ -21,6 +21,18 @@ type dynamicSystemView struct {
 	mountEntry *MountEntry
 }
 
+type extendedSystemView struct {
+	dynamicSystemView
+}
+
+func (e extendedSystemView) Auditor() logical.Auditor {
+	return genericAuditor{
+		mountType: e.mountEntry.Type,
+		namespace: e.mountEntry.Namespace(),
+		c:         e.core,
+	}
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
@@ -212,8 +224,9 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 
 	// Return a subset of the data
 	ret := &logical.Entity{
-		ID:   entity.ID,
-		Name: entity.Name,
+		ID:       entity.ID,
+		Name:     entity.Name,
+		Disabled: entity.Disabled,
 	}
 
 	if entity.Metadata != nil {

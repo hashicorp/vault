@@ -5,11 +5,10 @@ CHANGES:
  * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
    will now be preferred over regions set in the enclosing environment.
    This is a _breaking_ change.
- * audit: Several more values in audit logs now are omitted if they are empty.
-   This helps reduce the size of audit log entries by not reproducing keys in
-   each entry that commonly don't contain any value, which can help in cases
-   where audit log entries are above the maximum UDP packet size and others.
-   See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
+ * audit: All values in audit logs now are omitted if they are empty.  This
+   helps reduce the size of audit log entries by not reproducing keys in each
+   entry that commonly don't contain any value, which can help in cases where
+   audit log entries are above the maximum UDP packet size and others.
  * backends: both PeriodicFunc and WALRollback functions will be called if 
    both are provided. Previously WALRollback would only be called if PeriodicFunc 
    was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
