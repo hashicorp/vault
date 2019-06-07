@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/mitchellh/reflectwalk"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/kalafut/q"
@@ -18,7 +15,6 @@ var re = regexp.MustCompile(`"{{(\S+)}}"`)
 
 const (
 	text = iota
-	str
 	obj
 	handler
 )
@@ -44,13 +40,13 @@ func (t *parsedTemplate) addText(s string) {
 	t.chunks = append(t.chunks, c)
 }
 
-func (t *parsedTemplate) addStringParam(name string) {
-	t.chunks = append(t.chunks, chunk{
-		chunkType: str,
-		variable:  name,
-		dflt:      `""`,
-	})
-}
+//func (t *parsedTemplate) addStringParam(name string) {
+//	t.chunks = append(t.chunks, chunk{
+//		chunkType: str,
+//		variable:  name,
+//		dflt:      `""`,
+//	})
+//}
 
 func (t *parsedTemplate) addMatcher(f hFunc) {
 	t.chunks = append(t.chunks, chunk{
@@ -66,12 +62,12 @@ func (t *parsedTemplate) render(entity identity.Entity) string {
 		switch c.chunkType {
 		case text:
 			out.WriteString(c.value)
-		case str:
-			if c.variable == "identity.entity.id" {
-				out.WriteString(fmt.Sprintf(`"%s"`, entity.ID))
-			} else {
-				out.WriteString(c.dflt)
-			}
+		//case str:
+		//	if c.variable == "identity.entity.id" {
+		//		out.WriteString(fmt.Sprintf(`"%s"`, entity.ID))
+		//	} else {
+		//		out.WriteString(c.dflt)
+		//	}
 		case handler:
 			out.WriteString(c.matcher(entity))
 		}
@@ -80,16 +76,14 @@ func (t *parsedTemplate) render(entity identity.Entity) string {
 	return out.String()
 }
 
-func ABC(tpl string, e identity.Entity) (map[string]interface{}, error) {
+func ABC(tpl string, e identity.Entity) (string, error) {
 	var out map[string]interface{}
 	var pt parsedTemplate
 
 	var compact bytes.Buffer
 	err := json.Compact(&compact, []byte(tpl))
 
-	//err := jsonutil.DecodeJSON([]byte(tpl), &out)
 	err = json.Unmarshal([]byte(tpl), &out)
-	q.Q(out)
 
 	matches := re.FindAllStringSubmatchIndex(tpl, -1)
 
@@ -98,11 +92,13 @@ func ABC(tpl string, e identity.Entity) (map[string]interface{}, error) {
 		pt.addText(tpl[i:m[0]])
 
 		v := tpl[m[2]:m[3]]
+		q.Q(v)
 
 		var f hFunc
 		for _, p := range patterns {
 			m := p.pattern.FindStringSubmatch(v)
 			if len(m) > 0 {
+				//q.Q(v, p.pattern)
 				f = func(entity identity.Entity) string {
 					return p.handler(entity, m[1:])
 				}
@@ -120,36 +116,10 @@ func ABC(tpl string, e identity.Entity) (map[string]interface{}, error) {
 	}
 	pt.addText(tpl[i:])
 
-	q.Q(pt.render(e))
+	result := pt.render(e)
+	q.Q(result)
 
-	//walkTest()
-
-	return out, err
-}
-
-type walker struct{}
-
-func (w walker) Map(m reflect.Value) error {
-	q.Q(m)
-	return nil
-}
-
-func (w walker) MapElem(m, k, v reflect.Value) error {
-	if v.Kind() == reflect.String {
-		q.Q(m, k.String(), v.String())
-	}
-	return nil
-}
-
-var _ reflectwalk.MapWalker = (*walker)(nil)
-
-func walkTest() {
-	exp := map[string]interface{}{
-		"basic": float64(42),
-	}
-	w := walker{}
-
-	q.Q(reflectwalk.Walk(exp, w))
+	return result, err
 }
 
 /*
@@ -176,26 +146,33 @@ type matcher struct {
 	handler func(identity.Entity, []string) string
 }
 
-// TODO: get rid of this
+// TODO: maybe get rid of this
 func quote(s string) string {
 	return fmt.Sprintf(`"%s"`, s)
 }
 
+// TODO: named parameters would be better than <param>
+func reFmt(s string) string {
+	s = strings.ReplaceAll(s, ".", `\.`)
+	s = strings.ReplaceAll(s, "<param>", `([^\s.]+)`)
+	return "^" + s + "$"
+}
+
 var patterns = []matcher{
 	{
-		pattern: regexp.MustCompile(`^identity\.entity\.id$`),
+		pattern: regexp.MustCompile(reFmt("identity.entity.id")),
 		handler: func(e identity.Entity, v []string) string {
 			return quote(e.ID)
 		},
 	},
 	{
-		pattern: regexp.MustCompile(`^identity\.entity\.name$`),
+		pattern: regexp.MustCompile(reFmt("identity.entity.name")),
 		handler: func(e identity.Entity, v []string) string {
 			return quote(e.Name)
 		},
 	},
 	{
-		pattern: regexp.MustCompile(`^identity\.entity\.metadata$`),
+		pattern: regexp.MustCompile(reFmt("identity.entity.metadata")),
 		handler: func(e identity.Entity, v []string) string {
 			d, err := json.Marshal(e.Metadata)
 			if err == nil {
@@ -205,15 +182,16 @@ var patterns = []matcher{
 		},
 	},
 	{
-		pattern: regexp.MustCompile(`^identity\.entity\.metadata\.(\S+)$`),
+		pattern: regexp.MustCompile(reFmt(`identity.entity.metadata.<param>`)),
 		handler: func(e identity.Entity, v []string) string {
 			return quote(e.Metadata[v[0]])
 		},
 	},
 	{
-		pattern: regexp.MustCompile(`^identity\.entity\.aliases\.(\S+)\.metadata\.(\S+)$`),
+		pattern: regexp.MustCompile(reFmt(`identity.entity.aliases.<param>.metadata.<param>`)),
 		handler: func(e identity.Entity, v []string) string {
 			name, key := v[0], v[1]
+			q.Q(name, key)
 			for _, alias := range e.Aliases {
 				if alias.Name == name {
 					return quote(alias.Metadata[key])

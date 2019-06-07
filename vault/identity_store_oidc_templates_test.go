@@ -24,12 +24,12 @@ func Test_OIDC_TestABC(t *testing.T) {
 			},
 		},
 	}
-	var out map[string]interface{}
 	tpl := `
 {
   "alias_claims": {
     "id": "{{identity.entity.id}}",
-	"region": "west"
+    "region": "west",
+    "stuff": "{{identity.entity.metadata}}"
   }
 }
 `
@@ -38,11 +38,15 @@ func Test_OIDC_TestABC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	exp := map[string]interface{}{
-		"basic":   float64(42),
-		"complex": "{{ abc }}",
-		"another": "{{xyz}}",
-	}
+	exp := `
+{
+  "alias_claims": {
+    "id": "abc-123",
+    "region": "west",
+    "stuff": {"color":"green","size":"small"}
+  }
+}
+`
 
 	if diff := deep.Equal(out, exp); diff != nil {
 		t.Fatal(diff)
