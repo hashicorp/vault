@@ -1,17 +1,68 @@
 #!/usr/bin/env bash
 
+# READ THIS BEFORE MAKING CHANGES:
+#
+# If you want to add a new pre-commit check, here are the rules:
+#
+#   1. Create a bash function for your check (see e.g. ui_lint below).
+#      NOTE: Each function will be called in a sub-shell so you can freely
+#      change directory without worrying about interference.
+#   2. Add the name of the function to the CHECKS variable.
+#   3. If no changes relevant to your new check are staged, then
+#      do not output anything at all - this would be annoying noise.
+#      In this case, call 'return 0' from your check function to return
+#      early without blocking the commit.
+#   4. If any non-trivial check-specific thing has to be invoked,
+#      then output '==> [check description]' as the first line of
+#      output. Each sub-check should output '--> [subcheck description]'
+#      after it has run, indicating success or failure.
+#   5. Call 'block [reason]' to block the commit. This ensures the last
+#      line of output calls out that the commit was blocked - which may not
+#      be obvious from random error messages generated in 4.
+#
+# At the moment, there are no automated tests for this hook, so please run it
+# locally to check you have not broken anything - breaking this will interfere
+# with other peoples' workflows significantly, so be sure, check everything twice.
+
 set -euo pipefail
 
 # Call block to block the commit with a message.
 block() {
-		echo "$@"
-    echo "Commit blocked - see errors above."
-    exit 1
+  echo "$@"
+  echo "Commit blocked - see errors above."
+  exit 1
+}
+
+# Add all check functions to this space separated list.
+# They are executed in this order (see end of file).
+CHECKS="ui_lint circleci_verify"
+
+# Run ui linter if changes in that dir detected.
+ui_lint() {
+  local DIR=ui LINTER=node_modules/.bin/lint-staged
+
+  # Silently succeed if no changes staged for $DIR
+  if git diff --name-only --cached --exit-code -- $DIR/; then
+    return 0
+  fi
+
+  # Silently succeed if the linter has not been installed.
+  # We assume that if you're doing UI dev, you will have installed the linter
+  # by running yarn.
+  if [ ! -x $DIR/$LINTER ]; then
+    return 0
+  fi
+
+  echo "==> Changes detected in $DIR/: Running linter..."
+
+  # Run the linter from the UI dir.
+  cd $DIR
+  $LINTER || block "UI lint failed"
 }
 
 # Check .circleci/config.yml is up to date and valid, and that all changes are
 # included together in this commit.
-(
+circleci_verify() {
   # Change to the root dir of the repo.
   cd "$(git rev-parse --show-toplevel)"
 
@@ -20,30 +71,34 @@ block() {
     # This is just for consistency, as I keep making this mistake - Sam.
     block "ERROR: File(s) with .yaml extension detected. Please rename them .yml instead."
   fi
-  
+
   # Succeed early if no changes to yml files in .circleci/ are currently staged.
   # make ci-verify is slow so we really don't want to run it unnecessarily.
   if git diff --name-only --cached --exit-code -- '.circleci/***.yml'; then
-    exit 0
+    return 0
   fi
-	
-	# Make sure to add no explicit output before this line, as it would just be noise
-	# for those making non-circleci changes.
-	echo Verifying config changes in .circleci/
-	echo "--> OK: All files are .yml not .yaml"
+  # Make sure to add no explicit output before this line, as it would just be noise
+  # for those making non-circleci changes.
+  echo "==> Verifying config changes in .circleci/"
+  echo "--> OK: All files are .yml not .yaml"
 
   # Ensure commit includes _all_ files in .circleci/
-	# So not only are the files up to date, but we are also committing them in one go.
+  # So not only are the files up to date, but we are also committing them in one go.
   if ! git diff --name-only --exit-code -- '.circleci/***.yml'; then
-		echo "ERROR: Some .yml diffs in .circleci/ are staged, others not."
-		block "Please commit the entire .circleci/ directory together, or omit it altogether."
-	fi
-
-	echo "--> OK: All .yml files in .circleci are staged."
-
-  if ! make -C .circleci ci-verify; then
-		block "ERROR: make ci-verify failed"
+    echo "ERROR: Some .yml diffs in .circleci/ are staged, others not."
+    block "Please commit the entire .circleci/ directory together, or omit it altogether."
   fi
 
-	echo "--> OK: make ci-verify succeeded."
-)
+  echo "--> OK: All .yml files in .circleci are staged."
+
+  if ! make -C .circleci ci-verify; then
+    block "ERROR: make ci-verify failed"
+  fi
+
+  echo "--> OK: make ci-verify succeeded."
+}
+
+for CHECK in $CHECKS; do
+  # Force each check into a subshell to avoid crosstalk.
+  ( $CHECK ) || exit $?
+done
