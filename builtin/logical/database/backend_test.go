@@ -56,7 +56,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
 
-	// exponential backoff-retry
+	// Exponential backoff-retry
 	if err = pool.Retry(func() error {
 		// This will cause a validation to run
 		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{

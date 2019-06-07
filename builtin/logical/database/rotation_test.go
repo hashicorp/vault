@@ -98,10 +98,10 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 		t.Fatalf("empty username (%s) or password (%s)", username, password)
 	}
 
-	// verify username/password
+	// Verify username/password
 	verifyPgConn(t, username, password, connURL)
 
-	// re-read the creds, verifying they aren't changing on read
+	// Re-read the creds, verifying they aren't changing on read
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
@@ -118,7 +118,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 		t.Fatal("expected re-read username/password to match, but didn't")
 	}
 
-	// trigger rotation
+	// Trigger rotation
 	data = map[string]interface{}{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -153,11 +153,11 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 		t.Fatalf("expected passwords to differ, got (%s)", newPassword)
 	}
 
-	// verify new username/password
+	// Verify new username/password
 	verifyPgConn(t, username, newPassword, connURL)
 }
 
-// sanity check to make sure we don't allow an attempt of rotating credentials
+// Sanity check to make sure we don't allow an attempt of rotating credentials
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
 func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
@@ -240,10 +240,10 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 		t.Fatalf("empty username (%s) or password (%s)", username, password)
 	}
 
-	// verify username/password
+	// Verify username/password
 	verifyPgConn(t, username, password, connURL)
 
-	// trigger rotation
+	// Trigger rotation
 	data = map[string]interface{}{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -309,12 +309,11 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	// verify empty queue
+	// Verify empty queue
 	if bd.credRotationQueue.Len() != 0 {
 		t.Fatalf("expected zero queue items, got: %d", bd.credRotationQueue.Len())
 	}
 
-	// time.Sleep(15 * time.Second)
 	assertWALCount(t, config.StorageView, 0)
 }
 
@@ -363,11 +362,11 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// save Now() to make sure rotation time is after this, as well as the WAL
+	// Save Now() to make sure rotation time is after this, as well as the WAL
 	// time
 	roleTime := time.Now()
 
-	// create role
+	// Create role
 	data = map[string]interface{}{
 		"name":                  roleName,
 		"db_name":               "plugin-test",
@@ -375,7 +374,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		"rotation_statements":   testRoleStaticUpdate,
 		"revocation_statements": defaultRevocationSQL,
 		"username":              "statictest",
-		// low value here, to make sure the backend rotates this password at least
+		// Low value here, to make sure the backend rotates this password at least
 		// once before we compare it to the WAL
 		"rotation_period": "10s",
 	}
@@ -392,17 +391,17 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// allow the first rotation to occur, setting LastVaultRotation
+	// Allow the first rotation to occur, setting LastVaultRotation
 	time.Sleep(time.Second * 12)
 
-	// cleanup the backend, then create a WAL for the role with a
+	// Cleanup the backend, then create a WAL for the role with a
 	// LastVaultRotation of 1 hour ago, so that when we recreate the backend the
 	// WAL will be read but discarded
 	b.Cleanup(ctx)
 	b = nil
 	time.Sleep(time.Second * 3)
 
-	// make a fake WAL entry with an older time
+	// Make a fake WAL entry with an older time
 	oldRotationTime := roleTime.Add(time.Hour * -1)
 	walPassword := "somejunkpassword"
 	_, err = framework.PutWAL(ctx, config.StorageView, staticWALKey, &setCredentialsWAL{
@@ -417,7 +416,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 
 	assertWALCount(t, config.StorageView, 1)
 
-	// reload backend
+	// Reload backend
 	lb, err = Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -428,10 +427,10 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	}
 	defer b.Cleanup(ctx)
 
-	// allow enough time for populateQueue to work after boot
+	// Allow enough time for populateQueue to work after boot
 	time.Sleep(time.Second * 12)
 
-	// populateQueue should have processed the entry
+	// PopulateQueue should have processed the entry
 	assertWALCount(t, config.StorageView, 0)
 
 	// Read the role
@@ -456,7 +455,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatal("last vault rotation time not greater than role creation time")
 	}
 
-	// grab password to verify it didn't change
+	// Grab password to verify it didn't change
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "static-creds/" + roleName,
@@ -473,7 +472,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	}
 }
 
-// helper to assert the number of WAL entries is what we expect
+// Helper to assert the number of WAL entries is what we expect
 func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 	var count int
 	ctx := context.Background()
@@ -482,7 +481,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 		t.Fatal("error listing WALs")
 	}
 
-	// loop through WAL keys and process any rotation ones
+	// Loop through WAL keys and process any rotation ones
 	for _, k := range keys {
 		walEntry, _ := framework.GetWAL(ctx, s, k)
 		if walEntry == nil {
@@ -500,7 +499,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 }
 
 //
-// end WAL testing
+// End WAL testing
 //
 
 func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
@@ -517,14 +516,14 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	// allow initQueue to finish
+	// Allow initQueue to finish
 	time.Sleep(5 * time.Second)
 	bd := b.(*databaseBackend)
 	if bd.credRotationQueue == nil {
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	// configure backend, add item and confirm length
+	// Configure backend, add item and confirm length
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
 
@@ -547,7 +546,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// create three static roles with different rotation periods
+	// Create three static roles with different rotation periods
 	testCases := []string{"65", "130", "5400"}
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
@@ -574,7 +573,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 		}
 	}
 
-	// verify the queue has 3 items in it
+	// Verify the queue has 3 items in it
 	if bd.credRotationQueue.Len() != 3 {
 		t.Fatalf("expected 3 items in the rotation queue, got: (%d)", bd.credRotationQueue.Len())
 	}
@@ -597,23 +596,23 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 		t.Fatalf("expected 3 roles, got: (%d)", len(keys))
 	}
 
-	// capture initial passwords, before the periodic function is triggered
+	// Capture initial passwords, before the periodic function is triggered
 	pws := make(map[string][]string, 0)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep to make sure the 65s role will be up for rotation by the time the
+	// Sleep to make sure the 65s role will be up for rotation by the time the
 	// periodic function ticks
 	time.Sleep(7 * time.Second)
 
-	// sleep 75 to make sure the periodic func has time to actually run
+	// Sleep 75 to make sure the periodic func has time to actually run
 	time.Sleep(75 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep more, this should allow both sr65 and sr130 to rotate
+	// Sleep more, this should allow both sr65 and sr130 to rotate
 	time.Sleep(140 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// verify all pws are as they should
+	// Verify all pws are as they should
 	pass := true
 	for k, v := range pws {
 		switch {
@@ -639,7 +638,8 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	}
 }
 
-// capture the current passwords
+// capturePasswords captures the current passwords at the time of calling, and
+// returns a map of username / passwords building off of the input map
 func capturePasswords(t *testing.T, b logical.Backend, config *logical.BackendConfig, testCases []string, pws map[string][]string) map[string][]string {
 	new := make(map[string][]string, 0)
 	for _, tc := range testCases {

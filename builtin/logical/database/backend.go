@@ -53,11 +53,11 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 
 	b.credRotationQueue = queue.New()
-	// create a context with a cancel method for processing any WAL entries and
+	// Create a context with a cancel method for processing any WAL entries and
 	// populating the queue
 	ctx, cancel := context.WithCancel(ctx)
 	b.cancelQueue = cancel
-	// load queue and kickoff new periodic ticker
+	// Load queue and kickoff new periodic ticker
 	go b.initQueue(ctx, conf)
 	return b, nil
 }
@@ -108,7 +108,7 @@ type databaseBackend struct {
 
 	*framework.Backend
 	sync.RWMutex
-	// credRotationQueue is an in-memory priority queue used to track Static Roles
+	// CredRotationQueue is an in-memory priority queue used to track Static Roles
 	// that require periodic rotation. Backends will have a PriorityQueue
 	// initialized on setup, but only backends that are mounted by a primary
 	// server or mounted as a local mount will perform the rotations.
@@ -269,7 +269,6 @@ func (b *databaseBackend) invalidateQueue() {
 	b.Lock()
 	defer b.Unlock()
 
-	// cancelQueue
 	if b.cancelQueue != nil {
 		b.cancelQueue()
 	}

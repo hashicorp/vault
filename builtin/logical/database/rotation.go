@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	// interval to check the queue for items needing rotation
+	// Interval to check the queue for items needing rotation
 	queueTickSeconds  = 5
 	queueTickInterval = queueTickSeconds * time.Second
 
-	// wal storage key used for static account rotations
+	// WAL storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
 )
 
@@ -34,7 +34,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 	log := b.Logger()
 	log.Info("populating role rotation queue")
 
-	// build map of role name / wal entries
+	// Build map of role name / wal entries
 	walMap, err := b.loadStaticWALs(ctx, s)
 	if err != nil {
 		log.Warn("unable to load rotation WALs", "error", err)
@@ -62,7 +62,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		walEntry := walMap[roleName]
 		if role == nil || role.StaticAccount == nil {
 			if walEntry != nil {
-				// no static role exists for this wal entry, delete it
+				// No static role exists for this wal entry, delete it
 				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
@@ -74,9 +74,9 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
 		}
 
-		// check if role name is in map
+		// Check if role name is in map
 		if walEntry != nil {
-			// check walEntry last vault time
+			// Check walEntry last vault time
 			if !walEntry.LastVaultRotation.IsZero() && walEntry.LastVaultRotation.Before(role.StaticAccount.LastVaultRotation) {
 				// WAL's last vault rotation record is older than the role's data, so
 				// delete and move on
@@ -136,7 +136,7 @@ type setCredentialsWAL struct {
 // based on the current time.
 func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Storage) error {
 	for {
-		// quit rotating credentials if shutdown has started
+		// Quit rotating credentials if shutdown has started
 		select {
 		case <-ctx.Done():
 			return nil
@@ -150,12 +150,12 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			return err
 		}
 
-		// guard against possible nil item
+		// Guard against possible nil item
 		if item == nil {
 			return nil
 		}
 
-		// validate the role still exists
+		// Validate the role still exists
 		role, err := b.StaticRole(ctx, s, item.Key)
 		if err != nil {
 			b.logger.Error("unable load role", "role", item.Key, "error", err)
@@ -166,13 +166,13 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			continue
 		}
 
-		// if "now" is less than the Item priority, then this item does not need to
+		// If "now" is less than the Item priority, then this item does not need to
 		// be rotated
 		if time.Now().Unix() < item.Priority {
 			if err := b.pushItem(item); err != nil {
 				b.logger.Error("unable to push item on to queue", "error", err)
 			}
-			// break out of the for loop
+			// Break out of the for loop
 			break
 		}
 
@@ -198,7 +198,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			// likely will not attempt to rotate it, as a back-off of sorts
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
 
-			// preserve the WALID if it was returned
+			// Preserve the WALID if it was returned
 			if resp != nil && resp.WALID != "" {
 				item.Value = resp.WALID
 			}
@@ -206,7 +206,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			if err := b.pushItem(item); err != nil {
 				b.logger.Error("unable to push item on to queue", "error", err)
 			}
-			// go to next item
+			// Go to next item
 			continue
 		}
 
@@ -215,7 +215,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			lvr = time.Now()
 		}
 
-		// update priority and push updated Item to the queue
+		// Update priority and push updated Item to the queue
 		nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
 		item.Priority = nextRotation.Unix()
 		if err := b.pushItem(item); err != nil {
@@ -292,7 +292,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
-	// re-use WAL ID if present, otherwise PUT a new WAL
+	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
@@ -370,13 +370,13 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		return output, err
 	}
 
-	// cleanup WAL after successfully rotating and pushing new item on to queue
+	// Cleanup WAL after successfully rotating and pushing new item on to queue
 	if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
 		merr = multierror.Append(merr, err)
 		return output, merr
 	}
 
-	// the WAL has been deleted, return new setStaticAccountOutput without it
+	// The WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
 
@@ -391,7 +391,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 // avoid blocking the mount process while loading and evaluating existing roles,
 // etc.
 func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
-	// verify this mount is on the primary server, or is a local mount. If not, do
+	// Verify this mount is on the primary server, or is a local mount. If not, do
 	// not create a queue or launch a ticker. Both processing the WAL list and
 	// populating the queue are done sequentially and before launching a
 	// go-routine to run the periodic ticker.
@@ -405,10 +405,10 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		// that we can write to storage
 		time.Sleep(3 * time.Second)
 
-		// load roles and populate queue with static accounts
+		// Load roles and populate queue with static accounts
 		b.populateQueue(ctx, conf.StorageView)
 
-		// launch ticker
+		// Launch ticker
 		go b.runTicker(ctx, conf.StorageView)
 	}
 }
@@ -426,14 +426,14 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 	}
 
 	walMap := make(map[string]*setCredentialsWAL)
-	// loop through WAL keys and process any rotation ones
+	// Loop through WAL keys and process any rotation ones
 	for _, walID := range keys {
 		walEntry := b.findStaticWAL(ctx, s, walID)
 		if walEntry == nil {
 			continue
 		}
 
-		// verify the static role still exists
+		// Verify the static role still exists
 		roleName := walEntry.RoleName
 		role, err := b.StaticRole(ctx, s, roleName)
 		if err != nil {

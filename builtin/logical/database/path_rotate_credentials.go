@@ -113,7 +113,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		}
 
 		if role.StaticAccount != nil {
-			// in create/update of static accounts, we only care if the operation
+			// In create/update of static accounts, we only care if the operation
 			// err'd , and this call does not return credentials
 			item, err := b.popFromRotationQueueByKey(name)
 			if err != nil {
@@ -128,11 +128,11 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			})
 			if err != nil {
 				b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
-				// update the priority to re-try this rotation and re-add the item to
+				// Update the priority to re-try this rotation and re-add the item to
 				// the queue
 				item.Priority = time.Now().Add(10 * time.Second).Unix()
 
-				// preserve the WALID if it was returned
+				// Preserve the WALID if it was returned
 				if resp.WALID != "" {
 					item.Value = resp.WALID
 				}

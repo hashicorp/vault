@@ -115,7 +115,7 @@ func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 		},
 	}
 
-	// get the fields that are specific to the type of role, and add them to the
+	// Get the fields that are specific to the type of role, and add them to the
 	// common fields
 	var typeFields map[string]*framework.FieldSchema
 	switch roleType {
@@ -202,7 +202,7 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 
 func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	// if this role is a static account, we need to revoke the user from the
+	// If this role is a static account, we need to revoke the user from the
 	// database
 	role, err := b.StaticRole(ctx, req.Storage, name)
 	if err != nil {
@@ -212,7 +212,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		return nil, nil
 	}
 
-	// clean up the static useraccount, if it exists
+	// Clean up the static useraccount, if it exists
 	if role.StaticAccount != nil {
 		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -233,7 +233,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		return nil, err
 	}
 
-	// remove the item from the queue
+	// Remove the item from the queue
 	_, _ = b.popFromRotationQueueByKey(name)
 
 	return nil, nil
@@ -439,7 +439,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
 
-	// only call setStaticAccount if we're creating the role for the
+	// Only call setStaticAccount if we're creating the role for the
 	// first time
 	switch req.Operation {
 	case logical.CreateOperation:
@@ -543,8 +543,6 @@ type roleEntry struct {
 }
 
 type staticAccount struct {
-	// Fields used in Static Accounts and automatic password rotation
-
 	// Username to create or assume management for static accounts
 	Username string `json:"username"`
 
