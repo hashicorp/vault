@@ -14,16 +14,16 @@ storiesOf('HttpRequests/Table/', module)
     context: {
       counters: [
         {
-          start_time: '2019-05-01T00:00:00Z',
-          total: 50,
+          start_time: '2019-04-01T05:00:00.000Z',
+          total: 5500,
         },
         {
-          start_time: '2019-04-01T00:00:00Z',
-          total: 45,
+          start_time: '2019-05-01T05:00:00.000Z',
+          total: 4500,
         },
         {
-          start_time: '2019-03-01T00:00:00Z',
-          total: 55,
+          start_time: '2019-06-01T05:00:00.000Z',
+          total: 5000,
         },
       ]
     },

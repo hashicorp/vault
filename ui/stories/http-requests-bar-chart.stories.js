@@ -6,18 +6,18 @@ import notes from './http-requests-bar-chart.md';
 
 const COUNTERS = [
   {
-    start_time: '2019-03-01T00:00:00Z',
+    start_time: '2019-04-01T05:00:00.000Z',
     total: 5500,
   },
   {
-    start_time: '2019-04-01T00:00:00Z',
+    start_time: '2019-05-01T05:00:00.000Z',
     total: 4500,
   },
   {
-    start_time: '2019-05-01T00:00:00Z',
+    start_time: '2019-06-01T05:00:00.000Z',
     total: 5000,
   },
-]
+];
 
 storiesOf('HttpRequests/BarChart/', module)
   .addParameters({ options: { showPanel: true } })
