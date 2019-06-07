@@ -120,7 +120,10 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	// First, do a read
+	curOutputCurl := client.OutputCurlString() // we don't want to see curl output for the read request
+	client.SetOutputCurlString(false)
 	secret, err := kvReadRequest(client, path, nil)
+	client.SetOutputCurlString(curOutputCurl)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 		return 2
