@@ -101,7 +101,8 @@ to specify where the configuration is.
 
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
-  directory to successfully load plugins.
+  directory to successfully load plugins. If this parameter is set, then 
+  the [api_addr](#api_addr) parameter must also be set.
 
 - `telemetry` <tt>([Telemetry][telemetry]: &lt;none&gt;)</tt> – Specifies the telemetry
   reporting system.
@@ -146,7 +147,9 @@ The following parameters are used on backends that support [high availability][h
   other Vault servers in the cluster for client redirection. This value is also
   used for [plugin backends][plugins]. This can also be provided via the
   environment variable `VAULT_API_ADDR`. In general this should be set as a full
-  URL that points to the value of the [`listener`](#listener) address.
+  URL that points to the value of the [`listener`](#listener) address. If the
+  [plugin_directory](#plugin_directory) parameter is set, then this parameter must
+  also be set.
 
 - `cluster_addr` `(string: "")` -  – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided

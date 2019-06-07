@@ -683,6 +683,14 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Attempt to detect the redirect address, if possible
 	if coreConfig.RedirectAddr == "" {
+		// If 'plugin_directory' is configured, then 'api_addr' must also be
+		// configured. This will prevent plugins from being enabled successfully
+		// but then failing mysteriously when one tries to address them through
+		// their API endpoints.
+		if coreConfig.PluginDirectory != ""  {
+			c.UI.Error(fmt.Sprintf("No `api_addr` value specified in config or in VAULT_API_ADDR; this value must be manually set if `plugin_directory` is set."))
+			return 1
+		}
 		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
 	}
 	var detect physical.RedirectDetect
