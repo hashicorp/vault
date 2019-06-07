@@ -159,5 +159,7 @@
       "pre-commit": "lint-staged"
     }
   },
-  "dependencies": {}
+  "dependencies": {
+    "d3-tooltip": "^0.0.1"
+  }
 }

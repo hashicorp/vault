@@ -6406,6 +6406,11 @@ cyclist@~0.2.2:
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-0.2.2.tgz#1b33792e11e914a2fd6d6ed6447464444e5fa640"
   integrity sha1-GzN5LhHpFKL9bW7WRHRkRE5fpkA=
 
+d3-tooltip@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/d3-tooltip/-/d3-tooltip-0.0.1.tgz#125e851eb9334f7477b0fff03b762dbfb5e87414"
+  integrity sha1-El6FHrkzT3R3sP/wO3Ytv7XodBQ=
+
 dag-map@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/dag-map/-/dag-map-2.0.2.tgz#9714b472de82a1843de2fba9b6876938cab44c68"
