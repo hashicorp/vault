@@ -81,10 +81,6 @@ type LockedBucket struct {
 	*locksutil.LockEntry
 }
 
-func (s *StoragePackerV2) BucketsView() *logical.StorageView {
-	return s.BucketStorageView
-}
-
 func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []string) error {
 	// If we crash while writing out new buckets created by sharding,
 	// we will have version N of the bucket in storage, and version N+1
@@ -287,7 +283,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	for k, v := range shards {
 		s.Logger.Trace("storing bucket", "shard", k)
 		// Avoid queuing mode, go directly to "store" not "persist"
-		if err := s.storeBucket(ctx, v); err != nil {
+		if err := s.storeBucket(ctx, v, 1); err != nil {
 			s.Logger.Debug("encountered error", "shard", k)
 			retErr = multierror.Append(retErr, err)
 			cleanupStorage()
@@ -303,7 +299,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	origBucketItemMap := bucket.ItemMap
 	bucket.ItemMap = nil
 	bucket.HasShards = true
-	if err := s.storeBucket(ctx, bucket); err != nil {
+	if err := s.storeBucket(ctx, bucket, 1); err != nil {
 		retErr = multierror.Append(retErr, err)
 		bucket.ItemMap = origBucketItemMap
 		bucket.HasShards = false
@@ -329,11 +325,13 @@ func (s *StoragePackerV2) persistBucket(ctx context.Context, bucket *LockedBucke
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
 	}
-	return s.storeBucket(ctx, bucket)
+	return s.storeBucket(ctx, bucket, 0)
 }
 
 // storeBucket actually stores the bucket.
-func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket) error {
+// "depth" is used to prevent recursive operation, if one of the shards
+// is itself too big, we fail and report an error.
+func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket, depth int) error {
 	marshaledBucket, err := proto.Marshal(bucket.Bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed to marshal bucket: {{err}}", err)
@@ -352,8 +350,12 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket)
 		Value: compressedBucket,
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), physical.ErrValueTooLarge) && !s.disableSharding {
-			err = s.shardBucket(ctx, bucket, s.GetCacheKey(bucket.Key))
+		if strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+			if depth > 0 {
+				return errwrap.Wrapf("Recursive sharding detected: {{err}}", err)
+			} else if !s.disableSharding {
+				err = s.shardBucket(ctx, bucket, s.GetCacheKey(bucket.Key))
+			}
 		}
 		if err != nil {
 			return errwrap.Wrapf("failed to persist packed storage entry: {{err}}", err)
@@ -411,6 +413,15 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 		}
 		idsSeen[item.ID] = true
 	}
+
+	// Data flow:
+	//     (id, data)+
+	// 1. compute hashes
+	//     (id, key=hash(id), data)+
+	// 2. sort and partition by bucket
+	//     bucket NN => (id, key=NN*, data)+
+	// 3. acquire storage locks in storage lock order
+	// 4. process items in each bucket
 
 	requests := s.keysForItems(items)
 
@@ -583,6 +594,7 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 		return nil, fmt.Errorf("nil buckets view")
 	}
 
+	// Should we check if the view's prefix ends with a /?
 	config.BucketStorageView = config.BucketStorageView.SubView("v2/")
 
 	if config.ConfigStorageView == nil {
@@ -681,7 +693,7 @@ func (s *StoragePackerV2) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
 		bucket := value.(*LockedBucket)
-		lErr := s.storeBucket(ctx, bucket)
+		lErr := s.storeBucket(ctx, bucket, 0)
 		if lErr != nil {
 			err = multierror.Append(err, lErr)
 		}

@@ -31,19 +31,11 @@ type StoragePacker interface {
 	// during flushing or while turing queue mode back off.
 	SetQueueMode(bool)
 	FlushQueue(context.Context) error
+
+	// Is the given storage path controlled by this StoragePacker?
+	MatchingStorage(string) bool
+
+	// Given a storage path (to a bucket) and new contents, invalidate the existing bucket and
+	// reload it.
+	InvalidateItems(context.Context, string, []byte) ([]*Item, []*Item, error)
 }
-
-/*
-
-// Is the given storage path controlled by this StoragePacker?
-func (s *StoragePackerV2) MatchingStorage(path string) bool
-
-// Given a storage path (to a bucket) and new contents, return
-// "present": all items present in the new bucket
-// "deleted": all items that were in the cache but are now absent
-// For normal WAL operation this is serialized based on the order PutItem
-// wrote them; for recovery from the Merkle tree this will not be the case.
-func (s *StoragePackerV2) InvalidateItems(context.Context, path string, newValu []byte) (present []*Item, deleted []*Item, error)
-
-
-*/

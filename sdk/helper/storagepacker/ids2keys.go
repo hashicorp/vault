@@ -19,9 +19,6 @@ type itemRequest struct {
 
 	// Stored object, nil if not found
 	Value *Item
-
-	// Bucket responsible for this key
-	Bucket *Bucket
 }
 
 func GetItemIDHash(itemID string) string {
@@ -33,10 +30,9 @@ func (s *StoragePackerV2) keysForIDs(ids []string) []*itemRequest {
 	requests := make([]*itemRequest, 0, len(ids))
 	for _, id := range ids {
 		requests = append(requests, &itemRequest{
-			ID:     id,
-			Key:    GetItemIDHash(id),
-			Value:  nil,
-			Bucket: nil,
+			ID:    id,
+			Key:   GetItemIDHash(id),
+			Value: nil,
 		})
 	}
 	return requests
@@ -47,10 +43,9 @@ func (s *StoragePackerV2) keysForItems(items []*Item) []*itemRequest {
 	requests := make([]*itemRequest, 0, len(items))
 	for _, i := range items {
 		requests = append(requests, &itemRequest{
-			ID:     i.ID,
-			Key:    GetItemIDHash(i.ID),
-			Value:  i,
-			Bucket: nil,
+			ID:    i.ID,
+			Key:   GetItemIDHash(i.ID),
+			Value: i,
 		})
 	}
 	return requests

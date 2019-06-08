@@ -427,6 +427,8 @@ func checkAllItems(t *testing.T, storagePacker *StoragePackerV2, ctx context.Con
 
 func TestStoragePackerV2_Recurse(t *testing.T) {
 	// Created from generateLotsOfCollidingIDs(10, "0000")
+	// This is a targeted way of generating a recursive split, a more natural one would
+	// be PutItem on a sufficiently large number of objects.
 	ids := []string{
 		"0000rZdeLoTTuouIGnsMpqYZqgwWzUpOLKXgRuEV",
 		"0000qToiiioByTRsjmBpfkAbsQtSdRTPfVqDGohJ",
@@ -457,17 +459,17 @@ func TestStoragePackerV2_Recurse(t *testing.T) {
 		Data: incompressibleData(9000),
 	}
 
-	for idx, item := range allItems {
+	for idx, item := range allItems[:9] {
 		err := storagePacker1.PutItem(ctx, item)
 		if err != nil {
 			t.Fatalf("Error inserting key %v %v: %v", idx, item.ID, err)
 		}
 	}
 
-	checkAllItems(t, storagePacker1, ctx, allItems)
-
-	storagePacker2 := createStoragePacker(t, storage)
-	checkAllItems(t, storagePacker2, ctx, allItems)
+	err := storagePacker1.PutItem(ctx, allItems[9])
+	if err == nil {
+		t.Fatalf("Expected error when triggering recursive split")
+	}
 }
 
 func run_concurrentTest(t *testing.T, n int, ids [][]string) {
@@ -851,7 +853,6 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 			Message: nil,
 			Data:    []byte{0, 1, 2, 3, 4},
 		},
-		Bucket: b.Bucket,
 	}
 	p := &partitionedRequests{
 		Bucket:   b,
@@ -1010,21 +1011,12 @@ func TestStoragePackerV2_StorageErrors(t *testing.T) {
 		t.Logf("DeleteItem error: %+v", err)
 	}
 
-	// Created from generateLotsOfCollidingIDs(10, "0000")
-	ids := []string{
-		"0000rZdeLoTTuouIGnsMpqYZqgwWzUpOLKXgRuEV",
-		"0000qToiiioByTRsjmBpfkAbsQtSdRTPfVqDGohJ",
-		"0000evHgpGImPYdBHIDmSrBGIHafnjgiMCVJypSJ",
-		"0000HUdnRbChiiPYrUBUEhwDvRoDeeyjEKaEVifJ",
-		"0000fUPXeNVBIIUhzzalccCzzFMTjohWoCjMFbLq",
-		"0000YZZGZSdHTLCnqXkhHytkMKrsFidIQRTBywWr",
-		"0000OosvkBZTwMPHQkPWbvHFhQwhDAJKUEVjUaAg",
-		"0000NHPWdQSmtkbKKfFEazXbPorbFgSidSrubKcK",
-		"0000llbJsqIorLwuqjWruVtiLEPYTyZXttzjNLLL",
-		"0000IkgtiWeZAzjFUalTJoYfeSeLGIILKoIuaiJV",
-	}
+	// Failure during sharding
+	n := 20
+	ids := append(generateLotsOfCollidingIDs(n-1, "00"),
+		generateLotsOfCollidingIDs(1, "00c")...)
 
-	allItems := make([]*Item, 10)
+	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
 			ID:   ids[i],
@@ -1034,14 +1026,47 @@ func TestStoragePackerV2_StorageErrors(t *testing.T) {
 
 	backend.FailPut(false)
 	// Induce failure on one of the leaf shards created
-	storage.suffixToFail = "00/0/0/c"
+	storage.suffixToFail = "00/c"
 	testFailedPutWhileSharding(t, storagePacker, allItems)
 
 	// Induce failure on the root bucket instead
-	// This causes the test to fail because cleanup only does
-	// the immediate shards, not the ones below those.
-	/*
-		storage.suffixToFail = "00"
-		testFailedPutWhileSharding(t, storagePacker, allItems)
-	*/
+	storage.suffixToFail = "00"
+	testFailedPutWhileSharding(t, storagePacker, allItems)
+}
+
+func TestStoragePackerV2_MatchingStorage(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+	bucketStorageView := logical.NewStorageView(storage, "test/foo/buckets/")
+	configStorageView := logical.NewStorageView(storage, "dontcare/config")
+	logger := log.New(&log.LoggerOptions{Name: "storagepackertest"})
+
+	sp, err := NewStoragePackerV2(ctx, &Config{
+		BucketStorageView: bucketStorageView,
+		ConfigStorageView: configStorageView,
+		Logger:            logger,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		Path     string
+		Expected bool
+	}{
+		{"test/foo/buckets/v2/00", true},
+		{"test/foo/buckets/00", false},
+		{"test/foo/unrelated/v2/00", false},
+		{"test/foo/buckets/v2/fa/c/e", true},
+		{"test/foo/", false},
+		{"test/bar/buckets/v2/00", false},
+	}
+
+	for _, tc := range cases {
+		actual := sp.MatchingStorage(tc.Path)
+		if actual != tc.Expected {
+			t.Errorf("MatchingStorage returned wrong result on %q", tc.Path)
+		}
+	}
 }

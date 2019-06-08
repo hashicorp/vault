@@ -51,10 +51,6 @@ func partitionHasAllItems(t *testing.T, partition []*partitionedRequests, ids []
 				return false
 			}
 			delete(idsRequired, r.ID)
-			if r.Bucket != p.Bucket.Bucket {
-				t.Logf("request has mismatched bucket for ID %q", r.ID)
-				return false
-			}
 		}
 	}
 	if len(idsRequired) != 0 {

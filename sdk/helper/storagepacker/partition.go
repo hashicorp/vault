@@ -22,7 +22,13 @@ func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]
 
 	// The items requests are sorted by key, so the same buckets end
 	// up together--- but the radix tree doesn't have a way to take
-	// advantage of that.
+	// advantage of that to do a single pass.
+	//
+	// We could check whether each request has the same prefix as the
+	// previous one, which would technically work given that we fully
+	// populate the shards, so we don't have to worry about a set of
+	// radix tree entries that looks like X, X0, X2, X4 where we pop
+	// up and down between two levels.
 	s.bucketsCacheLock.RLock()
 	defer s.bucketsCacheLock.RUnlock()
 
@@ -32,7 +38,6 @@ func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]
 			return nil, fmt.Errorf("key %s not found in bucket cache", r.Key)
 		}
 		bucket := bucketRaw.(*LockedBucket)
-		r.Bucket = bucket.Bucket
 		if lastBucket == nil || lastBucket.Bucket != bucket {
 			// Distinct from previous bucket
 			lastBucket = &partitionedRequests{
