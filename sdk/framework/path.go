@@ -115,7 +115,16 @@ type Path struct {
 
 	// Display* members are available to provide hints for UI and documentation
 	// generators. They will be included in OpenAPI output if set.
-	DisplayNavigation bool
+	//DisplayNavigation bool
+	DisplayAttrs *DisplayAttributes
+}
+
+type DisplayAttributes struct {
+	Name       string      `json:"name,omitempty"`
+	Value      interface{} `json:"value,omitempty"`
+	Sensitive  bool        `json:"sensitive,omitempty"`
+	Navigation bool        `json:"navigation,omitempty"`
+	Group      string      `json:"group,omitempty"`
 }
 
 // OperationHandler defines and describes a specific operation handler.

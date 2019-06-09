@@ -98,12 +98,13 @@ type OASLicense struct {
 }
 
 type OASPathItem struct {
-	Description       string         `json:"description,omitempty"`
-	Parameters        []OASParameter `json:"parameters,omitempty"`
-	Sudo              bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Unauthenticated   bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported   bool           `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
-	DisplayNavigation bool           `json:"x-vault-displayNavigation,omitempty" mapstructure:"x-vault-displayNavigation"`
+	Description       string             `json:"description,omitempty"`
+	Parameters        []OASParameter     `json:"parameters,omitempty"`
+	Sudo              bool               `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Unauthenticated   bool               `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
+	CreateSupported   bool               `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
+	DisplayNavigation bool               `json:"x-vault-displayNavigation,omitempty" mapstructure:"x-vault-displayNavigation"`
+	DisplayAttrs      *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -158,17 +159,18 @@ type OASSchema struct {
 	// approach than OASParameter (unfortunately), but is how JSONSchema handles 'required'.
 	Required []string `json:"required,omitempty"`
 
-	Items            *OASSchema    `json:"items,omitempty"`
-	Format           string        `json:"format,omitempty"`
-	Pattern          string        `json:"pattern,omitempty"`
-	Enum             []interface{} `json:"enum,omitempty"`
-	Default          interface{}   `json:"default,omitempty"`
-	Example          interface{}   `json:"example,omitempty"`
-	Deprecated       bool          `json:"deprecated,omitempty"`
-	DisplayName      string        `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
-	DisplayValue     interface{}   `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
-	DisplaySensitive bool          `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
-	DisplayGroup     string        `json:"x-vault-displayGroup,omitempty" mapstructure:"x-vault-displayGroup,omitempty"`
+	Items      *OASSchema    `json:"items,omitempty"`
+	Format     string        `json:"format,omitempty"`
+	Pattern    string        `json:"pattern,omitempty"`
+	Enum       []interface{} `json:"enum,omitempty"`
+	Default    interface{}   `json:"default,omitempty"`
+	Example    interface{}   `json:"example,omitempty"`
+	Deprecated bool          `json:"deprecated,omitempty"`
+	//DisplayName      string             `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	DisplayValue     interface{}        `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
+	DisplaySensitive bool               `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
+	DisplayGroup     string             `json:"x-vault-displayGroup,omitempty" mapstructure:"x-vault-displayGroup,omitempty"`
+	DisplayAttrs     *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs,omitempty"`
 }
 
 type OASResponse struct {
@@ -233,7 +235,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
-		pi.DisplayNavigation = p.DisplayNavigation
+		pi.DisplayAttrs = p.DisplayAttrs
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -267,14 +269,15 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				Description: cleanString(field.Description),
 				In:          location,
 				Schema: &OASSchema{
-					Type:             t.baseType,
-					Pattern:          t.pattern,
-					Enum:             field.AllowedValues,
-					Default:          field.Default,
-					DisplayName:      field.DisplayName,
-					DisplayValue:     field.DisplayValue,
-					DisplaySensitive: field.DisplaySensitive,
-					DisplayGroup:     field.DisplayGroup,
+					Type:    t.baseType,
+					Pattern: t.pattern,
+					Enum:    field.AllowedValues,
+					Default: field.Default,
+					//DisplayName:      field.DisplayName,
+					//DisplayValue:     field.DisplayValue,
+					//DisplaySensitive: field.DisplaySensitive,
+					//DisplayGroup:     field.DisplayGroup,
+					DisplayAttrs: field.DisplayAttrs,
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -331,17 +334,18 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					}
 
 					p := OASSchema{
-						Type:             openapiField.baseType,
-						Description:      cleanString(field.Description),
-						Format:           openapiField.format,
-						Pattern:          openapiField.pattern,
-						Enum:             field.AllowedValues,
-						Default:          field.Default,
-						Deprecated:       field.Deprecated,
-						DisplayName:      field.DisplayName,
-						DisplayValue:     field.DisplayValue,
-						DisplaySensitive: field.DisplaySensitive,
-						DisplayGroup:     field.DisplayGroup,
+						Type:        openapiField.baseType,
+						Description: cleanString(field.Description),
+						Format:      openapiField.format,
+						Pattern:     openapiField.pattern,
+						Enum:        field.AllowedValues,
+						Default:     field.Default,
+						Deprecated:  field.Deprecated,
+						//DisplayName:      field.DisplayName,
+						//DisplayValue: field.DisplayValue,
+						//DisplaySensitive: field.DisplaySensitive,
+						//DisplayGroup: field.DisplayGroup,
+						DisplayAttrs: field.DisplayAttrs,
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
