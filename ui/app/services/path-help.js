@@ -88,7 +88,7 @@ export default Service.extend({
             return { path: path, tag: pathInfo[path].get.tags[0] };
           }
         })
-        .filter(path => path != undefined);
+        .compact();
 
       //list endpoints all have { name: "list" } in their get parameters
       const listPaths = paths
@@ -101,7 +101,7 @@ export default Service.extend({
             return { path: path, tag: pathInfo[path].get.tags[0] };
           }
         })
-        .filter(path => path != undefined);
+        .compact();
 
       //we always want to keep list endpoints for menus
       //but only use scoped post/delete endpoints
@@ -114,7 +114,7 @@ export default Service.extend({
             return { path: path, tag: pathInfo[path].delete.tags[0] };
           }
         })
-        .filter(path => path != undefined);
+        .compact();
 
       //create endpoints have path params, signified by "{}"
       //we have to filter out login endpoints for auth methods
@@ -124,8 +124,15 @@ export default Service.extend({
             return { path: path, tag: pathInfo[path].post.tags[0] };
           }
         })
-        .filter(path => path != undefined);
+        .compact();
 
+      const navPaths = paths
+        .map(path => {
+          if (pathInfo[path]['x-vault-displayNavigation']) {
+            return { path: path };
+          }
+        })
+        .compact();
       //return paths object with all relevant information
       return {
         apiPath: apiPath,
@@ -133,6 +140,7 @@ export default Service.extend({
         list: listPaths,
         create: createPaths,
         delete: deletePaths,
+        navPaths: navPaths,
       };
     });
   },

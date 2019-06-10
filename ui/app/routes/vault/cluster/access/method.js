@@ -15,13 +15,10 @@ export default Route.extend({
         set(error, 'httpStatus', 404);
         throw error;
       }
-      if (model.type === 'ldap') {
-        return this.pathHelp.getPaths(model.apiPath, path).then(paths => {
-          model.set('paths', paths);
-          return model;
-        });
-      }
-      return model;
+      return this.pathHelp.getPaths(model.apiPath, path).then(paths => {
+        model.set('paths', paths);
+        return model;
+      });
     });
   },
 });

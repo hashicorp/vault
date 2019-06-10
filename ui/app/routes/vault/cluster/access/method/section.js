@@ -26,9 +26,7 @@ export default Route.extend({
     this._super(...arguments);
     controller.set('section', section);
     let method = this.modelFor('vault.cluster.access.method');
-    if (method.type === 'ldap') {
-      let paths = method.paths.list.map(pathInfo => pathInfo.path);
-      controller.set('paths', paths);
-    }
+    let paths = method.paths.navPaths.map(pathInfo => pathInfo.path);
+    controller.set('paths', paths);
   },
 });
