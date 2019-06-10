@@ -1,14 +1,12 @@
 package vault
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/kalafut/q"
 )
 
 var re = regexp.MustCompile(`"{{(\S+)}}"`)
@@ -22,69 +20,104 @@ type parsedTemplate struct {
 	chunks []chunk
 }
 
-type chunk struct {
-	chunkType int
-
-	value    string
-	dflt     string
-	variable string
-	matcher  hFunc
+type chunk interface {
+	Render(*identity.Entity, []*identity.Group) (string, error)
 }
 
-func (t *parsedTemplate) addText(s string) {
-	c := chunk{
-		chunkType: text,
-		value:     s,
-	}
-	t.chunks = append(t.chunks, c)
+type staticChunk struct {
+	value string
 }
 
-func (t *parsedTemplate) addMatcher(f hFunc) {
-	t.chunks = append(t.chunks, chunk{
-		chunkType: handler,
-		matcher:   f,
-	})
+func (sc *staticChunk) Render(*identity.Entity, []*identity.Group) (string, error) {
+	return sc.value, nil
 }
 
-func (t *parsedTemplate) render(entity *identity.Entity) string {
+type dynamicChunk struct {
+	matcher hFunc
+}
+
+func (dc *dynamicChunk) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
+	return dc.matcher(entity, groups)
+}
+
+//func (t *parsedTemplate) addText(s string) {
+//	c := chunk{
+//		chunkType: text,
+//		value:     s,
+//	}
+//	t.chunks = append(t.chunks, c)
+//}
+//
+//func (t *parsedTemplate) addMatcher(f hFunc) {
+//	t.chunks = append(t.chunks, chunk{
+//		chunkType: handler,
+//		matcher:   f,
+//	})
+//}
+
+//func (t *parsedTemplate) addText(s string) {
+//	c := chunk{
+//		chunkType: text,
+//		value:     s,
+//	}
+//	t.chunks = append(t.chunks, c)
+//}
+//
+//func (t *parsedTemplate) addMatcher(f hFunc) {
+//	t.chunks = append(t.chunks, chunk{
+//		chunkType: handler,
+//		matcher:   f,
+//	})
+//}
+
+func (t *parsedTemplate) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
 	var out strings.Builder
 
 	for _, c := range t.chunks {
-		switch c.chunkType {
-		case text:
-			out.WriteString(c.value)
-		case handler:
-			out.WriteString(c.matcher(entity))
+		result, err := c.Render(entity, groups)
+		if err != nil {
+			return "", err
 		}
+		out.WriteString(result)
+
+		//switch c.chunkType {
+		//case text:
+		//	out.WriteString(c.value)
+		//case handler:
+		//	result, err := c.matcher(entity, groups)
+		//	if err != nil {
+		//		return "", err
+		//	}
+		//	out.WriteString(result)
+		//}
 	}
 
-	return out.String()
+	return out.String(), nil
 }
 
-func ABC(tpl string, e *identity.Entity, groups []*identity.Group) (string, error) {
+func CompileTemplate(tpl string) (parsedTemplate, error) {
 	var out map[string]interface{}
 	var pt parsedTemplate
 
-	var compact bytes.Buffer
-	err := json.Compact(&compact, []byte(tpl))
-
-	err = json.Unmarshal([]byte(tpl), &out)
+	err := json.Unmarshal([]byte(tpl), &out)
+	if err != nil {
+		return pt, err
+	}
 
 	matches := re.FindAllStringSubmatchIndex(tpl, -1)
 
 	i := 0
 	for _, m := range matches {
-		pt.addText(tpl[i:m[0]])
+		//pt.addText(tpl[i:m[0]])
+		pt.chunks = append(pt.chunks, &staticChunk{tpl[i:m[0]]})
 
 		v := tpl[m[2]:m[3]]
-		q.Q()
 
 		var f hFunc
 		for _, p := range patterns {
 			m := p.pattern.FindStringSubmatch(v)
 			if len(m) > 0 {
-				//q.Q(v, p.pattern)
-				f = func(entity *identity.Entity) string {
+				f = func(entity *identity.Entity, groups []*identity.Group) (string, error) {
 					return p.handler(entity, groups, m[1:])
 				}
 				break
@@ -92,19 +125,22 @@ func ABC(tpl string, e *identity.Entity, groups []*identity.Group) (string, erro
 		}
 
 		if f != nil {
-			pt.addMatcher(f)
+			pt.chunks = append(pt.chunks, &dynamicChunk{f})
+			//pt.addMatcher(f)
 		} else {
-			pt.addText(v)
+			pt.chunks = append(pt.chunks, &staticChunk{v})
+			//f := func(entity *identity.Entity, groups []*identity.Group) (string, error) {
+			//	return staticTextHandler(nil, nil, []string{v})
+			//}
+			//pt.addMatcher(f)
 		}
 
 		i = m[1]
 	}
-	pt.addText(tpl[i:])
+	//pt.addText(tpl[i:])
+	pt.chunks = append(pt.chunks, &staticChunk{tpl[i:]})
 
-	result := pt.render(e)
-	q.Q(result)
-
-	return result, err
+	return pt, nil
 }
 
 /*
@@ -118,14 +154,10 @@ identity.entity.aliases.<mount_accessor>
 identity.entity.aliases.<mount_accessor>.name
 identity.entity.aliases.<mount_accessor>.metadata
 identity.entity.aliases.<mount_accessor>.metadata.<key>
-identity.groups.<group id>.id
-identity.groups.<group id>.name
-identity.groups.<group id>.metadata
-identity.groups.<group id>.metadata.<key>
 */
 
-type hFunc func(*identity.Entity) string
-type handlerFunc func(*identity.Entity, []*identity.Group, []string) string
+type hFunc func(*identity.Entity, []*identity.Group) (string, error)
+type handlerFunc func(*identity.Entity, []*identity.Group, []string) (string, error)
 
 type matcher struct {
 	pattern *regexp.Regexp
@@ -147,54 +179,54 @@ func reFmt(s string) string {
 var patterns = []matcher{
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.id")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
-			return quote(e.ID)
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+			return quote(e.ID), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.name")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
-			return quote(e.Name)
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+			return quote(e.Name), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt("identity.entity.metadata")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			d, err := json.Marshal(e.Metadata)
 			if err == nil {
-				return string(d)
+				return string(d), nil
 			}
-			return `{}`
+			return `{}`, nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.metadata.<param>`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
-			return quote(e.Metadata[v[0]])
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+			return quote(e.Metadata[v[0]]), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.aliases.<param>.metadata.<param>`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			name, key := v[0], v[1]
 			for _, alias := range e.Aliases {
 				if alias.Name == name {
-					return quote(alias.Metadata[key])
+					return quote(alias.Metadata[key]), nil
 				}
 			}
-			return quote("")
+			return quote(""), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.group_names`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
-			return groupsToList(groups, "name")
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+			return groupsToList(groups, "name"), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(reFmt(`identity.entity.group_ids`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) string {
-			return groupsToList(groups, "id")
+		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+			return groupsToList(groups, "id"), nil
 		},
 	},
 }
@@ -225,9 +257,9 @@ func classifyParameters(entity *identity.Entity, groups []*identity.Group, s str
 	p := findPattern(s)
 	if p != nil {
 		m := p.pattern.FindStringSubmatch(s)
-		result = p.handler(entity, groups, m[1:])
+		result, err = p.handler(entity, groups, m[1:])
 	}
-	return result, nil
+	return result, err
 }
 
 func findPattern(s string) *matcher {

@@ -41,7 +41,12 @@ func Test_OIDC_TestABC(t *testing.T) {
   }
 }
 `
-	out, err := ABC(tpl, testEntity, testGroups)
+	pt, err := CompileTemplate(tpl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := pt.Render(testEntity, testGroups)
 	if err != nil {
 		t.Fatal(err)
 	}
