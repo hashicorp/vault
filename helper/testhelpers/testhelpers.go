@@ -294,15 +294,16 @@ func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.
 	// Set this lower so that state populates quickly to standby nodes
 	cluster.HeartbeatInterval = 2 * time.Second
 
+	numCores := opts.NumCores
+	if numCores == 0 {
+		numCores = vault.DefaultNumCores
+	}
+
 	localopts := *opts
 	localopts.Logger = logger.Named("perf-pri")
 	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
 	localopts.Logger = logger.Named("perf-sec")
-	numCores := opts.NumCores
-	if numCores == 0 {
-		numCores = vault.DefaultNumCores
-	}
 	localopts.FirstCoreNumber += numCores
 	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
