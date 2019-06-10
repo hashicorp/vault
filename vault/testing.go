@@ -989,6 +989,7 @@ type TestClusterOptions struct {
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
+	FirstCoreNumber    int
 }
 
 var DefaultNumCores = 3
@@ -1371,6 +1372,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+		c.coreNumber = opts.FirstCoreNumber + i
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {

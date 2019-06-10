@@ -265,10 +265,6 @@ func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClu
 		"approle":  credAppRole.Factory,
 		"userpass": credUserpass.Factory,
 	}
-	coreConfig.LogicalBackends = map[string]logical.Factory{
-		"local-kv":  PassthroughWithLocalPathsFactory,
-		"leased-kv": vault.LeasedPassthroughBackendFactory,
-	}
 	vault.AddNoopAudit(&coreConfig)
 	cluster := vault.NewTestCluster(t, &coreConfig, opts)
 	cluster.Start()
@@ -279,13 +275,6 @@ func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClu
 	vault.TestWaitActive(t, core.Core)
 
 	return cluster, core
-}
-
-func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.HandlerProperties) http.Handler) (*vault.TestCluster, *vault.TestClusterCore) {
-	return ConfClusterAndCore(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
-		Logger:      logger,
-		HandlerFunc: handlerFunc,
-	})
 }
 
 func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
@@ -305,13 +294,17 @@ func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.
 	// Set this lower so that state populates quickly to standby nodes
 	cluster.HeartbeatInterval = 2 * time.Second
 
-	opts1 := *opts
-	opts1.Logger = logger.Named("perf-pri")
-	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &opts1)
+	localopts := *opts
+	localopts.Logger = logger.Named("perf-pri")
+	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
-	opts2 := *opts
-	opts1.Logger = logger.Named("perf-sec")
-	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &opts2)
+	localopts.Logger = logger.Named("perf-sec")
+	numCores := opts.NumCores
+	if numCores == 0 {
+		numCores = vault.DefaultNumCores
+	}
+	localopts.FirstCoreNumber += numCores
+	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
 	SetupTwoClusterPerfReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster)
 
@@ -319,6 +312,12 @@ func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.
 }
 
 func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
+	return GetFourReplicatedClustersWithConf(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: handlerFunc,
+	})
+}
+
+func GetFourReplicatedClustersWithConf(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
 	logger := log.New(&log.LoggerOptions{
@@ -328,13 +327,26 @@ func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerPrope
 	// Set this lower so that state populates quickly to standby nodes
 	cluster.HeartbeatInterval = 2 * time.Second
 
-	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
+	numCores := opts.NumCores
+	if numCores == 0 {
+		numCores = vault.DefaultNumCores
+	}
 
-	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"), handlerFunc)
+	localopts := *opts
+	localopts.Logger = logger.Named("perf-pri")
+	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
-	ret.PerfPrimaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri-dr"), handlerFunc)
+	localopts.Logger = logger.Named("perf-sec")
+	localopts.FirstCoreNumber += numCores
+	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
-	ret.PerfSecondaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec-dr"), handlerFunc)
+	localopts.Logger = logger.Named("perf-pri-dr")
+	localopts.FirstCoreNumber += numCores
+	ret.PerfPrimaryDRCluster, _ = ConfClusterAndCore(t, conf, &localopts)
+
+	localopts.Logger = logger.Named("perf-sec-dr")
+	localopts.FirstCoreNumber += numCores
+	ret.PerfSecondaryDRCluster, _ = ConfClusterAndCore(t, conf, &localopts)
 
 	builder := &ReplicatedTestClustersBuilder{clusters: ret}
 	builder.setupFourClusterReplication(t)
