@@ -20,12 +20,44 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
 
 1. Register or select an AAD application. Visit Overview page.
 1. Configure Redirect URIs ("Web" type). 
-1. Record "Application (client) ID".
+    * you must include two redirect URIs here one for CLI access another one for web access
+       * http://localhost:8250/oidc/callback
+       * https://hostname:port_number/ui/vault/auth/oidc/oidc/callback
+1. Record "Application (client) ID" you will need it as the oidc_client_id
+1. Under API Permissions grant the following permission:
+    * Microsoft Graph API permission [Group.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-10)  
 1. Under "Endpoints", copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
+    * endpoint url (oidc_discovery_url) should look as:  https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
 1. Switch to Certificates & Secrets. Create a new client secret and record the generated value as
 it will not be accessible after you leave the page.
 
-Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison) are required for [external groups](https://www.vaultproject.io/docs/secrets/identity/index.html#external-vs-internal-groups) to work. Further, the App Registration needs the [Group.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-10)  Microsoft Graph API Permission, and `groupMembershipClaims` should be changed from `none` in the [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest). In the [OIDC Role config](https://www.vaultproject.io/api/auth/jwt/index.html#create-role) the scope `"https://graph.microsoft.com/.default"` should be added to add groups to the jwt token and `groups_claim` should be set to `groups`. Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](https://www.vaultproject.io/api/secret/identity/group-alias.html) for the external group.
+Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison) are required for [external groups](https://www.vaultproject.io/docs/secrets/identity/index.html#external-vs-internal-groups) to work. 
+* `groupMembershipClaims` should be changed from `none` in the [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest). Options are "All" or "Security"
+
+* In the [OIDC Role config](https://www.vaultproject.io/api/auth/jwt/index.html#create-role) the scope `"https://graph.microsoft.com/.default"` should be added to add groups to the jwt token and `groups_claim` should be set to `groups`. 
+
+* Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](https://www.vaultproject.io/api/secret/identity/group-alias.html) for the external group.
+### CLI setup instructions:
+You have to fill in the following values make sure to use the correct vault secret patch that matches the name of the authentication method such as /oidc/
+   * oidc_client_id = Application Client ID
+   * oidc_client_secret = Secret obtained from the Certificates & Secrets Section
+   * default_role = default role the user will be using when connecting. (see the second command)
+   * oidc_discovery_url = Open ID endpoint retrieved from the App Registration wections.
+```
+    vault write auth/oidc/config \
+    oidc_client_id="your_client_id" \
+    oidc_client_secret="your_client_secret" \
+    default_role=“your_default_role” \
+    oidc_discovery_url="https://login.microsoftonline.com/tenant_id/v2.0”
+    
+```
+
+```
+vault write auth/oidc/role/demo user_claim="email" \
+allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+groups_claim="groups" \
+policies=default
+```
 
 ## Auth0
 1. Select Create Application (Regular Web App).
