@@ -238,6 +238,24 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			consistencyMode: "strong",
 		},
 		{
+			name: "Unix socket",
+			consulConfig: map[string]string{
+				"address": "unix:///tmp/.consul.http.sock",
+			},
+			address: "/tmp/.consul.http.sock",
+			scheme:  "http", // Default, not overridden?
+
+			// Defaults
+			checkTimeout:    5 * time.Second,
+			redirectAddr:    "http://127.0.0.1:8200",
+			path:            "vault/",
+			service:         "vault",
+			token:           "",
+			max_parallel:    4,
+			disableReg:      false,
+			consistencyMode: "default",
+		},
+		{
 			name: "Scheme in address",
 			consulConfig: map[string]string{
 				"address": "https://127.0.0.2:5000",
