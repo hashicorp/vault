@@ -39,6 +39,7 @@ App = Application.extend({
           'store',
           'version',
           'wizard',
+          'secret-mount-path',
         ],
       },
     },
