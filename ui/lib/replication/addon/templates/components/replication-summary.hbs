@@ -58,14 +58,14 @@
             Performance Replication
           </h3>
           {{#if (not (has-feature "Performance Replication"))}}
-              <p class="help has-text-grey-dark">
-                Performance Replication is a feature of {{#upgrade-link pageName="Performance Replication"}}Vault Enterprise Premium{{/upgrade-link}}
-              </p>
-            {{else}}
-              <p class="help has-text-grey-dark">
-                Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
-              </p>
-            {{/if}}
+            <p class="help has-text-grey-dark">
+              Performance Replication is a feature of Vault Enterprise Premium
+            </p>
+          {{else}}
+            <p class="help has-text-grey-dark">
+              Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+            </p>
+          {{/if}}
         {{/if}}
       {{else}}
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
@@ -117,7 +117,7 @@
                 </h3>
                 {{#if (not (has-feature "Performance Replication"))}}
                   <p class="help has-text-grey-dark">
-                    Performance Replication is a feature of {{#upgrade-link pageName="Performance Replication"}}Vault Enterprise Premium{{/upgrade-link}}
+                    Performance Replication is a feature of Vault Enterprise Premium
                   </p>
                 {{else}}
                   <p class="help has-text-grey-dark">
