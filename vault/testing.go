@@ -37,7 +37,6 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
@@ -591,6 +590,8 @@ type noopAudit struct {
 	Config    *audit.BackendConfig
 	salt      *salt.Salt
 	saltMutex sync.RWMutex
+	formatter audit.AuditFormatter
+	records   [][]byte
 }
 
 func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
@@ -601,11 +602,23 @@ func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-func (n *noopAudit) LogRequest(_ context.Context, _ *logical.LogInput) error {
+func (n *noopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
+	var w bytes.Buffer
+	err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
 }
 
-func (n *noopAudit) LogResponse(_ context.Context, _ *logical.LogInput) error {
+func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
+	var w bytes.Buffer
+	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
 }
 
@@ -647,14 +660,13 @@ func AddNoopAudit(conf *CoreConfig) {
 				Key:   "salt",
 				Value: []byte("foo"),
 			})
-			config.SaltConfig = &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			}
-			config.SaltView = view
-			return &noopAudit{
+			n := &noopAudit{
 				Config: config,
-			}, nil
+			}
+			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+				SaltFunc: n.Salt,
+			}
+			return n, nil
 		},
 	}
 }
@@ -1328,9 +1340,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		coreConfig.AuditBackends = map[string]audit.Factory{
-			"file": auditFile.Factory,
-		}
+		AddNoopAudit(coreConfig)
 	}
 
 	if coreConfig.Physical == nil {
@@ -1546,10 +1556,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				ClientToken: testCluster.RootToken,
 				Path:        "sys/audit/file",
 				Data: map[string]interface{}{
-					"type": "file",
-					"options": map[string]string{
-						"file_path": "discard",
-					},
+					"type": "noop",
 				},
 			}
 			resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)

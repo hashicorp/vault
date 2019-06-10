@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/go-test/deep"
 	"reflect"
@@ -166,6 +167,17 @@ func TestHashAuth(t *testing.T) {
 	}
 }
 
+type testOptMarshaler struct {
+	S string
+	I int
+}
+
+func (o *testOptMarshaler) MarshalJSONWithOptions(options *logical.MarshalOptions) ([]byte, error) {
+	return json.Marshal(&testOptMarshaler{S: options.ValueHasher(o.S), I: o.I})
+}
+
+var _ logical.OptMarshaler = &testOptMarshaler{}
+
 func TestHashRequest(t *testing.T) {
 	cases := []struct {
 		Input           *logical.Request
@@ -179,6 +191,7 @@ func TestHashRequest(t *testing.T) {
 					"foo":              "bar",
 					"baz":              "foobar",
 					"private_key_type": certutil.PrivateKeyType("rsa"),
+					"om":               &testOptMarshaler{S: "bar", I: 1},
 				},
 			},
 			&logical.Request{
@@ -186,6 +199,7 @@ func TestHashRequest(t *testing.T) {
 					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					"baz":              "foobar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
+					"om":               json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
 				},
 			},
 			[]string{"baz"},
@@ -234,6 +248,7 @@ func TestHashResponse(t *testing.T) {
 					// Responses can contain time values, so test that with
 					// a known fixed value.
 					"bar": now,
+					"om":  &testOptMarshaler{S: "bar", I: 1},
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
@@ -248,6 +263,7 @@ func TestHashResponse(t *testing.T) {
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					"baz": "foobar",
 					"bar": now.Format(time.RFC3339Nano),
+					"om":  json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
