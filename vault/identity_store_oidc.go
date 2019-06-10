@@ -66,7 +66,6 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"rotation_period": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "How often to generate a new keypair. Defaults to 6h",
-					Default:     "6h",
 				},
 
 				"verification_ttl": &framework.FieldSchema{
@@ -77,7 +76,6 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"algorithm": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
-					Default:     "RS256",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -95,103 +93,144 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
+		var namedKey *NamedKey
+		var update bool = false
+		var algorithm signingAlgorithm
+
 		// parse parameters
 		name := d.Get("name").(string)
 		rotationPeriod := d.Get("rotation_period").(string)
 		verificationttl := d.Get("verification_ttl").(string)
 		algorithmInput := d.Get("algorithm").(string)
 
-		// check inputs and set defaults
-
-		// todo check that this named key doesn't already exist
-
-		_, err := parseutil.ParseDurationSecond(rotationPeriod)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse provided rotation_period of: %s", rotationPeriod)
-		}
-
-		if verificationttl == "" {
-			verificationttl = rotationPeriod
-		}
-		_, err = parseutil.ParseDurationSecond(verificationttl)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse provided verification_ttl of: %s", verificationttl)
-		}
-
-		var algorithm signingAlgorithm
-		switch algorithmInput {
-		case "RS256":
-			algorithm = rs256
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unknown signing algorithm %q", algorithmInput)), logical.ErrInvalidRequest
-		}
-
-		// generate a signing key
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		// determine if we are creating a key or updating an existing key
+		entry, err := req.Storage.Get(ctx, "oidc-config/namedKey/"+name)
 		if err != nil {
 			return nil, err
 		}
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
+		if entry != nil {
+			if err := entry.DecodeJSON(&namedKey); err != nil {
+				return nil, err
+			}
+			update = true
 		}
 
-		signingKey := jose.JSONWebKey{
-			Key:       key,
-			KeyID:     id,
-			Algorithm: string(jose.RS256),
-			Use:       "sig",
+		// set defaults if creating a new key
+		if !update {
+			if rotationPeriod == "" {
+				rotationPeriod = "6h"
+			}
+			if verificationttl == "" {
+				verificationttl = rotationPeriod
+			}
+			if algorithmInput == "" {
+				algorithmInput = "RS256"
+			}
 		}
 
-		publicKey := ExpireableKey{
-			Key: jose.JSONWebKey{
-				Key:       &key.PublicKey,
+		// verify inputs and set values if this is an update
+		if rotationPeriod != "" {
+			_, err = parseutil.ParseDurationSecond(rotationPeriod)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse provided rotation_period of: %s", rotationPeriod)
+			}
+			if update {
+				namedKey.RotationPeriod = rotationPeriod
+			}
+		}
+
+		if verificationttl != "" {
+			_, err = parseutil.ParseDurationSecond(verificationttl)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse provided verification_ttl of: %s", verificationttl)
+			}
+			if update {
+				namedKey.Verificationttl = verificationttl
+			}
+		}
+
+		if algorithmInput != "" {
+			switch algorithmInput {
+			case "RS256":
+				algorithm = rs256
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("unknown signing algorithm %q", algorithmInput)), logical.ErrInvalidRequest
+			}
+			if update {
+				namedKey.SigningAlgorithm = algorithm
+			}
+		}
+
+		// generate keys if creating a new key
+		if !update {
+			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			if err != nil {
+				return nil, err
+			}
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, err
+			}
+
+			signingKey := jose.JSONWebKey{
+				Key:       key,
 				KeyID:     id,
 				Algorithm: string(jose.RS256),
 				Use:       "sig",
+			}
+
+			publicKey := ExpireableKey{
+				Key: jose.JSONWebKey{
+					Key:       &key.PublicKey,
+					KeyID:     id,
+					Algorithm: string(jose.RS256),
+					Use:       "sig",
+				},
+				Expirable: false,
+				ExpireAt:  time.Time{},
+			}
+
+			// add public part of signing key to global keys (this is what well-known will return)
+			keyRing := make([]string, 1, 1)
+			keyRing[0] = id
+
+			// create the named key
+			namedKey = &NamedKey{
+				Name:             name,
+				SigningAlgorithm: algorithm,
+				RotationPeriod:   rotationPeriod,
+				Verificationttl:  verificationttl,
+				KeyRing:          keyRing,
+				SigningKey:       signingKey,
+			}
+
+			// store public keys (which was just created)
+			publicKeys = append(publicKeys, publicKey)
+			entry, err = logical.StorageEntryJSON("oidc-config/publicKeys/", publicKeys)
+			if err != nil {
+				return nil, err
+			}
+			if err := req.Storage.Put(ctx, entry); err != nil {
+				return nil, err
+			}
+		}
+
+		// store named key (which was either created or updated)
+		entry, err = logical.StorageEntryJSON("oidc-config/namedKey/"+name, namedKey)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"rotation_period":  namedKey.RotationPeriod,
+				"verification_ttl": namedKey.Verificationttl,
+				"algorithm":        namedKey.SigningAlgorithm.String(),
 			},
-			Expirable: false,
-			ExpireAt:  time.Time{},
-		}
-
-		// add public part of signing key to global keys (this is what well-known will return)
-		// this public key does not yet have an expiry time because it has not been rotated yet
-		// so it isn't an expirable key yet
-
-		keyRing := make([]string, 1, 1)
-		keyRing[0] = id
-
-		// create the named key
-		namedKey := &NamedKey{
-			Name:             name,
-			SigningAlgorithm: algorithm,
-			RotationPeriod:   rotationPeriod,
-			Verificationttl:  verificationttl,
-			KeyRing:          keyRing,
-			SigningKey:       signingKey,
-		}
-
-		// store named key
-		entry, err := logical.StorageEntryJSON("oidc-config/namedKey/"+name, namedKey)
-		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-
-		publicKeys = append(publicKeys, publicKey)
-
-		// store public keys
-		entry, err = logical.StorageEntryJSON("oidc-config/publicKeys/", publicKeys)
-		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-
-		return nil, nil
+		}, nil
 	}
 }
 
