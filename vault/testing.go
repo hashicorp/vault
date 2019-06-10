@@ -1020,6 +1020,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = opts.NumCores
 	}
 
+	var firstCoreNumber int
+	if opts != nil {
+		firstCoreNumber = opts.FirstCoreNumber
+	}
+
 	certIPs := []net.IP{
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
@@ -1372,7 +1377,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		c.coreNumber = opts.FirstCoreNumber + i
+		c.coreNumber = firstCoreNumber + i
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
