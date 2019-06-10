@@ -1,7 +1,7 @@
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import escapeStringRegexp from 'escape-string-regexp';
-import commonPrefix from 'vault/utils/common-prefix';
+import commonPrefix from 'core/utils/common-prefix';
 
 export default Mixin.create({
   queryParams: {
