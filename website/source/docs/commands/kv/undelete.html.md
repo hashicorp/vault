@@ -15,7 +15,7 @@ description: |-
 engine command, and not available for Version 1.
 
 
-The `kv undelete` command undo the deletes of the data for the provided version
+The `kv undelete` command undoes the deletes of the data for the provided version
 and path in the key-value store. This restores the data, allowing it to be
 returned on get requests.
 
