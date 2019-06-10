@@ -23,7 +23,7 @@ taken.
 Destroy version 11 of the key "creds":
 
 ```text
-$ vault kv destroy -versions=3 secret/creds
+$ vault kv destroy -versions=11 secret/creds
 Success! Data written to: secret/destroy/creds
 ```
 
