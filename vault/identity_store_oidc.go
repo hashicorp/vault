@@ -81,15 +81,25 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleOIDCCreateKey(),
 				logical.ReadOperation:   i.handleOIDCReadKey(),
+				logical.DeleteOperation: i.handleOIDCDeleteKey(),
 			},
 
 			HelpSynopsis:    "oidc/key/:key help synopsis here",
 			HelpDescription: "oidc/key/:key help description here",
 		},
+		{
+			Pattern: "oidc/key/?",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: i.handleOIDCListKeys(),
+			},
+
+			HelpSynopsis:    "oidc/key/ help synopsis here",
+			HelpDescription: "oidc/key/ help description here",
+		},
 	}
 }
 
-//handleOIDCCreateKey is used to create a new key
+// handleOIDCCreateKey is used to create a new key
 func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
@@ -104,7 +114,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 		algorithmInput := d.Get("algorithm").(string)
 
 		// determine if we are creating a key or updating an existing key
-		entry, err := req.Storage.Get(ctx, "oidc-config/namedKey/"+name)
+		entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +216,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 
 			// store public keys (which was just created)
 			publicKeys = append(publicKeys, publicKey)
-			entry, err = logical.StorageEntryJSON("oidc-config/publicKeys/", publicKeys)
+			entry, err = logical.StorageEntryJSON("oidc-config/public-keys/", publicKeys)
 			if err != nil {
 				return nil, err
 			}
@@ -216,7 +226,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 		}
 
 		// store named key (which was either created or updated)
-		entry, err = logical.StorageEntryJSON("oidc-config/namedKey/"+name, namedKey)
+		entry, err = logical.StorageEntryJSON("oidc-config/named-key/"+name, namedKey)
 		if err != nil {
 			return nil, err
 		}
@@ -234,14 +244,13 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 	}
 }
 
-// read key
+// handleOIDCReadKey is used to read an existing key
 func (i *IdentityStore) handleOIDCReadKey() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		nameInput := d.Get("name").(string)
 
-		//todo validate nameInput, can't be null
+		name := d.Get("name").(string)
 
-		entry, err := req.Storage.Get(ctx, "oidc-config/namedKey/"+nameInput)
+		entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
 		if err != nil {
 			return nil, err
 		}
@@ -258,9 +267,37 @@ func (i *IdentityStore) handleOIDCReadKey() framework.OperationFunc {
 				},
 			}, nil
 		}
-		return logical.ErrorResponse(fmt.Sprintf("no named key was stored at %q", nameInput)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf("no named key was stored at %q", name)), logical.ErrInvalidRequest
 	}
 }
+
+// handleOIDCDeleteKey is used to delete a key
+func (i *IdentityStore) handleOIDCDeleteKey() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+		name := d.Get("name").(string)
+
+		err := req.Storage.Delete(ctx, "oidc-config/named-key/"+name)
+		if err != nil {
+			return nil, err
+		}
+		//todo this is supposed to return  204-no content
+		return nil, nil
+	}
+}
+
+// handleOIDCListKey is used to list named keys
+func (i *IdentityStore) handleOIDCListKeys() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		keys, err := req.Storage.List(ctx, "oidc-config/named-key/")
+		if err != nil {
+			return nil, err
+		}
+		return logical.ListResponse(keys), nil
+	}
+}
+
+// some helper methods
 
 // SigningAlgorithmString takes a signingAlgorithm and returns the string representation of that algorithm
 func (a signingAlgorithm) String() string {
