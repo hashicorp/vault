@@ -30,7 +30,7 @@ const config = {
 
 if (process.env.CI) {
   config.reporter = 'xunit';
-  config.report_file = 'test-reports/ember.xml';
+  config.report_file = 'test-results/qunit/results.xml';
   config.xunit_intermediate_output = true;
 }
 

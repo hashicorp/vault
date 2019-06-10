@@ -1,10 +1,12 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,8 +22,7 @@ import (
 type consulConf map[string]string
 
 var (
-	addrCount     int = 0
-	testImagePull sync.Once
+	addrCount int = 0
 )
 
 func testConsulBackend(t *testing.T) *ConsulBackend {
@@ -231,6 +232,24 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			consistencyMode: "strong",
 		},
 		{
+			name: "Scheme in address",
+			consulConfig: map[string]string{
+				"address": "https://127.0.0.2:5000",
+			},
+			address: "127.0.0.2:5000",
+			scheme:  "https",
+
+			// Defaults
+			checkTimeout:    5 * time.Second,
+			redirectAddr:    "http://127.0.0.1:8200",
+			path:            "vault/",
+			service:         "vault",
+			token:           "",
+			max_parallel:    4,
+			disableReg:      false,
+			consistencyMode: "default",
+		},
+		{
 			name: "check timeout too short",
 			fail: true,
 			consulConfig: map[string]string{
@@ -286,6 +305,20 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		if test.consistencyMode != c.consistencyMode {
 			t.Errorf("bad consistency_mode value: %v != %v", test.consistencyMode, c.consistencyMode)
+		}
+
+		// The configuration stored in the Consul "client" object is not exported, so
+		// we either have to skip validating it, or add a method to export it, or use reflection.
+		consulConfig := reflect.Indirect(reflect.ValueOf(c.client)).FieldByName("config")
+		consulConfigScheme := consulConfig.FieldByName("Scheme").String()
+		consulConfigAddress := consulConfig.FieldByName("Address").String()
+
+		if test.scheme != consulConfigScheme {
+			t.Errorf("bad scheme value: %v != %v", test.scheme, consulConfigScheme)
+		}
+
+		if test.address != consulConfigAddress {
+			t.Errorf("bad address value: %v != %v", test.address, consulConfigAddress)
 		}
 
 		// FIXME(sean@): Unable to test max_parallel
@@ -488,7 +521,7 @@ func TestConsulBackend(t *testing.T) {
 	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
 		defer cleanup()
 		addr, consulToken = connURL, token
 	}
@@ -522,11 +555,82 @@ func TestConsulBackend(t *testing.T) {
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
+func TestConsul_TooLarge(t *testing.T) {
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
+	}
+
+	conf := api.DefaultConfig()
+	conf.Address = addr
+	conf.Token = consulToken
+	client, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+	defer func() {
+		client.KV().DeleteTree(randPath, nil)
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewConsulBackend(map[string]string{
+		"address":      conf.Address,
+		"path":         randPath,
+		"max_parallel": "256",
+		"token":        conf.Token,
+	}, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	zeros := make([]byte, 600000, 600000)
+	n, err := rand.Read(zeros)
+	if n != 600000 {
+		t.Fatalf("expected 500k zeros, read %d", n)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Put(context.Background(), &physical.Entry{
+		Key:   "foo",
+		Value: zeros,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
+
+	err = b.(physical.Transactional).Transaction(context.Background(), []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: zeros,
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
+}
+
 func TestConsulHABackend(t *testing.T) {
 	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
 		defer cleanup()
 		addr, consulToken = connURL, token
 	}

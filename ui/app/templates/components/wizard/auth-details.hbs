@@ -11,10 +11,10 @@
   @headerText="Want to start again or move on?"
   @class="wizard-details"
 >
-  <button type="button"  class="button next-feature-step" {{action onReset}}>
-    Enable another Auth Method <ICon @glyph="loop"  @size=13 />
+  <button type="button" class="button next-feature-step" {{action onReset}}>
+    Enable another Auth Method <Icon @glyph="loop" class="hs-icon-button-right" />
   </button>
   <button type="button"  class="button next-feature-step" {{action onAdvance}}>
-    {{nextFeature}} <ICon @glyph="chevron-right"  @size=10 />
+    {{nextFeature}} <Chevron @isButton={{true}} />
   </button>
 </WizardSection>

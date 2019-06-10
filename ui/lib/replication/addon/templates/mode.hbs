@@ -1,0 +1,52 @@
+{{#if model.replicationAttrs.replicationEnabled}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-replication-title=true>
+        {{#if (eq replicationMode 'dr')}}
+          Disaster Recovery
+        {{else if (eq replicationMode 'performance')}}
+          Performance
+        {{/if}}
+        <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
+            {{model.replicationAttrs.modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <span class="tag is-light has-text-grey-dark">
+            <code>
+              {{model.replicationAttrs.secondaryId}}
+            </code>
+          </span>
+        {{/if}}
+        <span class="tag is-light">
+          <code class="has-text-grey-dark">
+            {{model.replicationAttrs.clusterIdDisplay}}
+          </code>
+        </span>
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
+    <nav class="tabs sub-nav">
+      <ul>
+        <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
+          {{#link-to "mode" replicationMode data-test-replication-link="details"}}
+            Details
+          {{/link-to}}
+        </li>
+        <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
+          {{#link-to "mode.manage" replicationMode data-test-replication-link="manage"}}
+            Manage
+          {{/link-to}}
+        </li>
+        {{#if model.replicationAttrs.isPrimary}}
+          <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
+            {{#link-to "mode.secondaries" replicationMode data-test-replication-link="secondaries"}}
+              Secondaries
+            {{/link-to}}
+          </li>
+        {{/if}}
+      </ul>
+    </nav>
+  </div>
+{{/if}}
+{{outlet}}

@@ -21,3 +21,41 @@
     text-align: left;
   }
 }
+
+.popup-menu-content .confirm-action-message {
+  margin: 0;
+
+  .message {
+    border: 0;
+    font-size: $size-8;
+    line-height: 1.33;
+    margin: 0;
+  }
+
+  .message-title {
+    font-size: 1rem;
+  }
+
+  .hs-icon {
+    color: $yellow;
+  }
+
+  p {
+    font-weight: $font-weight-semibold;
+    margin-left: $spacing-l;
+    padding-left: $spacing-xxs;
+    padding-top: 0;
+  }
+
+  .confirm-action-options {
+    border-top: $light-border;
+    display: flex;
+    padding: $spacing-xxs;
+
+    .link {
+      flex: 1;
+      text-align: center;
+      width: auto;
+    }
+  }
+}

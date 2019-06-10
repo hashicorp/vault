@@ -1,4 +1,4 @@
-import decodeConfigFromJWT from 'vault/utils/decode-config-from-jwt';
+import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import { module, test } from 'qunit';
 
 module('Unit | Util | decode config from jwt', function() {

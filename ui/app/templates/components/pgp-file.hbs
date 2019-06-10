@@ -1,6 +1,6 @@
 <div class="level is-mobile">
   <div class="level-left">
-    <label class="is-label" data-test-pgp-label=true>
+    <label class="is-label" data-test-pgp-label>
       {{#if label}}
         {{label}}
       {{else}}
@@ -11,7 +11,7 @@
   <div class="level-right">
     <div class="control is-flex">
       <input
-        data-test-text-toggle=true
+        data-test-text-toggle
         id={{concat "useText-" elementId}}
         type="checkbox"
         name={{concat "useText-" elementId}}
@@ -48,7 +48,7 @@
           <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input=true>
           <span class="file-cta is-fullwidth">
             <span class="file-icon has-text-grey-dark">
-              {{i-con glyph="document" size=16}}
+              <Icon @glyph="file-outline" />
             </span>
             <span class="file-label has-text-grey-dark" data-test-pgp-file-input-label=true>
               {{#if key.fileName}}
@@ -59,7 +59,10 @@
             </span>
             {{#if key.fileName}}
               <button type="button" class="file-delete-button" {{action 'clearKey'}} data-test-pgp-clear=true>
-                {{i-con glyph="close" size=16}}
+                <Icon
+                  @glyph="cancel-plain"
+                  @aria-label="Close"
+                />
               </button>
             {{/if}}
           </span>

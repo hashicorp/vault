@@ -170,6 +170,11 @@ The following Azure roles and Azure Active Directory (AAD) permissions are requi
 - "Read and write all applications" permission in AAD
 
 These permissions can be configured through the Azure Portal, CLI tool, or PowerShell.
+In your Azure subscription, your account must have `Microsoft.Authorization/*/Write`
+access to assign an AD app to a role. This action is granted through the [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner) role or
+[User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) role. If your account is assigned to the Contributor role, you
+don't have adequate permission. You will receive an error when attempting to assign the service
+principal to a role.
 
 ## Choosing between dynamic or existing service principals
 

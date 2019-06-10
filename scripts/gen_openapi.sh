@@ -61,7 +61,11 @@ vault secrets enable ssh
 vault secrets enable totp
 vault secrets enable transit
 
-curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+if [ "$1" == "-p" ]; then
+  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
+else
+  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+fi
 
 kill $VAULT_PID
 sleep 1

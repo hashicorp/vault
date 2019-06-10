@@ -184,6 +184,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 				},
 			},
 		},
+		Disabled: true,
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

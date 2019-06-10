@@ -293,6 +293,7 @@ type SecretAuth struct {
 	IdentityPolicies []string          `json:"identity_policies"`
 	Metadata         map[string]string `json:"metadata"`
 	Orphan           bool              `json:"orphan"`
+	EntityID         string            `json:"entity_id"`
 
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`

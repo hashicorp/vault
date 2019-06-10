@@ -1,0 +1,23 @@
+<h4 class="title is-5 is-marginless">
+  Recover
+</h4>
+<div class="content">
+  <p>
+    Attempt recovery if replication is in a bad state, for instance if an error
+    has caused replication to stop syncing.
+  </p>
+</div>
+<div class="field">
+  <div class="control">
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Begin recovery?"
+      @confirmMessage="This will attempt to recover to continue syncing."
+      @confirmButtonText="Recover"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "onSubmit" "recover"}}
+    >
+      Recover
+    </ConfirmAction>
+  </div>
+</div>
