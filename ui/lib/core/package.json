@@ -18,6 +18,7 @@
     "ember-maybe-in-element": "*",
     "ember-radio-button": "*",
     "ember-svg-jar": "*",
-    "ember-truth-helpers": "*"
+    "ember-truth-helpers": "*",
+    "escape-string-regexp": "*"
   }
 }
