@@ -454,6 +454,9 @@ const (
 	IFA_ANYCAST          = 0x5
 	IFA_CACHEINFO        = 0x6
 	IFA_MULTICAST        = 0x7
+	IFA_FLAGS            = 0x8
+	IFA_RT_PRIORITY      = 0x9
+	IFA_TARGET_NETNSID   = 0xa
 	IFLA_UNSPEC          = 0x0
 	IFLA_ADDRESS         = 0x1
 	IFLA_BROADCAST       = 0x2
