@@ -20,7 +20,7 @@ taken.
 
 ## Examples
 
-Destroy version 3 of the key "creds":
+Destroy version 11 of the key "creds":
 
 ```text
 $ vault kv destroy -versions=3 secret/creds
