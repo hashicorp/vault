@@ -107,20 +107,6 @@ should be at the top-level, rather than underneath a key named after their filen
 This naming convention is unfortunate as it breaks autocompletion in bash,
 but there we go.
 
-## Rationale
-
-The rationale for this is that our on-prem CircleCI instances
-currently do not support 2.1 syntax,
-however our configurations are of such a size
-that being able to split them amongst separate files makes them easier to manage.
-You can split 2.0 files across multiple files,
-however that breaks code reuse via YAML references (see below),
-and thus we would end up with a lot of code duplication,
-which is probably even worse than having to edit very large YAML files.
-
-So, the desire to split up the config leads to us having to use 2.1
-syntax for code reuse, which leads to this workflow.
-
 ### Why not just use YAML references?
 
 YAML references only work within a single file,
