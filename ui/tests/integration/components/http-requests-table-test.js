@@ -4,18 +4,9 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const COUNTERS = [
-  {
-    start_time: '2019-04-01T05:00:00.000Z',
-    total: 5500,
-  },
-  {
-    start_time: '2019-05-01T05:00:00.000Z',
-    total: 4500,
-  },
-  {
-    start_time: '2019-06-01T05:00:00.000Z',
-    total: 5000,
-  },
+  { start_time: '2019-04-01T07:00:00.000Z', total: 5500 },
+  { start_time: '2019-05-01T07:00:00.000Z', total: 4500 },
+  { start_time: '2019-06-01T07:00:00.000Z', total: 5000 },
 ];
 
 module('Integration | Component | http-requests-table', function(hooks) {
