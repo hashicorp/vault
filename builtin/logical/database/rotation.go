@@ -59,22 +59,14 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			log.Warn("unable to read static role", "error", err, "role", roleName)
 			continue
 		}
-		walEntry := walMap[roleName]
-		if role == nil || role.StaticAccount == nil {
-			if walEntry != nil {
-				// No static role exists for this wal entry, delete it
-				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
-					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
-				}
-			}
-			continue
-		}
+
 		item := queue.Item{
 			Key:      roleName,
 			Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
 		}
 
 		// Check if role name is in map
+		walEntry := walMap[roleName]
 		if walEntry != nil {
 			// Check walEntry last vault time
 			if !walEntry.LastVaultRotation.IsZero() && walEntry.LastVaultRotation.Before(role.StaticAccount.LastVaultRotation) {
@@ -401,10 +393,6 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		!replicationState.HasState(consts.ReplicationDRSecondary) &&
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing database rotation queue")
-
-		// Sleep a few seconds to allow Vault to mount and complete setup, so
-		// that we can write to storage
-		time.Sleep(3 * time.Second)
 
 		// Load roles and populate queue with static accounts
 		b.populateQueue(ctx, conf.StorageView)
