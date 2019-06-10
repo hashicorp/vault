@@ -4,7 +4,7 @@ page_title: "kv delete - Command"
 sidebar_title: "<code>delete</code>"
 sidebar_current: "docs-commands-kv-delete"
 description: |-
-  The "kv delete" command disables an secrets engine at a given PATH. The
+  The "kv delete" command disables a secrets engine at a given PATH. The
   argument corresponds to the enabled PATH of the engine, not the TYPE! All
   secrets created by this engine are revoked and its Vault data is removed.
 ---
