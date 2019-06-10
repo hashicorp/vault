@@ -427,6 +427,8 @@ type Core struct {
 
 	// Stores request counters
 	counters counters
+
+	coreNumber int
 }
 
 // CoreConfig is used to parameterize a core
