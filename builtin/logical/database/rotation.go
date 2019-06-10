@@ -150,7 +150,11 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		// Validate the role still exists
 		role, err := b.StaticRole(ctx, s, item.Key)
 		if err != nil {
-			b.logger.Error("unable load role", "role", item.Key, "error", err)
+			b.logger.Error("unable to load role", "role", item.Key, "error", err)
+			item.Priority = time.Now().Add(10 * time.Second).Unix()
+			if err := b.pushItem(item); err != nil {
+				b.logger.Error("unable to push item on to queue", "error", err)
+			}
 			continue
 		}
 		if role == nil {
