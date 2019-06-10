@@ -28,7 +28,7 @@ Success! Data deleted (if it existed) at: secret/creds
 **[K/V Version 2]** Delete version 11 of key "creds":
 
 ```text
-$ vault kv delete -versions=3 secret/creds
+$ vault kv delete -versions=11 secret/creds
 Success! Data deleted (if it existed) at: secret/creds
 ```
 
