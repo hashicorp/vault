@@ -165,7 +165,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 	if _, ok := d.GetOk("password"); ok {
 		userErr, intErr := b.updateUserPassword(req, d, userEntry)
 		if intErr != nil {
-			return nil, err
+			return nil, intErr
 		}
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), logical.ErrInvalidRequest
