@@ -104,14 +104,28 @@ export default Component.extend({
       .tickSizeOuter(0);
 
     barChartSVG
-      .select('g.x.axis')
+      .select('g.x-axis')
       .attr('transform', `translate(0,${height})`)
       .call(xAxis);
 
     barChartSVG
-      .select('g.y.axis')
+      .select('g.y-axis')
       .attr('transform', `translate(${width - margin.left - margin.right}, 0)`)
       .call(yAxis);
+
+    // render the gridlines
+    const gridlines = d3Axis
+      .axisRight(yScale)
+      .ticks(3)
+      .tickFormat('')
+      .tickSize(width - margin.left - margin.right);
+
+    barChartSVG.select('.gridlines').call(gridlines);
+
+    barChartSVG
+      .select('.gridlines')
+      .selectAll('.tick')
+      .style('stroke-dasharray', '5 5');
 
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters);

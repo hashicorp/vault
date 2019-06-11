@@ -8,7 +8,6 @@
   margin: auto;
   overflow: inherit;
 
-  .domain,
   .tick > line {
     stroke: $light-grey;
   }
@@ -16,5 +15,17 @@
   .tick > text {
     fill: $grey;
     font-size: $size-8;
+  }
+
+  .gridlines > .domain {
+    stroke: unset;
+  }
+
+  .x-axis,
+  .y-axis {
+    .domain,
+    .tick > line {
+      stroke: $grey-light;
+    }
   }
 }
