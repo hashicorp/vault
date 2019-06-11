@@ -1,17 +1,15 @@
-package vault
+package identity
 
 import (
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/vault/helper/identity"
 )
 
 // chunk can convert and an entity+group list into JSON
 type chunk interface {
-	Render(*identity.Entity, []*identity.Group) (string, error)
+	Render(*Entity, []*Group) (string, error)
 }
 
 // staticChunk holds a string that will be rendered without change
@@ -19,17 +17,17 @@ type staticChunk struct {
 	str string
 }
 
-func (sc *staticChunk) Render(*identity.Entity, []*identity.Group) (string, error) {
+func (sc *staticChunk) Render(*Entity, []*Group) (string, error) {
 	return sc.str, nil
 }
 
 // dynamicChunk holds a function that will render entity/group info into a string
 // appropriate for the matching template parameter.
 type dynamicChunk struct {
-	renderer func(*identity.Entity, []*identity.Group) (string, error)
+	renderer func(*Entity, []*Group) (string, error)
 }
 
-func (dc *dynamicChunk) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
+func (dc *dynamicChunk) Render(entity *Entity, groups []*Group) (string, error) {
 	return dc.renderer(entity, groups)
 }
 
@@ -38,7 +36,7 @@ type parsedTemplate struct {
 	chunks []chunk
 }
 
-func (t *parsedTemplate) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
+func (t *parsedTemplate) Render(entity *Entity, groups []*Group) (string, error) {
 	var out strings.Builder
 
 	for _, c := range t.chunks {
@@ -96,7 +94,7 @@ func CompileTemplate(template string) (parsedTemplate, error) {
 
 			if len(submatches) > 0 {
 				handler := p.handler
-				f := func(entity *identity.Entity, groups []*identity.Group) (string, error) {
+				f := func(entity *Entity, groups []*Group) (string, error) {
 					return handler(entity, groups, submatches[1:])
 				}
 				c = &dynamicChunk{renderer: f}
@@ -124,25 +122,25 @@ func CompileTemplate(template string) (parsedTemplate, error) {
 
 type paramMatcher struct {
 	pattern *regexp.Regexp
-	handler func(*identity.Entity, []*identity.Group, []string) (string, error)
+	handler func(*Entity, []*Group, []string) (string, error)
 }
 
 var patterns = []paramMatcher{
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.id")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return quote(e.ID), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.name")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return quote(e.Name), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.metadata")),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			d, err := json.Marshal(e.Metadata)
 			if err == nil {
 				return string(d), nil
@@ -152,13 +150,13 @@ var patterns = []paramMatcher{
 	},
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.metadata.<param>`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return quote(e.Metadata[v[0]]), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.aliases.<param>.metadata.<param>`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			name, key := v[0], v[1]
 			for _, alias := range e.Aliases {
 				if alias.Name == name {
@@ -170,13 +168,13 @@ var patterns = []paramMatcher{
 	},
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.group_names`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return groupsToArray(groups, "name"), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.group_ids`)),
-		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return groupsToArray(groups, "id"), nil
 		},
 	},
@@ -194,7 +192,7 @@ func regexify(s string) string {
 
 // groupsToArray is a helper to extract either the ID or Name from
 // a list of groups into a JSON array.
-func groupsToArray(groups []*identity.Group, element string) string {
+func groupsToArray(groups []*Group, element string) string {
 	var out strings.Builder
 
 	groupsLen := len(groups)

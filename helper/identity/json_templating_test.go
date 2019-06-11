@@ -1,20 +1,19 @@
-package vault
+package identity
 
 import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/helper/identity"
 )
 
-var testEntity = &identity.Entity{
+var testEntity = &Entity{
 	ID:   "abc-123",
 	Name: "Entity Name",
 	Metadata: map[string]string{
 		"color": "green",
 		"size":  "small",
 	},
-	Aliases: []*identity.Alias{
+	Aliases: []*Alias{
 		{
 			Name: "aws_123",
 			Metadata: map[string]string{
@@ -24,7 +23,7 @@ var testEntity = &identity.Entity{
 	},
 }
 
-var testGroups = []*identity.Group{
+var testGroups = []*Group{
 	{ID: "a08b0c02", Name: "g1"},
 	{ID: "239bef91", Name: "g2"},
 }
