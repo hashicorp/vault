@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// chunk can convert and an entity+group list into JSON
-type chunk interface {
+// chunkRenderer can convert and an entity+group list into JSON
+type chunkRenderer interface {
 	Render(*Entity, []*Group) (string, error)
 }
 
@@ -17,6 +17,8 @@ type staticChunk struct {
 	str string
 }
 
+// Render generates a string version from the entity and groups.
+// For staticChunk, this will just be a fixed string.
 func (sc *staticChunk) Render(*Entity, []*Group) (string, error) {
 	return sc.str, nil
 }
@@ -27,16 +29,19 @@ type dynamicChunk struct {
 	renderer func(*Entity, []*Group) (string, error)
 }
 
+// Render generates a string version from the entity and groups.
+// For dynamicChunk, this will invoked the wrapped handler that was
+// matched during template parsing.
 func (dc *dynamicChunk) Render(entity *Entity, groups []*Group) (string, error) {
 	return dc.renderer(entity, groups)
 }
 
 // parsedTemplates is a sequence of chunks to be rendered in order
-type parsedTemplate struct {
-	chunks []chunk
+type CompiledTemplate struct {
+	chunks []chunkRenderer
 }
 
-func (t *parsedTemplate) Render(entity *Entity, groups []*Group) (string, error) {
+func (t *CompiledTemplate) Render(entity *Entity, groups []*Group) (string, error) {
 	var out strings.Builder
 
 	for _, c := range t.chunks {
@@ -50,17 +55,15 @@ func (t *parsedTemplate) Render(entity *Entity, groups []*Group) (string, error)
 	return out.String(), nil
 }
 
-var parameterRE = regexp.MustCompile(`"{{(\S+)}}"`)
-
-func CompileTemplate(template string) (parsedTemplate, error) {
-	var pt parsedTemplate
+func NewCompiledTemplate(template string) (*CompiledTemplate, error) {
+	var pt CompiledTemplate
 	var tmp map[string]interface{}
 
 	// Even before being rendered, templates should be valid JSON. Check that
 	// now so we can return a descriptive errors if necessary.
 	err := json.Unmarshal([]byte(template), &tmp)
 	if err != nil {
-		return pt, err
+		return nil, err
 	}
 
 	// Find all possible parameters {{...something...}}. matches will be a list
@@ -72,7 +75,7 @@ func CompileTemplate(template string) (parsedTemplate, error) {
 	idx := 0
 
 	for _, m := range matches {
-		// Add a chunk of static text from out current pointer to the start of the
+		// Add a chunkRenderer of static text from out current pointer to the start of the
 		// next match.
 		pt.chunks = append(pt.chunks, &staticChunk{
 			str: template[idx:m[0]],
@@ -81,9 +84,9 @@ func CompileTemplate(template string) (parsedTemplate, error) {
 		param := template[m[2]:m[3]]
 
 		// Search parameter pattern looking for a match. If one is found, create
-		// create a dynamic chunk using the handler for that parameter, closed
+		// create a dynamic chunkRenderer using the handler for that parameter, closed
 		// over with the parameter string(s) found for this template.
-		var c chunk
+		var c chunkRenderer
 		for _, p := range patterns {
 			// Test for a match, retaining any captures. For example:
 			//
@@ -117,7 +120,7 @@ func CompileTemplate(template string) (parsedTemplate, error) {
 		str: template[idx:],
 	})
 
-	return pt, nil
+	return &pt, nil
 }
 
 type paramMatcher struct {
@@ -125,6 +128,7 @@ type paramMatcher struct {
 	handler func(*Entity, []*Group, []string) (string, error)
 }
 
+var parameterRE = regexp.MustCompile(`"{{(\S+)}}"`)
 var patterns = []paramMatcher{
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.id")),

@@ -41,7 +41,7 @@ func Test_OIDC_TestABC(t *testing.T) {
   }
 }
 `
-	pt, err := CompileTemplate(tpl)
+	pt, err := NewCompiledTemplate(tpl)
 	if err != nil {
 		t.Fatal(err)
 	}
