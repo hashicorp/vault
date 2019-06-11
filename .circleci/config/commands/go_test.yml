@@ -46,7 +46,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
-          gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+          gotestsum --format=standard-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=40m \
             -parallel=20 \
