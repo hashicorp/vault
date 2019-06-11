@@ -77,6 +77,7 @@ circleci_verify() {
   if git diff --name-only --cached --exit-code -- '.circleci/***.yml'; then
     return 0
   fi
+
   # Make sure to add no explicit output before this line, as it would just be noise
   # for those making non-circleci changes.
   echo "==> Verifying config changes in .circleci/"
@@ -87,6 +88,12 @@ circleci_verify() {
   if ! git diff --name-only --exit-code -- '.circleci/***.yml'; then
     echo "ERROR: Some .yml diffs in .circleci/ are staged, others not."
     block "Please commit the entire .circleci/ directory together, or omit it altogether."
+  fi
+  
+  # Even untracked yml or yaml files will get baked into the output.
+  # This is a loose check on _any_ untracked files in .circleci/ for simplicity.
+  if [ -n "$(git ls-files --others --exclude-standard '.circleci/')" ]; then
+    block "ERROR: You have untracked files in .circleci/ please add or delete them."
   fi
 
   echo "--> OK: All .yml files in .circleci are staged."
