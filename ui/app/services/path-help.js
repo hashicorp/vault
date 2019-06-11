@@ -29,7 +29,8 @@ export default Service.extend({
     });
   },
 
-  getNewModel(modelType, owner, backend, apiPath, itemType) {
+  getNewModel(modelType, backend, apiPath, itemType) {
+    let owner = getOwner(this);
     const modelName = `model:${modelType}`;
     const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
@@ -41,7 +42,7 @@ export default Service.extend({
         return resolve();
       }
       helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       newModel = DS.Model.extend({});
       //use paths to dynamically create our openapi help url
@@ -54,16 +55,18 @@ export default Service.extend({
           owner.register(`adapter:${modelType}`, adapter);
         }
         //if we have an item we want the create info for that itemType
+        let tag, path;
         if (itemType) {
-          let { tag, path } = paths.create[0];
+          tag = paths.create[0].tag;
+          path = paths.create[0].path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
-          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
         } else {
           //we need the mount config
-          let { tag, path } = paths.configPath[0];
-          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+          tag = paths.configPath[0].tag;
+          path = paths.configPath[0].path;
         }
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
+        helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
   },
@@ -219,9 +222,10 @@ export default Service.extend({
     });
   },
 
-  registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner) {
+  registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then(props => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
+      let owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
       //if our newModel doesn't have fieldGroups already
       //we need to create them

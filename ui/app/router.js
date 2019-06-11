@@ -43,7 +43,7 @@ Router.map(function() {
             this.route('list', { path: '/' });
             this.route('create');
             this.route('edit', { path: '/edit/:item_id' });
-            this.route('show', { path: '/:item_id' });
+            this.route('show', { path: '/show/:item_id' });
           });
           this.route('section', { path: '/:section_name' });
         });

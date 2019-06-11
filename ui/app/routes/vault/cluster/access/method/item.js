@@ -1,6 +1,5 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { getOwner } from '@ember/application';
 import { singularize } from 'ember-inflector';
 
 export default Route.extend({
@@ -13,7 +12,7 @@ export default Route.extend({
     let methodModel = this.modelFor('vault.cluster.access.method');
     let { apiPath, type } = methodModel;
     let modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, getOwner(this), method, apiPath, itemType);
+    return this.pathHelp.getNewModel(modelType, method, apiPath, itemType);
   },
 
   setupController(controller) {

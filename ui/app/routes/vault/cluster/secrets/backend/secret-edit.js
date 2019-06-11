@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
-import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
@@ -63,8 +62,7 @@ export default Route.extend(UnloadModelRoute, {
     if (['secret', 'secret-v2'].includes(modelType)) {
       return resolve();
     }
-    let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, owner, backend);
+    return this.pathHelp.getNewModel(modelType, backend);
   },
 
   modelType(backend, secret) {

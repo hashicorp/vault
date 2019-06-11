@@ -20,12 +20,10 @@
 {{section-tabs model "authShow" paths}}
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array
+    <ToolbarLink @params={{array
         "vault.cluster.access.method.item.create"
         (pluralize itemType)
-      }}
-    >
+      }}>
       Create
       {{itemType}}
     </ToolbarLink>
@@ -69,14 +67,11 @@
     }}
   {{/if}}
 {{else}}
-  <EmptyState
-    @title="No {{pluralize itemType}} yet"
-    @message="A list of
+  <EmptyState @title="No {{pluralize itemType}} yet" @message="A list of
       {{pluralize itemType}}
-       in this namespace will be listed here. Create your first
+       will be listed here. Create your first
       {{itemType}}
-       to get started."
-  >
+       to get started.">
     {{#link-to
       "vault.cluster.access.method.item.create"
       (pluralize itemType)
