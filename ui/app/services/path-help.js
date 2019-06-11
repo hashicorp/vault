@@ -78,6 +78,7 @@ export default Service.extend({
       //remove deprecated endpoints
       paths = paths.filter(path => pathInfo[path]['x-vault-sudo'] !== true); //get rid of deprecated paths
 
+      //TODO: consolidate this into a single reduce()
       //config is a get/post endpoint that doesn't take route params
       //and isn't also a list endpoint
       const configPath = paths
@@ -162,19 +163,24 @@ export default Service.extend({
 
       //include url params
       if (params) {
-        let label = capitalize(params[0].name);
+        const { name, schema, description } = params[0];
+        let label = capitalize(name);
         if (label.toLowerCase() !== 'name') {
           label += ' name';
         }
-        paramProp[params[0].name] = {
-          name: params[0].name,
+        paramProp[name] = {
+          'x-vault-displayAttrs': {
+            name: name,
+            group: 'default',
+          },
           label: label,
-          type: params[0].schema.type,
-          description: params[0].description,
+          type: schema.type,
+          description: description,
           isId: true,
-          fieldGroup: 'default',
         };
       }
+
+      //TODO: handle post endpoints without requestBody
       const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
       //put url params (e.g. {name}, {role})
       //at the front of the props list

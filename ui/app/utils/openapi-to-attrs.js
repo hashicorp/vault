@@ -6,34 +6,43 @@ import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
+  let sensitive, name, group, value;
   // expand all attributes
-  for (let prop in props) {
-    let details = props[prop];
-    if (details.deprecated === true) {
-      continue;
+  for (const propName in props) {
+    const prop = props[propName];
+    let { description, items, type, format, isId, label } = prop;
+    let displayAttrs = prop['x-vault-displayAttrs'];
+    if (!isEmpty(displayAttrs)) {
+      sensitive = displayAttrs.sensitive === true && type !== 'boolean';
+      name = displayAttrs.name;
+      group = displayAttrs.group;
+      value = displayAttrs.value;
     }
-    if (details.type === 'integer') {
-      details.type = 'number';
-    }
-    let editType = details.type;
 
-    if (details.format === 'seconds') {
+    // if (details.deprecated === true) {
+    //   continue;
+    // }
+    if (type === 'integer') {
+      type = 'number';
+    }
+    let editType = type;
+
+    if (format === 'seconds') {
       editType = 'ttl';
-    } else if (details.items) {
-      editType = details.items.type + capitalize(details.type);
+    } else if (items) {
+      editType = items.type + capitalize(type);
     }
     let attrDefn = {
       editType,
-      type: details.type,
-      helpText: details.description,
-      sensitive: details['x-vault-displaySensitive'],
-      label: details['x-vault-displayName'] || details.label,
-      possibleValues: details['enum'],
-      fieldValue: details.isId ? 'id' : null,
-      fieldGroup: details['x-vault-displayGroup'],
-      readOnly: details.isId,
-      defaultValue:
-        details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
+      type: type,
+      helpText: description,
+      sensitive: sensitive,
+      label: name || label,
+      possibleValues: prop['enum'],
+      fieldValue: isId ? 'id' : null,
+      fieldGroup: group || 'default',
+      readOnly: isId,
+      defaultValue: value || null,
     };
     // loop to remove empty vals
     for (let attrProp in attrDefn) {
@@ -41,7 +50,7 @@ export const expandOpenApiProps = function(props) {
         delete attrDefn[attrProp];
       }
     }
-    attrs[camelize(prop)] = attrDefn;
+    attrs[camelize(propName)] = attrDefn;
   }
   return attrs;
 };

@@ -1,17 +1,19 @@
 {{#unless
-  (or
-    (eq attr.type "boolean")
-    (contains
-      attr.options.editType
-      (array
-        "boolean"
-        "searchSelect"
-        "mountAccessor"
-        "kv"
-        "file"
-        "ttl"
-        "stringArray"
-        "json"
+  (or (eq attr.options.sensitive true)
+    (or 
+      (eq attr.type "boolean")
+      (contains
+        attr.options.editType
+        (array
+          "boolean"
+          "searchSelect"
+          "mountAccessor"
+          "kv"
+          "file"
+          "ttl"
+          "stringArray"
+          "json"
+        )
       )
     )
   )
@@ -30,20 +32,12 @@
 {{#if attr.options.possibleValues}}
   <div class="control is-expanded">
     <div class="select is-fullwidth">
-      <select
-        name="{{attr.name}}"
-        id="{{attr.name}}"
-        onchange={{action
+      <select name="{{attr.name}}" id="{{attr.name}}" onchange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }}
-        data-test-input={{attr.name}}
-      >
+        }} data-test-input={{attr.name}}>
         {{#each (path-or-array attr.options.possibleValues model) as |val|}}
-          <option
-            selected={{eq (get model valuePath) (or val.value val)}}
-            value={{or val.value val}}
-          >
+          <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
             {{or val.displayName val}}
           </option>
         {{/each}}
@@ -52,11 +46,7 @@
   </div>
 {{else if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
   <div class="b-checkbox">
-    <input
-      type="checkbox"
-      id="{{attr.name}}"
-      class="styled"
-      checked={{eq (get model valuePath) attr.options.trueValue}}
+    <input type="checkbox" id="{{attr.name}}" class="styled" checked={{eq (get model valuePath) attr.options.trueValue}}
       onchange={{action
         (action
           "setAndBroadcastBool"
@@ -65,9 +55,7 @@
           attr.options.falseValue
         )
         value="target.checked"
-      }}
-      data-test-input={{attr.name}}
-     />
+      }} data-test-input={{attr.name}} />
 
     <label for="{{attr.name}}" class="is-label">
       {{labelString}}
@@ -78,16 +66,10 @@
   </div>
 {{else if (eq attr.options.editType "searchSelect")}}
   <div class="form-section">
-    <SearchSelect
-      @id={{attr.name}}
-      @models={{attr.options.models}}
-      @onChange={{action (action "setAndBroadcast" valuePath)}}
-      @inputValue={{get model valuePath}}
-      @helpText={{attr.options.helpText}}
-      @warning={{attr.options.warning}}
-      @label={{labelString}}
-      @fallbackComponent={{attr.options.fallbackComponent}}
-     />
+    <SearchSelect @id={{attr.name}} @models={{attr.options.models}}
+      @onChange={{action (action "setAndBroadcast" valuePath)}} @inputValue={{get model valuePath}}
+      @helpText={{attr.options.helpText}} @warning={{attr.options.warning}} @label={{labelString}}
+      @fallbackComponent={{attr.options.fallbackComponent}} />
 
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
@@ -134,26 +116,18 @@
     onChange=(action (action "setAndBroadcast" valuePath))
   }}
 {{else if (eq attr.options.sensitive true)}}
-  <MaskedInput
-    @value={{or (get model valuePath) attr.options.defaultValue}}
-    @placeholder=""
-    @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}}
-   />
+  <MaskedInput @name={{attr.name}} @label={{labelString}} @helpText={{attr.options.helpText}}
+    @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
+    @onChange={{action (action "setAndBroadcast" valuePath)}} />
 
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
-      <textarea
-        data-test-input={{attr.name}}
-        id={{attr.name}}
-        value={{or (get model valuePath) attr.options.defaultValue}}
-        oninput={{action
+      <textarea data-test-input={{attr.name}} id={{attr.name}}
+        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }}
-        class="textarea"
-      ></textarea>
+        }} class="textarea"></textarea>
     {{else if (eq attr.options.editType "json")}}
       <label for="{{attr.name}}" class="is-label">
         {{labelString}}
@@ -172,17 +146,11 @@
         valueUpdated=(action "codemirrorUpdated" attr.name "string")
       }}
     {{else}}
-      <input
-        data-test-input={{attr.name}}
-        id={{attr.name}}
-        autocomplete="off"
-        value={{or (get model valuePath) attr.options.defaultValue}}
-        oninput={{action
+      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off"
+        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }}
-        class="input"
-       />
+        }} class="input" />
 
       {{#if attr.options.validationAttr}}
         {{#if
@@ -190,10 +158,7 @@
             (get model valuePath) (not (get model attr.options.validationAttr))
           )
         }}
-          <AlertInline
-            @type="danger"
-            @message={{attr.options.invalidMessage}}
-           />
+          <AlertInline @type="danger" @message={{attr.options.invalidMessage}} />
 
         {{/if}}
       {{/if}}
@@ -201,17 +166,10 @@
   </div>
 {{else if (eq attr.type "boolean")}}
   <div class="b-checkbox">
-    <input
-      type="checkbox"
-      id="{{attr.name}}"
-      class="styled"
-      checked={{get model attr.name}}
-      onchange={{action
+    <input type="checkbox" id="{{attr.name}}" class="styled" checked={{get model attr.name}} onchange={{action
         (action "setAndBroadcast" valuePath)
         value="target.checked"
-      }}
-      data-test-input={{attr.name}}
-     />
+      }} data-test-input={{attr.name}} />
 
     <label for="{{attr.name}}" class="is-label">
       {{labelString}}
