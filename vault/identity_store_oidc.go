@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -55,6 +56,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		// 	HelpDescription: "HelpDecription here",
 		// },
 
+		// {
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
@@ -83,18 +85,42 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.ReadOperation:   i.handleOIDCReadKey(),
 				logical.DeleteOperation: i.handleOIDCDeleteKey(),
 			},
-
 			HelpSynopsis:    "oidc/key/:key help synopsis here",
 			HelpDescription: "oidc/key/:key help description here",
 		},
 		{
-			Pattern: "oidc/key/?",
+			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the key",
+				},
+				"verification_ttl": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.handleOIDCRotateKey(),
+			},
+			HelpSynopsis:    "oidc/key/:key/rotate help synopsis here",
+			HelpDescription: "oidc/key/:key/rotate help description here",
+		},
+		{
+			Pattern: "oidc/key/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.handleOIDCListKeys(),
 			},
-
-			HelpSynopsis:    "oidc/key/ help synopsis here",
-			HelpDescription: "oidc/key/ help description here",
+			HelpSynopsis:    "list oidc/key/ help synopsis here",
+			HelpDescription: "list oidc/key/ help description here",
+		},
+		{
+			Pattern: "oidc/well-known/certs/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.handleOIDCReadCerts(),
+			},
+			HelpSynopsis:    "read oidc/well-known/certs/ help synopsis here",
+			HelpDescription: "read oidc/well-known/certs/ help description here",
 		},
 	}
 }
@@ -173,36 +199,14 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 
 		// generate keys if creating a new key
 		if !update {
-			key, err := rsa.GenerateKey(rand.Reader, 2048)
-			if err != nil {
-				return nil, err
-			}
-			id, err := uuid.GenerateUUID()
+			signingKey, publicKey, err := generateKeys(algorithm)
 			if err != nil {
 				return nil, err
 			}
 
-			signingKey := jose.JSONWebKey{
-				Key:       key,
-				KeyID:     id,
-				Algorithm: string(jose.RS256),
-				Use:       "sig",
-			}
-
-			publicKey := ExpireableKey{
-				Key: jose.JSONWebKey{
-					Key:       &key.PublicKey,
-					KeyID:     id,
-					Algorithm: string(jose.RS256),
-					Use:       "sig",
-				},
-				Expirable: false,
-				ExpireAt:  time.Time{},
-			}
-
-			// add public part of signing key to global keys (this is what well-known will return)
+			// add public part of signing key to the key ring
 			keyRing := make([]string, 1, 1)
-			keyRing[0] = id
+			keyRing[0] = publicKey.Key.KeyID
 
 			// create the named key
 			namedKey = &NamedKey{
@@ -214,7 +218,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 				SigningKey:       signingKey,
 			}
 
-			// store public keys (which was just created)
+			// add the public key to the struct containing all public keys and store it
 			publicKeys = append(publicKeys, publicKey)
 			entry, err = logical.StorageEntryJSON("oidc-config/public-keys/", publicKeys)
 			if err != nil {
@@ -225,7 +229,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 			}
 		}
 
-		// store named key (which was either created or updated)
+		// store named key (which was either just created or updated)
 		entry, err = logical.StorageEntryJSON("oidc-config/named-key/"+name, namedKey)
 		if err != nil {
 			return nil, err
@@ -297,9 +301,175 @@ func (i *IdentityStore) handleOIDCListKeys() framework.OperationFunc {
 	}
 }
 
-// some helper methods
+// handleOIDCRotateKey is used to manually trigger a rotation on the named key
+func (i *IdentityStore) handleOIDCRotateKey() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		name := d.Get("name").(string)
+		verificationttlInput := d.Get("verification_ttl").(string)
+		var responseVerificationttl string
 
-// SigningAlgorithmString takes a signingAlgorithm and returns the string representation of that algorithm
+		// validate inputs and update rotation overrides
+		overrides := make(map[string]interface{})
+		if verificationttlInput != "" {
+			verificationttlDuration, err := parseutil.ParseDurationSecond(verificationttlInput)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse provided verification_ttl of: %s", verificationttlInput)
+			}
+			overrides["verificationttlDuration"] = verificationttlDuration
+		}
+
+		// load the named key and perform a rotation
+		entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			return logical.ErrorResponse(fmt.Sprintf("no named key found at %q", name)), logical.ErrInvalidRequest
+		}
+
+		var storedNamedKey NamedKey
+		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
+			return nil, err
+		}
+		err = storedNamedKey.rotate(overrides)
+		if err != nil {
+			return nil, err
+		}
+
+		// prepare response
+		if verificationttlInput != "" {
+			responseVerificationttl = verificationttlInput
+		} else {
+			responseVerificationttl = storedNamedKey.Verificationttl
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"rotation_period":  storedNamedKey.RotationPeriod,
+				"verification_ttl": responseVerificationttl,
+				"algorithm":        storedNamedKey.SigningAlgorithm.String(),
+			},
+		}, nil
+	}
+}
+
+// handleOIDCReadCerts is used to retrieve all certs from all keys so that clients can
+// verify the validity of a signed OIDC token
+func (i *IdentityStore) handleOIDCReadCerts() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+		jwks := jose.JSONWebKeySet{
+			Keys: make([]jose.JSONWebKey, len(publicKeys)),
+		}
+
+		for i, expirableKey := range publicKeys {
+			jwks.Keys[i] = expirableKey.Key
+		}
+
+		data, err := json.MarshalIndent(jwks, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+
+		// resp := []map[string]interface{}{
+		// 	{
+		// 		"key1": "value2",
+		// 		"key2": 2,
+		// 	},
+		// 	{
+		// 		"key1": "value2",
+		// 		"key2": 3,
+		// 	},
+		// 	{
+		// 		"key1": "value2",
+		// 		"key2": 4,
+		// 	},
+		// }
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"keys": data,
+			},
+		}, nil
+
+		//		return nil, nil
+	}
+}
+
+// --- some helper methods ---
+
+// NamedKey.rotate(overrides) performs a key rotation on a NamedKey
+// ASSUMPTION: overrides make sense...
+func (namedKey NamedKey) rotate(overrides map[string]interface{}) error {
+	// fail early if the verification ttl of the named key is not parse-able
+	var verificationttlDuration time.Duration
+	verificationttlDurationInterface, ok := overrides["verificationttlDuration"]
+	if ok {
+		verificationttlDuration = verificationttlDurationInterface.(time.Duration)
+	} else {
+		var err error
+		verificationttlDuration, err = parseutil.ParseDurationSecond(namedKey.Verificationttl)
+		if err != nil {
+			return err
+		}
+	}
+
+	// generate new key
+	signingKey, publicKey, err := generateKeys(namedKey.SigningAlgorithm)
+	if err != nil {
+		return err
+	}
+
+	// rotation involves overwritting current signing key, updating key ring, and updating global
+	// public keys to expire the signing key that was just rotated
+	rotateID := namedKey.SigningKey.KeyID
+	namedKey.SigningKey = signingKey
+	namedKey.KeyRing = append(namedKey.KeyRing, publicKey.Key.KeyID)
+
+	// give current signing key's public portion an expiry time
+	for _, publicKey := range publicKeys {
+		if publicKey.Key.KeyID == rotateID {
+			publicKey.Expirable = true
+			publicKey.ExpireAt = time.Now().Add(verificationttlDuration)
+			break
+		}
+	}
+
+	return nil
+}
+
+// generateKeys returns a signingKey and publicKey pair
+func generateKeys(algorithm signingAlgorithm) (signingKey jose.JSONWebKey, publicKey ExpireableKey, err error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return
+	}
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return
+	}
+
+	signingKey = jose.JSONWebKey{
+		Key:       key,
+		KeyID:     id,
+		Algorithm: algorithm.String(),
+		Use:       "sig",
+	}
+
+	publicKey = ExpireableKey{
+		Key: jose.JSONWebKey{
+			Key:       &key.PublicKey,
+			KeyID:     id,
+			Algorithm: algorithm.String(),
+			Use:       "sig",
+		},
+		Expirable: false,
+		ExpireAt:  time.Time{},
+	}
+	return
+}
+
+// signingAlgorithm.String takes a signingAlgorithm and returns the string representation of that algorithm
 func (a signingAlgorithm) String() string {
 	switch a {
 	case rs256:
