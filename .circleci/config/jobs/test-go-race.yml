@@ -10,6 +10,7 @@ steps:
         sudo chown -R circleci:circleci /go
   - restore_go_cache
   - go_test:
+      CGO_ENABLED: 1
       extra_flags: "-race"
   - store_artifacts:
       path: test-results

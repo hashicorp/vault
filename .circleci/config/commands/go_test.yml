@@ -3,6 +3,9 @@ parameters:
   extra_flags:
     type: string
     default: ""
+  CGO_ENABLED:
+    type: integer
+    default: 0
 steps:
   - run:
       name: Run Go tests
@@ -19,5 +22,7 @@ steps:
         export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
         # Run tests
-        TESTARGS="<< parameters.extra_flags >>" make test
+        export TESTARGS="<< parameters.extra_flags >> -v"
+        export CGO_ENABLED="<< parameters.extra_flags >>"
+        make test
 

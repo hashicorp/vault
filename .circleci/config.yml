@@ -132,7 +132,9 @@ jobs:
           export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
           # Run tests
-          TESTARGS="" make test
+          export TESTARGS=" -v"
+          export CGO_ENABLED=""
+          make test
         name: Run Go tests
         no_output_timeout: 20m
     - store_artifacts:
@@ -171,7 +173,9 @@ jobs:
           export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
           # Run tests
-          TESTARGS="-race" make test
+          export TESTARGS="-race -v"
+          export CGO_ENABLED="-race"
+          make test
         name: Run Go tests
         no_output_timeout: 20m
     - store_artifacts:
@@ -208,6 +212,9 @@ workflows:
 #   go_test:
 #     description: run go tests
 #     parameters:
+#       CGO_ENABLED:
+#         default: 0
+#         type: integer
 #       extra_flags:
 #         default: \"\"
 #         type: string
@@ -225,7 +232,9 @@ workflows:
 #           export PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"
 # 
 #           # Run tests
-#           TESTARGS=\"<< parameters.extra_flags >>\" make test
+#           export TESTARGS=\"<< parameters.extra_flags >> -v\"
+#           export CGO_ENABLED=\"<< parameters.extra_flags >>\"
+#           make test
 #         name: Run Go tests
 #         no_output_timeout: 20m
 #   restore_go_cache:
@@ -348,6 +357,7 @@ workflows:
 #         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - go_test:
+#         CGO_ENABLED: 1
 #         extra_flags: -race
 #     - store_artifacts:
 #         path: test-results
