@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -304,6 +303,7 @@ func (i *IdentityStore) handleOIDCListKeys() framework.OperationFunc {
 // handleOIDCRotateKey is used to manually trigger a rotation on the named key
 func (i *IdentityStore) handleOIDCRotateKey() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
 		name := d.Get("name").(string)
 		verificationttlInput := d.Get("verification_ttl").(string)
 		var responseVerificationttl string
@@ -366,40 +366,18 @@ func (i *IdentityStore) handleOIDCReadCerts() framework.OperationFunc {
 			jwks.Keys[i] = expirableKey.Key
 		}
 
-		data, err := json.MarshalIndent(jwks, "", "  ")
-		if err != nil {
-			return nil, err
-		}
-
-		// resp := []map[string]interface{}{
-		// 	{
-		// 		"key1": "value2",
-		// 		"key2": 2,
-		// 	},
-		// 	{
-		// 		"key1": "value2",
-		// 		"key2": 3,
-		// 	},
-		// 	{
-		// 		"key1": "value2",
-		// 		"key2": 4,
-		// 	},
-		// }
-
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"keys": data,
+				"keys": jwks,
 			},
 		}, nil
-
-		//		return nil, nil
 	}
 }
 
 // --- some helper methods ---
 
 // NamedKey.rotate(overrides) performs a key rotation on a NamedKey
-// ASSUMPTION: overrides make sense...
+// ASSUMPTION: overrides make sense and won't cause type conversion errors...
 func (namedKey NamedKey) rotate(overrides map[string]interface{}) error {
 	// fail early if the verification ttl of the named key is not parse-able
 	var verificationttlDuration time.Duration
@@ -424,6 +402,7 @@ func (namedKey NamedKey) rotate(overrides map[string]interface{}) error {
 	// public keys to expire the signing key that was just rotated
 	rotateID := namedKey.SigningKey.KeyID
 	namedKey.SigningKey = signingKey
+	publicKeys = append(publicKeys, publicKey)
 	namedKey.KeyRing = append(namedKey.KeyRing, publicKey.Key.KeyID)
 
 	// give current signing key's public portion an expiry time
