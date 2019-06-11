@@ -105,6 +105,10 @@ func (d StaticSystemView) Auditor() Auditor {
 	return noopAuditor{}
 }
 
+func (d StaticSystemView) ForwardGenericRequest(ctx context.Context, req *Request) (*Response, error) {
+	return nil, errors.New("ForwardGenericRequest is not implemented in StaticSystemView")
+}
+
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
 	return d.DefaultLeaseTTLVal
 }
