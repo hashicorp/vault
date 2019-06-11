@@ -234,7 +234,7 @@ func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
 }
 
 func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-backup")
+	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-key-backup")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -275,7 +275,7 @@ func (c *Sys) RekeyDeleteBackup() error {
 }
 
 func (c *Sys) RekeyDeleteRecoveryBackup() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-backup")
+	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-key-backup")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
