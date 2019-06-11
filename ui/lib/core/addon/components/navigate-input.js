@@ -1,12 +1,16 @@
 import { schedule, debounce } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
+
+//TODO MOVE THESE TO THE ADDON
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-const routeFor = function(type, mode) {
+import layout from '../templates/components/navigate-input';
+
+const routeFor = function(type, mode, urls) {
   const MODES = {
     secrets: 'vault.cluster.secrets.backend',
     'secrets-cert': 'vault.cluster.secrets.backend',
@@ -14,6 +18,11 @@ const routeFor = function(type, mode) {
     'policy-list': 'vault.cluster.policies',
     leases: 'vault.cluster.access.leases',
   };
+  // urls object should have create, list, show keys
+  // so we'll return that here
+  if (urls) {
+    return urls[type.slice().replace('-root', '')];
+  }
   let useSuffix = true;
   const typeVal = mode === 'secrets' || mode === 'leases' ? type : type.replace('-root', '');
   const modeKey = mode + '-' + typeVal;
@@ -26,9 +35,11 @@ const routeFor = function(type, mode) {
 };
 
 export default Component.extend(FocusOnInsertMixin, {
+  layout,
   router: service(),
 
   classNames: ['navigate-filter'],
+  urls: null,
 
   // these get passed in from the outside
   // actions that get passed in
@@ -75,13 +86,13 @@ export default Component.extend(FocusOnInsertMixin, {
       return;
     }
     if (this.get('filterMatchesKey') && !utils.keyIsFolder(val)) {
-      let params = [routeFor('show', mode), extraParams, this.keyForNav(val)].compact();
+      let params = [routeFor('show', mode, this.urls), extraParams, this.keyForNav(val)].compact();
       this.transitionToRoute(...params);
     } else {
       if (mode === 'policies') {
         return;
       }
-      let route = routeFor('create', mode);
+      let route = routeFor('create', mode, urls);
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
@@ -136,7 +147,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   navigate(key, mode, pageFilter) {
-    const route = routeFor(key ? 'list' : 'list-root', mode);
+    const route = routeFor(key ? 'list' : 'list-root', mode, this.urls);
     let args = [route];
     if (key) {
       args.push(key);
@@ -161,7 +172,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   filterUpdatedNoNav: function(val, mode) {
     var key = val ? val.trim() : null;
-    this.transitionToRoute(routeFor('list-root', mode), {
+    this.transitionToRoute(routeFor('list-root', mode, this.urls), {
       queryParams: {
         pageFilter: key,
         page: 1,

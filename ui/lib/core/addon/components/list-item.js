@@ -1,8 +1,10 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
+import layout from '../templates/components/list-item';
 
 export default Component.extend({
+  layout,
   flashMessages: service(),
   tagName: '',
   linkParams: null,
