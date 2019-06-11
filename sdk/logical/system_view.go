@@ -72,6 +72,7 @@ type SystemView interface {
 
 type ExtendedSystemView interface {
 	Auditor() Auditor
+	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 }
 
 type StaticSystemView struct {
