@@ -100,7 +100,7 @@ export default Component.extend({
       .tickSizeOuter(0);
     const xAxis = d3Axis
       .axisBottom(xScale)
-      .tickFormat(d3TimeFormat.timeFormat('%b %Y'))
+      .tickFormat(d3TimeFormat.utcFormat('%b %Y'))
       .tickSizeOuter(0);
 
     barChartSVG
