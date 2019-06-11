@@ -6,21 +6,16 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="box is-sideless is-bottomless has-text-centered has-background-white-bis">
-  <p class="has-text-grey-dark">
-    <span data-test-upgrade-feature-description>
-      {{featureName}} is a {{minimumEdition}} feature.
-    </span>
-    You can upgrade to {{minimumEdition}} to unlock additional collaboration and security features
-  </p>
-  <p>
-    <a
-      href="https://hashicorp.com/products/vault/trial?source=vaultui_{{featureName}}"
-      class="button is-ghost has-icon-right"
-      data-test-upgrade-link="true"
-    >
-      Vault Enterprise
-      <Chevron />
-    </a>
-  </p>
-</div>
+<EmptyState
+  @title="{{featureName}} is a {{minimumEdition}} feature."
+  @message="You can upgrade to {{minimumEdition}} to unlock additional collaboration and security features"
+>
+  <a
+    href="https://hashicorp.com/products/vault/trial?source=vaultui_{{featureName}}"
+    class="link has-icon-right"
+    data-test-upgrade-link="true"
+  >
+    Vault Enterprise
+    <Chevron />
+  </a>
+</EmptyState>
