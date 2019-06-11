@@ -24,12 +24,12 @@ const (
 )
 
 // globals - todo fix this
-var publicKeys []ExpireableKey = make([]ExpireableKey, 0, 0)
+var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 
 type ExpireableKey struct {
-	Key       jose.JSONWebKey `json:"key"`
-	Expirable bool            `json:"expirable"`
-	ExpireAt  time.Time       `json:"expire_at"`
+	Key        jose.JSONWebKey `json:"key"`
+	Expireable bool            `json:"expireable"`
+	ExpireAt   time.Time       `json:"expire_at"`
 }
 
 type NamedKey struct {
@@ -218,7 +218,7 @@ func (i *IdentityStore) handleOIDCCreateKey() framework.OperationFunc {
 			}
 
 			// add the public key to the struct containing all public keys and store it
-			publicKeys = append(publicKeys, publicKey)
+			publicKeys = append(publicKeys, &publicKey)
 			entry, err = logical.StorageEntryJSON("oidc-config/public-keys/", publicKeys)
 			if err != nil {
 				return nil, err
@@ -336,6 +336,15 @@ func (i *IdentityStore) handleOIDCRotateKey() framework.OperationFunc {
 			return nil, err
 		}
 
+		// store named key (it was modified when rotate was called on it)
+		entry, err = logical.StorageEntryJSON("oidc-config/named-key/"+name, storedNamedKey)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
 		// prepare response
 		if verificationttlInput != "" {
 			responseVerificationttl = verificationttlInput
@@ -358,12 +367,16 @@ func (i *IdentityStore) handleOIDCRotateKey() framework.OperationFunc {
 func (i *IdentityStore) handleOIDCReadCerts() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
+		// fmt.Printf("\npublicKeys before expiry:\n%#v", publicKeys)
+		publicKeys = expire(publicKeys)
+		// fmt.Printf("\npublicKeys after expiry:\n%#v", publicKeys)
+
 		jwks := jose.JSONWebKeySet{
 			Keys: make([]jose.JSONWebKey, len(publicKeys)),
 		}
 
-		for i, expirableKey := range publicKeys {
-			jwks.Keys[i] = expirableKey.Key
+		for i, expireableKey := range publicKeys {
+			jwks.Keys[i] = expireableKey.Key
 		}
 
 		return &logical.Response{
@@ -376,9 +389,32 @@ func (i *IdentityStore) handleOIDCReadCerts() framework.OperationFunc {
 
 // --- some helper methods ---
 
+// expire returns a lice of ExpireableKey with the expired keys removed
+func expire(keys []*ExpireableKey) []*ExpireableKey {
+	activeKeys := make([]*ExpireableKey, len(keys))
+	now := time.Now()
+
+	// a key is active if it is not yet expireable (because it is the signing key of some named
+	// keyring) or if it is expireable but the expireAt time is in the future
+	insertIndex := 0
+	fmt.Printf("\nkeys:\n%#v", keys)
+	for i := range keys {
+		fmt.Printf("\nkey:\n%#v", keys[i])
+		switch {
+		// expire case
+		case keys[i].Expireable && now.After(keys[i].ExpireAt):
+		default:
+			activeKeys[insertIndex] = keys[i]
+			insertIndex = insertIndex + 1
+		}
+	}
+
+	return activeKeys[:insertIndex]
+}
+
 // NamedKey.rotate(overrides) performs a key rotation on a NamedKey
 // ASSUMPTION: overrides make sense and won't cause type conversion errors...
-func (namedKey NamedKey) rotate(overrides map[string]interface{}) error {
+func (namedKey *NamedKey) rotate(overrides map[string]interface{}) error {
 	// fail early if the verification ttl of the named key is not parse-able
 	var verificationttlDuration time.Duration
 	verificationttlDurationInterface, ok := overrides["verificationttlDuration"]
@@ -402,14 +438,18 @@ func (namedKey NamedKey) rotate(overrides map[string]interface{}) error {
 	// public keys to expire the signing key that was just rotated
 	rotateID := namedKey.SigningKey.KeyID
 	namedKey.SigningKey = signingKey
-	publicKeys = append(publicKeys, publicKey)
+	publicKeys = append(publicKeys, &publicKey)
 	namedKey.KeyRing = append(namedKey.KeyRing, publicKey.Key.KeyID)
 
 	// give current signing key's public portion an expiry time
-	for _, publicKey := range publicKeys {
-		if publicKey.Key.KeyID == rotateID {
-			publicKey.Expirable = true
-			publicKey.ExpireAt = time.Now().Add(verificationttlDuration)
+	fmt.Printf("\n--- looping through public keys")
+	for i := range publicKeys {
+		fmt.Printf("\n--- current key[%d]:\n%#v", i, publicKeys[i])
+		if publicKeys[i].Key.KeyID == rotateID {
+			fmt.Printf("\n--- rotateID match found")
+			publicKeys[i].Expireable = true
+			publicKeys[i].ExpireAt = time.Now().Add(verificationttlDuration)
+			fmt.Printf("\n--- current key[%d]:\n%#v", i, publicKeys[i])
 			break
 		}
 	}
@@ -442,8 +482,8 @@ func generateKeys(algorithm signingAlgorithm) (signingKey jose.JSONWebKey, publi
 			Algorithm: algorithm.String(),
 			Use:       "sig",
 		},
-		Expirable: false,
-		ExpireAt:  time.Time{},
+		Expireable: false,
+		ExpireAt:   time.Time{},
 	}
 	return
 }
