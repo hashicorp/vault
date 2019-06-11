@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/y0ssar1an/q"
 )
 
 const (
@@ -397,6 +398,26 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		!replicationState.HasState(consts.ReplicationDRSecondary) &&
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing database rotation queue")
+
+		// poll for a PutWAL call that does not return a "read-only storage" error
+	READONLY_LOOP:
+		for {
+			q.Q("enter read-only")
+
+			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
+			if walID != "" {
+				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
+			}
+			switch {
+			case err == nil:
+				break READONLY_LOOP
+			case err.Error() == logical.ErrSetupReadOnly.Error():
+				time.Sleep(10 * time.Millisecond)
+			default:
+				b.Logger().Error("deleting nil key resulted in error", "error", err)
+				return
+			}
+		}
 
 		// Load roles and populate queue with static accounts
 		b.populateQueue(ctx, conf.StorageView)
