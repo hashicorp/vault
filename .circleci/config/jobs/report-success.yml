@@ -1,0 +1,4 @@
+executor: go
+steps:
+  - run:
+      command: echo "Pipeline successful."

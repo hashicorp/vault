@@ -14,3 +14,9 @@ jobs:
   - test-go-race:
       requires:
         - build-go-dev
+  # The report-success job depends only on the _required_ jobs that indicate success.
+  # This allows us to ignore certain jobs that are works in progress at the moment.
+  - report-success:
+      requires:
+        - test-ui
+        - test-go

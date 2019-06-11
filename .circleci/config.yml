@@ -187,6 +187,13 @@ jobs:
     - GO_TAGS: null
     - GO_VERSION: 1.12.4
     - GOTESTSUM_VERSION: 0.3.3
+  report-success:
+    docker:
+    - image: golang:1.12.4-stretch
+    working_directory: /src
+    steps:
+    - run:
+        command: echo "Pipeline successful."
 workflows:
   ci:
     jobs:
@@ -205,6 +212,10 @@ workflows:
     - test-go-race:
         requires:
         - build-go-dev
+    - report-success:
+        requires:
+        - test-ui
+        - test-go
   version: 2
 
 # Original config.yml file:
@@ -326,6 +337,11 @@ workflows:
 #           npm rebuild node-sass
 #         name: Install UI dependencies
 #     - save_yarn_cache
+#   report-success:
+#     executor: go
+#     steps:
+#     - run:
+#         command: echo \"Pipeline successful.\"
 #   test-go:
 #     executor: go-machine
 #     parallelism: 2
@@ -423,3 +439,7 @@ workflows:
 #     - test-go-race:
 #         requires:
 #         - build-go-dev
+#     - report-success:
+#         requires:
+#         - test-ui
+#         - test-go
