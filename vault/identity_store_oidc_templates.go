@@ -9,66 +9,34 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 )
 
-var re = regexp.MustCompile(`"{{(\S+)}}"`)
-
-const (
-	text = iota
-	handler
-)
-
-type parsedTemplate struct {
-	chunks []chunk
-}
-
+// chunk can convert and an entity+group list into JSON
 type chunk interface {
 	Render(*identity.Entity, []*identity.Group) (string, error)
 }
 
+// staticChunk holds a string that will be rendered without change
 type staticChunk struct {
-	value string
+	str string
 }
 
 func (sc *staticChunk) Render(*identity.Entity, []*identity.Group) (string, error) {
-	return sc.value, nil
+	return sc.str, nil
 }
 
+// dynamicChunk holds a function that will render entity/group info into a string
+// appropriate for the matching template parameter.
 type dynamicChunk struct {
-	matcher hFunc
+	renderer func(*identity.Entity, []*identity.Group) (string, error)
 }
 
 func (dc *dynamicChunk) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
-	return dc.matcher(entity, groups)
+	return dc.renderer(entity, groups)
 }
 
-//func (t *parsedTemplate) addText(s string) {
-//	c := chunk{
-//		chunkType: text,
-//		value:     s,
-//	}
-//	t.chunks = append(t.chunks, c)
-//}
-//
-//func (t *parsedTemplate) addMatcher(f hFunc) {
-//	t.chunks = append(t.chunks, chunk{
-//		chunkType: handler,
-//		matcher:   f,
-//	})
-//}
-
-//func (t *parsedTemplate) addText(s string) {
-//	c := chunk{
-//		chunkType: text,
-//		value:     s,
-//	}
-//	t.chunks = append(t.chunks, c)
-//}
-//
-//func (t *parsedTemplate) addMatcher(f hFunc) {
-//	t.chunks = append(t.chunks, chunk{
-//		chunkType: handler,
-//		matcher:   f,
-//	})
-//}
+// parsedTemplates is a sequence of chunks to be rendered in order
+type parsedTemplate struct {
+	chunks []chunk
+}
 
 func (t *parsedTemplate) Render(entity *identity.Entity, groups []*identity.Group) (string, error) {
 	var out strings.Builder
@@ -79,118 +47,101 @@ func (t *parsedTemplate) Render(entity *identity.Entity, groups []*identity.Grou
 			return "", err
 		}
 		out.WriteString(result)
-
-		//switch c.chunkType {
-		//case text:
-		//	out.WriteString(c.value)
-		//case handler:
-		//	result, err := c.matcher(entity, groups)
-		//	if err != nil {
-		//		return "", err
-		//	}
-		//	out.WriteString(result)
-		//}
 	}
 
 	return out.String(), nil
 }
 
-func CompileTemplate(tpl string) (parsedTemplate, error) {
-	var out map[string]interface{}
-	var pt parsedTemplate
+var parameterRE = regexp.MustCompile(`"{{(\S+)}}"`)
 
-	err := json.Unmarshal([]byte(tpl), &out)
+func CompileTemplate(template string) (parsedTemplate, error) {
+	var pt parsedTemplate
+	var tmp map[string]interface{}
+
+	// Even before being rendered, templates should be valid JSON. Check that
+	// now so we can return a descriptive errors if necessary.
+	err := json.Unmarshal([]byte(template), &tmp)
 	if err != nil {
 		return pt, err
 	}
 
-	matches := re.FindAllStringSubmatchIndex(tpl, -1)
+	// Find all possible parameters {{...something...}}. matches will be a list
+	// of 4-element slices provides character indices of both the entire match
+	// start and end (m[0], m[1]), and the element within braces (m[2], m[3]).
+	matches := parameterRE.FindAllStringSubmatchIndex(template, -1)
 
-	i := 0
+	// idx will point to the current character offset in the template
+	idx := 0
+
 	for _, m := range matches {
-		//pt.addText(tpl[i:m[0]])
-		pt.chunks = append(pt.chunks, &staticChunk{tpl[i:m[0]]})
+		// Add a chunk of static text from out current pointer to the start of the
+		// next match.
+		pt.chunks = append(pt.chunks, &staticChunk{
+			str: template[idx:m[0]],
+		})
 
-		v := tpl[m[2]:m[3]]
+		param := template[m[2]:m[3]]
 
-		var f hFunc
+		// Search parameter pattern looking for a match. If one is found, create
+		// create a dynamic chunk using the handler for that parameter, closed
+		// over with the parameter string(s) found for this template.
+		var c chunk
 		for _, p := range patterns {
-			m := p.pattern.FindStringSubmatch(v)
-			if len(m) > 0 {
-				f = func(entity *identity.Entity, groups []*identity.Group) (string, error) {
-					return p.handler(entity, groups, m[1:])
+			// Test for a match, retaining any captures. For example:
+			//
+			// identity.entity.aliases.<mount_accessor>.metadata.<key>
+			//                              [1]                   [2]
+			// |----------------------[0]-----------------------------|
+			submatches := p.pattern.FindStringSubmatch(param)
+
+			if len(submatches) > 0 {
+				handler := p.handler
+				f := func(entity *identity.Entity, groups []*identity.Group) (string, error) {
+					return handler(entity, groups, submatches[1:])
 				}
+				c = &dynamicChunk{renderer: f}
 				break
 			}
 		}
 
-		if f != nil {
-			pt.chunks = append(pt.chunks, &dynamicChunk{f})
-			//pt.addMatcher(f)
-		} else {
-			pt.chunks = append(pt.chunks, &staticChunk{v})
-			//f := func(entity *identity.Entity, groups []*identity.Group) (string, error) {
-			//	return staticTextHandler(nil, nil, []string{v})
-			//}
-			//pt.addMatcher(f)
+		// Failing to match, just output the original string, including braces
+		if c == nil {
+			c = &staticChunk{str: template[m[0]:m[1]]}
 		}
+		pt.chunks = append(pt.chunks, c)
 
-		i = m[1]
+		// Advance index to the end of the entire match
+		idx = m[1]
 	}
-	//pt.addText(tpl[i:])
-	pt.chunks = append(pt.chunks, &staticChunk{tpl[i:]})
+
+	// Add remainder of template string
+	pt.chunks = append(pt.chunks, &staticChunk{
+		str: template[idx:],
+	})
 
 	return pt, nil
 }
 
-/*
-identity.entity.id
-identity.entity.name
-identity.entity.metadata
-identity.entity.metadata.<key>
-identity.entity.group_ids
-identity.entity.group_names
-identity.entity.aliases.<mount_accessor>
-identity.entity.aliases.<mount_accessor>.name
-identity.entity.aliases.<mount_accessor>.metadata
-identity.entity.aliases.<mount_accessor>.metadata.<key>
-*/
-
-type hFunc func(*identity.Entity, []*identity.Group) (string, error)
-type handlerFunc func(*identity.Entity, []*identity.Group, []string) (string, error)
-
-type matcher struct {
+type paramMatcher struct {
 	pattern *regexp.Regexp
-	handler handlerFunc
+	handler func(*identity.Entity, []*identity.Group, []string) (string, error)
 }
 
-// TODO: maybe get rid of this
-func quote(s string) string {
-	return fmt.Sprintf(`"%s"`, s)
-}
-
-// TODO: named parameters would be better than <param>
-func reFmt(s string) string {
-	s = strings.ReplaceAll(s, ".", `\.`)
-	s = strings.ReplaceAll(s, "<param>", `([^\s.]+)`)
-	return "^" + s + "$"
-}
-
-var patterns = []matcher{
+var patterns = []paramMatcher{
 	{
-		pattern: regexp.MustCompile(reFmt("identity.entity.id")),
+		pattern: regexp.MustCompile(regexify("identity.entity.id")),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			return quote(e.ID), nil
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt("identity.entity.name")),
+		pattern: regexp.MustCompile(regexify("identity.entity.name")),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			return quote(e.Name), nil
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt("identity.entity.metadata")),
+		pattern: regexp.MustCompile(regexify("identity.entity.metadata")),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			d, err := json.Marshal(e.Metadata)
 			if err == nil {
@@ -200,13 +151,13 @@ var patterns = []matcher{
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt(`identity.entity.metadata.<param>`)),
+		pattern: regexp.MustCompile(regexify(`identity.entity.metadata.<param>`)),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			return quote(e.Metadata[v[0]]), nil
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt(`identity.entity.aliases.<param>.metadata.<param>`)),
+		pattern: regexp.MustCompile(regexify(`identity.entity.aliases.<param>.metadata.<param>`)),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
 			name, key := v[0], v[1]
 			for _, alias := range e.Aliases {
@@ -218,21 +169,35 @@ var patterns = []matcher{
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt(`identity.entity.group_names`)),
+		pattern: regexp.MustCompile(regexify(`identity.entity.group_names`)),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
-			return groupsToList(groups, "name"), nil
+			return groupsToArray(groups, "name"), nil
 		},
 	},
 	{
-		pattern: regexp.MustCompile(reFmt(`identity.entity.group_ids`)),
+		pattern: regexp.MustCompile(regexify(`identity.entity.group_ids`)),
 		handler: func(e *identity.Entity, groups []*identity.Group, v []string) (string, error) {
-			return groupsToList(groups, "id"), nil
+			return groupsToArray(groups, "id"), nil
 		},
 	},
 }
 
-func groupsToList(groups []*identity.Group, element string) string {
+// regexify creates a regex from a simpler, more readable pattern.
+func regexify(s string) string {
+	s = strings.ReplaceAll(s, ".", `\.`)
+
+	// TODO: named parameters might be better than <param>
+	s = strings.ReplaceAll(s, "<param>", `([^\s.]+)`)
+
+	return "^" + s + "$"
+}
+
+// groupsToArray is a helper to extract either the ID or Name from
+// a list of groups into a JSON array.
+func groupsToArray(groups []*identity.Group, element string) string {
 	var out strings.Builder
+
+	groupsLen := len(groups)
 
 	out.WriteString("[")
 	for i, g := range groups {
@@ -244,7 +209,7 @@ func groupsToList(groups []*identity.Group, element string) string {
 			v = g.ID
 		}
 		out.WriteString(quote(v))
-		if i < len(groups)-1 {
+		if i < groupsLen-1 {
 			out.WriteString(",")
 		}
 	}
@@ -253,22 +218,6 @@ func groupsToList(groups []*identity.Group, element string) string {
 	return out.String()
 }
 
-func classifyParameters(entity *identity.Entity, groups []*identity.Group, s string) (result string, err error) {
-	p := findPattern(s)
-	if p != nil {
-		m := p.pattern.FindStringSubmatch(s)
-		result, err = p.handler(entity, groups, m[1:])
-	}
-	return result, err
-}
-
-func findPattern(s string) *matcher {
-	for _, p := range patterns {
-		m := p.pattern.FindStringSubmatch(s)
-		if len(m) > 0 {
-			return &p
-		}
-	}
-
-	return nil
+func quote(s string) string {
+	return fmt.Sprintf(`"%s"`, s)
 }

@@ -37,7 +37,8 @@ func Test_OIDC_TestABC(t *testing.T) {
     "region": "west",
     "stuff": "{{identity.entity.metadata}}",
     "groups": "{{identity.entity.group_names}}",
-    "group_ids": "{{identity.entity.group_ids}}"
+    "group_ids": "{{identity.entity.group_ids}}",
+    "notamatch": "{{identity.entity.nope}}"
   }
 }
 `
@@ -58,7 +59,8 @@ func Test_OIDC_TestABC(t *testing.T) {
     "region": "west",
     "stuff": {"color":"green","size":"small"},
     "groups": ["g1","g2"],
-    "group_ids": ["a08b0c02","239bef91"]
+    "group_ids": ["a08b0c02","239bef91"],
+    "notamatch": "{{identity.entity.nope}}"
   }
 }
 `
@@ -68,6 +70,7 @@ func Test_OIDC_TestABC(t *testing.T) {
 	}
 }
 
+/*
 func Test_OIDC_classifyParameters(t *testing.T) {
 	tests := []struct {
 		s         string
@@ -130,3 +133,4 @@ func Test_OIDC_classifyParameters(t *testing.T) {
 		}
 	}
 }
+*/
