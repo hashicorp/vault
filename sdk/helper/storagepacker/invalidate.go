@@ -2,9 +2,12 @@ package storagepacker
 
 import (
 	"context"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/logical"
+	"fmt"
 	"strings"
+
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Is the given storage path controlled by this StoragePacker?
@@ -16,9 +19,9 @@ func (s *StoragePackerV2) bucketKeyFromPath(path string) (string, error) {
 	bucketRoot := s.BucketStorageView.Prefix()
 
 	if strings.HasPrefix(path, bucketRoot) {
-		return strings.TrimPrefix(path, bucketRoot)
+		return strings.TrimPrefix(path, bucketRoot), nil
 	} else {
-		return "", fmt.Errorfmt("path %q doesn't match bucket storage %q", path, bucketKey)
+		return "", fmt.Errorf("path %q doesn't match bucket storage %q", path, bucketRoot)
 	}
 }
 
@@ -65,25 +68,25 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 		bucketRemoved = true
 		// Create a placeholder so we can run the rest of the logic
 		// against an empty collection
-		replacementBucket := s.newEmptyBucket(bucketKey)
+		replacementBucket = s.newEmptyBucket(bucketKey)
 	} else {
 		// Fake up a storage entry for the bucket and decode it
 		storage := &logical.StorageEntry{
 			Value: newValue,
 		}
 		replacementBucket, err = s.DecodeBucket(storage)
-		if err {
+		if err != nil {
 			return nil, nil, errwrap.Wrapf("unable to decode replicated bucket: {{err}}", err)
 		}
 		if replacementBucket.Key != bucketKey {
-			return nil, nil, fmt.Errorfmt("decoded bucket key %q doesn't match path component %q", replacementBucket.Key, bucketKey)
+			return nil, nil, fmt.Errorf("decoded bucket key %q doesn't match path component %q", replacementBucket.Key, bucketKey)
 		}
 	}
 
 	present = make([]*Item, 0)
 
-	originalBucket, err := s.GetBucket(bucketKey)
-	if err {
+	originalBucket, err := s.GetBucket(ctx, bucketKey)
+	if err != nil {
 		return nil, nil, errwrap.Wrapf("problem finding original bucket: {{err}}", err)
 	}
 	originalBucket.Lock()
@@ -116,7 +119,7 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 	present = append(present, revisit...)
 
 	// Swap the replacement bucket in to the cache (or delete)
-	cacheKey := s.cacheKey(bucketKey)
+	cacheKey := s.GetCacheKey(bucketKey)
 	s.bucketsCacheLock.RLock()
 	if bucketRemoved {
 		s.bucketsCache.Delete(cacheKey)
@@ -154,14 +157,14 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 
 	// Looking through the other buckets without acquiring a lock
 	// is unsafe, but should be OK in the context of a replica.
-	for _, p := range partitions {
+	for _, p := range partition {
 		bucketsToCheck := s.bucketAndAllParents(p.Bucket)
 		for _, request := range p.Requests {
 			found := false
 			for _, b := range bucketsToCheck {
 				// Skip originalBucket
 				if b.Key != bucketKey {
-					if data, found = b.ItemMap[request.ID]; found {
+					if data, found := b.ItemMap[request.ID]; found {
 						revisit = append(revisit, &Item{
 							ID:   request.ID,
 							Data: data,
@@ -187,9 +190,9 @@ func (s *StoragePackerV2) bucketAndAllParents(bucket *LockedBucket) []*LockedBuc
 	s.bucketsCacheLock.RLock()
 	defer s.bucketsCacheLock.RUnlock()
 
-	parents := []*LockedBuckets{bucket}
+	parents := []*LockedBucket{bucket}
 	for k := s.parentCacheKey(bucket.Key); k != ""; k = s.parentCacheKey(k) {
-		bucketRaw, found := bucketsCacheLock.Get(k)
+		bucketRaw, found := s.bucketsCache.Get(k)
 		if found {
 			parents = append(parents, bucketRaw.(*LockedBucket))
 		}
@@ -199,7 +202,7 @@ func (s *StoragePackerV2) bucketAndAllParents(bucket *LockedBucket) []*LockedBuc
 
 // Given a bucket key, return the cache key for its parent
 func (s *StoragePackerV2) parentCacheKey(bucketKey string) string {
-	bucketCacheKey = s.cacheKey(bucketKey)
+	bucketCacheKey := s.GetCacheKey(bucketKey)
 	if len(bucketCacheKey) <= s.BaseBucketBits {
 		return ""
 	} else {
@@ -216,10 +219,10 @@ func (s *StoragePackerV2) newEmptyBucket(bucketKey string) *LockedBucket {
 	return &LockedBucket{
 		Bucket: &Bucket{
 			Key:       bucketKey,
-			HasShards: False,
+			HasShards: false,
 			ItemMap:   make(map[string][]byte),
 		},
-		Lock: lock,
+		LockEntry: lock,
 	}
 }
 

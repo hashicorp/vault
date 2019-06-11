@@ -203,7 +203,9 @@ func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 		LockEntry: lock,
 		Bucket:    &bucket,
 	}
-	lb.Key = storageEntry.Key
+	if lb.Key == "" {
+		lb.Key = storageEntry.Key
+	}
 
 	return lb, nil
 }
