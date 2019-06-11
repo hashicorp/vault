@@ -189,9 +189,14 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 				HMACType: "hmac-sha256",
 			}
 			config.SaltView = view
-			return &noopAudit{
+
+			n := &noopAudit{
 				Config: config,
-			}, nil
+			}
+			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+				SaltFunc: n.Salt,
+			}
+			return n, nil
 		},
 	}
 
@@ -1561,7 +1566,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			auditReq := &logical.Request{
 				Operation:   logical.UpdateOperation,
 				ClientToken: testCluster.RootToken,
-				Path:        "sys/audit/file",
+				Path:        "sys/audit/noop",
 				Data: map[string]interface{}{
 					"type": "noop",
 				},
