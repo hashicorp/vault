@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/y0ssar1an/q"
 )
 
 const (
@@ -402,8 +401,6 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		// poll for a PutWAL call that does not return a "read-only storage" error
 	READONLY_LOOP:
 		for {
-			q.Q("enter read-only")
-
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
 			if walID != "" {
 				defer framework.DeleteWAL(ctx, conf.StorageView, walID)

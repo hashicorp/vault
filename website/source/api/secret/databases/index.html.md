@@ -448,6 +448,12 @@ Static Roles, please see the database-specific documentation.
   plugin type will support this functionality. See the plugin's API page for
   more information on support and formatting for this parameter.
 
+- `revoke_user_on_delete` `(boolean: false)` – Specifies if Vault should attempt
+  to revoke the database user associated with this static role, indicated by the
+  `username`. If `true`, when Vault deletes this Role it will attempt to revoke
+  the database user using the configured `revocation_statements` if they exist.
+  Default `false`
+
 
 
 ### Sample Payload
@@ -506,6 +512,7 @@ $ curl \
 		"renew_statements": [],
 		"revocation_statements": [],
 		"rollback_statements": []
+		"revoke_user_on_delete": false,
 	},
 }
 ```

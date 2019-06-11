@@ -99,7 +99,9 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Verify username/password
-	verifyPgConn(t, username, password, connURL)
+	if err := verifyPgConn(t, username, password, connURL); err != nil {
+		t.Fatal(err)
+	}
 
 	// Re-read the creds, verifying they aren't changing on read
 	data = map[string]interface{}{}
@@ -154,7 +156,9 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Verify new username/password
-	verifyPgConn(t, username, newPassword, connURL)
+	if err := verifyPgConn(t, username, newPassword, connURL); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Sanity check to make sure we don't allow an attempt of rotating credentials
@@ -241,7 +245,9 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 
 	// Verify username/password
-	verifyPgConn(t, username, password, connURL)
+	if err := verifyPgConn(t, username, password, connURL); err != nil {
+		t.Fatal(err)
+	}
 
 	// Trigger rotation
 	data = map[string]interface{}{"name": "plugin-role-test"}
@@ -262,19 +268,153 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 }
 
-func verifyPgConn(t *testing.T, username, password, connURL string) {
-	cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
-	db, err := sql.Open("postgres", cURL)
+func TestBackend_StaticRole_Revoke_user(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	lb, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Ping(); err != nil {
-		t.Fatal(err)
+	b, ok := lb.(*databaseBackend)
+	if !ok {
+		t.Fatal("could not convert to db backend")
 	}
-	db.Close()
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	testCases := map[string]struct {
+		revoke          *bool
+		expectVerifyErr bool
+	}{
+		// Default case: user does not specify, Vault leaves the database user
+		// untouched, and the final connection check passes because the user still
+		// exists
+		"unset": {},
+		// Revoke on delete. The final connection check should fail because the user
+		// no longer exists
+		"revoke": {
+			revoke:          newBoolPtr(true),
+			expectVerifyErr: true,
+		},
+		// Revoke false, final connection check should still pass
+		"persist": {
+			revoke: newBoolPtr(false),
+		},
+	}
+	for k, tc := range testCases {
+		t.Run(k, func(t *testing.T) {
+			data = map[string]interface{}{
+				"name":                  "plugin-role-test",
+				"db_name":               "plugin-test",
+				"creation_statements":   testRoleStaticCreate,
+				"rotation_statements":   testRoleStaticUpdate,
+				"revocation_statements": defaultRevocationSQL,
+				"username":              "statictest",
+				"rotation_period":       "5400s",
+			}
+			if tc.revoke != nil {
+				data["revoke_user_on_delete"] = *tc.revoke
+			}
+
+			req = &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "static-roles/plugin-role-test",
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			// Read the creds
+			data = map[string]interface{}{}
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "static-creds/plugin-role-test",
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			username := resp.Data["username"].(string)
+			password := resp.Data["password"].(string)
+			if username == "" || password == "" {
+				t.Fatalf("empty username (%s) or password (%s)", username, password)
+			}
+
+			// Verify username/password
+			if err := verifyPgConn(t, username, password, connURL); err != nil {
+				t.Fatal(err)
+			}
+
+			// delete the role, expect the default where the user is not destroyed
+			// Read the creds
+			req = &logical.Request{
+				Operation: logical.DeleteOperation,
+				Path:      "static-roles/plugin-role-test",
+				Storage:   config.StorageView,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			// Verify new username/password still work
+			if err := verifyPgConn(t, username, password, connURL); err != nil {
+				if !tc.expectVerifyErr {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
 }
 
-//
+func verifyPgConn(t *testing.T, username, password, connURL string) error {
+	cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
+	db, err := sql.Open("postgres", cURL)
+	if err != nil {
+		return err
+	}
+	if err := db.Ping(); err != nil {
+		return err
+	}
+	return db.Close()
+}
+
 // WAL testing
 //
 // First scenario, WAL contains a role name that does not exist.
@@ -516,8 +656,6 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	// Allow initQueue to finish
-	time.Sleep(5 * time.Second)
 	bd := b.(*databaseBackend)
 	if bd.credRotationQueue == nil {
 		t.Fatal("database backend had no credential rotation queue")
@@ -668,4 +806,9 @@ func capturePasswords(t *testing.T, b logical.Backend, config *logical.BackendCo
 	}
 
 	return pws
+}
+
+func newBoolPtr(b bool) *bool {
+	v := b
+	return &v
 }

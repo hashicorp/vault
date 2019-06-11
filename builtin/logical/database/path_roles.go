@@ -171,6 +171,13 @@ func staticFields() map[string]*framework.FieldSchema {
 	this functionality. See the plugin's API page for more information on
 	support and formatting for this parameter.`,
 		},
+		"revoke_user_on_delete": {
+			Type:    framework.TypeBool,
+			Default: false,
+			Description: `Revoke the database user identified by the username when
+	this Role is deleted. Revocation will use the configured
+	revocation_statements if provided. Default false.`,
+		},
 	}
 	return fields
 }
@@ -217,7 +224,8 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 	}
 
 	// Clean up the static useraccount, if it exists
-	if role.StaticAccount != nil {
+	revoke := role.StaticAccount.RevokeUserOnDelete
+	if revoke {
 		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
@@ -255,6 +263,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
+		data["revoke_user_on_delete"] = role.StaticAccount.RevokeUserOnDelete
 	}
 
 	return &logical.Response{
@@ -437,6 +446,8 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
 
+	role.StaticAccount.RevokeUserOnDelete = data.Get("revoke_user_on_delete").(bool)
+
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
 
@@ -559,6 +570,10 @@ type staticAccount struct {
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
+
+	// RevokeUser is a boolean flag to indicate if Vault should revoke the
+	// database user when the role is deleted
+	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
 }
 
 // NextRotationTime calculates the next rotation by adding the Rotation Period
