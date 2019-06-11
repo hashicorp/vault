@@ -132,7 +132,7 @@ jobs:
           export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
           # Run tests
-          export TESTARGS=" -v"
+          export TESTARGS=""
           export CGO_ENABLED=""
           make test
         name: Run Go tests
@@ -173,7 +173,7 @@ jobs:
           export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
           # Run tests
-          export TESTARGS="-race -v"
+          export TESTARGS="-race"
           export CGO_ENABLED="-race"
           make test
         name: Run Go tests
@@ -243,7 +243,7 @@ workflows:
 #           export PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"
 # 
 #           # Run tests
-#           export TESTARGS=\"<< parameters.extra_flags >> -v\"
+#           export TESTARGS=\"<< parameters.extra_flags >>\"
 #           export CGO_ENABLED=\"<< parameters.extra_flags >>\"
 #           make test
 #         name: Run Go tests

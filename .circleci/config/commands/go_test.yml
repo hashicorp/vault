@@ -22,7 +22,7 @@ steps:
         export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
         # Run tests
-        export TESTARGS="<< parameters.extra_flags >> -v"
+        export TESTARGS="<< parameters.extra_flags >>"
         export CGO_ENABLED="<< parameters.extra_flags >>"
         make test
 
