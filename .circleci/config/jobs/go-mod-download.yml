@@ -1,0 +1,15 @@
+executor: go
+steps:
+  - add_ssh_keys:
+      fingerprints:
+        # "CircleCI SSH Checkout" SSH key associated with hashicorp-ci GitHub user
+        - "c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98"
+  - checkout
+  - restore_go_cache
+  - run:
+      name: Download Go modules
+      command: go mod download
+  - run:
+      name: Verify checksums of Go modules
+      command: go mod verify
+  - save_go_cache
