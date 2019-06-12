@@ -1,27 +1,16 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
-import { isEmpty } from '@ember/utils';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
-  let sensitive, name, group, value;
   // expand all attributes
   for (const propName in props) {
     const prop = props[propName];
     let { description, items, type, format, isId, label } = prop;
-    let displayAttrs = prop['x-vault-displayAttrs'];
-    if (!isEmpty(displayAttrs)) {
-      sensitive = displayAttrs.sensitive === true && type !== 'boolean';
-      name = displayAttrs.name;
-      group = displayAttrs.group;
-      value = displayAttrs.value;
-    }
+    let { name, value, group, sensitive } = prop['x-vault-displayAttrs'] || {};
 
-    // if (details.deprecated === true) {
-    //   continue;
-    // }
     if (type === 'integer') {
       type = 'number';
     }

@@ -1,19 +1,17 @@
 {{#unless
-  (or (eq attr.options.sensitive true)
-    (or 
-      (eq attr.type "boolean")
-      (contains
-        attr.options.editType
-        (array
-          "boolean"
-          "searchSelect"
-          "mountAccessor"
-          "kv"
-          "file"
-          "ttl"
-          "stringArray"
-          "json"
-        )
+  (or
+    (eq attr.type "boolean")
+    (contains
+      attr.options.editType
+      (array
+        "boolean"
+        "searchSelect"
+        "mountAccessor"
+        "kv"
+        "file"
+        "ttl"
+        "stringArray"
+        "json"
       )
     )
   )
@@ -116,8 +114,7 @@
     onChange=(action (action "setAndBroadcast" valuePath))
   }}
 {{else if (eq attr.options.sensitive true)}}
-  <MaskedInput @name={{attr.name}} @label={{labelString}} @helpText={{attr.options.helpText}}
-    @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
+  <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}} />
 
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}

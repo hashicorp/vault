@@ -1,19 +1,9 @@
-<label for="{{name}}" class="is-label">
-  {{label}}
-  {{#if helpText}}
-    {{#info-tooltip}}
-      <span data-test-help-text>
-        {{helpText}}
-      </span>
-    {{/info-tooltip}}
-  {{/if}}
-</label>
 <div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
     <pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
   {{else}}
-    <textarea id={{name}} class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
+    <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
       onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}
       onchange={{action "updateValue"}} value={{readonly displayValue}} data-test-textarea />
   {{/if}}
