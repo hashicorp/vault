@@ -122,11 +122,6 @@ export default Component.extend({
 
     barChartSVG.select('.gridlines').call(gridlines);
 
-    barChartSVG
-      .select('.gridlines')
-      .selectAll('.tick')
-      .style('stroke-dasharray', '5 5');
-
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters);
     const barsEnter = bars
@@ -136,7 +131,6 @@ export default Component.extend({
 
     bars
       .merge(barsEnter)
-      // these attributes are only applied when bars are updated
       .attr('width', xScale.bandwidth())
       .attr('height', counter => height - yScale(counter.total))
       // the offset between each bar
@@ -152,10 +146,10 @@ export default Component.extend({
     this.renderBarChart();
   },
 
-  waitforResize: task(function*() {
+  waitForResize: task(function*() {
     while (true) {
       yield waitForEvent(window, 'resize');
-      debounce(this, 'updateDimensions', 200);
+      run.scheduleOnce('afterRender', this, 'updateDimensions');
     }
   })
     .on('didInsertElement')
