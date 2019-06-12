@@ -106,6 +106,7 @@
     "ember-radio-button": "^1.1.1",
     "ember-resolver": "^5.0.1",
     "ember-responsive": "^3.0.0-beta.3",
+    "ember-router-helpers": "^0.2.0",
     "ember-sinon": "^1.0.1",
     "ember-source": "~3.4.0",
     "ember-svg-jar": "^1.2.2",
