@@ -79,7 +79,8 @@ in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Group Attribute",
+				Name:  "Group Attribute",
+				Value: "cn",
 			},
 		},
 
@@ -96,7 +97,8 @@ Default: cn`,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "User Attribute",
+				Name:  "User Attribute",
+				Value: "cn",
 			},
 		},
 
