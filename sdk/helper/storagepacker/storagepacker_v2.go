@@ -354,7 +354,7 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket,
 	if err != nil {
 		if strings.Contains(err.Error(), physical.ErrValueTooLarge) {
 			if depth > 0 {
-				return errwrap.Wrapf("Recursive sharding detected: {{err}}", err)
+				return errwrap.Wrapf("recursive sharding detected: {{err}}", err)
 			} else if !s.disableSharding {
 				err = s.shardBucket(ctx, bucket, s.GetCacheKey(bucket.Key))
 			}

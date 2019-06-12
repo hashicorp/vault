@@ -77,7 +77,7 @@ func checkForDuplicateIds(ids []string) (bool, string) {
 func (s *StoragePackerV2) firstKey(cacheKey string) (string, error) {
 	rootShardLength := s.BaseBucketBits / 4
 	if len(cacheKey) < rootShardLength {
-		return cacheKey, errors.New("Key too short.")
+		return cacheKey, errors.New("key too short")
 	}
 	return cacheKey[0 : s.BaseBucketBits/4], nil
 }
