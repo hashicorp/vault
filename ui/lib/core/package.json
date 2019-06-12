@@ -8,6 +8,7 @@
     "base64-js": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
+    "ember-basic-dropdown-hover": "*",
     "ember-cli-babel": "*",
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
@@ -17,6 +18,7 @@
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
     "ember-radio-button": "*",
+    "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
     "escape-string-regexp": "*"
