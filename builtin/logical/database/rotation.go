@@ -183,6 +183,10 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			walEntry, err := b.findStaticWAL(ctx, s, walID)
 			if err != nil {
 				b.logger.Error("error finding static WAL", "error", err)
+				item.Priority = time.Now().Add(10 * time.Second).Unix()
+				if err := b.pushItem(item); err != nil {
+					b.logger.Error("unable to push item on to queue", "error", err)
+				}
 			}
 			if walEntry != nil && walEntry.NewPassword != "" {
 				input.Password = walEntry.NewPassword
