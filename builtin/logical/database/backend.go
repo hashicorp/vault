@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -99,6 +100,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
 
+	b.roleLocks = locksutil.CreateLocks()
+
 	return &b
 }
 
@@ -117,6 +120,11 @@ type databaseBackend struct {
 	// background ticker.
 	credRotationQueue *queue.PriorityQueue
 	cancelQueue       context.CancelFunc
+
+	// roleLocks is used to lock modifications to roles in the queue, to ensure
+	// concurrent requests are not modifying the same role and possibly causing
+	// issues with the priority queue.
+	roleLocks []*locksutil.LockEntry
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

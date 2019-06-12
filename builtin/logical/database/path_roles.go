@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -209,6 +210,11 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 
 func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
+
+	// Grab the exclusive lock
+	lock := locksutil.LockForKey(b.roleLocks, name)
+	lock.Lock()
+	defer lock.Unlock()
 
 	// Remove the item from the queue
 	_, _ = b.popFromRotationQueueByKey(name)
@@ -450,6 +456,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
+
+	// Grab the exclusive lock as well potentially pop and re-push the queue item
+	// for this role
+	lock := locksutil.LockForKey(b.roleLocks, name)
+	lock.Lock()
+	defer lock.Unlock()
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time
