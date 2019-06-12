@@ -4,18 +4,9 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const COUNTERS = [
-  {
-    start_time: '2019-05-01T00:00:00Z',
-    total: 50,
-  },
-  {
-    start_time: '2019-04-01T00:00:00Z',
-    total: 45,
-  },
-  {
-    start_time: '2019-03-01T00:00:00Z',
-    total: 55,
-  },
+  { start_time: '2019-04-01T00:00:00Z', total: 5500 },
+  { start_time: '2019-05-01T00:00:00Z', total: 4500 },
+  { start_time: '2019-06-01T00:00:00Z', total: 5000 },
 ];
 
 module('Integration | Component | http-requests-table', function(hooks) {
@@ -54,7 +45,9 @@ module('Integration | Component | http-requests-table', function(hooks) {
 
   test('it shows the percent change between each time window', async function(assert) {
     await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
-    const expected = (((COUNTERS[1].total - COUNTERS[0].total) / COUNTERS[1].total) * 100).toFixed(1);
+    const expected = Math.abs(
+      (((COUNTERS[1].total - COUNTERS[0].total) / COUNTERS[1].total) * 100).toFixed(1)
+    );
 
     assert.ok(this.element.textContent.includes(expected));
   });
