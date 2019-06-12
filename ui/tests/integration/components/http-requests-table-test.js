@@ -25,7 +25,7 @@ module('Integration | Component | http-requests-table', function(hooks) {
   test('it does not show Change column with less than one month of data', async function(assert) {
     const one_month_counter = [
       {
-        start_time: '2019-05-01T12:00:00Z',
+        start_time: '2019-05-01T00:00:00Z',
         total: 50,
       },
     ];
