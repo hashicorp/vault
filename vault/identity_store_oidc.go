@@ -17,47 +17,47 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// types
-type audience []string
-type signingAlgorithm int
-
-const (
-	rs256 signingAlgorithm = iota
-)
-
-// globals - todo fix this
+// todo fix this
 var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 
+const (
+	namedKeyConfigPath   = "oidc-config/named-key/"
+	publicKeysConfigPath = "oidc-config/public-keys/"
+)
+
+type audience []string
 type ExpireableKey struct {
 	Key        jose.JSONWebKey `json:"key"`
 	Expireable bool            `json:"expireable"`
 	ExpireAt   time.Time       `json:"expire_at"`
 }
-
 type NamedKey struct {
-	Name             string           `json:"name"`
-	SigningAlgorithm signingAlgorithm `json:"signing_algorithm"`
-	Verificationttl  string           `json:"verification_ttl"`
-	RotationPeriod   string           `json:"rotation_period"`
-	KeyRing          []string         `json:"key_ring"`
-	SigningKey       jose.JSONWebKey  `json:"signing_key"`
+	Name             string          `json:"name"`
+	SigningAlgorithm string          `json:"signing_algorithm"`
+	Verificationttl  time.Duration   `json:"verification_ttl"`
+	RotationPeriod   time.Duration   `json:"rotation_period"`
+	KeyRing          []string        `json:"key_ring"`
+	SigningKey       jose.JSONWebKey `json:"signing_key"`
 }
 
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/key/:key - Create a new key named key
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
-		// {
-		// 	Pattern: "oidc/token",
-		// 	Callbacks: map[logical.Operation]framework.OperationFunc{
-		// 		logical.UpdateOperation: i.handleOIDCGenerateIDToken(),
-		// 	},
+		{
+			Pattern: "oidc/tmp/?$",
+			Fields: map[string]*framework.FieldSchema{
 
-		// 	HelpSynopsis:    "HelpSynopsis here",
-		// 	HelpDescription: "HelpDecription here",
-		// },
-
-		// {
+				"test": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Description: "How often to generate a new keypair. Defaults to 6h",
+					Default:     "-1",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.handleOIDCtmp,
+			},
+		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
@@ -67,13 +67,15 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 
 				"rotation_period": &framework.FieldSchema{
-					Type:        framework.TypeString,
+					Type:        framework.TypeDurationSecond,
 					Description: "How often to generate a new keypair. Defaults to 6h",
+					Default:     -1,
 				},
 
 				"verification_ttl": &framework.FieldSchema{
-					Type:        framework.TypeString,
+					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Defaults to the current rotation_period, which will provide for a current key and previous key.",
+					Default:     -1,
 				},
 
 				"algorithm": &framework.FieldSchema{
@@ -97,8 +99,9 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the key",
 				},
 				"verification_ttl": &framework.FieldSchema{
-					Type:        framework.TypeString,
+					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key.",
+					Default:     -1,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -116,12 +119,12 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "list oidc/key/ help description here",
 		},
 		{
-			Pattern: "oidc/well-known/certs/?$",
+			Pattern: "oidc/.well-known/certs/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.handleOIDCReadCerts,
 			},
-			HelpSynopsis:    "read oidc/well-known/certs/ help synopsis here",
-			HelpDescription: "read oidc/well-known/certs/ help description here",
+			HelpSynopsis:    "read oidc/.well-known/certs/ help synopsis here",
+			HelpDescription: "read oidc/.well-known/certs/ help description here",
 		},
 		{
 			Pattern: "oidc/token/generate/?$",
@@ -132,21 +135,36 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
+// testing
+func (i *IdentityStore) handleOIDCtmp(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	fmt.Printf("\n -- HERE --")
+	test := d.Get("test").(int)
+	fmt.Printf("\ntest: %#v", test)
+
+	time, err := parseutil.ParseDurationSecond(test)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("\ntime: %#v", time)
+
+	return nil, nil
+}
+
 // handleOIDCCreateKey is used to create a new key
 func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	var namedKey *NamedKey
 	var update bool = false
-	var algorithm signingAlgorithm
 
 	// parse parameters
 	name := d.Get("name").(string)
-	rotationPeriod := d.Get("rotation_period").(string)
-	verificationttl := d.Get("verification_ttl").(string)
-	algorithmInput := d.Get("algorithm").(string)
+	rotationPeriodInput := d.Get("rotation_period").(int)
+	verificationttlInput := d.Get("verification_ttl").(int)
+	algorithm := d.Get("algorithm").(string)
 
 	// determine if we are creating a key or updating an existing key
-	entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -157,48 +175,46 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 		update = true
 	}
 
+	var rotationPeriod time.Duration
+	var verificationttl time.Duration
+
 	// set defaults if creating a new key
 	if !update {
-		if rotationPeriod == "" {
-			rotationPeriod = "6h"
+		if rotationPeriodInput == -1 {
+			rotationPeriod, _ = parseutil.ParseDurationSecond("6h")
+		} else {
+			rotationPeriod, err = parseutil.ParseDurationSecond(rotationPeriodInput)
+			if err != nil {
+				return nil, err
+			}
 		}
-		if verificationttl == "" {
+		if verificationttlInput == -1 {
 			verificationttl = rotationPeriod
+		} else {
+			verificationttl, err = parseutil.ParseDurationSecond(verificationttl)
+			if err != nil {
+				return nil, err
+			}
 		}
-		if algorithmInput == "" {
-			algorithmInput = "RS256"
-		}
-	}
-
-	// verify inputs and set values if this is an update
-	if rotationPeriod != "" {
-		_, err = parseutil.ParseDurationSecond(rotationPeriod)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse provided rotation_period of: %s", rotationPeriod)
-		}
-		if update {
-			namedKey.RotationPeriod = rotationPeriod
+		if algorithm == "" {
+			algorithm = "RS256"
 		}
 	}
 
-	if verificationttl != "" {
-		_, err = parseutil.ParseDurationSecond(verificationttl)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse provided verification_ttl of: %s", verificationttl)
+	// set values if they were provided and this is an update
+	if update {
+		if rotationPeriodInput >= 0 {
+			namedKey.RotationPeriod, _ = parseutil.ParseDurationSecond(rotationPeriod)
 		}
-		if update {
-			namedKey.Verificationttl = verificationttl
-		}
-	}
 
-	if algorithmInput != "" {
-		switch algorithmInput {
-		case "RS256":
-			algorithm = rs256
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unknown signing algorithm %q", algorithmInput)), logical.ErrInvalidRequest
+		if verificationttl >= 0 {
+			namedKey.Verificationttl, _ = parseutil.ParseDurationSecond(verificationttl)
 		}
-		if update {
+
+		if algorithm != "" {
+			if algorithm != "RS256" {
+				return logical.ErrorResponse(fmt.Sprintf("unknown signing algorithm %q", algorithm)), logical.ErrInvalidRequest
+			}
 			namedKey.SigningAlgorithm = algorithm
 		}
 	}
@@ -226,7 +242,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 
 		// add the public key to the struct containing all public keys and store it
 		publicKeys = append(publicKeys, &publicKey)
-		entry, err = logical.StorageEntryJSON("oidc-config/public-keys/", publicKeys)
+		entry, err = logical.StorageEntryJSON(publicKeysConfigPath, publicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +252,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 	}
 
 	// store named key (which was either just created or updated)
-	entry, err = logical.StorageEntryJSON("oidc-config/named-key/"+name, namedKey)
+	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, namedKey)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +264,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 		Data: map[string]interface{}{
 			"rotation_period":  namedKey.RotationPeriod,
 			"verification_ttl": namedKey.Verificationttl,
-			"algorithm":        namedKey.SigningAlgorithm.String(),
+			"algorithm":        namedKey.SigningAlgorithm,
 		},
 	}, nil
 }
@@ -257,7 +273,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +286,7 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 			Data: map[string]interface{}{
 				"rotation_period":  storedNamedKey.RotationPeriod,
 				"verification_ttl": storedNamedKey.Verificationttl,
-				"algorithm":        storedNamedKey.SigningAlgorithm.String(),
+				"algorithm":        storedNamedKey.SigningAlgorithm,
 			},
 		}, nil
 	}
@@ -281,7 +297,7 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	err := req.Storage.Delete(ctx, "oidc-config/named-key/"+name)
+	err := req.Storage.Delete(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +307,7 @@ func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Re
 
 // handleOIDCListKey is used to list named keys
 func (i *IdentityStore) handleOIDCListKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keys, err := req.Storage.List(ctx, "oidc-config/named-key/")
+	keys, err := req.Storage.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -301,21 +317,10 @@ func (i *IdentityStore) handleOIDCListKeys(ctx context.Context, req *logical.Req
 // handleOIDCRotateKey is used to manually trigger a rotation on the named key
 func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	verificationttlInput := d.Get("verification_ttl").(string)
-	var responseVerificationttl string
-
-	// validate inputs and update rotation overrides
-	overrides := make(map[string]interface{})
-	if verificationttlInput != "" {
-		verificationttlDuration, err := parseutil.ParseDurationSecond(verificationttlInput)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse provided verification_ttl of: %s", verificationttlInput)
-		}
-		overrides["verificationttlDuration"] = verificationttlDuration
-	}
+	verificationTTLOverride := d.Get("verification_ttl").(int)
 
 	// load the named key and perform a rotation
-	entry, err := req.Storage.Get(ctx, "oidc-config/named-key/"+name)
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -327,13 +332,13 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 	if err := entry.DecodeJSON(&storedNamedKey); err != nil {
 		return nil, err
 	}
-	err = storedNamedKey.rotate(overrides)
+	verificationTTL, err := storedNamedKey.rotate(verificationTTLOverride)
 	if err != nil {
 		return nil, err
 	}
 
 	// store named key (it was modified when rotate was called on it)
-	entry, err = logical.StorageEntryJSON("oidc-config/named-key/"+name, storedNamedKey)
+	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, storedNamedKey)
 	if err != nil {
 		return nil, err
 	}
@@ -342,17 +347,11 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 	}
 
 	// prepare response
-	if verificationttlInput != "" {
-		responseVerificationttl = verificationttlInput
-	} else {
-		responseVerificationttl = storedNamedKey.Verificationttl
-	}
-
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"rotation_period":  storedNamedKey.RotationPeriod,
-			"verification_ttl": responseVerificationttl,
-			"algorithm":        storedNamedKey.SigningAlgorithm.String(),
+			"verification_ttl": verificationTTL,
+			"algorithm":        storedNamedKey.SigningAlgorithm,
 		},
 	}, nil
 }
@@ -382,7 +381,7 @@ func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Re
 // handleOIDCGenerateSignToken generates and signs an OIDC token
 func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// load test key yolo style
-	entry, _ := req.Storage.Get(ctx, "oidc-config/named-key/test")
+	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath)
 	var namedKey NamedKey
 	entry.DecodeJSON(&namedKey)
 
@@ -473,26 +472,22 @@ func expire(keys []*ExpireableKey) []*ExpireableKey {
 	return activeKeys[:insertIndex]
 }
 
-// NamedKey.rotate(overrides) performs a key rotation on a NamedKey
-// ASSUMPTION: overrides make sense and won't cause type conversion errors...
-func (namedKey *NamedKey) rotate(overrides map[string]interface{}) error {
+// NamedKey.rotate(overrides) performs a key rotation on a NamedKey and returns the
+// verification_ttl that was applied.
+// verification_ttl can be overriden with an overrideVerificationTTL value >= 0
+func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (time.Duration, error) {
 	// fail early if the verification ttl of the named key is not parse-able
-	var verificationttlDuration time.Duration
-	verificationttlDurationInterface, ok := overrides["verificationttlDuration"]
-	if ok {
-		verificationttlDuration = verificationttlDurationInterface.(time.Duration)
+	var verificationTTLDuration time.Duration
+	if overrideVerificationTTL >= 0 {
+		verificationTTLDuration, _ = parseutil.ParseDurationSecond(overrideVerificationTTL)
 	} else {
-		var err error
-		verificationttlDuration, err = parseutil.ParseDurationSecond(namedKey.Verificationttl)
-		if err != nil {
-			return err
-		}
+		verificationTTLDuration = namedKey.Verificationttl
 	}
 
 	// generate new key
 	signingKey, publicKey, err := generateKeys(namedKey.SigningAlgorithm)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	// rotation involves overwritting current signing key, updating key ring, and updating global
@@ -509,17 +504,19 @@ func (namedKey *NamedKey) rotate(overrides map[string]interface{}) error {
 		if publicKeys[i].Key.KeyID == rotateID {
 			fmt.Printf("\n--- rotateID match found")
 			publicKeys[i].Expireable = true
-			publicKeys[i].ExpireAt = time.Now().Add(verificationttlDuration)
+			publicKeys[i].ExpireAt = time.Now().Add(verificationTTLDuration)
 			fmt.Printf("\n--- current key[%d]:\n%#v", i, publicKeys[i])
 			break
 		}
 	}
 
-	return nil
+	return verificationTTLDuration, nil
 }
 
 // generateKeys returns a signingKey and publicKey pair
-func generateKeys(algorithm signingAlgorithm) (signingKey jose.JSONWebKey, publicKey ExpireableKey, err error) {
+func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey ExpireableKey, err error) {
+	// 2048 is recommended by RSA Laboratories as a MINIMUM post 2015, 3072 bits
+	// is also seen in the wild, this could be configurable if need be
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return
@@ -532,7 +529,7 @@ func generateKeys(algorithm signingAlgorithm) (signingKey jose.JSONWebKey, publi
 	signingKey = jose.JSONWebKey{
 		Key:       key,
 		KeyID:     id,
-		Algorithm: algorithm.String(),
+		Algorithm: algorithm,
 		Use:       "sig",
 	}
 
@@ -540,23 +537,13 @@ func generateKeys(algorithm signingAlgorithm) (signingKey jose.JSONWebKey, publi
 		Key: jose.JSONWebKey{
 			Key:       &key.PublicKey,
 			KeyID:     id,
-			Algorithm: algorithm.String(),
+			Algorithm: algorithm,
 			Use:       "sig",
 		},
 		Expireable: false,
 		ExpireAt:   time.Time{},
 	}
 	return
-}
-
-// signingAlgorithm.String takes a signingAlgorithm and returns the string representation of that algorithm
-func (a signingAlgorithm) String() string {
-	switch a {
-	case rs256:
-		return "RS256"
-	default:
-		return "unknown"
-	}
 }
 
 type idToken struct {

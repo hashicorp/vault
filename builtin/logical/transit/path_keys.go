@@ -21,7 +21,7 @@ import (
 
 func (b *backend) pathListKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/?",
+		Pattern: "keys/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeysList,
