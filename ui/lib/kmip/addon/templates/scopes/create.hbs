@@ -7,6 +7,6 @@
   </PageHeader>
   <EditForm
     @model={{model}}
-    @onSave={{action "onSave"}}
+    @onSave={{transition-to "scopes.index"}}
     @cancelLinkParams={{array "scopes.index"}}
   />
