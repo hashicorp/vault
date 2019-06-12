@@ -48,7 +48,7 @@ const (
 	accessorPrefix = "accessor/"
 
 	// parentPrefix is the prefix used to store tokens for their
-	// secondar parent based index
+	// secondary parent based index
 	parentPrefix = "parent/"
 
 	// tokenSubPath is the sub-path used for the token store
@@ -539,7 +539,6 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-	//ts.logger.Debug("invalidating key", "key", key)
 
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
