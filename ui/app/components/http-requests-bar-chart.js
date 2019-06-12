@@ -124,6 +124,9 @@ export default Component.extend({
 
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
+
+    bars.exit().remove();
+
     const barsEnter = bars
       .enter()
       .append('rect')
