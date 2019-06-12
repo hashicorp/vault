@@ -8,23 +8,31 @@
   margin: auto;
   overflow: inherit;
 
-  .tick > line {
-    stroke: $light-grey;
+  .tick {
+    line {
+      stroke: $light-grey;
+    }
+
+    text {
+      fill: $grey;
+      font-size: $size-8;
+    }
   }
 
-  .tick > text {
-    fill: $grey;
-    font-size: $size-8;
-  }
+  .gridlines {
+    .domain {
+      stroke: unset;
+    }
 
-  .gridlines > .domain {
-    stroke: unset;
+    line {
+      stroke-dasharray: 5 5;
+    }
   }
 
   .x-axis,
   .y-axis {
     .domain,
-    .tick > line {
+    line {
       stroke: $grey-light;
     }
   }
