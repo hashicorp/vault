@@ -14,7 +14,7 @@ module('Integration | Component | upgrade page', function(hooks) {
 
     assert.equal(find('.page-header .title').textContent.trim(), 'Vault Enterprise', 'renders default title');
     assert.equal(
-      find('[data-test-upgrade-feature-description]').textContent.trim(),
+      find('[data-test-empty-state-title]').textContent.trim(),
       'This is a Vault Enterprise feature.',
       'renders default description'
     );
@@ -33,7 +33,7 @@ module('Integration | Component | upgrade page', function(hooks) {
       'renders default title'
     );
     assert.equal(
-      find('[data-test-upgrade-feature-description]').textContent.trim(),
+      find('[data-test-empty-state-title]').textContent.trim(),
       'Specific Feature Name is a Premium feature.',
       'renders default description'
     );
