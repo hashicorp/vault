@@ -58,6 +58,7 @@
     "d3-scale": "^1.0.7",
     "d3-selection": "^1.3.0",
     "d3-time-format": "^2.1.1",
+    "d3-tooltip": "^0.0.1",
     "date-fns": "^1.29.0",
     "deepmerge": "^2.1.1",
     "doctoc": "^1.4.0",
@@ -162,8 +163,5 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },
-  "dependencies": {
-    "d3-tooltip": "^0.0.1"
   }
 }
