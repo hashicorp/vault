@@ -6,17 +6,16 @@ export default buildRoutes(function() {
   this.route('scopes', { path: '/scopes' }, function() {
     this.route('index', { path: '/' });
     this.route('create');
-    this.route('scope', { path: '/:scope_name' }, function() {
-      this.route('roles', { path: '/roles' }, function() {
-        this.route('index', { path: '/' });
-        this.route('create');
-        this.route('role', { path: '/:role_name' }, function() {
-          this.route('credentials', { path: '/credentials' }, function() {
-            this.route('index', { path: '/' });
-            this.route('cred', { path: '/:serial' });
-          });
-        });
-      });
-    });
+  });
+  this.route('scope', { path: '/scopes/:scope_name/roles' }, function() {
+    this.route('roles', { path: '/' });
+    this.route('roles.create', { path: '/create' });
+  });
+  this.route('role', { path: '/scopes/:scope_name/roles/:role_name' });
+  this.route('role.edit', { path: '/scopes/:scope_name/roles/:role_name/edit' });
+  this.route('credentials', { path: '/scopes/:scope_name/roles/:role_name/credentials' }, function() {
+    this.route('index', { path: '/' });
+    this.route('generate');
+    this.route('show', { path: '/:serial' });
   });
 });
