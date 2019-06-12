@@ -123,7 +123,7 @@ export default Component.extend({
     barChartSVG.select('.gridlines').call(gridlines);
 
     // render the bars
-    const bars = barsContainer.selectAll('.bar').data(parsedCounters);
+    const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
     const barsEnter = bars
       .enter()
       .append('rect')
