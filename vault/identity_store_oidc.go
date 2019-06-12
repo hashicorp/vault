@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -120,6 +122,12 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			},
 			HelpSynopsis:    "read oidc/well-known/certs/ help synopsis here",
 			HelpDescription: "read oidc/well-known/certs/ help description here",
+		},
+		{
+			Pattern: "oidc/token/generate/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.handleOIDCGenerateSignToken(),
+			},
 		},
 	}
 }
@@ -387,6 +395,77 @@ func (i *IdentityStore) handleOIDCReadCerts() framework.OperationFunc {
 	}
 }
 
+// handleOIDCGenerateSignToken generates and signs an OIDC token
+func (i *IdentityStore) handleOIDCGenerateSignToken() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		// load test key yolo style
+		entry, _ := req.Storage.Get(ctx, "oidc-config/named-key/test")
+		var namedKey NamedKey
+		entry.DecodeJSON(&namedKey)
+
+		// generate an OIDC token from entity data
+		accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
+		if err != nil {
+			return nil, err
+		}
+
+		te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
+		if te == nil {
+			return nil, errors.New("No token entry for this token")
+		}
+		fmt.Printf("-- -- --\nreq:\n%#v\n", req)
+		fmt.Printf("-- -- --\nte:\n%#v\n", te)
+		if err != nil {
+			return nil, err
+		}
+		if te.EntityID == "" {
+			return nil, errors.New("No EntityID associated with this request's Vault token")
+		}
+
+		now := time.Now()
+		idToken := idToken{
+			Issuer:   "Issuer",
+			Subject:  te.EntityID,
+			Audience: []string{"client_id_of_relying_party"},
+			Expiry:   now.Add(2 * time.Minute).Unix(),
+			IssuedAt: now.Unix(),
+			Claims:   te,
+		}
+
+		// signing
+		// keyRing, _ := i.createKeyRing("foo")
+		// privWebKey, pubWebKey := keyRing.GenerateWebKeys()
+		// signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
+		payload, err := json.Marshal(idToken)
+		if err != nil {
+			return nil, err
+		}
+
+		signingKey := jose.SigningKey{Key: namedKey.SigningKey, Algorithm: jose.SignatureAlgorithm("RS256")}
+		signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("new signier: %v", err)
+		}
+		signature, err := signer.Sign(payload)
+		if err != nil {
+			return nil, fmt.Errorf("signing payload: %v", err)
+		}
+		signedIdToken, _ := signature.CompactSerialize()
+
+		jwks := jose.JSONWebKeySet{
+			Keys: make([]jose.JSONWebKey, 1),
+		}
+		jwks.Keys[0] = namedKey.SigningKey.Public()
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"token": signedIdToken,
+				"pub":   jwks,
+			},
+		}, nil
+	}
+}
+
 // --- some helper methods ---
 
 // expire returns a lice of ExpireableKey with the expired keys removed
@@ -498,7 +577,6 @@ func (a signingAlgorithm) String() string {
 	}
 }
 
-/*
 type idToken struct {
 	// ---- OIDC CLAIMS WITH NOTES FROM SPEC ----
 	// required fields
@@ -531,34 +609,35 @@ type idToken struct {
 
 	// maybe userpass auth is a lower level than approle or userpass ent with mfa enabled...
 	// here is one spec...
+	/*
+		+--------------------------+---------+---------+---------+---------+
+		| Token Type               | Level 1 | Level 2 | Level 3 | Level 4 |
+		+--------------------------+---------+---------+---------+---------+
+		| Hard crypto token        | X       | X       | X       | X       |
+		|                          |         |         |         |         |
+		| One-time password device | X       | X       | X       |         |
+		|                          |         |         |         |         |
+		| Soft crypto token        | X       | X       | X       |         |
+		|                          |         |         |         |         |
+		| Passwords & PINs         | X       | X       |         |         |
+		+--------------------------+---------+---------+---------+---------+
 
-	+--------------------------+---------+---------+---------+---------+
-	| Token Type               | Level 1 | Level 2 | Level 3 | Level 4 |
-	+--------------------------+---------+---------+---------+---------+
-	| Hard crypto token        | X       | X       | X       | X       |
-	|                          |         |         |         |         |
-	| One-time password device | X       | X       | X       |         |
-	|                          |         |         |         |         |
-	| Soft crypto token        | X       | X       | X       |         |
-	|                          |         |         |         |         |
-	| Passwords & PINs         | X       | X       |         |         |
-	+--------------------------+---------+---------+---------+---------+
-
-	 +------------------------+---------+---------+---------+---------+
-	 | Protect Against        | Level 1 | Level 2 | Level 3 | Level 4 |
-	 +------------------------+---------+---------+---------+---------+
-	 | On-line guessing       | X       | X       | X       | X       |
-	 |                        |         |         |         |         |
-	 | Replay                 | X       | X       | X       | X       |
-	 |                        |         |         |         |         |
-	 | Eavesdropper           |         | X       | X       | X       |
-	 |                        |         |         |         |         |
-	 | Verifier impersonation |         |         | X       | X       |
-	 |                        |         |         |         |         |
-	 | Man-in-the-middle      |         |         | X       | X       |
-	 |                        |         |         |         |         |
-	 | Session hijacking      |         |         |         | X       |
-	 +------------------------+---------+---------+---------+---------+
+		 +------------------------+---------+---------+---------+---------+
+		 | Protect Against        | Level 1 | Level 2 | Level 3 | Level 4 |
+		 +------------------------+---------+---------+---------+---------+
+		 | On-line guessing       | X       | X       | X       | X       |
+		 |                        |         |         |         |         |
+		 | Replay                 | X       | X       | X       | X       |
+		 |                        |         |         |         |         |
+		 | Eavesdropper           |         | X       | X       | X       |
+		 |                        |         |         |         |         |
+		 | Verifier impersonation |         |         | X       | X       |
+		 |                        |         |         |         |         |
+		 | Man-in-the-middle      |         |         | X       | X       |
+		 |                        |         |         |         |         |
+		 | Session hijacking      |         |         |         | X       |
+		 +------------------------+---------+---------+---------+---------+
+	*/
 	AuthenticationMethodsReference string `json:"amr,omitempty"`
 	// I think this is only useful if downstream services will be making decisions based on what auth method was used to acquire a Vault token
 	// which is something that we are trying to abstract away in using entityID as our sub. Think we can remove this.
@@ -581,6 +660,7 @@ type idToken struct {
 	//FederatedIDClaims *federatedIDClaims `json:"federated_claims,omitempty"`
 }
 
+/*
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/token - To register generate a new odic token
 // oidc/key/:key - Create a new keyring
