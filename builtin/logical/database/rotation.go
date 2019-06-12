@@ -398,7 +398,9 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing database rotation queue")
 
-		// poll for a PutWAL call that does not return a "read-only storage" error
+		// Poll for a PutWAL call that does not return a "read-only storage" error.
+		// This ensures the startup phases of loading WAL entries from any possible
+		// failed rotations can complete without error when deleting from storage.
 	READONLY_LOOP:
 		for {
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
