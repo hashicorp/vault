@@ -102,21 +102,20 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 		}
 	}
 
-	if originalBucket.Key != replacementBucket.Key {
-		// no original bucket, can't report any deletions
-		return present, make([]*Item, 0), nil
+	// Is the new bucket a replacement, or new?  If it's new, nothing to compare against.
+	if originalBucket.Key == replacementBucket.Key {
+		// Any item not present in the new bucket *might* be deleted, or
+		// it might be elsewhere (in which case we want to report that value instead,
+		// to make sure the correct version is being used.)
+		maybeDeleted := itemDifferenceBetween(originalBucket, replacementBucket)
+		var revisit []*Item
+		deleted, revisit, err = s.identifyItemsAbsentOrShadowed(bucketKey, maybeDeleted)
+		if err != nil {
+			// Return partial information?
+			return present, nil, err
+		}
+		present = append(present, revisit...)
 	}
-
-	// Any item not present in the new bucket *might* be deleted, or
-	// it might be elsewhere (in which case we want to report that value instead,
-	// to make sure the correct version is being used.)
-	maybeDeleted := itemDifferenceBetween(originalBucket, replacementBucket)
-	deleted, revisit, err := s.identifyItemsAbsentOrShadowed(bucketKey, maybeDeleted)
-	if err != nil {
-		// Return partial information?
-		return present, nil, err
-	}
-	present = append(present, revisit...)
 
 	// Swap the replacement bucket in to the cache (or delete)
 	cacheKey := s.GetCacheKey(bucketKey)
@@ -164,7 +163,8 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 			for _, b := range bucketsToCheck {
 				// Skip originalBucket
 				if b.Key != bucketKey {
-					if data, found := b.ItemMap[request.ID]; found {
+					var data []byte
+					if data, found = b.ItemMap[request.ID]; found {
 						revisit = append(revisit, &Item{
 							ID:   request.ID,
 							Data: data,
@@ -203,7 +203,7 @@ func (s *StoragePackerV2) bucketAndAllParents(bucket *LockedBucket) []*LockedBuc
 // Given a bucket key, return the cache key for its parent
 func (s *StoragePackerV2) parentCacheKey(bucketKey string) string {
 	bucketCacheKey := s.GetCacheKey(bucketKey)
-	if len(bucketCacheKey) <= s.BaseBucketBits {
+	if len(bucketCacheKey) < s.BaseBucketBits/4 {
 		return ""
 	} else {
 		n := len(bucketCacheKey)
