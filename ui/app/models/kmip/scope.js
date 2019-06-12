@@ -1,8 +1,12 @@
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 
+const { attr } = DS;
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+
 export default DS.Model.extend({
-  useOpenAPI: true,
-  getHelpUrl(path) {
-    return `/v1/${path}/scope/example?help=1`;
-  },
+  name: attr('string'),
+  attrs: computed(function() {
+    return expandAttributeMeta(this, ['name']);
+  }),
 });

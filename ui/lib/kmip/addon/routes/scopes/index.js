@@ -4,12 +4,11 @@ import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   store: service(),
+  secretMountPath: service(),
   model(params) {
-    let model = [{ id: 'a scope' }];
-    model.set('meta', { total: 1 });
-    return model;
     return this.store
       .lazyPaginatedQuery('kmip/scope', {
+        backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
