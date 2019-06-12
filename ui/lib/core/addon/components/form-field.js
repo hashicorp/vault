@@ -3,6 +3,7 @@ import { computed } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
+import layout from '../templates/components/form-field';
 
 /**
  * @module FormField
@@ -22,6 +23,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default Component.extend({
+  layout,
   'data-test-field': true,
   classNames: ['field'],
 

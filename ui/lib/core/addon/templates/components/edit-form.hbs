@@ -18,9 +18,17 @@
   <MessageError @model={{model}} data-test-edit-form-error />
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
-    {{#each model.fields as |attr|}}
-      {{form-field data-test-field attr=attr model=model}}
-    {{/each}}
+    {{#if model.attrs}}
+      {{#each model.attrs as |attr|}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+        />
+      {{/each}}
+    {{else if model.fieldGroups}}
+      <FormFieldGroups @model={{model}} />
+    {{/if}}
   </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">

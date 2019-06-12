@@ -2,8 +2,10 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
+import layout from '../templates/components/edit-form';
 
 export default Component.extend({
+  layout,
   flashMessages: service(),
 
   // public API
