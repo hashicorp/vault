@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -36,8 +37,7 @@ func Test_OIDC_TestABC(t *testing.T) {
     "region": "west",
     "stuff": "{{identity.entity.metadata}}",
     "groups": "{{identity.entity.group_names}}",
-    "group_ids": "{{identity.entity.group_ids}}",
-    "notamatch": "{{identity.entity.nope}}"
+    "group_ids": "{{identity.entity.group_ids}}"
   }
 }
 `
@@ -58,14 +58,23 @@ func Test_OIDC_TestABC(t *testing.T) {
     "region": "west",
     "stuff": {"color":"green","size":"small"},
     "groups": ["g1","g2"],
-    "group_ids": ["a08b0c02","239bef91"],
-    "notamatch": "{{identity.entity.nope}}"
+    "group_ids": ["a08b0c02","239bef91"]
   }
 }
 `
 
 	if diff := deep.Equal(out, exp); diff != nil {
 		t.Fatal(diff)
+	}
+
+	tpl = `
+{
+	"notamatch": "{{identity.entity.nope}}"
+}
+`
+	_, err = NewCompiledTemplate(tpl)
+	if err == nil || !strings.Contains(err.Error(), "invalid template parameter") {
+		t.Fatal("expected error, got nil")
 	}
 }
 
