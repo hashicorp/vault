@@ -19,7 +19,7 @@ var testEntity = &Entity{
 	},
 	Aliases: []*Alias{
 		{
-			Name: "aws_123",
+			MountAccessor: "aws_123",
 			Metadata: map[string]string{
 				"service": "ec2",
 				"region":  "west",

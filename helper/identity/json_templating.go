@@ -289,9 +289,9 @@ func groupsToArray(groups []*Group, element string) string {
 	return out.String()
 }
 
-func findAlias(name string, aliases []*Alias) *Alias {
+func findAlias(mountAccessor string, aliases []*Alias) *Alias {
 	for _, alias := range aliases {
-		if alias.Name == name {
+		if alias.MountAccessor == mountAccessor {
 			return alias
 		}
 	}
