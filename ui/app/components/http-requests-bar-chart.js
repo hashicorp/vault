@@ -3,6 +3,8 @@ import d3 from 'd3-selection';
 import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
+import d3Tip from 'd3-tip';
+import d3Array from 'd3-array';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
@@ -26,13 +28,17 @@ import { task, waitForEvent } from 'ember-concurrency';
  * ]
  */
 
+const COUNTERS = [
+  { start_time: '2019-04-01T00:00:00Z', total: 5500 },
+  { start_time: '2019-05-01T00:00:00Z', total: 4500 },
+  { start_time: '2019-06-01T00:00:00Z', total: 5000 },
+];
+
 const HEIGHT = 240;
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
-  counters: null,
-
-  /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
+  counters: COUNTERS,
   margin: { top: 24, right: 16, bottom: 24, left: 16 },
   padding: 0.04,
   width: 0,
@@ -83,17 +89,40 @@ export default Component.extend({
     });
   },
 
+  updateActiveDatum() {},
+
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters } = this;
     const height = this.height();
     const barChartSVG = d3.select('.http-requests-bar-chart');
     const barsContainer = d3.select('#bars-container');
 
+    // render the tooltip
+    // trigger it on the chart hover
+    // look up the appropriate bar based on x-coordinate
+    const chart = this;
+    const tip = d3Tip()
+      .attr('class', 'd3-tooltip')
+      .html(function(d) {
+        const mouseXCoord = d3.mouse(this)[0];
+        const eachBand = xScale.step();
+        const index = Math.floor(mouseXCoord / eachBand);
+        const val = yScale.domain()[index];
+        console.log(parsedCounters);
+        console.log(mouseXCoord);
+        // debugger;
+        return `<p>${parsedCounters[index].total}</p>`;
+      });
+
+    barChartSVG.call(tip);
+
     // render the chart
     d3.select('.http-requests-bar-chart')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
-      .attr('viewBox', `0 0 ${width} ${height}`);
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .on('mousemove', tip.show)
+      .on('mouseleave', tip.hide);
 
     // scale and render the axes
     const yAxis = d3Axis
@@ -127,8 +156,6 @@ export default Component.extend({
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
 
-    bars.exit().remove();
-
     const barsEnter = bars
       .enter()
       .append('rect')
@@ -141,6 +168,8 @@ export default Component.extend({
       // the offset between each bar
       .attr('x', counter => xScale(counter.start_time))
       .attr('y', counter => yScale(counter.total));
+
+    bars.exit().remove();
   },
 
   updateDimensions() {
