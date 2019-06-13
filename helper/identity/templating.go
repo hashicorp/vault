@@ -1,9 +1,15 @@
 package identity
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/errwrap"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
@@ -16,11 +22,12 @@ var (
 )
 
 type PopulateStringInput struct {
-	ValidityCheckOnly bool
-	String            string
-	Entity            *Entity
-	Groups            []*Group
-	Namespace         *namespace.Namespace
+	AllowMissingSelectors bool
+	ValidityCheckOnly     bool
+	String                string
+	Entity                *Entity
+	Groups                []*Group
+	Namespace             *namespace.Namespace
 }
 
 func PopulateString(p *PopulateStringInput) (bool, string, error) {
@@ -61,7 +68,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		case 2:
 			subst = true
 			if !p.ValidityCheckOnly {
-				tmplStr, err := performTemplating(p.Namespace, strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups)
+				tmplStr, err := performTemplating(p.Namespace, strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups, p.AllowMissingSelectors)
 				if err != nil {
 					return false, "", err
 				}
@@ -76,7 +83,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	return subst, b.String(), nil
 }
 
-func performTemplating(ns *namespace.Namespace, input string, entity *Entity, groups []*Group) (string, error) {
+func performTemplating(ns *namespace.Namespace, input string, entity *Entity, groups []*Group, allowMissingSelectors bool) (string, error) {
 	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
 		switch {
 		case trimmed == "id":
@@ -86,12 +93,25 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 				return "", ErrTemplateValueNotFound
 			}
 			return alias.Name, nil
-		case strings.HasPrefix(trimmed, "metadata."):
-			val, ok := alias.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
-			if !ok {
-				return "", ErrTemplateValueNotFound
+		case strings.HasPrefix(trimmed, "metadata.") || trimmed == "metadata":
+			split := strings.SplitN(trimmed, ".", 2)
+
+			switch len(split) {
+			case 1:
+				// all metadata as json, without outer braces
+				jsonMetadata, err := json.Marshal(alias.Metadata)
+				if err != nil {
+					return "", err
+				}
+				jsonMetadata = bytes.Trim(jsonMetadata, "{}")
+				return string(jsonMetadata), nil
+			case 2:
+				val, ok := alias.Metadata[split[1]]
+				if !ok && !allowMissingSelectors {
+					return "", ErrTemplateValueNotFound
+				}
+				return val, nil
 			}
-			return val, nil
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -102,16 +122,35 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 		case trimmed == "id":
 			return entity.ID, nil
 		case trimmed == "name":
-			if entity.Name == "" {
+			if entity.Name == "" && !allowMissingSelectors {
 				return "", ErrTemplateValueNotFound
 			}
 			return entity.Name, nil
-		case strings.HasPrefix(trimmed, "metadata."):
-			val, ok := entity.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
-			if !ok {
-				return "", ErrTemplateValueNotFound
+		case strings.HasPrefix(trimmed, "metadata.") || trimmed == "metadata":
+			split := strings.SplitN(trimmed, ".", 2)
+
+			switch len(split) {
+			case 1:
+				// all metadata as json, without outer braces
+				jsonMetadata, err := json.Marshal(entity.Metadata)
+				if err == nil {
+					jsonMetadata = bytes.Trim(jsonMetadata, "{}")
+					return string(jsonMetadata), nil
+				}
+				return "", nil
+			case 2:
+				val, ok := entity.Metadata[split[1]]
+				if !ok && !allowMissingSelectors {
+					return "", ErrTemplateValueNotFound
+				}
+				return val, nil
 			}
-			return val, nil
+		case trimmed == "group_names":
+			return listGroups(groups, "name"), nil
+
+		case trimmed == "group_ids":
+			return listGroups(groups, "id"), nil
+
 		case strings.HasPrefix(trimmed, "aliases."):
 			split := strings.SplitN(strings.TrimPrefix(trimmed, "aliases."), ".", 2)
 			if len(split) != 2 {
@@ -125,7 +164,10 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 				}
 			}
 			if found == nil {
-				return "", errors.New("alias not found")
+				if !allowMissingSelectors {
+					return "", errors.New("alias not found")
+				}
+				return "", nil
 			}
 			return performAliasTemplating(split[1], found)
 		}
@@ -196,6 +238,38 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 		return "", ErrTemplateValueNotFound
 	}
 
+	performTimeTemplating := func(trimmed string) (string, error) {
+		opsSplit := strings.SplitN(trimmed, ".", 3)
+
+		if opsSplit[0] != "now" {
+			return "", fmt.Errorf("invalid time selector %q", opsSplit[0])
+		}
+
+		result := time.Now()
+		switch len(opsSplit) {
+		case 1:
+			// return current time
+		case 2:
+			return "", errors.New("missing time operand")
+		case 3:
+			duration, err := time.ParseDuration(opsSplit[2])
+			if err != nil {
+				return "", errwrap.Wrapf("invalid duration: {{err}}", err)
+			}
+
+			switch opsSplit[1] {
+			case "plus":
+				result = result.Add(duration)
+			case "minus":
+				result = result.Add(-duration)
+			default:
+				return "", fmt.Errorf("invalid time operator %q", opsSplit[1])
+			}
+		}
+
+		return strconv.FormatInt(result.Unix(), 10), nil
+	}
+
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
 		if entity == nil {
@@ -208,7 +282,28 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 			return "", ErrNoGroupsAttachedToToken
 		}
 		return performGroupsTemplating(strings.TrimPrefix(input, "identity.groups."))
+
+	case strings.HasPrefix(input, "time."):
+		return performTimeTemplating(strings.TrimPrefix(input, "time."))
 	}
 
 	return "", ErrTemplateValueNotFound
+}
+
+func listGroups(groups []*Group, element string) string {
+	var out strings.Builder
+
+	for _, g := range groups {
+		var v string
+		switch element {
+		case "name":
+			v = g.Name
+		case "id":
+			v = g.ID
+		}
+		out.WriteString(strconv.Quote(v))
+		out.WriteString(",")
+	}
+
+	return strings.TrimSuffix(out.String(), ",")
 }

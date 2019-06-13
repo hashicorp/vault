@@ -2,28 +2,62 @@ package identity
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
 func TestPopulate_Basic(t *testing.T) {
 	var tests = []struct {
-		name              string
-		input             string
-		output            string
-		err               error
-		entityName        string
-		metadata          map[string]string
-		aliasAccessor     string
-		aliasID           string
-		aliasName         string
-		nilEntity         bool
-		validityCheckOnly bool
-		aliasMetadata     map[string]string
-		groupName         string
-		groupMetadata     map[string]string
+		allowMissingSelectors bool
+		name                  string
+		input                 string
+		output                string
+		err                   error
+		entityName            string
+		metadata              map[string]string
+		aliasAccessor         string
+		aliasID               string
+		aliasName             string
+		nilEntity             bool
+		validityCheckOnly     bool
+		aliasMetadata         map[string]string
+		groupName             string
+		groupMetadata         map[string]string
+		groupMemberships      []string
 	}{
+		// time.* tests. Keep tests with time.Now() at the front to avoid false
+		// positives due to the second changing during the test
+		{
+			name:   "time now",
+			input:  "{{time.now}}",
+			output: strconv.Itoa(int(time.Now().Unix())),
+		},
+		{
+			name:   "time plus",
+			input:  "{{time.now.plus.1h}}",
+			output: strconv.Itoa(int(time.Now().Unix() + (60 * 60))),
+		},
+		{
+			name:   "time plus",
+			input:  "{{time.now.minus.5m}}",
+			output: strconv.Itoa(int(time.Now().Unix() - (5 * 60))),
+		},
+		{
+			name:  "invalid operator",
+			input: "{{time.now.divide.5m}}",
+			err:   errors.New("invalid time operator \"divide\""),
+		},
+		{
+			name:  "time missing operand",
+			input: "{{time.now.plus}}",
+			err:   errors.New("missing time operand"),
+		},
+
 		{
 			name:   "no_templating",
 			input:  "path foobar {",
@@ -143,6 +177,102 @@ func TestPopulate_Basic(t *testing.T) {
 			groupName:  "groupName",
 			err:        errors.New("entity is not a member of group \"hroupName\""),
 		},
+
+		// missing selector cases
+		{
+			allowMissingSelectors: true,
+			name:                  "entity id",
+			input:                 "{{identity.entity.id}}",
+			output:                `entityID`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "entity name",
+			input:                 "{{identity.entity.name}}",
+			entityName:            "entityName",
+			output:                `entityName`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "entity name missing",
+			input:                 "{{identity.entity.name}}",
+			output:                ``,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "one metadata key",
+			input:                 "{{identity.entity.metadata.color}}",
+			metadata:              map[string]string{"foo": "bar", "color": "green"},
+			output:                `green`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "one metadata key not found",
+			input:                 "{{identity.entity.metadata.size}}",
+			metadata:              map[string]string{"foo": "bar", "color": "green"},
+			output:                ``,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "all entity metadata",
+			input:                 "{{identity.entity.metadata}}",
+			metadata:              map[string]string{"foo": "bar", "color": "green"},
+			output:                `"color":"green","foo":"bar"`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "group_names",
+			input:                 "{{identity.entity.group_names}}",
+			groupMemberships:      []string{"foo", "bar"},
+			output:                `"foo","bar"`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "group_ids",
+			input:                 "{{identity.entity.group_ids}}",
+			groupMemberships:      []string{"foo", "bar"},
+			output:                `"foo_0","bar_1"`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "one alias metadata key",
+			input:                 "{{identity.entity.aliases.aws_123.metadata.color}}",
+			aliasAccessor:         "aws_123",
+			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
+			output:                `green`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "one alias metadata key not found",
+			input:                 "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor:         "aws_123",
+			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
+			output:                ``,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "one alias metadata, accessor not found",
+			input:                 "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor:         "not_gonna_match",
+			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
+			output:                ``,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "all alias metadata",
+			input:                 "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor:         "aws_123",
+			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
+			output:                `"color":"green","foo":"bar"`,
+		},
+		{
+			allowMissingSelectors: true,
+			name:                  "all alias metadata, accessor not found",
+			input:                 "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor:         "not_gonna_match",
+			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
+			output:                ``,
+		},
 	}
 
 	for _, test := range tests {
@@ -173,12 +303,23 @@ func TestPopulate_Basic(t *testing.T) {
 				NamespaceID: namespace.RootNamespace.ID,
 			})
 		}
+
+		if test.groupMemberships != nil {
+			for i, groupName := range test.groupMemberships {
+				groups = append(groups, &Group{
+					ID:   fmt.Sprintf("%s_%d", groupName, i),
+					Name: groupName,
+				})
+			}
+		}
+
 		subst, out, err := PopulateString(&PopulateStringInput{
-			ValidityCheckOnly: test.validityCheckOnly,
-			String:            test.input,
-			Entity:            entity,
-			Groups:            groups,
-			Namespace:         namespace.RootNamespace,
+			AllowMissingSelectors: test.allowMissingSelectors,
+			ValidityCheckOnly:     test.validityCheckOnly,
+			String:                test.input,
+			Entity:                entity,
+			Groups:                groups,
+			Namespace:             namespace.RootNamespace,
 		})
 		if err != nil {
 			if test.err == nil {
@@ -189,10 +330,97 @@ func TestPopulate_Basic(t *testing.T) {
 			}
 		}
 		if out != test.output {
-			t.Fatalf("%s: bad output: %s", test.name, out)
+			t.Fatalf("%s: bad output: %s, expected: %s", test.name, out, test.output)
 		}
 		if err == nil && !subst && out != test.input {
 			t.Fatalf("%s: bad subst flag", test.name)
 		}
+	}
+}
+
+func TestPopulate_FullObject(t *testing.T) {
+	var testEntity = &Entity{
+		ID:   "abc-123",
+		Name: "Entity Name",
+		Metadata: map[string]string{
+			"color":         "green",
+			"size":          "small",
+			"non-printable": "\"\n\t",
+		},
+		Aliases: []*Alias{
+			{
+				MountAccessor: "aws_123",
+				Metadata: map[string]string{
+					"service": "ec2",
+					"region":  "west",
+				},
+			},
+		},
+	}
+
+	var testGroups = []*Group{
+		{ID: "a08b0c02", Name: "g1"},
+		{ID: "239bef91", Name: "g2"},
+	}
+
+	template := `
+			{
+			    "id": "{{identity.entity.id}}",
+			    "name": "{{identity.entity.name}}",
+			    "all metadata": { {{identity.entity.metadata}} },
+			    "one metadata key": "{{identity.entity.metadata.color}}",
+			    "one metadata key not found": "{{identity.entity.metadata.asldfk}}",
+			    "alias metadata": { {{identity.entity.aliases.aws_123.metadata}} },
+			    "alias not found metadata": { {{identity.entity.aliases.blahblah.metadata}} },
+			    "one alias metadata key": "{{identity.entity.aliases.aws_123.metadata.service}}",
+			    "one not found alias metadata key": "{{identity.entity.aliases.blahblah.metadata.service}}",
+			    "group names": [{{identity.entity.group_names}}],
+			    "group ids": [{{identity.entity.group_ids}}],
+			    "time now": {{time.now}},
+			    "time plus": {{time.now.plus.10s}},
+			    "time minus": {{time.now.minus.1h}},
+				"repeated and": {"nested element": "{{identity.entity.name}}"}
+			}`
+
+	expected := `
+			{
+			    "id": "abc-123",
+			    "name": "Entity Name",
+			    "all metadata": { "color":"green","non-printable":"\"\n\t","size":"small" },
+			    "one metadata key": "green",
+			    "one metadata key not found": "",
+			    "alias metadata": { "region":"west","service":"ec2" },
+			    "alias not found metadata": {  },
+			    "one alias metadata key": "ec2",
+			    "one not found alias metadata key": "",
+			    "group names": ["g1","g2"],
+			    "group ids": ["a08b0c02","239bef91"],
+			    "time now": <now>,
+			    "time plus": <plus>,
+			    "time minus": <minus>,
+				"repeated and": {"nested element": "Entity Name"}
+			}`
+
+	now := time.Now().Unix()
+	minus := now - (60 * 60)
+	plus := now + 10
+
+	expected = strings.ReplaceAll(expected, "<now>", strconv.FormatInt(now, 10))
+	expected = strings.ReplaceAll(expected, "<plus>", strconv.FormatInt(plus, 10))
+	expected = strings.ReplaceAll(expected, "<minus>", strconv.FormatInt(minus, 10))
+
+	input := &PopulateStringInput{
+		AllowMissingSelectors: true,
+		String:                template,
+		Entity:                testEntity,
+		Groups:                testGroups,
+	}
+	_, out, err := PopulateString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if out != expected {
+		t.Fatalf("expected:\n%s\n\ngot:\n%s", expected, out)
 	}
 }
