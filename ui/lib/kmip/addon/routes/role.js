@@ -3,10 +3,13 @@ import { inject as service } from '@ember/service';
 
 export default Route.extend({
   store: service(),
+  secretMountPath: service(),
   model(params) {
-    let model = { id: 'serial-beep-boop', get: true, activate: true };
-    return model;
-    return this.store.findRecord('kmip/role');
+    return this.store.queryRecord('kmip/role', {
+      backend: this.secretMountPath.currentPath,
+      scope: params.scope_name,
+      id: params.role_name,
+    });
   },
 
   setupController(controller) {

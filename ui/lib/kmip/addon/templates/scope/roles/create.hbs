@@ -1,0 +1,13 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Create a role
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<EditForm
+  @model={{model}}
+  @mode="create"
+  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
+  @cancelLinkParams={{array "scope.roles" this.scope}}
+/>

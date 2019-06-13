@@ -21,7 +21,7 @@ const routeFor = function(type, mode, urls) {
   // urls object should have create, list, show keys
   // so we'll return that here
   if (urls) {
-    return urls[type.slice().replace('-root', '')];
+    return urls[type.replace('-root', '')];
   }
   let useSuffix = true;
   const typeVal = mode === 'secrets' || mode === 'leases' ? type : type.replace('-root', '');
@@ -92,11 +92,17 @@ export default Component.extend(FocusOnInsertMixin, {
       if (mode === 'policies') {
         return;
       }
-      let route = routeFor('create', mode, urls);
+      let route = routeFor('create', mode, this.urls);
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
             initialKey: val,
+          },
+        });
+      } else if (this.urls) {
+        this.transitionToRoute(route, {
+          queryParams: {
+            initialKey: this.keyForNav(val),
           },
         });
       } else {

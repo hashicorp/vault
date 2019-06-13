@@ -24,10 +24,14 @@
           data-test-field
           @attr={{attr}}
           @model={{model}}
+          @mode={{@mode}}
         />
       {{/each}}
     {{else if model.fieldGroups}}
-      <FormFieldGroups @model={{model}} />
+      <FormFieldGroups
+        @model={{model}}
+        @mode={{@mode}}
+      />
     {{/if}}
   </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
