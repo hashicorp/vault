@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tokenhelper"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -3628,7 +3628,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 	{
 		roleEntry := &tsRoleEntry{
 			Name: "test",
-			TokenParams: tokenhelper.TokenParams{
+			TokenParams: tokenutil.TokenParams{
 				TokenType: logical.TokenTypeBatch,
 			},
 			Period:         time.Second,
@@ -3650,7 +3650,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		}
 		expRoleEntry := &tsRoleEntry{
 			Name: "test",
-			TokenParams: tokenhelper.TokenParams{
+			TokenParams: tokenutil.TokenParams{
 				TokenPeriod:         time.Second,
 				TokenExplicitMaxTTL: time.Hour,
 				TokenBoundCIDRs:     boundCIDRs,

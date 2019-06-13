@@ -1,4 +1,4 @@
-package tokenhelper
+package tokenutil
 
 import (
 	"errors"

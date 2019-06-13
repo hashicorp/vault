@@ -32,7 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tokenhelper"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/mapstructure"
@@ -409,7 +409,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 	}
 
-	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
+	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
 	p = append(p, rolesPath)
 
 	return p
@@ -579,7 +579,7 @@ func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
-	tokenhelper.TokenParams
+	tokenutil.TokenParams
 
 	// The name of the role. Embedded so it can be used for pathing
 	Name string `json:"name" mapstructure:"name" structs:"name"`
