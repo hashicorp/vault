@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 
 	metrics "github.com/armon/go-metrics"
@@ -188,7 +189,7 @@ type Core struct {
 
 	raftChallenge *physical.EncryptedBlobInfo
 
-	raftLeaderAddr string
+	raftLeaderClient *api.Client
 
 	raftLeaderBarrierConfig *SealConfig
 
@@ -369,6 +370,8 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
+	// The UUID used to hold the leader lock. Only set on active node
+	leaderUUID string
 
 	// CORS Information
 	corsConfig *CORSConfig
@@ -879,10 +882,14 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 		}
 
 		if c.isRaftUnseal() {
-			if err := c.joinRaftSendAnswer(ctx, c.raftLeaderAddr, c.raftChallenge, c.seal.GetAccess()); err != nil {
+			if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
 				return false, err
 			}
-
+			// Reset the state
+			c.raftUnseal = false
+			c.raftChallenge = nil
+			c.raftLeaderBarrierConfig = nil
+			c.raftLeaderClient = nil
 			go func() {
 				keyringFound := false
 				defer func() {
@@ -891,11 +898,6 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 						if err != nil {
 							c.logger.Error("failed to unseal", "error", err)
 						}
-						// Reset the state
-						c.raftUnseal = false
-						c.raftChallenge = nil
-						c.raftLeaderBarrierConfig = nil
-						c.raftLeaderAddr = ""
 					}
 				}()
 				for {

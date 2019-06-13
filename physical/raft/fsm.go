@@ -26,6 +26,7 @@ import (
 const (
 	deleteOp uint32 = 1 << iota
 	putOp
+	restoreCallbackOp
 )
 
 var (
@@ -40,6 +41,8 @@ var (
 var _ physical.Backend = (*FSM)(nil)
 var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
+
+type restoreCallback func() error
 
 // FSMApplyResponse is returned from an FSM apply. It indicates if the apply was
 // successful or not.
@@ -59,10 +62,14 @@ type FSM struct {
 
 	db *bolt.DB
 
+	// retoreCb is called after we've restored a snapshot
+	restoreCb restoreCallback
+
 	// latestIndex and latestTerm are the term and index of the last log we
 	// received
-	latestIndex  *uint64
-	latestTerm   *uint64
+	latestIndex *uint64
+	latestTerm  *uint64
+	// latestConfig is the latest server configuration we've seen
 	latestConfig atomic.Value
 
 	// This is just used in tests to disable to storing the latest indexes and
@@ -95,11 +102,14 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
-		b, err := tx.CreateBucketIfNotExists(dataBucketName)
+		_, err := tx.CreateBucketIfNotExists(dataBucketName)
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %v", err)
 		}
-
+		b, err := tx.CreateBucketIfNotExists(configBucketName)
+		if err != nil {
+			return fmt.Errorf("failed to create bucket: %v", err)
+		}
 		// Read in our latest index and term and populate it inmemory
 		val := b.Get(latestIndexKey)
 		if val != nil {
@@ -163,6 +173,52 @@ func (f *FSM) witnessIndex(i *IndexValue) {
 		atomic.StoreUint64(f.latestIndex, i.Index)
 		atomic.StoreUint64(f.latestTerm, i.Term)
 	}
+}
+
+func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configuration raft.Configuration) error {
+	var indexBytes []byte
+	latestIndex, _ := f.LatestState()
+
+	latestIndex.Index = index
+	latestIndex.Term = term
+
+	var err error
+	indexBytes, err = proto.Marshal(latestIndex)
+	if err != nil {
+		return err
+	}
+
+	protoConfig := raftConfigurationToProtoConfiguration(configurationIndex, configuration)
+	configBytes, err := proto.Marshal(protoConfig)
+	if err != nil {
+		return err
+	}
+
+	if f.storeLatestState {
+		err = f.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket(configBucketName)
+			err := b.Put(latestConfigKey, configBytes)
+			if err != nil {
+				return err
+			}
+
+			err = b.Put(latestIndexKey, indexBytes)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	atomic.StoreUint64(f.latestIndex, index)
+	atomic.StoreUint64(f.latestTerm, term)
+	f.latestConfig.Store(protoConfig)
+
+	return nil
 }
 
 // Delete deletes the given key from the bolt file.
@@ -313,12 +369,18 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	index, err := proto.Marshal(&IndexValue{
-		Term:  log.Term,
-		Index: log.Index,
-	})
-	if err != nil {
-		panic("failed to store data")
+	// Only advance latest pointer if this log has a higher index value than
+	// what we have seen in the past.
+	var logIndex []byte
+	latestIndex, _ := f.LatestState()
+	if latestIndex.Index < log.Index {
+		logIndex, err = proto.Marshal(&IndexValue{
+			Term:  log.Term,
+			Index: log.Index,
+		})
+		if err != nil {
+			panic("failed to store data")
+		}
 	}
 
 	err = f.db.Update(func(tx *bolt.Tx) error {
@@ -330,6 +392,11 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 				err = b.Put([]byte(op.Key), op.Value)
 			case deleteOp:
 				err = b.Delete([]byte(op.Key))
+			case restoreCallbackOp:
+				if f.restoreCb != nil {
+					// Kick off the restore callback function in a go routine
+					go f.restoreCb()
+				}
 			default:
 				return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 			}
@@ -339,8 +406,9 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		}
 
 		// TODO: benchmark so we can know how much time this adds
-		if f.storeLatestState {
-			err = b.Put(latestIndexKey, index)
+		if f.storeLatestState && len(logIndex) > 0 {
+			b := tx.Bucket(configBucketName)
+			err = b.Put(latestIndexKey, logIndex)
 			if err != nil {
 				return err
 			}
@@ -352,8 +420,11 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		panic("failed to store data")
 	}
 
-	atomic.StoreUint64(f.latestTerm, log.Term)
-	atomic.StoreUint64(f.latestIndex, log.Index)
+	// If we advanced the latest value, update the in-memory representation too.
+	if len(logIndex) > 0 {
+		atomic.StoreUint64(f.latestTerm, log.Term)
+		atomic.StoreUint64(f.latestIndex, log.Index)
+	}
 
 	return &FSMApplyResponse{
 		Success: true,
@@ -459,32 +530,11 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 				}
 				return err
 			}
+
 			err = b.Put([]byte(s.Key), s.Value)
 			if err != nil {
 				return err
 			}
-
-			// Update in-memory representation of the latest states
-			switch s.Key {
-			case string(latestIndexKey):
-				var latest IndexValue
-				err := proto.Unmarshal(s.Value, &latest)
-				if err != nil {
-					return err
-				}
-
-				atomic.StoreUint64(f.latestTerm, latest.Term)
-				atomic.StoreUint64(f.latestIndex, latest.Index)
-			case string(latestConfigKey):
-				var latest ConfigurationValue
-				err := proto.Unmarshal(s.Value, &latest)
-				if err != nil {
-					return err
-				}
-
-				f.latestConfig.Store(&latest)
-			}
-
 		}
 
 		return nil
@@ -536,7 +586,7 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 
 	if f.storeLatestState {
 		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(dataBucketName)
+			b := tx.Bucket(configBucketName)
 			err := b.Put(latestConfigKey, configBytes)
 			if err != nil {
 				return err

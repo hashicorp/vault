@@ -8,6 +8,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace github.com/hashicorp/raft => ../raft
 
+replace github.com/hashicorp/raft-snapshot => ../raft-snapshot
+
 require (
 	cloud.google.com/go v0.37.4
 	github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 // indirect
@@ -22,7 +24,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190412020505-60e2075261b6
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
+	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
 	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
@@ -61,7 +63,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
-	github.com/hashicorp/go-hclog v0.9.1
+	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-memdb v1.0.0
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -73,6 +75,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.0.1
+	github.com/hashicorp/raft-snapshot v1.0.0
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.1
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.1

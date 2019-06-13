@@ -22,6 +22,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -303,6 +304,34 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
 		},
+		{
+			Pattern: "storage/raft/snapshot",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftSnapshotRead(),
+					Summary:  "Retruns a snapshot of the current state of vault.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftSnapshotWrite(false),
+					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+		},
+		{
+			Pattern: "storage/raft/snapshot-force",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleStorageRaftSnapshotWrite(true),
+					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it. This bypasses checks ensuring the Autounseal or shamir keys are consistent with the snapshot data.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+		},
 	}
 }
 
@@ -455,6 +484,95 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 				"tls_key":  raftTLS.KeyParams,
 			},
 		}, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+		if req.ResponseWriter == nil {
+			return nil, errors.New("no writer for request")
+		}
+
+		err := raftStorage.Snapshot(req.ResponseWriter, b.Core.seal.GetAccess())
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+		if req.RequestReader == nil {
+			return nil, errors.New("no writer for request")
+		}
+
+		access := b.Core.seal.GetAccess()
+		if force {
+			access = nil
+		}
+
+		// We want to buffer the http request reader into a temp file here so we
+		// don't have to hold the full snapshot in memory. We also want to do
+		// the restore in two parts so we can restore the snapshot while the
+		// stateLock is write locked.
+		snapFile, cleanup, metadata, err := raftStorage.WriteSnapshotToTemp(req.RequestReader, access)
+		switch {
+		case err == nil:
+		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
+			switch b.Core.seal.BarrierType() {
+			case seal.Shamir:
+				return logical.ErrorResponse("Could not verify hash file, snapshot could be using a different set of shamir keys. Use the snapshot-force API to bypass this check."), logical.ErrInvalidRequest
+			default:
+				return logical.ErrorResponse("Could not verify hash file, snapshot could be using a different AutoUnseal mechanism. Use the snapshot-force API to bypass this check."), logical.ErrInvalidRequest
+			}
+		case err != nil:
+			b.Core.logger.Error("raft snapshot restore: failed to write snapshot", "error", err)
+			return nil, err
+		}
+
+		// We want to do this in a go routine so we can upgrade the lock and
+		// allow the client to disconnect.
+		go func() {
+			// Cleanup the temp file
+			defer cleanup()
+
+			// Grab statelock
+			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh); stopped {
+				b.Core.logger.Error("not applying snapshot; shutting down")
+				return
+			}
+			defer b.Core.stateLock.Unlock()
+
+			// We are calling the callback function syncronously here while we
+			// have the lock. So set it to nil and restore the callback when we
+			// finish.
+			raftStorage.SetRestoreCallback(nil)
+			defer raftStorage.SetRestoreCallback(b.Core.raftSnapshotRestoreCallback(true))
+
+			b.Core.logger.Info("Applying snapshot")
+			if err := raftStorage.RestoreSnapshot(b.Core.activeContext, metadata, snapFile); err != nil {
+				b.Core.logger.Error("error while restoring raft snapshot", "error", err)
+				return
+			}
+
+			// Run invalidation logic synchronously here
+			callback := b.Core.raftSnapshotRestoreCallback(false)
+			if err := callback(); err != nil {
+				return
+			}
+		}()
+
+		return nil, nil
 	}
 }
 
@@ -2624,7 +2742,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(keyRotateGracePeriod, func() {
+		time.AfterFunc(KeyRotateGracePeriod, func() {
 			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}

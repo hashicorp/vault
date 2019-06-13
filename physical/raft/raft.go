@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,8 +16,10 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/seal"
 
 	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -91,6 +94,9 @@ type RaftBackend struct {
 	// localID is the ID for this node. This can either be configured in the
 	// config file, via a file on disk, or is otherwise randomly generated.
 	localID string
+
+	// serverAddressProvider is used to map server IDs to addresses.
+	serverAddressProvider raft.ServerAddressProvider
 }
 
 // EnsurePath is used to make sure a path exists
@@ -250,7 +256,16 @@ func (b *RaftBackend) NodeID() string {
 
 // Initialized tells if raft is running or not
 func (b *RaftBackend) Initialized() bool {
-	return b.raft != nil
+	b.l.RLock()
+	init := b.raft != nil
+	b.l.RUnlock()
+	return init
+}
+
+func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvider) {
+	b.l.Lock()
+	b.serverAddressProvider = provider
+	b.l.Unlock()
 }
 
 // Bootstrap prepares the given peers to be part of the raft cluster
@@ -281,6 +296,12 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	// Store the config for later use
 	b.bootstrapConfig = raftConfig
 	return nil
+}
+
+func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
+	b.fsm.l.Lock()
+	b.fsm.restoreCb = restoreCb
+	b.fsm.l.Unlock()
 }
 
 // SetupCluster starts the raft cluster and enables the networking needed for
@@ -329,10 +350,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 			return err
 		}
 		transConfig := &raft.NetworkTransportConfig{
-			Stream:  raftLayer,
-			MaxPool: 3,
-			Timeout: 10 * time.Second,
-			//	ServerAddressProvider: serverAddressProvider,
+			Stream:                raftLayer,
+			MaxPool:               3,
+			Timeout:               10 * time.Second,
+			ServerAddressProvider: b.serverAddressProvider,
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
@@ -487,6 +508,9 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	if b.raft == nil {
 		return nil, errors.New("raft storage backend is not initialized")
 	}
@@ -507,6 +531,97 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	return ret, nil
 }
 
+// Snapshot takes a raft snapshot, packages it into a archive file and writes it
+// to the provided writer. Seal access is used to encrypt the SHASUM file so we
+// can validate the snapshot was taken using the same master keys or not.
+func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return errors.New("raft storage backend is sealed")
+	}
+
+	// If we have access to the seal create a sealer object
+	var s snapshot.Sealer
+	if access != nil {
+		s = &sealer{
+			access: access,
+		}
+	}
+
+	snap, err := snapshot.NewWithSealer(b.logger.Named("snapshot"), b.raft, s)
+	if err != nil {
+		return err
+	}
+	defer snap.Close()
+
+	_, err = io.Copy(out, snap)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteSnapshotToTemp reads a snapshot archive off the provided reader,
+// extracts the data and writes the snapshot to a temporary file. The seal
+// access is used to decrypt the SHASUM file in the archive to ensure this
+// snapshot has the same master key as the running instance. If the provided
+// access is nil then it will skip that validation.
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	var metadata raft.SnapshotMeta
+	if b.raft == nil {
+		return nil, nil, metadata, errors.New("raft storage backend is sealed")
+	}
+
+	// If we have access to the seal create a sealer object
+	var s snapshot.Sealer
+	if access != nil {
+		s = &sealer{
+			access: access,
+		}
+	}
+
+	snap, cleanup, err := snapshot.WriteToTempFileWithSealer(b.logger.Named("snapshot"), in, &metadata, s)
+	return snap, cleanup, metadata, err
+}
+
+// RestoreSnapshot applies the provided snapshot metadata and snapshot data to
+// raft.
+func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snapFile *os.File) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return errors.New("raft storage is not initialized")
+	}
+
+	if err := b.raft.Restore(&metadata, snapFile, 0); err != nil {
+		b.logger.Named("snapshot").Error("failed to restore snapshot", "error", err)
+		return err
+	}
+
+	// Apply a log that tells the follower nodes to run the restore callback
+	// function. This is done after the restore call so we can be sure the
+	// snapshot applied to a quorum of nodes.
+	command := &LogData{
+		Operations: []*LogOperation{
+			&LogOperation{
+				OpType: restoreCallbackOp,
+			},
+		},
+	}
+
+	b.l.RLock()
+	err := b.applyLog(ctx, command)
+	b.l.RUnlock()
+	return err
+}
+
 // Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	command := &LogData{
@@ -518,7 +633,10 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 		},
 	}
 
-	return b.applyLog(ctx, command)
+	b.l.RLock()
+	err := b.applyLog(ctx, command)
+	b.l.RUnlock()
+	return err
 }
 
 // Get returns the value corresponding to the given path from the fsm
@@ -542,7 +660,10 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		},
 	}
 
-	return b.applyLog(ctx, command)
+	b.l.RLock()
+	err := b.applyLog(ctx, command)
+	b.l.RUnlock()
+	return err
 }
 
 // List enumerates all the items under the prefix from the fsm
@@ -577,16 +698,16 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		command.Operations[i] = op
 	}
 
-	return b.applyLog(ctx, command)
+	b.l.RLock()
+	err := b.applyLog(ctx, command)
+	b.l.RUnlock()
+	return err
 }
 
 // applyLog will take a given log command and apply it to the raft log. applyLog
 // doesn't return until the log has been applied to a quorum of servers and is
-// persisted to the local FSM.
+// persisted to the local FSM. Caller should hold the raft lock.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
-	b.l.RLock()
-	defer b.l.RUnlock()
-
 	if b.raft == nil {
 		return errors.New("raft storage backend is not initialized")
 	}
@@ -658,6 +779,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		case isLeader := <-l.b.raftNotifyCh:
 			if isLeader {
 				// We are leader, set the key
+				l.b.l.RLock()
 				err := l.b.applyLog(context.Background(), &LogData{
 					Operations: []*LogOperation{
 						&LogOperation{
@@ -667,6 +789,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 						},
 					},
 				})
+				l.b.l.RUnlock()
 				if err != nil {
 					return nil, err
 				}
@@ -699,4 +822,38 @@ func (l *RaftLock) Value() (bool, string, error) {
 	value := string(e.Value)
 	// TODO: how to tell if held?
 	return true, value, nil
+}
+
+// sealer implements the snapshot.Sealer interface and is used in the snapshot
+// process for encrypting/decrypting the SHASUM file in snapshot archives.
+type sealer struct {
+	access seal.Access
+}
+
+// Seal encrypts the data with using the seal access object.
+func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
+	if s.access == nil {
+		return nil, errors.New("no seal access available")
+	}
+	eblob, err := s.access.Encrypt(ctx, pt)
+	if err != nil {
+		return nil, err
+	}
+
+	return proto.Marshal(eblob)
+}
+
+// Open decrypts the data using the seal access object.
+func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
+	if s.access == nil {
+		return nil, errors.New("no seal access available")
+	}
+
+	var eblob physical.EncryptedBlobInfo
+	err := proto.Unmarshal(ct, &eblob)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.access.Decrypt(ctx, &eblob)
 }

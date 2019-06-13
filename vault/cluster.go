@@ -314,6 +314,10 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	return nil
 }
 
+func (c *Core) ClusterAddr() string {
+	return c.clusterAddr
+}
+
 // stopClusterListener stops any existing listeners during seal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {

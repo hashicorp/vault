@@ -326,7 +326,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 // UnsealWithStoredKeys performs auto-unseal using stored keys. An error
 // return value of "nil" implies the Vault instance is unsealed.
 //
-// Callers should attempt to retry any NOnFatalErrors. Callers should
+// Callers should attempt to retry any NonFatalErrors. Callers should
 // not re-attempt fatal errors.
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()

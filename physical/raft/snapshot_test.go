@@ -363,3 +363,59 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 }
+
+func TestRaft_Snapshot_Take_Restore(t *testing.T) {
+	raft1, dir := getRaft(t, true, false)
+	defer os.RemoveAll(dir)
+	raft2, dir2 := getRaft(t, false, false)
+	defer os.RemoveAll(dir2)
+
+	addPeer(t, raft1, raft2)
+
+	// Write some data
+	for i := 0; i < 100; i++ {
+		err := raft1.Put(context.Background(), &physical.Entry{
+			Key:   fmt.Sprintf("key-%d", i),
+			Value: []byte(fmt.Sprintf("value-%d", i)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	snap := &bytes.Buffer{}
+
+	err := raft1.Snapshot(snap, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write some more data
+	for i := 100; i < 200; i++ {
+		err := raft1.Put(context.Background(), &physical.Entry{
+			Key:   fmt.Sprintf("key-%d", i),
+			Value: []byte(fmt.Sprintf("value-%d", i)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err = raft1.SnapshotRestore(ioutil.NopCloser(snap), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// make sure we don't have the second batch of writes
+	for i := 100; i < 200; i++ {
+		value, err := raft1.Get(context.Background(), fmt.Sprintf("key-%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if value != nil {
+			t.Fatal("didn't remove data")
+		}
+	}
+
+	compareFSMs(t, raft1.fsm, raft2.fsm)
+}
