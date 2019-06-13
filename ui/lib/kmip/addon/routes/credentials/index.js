@@ -4,12 +4,21 @@ import { inject as service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
   store: service(),
+  secretMountPath: service(),
+  credParams() {
+    let { role_name: role, scope_name: scope } = this.paramsFor('credentials');
+    return {
+      role,
+      scope,
+    };
+  },
   model(params) {
-    //let model = [{ id: 'serial-beep-boop' }];
-    //model.set('meta', { total: 1 });
-    //return model;
+    let { role, scope } = this.credParams();
     return this.store
-      .lazyPaginatedQuery('kmip/credentials', {
+      .lazyPaginatedQuery('kmip/credential', {
+        role,
+        scope,
+        backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
