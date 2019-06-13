@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -48,30 +49,34 @@ func (r *Response) Error() error {
 	var resp ErrorResponse
 	if err := jsonutil.DecodeJSON(bodyBuf.Bytes(), &resp); err != nil {
 		// Ignore the decoding error and just drop the raw response
-		return fmt.Errorf(
-			"Error making API request.\n\n"+
-				"URL: %s %s\n"+
-				"Code: %d. Raw Message:\n\n%s",
-			r.Request.Method, r.Request.URL.String(),
-			r.StatusCode, bodyBuf.String())
+		return &ResponseError{r.Request.Method, r.Request.URL.String(), r.StatusCode, bodyBuf.String(), nil}
 	}
-
-	var errBody bytes.Buffer
-	errBody.WriteString(fmt.Sprintf(
-		"Error making API request.\n\n"+
-			"URL: %s %s\n"+
-			"Code: %d. Errors:\n\n",
-		r.Request.Method, r.Request.URL.String(),
-		r.StatusCode))
-	for _, err := range resp.Errors {
-		errBody.WriteString(fmt.Sprintf("* %s", err))
-	}
-
-	return fmt.Errorf(errBody.String())
+	return &ResponseError{r.Request.Method, r.Request.URL.String(), r.StatusCode, "", resp.Errors}
 }
 
 // ErrorResponse is the raw structure of errors when they're returned by the
 // HTTP API.
 type ErrorResponse struct {
 	Errors []string
+}
+
+// ResponseError represents a Vault client response error.
+type ResponseError struct {
+	Method     string   // The request method.
+	URL        string   // The request URL.
+	StatusCode int      // The response status code.
+	RawMessage string   // The raw response body if decoding fails.
+	Errors     []string // The decoded response body errors.
+}
+
+// Error implements the error interface.
+func (e *ResponseError) Error() string {
+	msg := fmt.Sprintf("%s %s: %d %s", e.Method, e.URL, e.StatusCode, http.StatusText(e.StatusCode))
+	if e.RawMessage != "" {
+		msg += ": " + e.RawMessage
+	}
+	if len(e.Errors) > 0 {
+		msg += ": " + strings.Join(e.Errors, ": ")
+	}
+	return msg
 }
