@@ -409,7 +409,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 	}
 
-	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy"})
+	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
 	p = append(p, rolesPath)
 
 	return p
@@ -2233,6 +2233,16 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			renewable = false
 		}
 
+		// Update te.NumUses which is equal to req.Data["num_uses"] at this point
+		// 0 means unlimited so 1 is actually less than 0
+		switch {
+		case role.TokenNumUses == 0:
+		case te.NumUses == 0:
+			te.NumUses = role.TokenNumUses
+		case role.TokenNumUses < te.NumUses:
+			te.NumUses = role.TokenNumUses
+		}
+
 		if role.PathSuffix != "" {
 			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
 		}
@@ -2977,6 +2987,9 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 	if len(role.BoundCIDRs) > 0 {
 		resp.Data["bound_cidrs"] = role.BoundCIDRs
 	}
+	if role.TokenNumUses > 0 {
+		resp.Data["token_num_uses"] = role.TokenNumUses
+	}
 
 	return resp, nil
 }
@@ -3146,6 +3159,12 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
 				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
+	}
+
+	// no legacy version without the token_ prefix to check for
+	tokenNumUses, ok := data.GetOk("token_num_uses")
+	if ok {
+		entry.TokenNumUses = tokenNumUses.(int)
 	}
 
 	// Run validity checks on token type
