@@ -22,6 +22,7 @@ var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 const (
 	namedKeyConfigPath   = "oidc-config/named-key/"
 	publicKeysConfigPath = "oidc-config/public-keys/"
+	roleConfigPath       = "oidc-config/role/"
 )
 
 type audience []string
@@ -37,6 +38,14 @@ type NamedKey struct {
 	RotationPeriod   int             `json:"rotation_period"`
 	KeyRing          []string        `json:"key_ring"`
 	SigningKey       jose.JSONWebKey `json:"signing_key"`
+}
+
+type Role struct {
+	Name     string `json:"name"`
+	TokenTTL int    `json:"token_ttl"`
+	Key      string `json:"key"`
+	Template string `json:"template"`
+	RoleID   string `json:"role_id"`
 }
 
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
@@ -112,6 +121,30 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			Pattern: "oidc/token/generate/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.handleOIDCGenerateSignToken,
+			},
+		},
+		{
+			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+				"key": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The OIDC key to use for generating tokens. The specified key must already exist.",
+				},
+				"template": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The template string to use for generating tokens. This may be in string-ified JSON or base64 format.",
+				},
+				"ttl": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Description: "TTL of the tokens generated against the role.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.handleOIDCCreateRole,
 			},
 		},
 	}
@@ -411,6 +444,99 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 		Data: map[string]interface{}{
 			"token": signedIdToken,
 			"pub":   jwks,
+		},
+	}, nil
+}
+
+// handleOIDCCreateRole is used to create a new role or update an existing one
+func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	var role *Role
+	// var namedKey *NamedKey
+	var update bool = false
+
+	// parse parameters
+	name := d.Get("name").(string)
+	keyInput, keyInputOK := d.GetOk("key")
+	templateInput, templateInputOK := d.GetOk("template")
+	ttlInput, ttlInputOK := d.GetOk("ttl")
+
+	// determine if we are updating an existing role or creating a new one
+	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		if err := entry.DecodeJSON(&role); err != nil {
+			return nil, err
+		}
+		update = true
+	}
+
+	// validate inputs
+	if !update {
+		if !keyInputOK || !templateInputOK || !ttlInputOK {
+			return logical.ErrorResponse("key, template, and ttl must all be specified to create a role"), logical.ErrInvalidRequest
+		}
+	}
+
+	// validate that a key exists at the path specified if a key will be needed (creating a role or update and key parameter was specified)
+	if !update || keyInputOK {
+		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+keyInput.(string))
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			// the key specified does not exist in storage, this is an error
+			return logical.ErrorResponse("the specified key %q does not exist", keyInput.(string)), logical.ErrInvalidRequest
+		}
+	}
+
+	// create role path
+	if !update {
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
+
+		role = &Role{
+			Name:     name,
+			Key:      keyInput.(string),
+			Template: templateInput.(string),
+			TokenTTL: ttlInput.(int),
+			RoleID:   roleID,
+		}
+	}
+
+	// update role path
+	if update {
+		if keyInputOK {
+			role.Key = keyInput.(string)
+		}
+		if templateInputOK {
+			role.Template = templateInput.(string)
+		}
+		if ttlInputOK {
+			role.TokenTTL = ttlInput.(int)
+		}
+	}
+
+	// store role (which was either just created or updated)
+	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	// prepare response
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"client_id": role.RoleID,
+			"key":       role.Key,
+			"template":  role.Template,
+			"ttl":       role.TokenTTL,
 		},
 	}, nil
 }
