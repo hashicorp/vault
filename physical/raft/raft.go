@@ -35,6 +35,13 @@ var (
 	raftState         = "raft/"
 	peersFileName     = "peers.json"
 	snapshotsRetained = 2
+
+	// Set a max size of 512kb
+	maxCommandSizeBytes = 512 * 1024
+
+	// ErrCommandTooLarge is returned when the backend tries to apply a log
+	// greater than the max allowed size.
+	ErrCommandTooLarge = fmt.Errorf("%s: exceeds %d byte limit", physical.ErrValueTooLarge, maxCommandSizeBytes)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -587,6 +594,11 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	commandBytes, err := proto.Marshal(command)
 	if err != nil {
 		return err
+	}
+
+	// Restrict the value to maxCommandSizeBytes in length
+	if len(commandBytes) > maxCommandSizeBytes {
+		return ErrCommandTooLarge
 	}
 
 	applyFuture := b.raft.Apply(commandBytes, 0)
