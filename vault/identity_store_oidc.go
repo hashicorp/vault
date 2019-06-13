@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -300,8 +301,73 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedKeyConfigPath+name)
+	targetKeyName := d.Get("name").(string)
+
+	//todo delete pub key from publicKeys
+
+	// it is an error to delete a key that is actively referenced by a role
+	roleNames, err := req.Storage.List(ctx, roleConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var role *Role
+	rolesReferencingTargetKeyName := make([]string, 0)
+	for _, roleName := range roleNames {
+		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&role); err != nil {
+				return nil, err
+			}
+			if role.Key == targetKeyName {
+				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, role.Name)
+			}
+		}
+	}
+
+	if len(rolesReferencingTargetKeyName) > 0 {
+		errorMessage := fmt.Sprintf("Unable to delete the key: %q because it is currently referenced by these roles: %s",
+			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	// delete the public portion of the key from publicKeys (what .well-known returns)
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		// a key did exist so we need to load it and delete the public keys in its keyring
+		var storedNamedKey NamedKey
+		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
+			return nil, err
+		}
+		survivedKeys := make([]*ExpireableKey, len(publicKeys))
+		insertIndex := 0
+		var surviveCandidate bool
+		// todo: this can be optimized, using a naive implementation for the moment
+		for candidateIndex := range publicKeys {
+			surviveCandidate = true
+			for _, deletionKeyID := range storedNamedKey.KeyRing {
+				if publicKeys[candidateIndex].Key.KeyID == deletionKeyID {
+					surviveCandidate = false
+					break
+				}
+			}
+			if surviveCandidate {
+				survivedKeys[insertIndex] = publicKeys[candidateIndex]
+				insertIndex = insertIndex + 1
+			}
+		}
+		// todo: make thread safe - here and in a lot of other places
+		publicKeys = survivedKeys[:insertIndex]
+	}
+
+	// key can safely be deleted now
+	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
 	if err != nil {
 		return nil, err
 	}
