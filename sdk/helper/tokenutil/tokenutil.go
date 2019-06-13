@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TokenParams contains a set of common parameters that auth plugins can use
+// for setting token behavior
 type TokenParams struct {
 	// The set of CIDRs that tokens generated using this role will be bound to
 	TokenBoundCIDRs []*sockaddr.SockAddrMarshaler `json:"token_bound_cidrs"`
@@ -26,6 +28,9 @@ type TokenParams struct {
 	// If set, core will not automatically add default to the policy list
 	TokenNoDefaultPolicy bool `json:"token_no_default_policy" mapstructure:"token_no_default_policy"`
 
+	// The maximum number of times a token issued from this role may be used.
+	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses"`
+
 	// If non-zero, tokens created using this role will be able to be renewed
 	// forever, but will have a fixed renewal period of this value
 	TokenPeriod time.Duration `json:"token_period" mapstructure:"token_period"`
@@ -38,9 +43,6 @@ type TokenParams struct {
 
 	// The TTL to user for the token
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
-
-	// The maximum number of times a token issued from this role may be used.
-	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would
@@ -49,6 +51,9 @@ func AddTokenFields(m map[string]*framework.FieldSchema) {
 	AddTokenFieldsWithAllowList(m, nil)
 }
 
+// AddTokenFields adds fields to an existing role. It panics if it would
+// overwrite an existing field. Allowed can be use to restrict the set, e.g. if
+// there would be conflicts.
 func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []string) {
 	r := TokenFields()
 	for k, v := range r {
@@ -62,6 +67,7 @@ func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []
 	}
 }
 
+// TokenFields provides a set of field schemas for the parameters
 func TokenFields() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
 		"token_bound_cidrs": &framework.FieldSchema{
@@ -112,6 +118,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 	}
 }
 
+// ParseTokenFields provides common field parsing functionality into a TokenFields struct
 func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldData) error {
 	if boundCIDRsRaw, ok := d.GetOk("token_bound_cidrs"); ok {
 		boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw.([]string))
@@ -185,6 +192,7 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	return nil
 }
 
+// PopulateTokenData adds information from TokenParams into the map
 func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_bound_cidrs"] = t.TokenBoundCIDRs
 	m["token_explicit_max_ttl"] = t.TokenExplicitMaxTTL.Seconds()
@@ -197,6 +205,7 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_num_uses"] = t.TokenNumUses
 }
 
+// PopulateTokenAuth populates Auth with parameters
 func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.BoundCIDRs = t.TokenBoundCIDRs
 	auth.ExplicitMaxTTL = t.TokenExplicitMaxTTL
