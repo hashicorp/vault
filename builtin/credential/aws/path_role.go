@@ -225,8 +225,28 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 	return entry != nil, nil
 }
 
+// Upgrade every role entry, if needed.
+func (b *backend) upgradeRoleEntries(ctx context.Context, s logical.Storage) error {
+
+	roleNames, err := b.listRoles(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	for _, roleName := range roleNames {
+		_, err = b.lockedAWSRole(ctx, s, roleName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // lockedAWSRole returns the properties set on the given role. This method
 // acquires the read lock before reading the role from the storage.
+//
+// If needed, the role will be upgraded and persisted before being returned.
 func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
@@ -247,7 +267,9 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 	if err != nil {
 		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
-	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(
+		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+
 		b.roleMutex.Lock()
 		defer b.roleMutex.Unlock()
 		// Now that we have a R/W lock, we need to re-read the role entry in case it was
@@ -461,12 +483,17 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	return nil, req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 }
 
-// pathRoleList is used to list all the AMI IDs registered with Vault.
-func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+// listRoles returns a list of all the role names
+func (b *backend) listRoles(ctx context.Context, s logical.Storage) ([]string, error) {
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
+	return s.List(ctx, "role/")
+}
 
-	roles, err := req.Storage.List(ctx, "role/")
+// pathRoleList is used to list all the AMI IDs registered with Vault.
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
+	roles, err := b.listRoles(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
