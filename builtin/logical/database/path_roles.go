@@ -392,6 +392,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("empty role name attribute given"), nil
 	}
 
+	// Grab the exclusive lock as well potentially pop and re-push the queue item
+	// for this role
+	lock := locksutil.LockForKey(b.roleLocks, name)
+	lock.Lock()
+	defer lock.Unlock()
+
 	exists, err := b.pathRoleExistenceCheck(ctx, req, data)
 	if err != nil {
 		return nil, err
@@ -456,12 +462,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
-
-	// Grab the exclusive lock as well potentially pop and re-push the queue item
-	// for this role
-	lock := locksutil.LockForKey(b.roleLocks, name)
-	lock.Lock()
-	defer lock.Unlock()
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -146,6 +147,12 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		if item == nil {
 			return nil
 		}
+
+		// Grab the exclusive lock for this Role, to make sure we don't incur and
+		// writes during the rotation process
+		lock := locksutil.LockForKey(b.roleLocks, item.Key)
+		lock.Lock()
+		defer lock.Unlock()
 
 		// Validate the role still exists
 		role, err := b.StaticRole(ctx, s, item.Key)
