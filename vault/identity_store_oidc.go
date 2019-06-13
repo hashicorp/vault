@@ -104,7 +104,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/key/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.handleOIDCListKeys,
+				logical.ListOperation: i.handleOIDCListKey,
 			},
 			HelpSynopsis:    "list oidc/key/ help synopsis here",
 			HelpDescription: "list oidc/key/ help description here",
@@ -145,7 +145,17 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleOIDCCreateRole,
+				logical.ReadOperation:   i.handleOIDCReadRole,
+				logical.DeleteOperation: i.handleOIDCDeleteRole,
 			},
+		},
+		{
+			Pattern: "oidc/role/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: i.handleOIDCListRole,
+			},
+			HelpSynopsis:    "list oidc/role/ help synopsis here",
+			HelpDescription: "list oidc/role/ help description here",
 		},
 	}
 }
@@ -291,17 +301,15 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-
 	err := req.Storage.Delete(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
 	}
-	//todo this is supposed to return  204-no content
 	return nil, nil
 }
 
 // handleOIDCListKey is used to list named keys
-func (i *IdentityStore) handleOIDCListKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleOIDCListKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keys, err := req.Storage.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return nil, err
@@ -539,6 +547,52 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 			"ttl":       role.TokenTTL,
 		},
 	}, nil
+}
+
+// handleOIDCReadRole is used to read an existing role
+func (i *IdentityStore) handleOIDCReadRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	var role *Role
+	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		if err := entry.DecodeJSON(&role); err != nil {
+			return nil, err
+		}
+	} else {
+		return logical.ErrorResponse("No role configured at %q", name), logical.ErrInvalidRequest
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"client_id": role.RoleID,
+			"key":       role.Key,
+			"template":  role.Template,
+			"ttl":       role.TokenTTL,
+		},
+	}, nil
+}
+
+// handleOIDCDeleteRole is used to delete a role if it exists
+func (i *IdentityStore) handleOIDCDeleteRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// handleOIDCListRole is used to list stored a roles
+func (i *IdentityStore) handleOIDCListRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roles, err := req.Storage.List(ctx, roleConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(roles), nil
 }
 
 // --- some helper methods ---
