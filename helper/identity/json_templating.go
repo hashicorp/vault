@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // parsedTemplates is a sequence of chunks to be rendered in order
@@ -48,13 +50,13 @@ var patterns = []paramMatcher{
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.id")),
 		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
-			return quote(e.ID), nil
+			return strconv.Quote(e.ID), nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify("identity.entity.name")),
 		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
-			return quote(e.Name), nil
+			return strconv.Quote(e.Name), nil
 		},
 	},
 	{
@@ -70,19 +72,32 @@ var patterns = []paramMatcher{
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.metadata.<param>`)),
 		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
-			return quote(e.Metadata[v[0]]), nil
+			return strconv.Quote(e.Metadata[v[0]]), nil
+		},
+	},
+	{
+		pattern: regexp.MustCompile(regexify(`identity.entity.aliases.<param>.metadata`)),
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
+			name := v[0]
+			alias := findAlias(name, e.Aliases)
+			if alias != nil {
+				d, err := json.Marshal(alias.Metadata)
+				if err == nil {
+					return string(d), nil
+				}
+			}
+			return `{}`, nil
 		},
 	},
 	{
 		pattern: regexp.MustCompile(regexify(`identity.entity.aliases.<param>.metadata.<param>`)),
 		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			name, key := v[0], v[1]
-			for _, alias := range e.Aliases {
-				if alias.Name == name {
-					return quote(alias.Metadata[key]), nil
-				}
+			alias := findAlias(name, e.Aliases)
+			if alias != nil {
+				return strconv.Quote(alias.Metadata[key]), nil
 			}
-			return quote(""), nil
+			return `""`, nil
 		},
 	},
 	{
@@ -95,6 +110,38 @@ var patterns = []paramMatcher{
 		pattern: regexp.MustCompile(regexify(`identity.entity.group_ids`)),
 		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
 			return groupsToArray(groups, "id"), nil
+		},
+	},
+	{
+		// current time
+		pattern: regexp.MustCompile(regexify(`time.now`)),
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
+			ts := time.Now().Unix()
+			return strconv.FormatInt(ts, 10), nil
+		},
+	},
+	{
+		// offset time using go-parsable durations
+		// e.g. time.now.plus.1h, time.now.minus.15s
+		pattern: regexp.MustCompile(regexify(`time.now.<param>.<param>`)),
+		handler: func(e *Entity, groups []*Group, v []string) (string, error) {
+			op, duration := v[0], v[1]
+			d, err := time.ParseDuration(duration)
+			if err != nil {
+				return "", err
+			}
+
+			ts := time.Now()
+			switch op {
+			case "plus":
+				ts = ts.Add(d)
+			case "minus":
+				ts = ts.Add(-d)
+			default:
+				return "", fmt.Errorf("invalid time operation %q", op)
+
+			}
+			return strconv.FormatInt(ts.Unix(), 10), nil
 		},
 	},
 }
@@ -144,9 +191,18 @@ func NewCompiledTemplate(template string) (*CompiledTemplate, error) {
 			submatches := p.pattern.FindStringSubmatch(param)
 
 			if len(submatches) > 0 {
+				captures := submatches[1:]
 				handler := p.handler
+
+				// Invoke the handler with captured parameters to check for and render-time
+				// errors that might be found. Entity and group info are irrelevant here.
+				_, err := handler(new(Entity), nil, captures)
+				if err != nil {
+					return nil, err
+				}
+
 				f := func(entity *Entity, groups []*Group) (string, error) {
-					return handler(entity, groups, submatches[1:])
+					return handler(entity, groups, captures)
 				}
 				c = &chunk{renderer: f}
 				break
@@ -223,7 +279,7 @@ func groupsToArray(groups []*Group, element string) string {
 		case "id":
 			v = g.ID
 		}
-		out.WriteString(quote(v))
+		out.WriteString(strconv.Quote(v))
 		if i < groupsLen-1 {
 			out.WriteString(",")
 		}
@@ -233,6 +289,11 @@ func groupsToArray(groups []*Group, element string) string {
 	return out.String()
 }
 
-func quote(s string) string {
-	return fmt.Sprintf(`"%s"`, s)
+func findAlias(name string, aliases []*Alias) *Alias {
+	for _, alias := range aliases {
+		if alias.Name == name {
+			return alias
+		}
+	}
+	return nil
 }
