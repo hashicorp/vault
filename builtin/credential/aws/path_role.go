@@ -225,24 +225,6 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 	return entry != nil, nil
 }
 
-// Upgrade every role entry, if needed.
-func (b *backend) upgradeRoleEntries(ctx context.Context, s logical.Storage) error {
-
-	roleNames, err := b.listRoles(ctx, s)
-	if err != nil {
-		return err
-	}
-
-	for _, roleName := range roleNames {
-		_, err = b.lockedAWSRole(ctx, s, roleName)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // lockedAWSRole returns the properties set on the given role. This method
 // acquires the read lock before reading the role from the storage.
 //
@@ -267,6 +249,9 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 	if err != nil {
 		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
+
+	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
+	// performance replicated standby cluster.
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(
 		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 
@@ -332,6 +317,101 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 
 	if err := s.Put(ctx, entry); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// Upgrade and persist all of the role entries.
+//
+// TODO: this function is not yet called from anywhere.  It will be called
+//  via a new mechanism at plugin mount time.
+func (b *backend) persistUpgradedRoleEntries(ctx context.Context, s logical.Storage) error {
+
+	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
+	// performance replicated standby cluster.
+	if !(b.System().LocalMount() || !b.System().ReplicationState().HasState(
+		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+		return nil
+	}
+
+	// Read all the role names.
+	b.roleMutex.RLock()
+	roleNames, err := s.List(ctx, "role/")
+	b.roleMutex.RUnlock()
+	if err != nil {
+		return err
+	}
+
+	// Upgrade the roles as necessary.
+	for _, roleName := range roleNames {
+
+		needUpgrade, err := b.shouldUpgradeRoleEntry(ctx, s, roleName)
+		if err != nil {
+			return err
+		}
+
+		if needUpgrade {
+			err := b.persistUpgradedRoleEntry(ctx, s, roleName)
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+
+	return nil
+}
+
+// shouldUpgradeRole uses the read lock to read a role and return whether
+// it needs to be upgraded.
+func (b *backend) shouldUpgradeRoleEntry(
+	ctx context.Context, s logical.Storage, roleName string) (bool, error) {
+
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+
+	roleEntry, err := b.nonLockedAWSRole(ctx, s, roleName)
+	if err != nil {
+		return false, err
+	}
+	if roleEntry == nil {
+		return false, nil
+	}
+
+	// NOTE: we do not bother returning the upgraded roleEntry, since it
+	// will need to be re-read in case it was written to between releasing
+	// the read lock and acquiring the write lock. This does mean that
+	// upgradeRoleEntry() ends up getting called again in
+	// persistUpgradedRoleEntry(), but that is a consequence of not being able
+	// to promote a read lock to a write lock.
+	return b.upgradeRoleEntry(ctx, s, roleEntry)
+}
+
+// persistUpgradeRole uses the write lock to read a role and persist it
+// if it needs to be upgraded.
+func (b *backend) persistUpgradedRoleEntry(
+	ctx context.Context, s logical.Storage, roleName string) error {
+
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	roleEntry, err := b.nonLockedAWSRole(ctx, s, roleName)
+	if err != nil {
+		return err
+	}
+	if roleEntry == nil {
+		return nil
+	}
+
+	needUpgrade, err := b.upgradeRoleEntry(ctx, s, roleEntry)
+	if err != nil {
+		return err
+	}
+	if needUpgrade {
+		if err = b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -483,17 +563,12 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	return nil, req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 }
 
-// listRoles returns a list of all the role names
-func (b *backend) listRoles(ctx context.Context, s logical.Storage) ([]string, error) {
-	b.roleMutex.RLock()
-	defer b.roleMutex.RUnlock()
-	return s.List(ctx, "role/")
-}
-
 // pathRoleList is used to list all the AMI IDs registered with Vault.
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
 
-	roles, err := b.listRoles(ctx, req.Storage)
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
