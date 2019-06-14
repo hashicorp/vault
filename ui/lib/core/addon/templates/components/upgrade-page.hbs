@@ -7,12 +7,13 @@
 </PageHeader>
 
 <EmptyState
-  @title="{{featureName}} is a {{minimumEdition}} feature."
-  @message="You can upgrade to {{minimumEdition}} to unlock additional collaboration and security features"
+  @title="Upgrade to use {{featureName}}"
+  @message="You will need {{minimumEdition}} with {{featureName}} included to use this feature."
 >
   <a
-    href="https://hashicorp.com/products/vault/trial?source=vaultui_{{featureName}}"
+    href="https://www.hashicorp.com/products/vault/enterprise?source=vaultui_{{featureName}}"
     class="link has-icon-right"
+    target="_blank"
     data-test-upgrade-link="true"
   >
     Vault Enterprise
