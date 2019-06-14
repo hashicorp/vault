@@ -323,7 +323,8 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 	return nil
 }
 
-// Upgrade and persist all of the role entries.
+// persistUpgradedRoleEntries upgrades and persists all of the role entries
+// that are in need of being upgraded.
 //
 // TODO: this function is not yet called from anywhere.  It will be called
 //  via a new mechanism at plugin mount time.
@@ -347,49 +348,16 @@ func (b *backend) persistUpgradedRoleEntries(ctx context.Context, s logical.Stor
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
 
-		needUpgrade, err := b.shouldUpgradeRoleEntry(ctx, s, roleName)
+		err := b.persistUpgradedRoleEntry(ctx, s, roleName)
 		if err != nil {
 			return err
-		}
-
-		if needUpgrade {
-			err := b.persistUpgradedRoleEntry(ctx, s, roleName)
-			if err != nil {
-				return err
-			}
-
 		}
 	}
 
 	return nil
 }
 
-// shouldUpgradeRole uses the read lock to read a role and return whether
-// it needs to be upgraded.
-func (b *backend) shouldUpgradeRoleEntry(
-	ctx context.Context, s logical.Storage, roleName string) (bool, error) {
-
-	b.roleMutex.RLock()
-	defer b.roleMutex.RUnlock()
-
-	roleEntry, err := b.nonLockedAWSRole(ctx, s, roleName)
-	if err != nil {
-		return false, err
-	}
-	if roleEntry == nil {
-		return false, nil
-	}
-
-	// NOTE: we do not bother returning the upgraded roleEntry, since it
-	// will need to be re-read in case it was written to between releasing
-	// the read lock and acquiring the write lock. This does mean that
-	// upgradeRoleEntry() ends up getting called again in
-	// persistUpgradedRoleEntry(), but that is a consequence of not being able
-	// to promote a read lock to a write lock.
-	return b.upgradeRoleEntry(ctx, s, roleEntry)
-}
-
-// persistUpgradeRole uses the write lock to read a role and persist it
+// persistUpgradedRoleEntry uses the write lock to read a role and persist it
 // if it needs to be upgraded.
 func (b *backend) persistUpgradedRoleEntry(
 	ctx context.Context, s logical.Storage, roleName string) error {
