@@ -142,7 +142,7 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 			t.Fatalf("should be held")
 		}
 		if val != "bar" {
-			t.Fatalf("bad value: %v", err)
+			t.Fatalf("bad value: %v", val)
 		}
 	}
 
@@ -183,7 +183,7 @@ func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 			t.Fatalf("should be held")
 		}
 		if val != "baz" {
-			t.Fatalf("bad value: %v", err)
+			t.Fatalf("bad value: %v", val)
 		}
 	}
 
@@ -226,7 +226,7 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("should be held")
 	}
 	if val != "bar" {
-		t.Fatalf("bad value: %v", err)
+		t.Fatalf("bad value: %v", val)
 	}
 
 	// Release the lock, which will delete the stored item
@@ -269,7 +269,7 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("should be held")
 	}
 	if val != "baz" {
-		t.Fatalf("bad value: %v", err)
+		t.Fatalf("bad value: %v", val)
 	}
 
 	// Cleanup
