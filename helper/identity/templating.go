@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,13 +20,18 @@ var (
 	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
 )
 
+const (
+	ACLTemplating = iota // must be the first value for backwards compatibility
+	JSONTemplating
+)
+
 type PopulateStringInput struct {
-	AllowMissingSelectors bool
-	ValidityCheckOnly     bool
-	String                string
-	Entity                *Entity
-	Groups                []*Group
-	Namespace             *namespace.Namespace
+	Mode              int
+	ValidityCheckOnly bool
+	String            string
+	Entity            *Entity
+	Groups            []*Group
+	Namespace         *namespace.Namespace
 }
 
 func PopulateString(p *PopulateStringInput) (bool, string, error) {
@@ -68,7 +72,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		case 2:
 			subst = true
 			if !p.ValidityCheckOnly {
-				tmplStr, err := performTemplating(p.Namespace, strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups, p.AllowMissingSelectors)
+				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), p)
 				if err != nil {
 					return false, "", err
 				}
@@ -83,34 +87,43 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	return subst, b.String(), nil
 }
 
-func performTemplating(ns *namespace.Namespace, input string, entity *Entity, groups []*Group, allowMissingSelectors bool) (string, error) {
+func performTemplating(input string, p *PopulateStringInput) (string, error) {
+	// Handling quote wrapping uniformly. For ACL templating, this is a no-op.
+	quote := func(s string) string { return s }
+	if p.Mode == JSONTemplating {
+		quote = strconv.Quote
+	}
+
 	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
 		switch {
 		case trimmed == "id":
-			return alias.ID, nil
+			return quote(alias.ID), nil
 		case trimmed == "name":
 			if alias.Name == "" {
 				return "", ErrTemplateValueNotFound
 			}
 			return alias.Name, nil
-		case strings.HasPrefix(trimmed, "metadata.") || trimmed == "metadata":
+		case trimmed == "metadata":
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+
+			jsonMetadata, err := json.Marshal(alias.Metadata)
+			if err != nil {
+				return "", err
+			}
+			return string(jsonMetadata), nil
+
+		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
 
 			switch len(split) {
-			case 1:
-				// all metadata as json, without outer braces
-				jsonMetadata, err := json.Marshal(alias.Metadata)
-				if err != nil {
-					return "", err
-				}
-				jsonMetadata = bytes.Trim(jsonMetadata, "{}")
-				return string(jsonMetadata), nil
 			case 2:
 				val, ok := alias.Metadata[split[1]]
-				if !ok && !allowMissingSelectors {
+				if !ok && p.Mode == ACLTemplating {
 					return "", ErrTemplateValueNotFound
 				}
-				return val, nil
+				return quote(val), nil
 			}
 		}
 
@@ -120,56 +133,66 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 	performEntityTemplating := func(trimmed string) (string, error) {
 		switch {
 		case trimmed == "id":
-			return entity.ID, nil
+			return quote(p.Entity.ID), nil
 		case trimmed == "name":
-			if entity.Name == "" && !allowMissingSelectors {
+			if p.Entity.Name == "" && p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return entity.Name, nil
-		case strings.HasPrefix(trimmed, "metadata.") || trimmed == "metadata":
+			return quote(p.Entity.Name), nil
+		case trimmed == "metadata":
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+
+			jsonMetadata, err := json.Marshal(p.Entity.Metadata)
+			if err != nil {
+				return "", err
+			}
+			return string(jsonMetadata), nil
+		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
 
 			switch len(split) {
-			case 1:
-				// all metadata as json, without outer braces
-				jsonMetadata, err := json.Marshal(entity.Metadata)
-				if err == nil {
-					jsonMetadata = bytes.Trim(jsonMetadata, "{}")
-					return string(jsonMetadata), nil
-				}
-				return "", nil
 			case 2:
-				val, ok := entity.Metadata[split[1]]
-				if !ok && !allowMissingSelectors {
+				val, ok := p.Entity.Metadata[split[1]]
+				if !ok && p.Mode == ACLTemplating {
 					return "", ErrTemplateValueNotFound
 				}
-				return val, nil
+				return quote(val), nil
 			}
 		case trimmed == "group_names":
-			return listGroups(groups, "name"), nil
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+			return listGroups(p.Groups, "name"), nil
 
 		case trimmed == "group_ids":
-			return listGroups(groups, "id"), nil
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+			return listGroups(p.Groups, "id"), nil
 
 		case strings.HasPrefix(trimmed, "aliases."):
 			split := strings.SplitN(strings.TrimPrefix(trimmed, "aliases."), ".", 2)
 			if len(split) != 2 {
 				return "", errors.New("invalid alias selector")
 			}
-			var found *Alias
-			for _, alias := range entity.Aliases {
-				if split[0] == alias.MountAccessor {
-					found = alias
+			var alias *Alias
+			for _, a := range p.Entity.Aliases {
+				if split[0] == a.MountAccessor {
+					alias = a
 					break
 				}
 			}
-			if found == nil {
-				if !allowMissingSelectors {
+			if alias == nil {
+				if p.Mode == ACLTemplating {
 					return "", errors.New("alias not found")
 				}
-				return "", nil
+
+				// An empty alias is sufficient for generating defaults
+				alias = &Alias{Metadata: make(map[string]string)}
 			}
-			return performAliasTemplating(split[1], found)
+			return performAliasTemplating(split[1], alias)
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -195,12 +218,12 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 			return "", errors.New("invalid groups accessor")
 		}
 		var found *Group
-		for _, group := range groups {
+		for _, group := range p.Groups {
 			var compare string
 			if ids {
 				compare = group.ID
 			} else {
-				if ns != nil && group.NamespaceID == ns.ID {
+				if p.Namespace != nil && group.NamespaceID == p.Namespace.ID {
 					compare = group.Name
 				} else {
 					continue
@@ -272,13 +295,13 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
-		if entity == nil {
+		if p.Entity == nil {
 			return "", ErrNoEntityAttachedToToken
 		}
 		return performEntityTemplating(strings.TrimPrefix(input, "identity.entity."))
 
 	case strings.HasPrefix(input, "identity.groups."):
-		if len(groups) == 0 {
+		if len(p.Groups) == 0 {
 			return "", ErrNoGroupsAttachedToToken
 		}
 		return performGroupsTemplating(strings.TrimPrefix(input, "identity.groups."))
@@ -293,7 +316,8 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 func listGroups(groups []*Group, element string) string {
 	var out strings.Builder
 
-	for _, g := range groups {
+	out.WriteString("[")
+	for i, g := range groups {
 		var v string
 		switch element {
 		case "name":
@@ -301,9 +325,12 @@ func listGroups(groups []*Group, element string) string {
 		case "id":
 			v = g.ID
 		}
+		if i > 0 {
+			out.WriteString(",")
+		}
 		out.WriteString(strconv.Quote(v))
-		out.WriteString(",")
 	}
+	out.WriteString("]")
 
-	return strings.TrimSuffix(out.String(), ",")
+	return out.String()
 }

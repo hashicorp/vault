@@ -13,22 +13,22 @@ import (
 
 func TestPopulate_Basic(t *testing.T) {
 	var tests = []struct {
-		allowMissingSelectors bool
-		name                  string
-		input                 string
-		output                string
-		err                   error
-		entityName            string
-		metadata              map[string]string
-		aliasAccessor         string
-		aliasID               string
-		aliasName             string
-		nilEntity             bool
-		validityCheckOnly     bool
-		aliasMetadata         map[string]string
-		groupName             string
-		groupMetadata         map[string]string
-		groupMemberships      []string
+		mode              int
+		name              string
+		input             string
+		output            string
+		err               error
+		entityName        string
+		metadata          map[string]string
+		aliasAccessor     string
+		aliasID           string
+		aliasName         string
+		nilEntity         bool
+		validityCheckOnly bool
+		aliasMetadata     map[string]string
+		groupName         string
+		groupMetadata     map[string]string
+		groupMemberships  []string
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
 		// positives due to the second changing during the test
@@ -177,101 +177,126 @@ func TestPopulate_Basic(t *testing.T) {
 			groupName:  "groupName",
 			err:        errors.New("entity is not a member of group \"hroupName\""),
 		},
+		{
+			name:     "metadata_object_disallowed",
+			input:    "{{identity.entity.metadata}}",
+			metadata: map[string]string{"foo": "bar"},
+			err:      ErrTemplateValueNotFound,
+		},
+		{
+			name:          "alias_metadata_object_disallowed",
+			input:         "{{identity.entity.aliases.foomount.metadata}}",
+			aliasAccessor: "foomount",
+			aliasMetadata: map[string]string{"foo": "bar"},
+			err:           ErrTemplateValueNotFound,
+		},
+		{
+			name:             "group_names_disallowed",
+			input:            "{{identity.entity.group_names}}",
+			groupMemberships: []string{"foo", "bar"},
+			err:              ErrTemplateValueNotFound,
+		},
+		{
+			name:             "group_ids_disallowed",
+			input:            "{{identity.entity.group_ids}}",
+			groupMemberships: []string{"foo", "bar"},
+			err:              ErrTemplateValueNotFound,
+		},
 
 		// missing selector cases
 		{
-			allowMissingSelectors: true,
-			name:                  "entity id",
-			input:                 "{{identity.entity.id}}",
-			output:                `entityID`,
+			mode:   JSONTemplating,
+			name:   "entity id",
+			input:  "{{identity.entity.id}}",
+			output: `"entityID"`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "entity name",
-			input:                 "{{identity.entity.name}}",
-			entityName:            "entityName",
-			output:                `entityName`,
+			mode:       JSONTemplating,
+			name:       "entity name",
+			input:      "{{identity.entity.name}}",
+			entityName: "entityName",
+			output:     `"entityName"`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "entity name missing",
-			input:                 "{{identity.entity.name}}",
-			output:                ``,
+			mode:   JSONTemplating,
+			name:   "entity name missing",
+			input:  "{{identity.entity.name}}",
+			output: `""`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "one metadata key",
-			input:                 "{{identity.entity.metadata.color}}",
-			metadata:              map[string]string{"foo": "bar", "color": "green"},
-			output:                `green`,
+			mode:     JSONTemplating,
+			name:     "one metadata key",
+			input:    "{{identity.entity.metadata.color}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `"green"`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "one metadata key not found",
-			input:                 "{{identity.entity.metadata.size}}",
-			metadata:              map[string]string{"foo": "bar", "color": "green"},
-			output:                ``,
+			mode:     JSONTemplating,
+			name:     "one metadata key not found",
+			input:    "{{identity.entity.metadata.size}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `""`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "all entity metadata",
-			input:                 "{{identity.entity.metadata}}",
-			metadata:              map[string]string{"foo": "bar", "color": "green"},
-			output:                `"color":"green","foo":"bar"`,
+			mode:     JSONTemplating,
+			name:     "all entity metadata",
+			input:    "{{identity.entity.metadata}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `{"color":"green","foo":"bar"}`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "group_names",
-			input:                 "{{identity.entity.group_names}}",
-			groupMemberships:      []string{"foo", "bar"},
-			output:                `"foo","bar"`,
+			mode:             JSONTemplating,
+			name:             "group_names",
+			input:            "{{identity.entity.group_names}}",
+			groupMemberships: []string{"foo", "bar"},
+			output:           `["foo","bar"]`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "group_ids",
-			input:                 "{{identity.entity.group_ids}}",
-			groupMemberships:      []string{"foo", "bar"},
-			output:                `"foo_0","bar_1"`,
+			mode:             JSONTemplating,
+			name:             "group_ids",
+			input:            "{{identity.entity.group_ids}}",
+			groupMemberships: []string{"foo", "bar"},
+			output:           `["foo_0","bar_1"]`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "one alias metadata key",
-			input:                 "{{identity.entity.aliases.aws_123.metadata.color}}",
-			aliasAccessor:         "aws_123",
-			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
-			output:                `green`,
+			mode:          JSONTemplating,
+			name:          "one alias metadata key",
+			input:         "{{identity.entity.aliases.aws_123.metadata.color}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `"green"`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "one alias metadata key not found",
-			input:                 "{{identity.entity.aliases.aws_123.metadata.size}}",
-			aliasAccessor:         "aws_123",
-			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
-			output:                ``,
+			mode:          JSONTemplating,
+			name:          "one alias metadata key not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `""`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "one alias metadata, accessor not found",
-			input:                 "{{identity.entity.aliases.aws_123.metadata.size}}",
-			aliasAccessor:         "not_gonna_match",
-			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
-			output:                ``,
+			mode:          JSONTemplating,
+			name:          "one alias metadata, accessor not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor: "not_gonna_match",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `""`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "all alias metadata",
-			input:                 "{{identity.entity.aliases.aws_123.metadata}}",
-			aliasAccessor:         "aws_123",
-			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
-			output:                `"color":"green","foo":"bar"`,
+			mode:          JSONTemplating,
+			name:          "all alias metadata",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `{"color":"green","foo":"bar"}`,
 		},
 		{
-			allowMissingSelectors: true,
-			name:                  "all alias metadata, accessor not found",
-			input:                 "{{identity.entity.aliases.aws_123.metadata}}",
-			aliasAccessor:         "not_gonna_match",
-			aliasMetadata:         map[string]string{"foo": "bar", "color": "green"},
-			output:                ``,
+			mode:          JSONTemplating,
+			name:          "all alias metadata, accessor not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "not_gonna_match",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `{}`,
 		},
 	}
 
@@ -314,12 +339,12 @@ func TestPopulate_Basic(t *testing.T) {
 		}
 
 		subst, out, err := PopulateString(&PopulateStringInput{
-			AllowMissingSelectors: test.allowMissingSelectors,
-			ValidityCheckOnly:     test.validityCheckOnly,
-			String:                test.input,
-			Entity:                entity,
-			Groups:                groups,
-			Namespace:             namespace.RootNamespace,
+			Mode:              test.mode,
+			ValidityCheckOnly: test.validityCheckOnly,
+			String:            test.input,
+			Entity:            entity,
+			Groups:            groups,
+			Namespace:         namespace.RootNamespace,
 		})
 		if err != nil {
 			if test.err == nil {
@@ -365,32 +390,32 @@ func TestPopulate_FullObject(t *testing.T) {
 
 	template := `
 			{
-			    "id": "{{identity.entity.id}}",
-			    "name": "{{identity.entity.name}}",
-			    "all metadata": { {{identity.entity.metadata}} },
-			    "one metadata key": "{{identity.entity.metadata.color}}",
-			    "one metadata key not found": "{{identity.entity.metadata.asldfk}}",
-			    "alias metadata": { {{identity.entity.aliases.aws_123.metadata}} },
-			    "alias not found metadata": { {{identity.entity.aliases.blahblah.metadata}} },
-			    "one alias metadata key": "{{identity.entity.aliases.aws_123.metadata.service}}",
-			    "one not found alias metadata key": "{{identity.entity.aliases.blahblah.metadata.service}}",
-			    "group names": [{{identity.entity.group_names}}],
-			    "group ids": [{{identity.entity.group_ids}}],
+			    "id": {{identity.entity.id}},
+			    "name": {{identity.entity.name}},
+			    "all metadata": {{identity.entity.metadata}},
+			    "one metadata key": {{identity.entity.metadata.color}},
+			    "one metadata key not found": {{identity.entity.metadata.asldfk}},
+			    "alias metadata": {{identity.entity.aliases.aws_123.metadata}},
+			    "alias not found metadata": {{identity.entity.aliases.blahblah.metadata}},
+			    "one alias metadata key": {{identity.entity.aliases.aws_123.metadata.service}},
+			    "one not found alias metadata key": {{identity.entity.aliases.blahblah.metadata.service}},
+			    "group names": {{identity.entity.group_names}},
+			    "group ids": {{identity.entity.group_ids}},
 			    "time now": {{time.now}},
 			    "time plus": {{time.now.plus.10s}},
 			    "time minus": {{time.now.minus.1h}},
-				"repeated and": {"nested element": "{{identity.entity.name}}"}
+			    "repeated and": {"nested element": {{identity.entity.name}}}
 			}`
 
 	expected := `
 			{
 			    "id": "abc-123",
 			    "name": "Entity Name",
-			    "all metadata": { "color":"green","non-printable":"\"\n\t","size":"small" },
+			    "all metadata": {"color":"green","non-printable":"\"\n\t","size":"small"},
 			    "one metadata key": "green",
 			    "one metadata key not found": "",
-			    "alias metadata": { "region":"west","service":"ec2" },
-			    "alias not found metadata": {  },
+			    "alias metadata": {"region":"west","service":"ec2"},
+			    "alias not found metadata": {},
 			    "one alias metadata key": "ec2",
 			    "one not found alias metadata key": "",
 			    "group names": ["g1","g2"],
@@ -398,7 +423,7 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "time now": <now>,
 			    "time plus": <plus>,
 			    "time minus": <minus>,
-				"repeated and": {"nested element": "Entity Name"}
+			    "repeated and": {"nested element": "Entity Name"}
 			}`
 
 	now := time.Now().Unix()
@@ -410,10 +435,10 @@ func TestPopulate_FullObject(t *testing.T) {
 	expected = strings.ReplaceAll(expected, "<minus>", strconv.FormatInt(minus, 10))
 
 	input := &PopulateStringInput{
-		AllowMissingSelectors: true,
-		String:                template,
-		Entity:                testEntity,
-		Groups:                testGroups,
+		Mode:   JSONTemplating,
+		String: template,
+		Entity: testEntity,
+		Groups: testGroups,
 	}
 	_, out, err := PopulateString(input)
 	if err != nil {
