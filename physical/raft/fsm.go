@@ -41,6 +41,7 @@ var (
 var _ physical.Backend = (*FSM)(nil)
 var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
+var _ raft.ConfigurationStore = (*FSM)(nil)
 
 type restoreCallback func() error
 
@@ -561,7 +562,7 @@ func (s *noopSnapshotter) Release() {}
 
 // StoreConfig satisfies the raft.ConfigurationStore interface and persists the
 // latest raft server configuration to the bolt file.
-func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error {
+func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration) {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -574,14 +575,14 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 		var err error
 		indexBytes, err = proto.Marshal(latestIndex)
 		if err != nil {
-			return err
+			panic(fmt.Sprintf("unable to marshal latest index: %v", err))
 		}
 	}
 
 	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
 	configBytes, err := proto.Marshal(protoConfig)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("unable to marshal config: %v", err))
 	}
 
 	if f.storeLatestState {
@@ -603,14 +604,12 @@ func (f *FSM) StoreConfig(index uint64, configuration raft.Configuration) error 
 			return nil
 		})
 		if err != nil {
-			return err
+			panic(fmt.Sprintf("unable to store latest configuration: %v", err))
 		}
 	}
 
 	f.witnessIndex(latestIndex)
 	f.latestConfig.Store(protoConfig)
-
-	return nil
 }
 
 // raftConfigurationToProtoConfiguration converts a raft configuration object to

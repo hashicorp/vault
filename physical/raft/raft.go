@@ -453,11 +453,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 			return errwrap.Wrapf("raft recovery failed to delete peers.json; please delete manually: {{err}}", err)
 		}
 		b.logger.Info("raft recovery deleted peers.json")
-
-		err = b.fsm.StoreConfig(1, recoveryConfig)
-		if err != nil {
-			return errwrap.Wrapf("raft recovery failed to store config: {{err}}", err)
-		}
 	}
 
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
