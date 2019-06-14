@@ -33,7 +33,7 @@ type Client interface {
 // off a connection for a cluster listener application.
 type Handler interface {
 	ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error)
-	CALookup(context.Context) (*x509.Certificate, error)
+	CALookup(context.Context) ([]*x509.Certificate, error)
 
 	// Handoff is used to pass the connection lifetime off to
 	// the handler
@@ -195,12 +195,14 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 		defer cl.l.RUnlock()
 		for _, v := range clientHello.SupportedProtos {
 			if handler, ok := cl.handlers[v]; ok {
-				ca, err := handler.CALookup(ctx)
+				caList, err := handler.CALookup(ctx)
 				if err != nil {
 					return nil, err
 				}
 
-				caPool.AddCert(ca)
+				for _, ca := range caList {
+					caPool.AddCert(ca)
+				}
 				return ret, nil
 			}
 		}

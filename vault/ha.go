@@ -342,11 +342,11 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		}, func(error) {})
 	}
 	{
-		// Monitor for key rotation
+		// Monitor for key rotations
 		keyRotateStop := make(chan struct{})
 
 		g.Add(func() error {
-			c.periodicCheckKeyUpgrade(context.Background(), keyRotateStop)
+			c.periodicCheckKeyUpgrades(context.Background(), keyRotateStop)
 			return nil
 		}, func(error) {
 			close(keyRotateStop)
@@ -677,7 +677,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
-func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}) {
+func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
 	opCount := new(int32)
 	for {
 		select {
@@ -714,6 +714,10 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}
 
 				if err := c.checkKeyUpgrades(ctx); err != nil {
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
+				}
+
+				if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+					c.logger.Error("raft tls periodic upgrade check failed", "error", err)
 				}
 
 				atomic.AddInt32(lopCount, -1)

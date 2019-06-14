@@ -28,7 +28,6 @@ import (
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physicalstd.Clustered = (*RaftBackend)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -64,9 +63,9 @@ type RaftBackend struct {
 	// regarding this node.
 	raftNotifyCh chan bool
 
-	// raftLayer is the network layer used to connect the nodes in the raft
+	// streamLayer is the network layer used to connect the nodes in the raft
 	// cluster.
-	raftLayer *raftLayer
+	streamLayer *raftLayer
 
 	// raftTransport is the transport layer that the raft library uses for RPC
 	// communication.
@@ -120,11 +119,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	if !ok {
 		return nil, fmt.Errorf("'path' must be set")
 	}
-
-	/*var serverAddressProvider raft.ServerAddressProvider = nil
-	if s.config.RaftConfig.ProtocolVersion >= 3 { //ServerAddressProvider needs server ids to work correctly, which is only supported in protocol version 3 or higher
-		serverAddressProvider = s.serverLookup
-	}*/
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
@@ -262,6 +256,19 @@ func (b *RaftBackend) Initialized() bool {
 	return init
 }
 
+// SetTLSKeyring is used to install a new keyring. If the active key has changed
+// it will also close any network connections or streams forcing a reconnect
+// with the new key.
+func (b *RaftBackend) SetTLSKeyring(keyring *RaftTLSKeyring) error {
+	b.l.RLock()
+	err := b.streamLayer.setTLSKeyring(keyring)
+	b.l.RUnlock()
+
+	return err
+}
+
+// SetServerAddressProvider sets a the address provider for determining the raft
+// node addresses. This is currently only used in tests.
 func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvider) {
 	b.l.Lock()
 	b.serverAddressProvider = provider
@@ -298,6 +305,8 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	return nil
 }
 
+// SetRestoreCallback sets the callback to be used when a restoreCallbackOp is
+// processed through the FSM.
 func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
 	b.fsm.l.Lock()
 	b.fsm.restoreCb = restoreCb
@@ -306,7 +315,7 @@ func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
 
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
-func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicalstd.NetworkConfig, clusterListener physicalstd.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener physicalstd.ClusterHook) error {
 	b.logger.Trace("setting up raft cluster")
 
 	b.l.Lock()
@@ -332,8 +341,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	raftConfig.LeaderLeaseTimeout = raftConfig.LeaderLeaseTimeout * 5
 
 	switch {
-	case networkConfig == nil:
-		// If we don't have a provided network config we use an in-memory one.
+	case raftTLSKeyring == nil:
+		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap and dev modes.
 		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(clusterListener.Addr().String()))
@@ -345,19 +354,19 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 		}
 
 		// Set the local address and localID in the streaming layer and the raft config.
-		raftLayer, err := NewRaftLayer(b.logger.Named("stream"), networkConfig, baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), raftTLSKeyring, clusterListener.Addr(), baseTLSConfig)
 		if err != nil {
 			return err
 		}
 		transConfig := &raft.NetworkTransportConfig{
-			Stream:                raftLayer,
+			Stream:                streamLayer,
 			MaxPool:               3,
 			Timeout:               10 * time.Second,
 			ServerAddressProvider: b.serverAddressProvider,
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
-		b.raftLayer = raftLayer
+		b.streamLayer = streamLayer
 		b.raftTransport = transport
 	}
 
@@ -423,12 +432,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
-	if b.raftLayer != nil {
+	if b.streamLayer != nil {
 		// Add Handler to the cluster.
-		clusterListener.AddHandler(consts.RaftStorageALPN, b.raftLayer)
+		clusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
 
 		// Add Client to the cluster.
-		clusterListener.AddClient(consts.RaftStorageALPN, b.raftLayer)
+		clusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
 	return nil
@@ -444,6 +453,18 @@ func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) e
 	b.l.Unlock()
 
 	return future.Error()
+}
+
+// AppliedIndex returns the latest index applied to the FSM
+func (b *RaftBackend) AppliedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	return b.raft.AppliedIndex()
 }
 
 // RemovePeer removes the given peer ID from the raft cluster. If the node is

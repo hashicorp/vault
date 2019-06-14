@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/physical/raft"
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
@@ -31,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
-	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -446,6 +446,11 @@ type Core struct {
 
 	// Stores request counters
 	counters counters
+
+	// Stores the raft applied index for standby nodes
+	raftFollowerStates *raftFollowerStates
+	// Stop channel for raft TLS rotations
+	raftTLSRotationStopCh chan struct{}
 }
 
 // CoreConfig is used to parameterize a core
@@ -1489,8 +1494,8 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 	}
 
 	// If the storage backend needs to be sealed
-	if clustered, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
-		if err := clustered.TeardownCluster(c.clusterListener); err != nil {
+	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+		if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
 			c.logger.Error("error stopping storage cluster", "error", err)
 			return err
 		}
@@ -1602,6 +1607,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
+
+		c.startPeriodicRaftTLSRotate(ctx)
 	}
 
 	c.clusterParamsLock.Lock()
@@ -1683,6 +1690,8 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	var result error
+
+	c.stopPeriodicRaftTLSRotate()
 
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {

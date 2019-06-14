@@ -2,19 +2,14 @@ package vault
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/big"
-	mathrand "math/rand"
+	"math"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -23,66 +18,61 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
 )
 
-var raftTLSStoragePath = "core/raft/tls"
+var (
+	raftTLSStoragePath    = "core/raft/tls"
+	raftTLSRotationPeriod = 24 * time.Hour
+)
 
-type raftTLSConfig struct {
-	Cert      []byte                     `json:"cluster_cert,omitempty"`
-	KeyParams *certutil.ClusterKeyParams `json:"cluster_key_params,omitempty"`
+type raftFollowerStates struct {
+	l         sync.RWMutex
+	followers map[string]uint64
 }
 
-func generateRaftTLS() (*raftTLSConfig, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if err != nil {
-		return nil, err
+func (s *raftFollowerStates) update(nodeID string, appliedIndex uint64) {
+	s.l.Lock()
+	s.followers[nodeID] = appliedIndex
+	s.l.Unlock()
+}
+func (s *raftFollowerStates) delete(nodeID string) {
+	s.l.RLock()
+	delete(s.followers, nodeID)
+	s.l.RUnlock()
+}
+func (s *raftFollowerStates) get(nodeID string) uint64 {
+	s.l.RLock()
+	index := s.followers[nodeID]
+	s.l.RUnlock()
+	return index
+}
+func (s *raftFollowerStates) minIndex() uint64 {
+	var min uint64 = math.MaxUint64
+	minFunc := func(a, b uint64) uint64 {
+		if a > b {
+			return b
+		}
+		return a
 	}
 
-	host, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
+	s.l.RLock()
+	for _, i := range s.followers {
+		min = minFunc(min, i)
 	}
-	host = fmt.Sprintf("raft-%s", host)
-	template := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: host,
-		},
-		DNSNames: []string{host},
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		// 30 years of single-active uptime ought to be enough for anybody
-		NotAfter:              time.Now().Add(262980 * time.Hour),
-		BasicConstraintsValid: true,
-		IsCA:                  true,
+	s.l.RUnlock()
+
+	if min == math.MaxUint64 {
+		return 0
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
-	if err != nil {
-		return nil, errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
-	}
-
-	return &raftTLSConfig{
-		Cert: certBytes,
-		KeyParams: &certutil.ClusterKeyParams{
-			Type: certutil.PrivateKeyTypeP521,
-			X:    key.PublicKey.X,
-			Y:    key.PublicKey.Y,
-			D:    key.D,
-		},
-	}, nil
+	return min
 }
 
 func (c *Core) startRaftStorage(ctx context.Context) error {
@@ -99,19 +89,275 @@ func (c *Core) startRaftStorage(ctx context.Context) error {
 			return errors.New("could not find raft TLS configuration")
 		}
 
-		raftTLS := new(raftTLSConfig)
+		raftTLS := new(raft.RaftTLSKeyring)
 		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
 			return err
 		}
 
 		raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
-		if err := raftStorage.SetupCluster(ctx, &physicalstd.NetworkConfig{
-			Addr:      c.clusterListenerAddrs[0],
-			Cert:      raftTLS.Cert,
-			KeyParams: raftTLS.KeyParams,
-		}, c.clusterListener); err != nil {
+		if err := raftStorage.SetupCluster(ctx, raftTLS, c.clusterListener); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// startPeriodicRaftTLSRotate will spawn a go routine in charge of periodically
+// rotating the TLS certs and keys used for raft traffic.
+//
+// The logic for updating the TLS certificate uses a pseudo two phase commit
+// using the known applied indexes from standby nodes. When writing a new Key
+// it will be appended to the end of the keyring. Standbys can start accepting
+// connections with this key as soon as they see the update. Then it will write
+// the keyring a second time indicating the applied index for this key update.
+//
+// The active node will wait until it sees all standby nodes are at or past the
+// applied index for this update. At that point it will delete the older key
+// and make the new key active. The key isn't officially in use until this
+// happens. The dual write ensures the standby at least gets the first update
+// containing the key before the active node switches over to using it.
+//
+// If a standby is shut down then it cannot advance the key term until it
+// receives the update. This ensures a standby node isn't left behind and unable
+// to reconnect with the cluster. Additionally, only one outstanding key
+// is allowed for this same reason (max keyring size of 2).
+func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return nil
+	}
+
+	stopCh := make(chan struct{})
+	followerStates := &raftFollowerStates{
+		followers: make(map[string]uint64),
+	}
+
+	// Pre-populate the follower list with the set of peers.
+	raftConfig, err := raftStorage.GetConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+	for _, server := range raftConfig.Servers {
+		if !server.Leader {
+			followerStates.update(server.NodeID, 0)
+		}
+	}
+
+	logger := c.logger.Named("raft")
+	c.raftTLSRotationStopCh = stopCh
+	c.raftFollowerStates = followerStates
+
+	readKeyring := func() (*raft.RaftTLSKeyring, error) {
+		tlsKeyringEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+		if err != nil {
+			return nil, err
+		}
+		if tlsKeyringEntry == nil {
+			return nil, errors.New("no keyring found")
+		}
+		var keyring raft.RaftTLSKeyring
+		if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
+			return nil, err
+		}
+
+		return &keyring, nil
+	}
+
+	// rotateKeyring writes new key data to the keyring and adds an applied
+	// index that is used to verify it has been committed. The keys written in
+	// this function can be used on standbys but the active node doesn't start
+	// usint it yet.
+	rotateKeyring := func() (time.Time, error) {
+		// Read the existing keyring
+		keyring, err := readKeyring()
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+		}
+
+		switch {
+		case len(keyring.Keys) == 2 && keyring.Keys[1].AppliedIndex == 0:
+			// If this case is hit then the second write to add the applied
+			// index failed. Attempt to write it again.
+			keyring.Keys[1].AppliedIndex = raftStorage.AppliedIndex()
+			keyring.AppliedIndex = raftStorage.AppliedIndex()
+			entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+			if err != nil {
+				return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+			}
+			if err := c.barrier.Put(ctx, entry); err != nil {
+				return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+			}
+
+		case len(keyring.Keys) > 1:
+			// If there already exists a pending key update then the update
+			// hasn't replicated down to all standby nodes yet. Don't allow any
+			// new keys to be created until all standbys have seen this previous
+			// rotation. As a backoff strategy another rotation attempt is
+			// scheduled for 5 minutes from now.
+			logger.Warn("skipping new raft TLS config creation, keys are pending")
+			return time.Now().Add(time.Minute * 5), nil
+		}
+
+		logger.Info("creating new raft TLS config")
+
+		// Create a new key
+		raftTLSKey, err := raft.GenerateTLSKey()
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to generate new raft TLS key: {{err}}", err)
+		}
+
+		// Advance the term and store the new key
+		keyring.Term += 1
+		keyring.Keys = append(keyring.Keys, raftTLSKey)
+		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+		}
+
+		// Write the keyring again with the new applied index. This allows us to
+		// track if standby nodes receive the update.
+		keyring.Keys[1].AppliedIndex = raftStorage.AppliedIndex()
+		keyring.AppliedIndex = raftStorage.AppliedIndex()
+		entry, err = logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+		}
+
+		logger.Info("wrote new raft TLS config")
+		// Schedule the next rotation
+		return raftTLSKey.CreatedTime.Add(raftTLSRotationPeriod), nil
+	}
+
+	// checkCommitted verifies key updates have been applied to all nodes and
+	// finalizes the rotation by deleting the old keys and updating the raft
+	// backend.
+	checkCommitted := func() error {
+		keyring, err := readKeyring()
+		if err != nil {
+			return errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+		}
+
+		switch {
+		case len(keyring.Keys) == 1:
+			// No Keys to apply
+			return nil
+		case keyring.Keys[1].AppliedIndex != keyring.AppliedIndex:
+			// We haven't fully committed the new key, continue here
+			return nil
+		case followerStates.minIndex() < keyring.AppliedIndex:
+			// Not all the followers have applied the latest key
+			return nil
+		}
+
+		// Upgrade to the new key
+		keyring.Keys = keyring.Keys[1:]
+		keyring.Keys[0].Active = true
+		keyring.Term += 1
+		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+		if err != nil {
+			return errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			return errwrap.Wrapf("failed to write keyring: {{err}}", err)
+		}
+
+		// Update the TLS Key in the backend
+		if err := raftStorage.SetTLSKeyring(keyring); err != nil {
+			return errwrap.Wrapf("failed to install keyring: {{err}}", err)
+		}
+
+		logger.Info("installed new raft TLS key", "term", keyring.Term)
+		return nil
+	}
+
+	// Read the keyring to calculate the time of next rotation.
+	keyring, err := readKeyring()
+	if err != nil {
+		return err
+	}
+	activeKey := keyring.GetActive()
+	if activeKey == nil {
+		return errors.New("no active raft TLS key found")
+	}
+
+	// Start the process in a go routine
+	go func() {
+		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+
+		keyCheckInterval := time.NewTicker(1 * time.Minute)
+		defer keyCheckInterval.Stop()
+
+		var backoff bool
+		for {
+			// If we encountered and error we should try to create the key
+			// again.
+			if backoff {
+				nextRotationTime = time.Now().Add(10 * time.Second)
+				backoff = false
+			}
+
+			select {
+			case <-keyCheckInterval.C:
+				err := checkCommitted()
+				if err != nil {
+					logger.Error("failed to activate TLS key", "error", err)
+				}
+			case <-time.After(time.Until(nextRotationTime)):
+				// It's time to rotate the keys
+				next, err := rotateKeyring()
+				if err != nil {
+					logger.Error("failed to rotate TLS key", "error", err)
+					backoff = true
+					continue
+				}
+
+				nextRotationTime = next
+
+			case <-stopCh:
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (c *Core) stopPeriodicRaftTLSRotate() {
+	if c.raftTLSRotationStopCh != nil {
+		close(c.raftTLSRotationStopCh)
+	}
+	c.raftTLSRotationStopCh = nil
+	c.raftFollowerStates = nil
+}
+
+func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return nil
+	}
+
+	tlsKeyringEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+	if err != nil {
+		return err
+	}
+	if tlsKeyringEntry == nil {
+		return nil
+	}
+
+	var keyring raft.RaftTLSKeyring
+	if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
+		return err
+	}
+
+	if err := raftStorage.SetTLSKeyring(&keyring); err != nil {
+		return err
 	}
 
 	return nil
@@ -355,7 +601,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	clusterAddr := c.clusterAddr
+	clusterAddr := c.clusterListenerAddrs[0].String()
 	if UpdateClusterAddrForTests && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
@@ -388,11 +634,6 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return err
 	}
 
-	tlsCert, err := base64.StdEncoding.DecodeString(answerResp.Data.TLSCertRaw)
-	if err != nil {
-		return errwrap.Wrapf("error decoding tls cert: {{err}}", err)
-	}
-
 	raftStorage.Bootstrap(ctx, answerResp.Data.Peers)
 
 	err = c.startClusterListener(ctx)
@@ -401,11 +642,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 	}
 
 	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
-	err = raftStorage.SetupCluster(ctx, &physicalstd.NetworkConfig{
-		Addr:      c.clusterListenerAddrs[0],
-		Cert:      tlsCert,
-		KeyParams: answerResp.Data.TLSKey,
-	}, c.clusterListener)
+	err = raftStorage.SetupCluster(ctx, answerResp.Data.TLSKeyring, c.clusterListener)
 	if err != nil {
 		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)
 	}
@@ -422,7 +659,6 @@ type answerRespData struct {
 }
 
 type answerResp struct {
-	Peers      []raft.Peer                `json:"peers"`
-	TLSCertRaw string                     `json:"tls_cert"`
-	TLSKey     *certutil.ClusterKeyParams `json:"tls_key"`
+	Peers      []raft.Peer          `json:"peers"`
+	TLSKeyring *raft.RaftTLSKeyring `json:"tls_keyring"`
 }

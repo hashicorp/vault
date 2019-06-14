@@ -373,6 +373,9 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		if err := raftStorage.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
+		if b.Core.raftFollowerStates != nil {
+			b.Core.raftFollowerStates.delete(serverID)
+		}
 
 		return nil, nil
 	}
@@ -455,21 +458,23 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 
-		raftTLSEntry, err := b.Core.barrier.Get(ctx, raftTLSStoragePath)
+		tlsKeyringEntry, err := b.Core.barrier.Get(ctx, raftTLSStoragePath)
 		if err != nil {
 			return nil, err
 		}
-		if raftTLSEntry == nil {
+		if tlsKeyringEntry == nil {
 			return nil, errors.New("could not find raft TLS configuration")
 		}
-
-		raftTLS := new(raftTLSConfig)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
-			return nil, err
+		var keyring raft.RaftTLSKeyring
+		if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
+			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
 		if err := raftStorage.AddPeer(ctx, serverID, clusterAddr); err != nil {
 			return nil, err
+		}
+		if b.Core.raftFollowerStates != nil {
+			b.Core.raftFollowerStates.update(serverID, 0)
 		}
 
 		peers, err := raftStorage.Peers(ctx)
@@ -479,9 +484,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"peers":    peers,
-				"tls_cert": base64.StdEncoding.EncodeToString(raftTLS.Cert),
-				"tls_key":  raftTLS.KeyParams,
+				"peers":       peers,
+				"tls_keyring": keyring,
 			},
 		}, nil
 	}

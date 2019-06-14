@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -145,7 +144,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// If we have clustered storage, set it up now
-	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
+	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
 		// TODO: do we need to start cluster listener here? I think yes so we
 		// can get the correct cluster port in the event :0 is used. Unless we
 		// use a address provider?
@@ -162,12 +161,12 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
 		}
 
-		if err := clusteredStorage.SetupCluster(ctx, nil, c.clusterListener); err != nil {
+		if err := raftStorage.SetupCluster(ctx, nil, c.clusterListener); err != nil {
 			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
 		}
 
 		defer func() {
-			if err := clusteredStorage.TeardownCluster(c.clusterListener); err != nil {
+			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
 				c.logger.Error("failed to stop raft storage", "error", err)
 			}
 
@@ -302,13 +301,21 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
-	if _, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
-		raftTLS, err := generateRaftTLS()
+	if _, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+		raftTLS, err := raft.GenerateTLSKey()
 		if err != nil {
 			return nil, err
 		}
 
-		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, raftTLS)
+		raftTLS.Active = true
+		keyring := &raft.RaftTLSKeyring{
+			Keys: []*raft.RaftTLSKey{raftTLS},
+		}
+
+		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+		if err != nil {
+			return nil, err
+		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
 			return nil, err
 		}
