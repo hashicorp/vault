@@ -152,16 +152,16 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		return logical.ErrorResponse("missing mount_accessor"), nil
 	}
 
-	mountValidationResp := i.core.router.validateMountByAccessor(mountAccessor)
-	if mountValidationResp == nil {
+	mountEntry := i.core.router.MatchingMountByAccessor(mountAccessor)
+	if mountEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}
 
-	if mountValidationResp.MountLocal {
+	if mountEntry.Local {
 		return logical.ErrorResponse(fmt.Sprintf("mount_accessor %q is of a local mount", mountAccessor)), nil
 	}
 
-	groupAliasByFactors, err := i.MemDBAliasByFactors(mountValidationResp.MountAccessor, groupAliasName, false, true)
+	groupAliasByFactors, err := i.MemDBAliasByFactors(mountEntry.Accessor, groupAliasName, false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +208,13 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		group.Alias = groupAlias
 	}
 
+	// Check if the group we found belongs to a different namespace than the mount accessor
+	if group.NamespaceID != mountEntry.NamespaceID {
+		return logical.ErrorResponse("mount accessor and group are located in different namespaces"), nil
+	}
+
 	group.Alias.Name = groupAliasName
-	group.Alias.MountAccessor = mountValidationResp.MountAccessor
+	group.Alias.MountAccessor = mountEntry.Accessor
 	// Explicitly correct for previous versions that persisted this
 	group.Alias.MountType = ""
 

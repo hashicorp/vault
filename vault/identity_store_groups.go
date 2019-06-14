@@ -335,6 +335,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
 	respData["modify_index"] = group.ModifyIndex
 	respData["type"] = group.Type
+	respData["namespace_id"] = group.NamespaceID
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {

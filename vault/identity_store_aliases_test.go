@@ -196,8 +196,8 @@ func TestIdentityStore_AliasSameAliasNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected an error due to alias name not being unique")
+	if resp != nil {
+		t.Fatalf("expected no response since this modification should be idempotent")
 	}
 }
 
