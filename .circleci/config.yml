@@ -357,7 +357,10 @@ workflows:
     - sample-make-test-race:
         requires:
         - go-mod-download
-    - zip-samples
+    - zip-samples:
+        requires:
+        - sample-make-test
+        - sample-make-test-race
   version: 2
 
 # Original config.yml file:
@@ -677,4 +680,7 @@ workflows:
 #     - sample-make-test-race:
 #         requires:
 #         - go-mod-download
-#     - zip-samples
+#     - zip-samples:
+#         requires:
+#         - sample-make-test
+#         - sample-make-test-race
