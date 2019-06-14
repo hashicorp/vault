@@ -21,52 +21,6 @@ jobs:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
-  go-mod-download:
-    docker:
-    - image: golang:1.12.4-stretch
-    working_directory: /src
-    steps:
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: go mod download
-        name: Download Go modules
-    - run:
-        command: go mod verify
-        name: Verify checksums of Go modules
-    - save_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-        paths:
-        - /go/pkg/mod
-  build-go-dev:
-    docker:
-    - image: golang:1.12.4-stretch
-    working_directory: /src
-    steps:
-    - checkout
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          set -eux -o pipefail
-
-          # Move dev UI assets to expected location
-          rm -rf ./pkg
-          mkdir ./pkg
-
-          # Build dev binary
-          make bootstrap dev
-        name: Build dev binary
-    - persist_to_workspace:
-        paths:
-        - bin
-        root: .
   test-ui:
     docker:
     - image: node:10-stretch
@@ -104,6 +58,102 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
+  build-go-dev:
+    docker:
+    - image: golang:1.12.4-stretch
+    working_directory: /src
+    steps:
+    - checkout
+    - restore_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+    - attach_workspace:
+        at: .
+    - run:
+        command: |
+          set -eux -o pipefail
+
+          # Move dev UI assets to expected location
+          rm -rf ./pkg
+          mkdir ./pkg
+
+          # Build dev binary
+          make bootstrap dev
+        name: Build dev binary
+    - persist_to_workspace:
+        paths:
+        - bin
+        root: .
+  test-go-race:
+    machine: true
+    working_directory: ~/src
+    steps:
+    - checkout
+    - run:
+        command: |
+          set -eux -o pipefail
+
+          sudo mkdir /go
+          sudo chown -R circleci:circleci /go
+        name: Allow circleci user to restore Go modules cache
+    - restore_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+    - run:
+        command: |
+          set -eux -o pipefail
+
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          export GOPATH=/go
+          export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+
+          # Install CircleCI CLI
+          curl -sSL \
+              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz \
+              -C /usr/local/bin \
+              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          # Split Go tests by prior test times
+          package_names=$(go list \
+              -tags "${GO_TAGS}" \
+              ./... \
+            | grep -v /integ \
+            | grep -v /vendor/ \
+            | sort \
+            | circleci tests split --split-by=timings --timings-type=classname)
+
+          # Install gotestsum
+          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+          # Run tests
+          make prep
+          mkdir -p test-results/go-test
+          CGO_ENABLED= \
+            VAULT_ADDR= \
+            VAULT_TOKEN= \
+            VAULT_DEV_ROOT_TOKEN_ID= \
+            VAULT_ACC= \
+            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+              -tags "${GO_TAGS}" \
+              -timeout=40m \
+              -parallel=20 \
+              -race \
+              ${package_names}
+        name: Run Go tests
+        no_output_timeout: 20m
+    - store_artifacts:
+        path: test-results
+    - store_test_results:
+        path: test-results
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: null
+    - GO_VERSION: 1.12.4
+    - GOTESTSUM_VERSION: 0.3.3
   test-go:
     machine: true
     working_directory: ~/src
@@ -176,77 +226,6 @@ jobs:
     - GO_TAGS: null
     - GO_VERSION: 1.12.4
     - GOTESTSUM_VERSION: 0.3.3
-  test-go-race:
-    machine: true
-    working_directory: ~/src
-    steps:
-    - checkout
-    - run:
-        command: |
-          set -eux -o pipefail
-
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
-        name: Allow circleci user to restore Go modules cache
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: |
-          set -eux -o pipefail
-
-          # Install Go
-          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          export GOPATH=/go
-          export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
-
-          # Install CircleCI CLI
-          curl -sSL \
-              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz \
-              -C /usr/local/bin \
-              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
-
-          # Split Go tests by prior test times
-          package_names=$(go list \
-              -tags "${GO_TAGS}" \
-              ./... \
-            | grep -v /integ \
-            | grep -v /vendor/ \
-            | sort \
-            | circleci tests split --split-by=timings --timings-type=classname)
-
-          # Install gotestsum
-          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
-
-          # Run tests
-          make prep
-          mkdir -p test-results/go-test
-          CGO_ENABLED= \
-            VAULT_ADDR= \
-            VAULT_TOKEN= \
-            VAULT_DEV_ROOT_TOKEN_ID= \
-            VAULT_ACC= \
-            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
-              -tags "${GO_TAGS}" \
-              -timeout=40m \
-              -parallel=20 \
-              -race \
-              ${package_names}
-        name: Run Go tests
-        no_output_timeout: 20m
-    - store_artifacts:
-        path: test-results
-    - store_test_results:
-        path: test-results
-    environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: null
-    - GO_VERSION: 1.12.4
-    - GOTESTSUM_VERSION: 0.3.3
   sample-make-test:
     machine: true
     working_directory: ~/src
@@ -271,17 +250,86 @@ jobs:
           # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
           \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
         environment:
-          OUTDIR: test-results/make-test-sample
+          OUTDIR: /sample/make-test
           TESTARGS: -v
         name: make test
         no_output_timeout: 20m
-    - store_artifacts:
-        path: test-results/make-test-sample
+    - persist_to_workspace:
+        paths:
+        - sample/make-test
+        root: /
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
     - GO_VERSION: 1.12.4
     - GOTESTSUM_VERSION: 0.3.3
+  zip-samples:
+    docker:
+    - image: golang:1.12.4-stretch
+    working_directory: /src
+    steps:
+    - run:
+        command: tar -czf /sample.tar.gz /sample
+    - store_artifacts:
+        path: /sample.tar.gz
+  sample-make-test-race:
+    machine: true
+    working_directory: ~/src
+    parallelism: 10
+    steps:
+    - checkout
+    - run:
+        command: |
+          set -eux -o pipefail
+          sudo mkdir /go
+          sudo chown -R circleci:circleci /go
+        name: Allow circleci user to restore Go modules cache
+    - restore_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+    - run:
+        command: "set -eux -o pipefail\n\n# Install Go\ncurl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"\
+          \nsudo rm -rf /usr/local/go\nsudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"\
+          \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
+          \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\n# Run tests\nmkdir\
+          \ -p $OUTDIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
+          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
+          # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
+          \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
+        environment:
+          OUTDIR: /sample/make-test-race
+          TESTARGS: -v -race
+        name: make test
+        no_output_timeout: 20m
+    - persist_to_workspace:
+        paths:
+        - sample/make-test-race
+        root: /
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: null
+    - GO_VERSION: 1.12.4
+    - GOTESTSUM_VERSION: 0.3.3
+  go-mod-download:
+    docker:
+    - image: golang:1.12.4-stretch
+    working_directory: /src
+    steps:
+    - add_ssh_keys:
+        fingerprints:
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+    - checkout
+    - restore_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+    - run:
+        command: go mod download
+        name: Download Go modules
+    - run:
+        command: go mod verify
+        name: Verify checksums of Go modules
+    - save_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+        paths:
+        - /go/pkg/mod
 workflows:
   ci:
     jobs:
@@ -306,6 +354,10 @@ workflows:
     - sample-make-test:
         requires:
         - go-mod-download
+    - sample-make-test-race:
+        requires:
+        - go-mod-download
+    - zip-samples
   version: 2
 
 # Original config.yml file:
@@ -489,10 +541,31 @@ workflows:
 #         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - make-test-sample:
-#         OUTDIR: test-results/make-test-sample
+#         OUTDIR: /sample/make-test
 #         TESTARGS: -v
-#     - store_artifacts:
-#         path: test-results/make-test-sample
+#     - persist_to_workspace:
+#         paths:
+#         - sample/make-test
+#         root: /
+#   sample-make-test-race:
+#     executor: go-machine
+#     parallelism: 10
+#     steps:
+#     - checkout
+#     - run:
+#         command: |
+#           set -eux -o pipefail
+#           sudo mkdir /go
+#           sudo chown -R circleci:circleci /go
+#         name: Allow circleci user to restore Go modules cache
+#     - restore_go_cache
+#     - make-test-sample:
+#         OUTDIR: /sample/make-test-race
+#         TESTARGS: -v -race
+#     - persist_to_workspace:
+#         paths:
+#         - sample/make-test-race
+#         root: /
 #   test-go:
 #     executor: go-machine
 #     parallelism: 2
@@ -563,6 +636,12 @@ workflows:
 #         path: ui/test-results
 #     - store_test_results:
 #         path: ui/test-results
+#   zip-samples:
+#     executor: go
+#     steps:
+#     - run: tar -czf /sample.tar.gz /sample
+#     - store_artifacts:
+#         path: /sample.tar.gz
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
@@ -595,3 +674,7 @@ workflows:
 #     - sample-make-test:
 #         requires:
 #         - go-mod-download
+#     - sample-make-test-race:
+#         requires:
+#         - go-mod-download
+#     - zip-samples

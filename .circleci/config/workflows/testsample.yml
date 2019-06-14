@@ -3,3 +3,7 @@ jobs:
   - sample-make-test:
       requires:
         - go-mod-download
+  - sample-make-test-race:
+      requires:
+        - go-mod-download
+  - zip-samples

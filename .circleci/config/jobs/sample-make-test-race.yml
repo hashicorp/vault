@@ -10,9 +10,9 @@ steps:
         sudo chown -R circleci:circleci /go
   - restore_go_cache
   - make-test-sample:
-      TESTARGS: -v
-      OUTDIR: /sample/make-test
+      TESTARGS: -v -race
+      OUTDIR: /sample/make-test-race
   - persist_to_workspace:
       root: /
       paths:
-        - sample/make-test
+        - sample/make-test-race
