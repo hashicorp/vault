@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -71,12 +70,23 @@ type ResponseError struct {
 
 // Error implements the error interface.
 func (e *ResponseError) Error() string {
-	msg := fmt.Sprintf("%s %s: %d %s", e.Method, e.URL, e.StatusCode, http.StatusText(e.StatusCode))
 	if e.RawMessage != "" {
-		msg += ": " + e.RawMessage
+		return fmt.Sprintf(
+			"Error making API request.\n\n"+
+				"URL: %s %s\n"+
+				"Code: %d. Raw Message:\n\n%s",
+			e.Method, e.URL,
+			e.StatusCode, e.RawMessage)
 	}
-	if len(e.Errors) > 0 {
-		msg += ": " + strings.Join(e.Errors, ": ")
+	var errBody bytes.Buffer
+	errBody.WriteString(fmt.Sprintf(
+		"Error making API request.\n\n"+
+			"URL: %s %s\n"+
+			"Code: %d. Errors:\n\n",
+		e.Method, e.URL,
+		e.StatusCode))
+	for _, err := range e.Errors {
+		errBody.WriteString(fmt.Sprintf("* %s", err))
 	}
-	return msg
+	return errBody.String()
 }
