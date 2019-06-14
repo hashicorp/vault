@@ -228,7 +228,8 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 // lockedAWSRole returns the properties set on the given role. This method
 // acquires the read lock before reading the role from the storage.
 //
-// If needed, the role will be upgraded and persisted before being returned.
+// If the role needs to be upgraded, the write lock will be used to persist
+// the role to storage before being returned.
 func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
