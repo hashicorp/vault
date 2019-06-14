@@ -266,7 +266,7 @@ jobs:
           \nsudo rm -rf /usr/local/go\nsudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"\
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\n# Run tests\nmkdir\
-          \ -p $OUTPUT_DIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
+          \ -p $OUTDIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
           \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
           # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
           \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
@@ -378,7 +378,7 @@ workflows:
 #         command: \"set -eux -o pipefail\\n\\n# Install Go\\ncurl -sSLO \\\"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nsudo
 #           rm -rf /usr/local/go\\nsudo tar -C /usr/local -xzf \\\"go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nrm
 #           -f \\\"go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nexport GOPATH=/go\\nexport PATH=\\\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\\\"\\n\\n#
-#           Run tests\\nmkdir -p $OUTPUT_DIR\\nOUT=\\\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\\\"\\n\\n#
+#           Run tests\\nmkdir -p $OUTDIR\\nOUT=\\\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\\\"\\n\\n#
 #           We will force this to exit 0 each time, as this is treated as offline\\n#
 #           data gathering, not a blocking part of the pipeline.\\nset +eo pipefail \\nmake
 #           test 2>&1 | tee $OUT\\nexit 0\\n\"

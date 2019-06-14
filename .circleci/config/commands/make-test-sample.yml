@@ -24,7 +24,7 @@ steps:
         export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
         # Run tests
-        mkdir -p $OUTPUT_DIR
+        mkdir -p $OUTDIR
         OUT="$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log"
 
         # We will force this to exit 0 each time, as this is treated as offline
