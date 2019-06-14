@@ -1,0 +1,35 @@
+description: make test sample
+parameters:
+  TESTARGS:
+    type: string
+    default: "-v"
+  OUTDIR:
+    type: string
+steps:
+  - run:
+      name: make test
+      no_output_timeout: 20m
+      environment:
+        TESTARGS: "<< parameters.TESTARGS >>"
+        OUTDIR: "<< parameters.OUTDIR >>"
+      command: |
+        set -eux -o pipefail
+
+        # Install Go
+        curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+        rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+        export GOPATH=/go
+        export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+
+        # Run tests
+        mkdir -p $OUTPUT_DIR
+        OUT="$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log"
+
+        # We will force this to exit 0 each time, as this is treated as offline
+        # data gathering, not a blocking part of the pipeline.
+        set +eo pipefail 
+        make test 2>&1 | tee $OUT
+        exit 0
+

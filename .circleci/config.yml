@@ -247,6 +247,41 @@ jobs:
     - GO_TAGS: null
     - GO_VERSION: 1.12.4
     - GOTESTSUM_VERSION: 0.3.3
+  sample-make-test:
+    machine: true
+    working_directory: ~/src
+    parallelism: 10
+    steps:
+    - checkout
+    - run:
+        command: |
+          set -eux -o pipefail
+          sudo mkdir /go
+          sudo chown -R circleci:circleci /go
+        name: Allow circleci user to restore Go modules cache
+    - restore_cache:
+        key: go-sum-v1-{{ checksum "go.sum" }}
+    - run:
+        command: "set -eux -o pipefail\n\n# Install Go\ncurl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"\
+          \nsudo rm -rf /usr/local/go\nsudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"\
+          \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
+          \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\n# Run tests\nmkdir\
+          \ -p $OUTPUT_DIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
+          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
+          # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
+          \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
+        environment:
+          OUTDIR: test-results/make-test-sample
+          TESTARGS: -v
+        name: make test
+        no_output_timeout: 20m
+    - store_artifacts:
+        path: test-results/make-test-sample
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: null
+    - GO_VERSION: 1.12.4
+    - GOTESTSUM_VERSION: 0.3.3
 workflows:
   ci:
     jobs:
@@ -263,6 +298,15 @@ workflows:
         requires:
         - build-go-dev
     - test-go-race:
+        requires:
+        - build-go-dev
+  testsample:
+    jobs:
+    - go-mod-download
+    - build-go-dev:
+        requires:
+        - go-mod-download
+    - sample-make-test:
         requires:
         - build-go-dev
   version: 2
@@ -323,6 +367,28 @@ workflows:
 #               << parameters.extra_flags >> \\
 #               ${package_names}
 #         name: Run Go tests
+#         no_output_timeout: 20m
+#   make-test-sample:
+#     description: make test sample
+#     parameters:
+#       OUTDIR:
+#         type: string
+#       TESTARGS:
+#         default: -v
+#         type: string
+#     steps:
+#     - run:
+#         command: \"set -eux -o pipefail\\n\\n# Install Go\\ncurl -sSLO \\\"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nsudo
+#           rm -rf /usr/local/go\\nsudo tar -C /usr/local -xzf \\\"go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nrm
+#           -f \\\"go${GO_VERSION}.linux-amd64.tar.gz\\\"\\nexport GOPATH=/go\\nexport PATH=\\\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\\\"\\n\\n#
+#           Run tests\\nmkdir -p $OUTPUT_DIR\\nOUT=\\\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\\\"\\n\\n#
+#           We will force this to exit 0 each time, as this is treated as offline\\n#
+#           data gathering, not a blocking part of the pipeline.\\nset +eo pipefail \\nmake
+#           test 2>&1 | tee $OUT\\nexit 0\\n\"
+#         environment:
+#           OUTDIR: << parameters.OUTDIR >>
+#           TESTARGS: << parameters.TESTARGS >>
+#         name: make test
 #         no_output_timeout: 20m
 #   restore_go_cache:
 #     steps:
@@ -413,6 +479,23 @@ workflows:
 #           npm rebuild node-sass
 #         name: Install UI dependencies
 #     - save_yarn_cache
+#   sample-make-test:
+#     executor: go-machine
+#     parallelism: 10
+#     steps:
+#     - checkout
+#     - run:
+#         command: |
+#           set -eux -o pipefail
+#           sudo mkdir /go
+#           sudo chown -R circleci:circleci /go
+#         name: Allow circleci user to restore Go modules cache
+#     - restore_go_cache
+#     - make-test-sample:
+#         OUTDIR: test-results/make-test-sample
+#         TESTARGS: -v
+#     - store_artifacts:
+#         path: test-results/make-test-sample
 #   test-go:
 #     executor: go-machine
 #     parallelism: 2
@@ -507,5 +590,14 @@ workflows:
 #         requires:
 #         - build-go-dev
 #     - test-go-race:
+#         requires:
+#         - build-go-dev
+#   testsample:
+#     jobs:
+#     - go-mod-download
+#     - build-go-dev:
+#         requires:
+#         - go-mod-download
+#     - sample-make-test:
 #         requires:
 #         - build-go-dev
