@@ -88,7 +88,8 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 }
 
 func performTemplating(input string, p *PopulateStringInput) (string, error) {
-	// Handling quote wrapping uniformly. For ACL templating, this is a no-op.
+
+	// Handle quote wrapping uniformly. For ACL templating, this is a no-op.
 	quote := func(s string) string { return s }
 	if p.Mode == JSONTemplating {
 		quote = strconv.Quote
