@@ -1,8 +1,5 @@
 jobs:
   - go-mod-download
-  - build-go-dev:
-      requires:
-        - go-mod-download
   - sample-make-test:
       requires:
-        - build-go-dev
+        - go-mod-download
