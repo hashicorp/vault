@@ -57,6 +57,9 @@ IMPROVEMENTS:
  
 BUG FIXES: 
 
+ * identity: Fix a case where modifying aliases of an entity could end up
+   moving the entity into the wrong namespace
+
 ## 1.1.3 (June 5th, 2019)
 
 IMPROVEMENTS: 
