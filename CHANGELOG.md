@@ -2,6 +2,13 @@
 
 CHANGES:
 
+ * auth/token: Token store roles use new, common token fields for the values
+   that overlap with other auth backends. `period`, `explicit_max_ttl`, and
+   `bound_cidrs` will continue to work, with priority being given to the
+   `token_` prefixed versions of those parameters. They will also be returned
+   when doing a read on the role if they were used to provide values initially;
+   however, in Vault 1.4 if `period` or `explicit_max_ttl` is zero they will no
+   longer be returned. (`explicit_max_ttl` was already not returned if empty.)
  * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
    stricter about what characters it will accept in path names. Whereas before
    it would filter out unprintable characters (and this could be turned off),
@@ -34,7 +41,6 @@ FEATURES:
 
 IMPROVEMENTS: 
 
- * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
@@ -51,27 +57,66 @@ IMPROVEMENTS:
  
 BUG FIXES: 
 
- * auth/jwt: Fix bound constraint checking so `bound_claims` satisfies the requirement [JWT-49]
+ * identity: Fix a case where modifying aliases of an entity could end up
+   moving the entity into the wrong namespace
+
+## 1.1.3 (June 5th, 2019)
+
+IMPROVEMENTS: 
+
+ * agent: Now supports proxying request query parameters [GH-6772] 
+ * core: Mount table output now includes a UUID indicating the storage path [GH-6633]
+ * core: HTTP server timeout values are now configurable [GH-6666]
+ * replication: Improve performance of the reindex operation on secondary clusters 
+   when mount filters are in use
+ * replication: Replication status API now returns the state and progress of a reindex
+
+BUG FIXES:
+
+ * api: Return the Entity ID in the secret output [GH-6819]
+ * auth/jwt: Consider bound claims when considering if there is at least one
+   bound constraint [JWT-49]
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
+ * cli: Add deprecated stored-shares flag back to the init command [GH-6677]
+ * cli: Fix a panic when the KV command would return no data [GH-6675]
+ * cli: Fix issue causing CLI list operations to not return proper format when 
+   there is an empty response [GH-6776]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
- * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
- * core: Fix issue where some OpenAPI parameters were incorrectly listed as being sent
-   as a header [GH-6679]
+ * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of
+   endpoints [GH-6654]
+ * core: Fix issue where some OpenAPI parameters were incorrectly listed as
+   being sent as a header [GH-6679]
+ * core: Fix issue that would allow duplicate mount names to be used [GH-6771]
+ * namespaces: Fix behavior when using `root` instead of `root/` as the
+   namespace header value
  * pki: fix a panic when a client submits a null value [GH-5679]
- * replication: Fix an issue causing startup problems if a namespace policy
-   wasn't replicated properly
- * storage/consul: recognize `https://` address even if schema not specified [GH-6602]
- * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
-   constant switching of the active node [GH-6637]
- * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was
-   received from the DynamoDB API [GH-6640]
  * replication: Properly update mount entry cache on a secondary to apply all
    new values after a tune
- * ui: fix an issue where sensitive input values weren't being saved to the
+ * replication: Properly close connection on bootstrap error
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * replication: Fix longer than necessary WAL replay during an initial reindex
+ * replication: Fix error during mount filter invalidation on DR secondary clusters
+ * secrets/ad: Make time buffer configurable [AD-35]
+ * secrets/gcp: Check for nil config when getting credentials [SGCP-35]
+ * secrets/gcp: Fix error checking in some cases where the returned value could
+   be 403 instead of 404 [SGCP-37]
+ * secrets/gcpkms: Disable key rotation when deleting a key [GCPKMS-10]
+ * storage/consul: recognize `https://` address even if schema not specified
+   [GH-6602]
+ * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA)
+   could cause constant switching of the active node [GH-6637]
+ * storage/dynamodb: Eliminate a high-CPU condition that could occur if an
+   error was received from the DynamoDB API [GH-6640]
+ * storage/gcs: Correctly use configured chunk size values [GH-6655]
+ * storage/mssql: Use the correct database when pre-created schemas exist
+   [GH-6356]
+ * ui: Fix issue with select arrows on drop down menus [GH-6627]
+ * ui: Fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
- * ui: fix web cli parsing when using quoted values [GH-6755]
- * ui: fix a namespace workflow mapping identities from external namespaces by allowing
-   arbitrary input in search-select component [GH-6728]
+ * ui: Fix web cli parsing when using quoted values [GH-6755]
+ * ui: Fix a namespace workflow mapping identities from external namespaces by
+   allowing arbitrary input in search-select component [GH-6728]
 
 ## 1.1.2 (April 18th, 2019)
 

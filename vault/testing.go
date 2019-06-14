@@ -1001,6 +1001,7 @@ type TestClusterOptions struct {
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
 	PhysicalFactory    func(hclog.Logger) (physical.Backend, error)
+	FirstCoreNumber    int
 }
 
 var DefaultNumCores = 3
@@ -1029,6 +1030,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	var firstCoreNumber int
+	if opts != nil {
+		firstCoreNumber = opts.FirstCoreNumber
 	}
 
 	certIPs := []net.IP{
@@ -1394,6 +1400,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+		c.coreNumber = firstCoreNumber + i
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {

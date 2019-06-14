@@ -451,6 +451,8 @@ type Core struct {
 	raftFollowerStates *raftFollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
+
+	coreNumber int
 }
 
 // CoreConfig is used to parameterize a core
