@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -67,7 +68,7 @@ func (r *Response) Error() error {
 		errBody.WriteString(fmt.Sprintf("* %s", err))
 	}
 
-	return fmt.Errorf(errBody.String())
+	return errors.New(errBody.String())
 }
 
 // ErrorResponse is the raw structure of errors when they're returned by the
