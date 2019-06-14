@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/identity"
+
 	"gopkg.in/square/go-jose.v2"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -24,7 +26,6 @@ const (
 	publicKeysConfigPath = "oidc-config/public-keys/"
 )
 
-type audience []string
 type ExpireableKey struct {
 	Key        jose.JSONWebKey `json:"key"`
 	Expireable bool            `json:"expireable"`
@@ -109,7 +110,13 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "read oidc/.well-known/certs/ help description here",
 		},
 		{
-			Pattern: "oidc/token/generate/?$",
+			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.handleOIDCGenerateSignToken,
 			},
@@ -348,10 +355,19 @@ func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Re
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
 func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// load test key yolo style
-	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath)
+	rolename := d.Get("name").(string)
+
 	var namedKey NamedKey
-	entry.DecodeJSON(&namedKey)
+
+	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+rolename)
+	if entry == nil {
+		return logical.ErrorResponse("role %s not found", rolename), nil
+	}
+
+	err := entry.DecodeJSON(&namedKey)
+	if err != nil {
+		return nil, err
+	}
 
 	// generate an OIDC token from entity data
 	accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
@@ -376,17 +392,33 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	idToken := idToken{
 		Issuer:   "Issuer",
 		Subject:  te.EntityID,
-		Audience: []string{"client_id_of_relying_party"},
+		Audience: "client_id_of_relying_party",
 		Expiry:   now.Add(2 * time.Minute).Unix(),
 		IssuedAt: now.Unix(),
 		Claims:   te,
 	}
 
-	// signing
-	// keyRing, _ := i.createKeyRing("foo")
-	// privWebKey, pubWebKey := keyRing.GenerateWebKeys()
-	// signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
-	payload, err := json.Marshal(idToken)
+	e, err := i.MemDBEntityByID(te.EntityID, true)
+	if err != nil {
+		return nil, err
+	}
+
+	groups, inheritedGroups, err := i.groupsByEntityID(e.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups = append(groups, inheritedGroups...)
+
+	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		Mode:   identity.JSONTemplating,
+		String: `{"nbf":{{time.now}}}`,
+		Entity: e,
+		Groups: groups,
+		// namespace?
+	})
+
+	payload, err := buildFinalToken(idToken, populatedTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -402,17 +434,43 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	}
 	signedIdToken, _ := signature.CompactSerialize()
 
-	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 1),
-	}
-	jwks.Keys[0] = namedKey.SigningKey.Public()
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"token": signedIdToken,
-			"pub":   jwks,
+			"token":     signedIdToken,
+			"client_id": "the eventual role id",
+			"ttl":       60, // change to role TTL
 		},
 	}, nil
+}
+
+func buildFinalToken(idToken idToken, claimsJSON string) ([]byte, error) {
+	output := map[string]interface{}{
+		"iss": idToken.Issuer,
+		"sub": idToken.Subject,
+		"aud": idToken.Audience,
+		"exp": idToken.Expiry,
+		"iat": idToken.IssuedAt,
+	}
+
+	var parsed map[string]interface{}
+	err := json.Unmarshal([]byte(claimsJSON), &parsed)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range parsed {
+		if _, ok := output[k]; ok {
+			return nil, fmt.Errorf("top level key %q already exists", k)
+		}
+		output[k] = v
+	}
+
+	payload, err := json.Marshal(output)
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
 }
 
 // --- some helper methods ---
@@ -514,9 +572,9 @@ func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey Expir
 type idToken struct {
 	// ---- OIDC CLAIMS WITH NOTES FROM SPEC ----
 	// required fields
-	Issuer   string   `json:"iss"` // Vault server address?
-	Subject  string   `json:"sub"`
-	Audience audience `json:"aud"`
+	Issuer   string `json:"iss"` // Vault server address?
+	Subject  string `json:"sub"`
+	Audience string `json:"aud"`
 	// Audience _should_ contain the OAuth 2.0 client_id of the Relying Party.
 	// Not sure how/if we will leverage this
 
