@@ -12,7 +12,6 @@ replace github.com/hashicorp/raft-snapshot => ../raft-snapshot
 
 require (
 	cloud.google.com/go v0.37.4
-	github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 // indirect
 	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v11.7.1+incompatible
@@ -40,8 +39,6 @@ require (
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
-	github.com/dgraph-io/badger v1.5.4
-	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74

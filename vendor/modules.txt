@@ -15,8 +15,6 @@ cloud.google.com/go/spanner/internal/backoff
 cloud.google.com/go/compute/metadata
 # contrib.go.opencensus.io/exporter/ocagent v0.4.12
 contrib.go.opencensus.io/exporter/ocagent
-# github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9
-github.com/AndreasBriese/bbloom
 # github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault
@@ -77,7 +75,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
+# github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
@@ -163,7 +161,7 @@ github.com/centrify/cloud-golang-sdk/oauth
 github.com/centrify/cloud-golang-sdk/restapi
 # github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 github.com/chrismalek/oktasdk-go/okta
-# github.com/circonus-labs/circonus-gometrics v2.2.7+incompatible
+# github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible
 github.com/circonus-labs/circonus-gometrics
 github.com/circonus-labs/circonus-gometrics/api
 github.com/circonus-labs/circonus-gometrics/checkmgr
@@ -185,17 +183,8 @@ github.com/coreos/pkg/capnslog
 # github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
-# github.com/dgraph-io/badger v1.5.4
-github.com/dgraph-io/badger
-github.com/dgraph-io/badger/options
-github.com/dgraph-io/badger/protos
-github.com/dgraph-io/badger/skl
-github.com/dgraph-io/badger/table
-github.com/dgraph-io/badger/y
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
-# github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
-github.com/dgryski/go-farm
 # github.com/dimchansky/utfbom v1.1.0
 github.com/dimchansky/utfbom
 # github.com/docker/go-connections v0.4.0
@@ -233,6 +222,7 @@ github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
 github.com/gocql/gocql/internal/streams
 # github.com/gogo/protobuf v1.2.1
+github.com/gogo/protobuf/io
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/gogoproto
@@ -284,13 +274,13 @@ github.com/hashicorp/errwrap
 github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-gcp-common v0.5.0
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.8.0
+# github.com/hashicorp/go-hclog v0.9.2
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.0.0
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-memdb v1.0.0
 github.com/hashicorp/go-memdb
-# github.com/hashicorp/go-msgpack v0.5.3
+# github.com/hashicorp/go-msgpack v0.5.5
 github.com/hashicorp/go-msgpack/codec
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
@@ -326,8 +316,10 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.0.1
+# github.com/hashicorp/raft v1.0.1 => ../raft
 github.com/hashicorp/raft
+# github.com/hashicorp/raft-snapshot v1.0.0 => ../raft-snapshot
+github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
@@ -398,11 +390,11 @@ github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/helper/compressutil
 github.com/hashicorp/vault/sdk/helper/pathmanager
+github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
-github.com/hashicorp/vault/sdk/helper/tokenhelper
-github.com/hashicorp/vault/sdk/plugin/pb
+github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d

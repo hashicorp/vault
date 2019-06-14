@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 )
@@ -48,6 +49,10 @@ var (
 	// ErrCantBootstrap is returned when attempt is made to bootstrap a
 	// cluster that already has state present.
 	ErrCantBootstrap = errors.New("bootstrap only works on new clusters")
+
+	// ErrLeadershipTransferInProgress is returned when the leader is rejecting
+	// client requests because it is attempting to transfer leadership.
+	ErrLeadershipTransferInProgress = errors.New("leadership transfer in progress")
 )
 
 // Raft implements a Raft node.
@@ -96,6 +101,12 @@ type Raft struct {
 	// leaderState used only while state is leader
 	leaderState leaderState
 
+	// candidateFromLeadershipTransfer is used to indicate that this server became
+	// candidate because the leader tries to transfer leadership. This flag is
+	// used in RequestVoteRequest to express that a leadership transfer is going
+	// on.
+	candidateFromLeadershipTransfer bool
+
 	// Stores our local server ID, used to avoid sending RPCs to ourself
 	localID ServerID
 
@@ -103,7 +114,7 @@ type Raft struct {
 	localAddr ServerAddress
 
 	// Used for our logging
-	logger *log.Logger
+	logger hclog.Logger
 
 	// LogStore provides durable storage for logs
 	logs LogStore
@@ -156,6 +167,10 @@ type Raft struct {
 	// is indexed by an artificial ID which is used for deregistration.
 	observersLock sync.RWMutex
 	observers     map[uint64]*Observer
+
+	// leadershipTransferCh is used to start a leadership transfer from outside of
+	// the main thread.
+	leadershipTransferCh chan *leadershipTransferFuture
 }
 
 // BootstrapCluster initializes a server's storage with the given cluster
@@ -273,19 +288,21 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
 	for _, snapshot := range snapshots {
-		_, source, err := snaps.Open(snapshot.ID)
-		if err != nil {
-			// Skip this one and try the next. We will detect if we
-			// couldn't open any snapshots.
-			continue
-		}
-		defer source.Close()
+		if !conf.NoSnapshotRestoreOnStart {
+			_, source, err := snaps.Open(snapshot.ID)
+			if err != nil {
+				// Skip this one and try the next. We will detect if we
+				// couldn't open any snapshots.
+				continue
+			}
 
-		if err := fsm.Restore(source); err != nil {
-			// Same here, skip and try the next one.
-			continue
+			err = fsm.Restore(source)
+			source.Close()
+			if err != nil {
+				// Same here, skip and try the next one.
+				continue
+			}
 		}
-
 		snapshotIndex = snapshot.Index
 		snapshotTerm = snapshot.Term
 		break
@@ -394,14 +411,19 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	}
 
 	// Ensure we have a LogOutput.
-	var logger *log.Logger
+	var logger hclog.Logger
 	if conf.Logger != nil {
 		logger = conf.Logger
 	} else {
 		if conf.LogOutput == nil {
 			conf.LogOutput = os.Stderr
 		}
-		logger = log.New(conf.LogOutput, "", log.LstdFlags)
+
+		logger = hclog.New(&hclog.LoggerOptions{
+			Name:   "raft",
+			Level:  hclog.LevelFromString(conf.LogLevel),
+			Output: conf.LogOutput,
+		})
 	}
 
 	// Try to restore the current term.
@@ -437,17 +459,17 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 
 	// Create Raft struct.
 	r := &Raft{
-		protocolVersion: protocolVersion,
-		applyCh:         make(chan *logFuture),
-		conf:            *conf,
-		fsm:             fsm,
-		fsmMutateCh:     make(chan interface{}, 128),
-		fsmSnapshotCh:   make(chan *reqSnapshotFuture),
-		leaderCh:        make(chan bool),
-		localID:         localID,
-		localAddr:       localAddr,
-		logger:          logger,
-		logs:            logs,
+		protocolVersion:       protocolVersion,
+		applyCh:               make(chan *logFuture),
+		conf:                  *conf,
+		fsm:                   fsm,
+		fsmMutateCh:           make(chan interface{}, 128),
+		fsmSnapshotCh:         make(chan *reqSnapshotFuture),
+		leaderCh:              make(chan bool),
+		localID:               localID,
+		localAddr:             localAddr,
+		logger:                logger,
+		logs:                  logs,
 		configurationChangeCh: make(chan *configurationChangeFuture),
 		configurations:        configurations{},
 		rpcCh:                 trans.Consumer(),
@@ -461,6 +483,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		configurationsCh:      make(chan *configurationsFuture, 8),
 		bootstrapCh:           make(chan *bootstrapFuture),
 		observers:             make(map[uint64]*Observer),
+		leadershipTransferCh:  make(chan *leadershipTransferFuture, 1),
 	}
 
 	// Initialize as a follower.
@@ -487,14 +510,13 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	for index := snapshotIndex + 1; index <= lastLog.Index; index++ {
 		var entry Log
 		if err := r.logs.GetLog(index, &entry); err != nil {
-			r.logger.Printf("[ERR] raft: Failed to get log at %d: %v", index, err)
+			r.logger.Error(fmt.Sprintf("Failed to get log at %d: %v", index, err))
 			panic(err)
 		}
 		r.processConfigurationLogEntry(&entry)
 	}
-
-	r.logger.Printf("[INFO] raft: Initial configuration (index=%d): %+v",
-		r.configurations.latestIndex, r.configurations.latest.Servers)
+	r.logger.Info(fmt.Sprintf("Initial configuration (index=%d): %+v",
+		r.configurations.latestIndex, r.configurations.latest.Servers))
 
 	// Setup a heartbeat fast-path to avoid head-of-line
 	// blocking where possible. It MUST be safe for this
@@ -514,27 +536,28 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 func (r *Raft) restoreSnapshot() error {
 	snapshots, err := r.snapshots.List()
 	if err != nil {
-		r.logger.Printf("[ERR] raft: Failed to list snapshots: %v", err)
+		r.logger.Error(fmt.Sprintf("Failed to list snapshots: %v", err))
 		return err
 	}
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		_, source, err := r.snapshots.Open(snapshot.ID)
-		if err != nil {
-			r.logger.Printf("[ERR] raft: Failed to open snapshot %v: %v", snapshot.ID, err)
-			continue
+		if !r.conf.NoSnapshotRestoreOnStart {
+			_, source, err := r.snapshots.Open(snapshot.ID)
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+
+			err = r.fsm.Restore(source)
+			source.Close()
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+			// Log success
+			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
 		}
-		defer source.Close()
-
-		if err := r.fsm.Restore(source); err != nil {
-			r.logger.Printf("[ERR] raft: Failed to restore snapshot %v: %v", snapshot.ID, err)
-			continue
-		}
-
-		// Log success
-		r.logger.Printf("[INFO] raft: Restored from snapshot %v", snapshot.ID)
-
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 
@@ -914,8 +937,9 @@ func (r *Raft) LastContact() time.Time {
 // "last_snapshot_index", "last_snapshot_term",
 // "latest_configuration", "last_contact", and "num_peers".
 //
-// The value of "state" is a numerical value representing a
-// RaftState const.
+// The value of "state" is a numeric constant representing one of
+// the possible leadership states the node is in at any given time.
+// the possible states are: "Follower", "Candidate", "Leader", "Shutdown".
 //
 // The value of "latest_configuration" is a string which contains
 // the id of each server, its suffrage status, and its address.
@@ -955,7 +979,7 @@ func (r *Raft) Stats() map[string]string {
 
 	future := r.GetConfiguration()
 	if err := future.Error(); err != nil {
-		r.logger.Printf("[WARN] raft: could not get configuration for Stats: %v", err)
+		r.logger.Warn(fmt.Sprintf("could not get configuration for Stats: %v", err))
 	} else {
 		configuration := future.Configuration()
 		s["latest_configuration_index"] = toString(future.Index())
@@ -1005,4 +1029,39 @@ func (r *Raft) LastIndex() uint64 {
 // index.
 func (r *Raft) AppliedIndex() uint64 {
 	return r.getLastApplied()
+}
+
+// LeadershipTransfer will transfer leadership to a server in the cluster.
+// This can only be called from the leader, or it will fail. The leader will
+// stop accepting client requests, make sure the target server is up to date
+// and starts the transfer with a TimeoutNow message. This message has the same
+// effect as if the election timeout on the on the target server fires. Since
+// it is unlikely that another server is starting an election, it is very
+// likely that the target server is able to win the election.  Note that raft
+// protocol version 3 is not sufficient to use LeadershipTransfer. A recent
+// version of that library has to be used that includes this feature.  Using
+// transfer leadership is safe however in a cluster where not every node has
+// the latest version. If a follower cannot be promoted, it will fail
+// gracefully.
+func (r *Raft) LeadershipTransfer() Future {
+	if r.protocolVersion < 3 {
+		return errorFuture{ErrUnsupportedProtocol}
+	}
+
+	return r.initiateLeadershipTransfer(nil, nil)
+}
+
+// LeadershipTransferToServer does the same as LeadershipTransfer but takes a
+// server in the arguments in case a leadership should be transitioned to a
+// specific server in the cluster.  Note that raft protocol version 3 is not
+// sufficient to use LeadershipTransfer. A recent version of that library has
+// to be used that includes this feature. Using transfer leadership is safe
+// however in a cluster where not every node has the latest version. If a
+// follower cannot be promoted, it will fail gracefully.
+func (r *Raft) LeadershipTransferToServer(id ServerID, address ServerAddress) Future {
+	if r.protocolVersion < 3 {
+		return errorFuture{ErrUnsupportedProtocol}
+	}
+
+	return r.initiateLeadershipTransfer(&id, &address)
 }

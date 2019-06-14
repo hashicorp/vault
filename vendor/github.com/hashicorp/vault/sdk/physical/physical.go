@@ -2,13 +2,10 @@ package physical
 
 import (
 	"context"
-	"net"
 	"strings"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const DefaultParallelOperations = 128
@@ -120,17 +117,6 @@ type Lock interface {
 
 	// Returns the value of the lock and if it is held
 	Value() (bool, string, error)
-}
-
-type NetworkConfig struct {
-	Addr             net.Addr
-	Cert             []byte
-	ClusterKeyParams *certutil.ClusterKeyParams
-}
-
-type Clustered interface {
-	SetupCluster(context.Context, *NetworkConfig, cluster.ClusterHook) error
-	TeardownCluster(cluster.ClusterHook) error
 }
 
 // Factory is the factory function to create a physical backend.

@@ -69,6 +69,34 @@ func (r *Raft) runFSM() {
 		}
 	}
 
+	commitConfiguration := func(req *configurationCommitTuple) {
+		configStore, ok := r.fsm.(ConfigurationStore)
+		if !ok {
+			if req.future != nil {
+				req.future.respond(nil)
+			}
+			return
+		}
+
+		// Apply the log if a command
+		if req.log.Type == LogConfiguration {
+			start := time.Now()
+			if err := configStore.StoreConfig(req.log.Index, req.configuration); err != nil {
+				panic(err)
+			}
+			metrics.MeasureSince([]string{"raft", "fsm", "apply"}, start)
+		}
+
+		// Update the indexes
+		lastIndex = req.log.Index
+		lastTerm = req.log.Term
+
+		// Invoke the future if given
+		if req.future != nil {
+			req.future.respond(nil)
+		}
+	}
+
 	restore := func(req *restoreFuture) {
 		// Open the snapshot
 		meta, source, err := r.snapshots.Open(req.ID)
@@ -121,6 +149,9 @@ func (r *Raft) runFSM() {
 
 			case *restoreFuture:
 				restore(req)
+
+			case *configurationCommitTuple:
+				commitConfiguration(req)
 
 			default:
 				panic(fmt.Errorf("bad type passed to fsmMutateCh: %#v", ptr))

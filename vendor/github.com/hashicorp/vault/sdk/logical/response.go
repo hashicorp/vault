@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 )
@@ -176,4 +178,26 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	}
 
 	return ret, nil
+}
+
+type ResponseWriter struct {
+	writer  io.Writer
+	written *uint32
+}
+
+func NewResponseWriter(w io.Writer) *ResponseWriter {
+	return &ResponseWriter{
+		writer:  w,
+		written: new(uint32),
+	}
+}
+
+func (rw *ResponseWriter) Write(bytes []byte) (int, error) {
+	atomic.StoreUint32(rw.written, 1)
+
+	return rw.writer.Write(bytes)
+}
+
+func (rw *ResponseWriter) Written() bool {
+	return atomic.LoadUint32(rw.written) == 1
 }

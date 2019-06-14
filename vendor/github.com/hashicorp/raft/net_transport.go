@@ -19,6 +19,7 @@ const (
 	rpcAppendEntries uint8 = iota
 	rpcRequestVote
 	rpcInstallSnapshot
+	rpcTimeoutNow
 
 	// DefaultTimeoutScale is the default TimeoutScale in a NetworkTransport.
 	DefaultTimeoutScale = 256 * 1024 // 256KB
@@ -459,6 +460,11 @@ func (n *NetworkTransport) DecodePeer(buf []byte) ServerAddress {
 	return ServerAddress(buf)
 }
 
+// TimeoutNow implements the Transport interface.
+func (n *NetworkTransport) TimeoutNow(id ServerID, target ServerAddress, args *TimeoutNowRequest, resp *TimeoutNowResponse) error {
+	return n.genericRPC(id, target, rpcTimeoutNow, args, resp)
+}
+
 // listen is used to handling incoming connections.
 func (n *NetworkTransport) listen() {
 	const baseDelay = 5 * time.Millisecond
@@ -576,6 +582,13 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, en
 		}
 		rpc.Command = &req
 		rpc.Reader = io.LimitReader(r, req.Size)
+
+	case rpcTimeoutNow:
+		var req TimeoutNowRequest
+		if err := dec.Decode(&req); err != nil {
+			return err
+		}
+		rpc.Command = &req
 
 	default:
 		return fmt.Errorf("unknown rpc type %d", rpcType)

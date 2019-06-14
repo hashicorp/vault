@@ -3,8 +3,9 @@ package raft
 import (
 	"fmt"
 	"io"
-	"log"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 // These are the versions of the protocol (which includes RPC messages as
@@ -37,7 +38,8 @@ import (
 //
 // 1. Remove the server from the cluster with RemoveServer, using its network
 //    address as its ServerID.
-// 2. Update the server's config to a better ID (restarting the server).
+// 2. Update the server's config to use a UUID or something else that is
+//	  not tied to the machine as the ServerID (restarting the server).
 // 3. Add the server back to the cluster with AddVoter, using its new ID.
 //
 // You can do this during the rolling upgrade from N+1 to N+2 of your app, or
@@ -190,9 +192,20 @@ type Config struct {
 	// Defaults to os.Stderr.
 	LogOutput io.Writer
 
-	// Logger is a user-provided logger. If nil, a logger writing to LogOutput
-	// is used.
-	Logger *log.Logger
+	// LogLevel represents a log level. If a no matching string is specified,
+	// hclog.NoLevel is assumed.
+	LogLevel string
+
+	// Logger is a user-provided hc-log logger. If nil, a logger writing to
+	// LogOutput with LogLevel is used.
+	Logger hclog.Logger
+
+	// NoSnapshotRestoreOnStart controls if raft will restore a snapshot to the
+	// FSM on start. This is useful if your FSM recovers from other mechanisms
+	// than raft snapshotting. Snapshot metadata will still be used to initalize
+	// raft's configuration and index values. This is used in NewRaft and
+	// RestoreCluster.
+	NoSnapshotRestoreOnStart bool
 }
 
 // DefaultConfig returns a Config with usable defaults.
@@ -208,6 +221,7 @@ func DefaultConfig() *Config {
 		SnapshotInterval:   120 * time.Second,
 		SnapshotThreshold:  8192,
 		LeaderLeaseTimeout: 500 * time.Millisecond,
+		LogLevel:           "DEBUG",
 	}
 }
 

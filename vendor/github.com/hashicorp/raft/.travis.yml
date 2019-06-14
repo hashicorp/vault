@@ -5,6 +5,7 @@ go:
     # - 1.6
     - 1.8
     - 1.9
+    - 1.12
     - tip
 
 install: make deps
