@@ -250,14 +250,14 @@ jobs:
           # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
           \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
         environment:
-          OUTDIR: /sample/make-test
+          OUTDIR: sample/make-test
           TESTARGS: -v
         name: make test
         no_output_timeout: 20m
     - persist_to_workspace:
         paths:
-        - sample/make-test
-        root: /
+        - make-test
+        root: sample
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
@@ -269,9 +269,9 @@ jobs:
     working_directory: /src
     steps:
     - run:
-        command: tar -czf /sample.tar.gz /sample
+        command: tar -czf sample.tar.gz sample/
     - store_artifacts:
-        path: /sample.tar.gz
+        path: sample.tar.gz
   sample-make-test-race:
     machine: true
     working_directory: ~/src
@@ -296,14 +296,14 @@ jobs:
           # data gathering, not a blocking part of the pipeline.\nset +eo pipefail\
           \ \nmake test 2>&1 | tee $OUT\nexit 0\n"
         environment:
-          OUTDIR: /sample/make-test-race
+          OUTDIR: sample/make-test-race
           TESTARGS: -v -race
         name: make test
         no_output_timeout: 20m
     - persist_to_workspace:
         paths:
-        - sample/make-test-race
-        root: /
+        - make-test-race
+        root: sample
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
@@ -544,12 +544,12 @@ workflows:
 #         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - make-test-sample:
-#         OUTDIR: /sample/make-test
+#         OUTDIR: sample/make-test
 #         TESTARGS: -v
 #     - persist_to_workspace:
 #         paths:
-#         - sample/make-test
-#         root: /
+#         - make-test
+#         root: sample
 #   sample-make-test-race:
 #     executor: go-machine
 #     parallelism: 10
@@ -563,12 +563,12 @@ workflows:
 #         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - make-test-sample:
-#         OUTDIR: /sample/make-test-race
+#         OUTDIR: sample/make-test-race
 #         TESTARGS: -v -race
 #     - persist_to_workspace:
 #         paths:
-#         - sample/make-test-race
-#         root: /
+#         - make-test-race
+#         root: sample
 #   test-go:
 #     executor: go-machine
 #     parallelism: 2
@@ -642,9 +642,9 @@ workflows:
 #   zip-samples:
 #     executor: go
 #     steps:
-#     - run: tar -czf /sample.tar.gz /sample
+#     - run: tar -czf sample.tar.gz sample/
 #     - store_artifacts:
-#         path: /sample.tar.gz
+#         path: sample.tar.gz
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}

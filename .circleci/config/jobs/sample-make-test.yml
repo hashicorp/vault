@@ -11,8 +11,8 @@ steps:
   - restore_go_cache
   - make-test-sample:
       TESTARGS: -v
-      OUTDIR: /sample/make-test
+      OUTDIR: sample/make-test
   - persist_to_workspace:
-      root: /
+      root: sample
       paths:
-        - sample/make-test
+        - make-test
