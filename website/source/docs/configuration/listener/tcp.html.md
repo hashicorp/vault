@@ -171,6 +171,30 @@ api_addr = "https://10.0.0.5:8200"
 cluster_addr = "https://10.0.0.5:8201"
 ```
 
+### Multiple Listeners Using Different Configurations
+
+This example shows Vault listening on two ports: one port is configured to require mutual TLS, and one port is configured without mutual TLS. This pattern is commonly used when the API will be accessed by machines using mutual TLS, but the UI will be accessed by humans with another Auth Method. While a single listener statement can be used, this often results in frequent browser prompts on the Vault UI asking for a TLS certificate.
+
+```hcl
+
+# regular listener that does not require mutual TLS
+listener "tcp" {
+  address = "10.0.0.5:8200"
+}
+
+# additional listener that does require mutual TLS
+listener "tcp" {
+  address = "10.0.0.5:8210"
+  tls_require_and_verify_client_cert = true
+  tls_client_ca_file = "userCertCA.pem"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://10.0.0.5:8200"
+cluster_addr = "https://10.0.0.5:8201"
+```
+
+
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /docs/configuration/index.html#api_addr
 [cluster-addr]: /docs/configuration/index.html#cluster_addr
