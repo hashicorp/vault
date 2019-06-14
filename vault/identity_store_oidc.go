@@ -22,9 +22,15 @@ import (
 var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 
 const (
-	namedKeyConfigPath   = "oidc-config/named-key/"
-	publicKeysConfigPath = "oidc-config/public-keys/"
+	oidcConfigFieldIssuer = "issuer"
+	oidcConfigStorageKey  = "oidc/config/issuer"
+	namedKeyConfigPath    = "oidc-config/named-key/"
+	publicKeysConfigPath  = "oidc-config/public-keys/"
 )
+
+type oidcConfig struct {
+	Issuer string `json:"issuer"`
+}
 
 type ExpireableKey struct {
 	Key        jose.JSONWebKey `json:"key"`
@@ -45,24 +51,39 @@ type NamedKey struct {
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "oidc/config/?$",
+			Fields: map[string]*framework.FieldSchema{
+				oidcConfigFieldIssuer: {
+					Type:        framework.TypeString,
+					Description: "Issuer URL to be used in the iss claim of the token. If not set, Vault's app_addr will be used.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   i.readOIDCConfig,
+				logical.UpdateOperation: i.writeOIDCConfig,
+			},
+			HelpSynopsis:    "OIDC configuration",
+			HelpDescription: "Update OIDC configuration in the identity backend",
+		},
+		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the key",
 				},
 
-				"rotation_period": &framework.FieldSchema{
+				"rotation_period": {
 					Type:        framework.TypeDurationSecond,
 					Description: "How often to generate a new keypair. Defaults to 6h",
 				},
 
-				"verification_ttl": &framework.FieldSchema{
+				"verification_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Defaults to the current rotation_period, which will provide for a current key and previous key.",
 				},
 
-				"algorithm": &framework.FieldSchema{
+				"algorithm": {
 					Type:        framework.TypeString,
 					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
 				},
@@ -78,11 +99,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the key",
 				},
-				"verification_ttl": &framework.FieldSchema{
+				"verification_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key.",
 				},
@@ -122,6 +143,75 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			},
 		},
 	}
+}
+
+// readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
+func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	c, err := i.getOIDCConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if c == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer": c.Issuer,
+		},
+	}, nil
+}
+
+// writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
+func (i *IdentityStore) writeOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	value, ok := d.GetOk(oidcConfigFieldIssuer)
+	if !ok {
+		return nil, nil
+	}
+
+	c := oidcConfig{
+		Issuer: value.(string),
+	}
+
+	entry, err := logical.StorageEntryJSON(oidcConfigStorageKey, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	var resp logical.Response
+
+	if c.Issuer != "" {
+		resp.AddWarning(`If "issuer" is set explicitly, all tokens must be ` +
+			`validated against that address, including those issued by secondary ` +
+			`clusters. Setting issuer to "" will restore the default behavior of ` +
+			`using the cluster's api_addr as the issuer.`)
+	}
+
+	return &resp, nil
+}
+
+func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
+	var c oidcConfig
+
+	entry, err := s.Get(ctx, oidcConfigStorageKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	if err := entry.DecodeJSON(&c); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
@@ -388,9 +478,19 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 		return nil, errors.New("No EntityID associated with this request's Vault token")
 	}
 
+	config, err := i.getOIDCConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	issuer := i.core.redirectAddr
+	if config != nil && config.Issuer != "" {
+		issuer = config.Issuer
+	}
+
 	now := time.Now()
 	idToken := idToken{
-		Issuer:   "Issuer",
+		Issuer:   issuer,
 		Subject:  te.EntityID,
 		Audience: "client_id_of_relying_party",
 		Expiry:   now.Add(2 * time.Minute).Unix(),
