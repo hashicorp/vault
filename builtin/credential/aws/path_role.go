@@ -323,12 +323,12 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 	return nil
 }
 
-// persistUpgradedRoleEntries upgrades and persists all of the role entries
+// persistUpgradableRoleEntries upgrades and persists all of the role entries
 // that are in need of being upgraded.
 //
 // TODO: this function is not yet called from anywhere.  It will be called
 //  via a new mechanism at plugin mount time.
-func (b *backend) persistUpgradedRoleEntries(ctx context.Context, s logical.Storage) error {
+func (b *backend) persistUpgradableRoleEntries(ctx context.Context, s logical.Storage) error {
 
 	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
 	// performance replicated standby cluster.
@@ -348,7 +348,7 @@ func (b *backend) persistUpgradedRoleEntries(ctx context.Context, s logical.Stor
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
 
-		err := b.persistUpgradedRoleEntry(ctx, s, roleName)
+		err := b.persistUpgradableRoleEntry(ctx, s, roleName)
 		if err != nil {
 			return err
 		}
@@ -357,9 +357,9 @@ func (b *backend) persistUpgradedRoleEntries(ctx context.Context, s logical.Stor
 	return nil
 }
 
-// persistUpgradedRoleEntry uses the write lock to read a role and persist it
+// persistUpgradableRoleEntry uses the write lock to read a role and persist it
 // if it needs to be upgraded.
-func (b *backend) persistUpgradedRoleEntry(
+func (b *backend) persistUpgradableRoleEntry(
 	ctx context.Context, s logical.Storage, roleName string) error {
 
 	b.roleMutex.Lock()
