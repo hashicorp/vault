@@ -15,6 +15,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	bolt "go.etcd.io/bbolt"
 )
@@ -33,7 +34,8 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	logger.Info("raft dir", "dir", raftDir)
 
 	conf := map[string]string{
-		"path": raftDir,
+		"path":          raftDir,
+		"trailing_logs": "100",
 	}
 
 	if noStoreState {
@@ -232,6 +234,63 @@ func TestRaft_Backend_MaxSize(t *testing.T) {
 	if err != ErrCommandTooLarge {
 		t.Fatal(err)
 	}
+}
+
+func TestRaft_Backend_Performance(t *testing.T) {
+	b, dir := getRaft(t, true, false)
+	defer os.RemoveAll(dir)
+
+	defaultConfig := raft.DefaultConfig()
+
+	localConfig := raft.DefaultConfig()
+	b.applyConfigSettings(localConfig)
+
+	if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+
+	b.conf = map[string]string{
+		"path":                   dir,
+		"performance_multiplier": "5",
+	}
+
+	localConfig = raft.DefaultConfig()
+	b.applyConfigSettings(localConfig)
+
+	if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+
+	b.conf = map[string]string{
+		"path":                   dir,
+		"performance_multiplier": "1",
+	}
+
+	localConfig = raft.DefaultConfig()
+	b.applyConfigSettings(localConfig)
+
+	if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
+		t.Fatalf("bad config: %v", localConfig)
+	}
+
 }
 
 func BenchmarkDB_Puts(b *testing.B) {

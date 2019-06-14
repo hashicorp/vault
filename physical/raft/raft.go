@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -313,6 +314,44 @@ func (b *RaftBackend) SetRestoreCallback(restoreCb restoreCallback) {
 	b.fsm.l.Unlock()
 }
 
+func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
+	config.Logger = b.logger
+	multiplierRaw, ok := b.conf["performance_multiplier"]
+	multiplier := 5
+	if ok {
+		var err error
+		multiplier, err = strconv.Atoi(multiplierRaw)
+		if err != nil {
+			return err
+		}
+	}
+	config.ElectionTimeout = config.ElectionTimeout * time.Duration(multiplier)
+	config.HeartbeatTimeout = config.HeartbeatTimeout * time.Duration(multiplier)
+	config.LeaderLeaseTimeout = config.LeaderLeaseTimeout * time.Duration(multiplier)
+
+	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
+	if ok {
+		var err error
+		snapThreshold, err := strconv.Atoi(snapThresholdRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotThreshold = uint64(snapThreshold)
+	}
+
+	trailingLogsRaw, ok := b.conf["trailing_logs"]
+	if ok {
+		var err error
+		trailingLogs, err := strconv.Atoi(trailingLogsRaw)
+		if err != nil {
+			return err
+		}
+		config.TrailingLogs = uint64(trailingLogs)
+	}
+
+	return nil
+}
+
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener physicalstd.ClusterHook) error {
@@ -333,12 +372,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 
 	// Setup the raft config
 	raftConfig := raft.DefaultConfig()
-	raftConfig.Logger = b.logger
-	raftConfig.SnapshotThreshold = 100
-	raftConfig.TrailingLogs = 100
-	raftConfig.ElectionTimeout = raftConfig.ElectionTimeout * 5
-	raftConfig.HeartbeatTimeout = raftConfig.HeartbeatTimeout * 5
-	raftConfig.LeaderLeaseTimeout = raftConfig.LeaderLeaseTimeout * 5
+	if err := b.applyConfigSettings(raftConfig); err != nil {
+		return err
+	}
 
 	switch {
 	case raftTLSKeyring == nil:
@@ -613,7 +649,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) 
 
 // RestoreSnapshot applies the provided snapshot metadata and snapshot data to
 // raft.
-func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snapFile *os.File) error {
+func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snap io.Reader) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -621,7 +657,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 		return errors.New("raft storage is not initialized")
 	}
 
-	if err := b.raft.Restore(&metadata, snapFile, 0); err != nil {
+	if err := b.raft.Restore(&metadata, snap, 0); err != nil {
 		b.logger.Named("snapshot").Error("failed to restore snapshot", "error", err)
 		return err
 	}

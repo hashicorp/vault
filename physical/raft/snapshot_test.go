@@ -187,7 +187,7 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 		t.Fatalf("unexpected term, got %d expected 1", index.Term)
 	}
 	if index.Index != 103 {
-		t.Fatalf("unexpected index, got %d expected 1003", index.Term)
+		t.Fatalf("unexpected index, got %d expected 103", index.Term)
 	}
 
 	// Take a snapshot
@@ -203,10 +203,10 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 	io.Copy(ioutil.Discard, reader)
 
 	if meta.Index != index.Index {
-		t.Fatalf("indexes did not match, got %d exptected %d", meta.Index, index.Index)
+		t.Fatalf("indexes did not match, got %d expected %d", meta.Index, index.Index)
 	}
 	if meta.Term != index.Term {
-		t.Fatalf("term did not match, got %d exptected %d", meta.Term, index.Term)
+		t.Fatalf("term did not match, got %d expected %d", meta.Term, index.Term)
 	}
 
 	// Write some more data
@@ -401,21 +401,39 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	err = raft1.SnapshotRestore(ioutil.NopCloser(snap), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(snap), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	err = raft1.RestoreSnapshot(context.Background(), metadata, snapFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// make sure we don't have the second batch of writes
 	for i := 100; i < 200; i++ {
-		value, err := raft1.Get(context.Background(), fmt.Sprintf("key-%d", i))
-		if err != nil {
-			t.Fatal(err)
+		{
+			value, err := raft1.Get(context.Background(), fmt.Sprintf("key-%d", i))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value != nil {
+				t.Fatal("didn't remove data")
+			}
 		}
-		if value != nil {
-			t.Fatal("didn't remove data")
+		{
+			value, err := raft2.Get(context.Background(), fmt.Sprintf("key-%d", i))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value != nil {
+				t.Fatal("didn't remove data")
+			}
 		}
 	}
 
+	time.Sleep(10 * time.Second)
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 }
