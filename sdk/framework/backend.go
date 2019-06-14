@@ -511,8 +511,18 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
-	Type        FieldType
-	Default     interface{}
+	Type FieldType
+
+	// Default value that will be returned from Get() if the parameter was not
+	// provided in the request. It is often *not* specified since defaults are
+	// usually not stored in a configuration. This allows unspecified fields
+	// to use the current Vault defaults instead of those that existed when the
+	// config was created.
+	//
+	// If this field is used, GetOK() can indicate whether the parameter was
+	// explicitly provided or not.
+	Default interface{}
+
 	Description string
 	Required    bool
 	Deprecated  bool
