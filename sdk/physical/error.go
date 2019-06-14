@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"sync"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -18,6 +19,7 @@ const (
 type ErrorInjector struct {
 	backend      Backend
 	errorPercent int
+	randomLock   *sync.Mutex
 	random       *rand.Rand
 }
 
@@ -42,6 +44,7 @@ func NewErrorInjector(b Backend, errorPercent int, logger log.Logger) *ErrorInje
 	return &ErrorInjector{
 		backend:      b,
 		errorPercent: errorPercent,
+		randomLock:   new(sync.Mutex),
 		random:       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 	}
 }
@@ -59,7 +62,9 @@ func (e *ErrorInjector) SetErrorPercentage(p int) {
 }
 
 func (e *ErrorInjector) addError() error {
+	e.randomLock.Lock()
 	roll := e.random.Intn(100)
+	e.randomLock.Unlock()
 	if roll < e.errorPercent {
 		return errors.New("random error")
 	}

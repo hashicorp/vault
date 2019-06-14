@@ -9,13 +9,15 @@
       {{#if value}}
         <Icon
           aria-hidden="true"
-          class="hs-icon-l icon-true"
+          class="icon-true"
+          @size="l"
           @glyph="check-circle-outline"
         /> Yes
       {{else}}
         <Icon
           aria-hidden="true"
-          class="hs-icon-l icon-false"
+          class="icon-false"
+          @size="l"
           @glyph="cancel-circle-outline"
         /> No
       {{/if}}

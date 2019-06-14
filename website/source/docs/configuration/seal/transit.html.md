@@ -64,8 +64,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   This may also be supplied using the `VAULT_NAMESPACE` environment variable.
 
 - `disable_renewal` `(string: "false")`: Disables the automatic renewal of the token
-  in case the lifecyle of the token is managed with some other mechanism outside of
-  Vault, such as Vault Agent.  This may also be specfied using the
+  in case the lifecycle of the token is managed with some other mechanism outside of
+  Vault, such as Vault Agent.  This may also be specified using the
   `VAULT_TRANSIT_SEAL_DISABLE_RENEWAL` environment variable.
 
 - `tls_ca_cert` `(string: "")`: Specifies the path to the CA certificate file used

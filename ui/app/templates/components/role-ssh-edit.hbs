@@ -21,19 +21,9 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show") }}
+{{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (or model.canUpdate model.canDelete)}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit role
-        </ToolbarSecretLink>
-      {{/if}}
       {{#if (eq model.keyType "otp")}}
         <ToolbarSecretLink
           @secret={{model.id}}
@@ -51,6 +41,27 @@
           @replace=true
         >
           Sign Keys
+        </ToolbarSecretLink>
+      {{/if}}
+      {{#if (or model.canUpdate model.canDelete)}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+      {{/if}}
+      {{#if (or model.canUpdate model.canDelete)}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="edit"
+          @data-test-edit-link=true
+          @replace=true
+        >
+          Edit role
         </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>

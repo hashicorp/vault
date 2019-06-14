@@ -23,11 +23,10 @@
 <Toolbar>
   <ToolbarActions>
     <ToolbarDownloadButton
-      @classNames="toolbar-link"
       @actionText="Download policy"
       @extension={{if (eq policyType "acl") model.format "sentinel"}}
-      @filename=model.name
-      @data=model.policy
+      @filename={{model.name}}
+      @data={{model.policy}}
     />
     {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
       <ToolbarLink
