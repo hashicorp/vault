@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	bolt "go.etcd.io/bbolt"
 )
@@ -69,6 +71,7 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 }
 
 func compareFSMs(t *testing.T, fsm1, fsm2 *FSM) {
+	t.Helper()
 	index1, config1 := fsm1.LatestState()
 	index2, config2 := fsm2.LatestState()
 
@@ -184,6 +187,115 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	// Make sure all stores are the same
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 	compareFSMs(t, raft1.fsm, raft3.fsm)
+}
+
+func TestRaft_Recovery(t *testing.T) {
+	// Create 4 raft nodes
+	raft1, dir1 := getRaft(t, true, true)
+	raft2, dir2 := getRaft(t, false, true)
+	raft3, dir3 := getRaft(t, false, true)
+	raft4, dir4 := getRaft(t, false, true)
+	defer os.RemoveAll(dir1)
+	defer os.RemoveAll(dir2)
+	defer os.RemoveAll(dir3)
+	defer os.RemoveAll(dir4)
+
+	// Add them all to the cluster
+	addPeer(t, raft1, raft2)
+	addPeer(t, raft1, raft3)
+	addPeer(t, raft1, raft4)
+
+	// Add some data into the FSM
+	physical.ExerciseBackend(t, raft1)
+
+	time.Sleep(10 * time.Second)
+
+	clusterHook1 := &noopClusterHook{
+		addr: &idAddr{
+			id: raft1.NodeID(),
+		},
+	}
+	clusterHook2 := &noopClusterHook{
+		addr: &idAddr{
+			id: raft2.NodeID(),
+		},
+	}
+	clusterHook3 := &noopClusterHook{
+		addr: &idAddr{
+			id: raft3.NodeID(),
+		},
+	}
+	clusterHook4 := &noopClusterHook{
+		addr: &idAddr{
+			id: raft4.NodeID(),
+		},
+	}
+
+	// Bring down all nodes
+	raft1.TeardownCluster(clusterHook1)
+	raft2.TeardownCluster(clusterHook2)
+	raft3.TeardownCluster(clusterHook3)
+	raft4.TeardownCluster(clusterHook4)
+
+	// Prepare peers.json
+	type RecoveryPeer struct {
+		ID       string `json:"id"`
+		Address  string `json:"address"`
+		NonVoter bool   `json: non_voter`
+	}
+
+	// Leave out node 1 during recovery
+	peersList := make([]*RecoveryPeer, 0, 3)
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft1.NodeID(),
+		Address:  raft1.NodeID(),
+		NonVoter: false,
+	})
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft2.NodeID(),
+		Address:  raft2.NodeID(),
+		NonVoter: false,
+	})
+	peersList = append(peersList, &RecoveryPeer{
+		ID:       raft4.NodeID(),
+		Address:  raft4.NodeID(),
+		NonVoter: false,
+	})
+
+	peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Bring up the nodes again
+	raft1.SetupCluster(context.Background(), nil, clusterHook1)
+	raft2.SetupCluster(context.Background(), nil, clusterHook2)
+	raft4.SetupCluster(context.Background(), nil, clusterHook4)
+
+	peers, err := raft1.Peers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(peers) != 3 {
+		t.Fatalf("failed to recover the cluster")
+	}
+
+	time.Sleep(10 * time.Second)
+
+	compareFSMs(t, raft1.fsm, raft2.fsm)
+	compareFSMs(t, raft1.fsm, raft4.fsm)
 }
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
