@@ -2,6 +2,13 @@
 
 CHANGES:
 
+ * auth/token: Token store roles use new, common token fields for the values
+   that overlap with other auth backends. `period`, `explicit_max_ttl`, and
+   `bound_cidrs` will continue to work, with priority being given to the
+   `token_` prefixed versions of those parameters. They will also be returned
+   when doing a read on the role if they were used to provide values initially;
+   however, in Vault 1.4 if `period` or `explicit_max_ttl` is zero they will no
+   longer be returned. (`explicit_max_ttl` was already not returned if empty.)
  * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
    stricter about what characters it will accept in path names. Whereas before
    it would filter out unprintable characters (and this could be turned off),
@@ -49,6 +56,9 @@ IMPROVEMENTS:
  * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
+
+ * identity: Fix a case where modifying aliases of an entity could end up
+   moving the entity into the wrong namespace
 
 ## 1.1.3 (June 5th, 2019)
 
