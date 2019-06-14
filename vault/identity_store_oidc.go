@@ -116,6 +116,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "HelpSynopsis here",
 			HelpDescription: "HelpDecription here",
 		},
+		oidcPathConfig(i),
 	}
 }
 
