@@ -68,8 +68,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.readOIDCConfig,
-				logical.UpdateOperation: i.writeOIDCConfig,
+				logical.ReadOperation:   i.pathReadOIDCConfig,
+				logical.UpdateOperation: i.pathUpdateOIDCConfig,
 			},
 			HelpSynopsis:    "OIDC configuration",
 			HelpDescription: "Update OIDC configuration in the identity backend",
@@ -98,9 +98,9 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleOIDCCreateKey,
-				logical.ReadOperation:   i.handleOIDCReadKey,
-				logical.DeleteOperation: i.handleOIDCDeleteKey,
+				logical.UpdateOperation: i.pathOIDCCreateKey,
+				logical.ReadOperation:   i.pathOIDCReadKey,
+				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
 			HelpSynopsis:    "oidc/key/:key help synopsis here",
 			HelpDescription: "oidc/key/:key help description here",
@@ -126,7 +126,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/key/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.handleOIDCListKey,
+				logical.ListOperation: i.pathOIDCListKey,
 			},
 			HelpSynopsis:    "list oidc/key/ help synopsis here",
 			HelpDescription: "list oidc/key/ help description here",
@@ -134,7 +134,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/.well-known/certs/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: i.handleOIDCReadCerts,
+				logical.ReadOperation: i.pathOIDCReadCerts,
 			},
 			HelpSynopsis:    "read oidc/.well-known/certs/ help synopsis here",
 			HelpDescription: "read oidc/.well-known/certs/ help description here",
@@ -148,7 +148,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: i.handleOIDCGenerateSignToken,
+				logical.ReadOperation: i.pathOIDCGenerateToken,
 			},
 		},
 		{
@@ -172,15 +172,15 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleOIDCCreateRole,
-				logical.ReadOperation:   i.handleOIDCReadRole,
-				logical.DeleteOperation: i.handleOIDCDeleteRole,
+				logical.UpdateOperation: i.pathOIDCCreateRole,
+				logical.ReadOperation:   i.pathOIDCReadRole,
+				logical.DeleteOperation: i.pathOIDCDeleteRole,
 			},
 		},
 		{
 			Pattern: "oidc/role/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.handleOIDCListRole,
+				logical.ListOperation: i.pathOIDCListRole,
 			},
 			HelpSynopsis:    "list oidc/role/ help synopsis here",
 			HelpDescription: "list oidc/role/ help description here",
@@ -189,7 +189,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 }
 
 // readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
-func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathReadOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	c, err := i.getOIDCConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request
 }
 
 // writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
-func (i *IdentityStore) writeOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathUpdateOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	value, ok := d.GetOk(oidcConfigFieldIssuer)
 	if !ok {
 		return nil, nil
@@ -258,7 +258,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
-func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	var namedKey *NamedKey
 	var update bool = false
@@ -372,7 +372,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 }
 
 // handleOIDCReadKey is used to read an existing key
-func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
@@ -396,7 +396,7 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 }
 
 // handleOIDCDeleteKey is used to delete a key
-func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	targetKeyName := d.Get("name").(string)
 
 	//todo delete pub key from publicKeys
@@ -471,7 +471,7 @@ func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Re
 }
 
 // handleOIDCListKey is used to list named keys
-func (i *IdentityStore) handleOIDCListKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keys, err := req.Storage.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return nil, err
@@ -531,7 +531,7 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 
 // handleOIDCReadCerts is used to retrieve all certs from all keys so that clients can
 // verify the validity of a signed OIDC token
-func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	publicKeys = expire(publicKeys)
 
 	jwks := jose.JSONWebKeySet{
@@ -550,7 +550,7 @@ func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Re
 }
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
-func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
 
 	role, err := i.getOIDCRole(ctx, req.Storage, roleName)
@@ -601,7 +601,7 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	idToken := idToken{
 		Issuer:   issuer,
 		Subject:  te.EntityID,
-		Audience: "client_id_of_relying_party",
+		Audience: role.RoleID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
 		Claims:   te,
@@ -653,7 +653,7 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 }
 
 // handleOIDCCreateRole is used to create a new role or update an existing one
-func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCCreateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	var role *Role
 	// var namedKey *NamedKey
@@ -746,7 +746,7 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 }
 
 // handleOIDCReadRole is used to read an existing role
-func (i *IdentityStore) handleOIDCReadRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	role, err := i.getOIDCRole(ctx, req.Storage, name)
@@ -786,7 +786,7 @@ func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, role
 }
 
 // handleOIDCDeleteRole is used to delete a role if it exists
-func (i *IdentityStore) handleOIDCDeleteRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCDeleteRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	err := req.Storage.Delete(ctx, roleConfigPath+name)
 	if err != nil {
@@ -796,7 +796,7 @@ func (i *IdentityStore) handleOIDCDeleteRole(ctx context.Context, req *logical.R
 }
 
 // handleOIDCListRole is used to list stored a roles
-func (i *IdentityStore) handleOIDCListRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roles, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
