@@ -245,6 +245,12 @@ func TestPopulate_Basic(t *testing.T) {
 			output:   `{"color":"green","foo":"bar"}`,
 		},
 		{
+			mode:   JSONTemplating,
+			name:   "null entity metadata",
+			input:  "{{identity.entity.metadata}}",
+			output: `{}`,
+		},
+		{
 			mode:             JSONTemplating,
 			name:             "group_names",
 			input:            "{{identity.entity.group_names}}",
@@ -292,6 +298,13 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			mode:          JSONTemplating,
+			name:          "null alias metadata",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "aws_123",
+			output:        `{}`,
+		},
+		{
+			mode:          JSONTemplating,
 			name:          "all alias metadata, accessor not found",
 			input:         "{{identity.entity.aliases.aws_123.metadata}}",
 			aliasAccessor: "not_gonna_match",
@@ -311,7 +324,7 @@ func TestPopulate_Basic(t *testing.T) {
 		}
 		if test.aliasAccessor != "" {
 			entity.Aliases = []*Alias{
-				&Alias{
+				{
 					MountAccessor: test.aliasAccessor,
 					ID:            test.aliasID,
 					Name:          test.aliasName,
