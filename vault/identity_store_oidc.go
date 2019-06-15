@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
@@ -20,6 +22,7 @@ import (
 
 // todo fix this
 var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
+var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
 const (
 	oidcConfigFieldIssuer = "issuer"
@@ -172,7 +175,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathOIDCCreateRole,
+				logical.UpdateOperation: i.pathOIDCUpdateRole,
 				logical.ReadOperation:   i.pathOIDCReadRole,
 				logical.DeleteOperation: i.pathOIDCDeleteRole,
 			},
@@ -659,7 +662,7 @@ func (key *NamedKey) signPayload(payload []byte) (string, error) {
 }
 
 // handleOIDCCreateRole is used to create a new role or update an existing one
-func (i *IdentityStore) pathOIDCCreateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	var role *Role
 	// var namedKey *NamedKey
@@ -670,6 +673,31 @@ func (i *IdentityStore) pathOIDCCreateRole(ctx context.Context, req *logical.Req
 	keyInput, keyInputOK := d.GetOk("key")
 	templateInput, templateInputOK := d.GetOk("template")
 	ttlInput, ttlInputOK := d.GetOk("ttl")
+
+	// Validate that template can be parsed and results in valid JSON
+	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		Mode:   identity.JSONTemplating,
+		String: templateInput.(string),
+		Entity: new(identity.Entity),
+		Groups: make([]*identity.Group, 0),
+		// namespace?
+	})
+
+	if err != nil {
+		return logical.ErrorResponse("Error parsing template: %s", err.Error()), nil
+	}
+
+	var tmp map[string]interface{}
+	if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
+		return logical.ErrorResponse("Error parsing template JSON: %s", err.Error()), nil
+	}
+
+	for key, _ := range tmp {
+		if strutil.StrListContains(requiredClaims, key) {
+			return logical.ErrorResponse(`Top level key %q not allowed. Restricted keys: %s`,
+				key, strings.Join(requiredClaims, ", ")), nil
+		}
+	}
 
 	// determine if we are updating an existing role or creating a new one
 	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
@@ -833,7 +861,7 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 		}
 
 		for k, v := range parsed {
-			if _, ok := output[k]; !ok {
+			if !strutil.StrListContains(requiredClaims, k) {
 				output[k] = v
 			} else {
 				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
