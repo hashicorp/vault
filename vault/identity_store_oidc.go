@@ -5,15 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
 
 	"gopkg.in/square/go-jose.v2"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -26,6 +26,7 @@ const (
 	oidcConfigStorageKey  = "oidc/config/issuer"
 	namedKeyConfigPath    = "oidc-config/named-key/"
 	publicKeysConfigPath  = "oidc-config/public-keys/"
+	roleConfigPath        = "oidc-config/role/"
 )
 
 type oidcConfig struct {
@@ -46,6 +47,14 @@ type NamedKey struct {
 	SigningKey       jose.JSONWebKey `json:"signing_key"`
 }
 
+type Role struct {
+	Name     string        `json:"name"` // TODO: do we need/want this?
+	TokenTTL time.Duration `json:"token_ttl"`
+	Key      string        `json:"key"`
+	Template string        `json:"template"`
+	RoleID   string        `json:"role_id"`
+}
+
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/key/:key - Create a new key named key
 func oidcPaths(i *IdentityStore) []*framework.Path {
@@ -59,8 +68,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.readOIDCConfig,
-				logical.UpdateOperation: i.writeOIDCConfig,
+				logical.ReadOperation:   i.pathReadOIDCConfig,
+				logical.UpdateOperation: i.pathUpdateOIDCConfig,
 			},
 			HelpSynopsis:    "OIDC configuration",
 			HelpDescription: "Update OIDC configuration in the identity backend",
@@ -89,9 +98,9 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleOIDCCreateKey,
-				logical.ReadOperation:   i.handleOIDCReadKey,
-				logical.DeleteOperation: i.handleOIDCDeleteKey,
+				logical.UpdateOperation: i.pathOIDCCreateKey,
+				logical.ReadOperation:   i.pathOIDCReadKey,
+				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
 			HelpSynopsis:    "oidc/key/:key help synopsis here",
 			HelpDescription: "oidc/key/:key help description here",
@@ -117,7 +126,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/key/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.handleOIDCListKeys,
+				logical.ListOperation: i.pathOIDCListKey,
 			},
 			HelpSynopsis:    "list oidc/key/ help synopsis here",
 			HelpDescription: "list oidc/key/ help description here",
@@ -125,7 +134,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/.well-known/certs/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: i.handleOIDCReadCerts,
+				logical.ReadOperation: i.pathOIDCReadCerts,
 			},
 			HelpSynopsis:    "read oidc/.well-known/certs/ help synopsis here",
 			HelpDescription: "read oidc/.well-known/certs/ help description here",
@@ -139,14 +148,48 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: i.handleOIDCGenerateSignToken,
+				logical.ReadOperation: i.pathOIDCGenerateToken,
 			},
+		},
+		{
+			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+				"key": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The OIDC key to use for generating tokens. The specified key must already exist.",
+				},
+				"template": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The template string to use for generating tokens. This may be in string-ified JSON or base64 format.",
+				},
+				"ttl": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Description: "TTL of the tokens generated against the role.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathOIDCCreateRole,
+				logical.ReadOperation:   i.pathOIDCReadRole,
+				logical.DeleteOperation: i.pathOIDCDeleteRole,
+			},
+		},
+		{
+			Pattern: "oidc/role/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: i.pathOIDCListRole,
+			},
+			HelpSynopsis:    "list oidc/role/ help synopsis here",
+			HelpDescription: "list oidc/role/ help description here",
 		},
 	}
 }
 
 // readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
-func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathReadOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	c, err := i.getOIDCConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -164,7 +207,7 @@ func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request
 }
 
 // writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
-func (i *IdentityStore) writeOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathUpdateOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	value, ok := d.GetOk(oidcConfigFieldIssuer)
 	if !ok {
 		return nil, nil
@@ -215,7 +258,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
-func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	var namedKey *NamedKey
 	var update bool = false
@@ -329,7 +372,7 @@ func (i *IdentityStore) handleOIDCCreateKey(ctx context.Context, req *logical.Re
 }
 
 // handleOIDCReadKey is used to read an existing key
-func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
@@ -353,19 +396,82 @@ func (i *IdentityStore) handleOIDCReadKey(ctx context.Context, req *logical.Requ
 }
 
 // handleOIDCDeleteKey is used to delete a key
-func (i *IdentityStore) handleOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
+func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	targetKeyName := d.Get("name").(string)
 
-	err := req.Storage.Delete(ctx, namedKeyConfigPath+name)
+	//todo delete pub key from publicKeys
+
+	// it is an error to delete a key that is actively referenced by a role
+	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
-	//todo this is supposed to return  204-no content
+
+	var role *Role
+	rolesReferencingTargetKeyName := make([]string, 0)
+	for _, roleName := range roleNames {
+		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&role); err != nil {
+				return nil, err
+			}
+			if role.Key == targetKeyName {
+				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, role.Name)
+			}
+		}
+	}
+
+	if len(rolesReferencingTargetKeyName) > 0 {
+		errorMessage := fmt.Sprintf("Unable to delete the key: %q because it is currently referenced by these roles: %s",
+			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	// delete the public portion of the key from publicKeys (what .well-known returns)
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		// a key did exist so we need to load it and delete the public keys in its keyring
+		var storedNamedKey NamedKey
+		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
+			return nil, err
+		}
+		survivedKeys := make([]*ExpireableKey, len(publicKeys))
+		insertIndex := 0
+		var surviveCandidate bool
+		// todo: this can be optimized, using a naive implementation for the moment
+		for candidateIndex := range publicKeys {
+			surviveCandidate = true
+			for _, deletionKeyID := range storedNamedKey.KeyRing {
+				if publicKeys[candidateIndex].Key.KeyID == deletionKeyID {
+					surviveCandidate = false
+					break
+				}
+			}
+			if surviveCandidate {
+				survivedKeys[insertIndex] = publicKeys[candidateIndex]
+				insertIndex = insertIndex + 1
+			}
+		}
+		// todo: make thread safe - here and in a lot of other places
+		publicKeys = survivedKeys[:insertIndex]
+	}
+
+	// key can safely be deleted now
+	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 // handleOIDCListKey is used to list named keys
-func (i *IdentityStore) handleOIDCListKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keys, err := req.Storage.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return nil, err
@@ -425,7 +531,7 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 
 // handleOIDCReadCerts is used to retrieve all certs from all keys so that clients can
 // verify the validity of a signed OIDC token
-func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	publicKeys = expire(publicKeys)
 
 	jwks := jose.JSONWebKeySet{
@@ -444,18 +550,25 @@ func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Re
 }
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
-func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	rolename := d.Get("name").(string)
+func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roleName := d.Get("name").(string)
 
-	var namedKey NamedKey
+	role, err := i.getOIDCRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse("role %q not found", roleName), nil
 
-	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+rolename)
-	if entry == nil {
-		return logical.ErrorResponse("role %s not found", rolename), nil
 	}
 
-	err := entry.DecodeJSON(&namedKey)
-	if err != nil {
+	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+	if entry == nil {
+		return logical.ErrorResponse("key %q not found", role.Key), nil
+	}
+
+	var namedKey NamedKey
+	if err := entry.DecodeJSON(&namedKey); err != nil {
 		return nil, err
 	}
 
@@ -466,16 +579,12 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	}
 
 	te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
-	if te == nil {
-		return nil, errors.New("No token entry for this token")
-	}
-	fmt.Printf("-- -- --\nreq:\n%#v\n", req)
-	fmt.Printf("-- -- --\nte:\n%#v\n", te)
 	if err != nil {
 		return nil, err
 	}
-	if te.EntityID == "" {
-		return nil, errors.New("No EntityID associated with this request's Vault token")
+
+	if te == nil || te.EntityID == "" {
+		return logical.ErrorResponse("No entity associated with this Vault token"), nil
 	}
 
 	config, err := i.getOIDCConfig(ctx, req.Storage)
@@ -492,8 +601,8 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	idToken := idToken{
 		Issuer:   issuer,
 		Subject:  te.EntityID,
-		Audience: "client_id_of_relying_party",
-		Expiry:   now.Add(2 * time.Minute).Unix(),
+		Audience: role.RoleID,
+		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
 		Claims:   te,
 	}
@@ -537,10 +646,162 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"token":     signedIdToken,
-			"client_id": "the eventual role id",
-			"ttl":       60, // change to role TTL
+			"client_id": role.RoleID,
+			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
+}
+
+// handleOIDCCreateRole is used to create a new role or update an existing one
+func (i *IdentityStore) pathOIDCCreateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	var role *Role
+	// var namedKey *NamedKey
+	var update bool = false
+
+	// parse parameters
+	name := d.Get("name").(string)
+	keyInput, keyInputOK := d.GetOk("key")
+	templateInput, templateInputOK := d.GetOk("template")
+	ttlInput, ttlInputOK := d.GetOk("ttl")
+
+	// determine if we are updating an existing role or creating a new one
+	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		if err := entry.DecodeJSON(&role); err != nil {
+			return nil, err
+		}
+		update = true
+	}
+
+	// validate inputs
+	if !update {
+		if !keyInputOK || !templateInputOK || !ttlInputOK {
+			return logical.ErrorResponse("key, template, and ttl must all be specified to create a role"), logical.ErrInvalidRequest
+		}
+	}
+
+	// validate that a key exists at the path specified if a key will be needed (creating a role or update and key parameter was specified)
+	if !update || keyInputOK {
+		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+keyInput.(string))
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			// the key specified does not exist in storage, this is an error
+			return logical.ErrorResponse("the specified key %q does not exist", keyInput.(string)), logical.ErrInvalidRequest
+		}
+	}
+
+	// create role path
+	if !update {
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
+
+		role = &Role{
+			Name:     name,
+			Key:      keyInput.(string),
+			Template: templateInput.(string),
+			TokenTTL: time.Duration(ttlInput.(int)) * time.Second,
+			RoleID:   roleID,
+		}
+	}
+
+	// update role path
+	if update {
+		if keyInputOK {
+			role.Key = keyInput.(string)
+		}
+		if templateInputOK {
+			role.Template = templateInput.(string)
+		}
+		if ttlInputOK {
+			role.TokenTTL = time.Duration(ttlInput.(int)) * time.Second
+		}
+	}
+
+	// store role (which was either just created or updated)
+	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	// prepare response
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"client_id": role.RoleID,
+			"key":       role.Key,
+			"template":  role.Template,
+			"ttl":       int64(role.TokenTTL.Seconds()),
+		},
+	}, nil
+}
+
+// handleOIDCReadRole is used to read an existing role
+func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	role, err := i.getOIDCRole(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"client_id": role.RoleID,
+			"key":       role.Key,
+			"template":  role.Template,
+			"ttl":       int64(role.TokenTTL.Seconds()),
+		},
+	}, nil
+}
+
+func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, roleName string) (*Role, error) {
+	entry, err := s.Get(ctx, roleConfigPath+roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var role Role
+	if err := entry.DecodeJSON(&role); err != nil {
+		return nil, err
+	}
+
+	return &role, nil
+}
+
+// handleOIDCDeleteRole is used to delete a role if it exists
+func (i *IdentityStore) pathOIDCDeleteRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// handleOIDCListRole is used to list stored a roles
+func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roles, err := req.Storage.List(ctx, roleConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(roles), nil
 }
 
 func buildFinalToken(idToken idToken, claimsJSON string) ([]byte, error) {
