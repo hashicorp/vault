@@ -1,9 +1,14 @@
 package identity
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/errwrap"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
@@ -15,7 +20,13 @@ var (
 	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
 )
 
+const (
+	ACLTemplating = iota // must be the first value for backwards compatibility
+	JSONTemplating
+)
+
 type PopulateStringInput struct {
+	Mode              int
 	ValidityCheckOnly bool
 	String            string
 	Entity            *Entity
@@ -61,7 +72,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		case 2:
 			subst = true
 			if !p.ValidityCheckOnly {
-				tmplStr, err := performTemplating(p.Namespace, strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups)
+				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), p)
 				if err != nil {
 					return false, "", err
 				}
@@ -76,22 +87,45 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	return subst, b.String(), nil
 }
 
-func performTemplating(ns *namespace.Namespace, input string, entity *Entity, groups []*Group) (string, error) {
+func performTemplating(input string, p *PopulateStringInput) (string, error) {
+
+	// Handle quote wrapping uniformly. For ACL templating, this is a no-op.
+	quote := func(s string) string { return s }
+	if p.Mode == JSONTemplating {
+		quote = strconv.Quote
+	}
+
 	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
 		switch {
 		case trimmed == "id":
-			return alias.ID, nil
+			return quote(alias.ID), nil
 		case trimmed == "name":
 			if alias.Name == "" {
 				return "", ErrTemplateValueNotFound
 			}
 			return alias.Name, nil
-		case strings.HasPrefix(trimmed, "metadata."):
-			val, ok := alias.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
-			if !ok {
+		case trimmed == "metadata":
+			if p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return val, nil
+
+			jsonMetadata, err := json.Marshal(alias.Metadata)
+			if err != nil {
+				return "", err
+			}
+			return string(jsonMetadata), nil
+
+		case strings.HasPrefix(trimmed, "metadata."):
+			split := strings.SplitN(trimmed, ".", 2)
+
+			switch len(split) {
+			case 2:
+				val, ok := alias.Metadata[split[1]]
+				if !ok && p.Mode == ACLTemplating {
+					return "", ErrTemplateValueNotFound
+				}
+				return quote(val), nil
+			}
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -100,34 +134,66 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 	performEntityTemplating := func(trimmed string) (string, error) {
 		switch {
 		case trimmed == "id":
-			return entity.ID, nil
+			return quote(p.Entity.ID), nil
 		case trimmed == "name":
-			if entity.Name == "" {
+			if p.Entity.Name == "" && p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return entity.Name, nil
+			return quote(p.Entity.Name), nil
+		case trimmed == "metadata":
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+
+			jsonMetadata, err := json.Marshal(p.Entity.Metadata)
+			if err != nil {
+				return "", err
+			}
+			return string(jsonMetadata), nil
 		case strings.HasPrefix(trimmed, "metadata."):
-			val, ok := entity.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
-			if !ok {
+			split := strings.SplitN(trimmed, ".", 2)
+
+			switch len(split) {
+			case 2:
+				val, ok := p.Entity.Metadata[split[1]]
+				if !ok && p.Mode == ACLTemplating {
+					return "", ErrTemplateValueNotFound
+				}
+				return quote(val), nil
+			}
+		case trimmed == "group_names":
+			if p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return val, nil
+			return listGroups(p.Groups, "name"), nil
+
+		case trimmed == "group_ids":
+			if p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
+			}
+			return listGroups(p.Groups, "id"), nil
+
 		case strings.HasPrefix(trimmed, "aliases."):
 			split := strings.SplitN(strings.TrimPrefix(trimmed, "aliases."), ".", 2)
 			if len(split) != 2 {
 				return "", errors.New("invalid alias selector")
 			}
-			var found *Alias
-			for _, alias := range entity.Aliases {
-				if split[0] == alias.MountAccessor {
-					found = alias
+			var alias *Alias
+			for _, a := range p.Entity.Aliases {
+				if split[0] == a.MountAccessor {
+					alias = a
 					break
 				}
 			}
-			if found == nil {
-				return "", errors.New("alias not found")
+			if alias == nil {
+				if p.Mode == ACLTemplating {
+					return "", errors.New("alias not found")
+				}
+
+				// An empty alias is sufficient for generating defaults
+				alias = &Alias{Metadata: make(map[string]string)}
 			}
-			return performAliasTemplating(split[1], found)
+			return performAliasTemplating(split[1], alias)
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -153,12 +219,12 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 			return "", errors.New("invalid groups accessor")
 		}
 		var found *Group
-		for _, group := range groups {
+		for _, group := range p.Groups {
 			var compare string
 			if ids {
 				compare = group.ID
 			} else {
-				if ns != nil && group.NamespaceID == ns.ID {
+				if p.Namespace != nil && group.NamespaceID == p.Namespace.ID {
 					compare = group.Name
 				} else {
 					continue
@@ -196,19 +262,76 @@ func performTemplating(ns *namespace.Namespace, input string, entity *Entity, gr
 		return "", ErrTemplateValueNotFound
 	}
 
+	performTimeTemplating := func(trimmed string) (string, error) {
+		opsSplit := strings.SplitN(trimmed, ".", 3)
+
+		if opsSplit[0] != "now" {
+			return "", fmt.Errorf("invalid time selector %q", opsSplit[0])
+		}
+
+		result := time.Now()
+		switch len(opsSplit) {
+		case 1:
+			// return current time
+		case 2:
+			return "", errors.New("missing time operand")
+		case 3:
+			duration, err := time.ParseDuration(opsSplit[2])
+			if err != nil {
+				return "", errwrap.Wrapf("invalid duration: {{err}}", err)
+			}
+
+			switch opsSplit[1] {
+			case "plus":
+				result = result.Add(duration)
+			case "minus":
+				result = result.Add(-duration)
+			default:
+				return "", fmt.Errorf("invalid time operator %q", opsSplit[1])
+			}
+		}
+
+		return strconv.FormatInt(result.Unix(), 10), nil
+	}
+
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
-		if entity == nil {
+		if p.Entity == nil {
 			return "", ErrNoEntityAttachedToToken
 		}
 		return performEntityTemplating(strings.TrimPrefix(input, "identity.entity."))
 
 	case strings.HasPrefix(input, "identity.groups."):
-		if len(groups) == 0 {
+		if len(p.Groups) == 0 {
 			return "", ErrNoGroupsAttachedToToken
 		}
 		return performGroupsTemplating(strings.TrimPrefix(input, "identity.groups."))
+
+	case strings.HasPrefix(input, "time."):
+		return performTimeTemplating(strings.TrimPrefix(input, "time."))
 	}
 
 	return "", ErrTemplateValueNotFound
+}
+
+func listGroups(groups []*Group, element string) string {
+	var out strings.Builder
+
+	out.WriteString("[")
+	for i, g := range groups {
+		var v string
+		switch element {
+		case "name":
+			v = g.Name
+		case "id":
+			v = g.ID
+		}
+		if i > 0 {
+			out.WriteString(",")
+		}
+		out.WriteString(strconv.Quote(v))
+	}
+	out.WriteString("]")
+
+	return out.String()
 }

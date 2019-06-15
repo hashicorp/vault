@@ -5,14 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/identity"
+
 	"gopkg.in/square/go-jose.v2"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -21,12 +22,17 @@ import (
 var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 
 const (
-	namedKeyConfigPath   = "oidc-config/named-key/"
-	publicKeysConfigPath = "oidc-config/public-keys/"
-	roleConfigPath       = "oidc-config/role/"
+	oidcConfigFieldIssuer = "issuer"
+	oidcConfigStorageKey  = "oidc/config/issuer"
+	namedKeyConfigPath    = "oidc-config/named-key/"
+	publicKeysConfigPath  = "oidc-config/public-keys/"
+	roleConfigPath        = "oidc-config/role/"
 )
 
-type audience []string
+type oidcConfig struct {
+	Issuer string `json:"issuer"`
+}
+
 type ExpireableKey struct {
 	Key        jose.JSONWebKey `json:"key"`
 	Expireable bool            `json:"expireable"`
@@ -42,11 +48,11 @@ type NamedKey struct {
 }
 
 type Role struct {
-	Name     string `json:"name"`
-	TokenTTL int    `json:"token_ttl"`
-	Key      string `json:"key"`
-	Template string `json:"template"`
-	RoleID   string `json:"role_id"`
+	Name     string        `json:"name"` // TODO: do we need/want this?
+	TokenTTL time.Duration `json:"token_ttl"`
+	Key      string        `json:"key"`
+	Template string        `json:"template"`
+	RoleID   string        `json:"role_id"`
 }
 
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
@@ -54,24 +60,39 @@ type Role struct {
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "oidc/config/?$",
+			Fields: map[string]*framework.FieldSchema{
+				oidcConfigFieldIssuer: {
+					Type:        framework.TypeString,
+					Description: "Issuer URL to be used in the iss claim of the token. If not set, Vault's app_addr will be used.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   i.readOIDCConfig,
+				logical.UpdateOperation: i.writeOIDCConfig,
+			},
+			HelpSynopsis:    "OIDC configuration",
+			HelpDescription: "Update OIDC configuration in the identity backend",
+		},
+		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the key",
 				},
 
-				"rotation_period": &framework.FieldSchema{
+				"rotation_period": {
 					Type:        framework.TypeDurationSecond,
 					Description: "How often to generate a new keypair. Defaults to 6h",
 				},
 
-				"verification_ttl": &framework.FieldSchema{
+				"verification_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Defaults to the current rotation_period, which will provide for a current key and previous key.",
 				},
 
-				"algorithm": &framework.FieldSchema{
+				"algorithm": {
 					Type:        framework.TypeString,
 					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
 				},
@@ -87,11 +108,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the key",
 				},
-				"verification_ttl": &framework.FieldSchema{
+				"verification_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key.",
 				},
@@ -119,7 +140,13 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "read oidc/.well-known/certs/ help description here",
 		},
 		{
-			Pattern: "oidc/token/generate/?$",
+			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.handleOIDCGenerateSignToken,
 			},
@@ -159,6 +186,75 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "list oidc/role/ help description here",
 		},
 	}
+}
+
+// readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
+func (i *IdentityStore) readOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	c, err := i.getOIDCConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if c == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer": c.Issuer,
+		},
+	}, nil
+}
+
+// writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
+func (i *IdentityStore) writeOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	value, ok := d.GetOk(oidcConfigFieldIssuer)
+	if !ok {
+		return nil, nil
+	}
+
+	c := oidcConfig{
+		Issuer: value.(string),
+	}
+
+	entry, err := logical.StorageEntryJSON(oidcConfigStorageKey, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	var resp logical.Response
+
+	if c.Issuer != "" {
+		resp.AddWarning(`If "issuer" is set explicitly, all tokens must be ` +
+			`validated against that address, including those issued by secondary ` +
+			`clusters. Setting issuer to "" will restore the default behavior of ` +
+			`using the cluster's api_addr as the issuer.`)
+	}
+
+	return &resp, nil
+}
+
+func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
+	var c oidcConfig
+
+	entry, err := s.Get(ctx, oidcConfigStorageKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	if err := entry.DecodeJSON(&c); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
@@ -455,10 +551,26 @@ func (i *IdentityStore) handleOIDCReadCerts(ctx context.Context, req *logical.Re
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
 func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// load test key yolo style
-	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath)
+	roleName := d.Get("name").(string)
+
+	role, err := i.getOIDCRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse("role %q not found", roleName), nil
+
+	}
+
+	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+	if entry == nil {
+		return logical.ErrorResponse("key %q not found", role.Key), nil
+	}
+
 	var namedKey NamedKey
-	entry.DecodeJSON(&namedKey)
+	if err := entry.DecodeJSON(&namedKey); err != nil {
+		return nil, err
+	}
 
 	// generate an OIDC token from entity data
 	accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
@@ -467,33 +579,55 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	}
 
 	te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
-	if te == nil {
-		return nil, errors.New("No token entry for this token")
-	}
-	fmt.Printf("-- -- --\nreq:\n%#v\n", req)
-	fmt.Printf("-- -- --\nte:\n%#v\n", te)
 	if err != nil {
 		return nil, err
 	}
-	if te.EntityID == "" {
-		return nil, errors.New("No EntityID associated with this request's Vault token")
+
+	if te == nil || te.EntityID == "" {
+		return logical.ErrorResponse("No entity associated with this Vault token"), nil
+	}
+
+	config, err := i.getOIDCConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	issuer := i.core.redirectAddr
+	if config != nil && config.Issuer != "" {
+		issuer = config.Issuer
 	}
 
 	now := time.Now()
 	idToken := idToken{
-		Issuer:   "Issuer",
+		Issuer:   issuer,
 		Subject:  te.EntityID,
-		Audience: []string{"client_id_of_relying_party"},
-		Expiry:   now.Add(2 * time.Minute).Unix(),
+		Audience: "client_id_of_relying_party",
+		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
 		Claims:   te,
 	}
 
-	// signing
-	// keyRing, _ := i.createKeyRing("foo")
-	// privWebKey, pubWebKey := keyRing.GenerateWebKeys()
-	// signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
-	payload, err := json.Marshal(idToken)
+	e, err := i.MemDBEntityByID(te.EntityID, true)
+	if err != nil {
+		return nil, err
+	}
+
+	groups, inheritedGroups, err := i.groupsByEntityID(e.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups = append(groups, inheritedGroups...)
+
+	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		Mode:   identity.JSONTemplating,
+		String: `{"nbf":{{time.now}}}`,
+		Entity: e,
+		Groups: groups,
+		// namespace?
+	})
+
+	payload, err := buildFinalToken(idToken, populatedTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -509,15 +643,11 @@ func (i *IdentityStore) handleOIDCGenerateSignToken(ctx context.Context, req *lo
 	}
 	signedIdToken, _ := signature.CompactSerialize()
 
-	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 1),
-	}
-	jwks.Keys[0] = namedKey.SigningKey.Public()
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"token": signedIdToken,
-			"pub":   jwks,
+			"token":     signedIdToken,
+			"client_id": role.RoleID,
+			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
 }
@@ -577,7 +707,7 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 			Name:     name,
 			Key:      keyInput.(string),
 			Template: templateInput.(string),
-			TokenTTL: ttlInput.(int),
+			TokenTTL: time.Duration(ttlInput.(int)) * time.Second,
 			RoleID:   roleID,
 		}
 	}
@@ -591,7 +721,7 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 			role.Template = templateInput.(string)
 		}
 		if ttlInputOK {
-			role.TokenTTL = ttlInput.(int)
+			role.TokenTTL = time.Duration(ttlInput.(int)) * time.Second
 		}
 	}
 
@@ -610,7 +740,7 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 			"client_id": role.RoleID,
 			"key":       role.Key,
 			"template":  role.Template,
-			"ttl":       role.TokenTTL,
+			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
 }
@@ -619,17 +749,12 @@ func (i *IdentityStore) handleOIDCCreateRole(ctx context.Context, req *logical.R
 func (i *IdentityStore) handleOIDCReadRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var role *Role
-	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
+	role, err := i.getOIDCRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if entry != nil {
-		if err := entry.DecodeJSON(&role); err != nil {
-			return nil, err
-		}
-	} else {
-		return logical.ErrorResponse("No role configured at %q", name), logical.ErrInvalidRequest
+	if role == nil {
+		return nil, nil
 	}
 
 	return &logical.Response{
@@ -637,9 +762,27 @@ func (i *IdentityStore) handleOIDCReadRole(ctx context.Context, req *logical.Req
 			"client_id": role.RoleID,
 			"key":       role.Key,
 			"template":  role.Template,
-			"ttl":       role.TokenTTL,
+			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
+}
+
+func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, roleName string) (*Role, error) {
+	entry, err := s.Get(ctx, roleConfigPath+roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var role Role
+	if err := entry.DecodeJSON(&role); err != nil {
+		return nil, err
+	}
+
+	return &role, nil
 }
 
 // handleOIDCDeleteRole is used to delete a role if it exists
@@ -659,6 +802,36 @@ func (i *IdentityStore) handleOIDCListRole(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 	return logical.ListResponse(roles), nil
+}
+
+func buildFinalToken(idToken idToken, claimsJSON string) ([]byte, error) {
+	output := map[string]interface{}{
+		"iss": idToken.Issuer,
+		"sub": idToken.Subject,
+		"aud": idToken.Audience,
+		"exp": idToken.Expiry,
+		"iat": idToken.IssuedAt,
+	}
+
+	var parsed map[string]interface{}
+	err := json.Unmarshal([]byte(claimsJSON), &parsed)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range parsed {
+		if _, ok := output[k]; ok {
+			return nil, fmt.Errorf("top level key %q already exists", k)
+		}
+		output[k] = v
+	}
+
+	payload, err := json.Marshal(output)
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
 }
 
 // --- some helper methods ---
@@ -760,9 +933,9 @@ func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey Expir
 type idToken struct {
 	// ---- OIDC CLAIMS WITH NOTES FROM SPEC ----
 	// required fields
-	Issuer   string   `json:"iss"` // Vault server address?
-	Subject  string   `json:"sub"`
-	Audience audience `json:"aud"`
+	Issuer   string `json:"iss"` // Vault server address?
+	Subject  string `json:"sub"`
+	Audience string `json:"aud"`
 	// Audience _should_ contain the OAuth 2.0 client_id of the Relying Party.
 	// Not sure how/if we will leverage this
 
@@ -844,6 +1017,7 @@ type idToken struct {
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/token - To register generate a new odic token
 // oidc/key/:key - Create a new keyring
+		oidcPathConfig(i),
 
 //handleOIDCGenerate is used to generate an OIDC token
 func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
