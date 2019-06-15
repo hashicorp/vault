@@ -109,11 +109,11 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				return "", ErrTemplateValueNotFound
 			}
 
-			jsonMetadata, err := json.Marshal(alias.Metadata)
+			jsonMetadata, err := marshalMetadata(alias.Metadata)
 			if err != nil {
 				return "", err
 			}
-			return string(jsonMetadata), nil
+			return jsonMetadata, nil
 
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
@@ -145,11 +145,11 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				return "", ErrTemplateValueNotFound
 			}
 
-			jsonMetadata, err := json.Marshal(p.Entity.Metadata)
+			jsonMetadata, err := marshalMetadata(p.Entity.Metadata)
 			if err != nil {
 				return "", err
 			}
-			return string(jsonMetadata), nil
+			return jsonMetadata, nil
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
 
@@ -334,4 +334,19 @@ func listGroups(groups []*Group, element string) string {
 	out.WriteString("]")
 
 	return out.String()
+}
+
+// marshalMetadata converts a metadata object into JSON, with special handling
+// for nil objects which are rendered as {} instead of null.
+func marshalMetadata(metadata map[string]string) (string, error) {
+	if metadata == nil {
+		return "{}", nil
+	}
+
+	enc, err := json.Marshal(metadata)
+	if err != nil {
+		return "", err
+	}
+
+	return string(enc), nil
 }
