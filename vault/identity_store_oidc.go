@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/identity"
-
-	"gopkg.in/square/go-jose.v2"
-
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"gopkg.in/square/go-jose.v2"
 )
 
 // todo fix this
@@ -619,29 +619,15 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	groups = append(groups, inheritedGroups...)
 
-	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
-		Mode:   identity.JSONTemplating,
-		String: `{"nbf":{{time.now}}}`,
-		Entity: e,
-		Groups: groups,
-		// namespace?
-	})
-
-	payload, err := buildFinalToken(idToken, populatedTemplate)
+	payload, err := idToken.generatePayload(i.Logger(), role.Template, e, groups)
 	if err != nil {
-		return nil, err
+		i.Logger().Warn("error populating OIDC token template", "error", err)
 	}
 
-	signingKey := jose.SigningKey{Key: namedKey.SigningKey, Algorithm: jose.SignatureAlgorithm("RS256")}
-	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
+	signedIdToken, err := namedKey.signPayload(payload)
 	if err != nil {
-		return nil, fmt.Errorf("new signier: %v", err)
+		return nil, errwrap.Wrapf("error signing OIDC token: {{err}}", err)
 	}
-	signature, err := signer.Sign(payload)
-	if err != nil {
-		return nil, fmt.Errorf("signing payload: %v", err)
-	}
-	signedIdToken, _ := signature.CompactSerialize()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -650,6 +636,26 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
+}
+
+func (key *NamedKey) signPayload(payload []byte) (string, error) {
+	signingKey := jose.SigningKey{Key: key.SigningKey, Algorithm: jose.SignatureAlgorithm(key.SigningAlgorithm)}
+	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	signature, err := signer.Sign(payload)
+	if err != nil {
+		return "", err
+	}
+
+	signedIdToken, err := signature.CompactSerialize()
+	if err != nil {
+		return "", err
+	}
+
+	return signedIdToken, nil
 }
 
 // handleOIDCCreateRole is used to create a new role or update an existing one
@@ -734,15 +740,7 @@ func (i *IdentityStore) pathOIDCCreateRole(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
-	// prepare response
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"client_id": role.RoleID,
-			"key":       role.Key,
-			"template":  role.Template,
-			"ttl":       int64(role.TokenTTL.Seconds()),
-		},
-	}, nil
+	return nil, nil
 }
 
 // handleOIDCReadRole is used to read an existing role
@@ -804,26 +802,43 @@ func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Reque
 	return logical.ListResponse(roles), nil
 }
 
-func buildFinalToken(idToken idToken, claimsJSON string) ([]byte, error) {
+func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
 	output := map[string]interface{}{
-		"iss": idToken.Issuer,
-		"sub": idToken.Subject,
-		"aud": idToken.Audience,
-		"exp": idToken.Expiry,
-		"iat": idToken.IssuedAt,
+		"iss": tok.Issuer,
+		"sub": tok.Subject,
+		"aud": tok.Audience,
+		"exp": tok.Expiry,
+		"iat": tok.IssuedAt,
 	}
 
-	var parsed map[string]interface{}
-	err := json.Unmarshal([]byte(claimsJSON), &parsed)
+	// Parse and integrate the populated role template. Structural errors with the template _should_
+	// be caught during role configuration. Error found during runtime will be logged, but they will
+	// not block generation of the basic ID token. They should not be returned to the requester.
+	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		Mode:   identity.JSONTemplating,
+		String: template,
+		Entity: entity,
+		Groups: groups,
+		// namespace?
+	})
+
 	if err != nil {
-		return nil, err
+		logger.Warn("error populating OIDC token template", "template", template, "error", err)
 	}
 
-	for k, v := range parsed {
-		if _, ok := output[k]; ok {
-			return nil, fmt.Errorf("top level key %q already exists", k)
+	if populatedTemplate != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(populatedTemplate), &parsed); err != nil {
+			logger.Warn("error parsing OIDC template", "template", template, "err", err)
 		}
-		output[k] = v
+
+		for k, v := range parsed {
+			if _, ok := output[k]; !ok {
+				output[k] = v
+			} else {
+				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
+			}
+		}
 	}
 
 	payload, err := json.Marshal(output)
