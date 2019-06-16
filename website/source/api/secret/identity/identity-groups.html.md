@@ -33,9 +33,9 @@ This endpoint creates or updates a group.
 
 ```json
 {
-    "name": "engineering-group",
-	"metadata": ["organization=hashicorp", "team=vault"],
-	"policies": ["eng-dev", "infra-dev"]
+  "name": "engineering-group",
+  "metadata": ["organization=hashicorp", "team=vault"],
+  "policies": ["eng-dev", "infra-dev"]
 }
 ```
 
@@ -53,10 +53,10 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
-                "name": "engineering-group"
-        }
+  "data": {
+    "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
+    "name": "engineering-group"
+  }
 }
 ```
 
@@ -86,8 +86,8 @@ This endpoint updates the group by its ID.
 
 ```json
 {
-	    "metadata": ["organization=updatedorg", "team=updatedteam"],
-	    "policies": ["updatedpolicy"]
+  "metadata": ["organization=updatedorg", "team=updatedteam"],
+  "policies": ["updatedpolicy"]
 }
 ```
 
@@ -105,10 +105,10 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
-                "name": "engineering-group"
-        }
+  "data": {
+    "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
+    "name": "engineering-group"
+  }
 }
 ```
 
@@ -136,22 +136,22 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "creation_time": "2017-09-13T01:17:26.755474204Z",
-                "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
-                "last_update_time": "2017-09-13T01:17:26.755474204Z",
-                "member_entity_ids": [],
-                "member_group_ids": null,
-                "metadata": {
-                        "organization": "hashicorp",
-                        "team": "vault"
-                },
-                "modify_index": 1,
-                "name": "engineering-group",
-                "policies": [
-                        "dev-policy"
-                ]
-        }
+  "data": {
+    "creation_time": "2017-09-13T01:17:26.755474204Z",
+    "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
+    "last_update_time": "2017-09-13T01:17:26.755474204Z",
+    "member_entity_ids": [],
+    "member_group_ids": null,
+    "metadata": {
+      "organization": "hashicorp",
+      "team": "vault"
+    },
+    "modify_index": 1,
+    "name": "engineering-group",
+    "policies": [
+      "dev-policy"
+    ]
+  }
 }
 ```
 
@@ -228,8 +228,8 @@ This endpoint queries the group by its ID.
 
 ```json
 {
-    "type": "by_id",
-    "group_id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8"
+  "type": "by_id",
+  "group_id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8"
 }
 ```
 
@@ -247,21 +247,21 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "creation_time": "2017-09-13T01:17:26.755474204Z",
-                "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
-                "last_update_time": "2017-09-13T01:17:26.755474204Z",
-                "member_entity_ids": [],
-                "member_group_ids": null,
-                "metadata": {
-                        "organization": "hashicorp",
-                        "team": "vault"
-                },
-                "modify_index": 1,
-                "name": "engineering-group",
-                "policies": [
-                        "dev-policy"
-                ]
-        }
+  "data": {
+    "creation_time": "2017-09-13T01:17:26.755474204Z",
+    "id": "454ceeb5-76d7-a131-b92a-7ecfb15523e8",
+    "last_update_time": "2017-09-13T01:17:26.755474204Z",
+    "member_entity_ids": [],
+    "member_group_ids": null,
+    "metadata": {
+      "organization": "hashicorp",
+      "team": "vault"
+    },
+    "modify_index": 1,
+    "name": "engineering-group",
+    "policies": [
+      "dev-policy"
+    ]
+  }
 }
 ```
