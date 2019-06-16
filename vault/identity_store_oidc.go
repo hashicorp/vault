@@ -21,7 +21,6 @@ import (
 )
 
 // todo fix this
-var publicKeys []*ExpireableKey = make([]*ExpireableKey, 0, 0)
 var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
 const (
@@ -37,17 +36,17 @@ type oidcConfig struct {
 }
 
 type ExpireableKey struct {
-	Key        jose.JSONWebKey `json:"key"`
-	Expireable bool            `json:"expireable"`
-	ExpireAt   time.Time       `json:"expire_at"`
+	KeyID    string    `json:"key_id"`
+	ExpireAt time.Time `json:"expire_at"`
 }
 type NamedKey struct {
-	Name             string          `json:"name"`
-	SigningAlgorithm string          `json:"signing_algorithm"`
-	VerificationTTL  int             `json:"verification_ttl"`
-	RotationPeriod   int             `json:"rotation_period"`
-	KeyRing          []string        `json:"key_ring"`
-	SigningKey       jose.JSONWebKey `json:"signing_key"`
+	Name             string           `json:"name"`
+	SigningAlgorithm string           `json:"signing_algorithm"`
+	VerificationTTL  int              `json:"verification_ttl"`
+	RotationPeriod   int              `json:"rotation_period"`
+	KeyRing          []*ExpireableKey `json:"key_ring"`
+	SigningKey       jose.JSONWebKey  `json:"signing_key"`
+	//PublicKey        jose.JSONWebKey `json:"public_key"`
 }
 
 type Role struct {
@@ -158,7 +157,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/.well-known/certs/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: i.pathOIDCReadCerts,
+				logical.ReadOperation: i.pathOIDCReadPublicKeys,
 			},
 			HelpSynopsis:    "read oidc/.well-known/certs/ help synopsis here",
 			HelpDescription: "read oidc/.well-known/certs/ help description here",
@@ -355,8 +354,9 @@ func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Requ
 		}
 
 		// add public part of signing key to the key ring
-		keyRing := make([]string, 1, 1)
-		keyRing[0] = publicKey.Key.KeyID
+		keyRing := []*ExpireableKey{
+			{KeyID: publicKey.KeyID},
+		}
 
 		// create the named key
 		namedKey = &NamedKey{
@@ -368,13 +368,7 @@ func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Requ
 			SigningKey:       signingKey,
 		}
 
-		// add the public key to the struct containing all public keys and store it
-		publicKeys = append(publicKeys, &publicKey)
-		entry, err = logical.StorageEntryJSON(publicKeysConfigPath, publicKeys)
-		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
+		if err := saveOIDCPublicKey(ctx, req.Storage, publicKey); err != nil {
 			return nil, err
 		}
 	}
@@ -425,8 +419,6 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	targetKeyName := d.Get("name").(string)
 
-	//todo delete pub key from publicKeys
-
 	// it is an error to delete a key that is actively referenced by a role
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
@@ -462,30 +454,30 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 	if entry != nil {
-		// a key did exist so we need to load it and delete the public keys in its keyring
-		var storedNamedKey NamedKey
-		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
-			return nil, err
-		}
-		survivedKeys := make([]*ExpireableKey, len(publicKeys))
-		insertIndex := 0
-		var surviveCandidate bool
-		// todo: this can be optimized, using a naive implementation for the moment
-		for candidateIndex := range publicKeys {
-			surviveCandidate = true
-			for _, deletionKeyID := range storedNamedKey.KeyRing {
-				if publicKeys[candidateIndex].Key.KeyID == deletionKeyID {
-					surviveCandidate = false
-					break
-				}
-			}
-			if surviveCandidate {
-				survivedKeys[insertIndex] = publicKeys[candidateIndex]
-				insertIndex = insertIndex + 1
-			}
-		}
-		// todo: make thread safe - here and in a lot of other places
-		publicKeys = survivedKeys[:insertIndex]
+		//// a key did exist so we need to load it and delete the public keys in its keyring
+		//var storedNamedKey NamedKey
+		//if err := entry.DecodeJSON(&storedNamedKey); err != nil {
+		//	return nil, err
+		//}
+		//survivedKeys := make([]*ExpireableKey, len(publicKeys))
+		//insertIndex := 0
+		//var surviveCandidate bool
+		//// todo: this can be optimized, using a naive implementation for the moment
+		//for candidateIndex := range publicKeys {
+		//	surviveCandidate = true
+		//	for _, deletionKeyID := range storedNamedKey.KeyRing {
+		//		if publicKeys[candidateIndex].Key.KeyID == deletionKeyID {
+		//			surviveCandidate = false
+		//			break
+		//		}
+		//	}
+		//	if surviveCandidate {
+		//		survivedKeys[insertIndex] = publicKeys[candidateIndex]
+		//		insertIndex = insertIndex + 1
+		//	}
+		//}
+		//// todo: make thread safe - here and in a lot of other places
+		//publicKeys = survivedKeys[:insertIndex]
 	}
 
 	// key can safely be deleted now
@@ -533,6 +525,10 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 	}
 	verificationTTLUsed, err := storedNamedKey.rotate(verificationTTLOverride)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := saveOIDCPublicKey(ctx, req.Storage, storedNamedKey.SigningKey.Public()); err != nil {
 		return nil, err
 	}
 
@@ -589,17 +585,28 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 	return resp, nil
 }
 
-// handleOIDCReadCerts is used to retrieve all certs from all keys so that clients can
+// pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
 // verify the validity of a signed OIDC token
-func (i *IdentityStore) pathOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	publicKeys = expire(publicKeys)
-
-	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, len(publicKeys)),
+func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := expireOIDCPublicKeys(ctx, req.Storage); err != nil {
+		return nil, err
 	}
 
-	for i, expireableKey := range publicKeys {
-		jwks.Keys[i] = expireableKey.Key
+	keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks := jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	for _, keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
 	}
 
 	data, err := json.Marshal(jwks)
@@ -940,37 +947,14 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 
 // --- some helper methods ---
 
-// expire returns a lice of ExpireableKey with the expired keys removed
-func expire(keys []*ExpireableKey) []*ExpireableKey {
-	activeKeys := make([]*ExpireableKey, len(keys))
-	now := time.Now()
-
-	// a key is active if it is not yet expireable (because it is the signing key of some named
-	// keyring) or if it is expireable but the expireAt time is in the future
-	insertIndex := 0
-	for i := range keys {
-		switch {
-		// expire case
-		case keys[i].Expireable && now.After(keys[i].ExpireAt):
-		default:
-			activeKeys[insertIndex] = keys[i]
-			insertIndex = insertIndex + 1
-		}
-	}
-
-	return activeKeys[:insertIndex]
-}
-
 // NamedKey.rotate(overrides) performs a key rotation on a NamedKey and returns the
 // verification_ttl that was applied. verification_ttl can be overriden with an
 // overrideVerificationTTL value >= 0
 func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
+	verificationTTL := namedKey.VerificationTTL
 
-	var verificationTTL int
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
-	} else {
-		verificationTTL = namedKey.VerificationTTL
 	}
 
 	// determine verificationTTL duration
@@ -982,18 +966,16 @@ func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
 		return -1, err
 	}
 
-	// rotation involves overwritting current signing key, updating key ring, and updating global
+	// rotation involves overwriting current signing key, updating key ring, and updating global
 	// public keys to expire the signing key that was just rotated
 	rotateID := namedKey.SigningKey.KeyID
 	namedKey.SigningKey = signingKey
-	publicKeys = append(publicKeys, &publicKey)
-	namedKey.KeyRing = append(namedKey.KeyRing, publicKey.Key.KeyID)
+	namedKey.KeyRing = append(namedKey.KeyRing, &ExpireableKey{KeyID: publicKey.KeyID})
 
-	// give current signing key's public portion an expiry time
-	for i := range publicKeys {
-		if publicKeys[i].Key.KeyID == rotateID {
-			publicKeys[i].Expireable = true
-			publicKeys[i].ExpireAt = time.Now().Add(verificationTTLDuration)
+	// set the previous public key's  expiry time
+	for _, key := range namedKey.KeyRing {
+		if key.KeyID == rotateID {
+			key.ExpireAt = time.Now().Add(verificationTTLDuration)
 			break
 		}
 	}
@@ -1002,7 +984,7 @@ func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
 }
 
 // generateKeys returns a signingKey and publicKey pair
-func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey ExpireableKey, err error) {
+func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey jose.JSONWebKey, err error) {
 	// 2048 is recommended by RSA Laboratories as a MINIMUM post 2015, 3072 bits
 	// is also seen in the wild, this could be configurable if need be
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -1021,17 +1003,96 @@ func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey Expir
 		Use:       "sig",
 	}
 
-	publicKey = ExpireableKey{
-		Key: jose.JSONWebKey{
-			Key:       &key.PublicKey,
-			KeyID:     id,
-			Algorithm: algorithm,
-			Use:       "sig",
-		},
-		Expireable: false,
-		ExpireAt:   time.Time{},
+	publicKey = jose.JSONWebKey{
+		Key:       &key.PublicKey,
+		KeyID:     id,
+		Algorithm: algorithm,
+		Use:       "sig",
 	}
+
 	return
+}
+
+func saveOIDCPublicKey(ctx context.Context, s logical.Storage, key jose.JSONWebKey) error {
+	entry, err := logical.StorageEntryJSON(publicKeysConfigPath+key.KeyID, key)
+	if err != nil {
+		return err
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func loadOIDCPublicKey(ctx context.Context, s logical.Storage, keyID string) (*jose.JSONWebKey, error) {
+	entry, err := s.Get(ctx, publicKeysConfigPath+keyID)
+	if err != nil {
+		return nil, err
+	}
+
+	var key jose.JSONWebKey
+	if err := entry.DecodeJSON(&key); err != nil {
+		return nil, err
+	}
+
+	return &key, nil
+}
+
+func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error) {
+	keys, err := s.List(ctx, publicKeysConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+func deleteOIDCPublicKey(ctx context.Context, s logical.Storage, keyID string) error {
+	return s.Delete(ctx, publicKeysConfigPath+keyID)
+}
+
+func expireOIDCPublicKeys(ctx context.Context, s logical.Storage) error {
+	keyIDs, err := listOIDCPublicKeys(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	keys, err := s.List(ctx, namedKeyConfigPath)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	usedKeys := make([]string, 0, 2*len(keys))
+
+	for _, k := range keys {
+		entry, err := s.Get(ctx, namedKeyConfigPath+k)
+		if err != nil {
+			return err
+		}
+
+		var key NamedKey
+		if err := entry.DecodeJSON(&key); err != nil {
+			return err
+		}
+
+		for _, k := range key.KeyRing {
+			if k.ExpireAt.IsZero() || k.ExpireAt.After(now) {
+				usedKeys = append(usedKeys, k.KeyID)
+			}
+		}
+	}
+
+	for _, keyID := range keyIDs {
+		if !strutil.StrListContains(usedKeys, keyID) {
+			if err := deleteOIDCPublicKey(ctx, s, keyID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 type idToken struct {
