@@ -58,6 +58,19 @@ type Role struct {
 	RoleID   string        `json:"role_id"`
 }
 
+type discovery struct {
+	Issuer        string   `json:"issuer"`
+	Auth          string   `json:"authorization_endpoint"`
+	Token         string   `json:"token_endpoint"`
+	Keys          string   `json:"jwks_uri"`
+	ResponseTypes []string `json:"response_types_supported"`
+	Subjects      []string `json:"subject_types_supported"`
+	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
+	Scopes        []string `json:"scopes_supported"`
+	AuthMethods   []string `json:"token_endpoint_auth_methods_supported"`
+	Claims        []string `json:"claims_supported"`
+}
+
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/key/:key - Create a new key named key
 func oidcPaths(i *IdentityStore) []*framework.Path {
@@ -71,8 +84,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.pathReadOIDCConfig,
-				logical.UpdateOperation: i.pathUpdateOIDCConfig,
+				logical.ReadOperation:   i.pathOIDCReadConfig,
+				logical.UpdateOperation: i.pathOIDCUpdateConfig,
 			},
 			HelpSynopsis:    "OIDC configuration",
 			HelpDescription: "Update OIDC configuration in the identity backend",
@@ -135,6 +148,14 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "list oidc/key/ help description here",
 		},
 		{
+			Pattern: "oidc/.well-known/openid-configuration/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.pathOIDCDiscovery,
+			},
+			HelpSynopsis:    "read oidc/.well-known/discovery/ help synopsis here",
+			HelpDescription: "read oidc/.well-known/discovery/ help description here",
+		},
+		{
 			Pattern: "oidc/.well-known/certs/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadCerts,
@@ -195,7 +216,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 }
 
 // readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
-func (i *IdentityStore) pathReadOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	c, err := i.getOIDCConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -213,7 +234,7 @@ func (i *IdentityStore) pathReadOIDCConfig(ctx context.Context, req *logical.Req
 }
 
 // writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
-func (i *IdentityStore) pathUpdateOIDCConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	value, ok := d.GetOk(oidcConfigFieldIssuer)
 	if !ok {
 		return nil, nil
@@ -265,7 +286,6 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	var namedKey *NamedKey
 	var update bool = false
 
@@ -535,6 +555,40 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 	}, nil
 }
 
+func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	issuer := "http://127.0.0.1:8200"
+
+	disc := discovery{
+		Issuer: issuer + "/v1/identity/oidc",
+		//Auth:        s.absURL("/auth"),
+		//Token:       s.absURL("/token"),
+		Keys:        issuer + "/v1/identity/oidc/.well-known/certs",
+		Subjects:    []string{"public"},
+		IDTokenAlgs: []string{string(jose.RS256)},
+		//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
+		//AuthMethods: []string{"client_secret_basic"},
+		//Claims: []string{
+		//	"aud", "email", "email_verified", "exp",
+		//	"iat", "iss", "locale", "name", "sub",
+		//},
+	}
+
+	data, err := json.Marshal(disc)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
 // handleOIDCReadCerts is used to retrieve all certs from all keys so that clients can
 // verify the validity of a signed OIDC token
 func (i *IdentityStore) pathOIDCReadCerts(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -548,11 +602,20 @@ func (i *IdentityStore) pathOIDCReadCerts(ctx context.Context, req *logical.Requ
 		jwks.Keys[i] = expireableKey.Key
 	}
 
-	return &logical.Response{
+	data, err := json.Marshal(jwks)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"keys": jwks,
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
 		},
-	}, nil
+	}
+
+	return resp, nil
 }
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
@@ -605,7 +668,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	now := time.Now()
 	idToken := idToken{
-		Issuer:   issuer,
+		Issuer:   issuer + "/v1/identity/oidc",
 		Subject:  te.EntityID,
 		Audience: role.RoleID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),

@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -75,6 +75,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		BackendType: logical.TypeLogical,
 		Paths:       iStore.paths(),
 		Invalidate:  iStore.Invalidate,
+		PathsSpecial: &logical.Paths{
+			Unauthenticated: []string{
+				"oidc/.well-known/*",
+			},
+		},
 	}
 
 	err = iStore.Setup(ctx, config)
