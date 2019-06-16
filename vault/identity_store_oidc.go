@@ -157,28 +157,31 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
-				"key": &framework.FieldSchema{
+				"key": {
 					Type:        framework.TypeString,
 					Description: "The OIDC key to use for generating tokens. The specified key must already exist.",
 				},
-				"template": &framework.FieldSchema{
+				"template": {
 					Type:        framework.TypeString,
 					Description: "The template string to use for generating tokens. This may be in string-ified JSON or base64 format.",
 				},
-				"ttl": &framework.FieldSchema{
+				"ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "TTL of the tokens generated against the role.",
+					Default:     "5m",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathOIDCUpdateRole,
+				logical.CreateOperation: i.pathOIDCUpdateRole,
 				logical.ReadOperation:   i.pathOIDCReadRole,
 				logical.DeleteOperation: i.pathOIDCDeleteRole,
 			},
+			ExistenceCheck: i.pathOIDCRoleExistenceCheck,
 		},
 		{
 			Pattern: "oidc/role/?$",
@@ -661,45 +664,20 @@ func (key *NamedKey) signPayload(payload []byte) (string, error) {
 	return signedIdToken, nil
 }
 
+func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	role, err := i.getOIDCRole(ctx, req.Storage, d.Get("name").(string))
+	if err != nil {
+		return false, err
+	}
+
+	return role != nil, nil
+}
+
 // handleOIDCCreateRole is used to create a new role or update an existing one
 func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	var role *Role
-	// var namedKey *NamedKey
-	var update bool = false
-
-	// parse parameters
 	name := d.Get("name").(string)
-	keyInput, keyInputOK := d.GetOk("key")
-	templateInput, templateInputOK := d.GetOk("template")
-	ttlInput, ttlInputOK := d.GetOk("ttl")
 
-	// Validate that template can be parsed and results in valid JSON
-	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
-		Mode:   identity.JSONTemplating,
-		String: templateInput.(string),
-		Entity: new(identity.Entity),
-		Groups: make([]*identity.Group, 0),
-		// namespace?
-	})
-
-	if err != nil {
-		return logical.ErrorResponse("Error parsing template: %s", err.Error()), nil
-	}
-
-	var tmp map[string]interface{}
-	if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
-		return logical.ErrorResponse("Error parsing template JSON: %s", err.Error()), nil
-	}
-
-	for key, _ := range tmp {
-		if strutil.StrListContains(requiredClaims, key) {
-			return logical.ErrorResponse(`Top level key %q not allowed. Restricted keys: %s`,
-				key, strings.Join(requiredClaims, ", ")), nil
-		}
-	}
-
-	// determine if we are updating an existing role or creating a new one
+	var role Role
 	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
 	if err != nil {
 		return nil, err
@@ -708,56 +686,76 @@ func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Req
 		if err := entry.DecodeJSON(&role); err != nil {
 			return nil, err
 		}
-		update = true
 	}
 
-	// validate inputs
-	if !update {
-		if !keyInputOK || !templateInputOK || !ttlInputOK {
-			return logical.ErrorResponse("key, template, and ttl must all be specified to create a role"), logical.ErrInvalidRequest
-		}
+	if key, ok := d.GetOk("key"); ok {
+		role.Key = key.(string)
+	} else if req.Operation == logical.CreateOperation {
+		role.Key = d.Get("key").(string)
 	}
 
-	// validate that a key exists at the path specified if a key will be needed (creating a role or update and key parameter was specified)
-	if !update || keyInputOK {
-		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+keyInput.(string))
+	if role.Key == "" {
+		return logical.ErrorResponse("key must be provided"), nil
+	}
+
+	// validate that key exists
+	entry, err = req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("Key %q does not exist", role.Key), nil
+	}
+
+	if template, ok := d.GetOk("template"); ok {
+		role.Template = template.(string)
+	} else if req.Operation == logical.CreateOperation {
+		role.Template = d.Get("template").(string)
+	}
+
+	// Validate that template can be parsed and results in valid JSON
+	if role.Template != "" {
+		_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+			Mode:   identity.JSONTemplating,
+			String: role.Template,
+			Entity: new(identity.Entity),
+			Groups: make([]*identity.Group, 0),
+			// namespace?
+		})
+
 		if err != nil {
-			return nil, err
+			return logical.ErrorResponse("Error parsing template: %s", err.Error()), nil
 		}
-		if entry == nil {
-			// the key specified does not exist in storage, this is an error
-			return logical.ErrorResponse("the specified key %q does not exist", keyInput.(string)), logical.ErrInvalidRequest
+
+		var tmp map[string]interface{}
+		if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
+			return logical.ErrorResponse("Error parsing template JSON: %s", err.Error()), nil
 		}
+
+		for key, _ := range tmp {
+			if strutil.StrListContains(requiredClaims, key) {
+				return logical.ErrorResponse(`Top level key %q not allowed. Restricted keys: %s`,
+					key, strings.Join(requiredClaims, ", ")), nil
+			}
+		}
+	}
+
+	if ttl, ok := d.GetOk("ttl"); ok {
+		role.TokenTTL = time.Duration(ttl.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
 	// create role path
-	if !update {
+	if role.RoleID == "" {
 		roleID, err := uuid.GenerateUUID()
 		if err != nil {
 			return nil, err
 		}
-
-		role = &Role{
-			Name:     name,
-			Key:      keyInput.(string),
-			Template: templateInput.(string),
-			TokenTTL: time.Duration(ttlInput.(int)) * time.Second,
-			RoleID:   roleID,
-		}
+		role.RoleID = roleID
 	}
 
-	// update role path
-	if update {
-		if keyInputOK {
-			role.Key = keyInput.(string)
-		}
-		if templateInputOK {
-			role.Template = templateInput.(string)
-		}
-		if ttlInputOK {
-			role.TokenTTL = time.Duration(ttlInput.(int)) * time.Second
-		}
-	}
+	role.Name = name // TODO: needed???
 
 	// store role (which was either just created or updated)
 	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
