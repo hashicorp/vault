@@ -80,6 +80,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 				"oidc/.well-known/*",
 			},
 		},
+		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			iStore.oidcPeriodicFunc(ctx, req.Storage)
+
+			return nil
+		},
 	}
 
 	err = iStore.Setup(ctx, config)

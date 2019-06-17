@@ -39,6 +39,7 @@ type ExpireableKey struct {
 	KeyID    string    `json:"key_id"`
 	ExpireAt time.Time `json:"expire_at"`
 }
+
 type NamedKey struct {
 	Name             string           `json:"name"`
 	SigningAlgorithm string           `json:"signing_algorithm"`
@@ -46,7 +47,7 @@ type NamedKey struct {
 	RotationPeriod   int              `json:"rotation_period"`
 	KeyRing          []*ExpireableKey `json:"key_ring"`
 	SigningKey       jose.JSONWebKey  `json:"signing_key"`
-	//PublicKey        jose.JSONWebKey `json:"public_key"`
+	NextRotation     time.Time        `json:"next_rotation""`
 }
 
 type Role struct {
@@ -113,7 +114,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathOIDCCreateKey,
+				logical.UpdateOperation: i.pathOIDCUpdateKey,
 				logical.ReadOperation:   i.pathOIDCReadKey,
 				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
@@ -284,7 +285,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
-func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var namedKey *NamedKey
 	var update bool = false
 
@@ -332,6 +333,9 @@ func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Requ
 	if update {
 		if rotationPeriodInputOK {
 			namedKey.RotationPeriod = rotationPeriodInput.(int)
+
+			// TODO: this should probably be the old/new NextRotation?
+			namedKey.NextRotation = time.Now().Add(time.Duration(rotationPeriod) * time.Second)
 		}
 
 		if verificationTTLInputOK {
@@ -366,6 +370,7 @@ func (i *IdentityStore) pathOIDCCreateKey(ctx context.Context, req *logical.Requ
 			VerificationTTL:  verificationTTL,
 			KeyRing:          keyRing,
 			SigningKey:       signingKey,
+			NextRotation:     time.Now().Add(time.Duration(rotationPeriod) * time.Second),
 		}
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, publicKey); err != nil {
@@ -448,43 +453,16 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 
-	// delete the public portion of the key from publicKeys (what .well-known returns)
-	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+targetKeyName)
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		//// a key did exist so we need to load it and delete the public keys in its keyring
-		//var storedNamedKey NamedKey
-		//if err := entry.DecodeJSON(&storedNamedKey); err != nil {
-		//	return nil, err
-		//}
-		//survivedKeys := make([]*ExpireableKey, len(publicKeys))
-		//insertIndex := 0
-		//var surviveCandidate bool
-		//// todo: this can be optimized, using a naive implementation for the moment
-		//for candidateIndex := range publicKeys {
-		//	surviveCandidate = true
-		//	for _, deletionKeyID := range storedNamedKey.KeyRing {
-		//		if publicKeys[candidateIndex].Key.KeyID == deletionKeyID {
-		//			surviveCandidate = false
-		//			break
-		//		}
-		//	}
-		//	if surviveCandidate {
-		//		survivedKeys[insertIndex] = publicKeys[candidateIndex]
-		//		insertIndex = insertIndex + 1
-		//	}
-		//}
-		//// todo: make thread safe - here and in a lot of other places
-		//publicKeys = survivedKeys[:insertIndex]
-	}
-
 	// key can safely be deleted now
 	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := i.expireOIDCPublicKeys(ctx, req.Storage); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -523,21 +501,8 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 	} else {
 		verificationTTLOverride = -1
 	}
-	verificationTTLUsed, err := storedNamedKey.rotate(verificationTTLOverride)
+	verificationTTLUsed, err := storedNamedKey.rotate(ctx, req.Storage, verificationTTLOverride)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := saveOIDCPublicKey(ctx, req.Storage, storedNamedKey.SigningKey.Public()); err != nil {
-		return nil, err
-	}
-
-	// store named key (it was modified when rotate was called on it)
-	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, storedNamedKey)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -588,10 +553,6 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 // pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
 // verify the validity of a signed OIDC token
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if err := expireOIDCPublicKeys(ctx, req.Storage); err != nil {
-		return nil, err
-	}
-
 	keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -950,7 +911,7 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 // NamedKey.rotate(overrides) performs a key rotation on a NamedKey and returns the
 // verification_ttl that was applied. verification_ttl can be overriden with an
 // overrideVerificationTTL value >= 0
-func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
+func (namedKey *NamedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL int) (int, error) {
 	verificationTTL := namedKey.VerificationTTL
 
 	if overrideVerificationTTL >= 0 {
@@ -963,6 +924,9 @@ func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
 	// generate new key
 	signingKey, publicKey, err := generateKeys(namedKey.SigningAlgorithm)
 	if err != nil {
+		return -1, err
+	}
+	if err := saveOIDCPublicKey(ctx, s, publicKey); err != nil {
 		return -1, err
 	}
 
@@ -978,6 +942,17 @@ func (namedKey *NamedKey) rotate(overrideVerificationTTL int) (int, error) {
 			key.ExpireAt = time.Now().Add(verificationTTLDuration)
 			break
 		}
+	}
+
+	namedKey.NextRotation = time.Now().Add(time.Duration(namedKey.RotationPeriod) * time.Second)
+
+	// store named key (it was modified when rotate was called on it)
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+namedKey.Name, namedKey)
+	if err != nil {
+		return -1, err
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		return -1, err
 	}
 
 	return verificationTTL, nil
@@ -1052,21 +1027,21 @@ func deleteOIDCPublicKey(ctx context.Context, s logical.Storage, keyID string) e
 	return s.Delete(ctx, publicKeysConfigPath+keyID)
 }
 
-func expireOIDCPublicKeys(ctx context.Context, s logical.Storage) error {
-	keyIDs, err := listOIDCPublicKeys(ctx, s)
+func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) error {
+	publicKeyIDs, err := listOIDCPublicKeys(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	keys, err := s.List(ctx, namedKeyConfigPath)
+	namedKeys, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return err
 	}
 
 	now := time.Now()
-	usedKeys := make([]string, 0, 2*len(keys))
+	usedKeys := make([]string, 0, 2*len(namedKeys))
 
-	for _, k := range keys {
+	for _, k := range namedKeys {
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)
 		if err != nil {
 			return err
@@ -1084,15 +1059,56 @@ func expireOIDCPublicKeys(ctx context.Context, s logical.Storage) error {
 		}
 	}
 
-	for _, keyID := range keyIDs {
+	for _, keyID := range publicKeyIDs {
 		if !strutil.StrListContains(usedKeys, keyID) {
 			if err := deleteOIDCPublicKey(ctx, s, keyID); err != nil {
+				return err
+			}
+			i.Logger().Debug("deleted OIDC public key", "key_id", keyID)
+		}
+	}
+
+	return nil
+}
+
+func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) error {
+	keys, err := s.List(ctx, namedKeyConfigPath)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+
+	for _, k := range keys {
+		entry, err := s.Get(ctx, namedKeyConfigPath+k)
+		if err != nil {
+			return err
+		}
+
+		var key NamedKey
+		if err := entry.DecodeJSON(&key); err != nil {
+			return err
+		}
+
+		if now.After(key.NextRotation) {
+			i.Logger().Debug("rotating OIDC key", "key", key.Name)
+			if _, err := key.rotate(ctx, s, -1); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage) {
+	if err := i.oidcKeyRotation(ctx, s); err != nil {
+		i.Logger().Warn("error rotating OIDC keys", "err", err)
+	}
+
+	if err := i.expireOIDCPublicKeys(ctx, s); err != nil {
+		i.Logger().Warn("error expiring OIDC public keys", "err", err)
+	}
 }
 
 type idToken struct {
