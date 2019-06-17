@@ -1,19 +1,16 @@
 description: make test sample
 parameters:
-  TESTARGS:
-    type: string
-    default: "-v"
   OUTDIR:
     type: string
   ENV:
     type: string
-    default: ""
+    default: "TESTARGS=-v"
   workspace_root:
     type: string
     default: /tmp/workspace
 steps:
   - run:
-      name: make test
+      name: make test <<parameters.ENV>>
       no_output_timeout: 20m
       environment:
         OUTDIR: "<<parameters.OUTDIR>>"
@@ -33,9 +30,6 @@ steps:
         # Run tests
         mkdir -p $OUTDIR
         OUT="$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log"
-
-        export <<parameters.ENV>>
-        export TESTARGS="<<parameters.TESTARGS>>"
 
         # We will force this to exit 0 each time, as this is treated as offline
         # data gathering, not a blocking part of the pipeline.

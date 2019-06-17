@@ -10,5 +10,5 @@ steps:
         sudo chown -R circleci:circleci /go
   - restore_go_cache
   - make-test-sample:
-      TESTARGS: -v
       OUTDIR: sample/make-test
+      ENV: TESTARGS='-v'

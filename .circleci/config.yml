@@ -272,14 +272,13 @@ jobs:
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
           \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
-          \n\nexport \nexport TESTARGS=\"-v\"\n\n# We will force this to exit 0 each\
-          \ time, as this is treated as offline\n# data gathering, not a blocking\
-          \ part of the pipeline.\n# This is also necessary to have the persist_to_workspace\
-          \ step\n# executed unconditionally.\nset +eo pipefail \n make test 2>&1\
-          \ | tee $OUT\n"
+          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
+          # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
+          \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
+          \ +eo pipefail \nTESTARGS='-v' make test 2>&1 | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test
-        name: make test
+        name: make test TESTARGS='-v'
         no_output_timeout: 20m
     - persist_to_workspace:
         paths:
@@ -312,14 +311,14 @@ jobs:
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
           \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
-          \n\nexport CGO_ENABLED=1\nexport TESTARGS=\"-v -race\"\n\n# We will force\
-          \ this to exit 0 each time, as this is treated as offline\n# data gathering,\
-          \ not a blocking part of the pipeline.\n# This is also necessary to have\
-          \ the persist_to_workspace step\n# executed unconditionally.\nset +eo pipefail\
-          \ \nCGO_ENABLED=1 make test 2>&1 | tee $OUT\n"
+          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
+          # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
+          \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
+          \ +eo pipefail \nCGO_ENABLED=1 TESTARGS='-v -race' make test 2>&1 | tee\
+          \ $OUT\n"
         environment:
           OUTDIR: sample/make-test-race
-        name: make test
+        name: make test CGO_ENABLED=1 TESTARGS='-v -race'
         no_output_timeout: 20m
     - persist_to_workspace:
         paths:

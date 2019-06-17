@@ -10,6 +10,5 @@ steps:
         sudo chown -R circleci:circleci /go
   - restore_go_cache
   - make-test-sample:
-      TESTARGS: -v -race
       OUTDIR: sample/make-test-race
-      ENV: CGO_ENABLED=1
+      ENV: CGO_ENABLED=1 TESTARGS='-v -race'
