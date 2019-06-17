@@ -33,8 +33,9 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
+          SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
+          $SUDO mkdir -p /go
+          $SUDO chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
@@ -57,8 +58,9 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
+          SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
+          $SUDO mkdir -p /go
+          $SUDO chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
@@ -125,8 +127,9 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
+          SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
+          $SUDO mkdir -p /go
+          $SUDO chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
@@ -195,8 +198,9 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
+          SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
+          $SUDO mkdir -p /go
+          $SUDO chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
@@ -339,8 +343,9 @@ workflows:
 #     - run:
 #         command: |
 #           set -eux -o pipefail
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
+#           SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
+#           $SUDO mkdir -p /go
+#           $SUDO chown -R circleci:circleci /go
 #         name: Allow circleci user to restore Go modules cache
 #     - restore_cache:
 #         key: go-sum-v1-{{ checksum \"go.sum\" }}
