@@ -56,6 +56,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'generic',
   },
   {
+    displayName: 'KMIP',
+    value: 'kmip',
+    type: 'kmip',
+    category: 'generic',
+  },
+  {
     displayName: 'Nomad',
     value: 'nomad',
     type: 'nomad',
