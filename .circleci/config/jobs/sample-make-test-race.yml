@@ -12,3 +12,4 @@ steps:
   - make-test-sample:
       TESTARGS: -v -race
       OUTDIR: sample/make-test-race
+      ENV: GCO_ENABLED=1

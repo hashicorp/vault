@@ -271,11 +271,11 @@ jobs:
           \nsudo rm -rf /usr/local/go\nsudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"\
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
-          \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
+          \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
           \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
           # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
           \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
-          \ +eo pipefail \nmake test 2>&1 | tee $OUT\n"
+          \ +eo pipefail \n make test 2>&1 | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test
           TESTARGS: -v
@@ -311,11 +311,11 @@ jobs:
           \nsudo rm -rf /usr/local/go\nsudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"\
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
-          \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
+          \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
           \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
           # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
           \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
-          \ +eo pipefail \nmake test 2>&1 | tee $OUT\n"
+          \ +eo pipefail \nGCO_ENABLED=1 make test 2>&1 | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test-race
           TESTARGS: -v -race
