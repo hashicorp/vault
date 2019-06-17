@@ -92,7 +92,7 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
 	github.com/kr/text v0.1.0
-	github.com/lib/pq v1.0.0
+	github.com/lib/pq v1.1.1
 	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.0.9
 	github.com/michaelklishin/rabbit-hole v1.5.0
