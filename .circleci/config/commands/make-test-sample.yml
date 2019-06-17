@@ -5,6 +5,9 @@ parameters:
     default: "-v"
   OUTDIR:
     type: string
+  workspace_root:
+    type: string
+    default: /tmp/workspace
 steps:
   - run:
       name: make test
@@ -23,13 +26,21 @@ steps:
         export GOPATH=/go
         export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
 
+        OUTDIR="<<parameters.workspace_root>>/$OUTDIR"
+
         # Run tests
         mkdir -p $OUTDIR
         OUT="$OUTDIR/CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log"
 
         # We will force this to exit 0 each time, as this is treated as offline
         # data gathering, not a blocking part of the pipeline.
+        # This is also necessary to have the persist_to_workspace step
+        # executed unconditionally.
         set +eo pipefail 
         make test 2>&1 | tee $OUT
-        exit 0
+  - persist_to_workspace:
+      when: always
+      root: <<parameters.workspace_root>>
+      paths:
+        - <<parameters.OUTDIR>>
 

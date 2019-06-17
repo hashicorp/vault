@@ -12,7 +12,3 @@ steps:
   - make-test-sample:
       TESTARGS: -v
       OUTDIR: sample/make-test
-  - persist_to_workspace:
-      root: sample
-      paths:
-        - make-test

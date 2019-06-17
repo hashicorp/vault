@@ -1,0 +1,4 @@
+executor: go
+steps:
+  - zip-test-sample:
+      samples_dir: sample/make-race

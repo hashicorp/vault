@@ -1,5 +1,0 @@
-executor: go
-steps:
-  - run: tar -czf sample.tar.gz sample/
-  - store_artifacts:
-      path: sample.tar.gz

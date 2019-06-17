@@ -1,0 +1,21 @@
+parameters:
+  workspace_root:
+    type: string
+    default: /tmp/workspace
+  samples_dir:
+    type: string
+steps:
+  - attach_workspace:
+      at: <<parameters.workspace_root>>
+  - run:
+      name: zip up samples
+      command: |
+        cd <<parameters.workspace_root>>
+        SHORT_SHA=$(cut -c1-8 \<<< $CIRCLE_SHA1)
+        TARBALL=sample-${SHORT_SHA}-$(date +%Y-%m-%dT%H_%M).tar.gz
+        # Write TARBALL containing <<parameters.samples_dir>> to zipped/<<parameters.samples_dir>>
+        OUTDIR=zipped/<<parameters.samples_dir>>
+        mkdir -p $OUTDIR
+        tar -czf $OUTDIR/$TARBALL <<parameters.samples_dir>>
+  - store_artifacts:
+      path: zipped/<<parameters.samples_dir>>

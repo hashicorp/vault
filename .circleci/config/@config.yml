@@ -38,16 +38,19 @@ executors:
     docker:
       - image: *GOLANG_IMAGE
     working_directory: /src
+    shell: /usr/bin/env bash -euo pipefail
   go-machine:
     machine: true
+    working_directory: ~/src
+    shell: /usr/bin/env bash -euo pipefail
     environment:
       CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
       GO_VERSION: 1.12.4  # Pin Go to patch version (ex: 1.2.3)
       GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
       GO_TAGS:
-    working_directory: ~/src
   node:
     docker:
       - image: *NODE_IMAGE
     working_directory: /src
+    shell: /usr/bin/env bash -euo pipefail
 
