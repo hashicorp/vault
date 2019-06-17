@@ -17,7 +17,9 @@ export default DS.Model.extend({
       {
         default: ['name'],
       },
+      { 'Allowed Operations': this.newFields },
     ];
+
     groups = combineFieldGroups(groups, this.newFields, []);
     return fieldToAttrs(this, groups);
   }),
