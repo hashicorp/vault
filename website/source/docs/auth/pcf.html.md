@@ -62,7 +62,7 @@ $ pcf settings | jq '.products[0].director_credhub_client_credentials'
 SSH into your Ops Manager VM:
 
 ```
-ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
+$ ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
 ```
 
 Please note that the above OPS_MGR_URL shouldn't be prepended with `https://`.
