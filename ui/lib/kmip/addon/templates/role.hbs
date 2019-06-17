@@ -12,14 +12,7 @@
   <h3 class="title is-5">
     Allowed operations
   </h3>
-  {{#each model as |attr|}}
-    {{#if (eq attr.type "object")}}
-    <InfoTableRow
-    @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-    @value={{stringify (get model attr.name)}}
-    />
-    {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
-    {{/if}}
+  {{#each model.allowedOperations as |attr|}}
+    {{info-table-row label=(titleize (humanize (dasherize attr))) value=true}}
   {{/each}}
 </div>
