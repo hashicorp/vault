@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Elasticsearch - Database - Secrets Engines"
 sidebar_title: "Elasticsearch"
-sidebar_current: "docs-secrets-databases-elasticsearch"
+sidebar_current: "docs-secrets-databases-elasticdb"
 description: |-
   Elasticsearch is one of the supported plugins for the database secrets engine. This
   plugin generates database credentials dynamically based on configured roles
