@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -21,42 +22,44 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-// todo fix this
-var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
-
-const (
-	oidcTokensPrefix     = "oidc_tokens/"
-	oidcConfigStorageKey = oidcTokensPrefix + "config/"
-	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
-	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
-	roleConfigPath       = oidcTokensPrefix + "roles/"
-)
-
 type oidcConfig struct {
 	Issuer string `json:"issuer"`
 }
 
-type ExpireableKey struct {
+type expireableKey struct {
 	KeyID    string    `json:"key_id"`
 	ExpireAt time.Time `json:"expire_at"`
 }
 
-type NamedKey struct {
+type namedKey struct {
 	Name             string           `json:"name"`
 	SigningAlgorithm string           `json:"signing_algorithm"`
 	VerificationTTL  int              `json:"verification_ttl"`
 	RotationPeriod   int              `json:"rotation_period"`
-	KeyRing          []*ExpireableKey `json:"key_ring"`
-	SigningKey       jose.JSONWebKey  `json:"signing_key"`
-	NextRotation     time.Time        `json:"next_rotation""`
+	KeyRing          []*expireableKey `json:"key_ring"`
+	SigningKey       *jose.JSONWebKey `json:"signing_key"`
+	NextRotation     time.Time        `json:"next_rotation"`
 }
 
-type Role struct {
+type role struct {
 	Name     string        `json:"name"` // TODO: do we need/want this?
 	TokenTTL time.Duration `json:"token_ttl"`
 	Key      string        `json:"key"`
 	Template string        `json:"template"`
 	RoleID   string        `json:"role_id"`
+}
+
+// idToken contains the required OIDC fields.
+//
+// Templated claims will be merged into the final output. Those claims may
+// include top-level keys, but those keys may not overwrite any of the
+// required OIDC fields.
+type idToken struct {
+	Issuer   string `json:"iss"` // api_addr or customer Issuer
+	Subject  string `json:"sub"` // Entity ID
+	Audience string `json:"aud"` // role ID will be used here.
+	Expiry   int64  `json:"exp"` // Expiration, as determined by the role.
+	IssuedAt int64  `json:"iat"` // Time of token creation
 }
 
 type discovery struct {
@@ -82,17 +85,16 @@ type oidcCache struct {
 	nextPeriodicRun   time.Time
 }
 
-func (c *oidcCache) purge() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+const (
+	oidcTokensPrefix     = "oidc_tokens/"
+	oidcConfigStorageKey = oidcTokensPrefix + "config/"
+	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
+	roleConfigPath       = oidcTokensPrefix + "roles/"
+)
 
-	c.discoveryResponse = c.discoveryResponse[:0]
-	c.jwksResponse = c.jwksResponse[:0]
-	c.nextPeriodicRun = time.Time{}
-}
+var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
-// oidcPaths returns the API endpoints supported to operate on OIDC tokens:
-// oidc/key/:key - Create a new key named key
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -176,12 +178,12 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "read oidc/.well-known/discovery/ help description here",
 		},
 		{
-			Pattern: "oidc/.well-known/certs/?$",
+			Pattern: "oidc/.well-known/keys/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
 			},
-			HelpSynopsis:    "read oidc/.well-known/certs/ help synopsis here",
-			HelpDescription: "read oidc/.well-known/certs/ help description here",
+			HelpSynopsis:    "read oidc/.well-known/keys/ help synopsis here",
+			HelpDescription: "read oidc/.well-known/keys/ help description here",
 		},
 		{
 			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
@@ -235,7 +237,6 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-// readOIDCConfig returns a framework.OperationFunc for reading OIDC configuration
 func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	c, err := i.getOIDCConfig(ctx, req.Storage)
 	if err != nil {
@@ -253,7 +254,6 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 	}, nil
 }
 
-// writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
 func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	value, ok := d.GetOk("issuer")
 	if !ok {
@@ -308,8 +308,8 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var namedKey *NamedKey
-	var update bool = false
+	var key *namedKey
+	var update bool
 
 	// parse parameters
 	name := d.Get("name").(string)
@@ -323,7 +323,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return nil, err
 	}
 	if entry != nil {
-		if err := entry.DecodeJSON(&namedKey); err != nil {
+		if err := entry.DecodeJSON(&key); err != nil {
 			return nil, err
 		}
 		update = true
@@ -354,38 +354,38 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	// set values on the namedkey if they were provided and this is an update
 	if update {
 		if rotationPeriodInputOK {
-			namedKey.RotationPeriod = rotationPeriodInput.(int)
+			key.RotationPeriod = rotationPeriodInput.(int)
 
 			// TODO: this should probably be the old/new NextRotation?
-			namedKey.NextRotation = time.Now().Add(time.Duration(rotationPeriod) * time.Second)
+			key.NextRotation = time.Now().Add(time.Duration(rotationPeriod) * time.Second)
 		}
 
 		if verificationTTLInputOK {
-			namedKey.VerificationTTL = verificationTTLInput.(int)
+			key.VerificationTTL = verificationTTLInput.(int)
 		}
 
 		if algorithm != "" {
 			if algorithm != "RS256" {
 				return logical.ErrorResponse("unknown signing algorithm %q", algorithm), logical.ErrInvalidRequest
 			}
-			namedKey.SigningAlgorithm = algorithm
+			key.SigningAlgorithm = algorithm
 		}
 	}
 
 	// generate keys if creating a new key
 	if !update {
-		signingKey, publicKey, err := generateKeys(algorithm)
+		signingKey, err := generateKeys(algorithm)
 		if err != nil {
 			return nil, err
 		}
 
 		// add public part of signing key to the key ring
-		keyRing := []*ExpireableKey{
-			{KeyID: publicKey.KeyID},
+		keyRing := []*expireableKey{
+			{KeyID: signingKey.Public().KeyID},
 		}
 
 		// create the named key
-		namedKey = &NamedKey{
+		key = &namedKey{
 			Name:             name,
 			SigningAlgorithm: algorithm,
 			RotationPeriod:   rotationPeriod,
@@ -395,13 +395,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 			NextRotation:     time.Now().Add(time.Duration(rotationPeriod) * time.Second),
 		}
 
-		if err := saveOIDCPublicKey(ctx, req.Storage, publicKey); err != nil {
+		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
 	}
 
 	// store named key (which was either just created or updated)
-	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, namedKey)
+	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, key)
 	if err != nil {
 		return nil, err
 	}
@@ -413,9 +413,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"rotation_period":  namedKey.RotationPeriod,
-			"verification_ttl": namedKey.VerificationTTL,
-			"algorithm":        namedKey.SigningAlgorithm,
+			"rotation_period":  key.RotationPeriod,
+			"verification_ttl": key.VerificationTTL,
+			"algorithm":        key.SigningAlgorithm,
 		},
 	}, nil
 }
@@ -429,7 +429,7 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	if entry != nil {
-		var storedNamedKey NamedKey
+		var storedNamedKey namedKey
 		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
 			return nil, err
 		}
@@ -454,7 +454,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	var role *Role
+	var role *role
 	rolesReferencingTargetKeyName := make([]string, 0)
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
@@ -516,7 +516,7 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("no named key found at %q", name), logical.ErrInvalidRequest
 	}
 
-	var storedNamedKey NamedKey
+	var storedNamedKey namedKey
 	if err := entry.DecodeJSON(&storedNamedKey); err != nil {
 		return nil, err
 	}
@@ -545,104 +545,6 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
-func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []byte
-
-	i.oidcCache.lock.RLock()
-	if len(i.oidcCache.discoveryResponse) > 0 {
-		data = i.oidcCache.discoveryResponse
-		i.oidcCache.lock.RUnlock()
-	} else {
-		i.oidcCache.lock.RUnlock()
-		issuer := "http://127.0.0.1:8200"
-
-		disc := discovery{
-			Issuer: issuer + "/v1/identity/oidc",
-			//Auth:        s.absURL("/auth"),
-			//Token:       s.absURL("/token"),
-			Keys:        issuer + "/v1/identity/oidc/.well-known/certs",
-			Subjects:    []string{"public"},
-			IDTokenAlgs: []string{string(jose.RS256)},
-			//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
-			//AuthMethods: []string{"client_secret_basic"},
-			//Claims: []string{
-			//	"aud", "email", "email_verified", "exp",
-			//	"iat", "iss", "locale", "name", "sub",
-			//},
-		}
-
-		var err error
-		data, err = json.Marshal(disc)
-		if err != nil {
-			return nil, err
-		}
-
-		i.oidcCache.lock.Lock()
-		i.oidcCache.discoveryResponse = data
-		i.oidcCache.lock.Unlock()
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     data,
-			logical.HTTPContentType: "application/json",
-		},
-	}
-
-	return resp, nil
-}
-
-// pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
-// verify the validity of a signed OIDC token.
-func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []byte
-
-	i.oidcCache.lock.RLock()
-	if len(i.oidcCache.jwksResponse) > 0 {
-		data = i.oidcCache.jwksResponse
-		i.oidcCache.lock.RUnlock()
-	} else {
-		i.oidcCache.lock.RUnlock()
-
-		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
-		if err != nil {
-			return nil, err
-		}
-
-		jwks := jose.JSONWebKeySet{
-			Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-		}
-
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
-			if err != nil {
-				return nil, err
-			}
-			jwks.Keys = append(jwks.Keys, *key)
-		}
-
-		data, err = json.Marshal(jwks)
-		if err != nil {
-			return nil, err
-		}
-
-		i.oidcCache.lock.Lock()
-		i.oidcCache.jwksResponse = data
-		i.oidcCache.lock.Unlock()
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     data,
-			logical.HTTPContentType: "application/json",
-		},
-	}
-
-	return resp, nil
-}
-
 // handleOIDCGenerateSignToken generates and signs an OIDC token
 func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
@@ -661,8 +563,8 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return logical.ErrorResponse("key %q not found", role.Key), nil
 	}
 
-	var namedKey NamedKey
-	if err := entry.DecodeJSON(&namedKey); err != nil {
+	var key namedKey
+	if err := entry.DecodeJSON(&key); err != nil {
 		return nil, err
 	}
 
@@ -698,7 +600,6 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		Audience: role.RoleID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
-		Claims:   te,
 	}
 
 	e, err := i.MemDBEntityByID(te.EntityID, true)
@@ -718,7 +619,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		i.Logger().Warn("error populating OIDC token template", "error", err)
 	}
 
-	signedIdToken, err := namedKey.signPayload(payload)
+	signedIdToken, err := key.signPayload(payload)
 	if err != nil {
 		return nil, errwrap.Wrapf("error signing OIDC token: {{err}}", err)
 	}
@@ -732,8 +633,55 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}, nil
 }
 
-func (key *NamedKey) signPayload(payload []byte) (string, error) {
-	signingKey := jose.SigningKey{Key: key.SigningKey, Algorithm: jose.SignatureAlgorithm(key.SigningAlgorithm)}
+func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
+	output := map[string]interface{}{
+		"iss": tok.Issuer,
+		"sub": tok.Subject,
+		"aud": tok.Audience,
+		"exp": tok.Expiry,
+		"iat": tok.IssuedAt,
+	}
+
+	// Parse and integrate the populated role template. Structural errors with the template _should_
+	// be caught during role configuration. Error found during runtime will be logged, but they will
+	// not block generation of the basic ID token. They should not be returned to the requester.
+	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		Mode:   identity.JSONTemplating,
+		String: template,
+		Entity: entity,
+		Groups: groups,
+		// namespace?
+	})
+
+	if err != nil {
+		logger.Warn("error populating OIDC token template", "template", template, "error", err)
+	}
+
+	if populatedTemplate != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(populatedTemplate), &parsed); err != nil {
+			logger.Warn("error parsing OIDC template", "template", template, "err", err)
+		}
+
+		for k, v := range parsed {
+			if !strutil.StrListContains(requiredClaims, k) {
+				output[k] = v
+			} else {
+				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
+			}
+		}
+	}
+
+	payload, err := json.Marshal(output)
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func (k *namedKey) signPayload(payload []byte) (string, error) {
+	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.SigningAlgorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
 	if err != nil {
 		return "", err
@@ -765,7 +713,7 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var role Role
+	var role role
 	entry, err := req.Storage.Get(ctx, roleConfigPath+name)
 	if err != nil {
 		return nil, err
@@ -881,7 +829,7 @@ func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Reque
 	}, nil
 }
 
-func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, roleName string) (*Role, error) {
+func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, roleName string) (*role, error) {
 	entry, err := s.Get(ctx, roleConfigPath+roleName)
 	if err != nil {
 		return nil, err
@@ -891,7 +839,7 @@ func (i *IdentityStore) getOIDCRole(ctx context.Context, s logical.Storage, role
 		return nil, nil
 	}
 
-	var role Role
+	var role role
 	if err := entry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
@@ -918,60 +866,109 @@ func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Reque
 	return logical.ListResponse(roles), nil
 }
 
-func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
-	output := map[string]interface{}{
-		"iss": tok.Issuer,
-		"sub": tok.Subject,
-		"aud": tok.Audience,
-		"exp": tok.Expiry,
-		"iat": tok.IssuedAt,
-	}
+func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var data []byte
 
-	// Parse and integrate the populated role template. Structural errors with the template _should_
-	// be caught during role configuration. Error found during runtime will be logged, but they will
-	// not block generation of the basic ID token. They should not be returned to the requester.
-	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
-		Mode:   identity.JSONTemplating,
-		String: template,
-		Entity: entity,
-		Groups: groups,
-		// namespace?
-	})
+	i.oidcCache.lock.RLock()
+	if len(i.oidcCache.discoveryResponse) > 0 {
+		data = i.oidcCache.discoveryResponse
+		i.oidcCache.lock.RUnlock()
+	} else {
+		i.oidcCache.lock.RUnlock()
+		issuer := "http://127.0.0.1:8200"
 
-	if err != nil {
-		logger.Warn("error populating OIDC token template", "template", template, "error", err)
-	}
-
-	if populatedTemplate != "" {
-		var parsed map[string]interface{}
-		if err := json.Unmarshal([]byte(populatedTemplate), &parsed); err != nil {
-			logger.Warn("error parsing OIDC template", "template", template, "err", err)
+		disc := discovery{
+			Issuer: issuer + "/v1/identity/oidc",
+			//Auth:        s.absURL("/auth"),
+			//Token:       s.absURL("/token"),
+			Keys:        issuer + "/v1/identity/oidc/.well-known/keys",
+			Subjects:    []string{"public"},
+			IDTokenAlgs: []string{string(jose.RS256)},
+			//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
+			//AuthMethods: []string{"client_secret_basic"},
+			//Claims: []string{
+			//	"aud", "email", "email_verified", "exp",
+			//	"iat", "iss", "locale", "name", "sub",
+			//},
 		}
 
-		for k, v := range parsed {
-			if !strutil.StrListContains(requiredClaims, k) {
-				output[k] = v
-			} else {
-				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
-			}
+		var err error
+		data, err = json.Marshal(disc)
+		if err != nil {
+			return nil, err
 		}
+
+		i.oidcCache.lock.Lock()
+		i.oidcCache.discoveryResponse = data
+		i.oidcCache.lock.Unlock()
 	}
 
-	payload, err := json.Marshal(output)
-	if err != nil {
-		return nil, err
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
+		},
 	}
 
-	return payload, nil
+	return resp, nil
 }
 
-// --- some helper methods ---
+// pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
+// verify the validity of a signed OIDC token.
+func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var data []byte
 
-// NamedKey.rotate(overrides) performs a key rotation on a NamedKey and returns the
+	i.oidcCache.lock.RLock()
+	if len(i.oidcCache.jwksResponse) > 0 {
+		data = i.oidcCache.jwksResponse
+		i.oidcCache.lock.RUnlock()
+	} else {
+		i.oidcCache.lock.RUnlock()
+
+		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		jwks := jose.JSONWebKeySet{
+			Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+		}
+
+		for _, keyID := range keyIDs {
+			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+			if err != nil {
+				return nil, err
+			}
+			jwks.Keys = append(jwks.Keys, *key)
+		}
+
+		data, err = json.Marshal(jwks)
+		if err != nil {
+			return nil, err
+		}
+
+		i.oidcCache.lock.Lock()
+		i.oidcCache.jwksResponse = data
+		i.oidcCache.lock.Unlock()
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
+// namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
 // verification_ttl that was applied. verification_ttl can be overriden with an
 // overrideVerificationTTL value >= 0
-func (namedKey *NamedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL int) (int, error) {
-	verificationTTL := namedKey.VerificationTTL
+func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL int) (int, error) {
+	verificationTTL := k.VerificationTTL
 
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
@@ -981,32 +978,32 @@ func (namedKey *NamedKey) rotate(ctx context.Context, s logical.Storage, overrid
 	verificationTTLDuration := time.Duration(verificationTTL) * time.Second
 
 	// generate new key
-	signingKey, publicKey, err := generateKeys(namedKey.SigningAlgorithm)
+	signingKey, err := generateKeys(k.SigningAlgorithm)
 	if err != nil {
 		return -1, err
 	}
-	if err := saveOIDCPublicKey(ctx, s, publicKey); err != nil {
+	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
 		return -1, err
 	}
 
 	// rotation involves overwriting current signing key, updating key ring, and updating global
 	// public keys to expire the signing key that was just rotated
-	rotateID := namedKey.SigningKey.KeyID
-	namedKey.SigningKey = signingKey
-	namedKey.KeyRing = append(namedKey.KeyRing, &ExpireableKey{KeyID: publicKey.KeyID})
+	rotateID := k.SigningKey.KeyID
+	k.SigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.KeyID})
 
 	// set the previous public key's  expiry time
-	for _, key := range namedKey.KeyRing {
+	for _, key := range k.KeyRing {
 		if key.KeyID == rotateID {
 			key.ExpireAt = time.Now().Add(verificationTTLDuration)
 			break
 		}
 	}
 
-	namedKey.NextRotation = time.Now().Add(time.Duration(namedKey.RotationPeriod) * time.Second)
+	k.NextRotation = time.Now().Add(time.Duration(k.RotationPeriod) * time.Second)
 
 	// store named key (it was modified when rotate was called on it)
-	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+namedKey.Name, namedKey)
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.Name, k)
 	if err != nil {
 		return -1, err
 	}
@@ -1018,33 +1015,26 @@ func (namedKey *NamedKey) rotate(ctx context.Context, s logical.Storage, overrid
 }
 
 // generateKeys returns a signingKey and publicKey pair
-func generateKeys(algorithm string) (signingKey jose.JSONWebKey, publicKey jose.JSONWebKey, err error) {
-	// 2048 is recommended by RSA Laboratories as a MINIMUM post 2015, 3072 bits
-	// is also seen in the wild, this could be configurable if need be
+func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
+	// 2048 bits is recommended by RSA Laboratories as a minimum post 2015
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return
-	}
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		return
+		return nil, err
 	}
 
-	signingKey = jose.JSONWebKey{
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	jwk := &jose.JSONWebKey{
 		Key:       key,
 		KeyID:     id,
 		Algorithm: algorithm,
 		Use:       "sig",
 	}
 
-	publicKey = jose.JSONWebKey{
-		Key:       &key.PublicKey,
-		KeyID:     id,
-		Algorithm: algorithm,
-		Use:       "sig",
-	}
-
-	return
+	return jwk, nil
 }
 
 func saveOIDCPublicKey(ctx context.Context, s logical.Storage, key jose.JSONWebKey) error {
@@ -1108,7 +1098,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 			return now, err
 		}
 
-		var key NamedKey
+		var key namedKey
 		if err := entry.DecodeJSON(&key); err != nil {
 			return now, err
 		}
@@ -1191,7 +1181,7 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 			return now, err
 		}
 
-		var key NamedKey
+		var key namedKey
 		if err := entry.DecodeJSON(&key); err != nil {
 			return now, err
 		}
@@ -1253,288 +1243,11 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	}
 }
 
-type idToken struct {
-	// ---- OIDC CLAIMS WITH NOTES FROM SPEC ----
-	// required fields
-	Issuer   string `json:"iss"` // Vault server address?
-	Subject  string `json:"sub"`
-	Audience string `json:"aud"`
-	// Audience _should_ contain the OAuth 2.0 client_id of the Relying Party.
-	// Not sure how/if we will leverage this
+func (c *oidcCache) purge() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	Expiry   int64 `json:"exp"`
-	IssuedAt int64 `json:"iat"`
-
-	AuthTime int64 `json:"auth_time"`
-	// required if max_age is specified in the Authentication request (which we aren't doing) or auth_time is identified by the client as an "Essential Claim"
-	// we could return the time that the token was created at
-
-	// optional fields
-
-	// Nonce                               string `json:"nonce,omitempty"`
-	// I don't think that Nonce will apply because we will not have any concept of "Authentication request".
-	// From spec:
-	// String value used to associate a Client session with an ID Token, and to mitigate replay attacks. The value is passed through unmodified from the Authentication Request to the ID Token. If present in the ID Token, Clients MUST verify that the nonce Claim Value is equal to the value of the nonce parameter sent in the Authentication Request. If present in the Authentication Request, Authorization Servers MUST include a nonce Claim in the ID Token with the Claim Value being the nonce value sent in the Authentication Request. Authorization Servers SHOULD perform no other processing on nonce values used. The nonce value is a case sensitive string.
-	// where Authentication Request means:
-	// OAuth 2.0 Authorization Request using extension parameters and scopes defined by OpenID Connect to request that the End-User be authenticated by the Authorization Server, which is an OpenID Connect Provider, to the Client, which is an OpenID Connect Relying Party.
-
-	AuthenticationContextClassReference string `json:"acr,omitempty"`
-	// Optional, very up to the implementation to decide on details.
-	// from the spec:
-	// Parties using this claim will need to agree upon the meanings of the values used, which may be context-specific.
-
-	// maybe userpass auth is a lower level than approle or userpass ent with mfa enabled...
-	// here is one spec...
-	/*
-		+--------------------------+---------+---------+---------+---------+
-		| Token Type               | Level 1 | Level 2 | Level 3 | Level 4 |
-		+--------------------------+---------+---------+---------+---------+
-		| Hard crypto token        | X       | X       | X       | X       |
-		|                          |         |         |         |         |
-		| One-time password device | X       | X       | X       |         |
-		|                          |         |         |         |         |
-		| Soft crypto token        | X       | X       | X       |         |
-		|                          |         |         |         |         |
-		| Passwords & PINs         | X       | X       |         |         |
-		+--------------------------+---------+---------+---------+---------+
-
-		 +------------------------+---------+---------+---------+---------+
-		 | Protect Against        | Level 1 | Level 2 | Level 3 | Level 4 |
-		 +------------------------+---------+---------+---------+---------+
-		 | On-line guessing       | X       | X       | X       | X       |
-		 |                        |         |         |         |         |
-		 | Replay                 | X       | X       | X       | X       |
-		 |                        |         |         |         |         |
-		 | Eavesdropper           |         | X       | X       | X       |
-		 |                        |         |         |         |         |
-		 | Verifier impersonation |         |         | X       | X       |
-		 |                        |         |         |         |         |
-		 | Man-in-the-middle      |         |         | X       | X       |
-		 |                        |         |         |         |         |
-		 | Session hijacking      |         |         |         | X       |
-		 +------------------------+---------+---------+---------+---------+
-	*/
-	AuthenticationMethodsReference string `json:"amr,omitempty"`
-	// I think this is only useful if downstream services will be making decisions based on what auth method was used to acquire a Vault token
-	// which is something that we are trying to abstract away in using entityID as our sub. Think we can remove this.
-
-	AuthorizingParty string `json:"azp,omitempty"`
-	// I don't think we should use this for same, reasoning builds on not leveraging "aud" - checkout: thhttps://bitbucket.org/openid/connect/issues/973/
-
-	// AccessTokenHash string `json:"at_hash,omitempty"`
-	// I don't think that at_hash will apply because we are not creating any kind of access token (maybe the Vault Token is like an access token but how it was acquired is different from a typical oauth access token)
-	// From the spec:
-	// The contents of the ID Token are as described in Section 2. When using the Authorization Code Flow, these additional requirements for the following ID Token Claims apply:
-	// at_hash
-	// OPTIONAL. Access Token hash value. Its value is the base64url encoding of the left-most half of the hash of the octets of the ASCII representation of the access_token value, where the hash algorithm used is the hash algorithm used in the alg Header Parameter of the ID Token's JOSE Header. For instance, if the alg is RS256, hash the access_token value with SHA-256, then take the left-most 128 bits and base64url encode them. The at_hash value is a case sensitive string.
-
-	// Email         string `json:"email,omitempty"`
-	// EmailVerified *bool  `json:"email_verified,omitempty"`
-	// Groups []string `json:"groups,omitempty"`
-	// Name   string      `json:"name,omitempty"`
-	Claims interface{} `json:"claims",omitempty`
-	//FederatedIDClaims *federatedIDClaims `json:"federated_claims,omitempty"`
+	c.discoveryResponse = c.discoveryResponse[:0]
+	c.jwksResponse = c.jwksResponse[:0]
+	c.nextPeriodicRun = time.Time{}
 }
-
-/*
-// oidcPaths returns the API endpoints supported to operate on OIDC tokens:
-// oidc/token - To register generate a new odic token
-// oidc/key/:key - Create a new keyring
-		oidcPathConfig(i),
-
-//handleOIDCGenerate is used to generate an OIDC token
-func (i *IdentityStore) handleOIDCGenerateIDToken() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		// Get entity linked to the requesting token
-		// te could be nil if it is a root token
-		// te could not have an entity if it was created from the token backend
-
-		accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
-		if err != nil {
-			return nil, err
-		}
-
-		te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
-		if te == nil {
-			return nil, errors.New("No token entry for this token")
-		}
-		fmt.Printf("-- -- --\nreq:\n%#v\n", req)
-		fmt.Printf("-- -- --\nte:\n%#v\n", te)
-		if err != nil {
-			return nil, err
-		}
-		if te.EntityID == "" {
-			return nil, errors.New("No EntityID associated with this request's Vault token")
-		}
-
-		now := time.Now()
-		idToken := idToken{
-			Issuer:   "Issuer",
-			Subject:  te.EntityID,
-			Audience: []string{"client_id_of_relying_party"},
-			Expiry:   now.Add(2 * time.Minute).Unix(),
-			IssuedAt: now.Unix(),
-			Claims:   te,
-		}
-
-		// signing
-		keyRing, _ := i.createKeyRing("foo")
-		privWebKey, pubWebKey := keyRing.GenerateWebKeys()
-		signedIdToken, _ := keyRing.SignIdToken(privWebKey, idToken)
-
-		jwks := jose.JSONWebKeySet{
-			Keys: make([]jose.JSONWebKey, 1),
-		}
-		jwks.Keys[0] = *pubWebKey
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"token": signedIdToken,
-				"pub":   jwks,
-			},
-		}, nil
-	}
-}
-
-func signPayload(key *jose.JSONWebKey, alg jose.SignatureAlgorithm, payload []byte) (jws string, err error) {
-	signingKey := jose.SigningKey{Key: key, Algorithm: alg}
-
-	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
-	if err != nil {
-		return "", fmt.Errorf("new signier: %v", err)
-	}
-	signature, err := signer.Sign(payload)
-	if err != nil {
-		return "", fmt.Errorf("signing payload: %v", err)
-	}
-	return signature.CompactSerialize()
-}
-
-
-// --- --- KEY SIGNING FUNCTIONALITY --- ---
-
-// type keyRing struct {
-// 	mostRecentKeyAt int // locates the most recent key within keys, -1 means that there is no key in the key ring
-// 	name            string
-// 	numberOfKeys    int
-// 	keyTTL          time.Duration
-// 	keys            []keyRingKey
-// }
-
-type keyRingKey struct {
-	createdAt time.Time
-	key       *rsa.PrivateKey
-	id        string
-}
-
-// TODO
-// - USE A REAL CONFIG
-// - STORE AND CACHE (look at upsertEntity)
-// - LOCKS AROUND ROTATING
-
-// populates an empty keyring from defaults or config
-func (i *IdentityStore) emptyKeyRing() *keyRing {
-	// retrieve config values if they exist
-	numberOfKeys := 4
-	keyTTL := 6 * time.Hour
-	return &keyRing{
-		mostRecentKeyAt: -1,
-		numberOfKeys:    numberOfKeys,
-		keyTTL:          keyTTL,
-		keys:            make([]keyRingKey, numberOfKeys, numberOfKeys),
-	}
-}
-
-// Create a keyRing
-func (i *IdentityStore) createKeyRing(name string) (*keyRing, error) {
-	// err if name already exist
-	// retrieve configurations - hardcoded for now
-	kr := i.emptyKeyRing()
-	kr.name = name
-	kr.Rotate()
-	// store keyring
-	return kr, nil
-}
-
-// RotateIfRequired performs a rotate if the current key is outdated
-func (kr *keyRing) RotateIfRequired() error {
-	expireAt := kr.keys[kr.mostRecentKeyAt].createdAt.Add(kr.keyTTL)
-	now := time.Now().UTC().Round(time.Millisecond)
-	if now.After(expireAt) {
-		err := kr.Rotate()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Rotate adds a new key to a keyRing which may override existing entries
-func (kr *keyRing) Rotate() error {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return err
-	}
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		return err
-	}
-
-	var insertInKeyRingAt int
-	switch {
-	case kr.mostRecentKeyAt < 0:
-		insertInKeyRingAt = 0
-	case kr.mostRecentKeyAt >= 0:
-		insertInKeyRingAt = (kr.mostRecentKeyAt + 1) % len(kr.keys)
-	}
-
-	kr.keys[insertInKeyRingAt].key = key
-	kr.keys[insertInKeyRingAt].createdAt = time.Now().UTC().Round(time.Millisecond)
-	kr.keys[insertInKeyRingAt].id = id
-	kr.mostRecentKeyAt = insertInKeyRingAt
-	return nil
-}
-
-//Sign a payload with a keyRing
-func (kr *keyRing) SignIdToken(webKey *jose.JSONWebKey, token idToken) (string, error) {
-	err := kr.RotateIfRequired()
-	if err != nil {
-		return "", err
-	}
-
-	payload, err := json.Marshal(token)
-	if err != nil {
-		return "", err
-	}
-
-	signingKey := jose.SigningKey{Key: webKey, Algorithm: jose.SignatureAlgorithm(webKey.Algorithm)}
-	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
-	if err != nil {
-		return "", fmt.Errorf("new signier: %v", err)
-	}
-	signature, err := signer.Sign(payload)
-	if err != nil {
-		return "", fmt.Errorf("signing payload: %v", err)
-	}
-	return signature.CompactSerialize()
-}
-
-func (kr *keyRing) GenerateWebKeys() (priv *jose.JSONWebKey, pub *jose.JSONWebKey) {
-	kr.RotateIfRequired()
-	keyRingKey := kr.keys[kr.mostRecentKeyAt]
-
-	priv = &jose.JSONWebKey{
-		Key:       keyRingKey.key,
-		KeyID:     keyRingKey.id,
-		Algorithm: string(jose.RS256),
-		Use:       "sig",
-	}
-	pub = &jose.JSONWebKey{
-		Key:       keyRingKey.key.Public(),
-		KeyID:     keyRingKey.id,
-		Algorithm: string(jose.RS256),
-		Use:       "sig",
-	}
-	return
-}
-*/
