@@ -272,13 +272,13 @@ jobs:
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
           \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
-          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
-          # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
-          \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
-          \ +eo pipefail \n make test 2>&1 | tee $OUT\n"
+          \n\nexport \nexport TESTARGS=\"-v\"\n\n# We will force this to exit 0 each\
+          \ time, as this is treated as offline\n# data gathering, not a blocking\
+          \ part of the pipeline.\n# This is also necessary to have the persist_to_workspace\
+          \ step\n# executed unconditionally.\nset +eo pipefail \n make test 2>&1\
+          \ | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test
-          TESTARGS: -v
         name: make test
         no_output_timeout: 20m
     - persist_to_workspace:
@@ -312,13 +312,13 @@ jobs:
           \nrm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"\nexport GOPATH=/go\nexport\
           \ PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"\n\nOUTDIR=\"/tmp/workspace/$OUTDIR\"\
           \n\n# Run tests\nmkdir -p $OUTDIR\nOUT=\"$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log\"\
-          \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
-          # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
-          \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
-          \ +eo pipefail \nCGO_ENABLED=1 make test 2>&1 | tee $OUT\n"
+          \n\nexport CGO_ENABLED=1\nexport TESTARGS=\"-v -race\"\n\n# We will force\
+          \ this to exit 0 each time, as this is treated as offline\n# data gathering,\
+          \ not a blocking part of the pipeline.\n# This is also necessary to have\
+          \ the persist_to_workspace step\n# executed unconditionally.\nset +eo pipefail\
+          \ \nCGO_ENABLED=1 make test 2>&1 | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test-race
-          TESTARGS: -v -race
         name: make test
         no_output_timeout: 20m
     - persist_to_workspace:
@@ -366,13 +366,13 @@ jobs:
           cd /tmp/workspace
           SHORT_SHA=$(cut -c1-8 <<< $CIRCLE_SHA1)
           TARBALL=sample-${SHORT_SHA}-$(date +%Y-%m-%dT%H_%M).tar.gz
-          # Write TARBALL containing sample/make-race to zipped/sample/make-race
-          OUTDIR=zipped/sample/make-race
+          # Write TARBALL containing sample/make-test to zipped/sample/make-test
+          OUTDIR=zipped/sample/make-test
           mkdir -p $OUTDIR
-          tar -czf $OUTDIR/$TARBALL sample/make-race
+          tar -czf $OUTDIR/$TARBALL sample/make-test
         name: zip up samples
     - store_artifacts:
-        path: /tmp/workspace/zipped/sample/make-race
+        path: /tmp/workspace/zipped/sample/make-test
 workflows:
   ci:
     jobs:

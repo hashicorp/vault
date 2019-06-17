@@ -16,8 +16,7 @@ steps:
       name: make test
       no_output_timeout: 20m
       environment:
-        TESTARGS: "<< parameters.TESTARGS >>"
-        OUTDIR: "<< parameters.OUTDIR >>"
+        OUTDIR: "<<parameters.OUTDIR>>"
       command: |
         set -eux -o pipefail
 
@@ -34,6 +33,9 @@ steps:
         # Run tests
         mkdir -p $OUTDIR
         OUT="$OUTDIR/$CIRCLE_SHA1-testrun-$CIRCLE_NODE_INDEX.log"
+
+        export <<parameters.ENV>>
+        export TESTARGS="<<parameters.TESTARGS>>"
 
         # We will force this to exit 0 each time, as this is treated as offline
         # data gathering, not a blocking part of the pipeline.
