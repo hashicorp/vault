@@ -18,7 +18,6 @@ jobs:
           OUTDIR=zipped/sample/make-test-race
           mkdir -p $OUTDIR
           tar -czf $OUTDIR/$TARBALL sample/make-test-race
-          tree /tmp/workspace
         name: zip up samples
     - store_artifacts:
         path: /tmp/workspace/zipped/sample/make-test-race
@@ -371,7 +370,6 @@ jobs:
           OUTDIR=zipped/sample/make-race
           mkdir -p $OUTDIR
           tar -czf $OUTDIR/$TARBALL sample/make-race
-          tree /tmp/workspace
         name: zip up samples
     - store_artifacts:
         path: /tmp/workspace/zipped/sample/make-race
