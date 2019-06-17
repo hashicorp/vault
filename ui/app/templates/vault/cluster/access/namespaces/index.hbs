@@ -35,9 +35,9 @@
         {{/with}}
         <li class="action">
           <ConfirmAction
-            @confirmButtonClasses="button is-primary"
-            @confirmButtonText="Remove"
             @buttonClasses="link is-destroy"
+            @confirmButtonText="Remove"
+            @confirmMessage="Any engines or mounts in this namespace will also be removed."
             @onConfirmAction={{action
               (perform
                 Item.callMethod
@@ -48,11 +48,6 @@
                 (action "refreshNamespaceList")
               )
             }}
-            @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
-            @showConfirm={{get this (concat "shouldDelete-" (dot-to-dash list.item.id))}}
-            @class={{if (get this (concat "shouldDelete-" (dot-to-dash list.item.id))) "message is-block is-warning is-outline"}}
-            @containerClasses="message-body is-block"
-            @messageClasses="is-block"
           >
             Delete
           </ConfirmAction>

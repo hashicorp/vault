@@ -2,7 +2,7 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-inline.md';
-import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
+import { MESSAGE_TYPES } from '../lib/core/addon/helpers/message-types.js';
 
 storiesOf('Alerts/AlertInline/', module)
   .addParameters({ options: { showPanel: false } })

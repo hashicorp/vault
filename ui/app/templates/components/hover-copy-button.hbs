@@ -2,11 +2,11 @@
   <T.trigger data-test-tooltip-trigger tabindex=false>
     <CopyButton
       data-test-hover-copy-button
+      class="copy-button button is-compact is-transparent"
       @clipboardText={{copyValue}}
-      @class="copy-button button is-compact is-transparent"
       @success={{action (mut tooltipText) "Copied!"}}
     >
-      <ICon @glyph="copy" aria-hidden="true" @size=16 />
+      <Icon @glyph="copy-action" aria-label="Copy" />
     </CopyButton>
   </T.trigger>
   <T.content @class="tool-tip">

@@ -3,6 +3,7 @@ package cachememdb
 import (
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	memdb "github.com/hashicorp/go-memdb"
 )
@@ -13,7 +14,7 @@ const (
 
 // CacheMemDB is the underlying cache database for storing indexes.
 type CacheMemDB struct {
-	db *memdb.MemDB
+	db *atomic.Value
 }
 
 // New creates a new instance of CacheMemDB.
@@ -23,9 +24,12 @@ func New() (*CacheMemDB, error) {
 		return nil, err
 	}
 
-	return &CacheMemDB{
-		db: db,
-	}, nil
+	c := &CacheMemDB{
+		db: new(atomic.Value),
+	}
+	c.db.Store(db)
+
+	return c, nil
 }
 
 func newDB() (*memdb.MemDB, error) {
@@ -129,7 +133,9 @@ func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, 
 		return nil, fmt.Errorf("invalid index name %q", indexName)
 	}
 
-	raw, err := c.db.Txn(false).First(tableNameIndexer, indexName, indexValues...)
+	txn := c.db.Load().(*memdb.MemDB).Txn(false)
+
+	raw, err := txn.First(tableNameIndexer, indexName, indexValues...)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +158,7 @@ func (c *CacheMemDB) Set(index *Index) error {
 		return errors.New("nil index provided")
 	}
 
-	txn := c.db.Txn(true)
+	txn := c.db.Load().(*memdb.MemDB).Txn(true)
 	defer txn.Abort()
 
 	if err := txn.Insert(tableNameIndexer, index); err != nil {
@@ -174,7 +180,9 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 	indexName = indexName + "_prefix"
 
 	// Get all the objects
-	iter, err := c.db.Txn(false).Get(tableNameIndexer, indexName, indexValues...)
+	txn := c.db.Load().(*memdb.MemDB).Txn(false)
+
+	iter, err := txn.Get(tableNameIndexer, indexName, indexValues...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +215,7 @@ func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 		return nil
 	}
 
-	txn := c.db.Txn(true)
+	txn := c.db.Load().(*memdb.MemDB).Txn(true)
 	defer txn.Abort()
 
 	if err := txn.Delete(tableNameIndexer, index); err != nil {
@@ -226,7 +234,7 @@ func (c *CacheMemDB) Flush() error {
 		return err
 	}
 
-	c.db = newDB
+	c.db.Store(newDB)
 
 	return nil
 }

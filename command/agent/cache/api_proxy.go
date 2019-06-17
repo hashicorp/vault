@@ -41,8 +41,13 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody
 
+	query := req.Request.URL.Query()
+	if len(query) != 0 {
+		fwReq.Params = query
+	}
+
 	// Make the request to Vault and get the response
-	ap.logger.Info("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
+	ap.logger.Info("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
 	if resp == nil && err != nil {

@@ -192,17 +192,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('version 2 with restricted policy still allows creation', async function(assert) {
     let backend = 'kv-v2';
-    const V2_POLICY = `'
+    const V2_POLICY = `
       path "kv-v2/metadata/*" {
         capabilities = ["list"]
       }
       path "kv-v2/data/secret" {
         capabilities = ["create", "read", "update"]
       }
-    '`;
+    `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
@@ -220,17 +220,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('version 2 with restricted policy still allows edit', async function(assert) {
     let backend = 'kv-v2';
-    const V2_POLICY = `'
+    const V2_POLICY = `
       path "kv-v2/metadata/*" {
         capabilities = ["list"]
       }
       path "kv-v2/data/secret" {
         capabilities = ["create", "read", "update"]
       }
-    '`;
+    `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
@@ -255,7 +255,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let paths = [
       '(',
       ')',
-      '"',
+      //'"',
       //"'",
       '!',
       '#',
@@ -290,21 +290,23 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     }
   });
 
-  // the web cli does not handle a single quote in a path, so we test it here via the UI
-  test('creating a secret with a single quote works properly', async function(assert) {
+  // the web cli does not handle a quote as part of a path, so we test it here via the UI
+  test('creating a secret with a single or double quote works properly', async function(assert) {
     await consoleComponent.runCommands('write sys/mounts/kv type=kv');
-    let path = "'some";
-    await listPage.visitRoot({ backend: 'kv' });
-    await listPage.create();
-    await editPage.createSecret(`${path}/2`, 'foo', 'bar');
-    await listPage.visit({ backend: 'kv', id: path });
-    assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-    await listPage.secrets.filterBy('text', '2')[0].click();
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.secrets.backend.show',
-      `${path}: show page renders correctly`
-    );
+    let paths = ["'some", '"some'];
+    for (let path of paths) {
+      await listPage.visitRoot({ backend: 'kv' });
+      await listPage.create();
+      await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+      await listPage.visit({ backend: 'kv', id: path });
+      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+      await listPage.secrets.filterBy('text', '2')[0].click();
+      assert.equal(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.show',
+        `${path}: show page renders correctly`
+      );
+    }
   });
 
   test('filter clears on nav', async function(assert) {
@@ -326,16 +328,16 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   let setupNoRead = async function(backend, canReadMeta = false) {
-    const V2_WRITE_ONLY_POLICY = `'
+    const V2_WRITE_ONLY_POLICY = `
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
       path "${backend}/+" {
         capabilities = ["list"]
       }
-    '`;
+    `;
 
-    const V2_WRITE_WITH_META_READ_POLICY = `'
+    const V2_WRITE_WITH_META_READ_POLICY = `
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
@@ -345,12 +347,12 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       path "${backend}/+" {
         capabilities = ["list"]
       }
-    '`;
-    const V1_WRITE_ONLY_POLICY = `'
+    `;
+    const V1_WRITE_ONLY_POLICY = `
      path "${backend}/+" {
         capabilities = ["create", "update", "list"]
       }
-    '`;
+    `;
 
     let policy;
     if (backend === 'kv-v2' && canReadMeta) {
@@ -364,7 +366,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       // disable any kv previously enabled kv
       `delete sys/mounts/${backend}`,
       `write sys/mounts/${backend} type=kv options=version=${backend === 'kv-v2' ? 2 : 1}`,
-      `write sys/policies/acl/${backend} policy=${policy}`,
+      `write sys/policies/acl/${backend} policy=${btoa(policy)}`,
       `write -field=client_token auth/token/create policies=${backend}`,
     ]);
 

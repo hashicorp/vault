@@ -66,9 +66,8 @@
   <div class="form-section">
     <SearchSelect @id={{attr.name}} @models={{attr.options.models}}
       @onChange={{action (action "setAndBroadcast" valuePath)}} @inputValue={{get model valuePath}}
-      @helpText={{attr.options.helpText}} @warning={{attr.options.warning}} @label={{labelString}}
+      @helpText={{attr.options.helpText}} @label={{labelString}}
       @fallbackComponent={{attr.options.fallbackComponent}} />
-
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
   {{mount-accessor-select
@@ -143,7 +142,7 @@
         valueUpdated=(action "codemirrorUpdated" attr.name "string")
       }}
     {{else}}
-      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off"
+      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
         value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"

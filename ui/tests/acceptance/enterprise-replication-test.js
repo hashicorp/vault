@@ -15,7 +15,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
     await click('[data-test-confirm-button]');
     if (assert) {
-      assert.equal(currentURL(), `/vault/replication/${type}`, 'redirects to the replication page');
+      assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
       assert.equal(
         flash.latestMessage,
         'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
@@ -32,12 +32,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   hooks.beforeEach(async function() {
     await authPage.login();
     await disableReplication('dr');
-    return disableReplication('performance');
+    await disableReplication('performance');
   });
 
   hooks.afterEach(async function() {
     await disableReplication('dr');
-    return disableReplication('performance');
+    await disableReplication('performance');
   });
 
   test('replication', async function(assert) {
@@ -139,7 +139,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     assert
       .dom('[data-test-secondary-name]')
-      .hasText(secondaryName, 'it displays the secondary in the list of known secondaries');
+      .includesText(secondaryName, 'it displays the secondary in the list of known secondaries');
   });
 
   test('disabling dr primary when perf replication is enabled', async function(assert) {

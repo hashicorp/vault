@@ -86,7 +86,7 @@ github.com/armon/go-proxyproto
 github.com/armon/go-radix
 # github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 github.com/asaskevich/govalidator
-# github.com/aws/aws-sdk-go v1.19.11
+# github.com/aws/aws-sdk-go v1.19.39
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/stscreds
@@ -111,13 +111,13 @@ github.com/aws/aws-sdk-go/internal/sdkio
 github.com/aws/aws-sdk-go/internal/ini
 github.com/aws/aws-sdk-go/internal/shareddefaults
 github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/aws/corehandlers
 github.com/aws/aws-sdk-go/aws/credentials/processcreds
 github.com/aws/aws-sdk-go/aws/csm
 github.com/aws/aws-sdk-go/aws/awsutil
 github.com/aws/aws-sdk-go/aws/client/metadata
 github.com/aws/aws-sdk-go/aws/signer/v4
-github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/ec2query
 github.com/aws/aws-sdk-go/private/protocol/query
@@ -131,8 +131,8 @@ github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/restxml
-github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
@@ -346,9 +346,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.1 => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190614165924-47d4e5b1f688 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.8 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190614165924-47d4e5b1f688 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -386,6 +386,7 @@ github.com/hashicorp/vault/sdk/helper/pathmanager
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
+github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
@@ -697,11 +698,11 @@ google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/spanner/v1
-google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/grpc v1.20.0
+# google.golang.org/grpc v1.20.1
 google.golang.org/grpc/grpclog
 google.golang.org/grpc/codes
 google.golang.org/grpc

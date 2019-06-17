@@ -1,0 +1,23 @@
+{
+  "name": "core",
+  "keywords": [
+    "ember-addon"
+  ],
+  "dependencies": {
+    "Duration.js": "*",
+    "base64-js": "*",
+    "ember-auto-import": "*",
+    "ember-basic-dropdown": "*",
+    "ember-cli-babel": "*",
+    "ember-cli-clipboard": "*",
+    "ember-cli-htmlbars": "*",
+    "ember-cli-htmlbars-inline-precompile": "*",
+    "ember-cli-string-helpers": "*",
+    "ember-composable-helpers": "*",
+    "ember-concurrency": "*",
+    "ember-maybe-in-element": "*",
+    "ember-radio-button": "*",
+    "ember-svg-jar": "*",
+    "ember-truth-helpers": "*"
+  }
+}

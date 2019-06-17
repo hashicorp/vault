@@ -395,7 +395,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Ensure the cache is populated, don't need the result
 	NamespaceByID(ctx, ns.ID, c)
 
-	// Verify there are no conflicting mounts
+	// Basic check for matching names
+	for _, ent := range c.mounts.Entries {
+		if ns.ID == ent.NamespaceID {
+			switch {
+			// Existing is oauth/github/ new is oauth/ or
+			// existing is oauth/ and new is oauth/github/
+			case strings.HasPrefix(ent.Path, entry.Path):
+				fallthrough
+			case strings.HasPrefix(entry.Path, ent.Path):
+				return logical.CodedError(409, fmt.Sprintf("path is already in use at %s", ent.Path))
+			}
+		}
+	}
+
+	// Verify there are no conflicting mounts in the router
 	if match := c.router.MountConflict(ctx, entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
@@ -468,6 +482,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	addPathCheckers(c, entry, backend, viewPath)
+
+	addLicenseCallback(c, backend)
 
 	c.setCoreBackend(entry, backend, view)
 
@@ -571,11 +587,6 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		backend.Cleanup(ctx)
 	}
 
-	// Unmount the backend entirely
-	if err := c.router.Unmount(ctx, path); err != nil {
-		return err
-	}
-
 	viewPath := entry.ViewPath()
 	switch {
 	case !updateStorage:
@@ -592,9 +603,15 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			return err
 		}
 	}
+
 	// Remove the mount table entry
 	if err := c.removeMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to remove mount entry for path being unmounted", "error", err, "path", path)
+		return err
+	}
+
+	// Unmount the backend entirely
+	if err := c.router.Unmount(ctx, path); err != nil {
 		return err
 	}
 
@@ -1184,6 +1201,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		BackendUUID: entry.BackendAwareUUID,
 	}
 
+	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {
 		return nil, err
@@ -1198,9 +1216,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
-	return dynamicSystemView{
-		core:       c,
-		mountEntry: entry,
+	return extendedSystemView{
+		dynamicSystemView{
+			core:       c,
+			mountEntry: entry,
+		},
 	}
 }
 

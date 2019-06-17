@@ -1,0 +1,16 @@
+jobs:
+  - install-ui-dependencies
+  - go-mod-download
+  - build-go-dev:
+      requires:
+        - go-mod-download
+  - test-ui:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+  - test-go:
+      requires:
+        - build-go-dev
+  - test-go-race:
+      requires:
+        - build-go-dev

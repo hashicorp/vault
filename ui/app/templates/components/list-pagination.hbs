@@ -8,14 +8,14 @@
       )
       class="pagination-previous"
     }}
-      {{i-con glyph="chevron-left" size=10}}
+      <Chevron @direction="left"/>
       <span class="pagination-previous-label">
         Previous
       </span>
     {{/link-to}}
   {{else}}
     <button type="button" disabled=true class="pagination-previous is-invisible" aria-hidden=true>
-      {{i-con glyph="chevron-left" size=10}}
+      <Chevron @direction="left" />
       <span class="pagination-previous-label">
         Previous
       </span>
@@ -32,14 +32,14 @@
       <span class="pagination-next-label">
         Next
       </span>
-      {{i-con glyph="chevron-right" size=11}}
+      <Chevron />
     {{/link-to}}
   {{else}}
     <button type="button" disabled=true class="pagination-next is-invisible" aria-hidden=true>
       <span class="pagination-next-label">
         Next
       </span>
-      {{i-con glyph="chevron-right" size=11}}
+      <Chevron />
     </button>
   {{/if}}
   {{#if segmentLinks }}

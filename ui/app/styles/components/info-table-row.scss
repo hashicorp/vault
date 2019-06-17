@@ -27,8 +27,14 @@
     }
   }
 
-  .icon {
+  .hs-icon {
     margin-right: 0.25rem;
+  }
+  .icon-true {
+    color: $green-500;
+  }
+  .icon-false {
+    color: $ui-gray-300;
   }
 }
 

@@ -1,0 +1,23 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{title}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<EmptyState
+  @title="Upgrade to use {{featureName}}"
+  @message="You will need {{minimumEdition}} with {{featureName}} included to use this feature."
+>
+  <a
+    href="https://www.hashicorp.com/products/vault/enterprise?source=vaultui_{{featureName}}"
+    class="link has-icon-right"
+    target="_blank"
+    rel="noopener"
+    data-test-upgrade-link="true"
+  >
+    Vault Enterprise
+    <Chevron />
+  </a>
+</EmptyState>
