@@ -24,6 +24,12 @@ commands:
             - ui/node_modules
   restore_go_cache:
     steps:
+      - run:
+          name: Allow circleci user to restore Go modules cache
+          command: |
+            set -eux -o pipefail
+            sudo mkdir /go
+            sudo chown -R circleci:circleci /go
       - restore_cache:
           key: *GO_SUM_CACHE_KEY
   save_go_cache:

@@ -30,6 +30,12 @@ jobs:
         fingerprints:
         - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout
+    - run:
+        command: |
+          set -eux -o pipefail
+          sudo mkdir /go
+          sudo chown -R circleci:circleci /go
+        name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
@@ -48,6 +54,12 @@ jobs:
     working_directory: /src
     steps:
     - checkout
+    - run:
+        command: |
+          set -eux -o pipefail
+          sudo mkdir /go
+          sudo chown -R circleci:circleci /go
+        name: Allow circleci user to restore Go modules cache
     - restore_cache:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - attach_workspace:
@@ -113,7 +125,6 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -184,7 +195,6 @@ jobs:
     - run:
         command: |
           set -eux -o pipefail
-
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -326,6 +336,12 @@ workflows:
 #         no_output_timeout: 20m
 #   restore_go_cache:
 #     steps:
+#     - run:
+#         command: |
+#           set -eux -o pipefail
+#           sudo mkdir /go
+#           sudo chown -R circleci:circleci /go
+#         name: Allow circleci user to restore Go modules cache
 #     - restore_cache:
 #         key: go-sum-v1-{{ checksum \"go.sum\" }}
 #   restore_yarn_cache:
@@ -418,13 +434,6 @@ workflows:
 #     parallelism: 2
 #     steps:
 #     - checkout
-#     - run:
-#         command: |
-#           set -eux -o pipefail
-# 
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - go_test
 #     - store_artifacts:
@@ -435,13 +444,6 @@ workflows:
 #     executor: go-machine
 #     steps:
 #     - checkout
-#     - run:
-#         command: |
-#           set -eux -o pipefail
-# 
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
 #     - restore_go_cache
 #     - go_test:
 #         extra_flags: -race
