@@ -278,8 +278,7 @@ properly named and formatted using a command like:
 $ openssl x509 -in ca.crt -text -noout
 ```
 
-Then, verify that 
-the certificates are properly chained to the `ca.crt` you've configured:
+Then, verify that the certificates are properly chained to the `ca.crt` you've configured:
 
 ```
 $ openssl verify -CAfile ca.crt -untrusted intermediate.crt identity.crt
