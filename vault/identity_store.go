@@ -87,6 +87,14 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		},
 	}
 
+	// TODO: remove before release. Very handy for testing auto rotation.
+	//go func() {
+	//	for {
+	//		iStore.oidcPeriodicFunc(ctx, config.StorageView)
+	//		time.Sleep(time.Second)
+	//	}
+	//}()
+
 	err = iStore.Setup(ctx, config)
 	if err != nil {
 		return nil, err
@@ -258,6 +266,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 		txn.Commit()
 		return
+	case strings.HasPrefix(key, oidcTokensPrefix):
+		i.oidcCache.purge()
 	}
 }
 

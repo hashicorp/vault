@@ -57,6 +57,9 @@ type IdentityStore struct {
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
 
+	// oidcCache stores .well-known responses and next rotation schedule info
+	oidcCache oidcCache
+
 	// logger is the server logger copied over from core
 	logger log.Logger
 

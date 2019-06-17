@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -24,11 +25,11 @@ import (
 var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
 const (
-	oidcConfigFieldIssuer = "issuer"
-	oidcConfigStorageKey  = "oidc/config/issuer"
-	namedKeyConfigPath    = "oidc-config/named-key/"
-	publicKeysConfigPath  = "oidc-config/public-keys/"
-	roleConfigPath        = "oidc-config/role/"
+	oidcTokensPrefix     = "oidc_tokens/"
+	oidcConfigStorageKey = oidcTokensPrefix + "config/"
+	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
+	roleConfigPath       = oidcTokensPrefix + "roles/"
 )
 
 type oidcConfig struct {
@@ -71,6 +72,25 @@ type discovery struct {
 	Claims        []string `json:"claims_supported"`
 }
 
+// oidcCache stores common response data as well as when the periodic func needs
+// to run. This is conservatively managed, and most writes to the OIDC endpoints
+// will invalidate the cache.
+type oidcCache struct {
+	lock              sync.RWMutex
+	discoveryResponse []byte
+	jwksResponse      []byte
+	nextPeriodicRun   time.Time
+}
+
+func (c *oidcCache) purge() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.discoveryResponse = c.discoveryResponse[:0]
+	c.jwksResponse = c.jwksResponse[:0]
+	c.nextPeriodicRun = time.Time{}
+}
+
 // oidcPaths returns the API endpoints supported to operate on OIDC tokens:
 // oidc/key/:key - Create a new key named key
 func oidcPaths(i *IdentityStore) []*framework.Path {
@@ -78,7 +98,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "oidc/config/?$",
 			Fields: map[string]*framework.FieldSchema{
-				oidcConfigFieldIssuer: {
+				"issuer": {
 					Type:        framework.TypeString,
 					Description: "Issuer URL to be used in the iss claim of the token. If not set, Vault's app_addr will be used.",
 				},
@@ -114,7 +134,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathOIDCUpdateKey,
+				logical.UpdateOperation: i.pathOIDCCreateUpdateKey,
 				logical.ReadOperation:   i.pathOIDCReadKey,
 				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
@@ -134,7 +154,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleOIDCRotateKey,
+				logical.UpdateOperation: i.pathOIDCRotateKey,
 			},
 			HelpSynopsis:    "oidc/key/:key/rotate help synopsis here",
 			HelpDescription: "oidc/key/:key/rotate help description here",
@@ -235,7 +255,7 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 
 // writeOIDCConfig returns a framework.OperationFunc for creating and updating OIDC configuration
 func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	value, ok := d.GetOk(oidcConfigFieldIssuer)
+	value, ok := d.GetOk("issuer")
 	if !ok {
 		return nil, nil
 	}
@@ -262,6 +282,8 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 			`using the cluster's api_addr as the issuer.`)
 	}
 
+	i.oidcCache.purge()
+
 	return &resp, nil
 }
 
@@ -285,7 +307,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
-func (i *IdentityStore) pathOIDCUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var namedKey *NamedKey
 	var update bool = false
 
@@ -387,6 +409,8 @@ func (i *IdentityStore) pathOIDCUpdateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
+	i.oidcCache.purge()
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"rotation_period":  namedKey.RotationPeriod,
@@ -459,9 +483,12 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	if err := i.expireOIDCPublicKeys(ctx, req.Storage); err != nil {
+	_, err = i.expireOIDCPublicKeys(ctx, req.Storage)
+	if err != nil {
 		return nil, err
 	}
+
+	i.oidcCache.purge()
 
 	return nil, nil
 }
@@ -475,8 +502,8 @@ func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(keys), nil
 }
 
-// handleOIDCRotateKey is used to manually trigger a rotation on the named key
-func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+// pathOIDCRotateKey is used to manually trigger a rotation on the named key
+func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	verificationTTLOverrideInput, verificationTTLOverrideInputOK := d.GetOk("verification_ttl")
 
@@ -506,6 +533,8 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	i.oidcCache.purge()
+
 	// prepare response
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -517,26 +546,40 @@ func (i *IdentityStore) handleOIDCRotateKey(ctx context.Context, req *logical.Re
 }
 
 func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	issuer := "http://127.0.0.1:8200"
+	var data []byte
 
-	disc := discovery{
-		Issuer: issuer + "/v1/identity/oidc",
-		//Auth:        s.absURL("/auth"),
-		//Token:       s.absURL("/token"),
-		Keys:        issuer + "/v1/identity/oidc/.well-known/certs",
-		Subjects:    []string{"public"},
-		IDTokenAlgs: []string{string(jose.RS256)},
-		//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
-		//AuthMethods: []string{"client_secret_basic"},
-		//Claims: []string{
-		//	"aud", "email", "email_verified", "exp",
-		//	"iat", "iss", "locale", "name", "sub",
-		//},
-	}
+	i.oidcCache.lock.RLock()
+	if len(i.oidcCache.discoveryResponse) > 0 {
+		data = i.oidcCache.discoveryResponse
+		i.oidcCache.lock.RUnlock()
+	} else {
+		i.oidcCache.lock.RUnlock()
+		issuer := "http://127.0.0.1:8200"
 
-	data, err := json.Marshal(disc)
-	if err != nil {
-		return nil, err
+		disc := discovery{
+			Issuer: issuer + "/v1/identity/oidc",
+			//Auth:        s.absURL("/auth"),
+			//Token:       s.absURL("/token"),
+			Keys:        issuer + "/v1/identity/oidc/.well-known/certs",
+			Subjects:    []string{"public"},
+			IDTokenAlgs: []string{string(jose.RS256)},
+			//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
+			//AuthMethods: []string{"client_secret_basic"},
+			//Claims: []string{
+			//	"aud", "email", "email_verified", "exp",
+			//	"iat", "iss", "locale", "name", "sub",
+			//},
+		}
+
+		var err error
+		data, err = json.Marshal(disc)
+		if err != nil {
+			return nil, err
+		}
+
+		i.oidcCache.lock.Lock()
+		i.oidcCache.discoveryResponse = data
+		i.oidcCache.lock.Unlock()
 	}
 
 	resp := &logical.Response{
@@ -551,28 +594,42 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 }
 
 // pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
-// verify the validity of a signed OIDC token
+// verify the validity of a signed OIDC token.
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
+	var data []byte
 
-	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-	}
+	i.oidcCache.lock.RLock()
+	if len(i.oidcCache.jwksResponse) > 0 {
+		data = i.oidcCache.jwksResponse
+		i.oidcCache.lock.RUnlock()
+	} else {
+		i.oidcCache.lock.RUnlock()
 
-	for _, keyID := range keyIDs {
-		key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
 		if err != nil {
 			return nil, err
 		}
-		jwks.Keys = append(jwks.Keys, *key)
-	}
 
-	data, err := json.Marshal(jwks)
-	if err != nil {
-		return nil, err
+		jwks := jose.JSONWebKeySet{
+			Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+		}
+
+		for _, keyID := range keyIDs {
+			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+			if err != nil {
+				return nil, err
+			}
+			jwks.Keys = append(jwks.Keys, *key)
+		}
+
+		data, err = json.Marshal(jwks)
+		if err != nil {
+			return nil, err
+		}
+
+		i.oidcCache.lock.Lock()
+		i.oidcCache.jwksResponse = data
+		i.oidcCache.lock.Unlock()
 	}
 
 	resp := &logical.Response{
@@ -796,6 +853,8 @@ func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Req
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	i.oidcCache.purge()
 
 	return nil, nil
 }
@@ -1023,91 +1082,174 @@ func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error
 	return keys, nil
 }
 
-func deleteOIDCPublicKey(ctx context.Context, s logical.Storage, keyID string) error {
-	return s.Delete(ctx, publicKeysConfigPath+keyID)
-}
+func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
+	var didUpdate bool
 
-func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) error {
+	// nextExpiration will be the soonest expiration time of all keys. Initialize
+	// here to a relatively distant time.
+	nextExpiration := time.Now().Add(24 * time.Hour)
+	now := time.Now()
+
 	publicKeyIDs, err := listOIDCPublicKeys(ctx, s)
 	if err != nil {
-		return err
+		return now, err
 	}
 
 	namedKeys, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
-		return err
+		return now, err
 	}
 
-	now := time.Now()
 	usedKeys := make([]string, 0, 2*len(namedKeys))
 
 	for _, k := range namedKeys {
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)
 		if err != nil {
-			return err
+			return now, err
 		}
 
 		var key NamedKey
 		if err := entry.DecodeJSON(&key); err != nil {
-			return err
+			return now, err
 		}
 
-		for _, k := range key.KeyRing {
-			if k.ExpireAt.IsZero() || k.ExpireAt.After(now) {
-				usedKeys = append(usedKeys, k.KeyID)
+		// Remove any expired keys from the keyring.
+		keyRing := key.KeyRing
+		var keyringUpdated bool
+
+		for i := 0; i < len(keyRing); i++ {
+			k := keyRing[i]
+			if !k.ExpireAt.IsZero() && k.ExpireAt.Before(now) {
+				keyRing[i] = keyRing[len(keyRing)-1]
+				keyRing = keyRing[:len(keyRing)-1]
+
+				keyringUpdated = true
+				i--
+				continue
 			}
+
+			// Save a remaining key's next expiration if it is the earliest we've
+			// seen (for use by the periodicFunc for scheduling).
+			if !k.ExpireAt.IsZero() && k.ExpireAt.Before(nextExpiration) {
+				nextExpiration = k.ExpireAt
+			}
+
+			// Mark the KeyID as in use so it doesn't get deleted in the next step
+			usedKeys = append(usedKeys, k.KeyID)
+		}
+
+		// Persist any keyring updates if necessary
+		if keyringUpdated {
+			key.KeyRing = keyRing
+			entry, err := logical.StorageEntryJSON(entry.Key, key)
+			if err != nil {
+				i.Logger().Error("error updating key", "key", key.Name, "error", err)
+			}
+
+			if err := s.Put(ctx, entry); err != nil {
+				i.Logger().Error("error saving key", "key", key.Name, "error", err)
+
+			}
+			didUpdate = true
 		}
 	}
 
+	// Delete all public keys that were not determined to be not expired and in
+	// use by some role.
 	for _, keyID := range publicKeyIDs {
 		if !strutil.StrListContains(usedKeys, keyID) {
-			if err := deleteOIDCPublicKey(ctx, s, keyID); err != nil {
-				return err
+			didUpdate = true
+			if err := s.Delete(ctx, publicKeysConfigPath+keyID); err != nil {
+				i.Logger().Error("error deleting OIDC public key", "key_id", keyID, "error", err)
+				nextExpiration = now
 			}
 			i.Logger().Debug("deleted OIDC public key", "key_id", keyID)
 		}
 	}
 
-	return nil
-}
-
-func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) error {
-	keys, err := s.List(ctx, namedKeyConfigPath)
-	if err != nil {
-		return err
+	if didUpdate {
+		i.oidcCache.purge()
 	}
 
+	return nextExpiration, nil
+}
+
+func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, error) {
+	// soonestRotation will be the soonest rotation time of all keys. Initialize
+	// here to a relatively distant time.
+	soonestRotation := time.Now().Add(24 * time.Hour)
 	now := time.Now()
+
+	keys, err := s.List(ctx, namedKeyConfigPath)
+	if err != nil {
+		return now, err
+	}
 
 	for _, k := range keys {
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)
 		if err != nil {
-			return err
+			return now, err
 		}
 
 		var key NamedKey
 		if err := entry.DecodeJSON(&key); err != nil {
-			return err
+			return now, err
 		}
 
+		// Future key rotation that is the earliest we've seen.
+		if now.Before(key.NextRotation) && key.NextRotation.Before(soonestRotation) {
+			soonestRotation = key.NextRotation
+		}
+
+		// Key that is due to be rotated.
 		if now.After(key.NextRotation) {
 			i.Logger().Debug("rotating OIDC key", "key", key.Name)
 			if _, err := key.rotate(ctx, s, -1); err != nil {
-				return err
+				return now, err
+			}
+
+			// Possibly save the new rotation time
+			if key.NextRotation.Before(soonestRotation) {
+				soonestRotation = key.NextRotation
 			}
 		}
 	}
 
-	return nil
+	return soonestRotation, nil
 }
 
+// oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
+// rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage) {
-	if err := i.oidcKeyRotation(ctx, s); err != nil {
-		i.Logger().Warn("error rotating OIDC keys", "err", err)
-	}
+	i.oidcCache.lock.RLock()
+	nextRun := i.oidcCache.nextPeriodicRun
+	i.oidcCache.lock.RUnlock()
 
-	if err := i.expireOIDCPublicKeys(ctx, s); err != nil {
-		i.Logger().Warn("error expiring OIDC public keys", "err", err)
+	// The condition here is for performance, not precise timing. The actions can
+	// be run at any time safely, but there is no need to invoke them (which
+	// might be somewhat expensive if there are many roles/keys) if we're not
+	// past any rotation/expiration TTLs.
+	if time.Now().After(nextRun) {
+		nextRotation, err := i.oidcKeyRotation(ctx, s)
+		if err != nil {
+			i.Logger().Warn("error rotating OIDC keys", "err", err)
+		}
+
+		nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
+		if err != nil {
+			i.Logger().Warn("error expiring OIDC public keys", "err", err)
+		}
+
+		i.oidcCache.purge()
+
+		// re-run at the soonest expiration or rotation time
+		i.oidcCache.lock.Lock()
+		if nextRotation.Before(nextExpiration) {
+			i.oidcCache.nextPeriodicRun = nextRotation
+		} else {
+			i.oidcCache.nextPeriodicRun = nextExpiration
+		}
+		i.oidcCache.lock.Unlock()
 	}
 }
 
