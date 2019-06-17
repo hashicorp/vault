@@ -117,7 +117,7 @@ type setCredentialsWAL struct {
 
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
-	walID string `json:"wal_id"`
+	walID string
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -414,6 +414,13 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		// failed rotations can complete without error when deleting from storage.
 	READONLY_LOOP:
 		for {
+			select {
+			case <-ctx.Done():
+				b.Logger().Info("queue initialization canceled")
+				return
+			default:
+			}
+
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
 			if walID != "" {
 				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
