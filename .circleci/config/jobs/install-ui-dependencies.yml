@@ -1,0 +1,13 @@
+executor: node
+steps:
+  - checkout
+  - restore_yarn_cache
+  - run:
+      name: Install UI dependencies
+      command: |
+        set -eux -o pipefail
+
+        cd ui
+        yarn install --ignore-optional
+        npm rebuild node-sass
+  - save_yarn_cache

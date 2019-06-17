@@ -21,6 +21,8 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -2679,6 +2681,8 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": "test1,test2",
 		"path_suffix":      "happenin",
 		"bound_cidrs":      []string{"0.0.0.0/0"},
+		"explicit_max_ttl": "2h",
+		"token_num_uses":   123,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2703,21 +2707,28 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"period":              int64(259200),
-		"allowed_policies":    []string{"test1", "test2"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"explicit_max_ttl":    int64(0),
-		"renewable":           true,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"token_period":           int64(259200),
+		"period":                 int64(259200),
+		"allowed_policies":       []string{"test1", "test2"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"explicit_max_ttl":       int64(7200),
+		"token_explicit_max_ttl": int64(7200),
+		"renewable":              true,
+		"token_type":             "default-service",
+		"token_num_uses":         123,
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2731,6 +2742,8 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": "test3",
 		"path_suffix":      "happenin",
 		"renewable":        false,
+		"explicit_max_ttl": "80h",
+		"token_num_uses":   0,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2754,21 +2767,27 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"period":              int64(284400),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"explicit_max_ttl":    int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"period":                 int64(284400),
+		"token_period":           int64(284400),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"token_explicit_max_ttl": int64(288000),
+		"explicit_max_ttl":       int64(288000),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2797,21 +2816,27 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"explicit_max_ttl":    int64(5),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"period":              int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"explicit_max_ttl":       int64(5),
+		"token_explicit_max_ttl": int64(5),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"period":                 int64(0),
+		"token_period":           int64(0),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2840,15 +2865,17 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"explicit_max_ttl":    int64(5),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "",
-		"period":              int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"token_explicit_max_ttl": int64(5),
+		"explicit_max_ttl":       int64(5),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "",
+		"period":                 int64(0),
+		"token_period":           int64(0),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -3585,6 +3612,248 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	}
 }
 
+func TestTokenStore_RoleTokenFields(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	//c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+	rootContext := namespace.RootContext(context.Background())
+
+	boundCIDRs, err := parseutil.ParseAddrs([]string{"127.0.0.1/32"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First test the upgrade case. Create a role with values and ensure they
+	// are reflected properly on read.
+	{
+		roleEntry := &tsRoleEntry{
+			Name: "test",
+			TokenParams: tokenutil.TokenParams{
+				TokenType: logical.TokenTypeBatch,
+			},
+			Period:         time.Second,
+			ExplicitMaxTTL: time.Hour,
+		}
+		roleEntry.BoundCIDRs = boundCIDRs
+		ns := namespace.RootNamespace
+		jsonEntry, err := logical.StorageEntryJSON("test", roleEntry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := ts.rolesView(ns).Put(rootContext, jsonEntry); err != nil {
+			t.Fatal(err)
+		}
+		// Read it back
+		roleEntry, err = ts.tokenStoreRole(rootContext, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expRoleEntry := &tsRoleEntry{
+			Name: "test",
+			TokenParams: tokenutil.TokenParams{
+				TokenPeriod:         time.Second,
+				TokenExplicitMaxTTL: time.Hour,
+				TokenBoundCIDRs:     boundCIDRs,
+				TokenType:           logical.TokenTypeBatch,
+			},
+			Period:         time.Second,
+			ExplicitMaxTTL: time.Hour,
+			BoundCIDRs:     boundCIDRs,
+		}
+		if diff := deep.Equal(expRoleEntry, roleEntry); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
+	// Now, read that back through the API and verify we see what we expect
+	{
+		req := logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(1),
+			"token_period":           int64(1),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(3600),
+			"explicit_max_ttl":       int64(3600),
+			"renewable":              false,
+			"token_type":             "batch",
+		}
+
+		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected bound cidrs: %s", resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "bound_cidrs")
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
+	// Put values in just the old locations, but through the API
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"explicit_max_ttl": 7200,
+			"token_type":       "default-batch",
+			"period":           5,
+			"bound_cidrs":      boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("expected a nil response")
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(5),
+			"token_period":           int64(5),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(7200),
+			"explicit_max_ttl":       int64(7200),
+			"renewable":              false,
+			"token_type":             "default-batch",
+		}
+
+		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected bound cidrs: %s", resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "bound_cidrs")
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Same thing for just the new locations
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"token_explicit_max_ttl": 5200,
+			"token_type":             "default-service",
+			"token_period":           7,
+			"token_bound_cidrs":      boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("expected a nil response")
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(0),
+			"token_period":           int64(7),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(5200),
+			"explicit_max_ttl":       int64(0),
+			"renewable":              false,
+			"token_type":             "default-service",
+		}
+
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Put values in both locations
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"token_explicit_max_ttl": 7200,
+			"explicit_max_ttl":       5200,
+			"token_type":             "service",
+			"token_period":           5,
+			"period":                 1,
+			"token_bound_cidrs":      boundCIDRs[0].String(),
+			"bound_cidrs":            boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp == nil {
+			t.Fatalf("expected a non-nil response")
+		}
+		if len(resp.Warnings) != 3 {
+			t.Fatalf("expected 3 warnings, got %#v", resp.Warnings)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(0),
+			"token_period":           int64(5),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(7200),
+			"explicit_max_ttl":       int64(0),
+			"renewable":              false,
+			"token_type":             "service",
+		}
+
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+}
+
 func TestTokenStore_Periodic(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
@@ -3724,6 +3993,120 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
 		}
 	}
+}
+
+func testTokenStore_NumUses_ErrorCheckHelper(t *testing.T, resp *logical.Response, err error) {
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("response was nil")
+	}
+	if resp.Auth == nil {
+		t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func testTokenStore_NumUses_SelfLookupHelper(t *testing.T, core *Core, clientToken string, expectedNumUses int) {
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/lookup-self")
+	req.ClientToken = clientToken
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Just used the token, this should decrement the num_uses counter
+	expectedNumUses = expectedNumUses - 1
+	actualNumUses := resp.Data["num_uses"].(int)
+
+	if actualNumUses != expectedNumUses {
+		t.Fatalf("num_uses mismatch (expected %d, got %d)", expectedNumUses, actualNumUses)
+	}
+}
+func TestTokenStore_NumUses(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	roleNumUses := 10
+	lesserNumUses := 5
+	greaterNumUses := 15
+
+	// Create a test role with limited token_num_uses
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test-limited-uses")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"token_num_uses": roleNumUses,
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// Create a test role with unlimited token_num_uses
+	req.Path = "auth/token/roles/test-unlimited-uses"
+	req.Data = map[string]interface{}{}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// Generate some tokens from the test roles
+	req.Path = "auth/token/create/test-limited-uses"
+
+	// first token, num_uses is expected to come from the limited uses role
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	noOverrideToken := resp.Auth.ClientToken
+
+	// second token, override num_uses with a lesser value, this should become the value
+	// applied to the token
+	req.Data = map[string]interface{}{
+		"num_uses": lesserNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	lesserOverrideToken := resp.Auth.ClientToken
+
+	// third token, override num_uses with a greater value, the value
+	// applied to the token should come from the limited uses role
+	req.Data = map[string]interface{}{
+		"num_uses": greaterNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	greaterOverrideToken := resp.Auth.ClientToken
+
+	// fourth token, override num_uses with a zero value, a num_uses value of zero
+	// has an internal meaning of unlimited so num_uses == 1 is actually less than
+	// num_uses == 0. In this case, the lesser value of the limited-uses role should be applied.
+	req.Data = map[string]interface{}{
+		"num_uses": 0,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	zeroOverrideToken := resp.Auth.ClientToken
+
+	// fifth token, override num_uses with a value from a role that has unlimited num_uses. num_uses
+	// should be the specified num_uses parameter at the create endpoint
+	req.Path = "auth/token/create/test-unlimited-uses"
+	req.Data = map[string]interface{}{
+		"num_uses": lesserNumUses,
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	testTokenStore_NumUses_ErrorCheckHelper(t, resp, err)
+	unlimitedRoleOverrideToken := resp.Auth.ClientToken
+
+	testTokenStore_NumUses_SelfLookupHelper(t, core, noOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, lesserOverrideToken, lesserNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, greaterOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, zeroOverrideToken, roleNumUses)
+	testTokenStore_NumUses_SelfLookupHelper(t, core, unlimitedRoleOverrideToken, lesserNumUses)
 }
 
 func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
