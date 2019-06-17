@@ -275,6 +275,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.5.1 h1:d9WLI7oF6VMtwBZwS5bbChc4kW+
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.1/go.mod h1:5VU7gc6/BEEFQW/viqMs3LBxI1D1cxJmKqKQEP3JUP4=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1 h1:q6DGb12Vw/CpZ9xDWAmpzxVRKeClFqRFgbIZ3fZcvuY=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1/go.mod h1:qCDsm0njdfUrnN5sFKMLjxGjZKjQf2qB6dReQ4gr4YI=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f h1:BYQVawXauMXQ26I3Pn1Nw9kp/aZD60xmh9ZP3jum0YM=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f/go.mod h1:CkOYWfeuC5nAzehBztl94S6VOn2g50h1tffpcNoWCZ8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.1 h1:BdiASUZLOvOUs317EnaUNjGxTSw0PYGQA7zJZhDKLC4=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.1/go.mod h1:EH9CI8+0aWRBz8eIgGth0QjttmHWlGvn+8ZmX/ZUetE=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1 h1:72K91p4uLhT/jgtBq2zV5Wn8ocvny4sAN56XOcTxK1w=
@@ -558,6 +560,8 @@ golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20190312061237-fead79001313/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e h1:nFYrTHrdrAOpShe27kaFHjsqYSEQ0KWqdWLu3xuZJts=
 golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20190410170021-cc4d4f50624c h1:OUGWoQpM/o3TxM7Fp3CEqRpaYCbg4H1hOVPnZoUtr2U=
+golang.org/x/sys v0.0.0-20190410170021-cc4d4f50624c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
