@@ -255,7 +255,7 @@ jobs:
     machine: true
     shell: /usr/bin/env bash -euo pipefail
     working_directory: ~/src
-    parallelism: 1
+    parallelism: 10
     steps:
     - checkout
     - run:
@@ -294,7 +294,7 @@ jobs:
     machine: true
     shell: /usr/bin/env bash -euo pipefail
     working_directory: ~/src
-    parallelism: 1
+    parallelism: 10
     steps:
     - checkout
     - run:

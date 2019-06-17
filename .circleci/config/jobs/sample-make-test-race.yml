@@ -1,5 +1,5 @@
 executor: go-machine
-parallelism: 1
+parallelism: 10
 steps:
   - checkout
   - run:
