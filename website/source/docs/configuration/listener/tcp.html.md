@@ -155,7 +155,7 @@ listener "tcp" {
 
 ### Listening on Multiple Interfaces
 
-This example shows Vault listening on a private interface, as well as localhost.
+Vault listeners with unique settings can co-exist, and each listener can be configured independently. This example shows Vault listening on multiple interfaces and multiple ports. The listeners on port 8200 are bound to the loopback interface and a private interface. The listener on port 8210 is bound to a private interface, and is configured to require mutual TLS.
 
 ```hcl
 listener "tcp" {
@@ -166,23 +166,6 @@ listener "tcp" {
   address = "10.0.0.5:8200"
 }
 
-# Advertise the non-loopback interface
-api_addr = "https://10.0.0.5:8200"
-cluster_addr = "https://10.0.0.5:8201"
-```
-
-### Multiple Listeners Using Different Configurations
-
-This example shows Vault listening on two ports: one port is configured to require mutual TLS, and one port is configured without mutual TLS. This pattern is commonly used when the API will be accessed by machines using mutual TLS, but the UI will be accessed by humans with another Auth Method. While a single listener statement can be used, this often results in frequent browser prompts on the Vault UI asking for a TLS certificate.
-
-```hcl
-
-# regular listener that does not require mutual TLS
-listener "tcp" {
-  address = "10.0.0.5:8200"
-}
-
-# additional listener that does require mutual TLS
 listener "tcp" {
   address = "10.0.0.5:8210"
   tls_require_and_verify_client_cert = true
@@ -193,7 +176,6 @@ listener "tcp" {
 api_addr = "https://10.0.0.5:8200"
 cluster_addr = "https://10.0.0.5:8201"
 ```
-
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /docs/configuration/index.html#api_addr
