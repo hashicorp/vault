@@ -15,10 +15,10 @@ At a high level, this works as follows:
 
 1. You construct a request to Vault including your `CF_INSTANCE_CERT`, signed by your `CF_INSTANCE_KEY`.
 2. Vault validates that the signature is no more than 5 minutes old, or 1 minute in the future.
-3. Vault validates that the cert was issued by the CA certificate authority you've pre-configured.
+3. Vault validates that the cert was issued by the CA certificate you've pre-configured.
 4. Vault validates that the request was signed by the private key for the `CF_INSTANCE_CERT`.
-5. Vault validates that the `CF_INSTANCE_CERT`'s shown application ID, space ID, and org ID presently exist.
-6. If all checks pass, Vault issues a token with that appropriate scopes you have designated.
+5. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.
+6. If all checks pass, Vault issues an appropriately-scoped token.
 
 ## Known Risks
 
@@ -249,7 +249,7 @@ your behalf.
 
 In testing we found that PCF instance identity CA certificates were set to expire in 3 years. Some
 PCF docs indicate they expire every 4 years. However long they last, at some point you may need 
-to add another CA certificate - one that's soon to expire, and one that is currently or soon-to-by
+to add another CA certificate - one that's soon to expire, and one that is currently or soon-to-be
 valid. 
 
 ```
