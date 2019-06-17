@@ -315,7 +315,7 @@ jobs:
           \n\n# We will force this to exit 0 each time, as this is treated as offline\n\
           # data gathering, not a blocking part of the pipeline.\n# This is also necessary\
           \ to have the persist_to_workspace step\n# executed unconditionally.\nset\
-          \ +eo pipefail \nGCO_ENABLED=1 make test 2>&1 | tee $OUT\n"
+          \ +eo pipefail \nCGO_ENABLED=1 make test 2>&1 | tee $OUT\n"
         environment:
           OUTDIR: sample/make-test-race
           TESTARGS: -v -race
