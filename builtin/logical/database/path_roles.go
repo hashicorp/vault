@@ -478,9 +478,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
-		if lvr.IsZero() {
-			lvr = time.Now()
-		}
 	case logical.UpdateOperation:
 		// store updated Role
 		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)

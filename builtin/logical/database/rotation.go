@@ -294,8 +294,6 @@ type setStaticAccountOutput struct {
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
 func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
-	// lvr is the known LastVaultRotation
-	var lvr time.Time
 	var merr error
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
@@ -365,7 +363,8 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	}
 
 	// Store updated role information
-	lvr = time.Now()
+	// lvr is the known LastVaultRotation
+	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
 	input.Role.StaticAccount.Password = password
 	output.RotationTime = lvr
