@@ -1,6 +1,7 @@
 executor: go-machine
 parallelism: 2
 steps:
+  - github-status/pending
   - checkout
   - run:
       name: Allow circleci user to restore Go modules cache
@@ -15,3 +16,4 @@ steps:
       path: test-results
   - store_test_results:
       path: test-results
+  - github-status/report

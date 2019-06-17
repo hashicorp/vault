@@ -10,6 +10,9 @@ references:
     go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
     yarn-lock: &YARN_LOCK_CACHE_KEY yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
 
+orbs:
+  github-status: samsalisbury/github-status@0.0.1
+
 # more commands defined in commands/
 commands:
   restore_yarn_cache:

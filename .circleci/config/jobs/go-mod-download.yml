@@ -13,3 +13,4 @@ steps:
       name: Verify checksums of Go modules
       command: go mod verify
   - save_go_cache
+  - github-status/report_failed_only

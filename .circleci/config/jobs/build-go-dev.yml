@@ -1,5 +1,6 @@
 executor: go
 steps:
+  - github-status/pending
   - checkout
   - restore_go_cache
   - attach_workspace:
@@ -19,3 +20,4 @@ steps:
       root: .
       paths:
         - bin
+  - github-status/report

@@ -11,3 +11,4 @@ steps:
         yarn install --ignore-optional
         npm rebuild node-sass
   - save_yarn_cache
+  - github-status/report_failed_only

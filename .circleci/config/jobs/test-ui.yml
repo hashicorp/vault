@@ -1,6 +1,7 @@
 executor: node
 resource_class: medium+
 steps:
+  - github-status/pending
   - checkout
   - restore_yarn_cache
   - attach_workspace:
@@ -31,3 +32,4 @@ steps:
       path: ui/test-results
   - store_test_results:
       path: ui/test-results
+  - github-status/report
