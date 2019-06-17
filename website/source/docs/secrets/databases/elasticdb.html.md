@@ -21,24 +21,22 @@ more information about setting up the database secrets engine.
 ## Getting Started
 
 To take advantage of this plugin, you must first enable Elasticsearch's native realm of security by activating X-Pack. These
-instructions will walk you through doing this using Elasticsearch 6.6.1. However, Elasticsearch 7.x.x is also supported.
+instructions will walk you through doing this using Elasticsearch 7.1.1. However, Elasticsearch 7.x.x is also supported.
 At the time of writing, X-Pack was a paid feature. To use it, you may need to enable a 30-day trial with Elasticsearch, 
 or activate a paid version.
 
 ### Enable X-Pack Security in Elasticsearch
 
-Read [Securing the Elastic Stack](https://www.elastic.co/guide/en/elastic-stack-overview/6.6/elasticsearch-security.html) and 
-follow [its instructions for enabling X-Pack Security](https://www.elastic.co/guide/en/elasticsearch/reference/6.6/setup-xpack.html). 
-When done, verify that you've enabled X-Pack by running `$ $ES_HOME/bin/elasticsearch-setup-passwords interactive`. You'll
-know it's been set up successfully if it takes you through a number of password-inputting steps.
+Read [Securing the Elastic Stack](https://www.elastic.co/guide/en/elastic-stack-overview/7.1/elasticsearch-security.html) and 
+follow [its instructions for enabling X-Pack Security](https://www.elastic.co/guide/en/elasticsearch/reference/7.1/setup-xpack.html). 
 
-### Recommended: Enable Encrypted Communications
+### Enable Encrypted Communications
 
-This plugin communicates with Elasticsearch's security API. We recommend you enable TLS for these communications so they can be
+This plugin communicates with Elasticsearch's security API. ES requires TLS for these communications so they can be
 encrypted.
 
-To set up TLS in Elasticsearch, first read [encrypted communications](https://www.elastic.co/guide/en/elastic-stack-overview/6.6/encrypting-communications.html)
-and go through its instructions on [encrypting HTTP client communications](https://www.elastic.co/guide/en/elasticsearch/reference/6.6/configuring-tls.html#tls-http). 
+To set up TLS in Elasticsearch, first read [encrypted communications](https://www.elastic.co/guide/en/elastic-stack-overview/7.1/encrypting-communications.html)
+and go through its instructions on [encrypting HTTP client communications](https://www.elastic.co/guide/en/elasticsearch/reference/7.1/configuring-tls.html#tls-http). 
 
 After enabling TLS on the Elasticsearch side, you'll need to convert the .p12 certificates you generated to other formats so they can be 
 used by Vault. [Here is an example using OpenSSL](https://stackoverflow.com/questions/15144046/converting-pkcs12-certificate-into-pem-using-openssl) 
@@ -51,6 +49,11 @@ and using `sudo dpkg-reconfigure ca-certificates`.
 
 The above instructions may vary if you are not using an Ubuntu machine. Please ensure you're using the methods specific to your operating
 environment. Describing every operating environment is outside the scope of these instructions.
+
+### Set Up Passwords
+
+When done, verify that you've enabled X-Pack by running `$ $ES_HOME/bin/elasticsearch-setup-passwords interactive`. You'll
+know it's been set up successfully if it takes you through a number of password-inputting steps.
 
 ### Create a Role for Vault
 
