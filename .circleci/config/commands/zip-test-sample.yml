@@ -17,5 +17,6 @@ steps:
         OUTDIR=zipped/<<parameters.samples_dir>>
         mkdir -p $OUTDIR
         tar -czf $OUTDIR/$TARBALL <<parameters.samples_dir>>
+        tree <<parameters.workspace_root>>
   - store_artifacts:
-      path: zipped/<<parameters.samples_dir>>
+      path: <<parameters.workspace_root>>/zipped/<<parameters.samples_dir>>

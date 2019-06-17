@@ -18,9 +18,10 @@ jobs:
           OUTDIR=zipped/sample/make-test-race
           mkdir -p $OUTDIR
           tar -czf $OUTDIR/$TARBALL sample/make-test-race
+          tree /tmp/workspace
         name: zip up samples
     - store_artifacts:
-        path: zipped/sample/make-test-race
+        path: /tmp/workspace/zipped/sample/make-test-race
   install-ui-dependencies:
     docker:
     - image: node:10-stretch
@@ -370,9 +371,10 @@ jobs:
           OUTDIR=zipped/sample/make-race
           mkdir -p $OUTDIR
           tar -czf $OUTDIR/$TARBALL sample/make-race
+          tree /tmp/workspace
         name: zip up samples
     - store_artifacts:
-        path: zipped/sample/make-race
+        path: /tmp/workspace/zipped/sample/make-race
 workflows:
   ci:
     jobs:
