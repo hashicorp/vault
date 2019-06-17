@@ -132,7 +132,7 @@ export default Service.extend({
 
       const navPaths = paths
         .map(path => {
-          if (pathInfo[path]['x-vault-displayNavigation']) {
+          if (pathInfo[path]['x-vault-displayAttrs'] && pathInfo[path]['x-vault-displayAttrs'].navigation) {
             return { path: path };
           }
         })
