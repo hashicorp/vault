@@ -14,9 +14,12 @@
     </span>
     {{#if (is-version "OSS")}}
       <span>
-        {{#upgrade-link linkClass="has-text-grey"}}
+        <a
+          href="https://hashicorp.com/products/vault/trial?source=vaultui"
+          class="link has-text-grey"
+        >
           Upgrade to Vault Enterprise
-        {{/upgrade-link}}
+        </a>
       </span>
     {{/if}}
     <span>
