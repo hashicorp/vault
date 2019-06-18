@@ -37,6 +37,7 @@ CHANGES:
 
 FEATURES:
 
+ * Adds an ElasticSearch database plugin which issues unique, short-lived ElasticSearch credentials [GH-6857]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
