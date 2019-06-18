@@ -185,7 +185,7 @@ permissions, but lower level permissions _may_ be usable.
 $ cf create-user vault pa55w0rd
 $ cf orgs
 $ cf org-users my-example-org
-$ cf set-org-role Alice my-example-org OrgManager
+$ cf set-org-role vault my-example-org OrgManager
 ```
 
 Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first 
