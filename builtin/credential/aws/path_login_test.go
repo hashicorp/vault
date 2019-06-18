@@ -63,7 +63,7 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 }
 
 func TestBackend_pathLogin_parseIamArn(t *testing.T) {
-	testParser := func(inputArn, expectedCanonicalArn string, expectedEntity iamEntity) {
+	testParser := func(t *testing.T, inputArn, expectedCanonicalArn string, expectedEntity iamEntity, expectFail bool) {
 		entity, err := parseIamArn(inputArn)
 		if err != nil {
 			t.Fatal(err)
@@ -76,22 +76,26 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 		}
 	}
 
-	testParser("arn:aws:iam::123456789012:user/UserPath/MyUserName",
+	testParser(t, "arn:aws:iam::123456789012:user/UserPath/MyUserName",
 		"arn:aws:iam::123456789012:user/MyUserName",
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "user", Path: "UserPath", FriendlyName: "MyUserName"},
+		false,
 	)
 	canonicalRoleArn := "arn:aws:iam::123456789012:role/RoleName"
-	testParser("arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName",
+	testParser(t, "arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName",
 		canonicalRoleArn,
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "assumed-role", FriendlyName: "RoleName", SessionInfo: "RoleSessionName"},
+		false,
 	)
-	testParser("arn:aws:iam::123456789012:role/RolePath/RoleName",
+	testParser(t, "arn:aws:iam::123456789012:role/RolePath/RoleName",
 		canonicalRoleArn,
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "role", Path: "RolePath", FriendlyName: "RoleName"},
+		false,
 	)
-	testParser("arn:aws:iam::123456789012:instance-profile/profilePath/InstanceProfileName",
+	testParser(t, "arn:aws:iam::123456789012:instance-profile/profilePath/InstanceProfileName",
 		"",
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "instance-profile", Path: "profilePath", FriendlyName: "InstanceProfileName"},
+		false,
 	)
 
 	// Test that it properly handles pathological inputs...
@@ -113,6 +117,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	_, err = parseIamArn("arn:aws:iam::1234556789012:/")
 	if err == nil {
 		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
+	}
+	_, err = parseIamArn("arn:aws:sts::1234556789012:assumed-role/role")
+	if err == nil {
+		t.Error("expected error from malformed assumed role ARN")
 	}
 }
 

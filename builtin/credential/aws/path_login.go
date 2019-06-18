@@ -1404,6 +1404,10 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	// now, entity.FriendlyName should either be <UserName> or <RoleName>
 	switch entity.Type {
 	case "assumed-role":
+		// Check for three parts for assumed role ARNs
+		if len(parts) < 3 {
+			return nil, fmt.Errorf("unrecognized arn: %q contains fewer than 3 slash-separated parts", fullParts[5])
+		}
 		// Assumed roles don't have paths and have a slightly different format
 		// parts[2] is <RoleSessionName>
 		entity.Path = ""
