@@ -34,13 +34,13 @@ type expireableKey struct {
 }
 
 type namedKey struct {
-	Name             string           `json:"name"`
-	SigningAlgorithm string           `json:"signing_algorithm"`
-	VerificationTTL  int              `json:"verification_ttl"`
-	RotationPeriod   int              `json:"rotation_period"`
-	KeyRing          []*expireableKey `json:"key_ring"`
-	SigningKey       *jose.JSONWebKey `json:"signing_key"`
-	NextRotation     time.Time        `json:"next_rotation"`
+	Name            string           `json:"name"`
+	Algorithm       string           `json:"signing_algorithm"`
+	VerificationTTL time.Duration    `json:"verification_ttl"`
+	RotationPeriod  time.Duration    `json:"rotation_period"`
+	KeyRing         []*expireableKey `json:"key_ring"`
+	SigningKey      *jose.JSONWebKey `json:"signing_key"`
+	NextRotation    time.Time        `json:"next_rotation"`
 }
 
 type role struct {
@@ -124,24 +124,29 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 
 				"rotation_period": {
 					Type:        framework.TypeDurationSecond,
-					Description: "How often to generate a new keypair. Defaults to 6h",
+					Description: "How often to generate a new keypair.",
+					Default:     "6h",
 				},
 
 				"verification_ttl": {
 					Type:        framework.TypeDurationSecond,
-					Description: "Controls how long the public portion of a key will be available for verification after being rotated. Defaults to the current rotation_period, which will provide for a current key and previous key.",
+					Description: "Controls how long the public portion of a key will be available for verification after being rotated.",
+					Default:     "24h",
 				},
 
 				"algorithm": {
 					Type:        framework.TypeString,
 					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
+					Default:     "RS256",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.CreateOperation: i.pathOIDCCreateUpdateKey,
 				logical.UpdateOperation: i.pathOIDCCreateUpdateKey,
 				logical.ReadOperation:   i.pathOIDCReadKey,
 				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
+			ExistenceCheck:  i.pathOIDCKeyExistenceCheck,
 			HelpSynopsis:    "oidc/key/:key help synopsis here",
 			HelpDescription: "oidc/key/:key help description here",
 		},
@@ -217,12 +222,12 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "TTL of the tokens generated against the role.",
-					Default:     "5m",
+					Default:     "24h",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathOIDCUpdateRole,
-				logical.CreateOperation: i.pathOIDCUpdateRole,
+				logical.UpdateOperation: i.pathOIDCCreateUpdateRole,
+				logical.CreateOperation: i.pathOIDCCreateUpdateRole,
 				logical.ReadOperation:   i.pathOIDCReadRole,
 				logical.DeleteOperation: i.pathOIDCDeleteRole,
 			},
@@ -328,16 +333,9 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var key *namedKey
-	var update bool
-
-	// parse parameters
 	name := d.Get("name").(string)
-	rotationPeriodInput, rotationPeriodInputOK := d.GetOk("rotation_period")
-	verificationTTLInput, verificationTTLInputOK := d.GetOk("verification_ttl")
-	algorithm := d.Get("algorithm").(string)
 
-	// determine if we are creating a new key or updating an existing key
+	var key namedKey
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
@@ -346,81 +344,62 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := entry.DecodeJSON(&key); err != nil {
 			return nil, err
 		}
-		update = true
+	} else {
+		key.Name = name
 	}
 
-	var rotationPeriod int
-	var verificationTTL int
-
-	// set defaults if creating a new key
-	if !update {
-		if rotationPeriodInputOK {
-			rotationPeriod = rotationPeriodInput.(int)
-		} else {
-			rotationPeriod = 6 * 60 * 60 // 6h in seconds
-		}
-
-		if verificationTTLInputOK {
-			verificationTTL = verificationTTLInput.(int)
-		} else {
-			verificationTTL = rotationPeriod
-		}
-
-		if algorithm == "" {
-			algorithm = "RS256"
-		}
+	if rotationPeriodRaw, ok := d.GetOk("rotation_period"); ok {
+		key.RotationPeriod = time.Duration(rotationPeriodRaw.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		key.RotationPeriod = time.Duration(d.Get("rotation_period").(int)) * time.Second
 	}
 
-	// set values on the namedkey if they were provided and this is an update
-	if update {
-		if rotationPeriodInputOK {
-			key.RotationPeriod = rotationPeriodInput.(int)
+	if verificationTTLRaw, ok := d.GetOk("verification_ttl"); ok {
+		key.VerificationTTL = time.Duration(verificationTTLRaw.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		key.VerificationTTL = time.Duration(d.Get("verification_ttl").(int)) * time.Second
+	}
 
-			// TODO: this should probably be the old/new NextRotation?
-			key.NextRotation = time.Now().Add(time.Duration(rotationPeriod) * time.Second)
-		}
+	if key.RotationPeriod < 1*time.Minute {
+		return logical.ErrorResponse("rotation_period must be at least one minute"), nil
+	}
 
-		if verificationTTLInputOK {
-			key.VerificationTTL = verificationTTLInput.(int)
-		}
+	if key.VerificationTTL > 10*key.RotationPeriod {
+		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
+	}
 
-		if algorithm != "" {
-			if algorithm != "RS256" {
-				return logical.ErrorResponse("unknown signing algorithm %q", algorithm), logical.ErrInvalidRequest
-			}
-			key.SigningAlgorithm = algorithm
-		}
+	if algorithm, ok := d.GetOk("algorithm"); ok {
+		key.Algorithm = algorithm.(string)
+	} else if req.Operation == logical.CreateOperation {
+		key.Algorithm = d.Get("algorithm").(string)
+	}
+
+	if key.Algorithm != "RS256" {
+		return logical.ErrorResponse("unknown signing algorithm %q", key.Algorithm), nil
+	}
+
+	// Update next rotation time if it is unset or now earlier than previously set.
+	nextRotation := time.Now().Add(key.RotationPeriod)
+	if key.NextRotation.IsZero() || nextRotation.Before(key.NextRotation) {
+		key.NextRotation = nextRotation
 	}
 
 	// generate keys if creating a new key
-	if !update {
-		signingKey, err := generateKeys(algorithm)
+	if key.SigningKey == nil {
+		signingKey, err := generateKeys(key.Algorithm)
 		if err != nil {
 			return nil, err
 		}
 
-		// add public part of signing key to the key ring
-		keyRing := []*expireableKey{
-			{KeyID: signingKey.Public().KeyID},
-		}
-
-		// create the named key
-		key = &namedKey{
-			Name:             name,
-			SigningAlgorithm: algorithm,
-			RotationPeriod:   rotationPeriod,
-			VerificationTTL:  verificationTTL,
-			KeyRing:          keyRing,
-			SigningKey:       signingKey,
-			NextRotation:     time.Now().Add(time.Duration(rotationPeriod) * time.Second),
-		}
+		key.SigningKey = signingKey
+		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
 	}
 
-	// store named key (which was either just created or updated)
+	// store named key
 	entry, err = logical.StorageEntryJSON(namedKeyConfigPath+name, key)
 	if err != nil {
 		return nil, err
@@ -431,13 +410,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	i.oidcCache.purge()
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"rotation_period":  key.RotationPeriod,
-			"verification_ttl": key.VerificationTTL,
-			"algorithm":        key.SigningAlgorithm,
-		},
-	}, nil
+	return nil, nil
 }
 
 // handleOIDCReadKey is used to read an existing key
@@ -455,9 +428,9 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		}
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"rotation_period":  storedNamedKey.RotationPeriod,
-				"verification_ttl": storedNamedKey.VerificationTTL,
-				"algorithm":        storedNamedKey.SigningAlgorithm,
+				"rotation_period":  int64(storedNamedKey.RotationPeriod.Seconds()),
+				"verification_ttl": int64(storedNamedKey.VerificationTTL.Seconds()),
+				"algorithm":        storedNamedKey.Algorithm,
 			},
 		}, nil
 	}
@@ -525,7 +498,6 @@ func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Reques
 // pathOIDCRotateKey is used to manually trigger a rotation on the named key
 func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	verificationTTLOverrideInput, verificationTTLOverrideInputOK := d.GetOk("verification_ttl")
 
 	// load the named key and perform a rotation
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
@@ -541,28 +513,31 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	// call rotate with an appropriate overrideTTL where -1 means no override
-	var verificationTTLOverride int
-	if verificationTTLOverrideInputOK {
-		verificationTTLOverride = verificationTTLOverrideInput.(int)
-	} else {
-		verificationTTLOverride = -1
+	// call rotate with an appropriate overrideTTL where < 0 means no override
+	verificationTTLOverride := -1 * time.Second
+
+	if ttlRaw, ok := d.GetOk("verification_ttl"); ok {
+		verificationTTLOverride = time.Duration(ttlRaw.(int)) * time.Second
 	}
-	verificationTTLUsed, err := storedNamedKey.rotate(ctx, req.Storage, verificationTTLOverride)
-	if err != nil {
+
+	if err := storedNamedKey.rotate(ctx, req.Storage, verificationTTLOverride); err != nil {
 		return nil, err
 	}
 
 	i.oidcCache.purge()
 
-	// prepare response
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"rotation_period":  storedNamedKey.RotationPeriod,
-			"verification_ttl": verificationTTLUsed,
-			"algorithm":        storedNamedKey.SigningAlgorithm,
-		},
-	}, nil
+	return nil, nil
+}
+
+func (i *IdentityStore) pathOIDCKeyExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
 }
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
@@ -701,7 +676,7 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 }
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
-	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.SigningAlgorithm)}
+	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
 	if err != nil {
 		return "", err
@@ -730,7 +705,7 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 }
 
 // handleOIDCCreateRole is used to create a new role or update an existing one
-func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	var role role
@@ -1078,51 +1053,43 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 // namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
 // verification_ttl that was applied. verification_ttl can be overriden with an
 // overrideVerificationTTL value >= 0
-func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL int) (int, error) {
+func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL
 
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
 	}
 
-	// determine verificationTTL duration
-	verificationTTLDuration := time.Duration(verificationTTL) * time.Second
-
 	// generate new key
-	signingKey, err := generateKeys(k.SigningAlgorithm)
+	signingKey, err := generateKeys(k.Algorithm)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
-		return -1, err
+		return err
 	}
 
-	// rotation involves overwriting current signing key, updating key ring, and updating global
-	// public keys to expire the signing key that was just rotated
-	rotateID := k.SigningKey.KeyID
-	k.SigningKey = signingKey
-	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.KeyID})
-
-	// set the previous public key's  expiry time
+	// set the previous public key's expiry time
 	for _, key := range k.KeyRing {
-		if key.KeyID == rotateID {
-			key.ExpireAt = time.Now().Add(verificationTTLDuration)
+		if key.KeyID == k.SigningKey.KeyID {
+			key.ExpireAt = time.Now().Add(verificationTTL)
 			break
 		}
 	}
-
-	k.NextRotation = time.Now().Add(time.Duration(k.RotationPeriod) * time.Second)
+	k.SigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.KeyID})
+	k.NextRotation = time.Now().Add(k.RotationPeriod)
 
 	// store named key (it was modified when rotate was called on it)
 	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.Name, k)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	if err := s.Put(ctx, entry); err != nil {
-		return -1, err
+		return err
 	}
 
-	return verificationTTL, nil
+	return nil
 }
 
 // generateKeys returns a signingKey and publicKey pair
@@ -1305,7 +1272,7 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 		// Key that is due to be rotated.
 		if now.After(key.NextRotation) {
 			i.Logger().Debug("rotating OIDC key", "key", key.Name)
-			if _, err := key.rotate(ctx, s, -1); err != nil {
+			if err := key.rotate(ctx, s, -1); err != nil {
 				return now, err
 			}
 
