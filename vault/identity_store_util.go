@@ -1039,7 +1039,7 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 	return nil
 }
 
-func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *identity.Group, memberGroupIDs []string) error {
+func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *identity.Group, previousGroup *identity.Group, memberGroupIDs []string) error {
 	var err error
 
 	if group == nil {
@@ -1221,6 +1221,16 @@ ALIAS:
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
 		err = i.sanitizeAlias(ctx, group.Alias)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If previousGroup is not nil, we are moving the alias from the previous
+	// group to the new one. As a result we need to upsert both in the context
+	// of this same transaction.
+	if previousGroup != nil {
+		err = i.UpsertGroupInTxn(txn, previousGroup, true)
 		if err != nil {
 			return err
 		}
