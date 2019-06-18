@@ -46,7 +46,8 @@ IMPROVEMENTS:
    of the list is one of the expected values [JWT-50]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
- * storage/postgres: LIST now performs better on large datasets. [GH-6546]
+ * identity: Allow a group alias' canonical ID to be modified
+ * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
