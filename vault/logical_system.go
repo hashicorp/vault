@@ -517,7 +517,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 		if req.RequestReader == nil {
-			return nil, errors.New("no writer for request")
+			return nil, errors.New("no reader for request")
 		}
 
 		access := b.Core.seal.GetAccess()
@@ -557,7 +557,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}
 			defer b.Core.stateLock.Unlock()
 
-			// We are calling the callback function syncronously here while we
+			// We are calling the callback function synchronously here while we
 			// have the lock. So set it to nil and restore the callback when we
 			// finish.
 			raftStorage.SetRestoreCallback(nil)
