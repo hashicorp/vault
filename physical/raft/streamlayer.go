@@ -67,12 +67,12 @@ type RaftTLSKeyring struct {
 	// states of the keyring are different.
 	Term uint64 `json:"term"`
 
-	// ActiveKey is the key that is active in the keyring. Only
+	// ActiveKeyID is the key ID to track the active key in the keyring. Only
 	// the active key is used for dialing.
 	ActiveKeyID string `json:"active_key_id"`
 }
 
-// GetActive returns the active key
+// GetActive returns the active key.
 func (k *RaftTLSKeyring) GetActive() *RaftTLSKey {
 	if k.ActiveKeyID == "" {
 		return nil
