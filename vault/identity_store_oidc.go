@@ -84,6 +84,7 @@ type oidcCache struct {
 	lock              sync.RWMutex
 	discoveryResponse []byte
 	jwksResponse      []byte
+	config            *oidcConfig
 	nextPeriodicRun   time.Time
 }
 
@@ -313,7 +314,13 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 }
 
 func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
-	var c oidcConfig
+	lock := i.oidcCache.lock
+
+	lock.RLock()
+	if i.oidcCache.config != nil {
+		defer lock.RUnlock()
+		return i.oidcCache.config, nil
+	}
 
 	entry, err := s.Get(ctx, oidcConfigStorageKey)
 	if err != nil {
@@ -324,9 +331,14 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		return nil, nil
 	}
 
+	var c oidcConfig
 	if err := entry.DecodeJSON(&c); err != nil {
 		return nil, err
 	}
+
+	lock.Lock()
+	i.oidcCache.config = &c
+	lock.Unlock()
 
 	return &c, nil
 }
