@@ -2,7 +2,6 @@ package vault
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -20,14 +19,14 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	// Create a test key "test-key"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
 	// Create a test role "test-role1" with a valid key -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"key": "test-key",
 		},
@@ -46,7 +45,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	// Create a test role "test-role2" witn an invalid key -- should fail
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role2",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"key": "a-key-that-does-not-exist",
 		},
@@ -77,7 +76,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	// Compare response for "test-role1" before and after it was updated
 	expectedDiff := map[string]interface{}{
 		"Data.map[template]:  != {\"some-key\":\"some-value\"}": true,
-		"Data.map[ttl]: 0 != 7200":                              true,
+		"Data.map[ttl]: 86400 != 7200":                          true, // 24h to 2h
 	}
 	diff := deep.Equal(respReadTestRole1, respReadTestRole1AfterUpdate)
 	expectStrings(t, diff, expectedDiff)
@@ -101,7 +100,9 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	if respReadTestRole1AfterDelete != nil {
 		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestRole1AfterDelete)
 	}
-	fmt.Printf("after delete:\n%#v", respReadTestRole1AfterDelete)
+	if respReadTestRole1AfterDelete != nil {
+		t.Fatalf("Expected role to have been deleted but read response was:\n%#v", respReadTestRole1AfterDelete)
+	}
 }
 
 // TestOIDC_Path_OIDCRole tests the List operation for roles
@@ -114,14 +115,14 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 	// Create a test key "test-key"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
 	// Create "test-role1"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"key": "test-key",
 		},
@@ -131,7 +132,7 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 	// Create "test-role2"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role2",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"key": "test-key",
 		},
@@ -179,7 +180,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	// Create a test key "test-key" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
@@ -197,8 +198,8 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"rotation_period":  "1m",
-			"verification_ttl": "2h",
+			"rotation_period":  "10m",
+			"verification_ttl": "1h",
 		},
 		Storage: storage,
 	})
@@ -214,8 +215,8 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 
 	// Compare response for "test-key" before and after it was updated
 	expectedDiff := map[string]interface{}{
-		"Data.map[rotation_period]: 21600 != 60":    true,
-		"Data.map[verification_ttl]: 21600 != 7200": true,
+		"Data.map[rotation_period]: 86400 != 600":   true, // from 24h to 10m
+		"Data.map[verification_ttl]: 86400 != 3600": true, // from 24h to 1h
 	}
 	diff := deep.Equal(respReadTestKey, respReadTestKeyAfterUpdate)
 	expectStrings(t, diff, expectedDiff)
@@ -256,7 +257,6 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Operation: logical.DeleteOperation,
 		Storage:   storage,
 	})
-	fmt.Printf("delete test-key:\n%#v", resp)
 	expectSuccess(t, resp, err)
 }
 
@@ -269,13 +269,13 @@ func TestOIDC_Path_OIDCKey(t *testing.T) {
 	// Prepare two keys, test-key1 and test-key2
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key1",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key2",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
@@ -321,14 +321,13 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// Create a test key "test-key"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
-	//todo THIS NAMING IS ALL WRONG - SHOULD BE PUBLIC KEYS, NOT CERTS...
-	// .well-known/certs should contain 1 public key
+	// .well-known/keys should contain 1 public key
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/certs",
+		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
@@ -354,9 +353,9 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/certs should contain 3 public keys
+	// .well-known/keys should contain 3 public keys
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/certs",
+		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
@@ -370,7 +369,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// create another named key
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key2",
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
 
@@ -381,10 +380,10 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/certs should contain 1 public key, all of the public keys
+	// .well-known/keys should contain 1 public key, all of the public keys
 	// from named key "test-key" should have been deleted
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/certs",
+		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})

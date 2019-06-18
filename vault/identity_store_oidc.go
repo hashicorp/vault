@@ -131,7 +131,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"rotation_period": {
 					Type:        framework.TypeDurationSecond,
 					Description: "How often to generate a new keypair.",
-					Default:     "6h",
+					Default:     "24h",
 				},
 
 				"verification_ttl": {
@@ -352,7 +352,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 	return &c, nil
 }
 
-// handleOIDCCreateKey is used to create a new named key or update an existing one
+// handleOIDCCreateUpdateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -720,7 +720,7 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 	return role != nil, nil
 }
 
-// handleOIDCCreateRole is used to create a new role or update an existing one
+// handleOIDCCreateUpdateRole is used to create a new role or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
