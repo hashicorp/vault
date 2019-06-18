@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -233,6 +235,24 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			},
 			HelpSynopsis:    "list oidc/role/ help synopsis here",
 			HelpDescription: "list oidc/role/ help description here",
+		},
+		{
+			Pattern: "oidc/introspect/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"token": {
+					Type:        framework.TypeString,
+					Description: "Token to verify",
+				},
+				"client_id": {
+					Type:        framework.TypeString,
+					Description: "Optional client_id to verify",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathOIDCIntrospect,
+			},
+			HelpSynopsis:    "list oidc/introspect/ help synopsis here",
+			HelpDescription: "list oidc/introspect/ help description here",
 		},
 	}
 }
@@ -768,7 +788,7 @@ func (i *IdentityStore) pathOIDCUpdateRole(ctx context.Context, req *logical.Req
 			return logical.ErrorResponse("Error parsing template JSON: %s", err.Error()), nil
 		}
 
-		for key, _ := range tmp {
+		for key := range tmp {
 			if strutil.StrListContains(requiredClaims, key) {
 				return logical.ErrorResponse(`Top level key %q not allowed. Restricted keys: %s`,
 					key, strings.Join(requiredClaims, ", ")), nil
@@ -951,6 +971,97 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		i.oidcCache.lock.Lock()
 		i.oidcCache.jwksResponse = data
 		i.oidcCache.lock.Unlock()
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
+func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var claims jwt.Claims
+	var errResponse string
+
+	rawIDToken := d.Get("token").(string)
+	clientID := d.Get("client_id").(string)
+
+	// validate basic JWT structure
+	parsedJWT, err := jwt.ParseSigned(rawIDToken)
+	if err != nil {
+		errResponse = fmt.Sprintf("error parsing token: %s", err.Error())
+	}
+
+	// validate signature
+	if errResponse == "" {
+		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage) // TODO: use cached keys
+		if err != nil {
+			return nil, err
+		}
+
+		var valid bool
+		for _, keyID := range keyIDs {
+			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+			if err != nil {
+				return nil, err
+			}
+			if err := parsedJWT.Claims(key, &claims); err == nil {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
+			errResponse = "unable to validate the token signature"
+		}
+	}
+
+	// validate claims
+	if errResponse == "" {
+		expected := jwt.Expected{
+			Issuer: "http://127.0.0.1:8200/v1/identity/oidc", // TODO: use real issuer
+			Time:   time.Now(),
+		}
+
+		if clientID != "" {
+			expected.Audience = []string{clientID}
+		}
+
+		if claimsErr := claims.Validate(expected); claimsErr != nil {
+			errResponse = fmt.Sprintf("error validating claims: %s", claimsErr.Error())
+		}
+	}
+
+	// validate entity exists and is active
+	if errResponse == "" {
+		entity, err := i.MemDBEntityByID(claims.Subject, true)
+		if err != nil {
+			return nil, err
+		}
+		if entity == nil {
+			errResponse = "entity was not found"
+		} else if entity.Disabled {
+			errResponse = "entity is disabled"
+		}
+	}
+
+	response := map[string]interface{}{
+		"active": true,
+	}
+
+	if errResponse != "" {
+		response["active"] = false
+		response["error"] = errResponse
+	}
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
 	}
 
 	resp := &logical.Response{
