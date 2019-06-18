@@ -1,6 +1,5 @@
 import DS from 'ember-data';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
-import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import { computed } from '@ember/object';
 
 const { attr } = DS;
@@ -13,14 +12,13 @@ export default DS.Model.extend({
   name: attr('string'),
   allowedOperations: attr(),
   fieldGroups: computed(function() {
-    let groups = [
+    const groups = [
       {
         default: ['name'],
       },
       { 'Allowed Operations': this.newFields },
     ];
 
-    groups = combineFieldGroups(groups, this.newFields, []);
     return fieldToAttrs(this, groups);
   }),
 });

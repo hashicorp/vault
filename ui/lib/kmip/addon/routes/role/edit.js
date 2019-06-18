@@ -5,12 +5,11 @@ export default Route.extend({
   store: service(),
   secretMountPath: service(),
   pathHelp: service(),
-
   beforeModel() {
     return this.pathHelp.getNewModel('kmip/role', null, this.secretMountPath.currentPath);
   },
-
-  model(params) {
+  model() {
+    const params = this.paramsFor(this.routeName);
     return this.store.queryRecord('kmip/role', {
       backend: this.secretMountPath.currentPath,
       scope: params.scope_name,
@@ -20,7 +19,7 @@ export default Route.extend({
 
   setupController(controller) {
     this._super(...arguments);
-    let { scope_name: scope, role_name: role } = this.paramsFor('role');
+    let { scope_name: scope, role_name: role } = this.paramsFor(this.routeName);
     controller.setProperties({ role, scope });
   },
 });
