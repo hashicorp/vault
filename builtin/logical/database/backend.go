@@ -56,10 +56,11 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	b.credRotationQueue = queue.New()
 	// Create a context with a cancel method for processing any WAL entries and
 	// populating the queue
-	ctx, cancel := context.WithCancel(ctx)
+	initCtx := context.Background()
+	ictx, cancel := context.WithCancel(initCtx)
 	b.cancelQueue = cancel
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(ctx, conf)
+	go b.initQueue(ictx, conf)
 	return b, nil
 }
 
