@@ -61,6 +61,8 @@ IMPROVEMENTS:
  
 BUG FIXES: 
 
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
+   when parsing this value [GH-6917]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
