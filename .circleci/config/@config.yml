@@ -28,6 +28,8 @@ commands:
           name: Allow circleci user to restore Go modules cache
           command: |
             set -eux -o pipefail
+            # Exit early if there is no user called circleci.
+            id -u circleci > /dev/null 2>&1 || exit 0
             SUDO=$(if command -v sudo > /dev/null 2>&1; then echo sudo; fi)
             $SUDO mkdir -p /go
             $SUDO chown -R circleci:circleci /go
