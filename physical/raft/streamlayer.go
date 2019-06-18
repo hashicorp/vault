@@ -38,10 +38,6 @@ type RaftTLSKey struct {
 	// key.
 	AppliedIndex uint64 `json:"applied_index"`
 
-	// Active specifies whether this key is the active one in the keyring. Only
-	// the active key is used for dialing.
-	Active bool `json:"active"`
-
 	// CertBytes is the marshaled certificate.
 	CertBytes []byte `json:"cluster_cert"`
 
@@ -70,12 +66,20 @@ type RaftTLSKeyring struct {
 	// Term is an incrementing identifier value used to quickly determine if two
 	// states of the keyring are different.
 	Term uint64 `json:"term"`
+
+	// ActiveKeyID is the key ID to track the active key in the keyring. Only
+	// the active key is used for dialing.
+	ActiveKeyID string `json:"active_key_id"`
 }
 
-// GetActive returns the active key
+// GetActive returns the active key.
 func (k *RaftTLSKeyring) GetActive() *RaftTLSKey {
+	if k.ActiveKeyID == "" {
+		return nil
+	}
+
 	for _, key := range k.Keys {
-		if key.Active {
+		if key.ID == k.ActiveKeyID {
 			return key
 		}
 	}
@@ -191,7 +195,6 @@ func (l *raftLayer) setTLSKeyring(keyring *RaftTLSKeyring) error {
 		return nil
 	}
 
-	var activeCount int
 	for _, key := range keyring.Keys {
 		switch {
 		case key.KeyParams == nil:
@@ -221,13 +224,10 @@ func (l *raftLayer) setTLSKeyring(keyring *RaftTLSKeyring) error {
 			},
 			D: key.KeyParams.D,
 		}
-		if key.Active {
-			activeCount++
-		}
 	}
 
-	if activeCount != 1 {
-		return errors.New("expected exactly one active key")
+	if keyring.GetActive() == nil {
+		return errors.New("expected one active key to be present in the keyring")
 	}
 
 	l.keyring = keyring

@@ -258,7 +258,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 		// Upgrade to the new key
 		keyring.Keys = keyring.Keys[1:]
-		keyring.Keys[0].Active = true
+		keyring.ActiveKeyID = keyring.Keys[0].ID
 		keyring.Term += 1
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
