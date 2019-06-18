@@ -69,7 +69,21 @@ type RaftTLSKeyring struct {
 
 	// ActiveKey is the key that is active in the keyring. Only
 	// the active key is used for dialing.
-	ActiveKey *RaftTLSKey `json:"active_key"`
+	ActiveKeyID string `json:"active_key_id"`
+}
+
+// GetActive returns the active key
+func (k *RaftTLSKeyring) GetActive() *RaftTLSKey {
+	if k.ActiveKeyID == "" {
+		return nil
+	}
+
+	for _, key := range k.Keys {
+		if key.ID == k.ActiveKeyID {
+			return key
+		}
+	}
+	return nil
 }
 
 func GenerateTLSKey() (*RaftTLSKey, error) {
@@ -212,7 +226,7 @@ func (l *raftLayer) setTLSKeyring(keyring *RaftTLSKeyring) error {
 		}
 	}
 
-	if keyring.ActiveKey == nil {
+	if keyring.GetActive() == nil {
 		return errors.New("expected one active key to be present in the keyring")
 	}
 
@@ -330,7 +344,7 @@ func (l *raftLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net
 
 	tlsConfig := l.baseTLSConfig.Clone()
 
-	key := l.keyring.ActiveKey
+	key := l.keyring.GetActive()
 	if key == nil {
 		return nil, errors.New("no active key")
 	}

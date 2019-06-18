@@ -310,7 +310,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		keyring := &raft.RaftTLSKeyring{
 			Keys: []*raft.RaftTLSKey{raftTLS},
 		}
-		keyring.ActiveKey = raftTLS
+		keyring.ActiveKeyID = raftTLS.ID
 
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {

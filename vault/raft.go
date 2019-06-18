@@ -258,7 +258,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 		// Upgrade to the new key
 		keyring.Keys = keyring.Keys[1:]
-		keyring.ActiveKey = keyring.Keys[0]
+		keyring.ActiveKeyID = keyring.Keys[0].ID
 		keyring.Term += 1
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
@@ -282,7 +282,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	activeKey := keyring.ActiveKey
+	activeKey := keyring.GetActive()
 	if activeKey == nil {
 		return errors.New("no active raft TLS key found")
 	}
