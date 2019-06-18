@@ -758,7 +758,7 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 
 // applyLog will take a given log command and apply it to the raft log. applyLog
 // doesn't return until the log has been applied to a quorum of servers and is
-// persisted to the local FSM. Caller should hold the raft lock.
+// persisted to the local FSM. Caller should hold the backend's read lock.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
 		return errors.New("raft storage backend is not initialized")
