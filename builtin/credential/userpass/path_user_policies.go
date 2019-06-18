@@ -19,6 +19,11 @@ func pathUserPolicies(b *backend) *framework.Path {
 			},
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
+				Description: "(DEPRECATED) Use 'token_policies' instead. If this and 'token_policies' are both specified only 'token_policies' will be used.",
+				Deprecated:  true,
+			},
+			"token_policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
 		},
@@ -43,9 +48,28 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies"))
+	var resp *logical.Response
 
-	return nil, b.setUser(ctx, req.Storage, username, userEntry)
+	policiesRaw, ok := d.GetOk("token_policies")
+	if !ok {
+		policiesRaw, ok = d.GetOk("policies")
+		if ok {
+			userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
+			userEntry.TokenPolicies = nil
+		}
+	} else {
+		userEntry.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
+		_, ok = d.GetOk("policies")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_policies' and deprecated 'policies' values supplied, ignoring the deprecated value")
+		}
+		userEntry.Policies = nil
+	}
+
+	return resp, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 const pathUserPoliciesHelpSyn = `
