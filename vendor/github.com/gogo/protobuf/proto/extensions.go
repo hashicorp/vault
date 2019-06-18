@@ -544,7 +544,7 @@ func SetExtension(pb Message, extension *ExtensionDesc, value interface{}) error
 	}
 	typ := reflect.TypeOf(extension.ExtensionType)
 	if typ != reflect.TypeOf(value) {
-		return fmt.Errorf("proto: bad extension value type. got: %T, want: %T", value, extension.ExtensionType)
+		return errors.New("proto: bad extension value type")
 	}
 	// nil extension values need to be caught early, because the
 	// encoder can't distinguish an ErrNil due to a nil extension
