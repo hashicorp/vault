@@ -79,22 +79,17 @@
                 {{/if}}
                 {{#if item.canDelete}}
                   <li class="action">
-                    {{#confirm-action
-                      confirmButtonClasses="button is-primary"
-                      buttonClasses="link is-destroy"
-                      onConfirmAction=(action "delete" item "secret")
-                      confirmMessage=(concat "Are you sure you want to permanently delete " item.id " and all its versions?")
-                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-                      class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-                      containerClasses="message-body is-block"
-                      messageClasses="is-block"
-                      data-test-v2-kv-delete=item.id
-                    }}
+                    <ConfirmAction
+                      @buttonClasses="link is-destroy"
+                      @confirmMessage="This will permanently delete this secret and all its versions."
+                      @onConfirmAction={{action "delete" item "secret"}}
+                      data-test-v2-kv-delete={{item.id}}
+                    >
                       {{if backendModel.isV2KV
                         "Permanently delete"
                         "Delete"
                       }}
-                    {{/confirm-action}}
+                    </ConfirmAction>
                   </li>
                 {{/if}}
               {{/if}}

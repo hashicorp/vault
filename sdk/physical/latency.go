@@ -3,6 +3,7 @@ package physical
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -19,6 +20,7 @@ type LatencyInjector struct {
 	backend       Backend
 	latency       time.Duration
 	jitterPercent int
+	randomLock    *sync.Mutex
 	random        *rand.Rand
 }
 
@@ -45,6 +47,7 @@ func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log
 		backend:       b,
 		latency:       latency,
 		jitterPercent: jitter,
+		randomLock:    new(sync.Mutex),
 		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 	}
 }
@@ -68,7 +71,9 @@ func (l *LatencyInjector) addLatency() {
 	if l.jitterPercent > 0 {
 		min := 100 - l.jitterPercent
 		max := 100 + l.jitterPercent
+		l.randomLock.Lock()
 		percent = l.random.Intn(max-min) + min
+		l.randomLock.Unlock()
 	}
 	latencyDuration := time.Duration(int(l.latency) * percent / 100)
 	time.Sleep(latencyDuration)

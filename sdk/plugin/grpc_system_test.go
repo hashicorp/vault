@@ -8,7 +8,7 @@ import (
 
 	"reflect"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -184,6 +184,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 				},
 			},
 		},
+		Disabled: true,
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

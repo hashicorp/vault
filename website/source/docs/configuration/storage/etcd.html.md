@@ -123,7 +123,7 @@ storage "etcd" {
 
 ### Enabling High Availability
 
-This example show enabling high availability for the Etcd storage backend.
+This example shows enabling high availability for the Etcd storage backend.
 
 ```hcl
 api_addr = "https://vault-leader.my-company.internal"

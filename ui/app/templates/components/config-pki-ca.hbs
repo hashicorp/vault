@@ -54,14 +54,14 @@
         </div>
         <div class="control">
           {{#if model.canDeleteRoot}}
-            {{#confirm-action
-              buttonClasses="button"
-              onConfirmAction=(action "deleteCA")
-              confirmMessage="Are you sure you want to delete the root CA key?"
-              cancelButtonText="Cancel"
-            }}
-            Delete
-            {{/confirm-action}}
+            <ConfirmAction
+              @buttonClasses="button"
+              @confirmTitle="Delete this CA key?"
+              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key are generated or uploaded."
+              @onConfirmAction={{action "deleteCA"}}
+            >
+              Delete
+            </ConfirmAction>
           {{/if}}
         </div>
       </div>

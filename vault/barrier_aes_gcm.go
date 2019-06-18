@@ -287,6 +287,7 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 	}
 
 	// Setup the keyring and finish
+	b.cache = make(map[uint32]cipher.AEAD)
 	b.keyring = keyring
 	return nil
 }

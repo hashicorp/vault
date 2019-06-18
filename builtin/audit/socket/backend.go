@@ -131,7 +131,7 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
+func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
 	if err := b.formatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
@@ -154,7 +154,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
 	return err
 }
 
-func (b *Backend) LogResponse(ctx context.Context, in *audit.LogInput) error {
+func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
 	if err := b.formatter.FormatResponse(ctx, &buf, b.formatConfig, in); err != nil {
 		return err

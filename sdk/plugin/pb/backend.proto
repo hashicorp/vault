@@ -210,6 +210,9 @@ message Auth {
 
 	// TokenType is the type of token being requested
 	uint32 token_type = 17;
+
+	// Whether the default policy should be added automatically by core
+	bool no_default_policy = 18;
 }
 
 message TokenEntry {

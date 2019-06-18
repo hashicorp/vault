@@ -39,7 +39,7 @@ branches:
 
 env:
   - TEST_COMMAND='make dev test-ember'
-  - TEST_COMMAND='make dev ember-ci-test'
+  - TEST_COMMAND='make dev test-ui-browserstack'
   - TEST_COMMAND='travis_wait 75 make testtravis'
   - TEST_COMMAND='travis_wait 75 make testracetravis'
   - GO111MODULE=on

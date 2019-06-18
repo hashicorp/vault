@@ -315,7 +315,7 @@ func (p *PostgreSQLBackend) HAEnabled() bool {
 // PostgreSQL table. It will block until either the stop channel is closed or
 // the lock could be acquired successfully. The returned channel will be closed
 // once the lock in the PostgreSQL table cannot be renewed, either due to an
-// error speaking to PostgresSQL or because someone else has taken it.
+// error speaking to PostgreSQL or because someone else has taken it.
 func (l *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()

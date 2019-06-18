@@ -115,7 +115,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleAliasUpdateCommon(),
+				logical.UpdateOperation: i.handleAliasCreateUpdate(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -147,7 +147,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleAliasUpdateCommon(),
+				logical.UpdateOperation: i.handleAliasCreateUpdate(),
 				logical.ReadOperation:   i.pathAliasIDRead(),
 				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},

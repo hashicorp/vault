@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -537,7 +536,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 
 	// Create an audit trail of the response
 	if !isControlGroupRun(req) {
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:                auth,
 			Request:             req,
 			Response:            auditResp,
@@ -668,7 +667,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if !isControlGroupRun(req) {
-			logInput := &audit.LogInput{
+			logInput := &logical.LogInput{
 				Auth:               auth,
 				Request:            req,
 				OuterErr:           ctErr,
@@ -690,7 +689,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Create an audit trail of the request
 	if !isControlGroupRun(req) {
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:               auth,
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
@@ -941,7 +940,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			errType = logical.ErrInvalidRequest
 		}
 
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:               auth,
 			Request:            req,
 			OuterErr:           ctErr,
@@ -963,7 +962,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// Create an audit trail of the request. Attach auth if it was returned,
 	// e.g. if a token was provided.
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:               auth,
 		Request:            req,
 		NonHMACReqDataKeys: nonHMACReqDataKeys,
@@ -1034,6 +1033,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		var entity *identity.Entity
 		auth = resp.Auth
+
+		// Only the token store can toggle this off, and that's via a different
+		// path since it's not a login request; it's explicitly disallowed
+		// above
+		auth.Renewable = true
 
 		mEntry := c.router.MatchingMountEntry(ctx, req.Path)
 
@@ -1110,7 +1114,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)
+		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
 		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
