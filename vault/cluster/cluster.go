@@ -222,7 +222,7 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
-// called. This function blocks so should be called in a go routine.
+// called. This function blocks so should be called in a goroutine.
 func (cl *Listener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)
