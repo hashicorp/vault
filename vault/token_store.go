@@ -371,7 +371,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"period": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_period' instead. If this and 'token_period' are both specified both will be retained but 'token_period' will take precedence.",
+				Description: "(DEPRECATED) Use 'token_period' instead. If this and 'token_period' are both specified only 'token_period' will be used.",
 				Deprecated:  true,
 			},
 
@@ -382,7 +382,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"explicit_max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_explicit_max_ttl' instead. If this and 'token_explicit_max_ttl' are both specified both will be retained but 'token_explicit_max_ttl' will take precedence.",
+				Description: "(DEPRECATED) Use 'token_explicit_max_ttl' instead. If this and 'token_explicit_max_ttl' are both specified only 'token_explicit_max_ttl' will be used.",
 				Deprecated:  true,
 			},
 
@@ -394,7 +394,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"bound_cidrs": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified both will be retained but 'token_bound_cidrs' will take precedence.",
+				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified only 'token_bound_cidrs' will be used.",
 				Deprecated:  true,
 			},
 		},
