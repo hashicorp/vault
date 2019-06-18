@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/patrickmn/go-cache"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -94,6 +96,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	//		time.Sleep(time.Second)
 	//	}
 	//}()
+
+	iStore.oidcCache = cache.New(cache.NoExpiration, cache.NoExpiration)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -267,7 +271,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		txn.Commit()
 		return
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.purge()
+		i.oidcCache.Flush()
 	}
 }
 
