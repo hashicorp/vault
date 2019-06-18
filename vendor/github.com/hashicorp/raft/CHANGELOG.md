@@ -1,3 +1,22 @@
+# UNRELEASED
+
+# 1.1.0 (Mai 23rd, 2019)
+
+FEATURES
+
+* Add transfer leadership extension [[GH-306](https://github.com/hashicorp/raft/pull/306)]
+
+IMPROVEMENTS
+
+* Move to `go mod` [[GH-323](https://github.com/hashicorp/consul/pull/323)]
+* Leveled log [[GH-321](https://github.com/hashicorp/consul/pull/321)]
+* Add peer changes to observations [[GH-326](https://github.com/hashicorp/consul/pull/326)]
+
+BUGFIXES
+
+* Copy the contents of an InmemSnapshotStore when opening a snapshot [[GH-270](https://github.com/hashicorp/consul/pull/270)]
+* Fix logging panic when converting parameters to strings [[GH-332](https://github.com/hashicorp/consul/pull/332)]
+
 # 1.0.1 (April 12th, 2019)
 
 IMPROVEMENTS

@@ -284,7 +284,7 @@ github.com/hashicorp/go-memdb
 github.com/hashicorp/go-msgpack/codec
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/go-plugin v1.0.0
+# github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-retryablehttp v0.5.3
@@ -316,9 +316,9 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.0.1 => ../raft
+# github.com/hashicorp/raft v1.0.2-0.20190617182316-3db06beda834
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-snapshot v1.0.0 => ../raft-snapshot
+# github.com/hashicorp/raft-snapshot v1.0.0
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
@@ -336,6 +336,8 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
 github.com/hashicorp/vault-plugin-auth-kubernetes
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f
+github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
@@ -353,9 +355,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.1 => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.11 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190618185021-07a27b1842ef => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -446,9 +448,10 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/kr/pretty
 # github.com/kr/text v0.1.0
 github.com/kr/text
-# github.com/lib/pq v1.0.0
+# github.com/lib/pq v1.1.1
 github.com/lib/pq
 github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/marstr/guid v1.1.0
 github.com/marstr/guid
 # github.com/mattn/go-colorable v0.0.9
@@ -652,7 +655,7 @@ golang.org/x/oauth2/jwt
 golang.org/x/oauth2/jws
 # golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
+# golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/cpu

@@ -75,10 +75,6 @@ type commitTuple struct {
 	log    *Log
 	future *logFuture
 }
-type configurationCommitTuple struct {
-	*commitTuple
-	configuration Configuration
-}
 
 // leaderState is state that is used while we are a leader.
 type leaderState struct {
@@ -553,7 +549,8 @@ func (r *Raft) leaderLoop() {
 				future.respond(ErrLeadershipTransferInProgress)
 				continue
 			}
-			r.logger.Debug(fmt.Sprintf("starting leadership transfer to %v: %v", future.ID, future.Address))
+
+			r.logger.Debug("starting leadership transfer", "id", future.ID, "address", future.Address)
 
 			// When we are leaving leaderLoop, we are no longer
 			// leader, so we should stop transferring.
@@ -1128,22 +1125,21 @@ func (r *Raft) processLog(l *Log, future *logFuture) {
 		return
 
 	case LogConfiguration:
-		// Forward to the fsm handler
-		select {
-		case r.fsmMutateCh <- &configurationCommitTuple{
-			commitTuple: &commitTuple{l, future},
-			// The configuration is commited prior to this.
-			configuration: r.configurations.committed,
-		}:
-		case <-r.shutdownCh:
-			if future != nil {
-				future.respond(ErrRaftShutdown)
+		// Only support this with the v2 configuration format
+		if r.protocolVersion > 2 {
+			// Forward to the fsm handler
+			select {
+			case r.fsmMutateCh <- &commitTuple{l, future}:
+			case <-r.shutdownCh:
+				if future != nil {
+					future.respond(ErrRaftShutdown)
+				}
 			}
-		}
 
-		// Return so that the future is only responded to
-		// by the FSM handler when the application is done
-		return
+			// Return so that the future is only responded to
+			// by the FSM handler when the application is done
+			return
+		}
 	case LogAddPeerDeprecated:
 	case LogRemovePeerDeprecated:
 	case LogNoop:

@@ -6,10 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/raft => ../raft
-
-replace github.com/hashicorp/raft-snapshot => ../raft-snapshot
-
 require (
 	cloud.google.com/go v0.37.4
 	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
@@ -71,7 +67,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.0.1
+	github.com/hashicorp/raft v1.0.2-0.20190617182316-3db06beda834
 	github.com/hashicorp/raft-snapshot v1.0.0
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.1
@@ -79,14 +75,15 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
-	github.com/hashicorp/vault/api v1.0.1
-	github.com/hashicorp/vault/sdk v0.1.11
+	github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190618185021-07a27b1842ef
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -96,7 +93,7 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
 	github.com/kr/text v0.1.0
-	github.com/lib/pq v1.0.0
+	github.com/lib/pq v1.1.1
 	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.0.9
 	github.com/michaelklishin/rabbit-hole v1.5.0

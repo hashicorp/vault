@@ -175,9 +175,12 @@ type Raft struct {
 
 // BootstrapCluster initializes a server's storage with the given cluster
 // configuration. This should only be called at the beginning of time for the
-// cluster, and you absolutely must make sure that you call it with the same
-// configuration on all the Voter servers. There is no need to bootstrap
-// Nonvoter and Staging servers.
+// cluster with an identical configuration listing all Voter servers. There is
+// no need to bootstrap Nonvoter and Staging servers.
+//
+// A cluster can only be bootstrapped once from a single participating Voter
+// server. Any further attempts to bootstrap will return an error that can be
+// safely ignored.
 //
 // One sane approach is to bootstrap a single server with a configuration
 // listing just itself as a Voter, then invoke AddVoter() on it to add other
@@ -288,21 +291,21 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
 	for _, snapshot := range snapshots {
-		if !conf.NoSnapshotRestoreOnStart {
-			_, source, err := snaps.Open(snapshot.ID)
-			if err != nil {
-				// Skip this one and try the next. We will detect if we
-				// couldn't open any snapshots.
-				continue
-			}
-
-			err = fsm.Restore(source)
-			source.Close()
-			if err != nil {
-				// Same here, skip and try the next one.
-				continue
-			}
+		_, source, err := snaps.Open(snapshot.ID)
+		if err != nil {
+			// Skip this one and try the next. We will detect if we
+			// couldn't open any snapshots.
+			continue
 		}
+
+		err = fsm.Restore(source)
+		// Close the source after the restore has completed
+		source.Close()
+		if err != nil {
+			// Same here, skip and try the next one.
+			continue
+		}
+
 		snapshotIndex = snapshot.Index
 		snapshotTerm = snapshot.Term
 		break
@@ -542,22 +545,23 @@ func (r *Raft) restoreSnapshot() error {
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		if !r.conf.NoSnapshotRestoreOnStart {
-			_, source, err := r.snapshots.Open(snapshot.ID)
-			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
-				continue
-			}
-
-			err = r.fsm.Restore(source)
-			source.Close()
-			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
-				continue
-			}
-			// Log success
-			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
+		_, source, err := r.snapshots.Open(snapshot.ID)
+		if err != nil {
+			r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
+			continue
 		}
+
+		err = r.fsm.Restore(source)
+		// Close the source after the restore has completed
+		source.Close()
+		if err != nil {
+			r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
+			continue
+		}
+
+		// Log success
+		r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
+
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 
@@ -591,10 +595,17 @@ func (r *Raft) restoreSnapshot() error {
 
 // BootstrapCluster is equivalent to non-member BootstrapCluster but can be
 // called on an un-bootstrapped Raft instance after it has been created. This
-// should only be called at the beginning of time for the cluster, and you
-// absolutely must make sure that you call it with the same configuration on all
-// the Voter servers. There is no need to bootstrap Nonvoter and Staging
-// servers.
+// should only be called at the beginning of time for the cluster with an
+// identical configuration listing all Voter servers. There is no need to
+// bootstrap Nonvoter and Staging servers.
+//
+// A cluster can only be bootstrapped once from a single participating Voter
+// server. Any further attempts to bootstrap will return an error that can be
+// safely ignored.
+//
+// One sane approach is to bootstrap a single server with a configuration
+// listing just itself as a Voter, then invoke AddVoter() on it to add other
+// servers to the cluster.
 func (r *Raft) BootstrapCluster(configuration Configuration) Future {
 	bootstrapReq := &bootstrapFuture{}
 	bootstrapReq.init()

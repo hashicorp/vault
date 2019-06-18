@@ -28,29 +28,17 @@
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="namespaces")}}
+    {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
       <li>
         {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
           Namespaces
-          {{#unless (has-feature "Namespaces")}}
-            {{#if (is-version "OSS")}}
-              {{edition-badge edition="Enterprise"}}
-            {{/if}}
-          {{/unless}}
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="control-groups")}}
+    {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
       <li>
         {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"}}
           Control Groups
-          {{#unless (has-feature "Control Groups")}}
-            {{#if (is-version "OSS")}}
-              {{edition-badge edition="Enterprise"}}
-            {{else}}
-              {{edition-badge edition="Premium"}}
-            {{/if}}
-          {{/unless}}
         {{/link-to}}
       </li>
     {{/if}}
