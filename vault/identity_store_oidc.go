@@ -26,6 +26,10 @@ import (
 
 type oidcConfig struct {
 	Issuer string `json:"issuer"`
+
+	// effectiveIssuer is a calculated field and will be either Issuer (if
+	// that's set) or the Vault instance's api_addr.
+	effectiveIssuer string
 }
 
 type expireableKey struct {
@@ -89,6 +93,7 @@ type oidcCache struct {
 }
 
 const (
+	issuerPath           = "/v1/identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
@@ -321,19 +326,23 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		defer lock.RUnlock()
 		return i.oidcCache.config, nil
 	}
+	lock.RUnlock()
 
+	var c oidcConfig
 	entry, err := s.Get(ctx, oidcConfigStorageKey)
 	if err != nil {
 		return nil, err
 	}
 
-	if entry == nil {
-		return nil, nil
+	if entry != nil {
+		if err := entry.DecodeJSON(&c); err != nil {
+			return nil, err
+		}
 	}
 
-	var c oidcConfig
-	if err := entry.DecodeJSON(&c); err != nil {
-		return nil, err
+	c.effectiveIssuer = c.Issuer
+	if c.effectiveIssuer == "" {
+		c.effectiveIssuer = i.core.redirectAddr + issuerPath
 	}
 
 	lock.Lock()
@@ -595,14 +604,9 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, err
 	}
 
-	issuer := i.core.redirectAddr
-	if config != nil && config.Issuer != "" {
-		issuer = config.Issuer
-	}
-
 	now := time.Now()
 	idToken := idToken{
-		Issuer:   issuer + "/v1/identity/oidc",
+		Issuer:   config.effectiveIssuer,
 		Subject:  te.EntityID,
 		Audience: role.RoleID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),
@@ -882,24 +886,20 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		i.oidcCache.lock.RUnlock()
 	} else {
 		i.oidcCache.lock.RUnlock()
-		issuer := "http://127.0.0.1:8200"
 
-		disc := discovery{
-			Issuer: issuer + "/v1/identity/oidc",
-			//Auth:        s.absURL("/auth"),
-			//Token:       s.absURL("/token"),
-			Keys:        issuer + "/v1/identity/oidc/.well-known/keys",
-			Subjects:    []string{"public"},
-			IDTokenAlgs: []string{string(jose.RS256)},
-			//Scopes:      []string{"openid", "email", "groups", "profile", "offline_access"},
-			//AuthMethods: []string{"client_secret_basic"},
-			//Claims: []string{
-			//	"aud", "email", "email_verified", "exp",
-			//	"iat", "iss", "locale", "name", "sub",
-			//},
+		c, err := i.getOIDCConfig(ctx, req.Storage)
+		if err != nil {
+			return nil, err
 		}
 
-		var err error
+		// TODO: review required contents
+		disc := discovery{
+			Issuer:      c.effectiveIssuer,
+			Keys:        c.effectiveIssuer + "/.well-known/keys",
+			Subjects:    []string{"public"},
+			IDTokenAlgs: []string{string(jose.RS256)},
+		}
+
 		data, err = json.Marshal(disc)
 		if err != nil {
 			return nil, err
@@ -1008,10 +1008,15 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 		}
 	}
 
+	c, err := i.getOIDCConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
 	// validate claims
 	if errResponse == "" {
 		expected := jwt.Expected{
-			Issuer: "http://127.0.0.1:8200/v1/identity/oidc", // TODO: use real issuer
+			Issuer: c.effectiveIssuer,
 			Time:   time.Now(),
 		}
 
@@ -1340,4 +1345,5 @@ func (c *oidcCache) purge() {
 	c.discoveryResponse = c.discoveryResponse[:0]
 	c.jwksResponse = c.jwksResponse[:0]
 	c.nextPeriodicRun = time.Time{}
+	c.config = nil
 }
