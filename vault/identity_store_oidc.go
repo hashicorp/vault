@@ -88,6 +88,7 @@ type oidcCache struct {
 	lock              sync.RWMutex
 	discoveryResponse []byte
 	jwksResponse      []byte
+	jwks              *jose.JSONWebKeySet
 	config            *oidcConfig
 	nextPeriodicRun   time.Time
 }
@@ -933,21 +934,9 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	} else {
 		i.oidcCache.lock.RUnlock()
 
-		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
+		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
 		if err != nil {
 			return nil, err
-		}
-
-		jwks := jose.JSONWebKeySet{
-			Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-		}
-
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
-			if err != nil {
-				return nil, err
-			}
-			jwks.Keys = append(jwks.Keys, *key)
 		}
 
 		data, err = json.Marshal(jwks)
@@ -986,17 +975,13 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 
 	// validate signature
 	if errResponse == "" {
-		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage) // TODO: use cached keys
+		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
 		if err != nil {
 			return nil, err
 		}
 
 		var valid bool
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
-			if err != nil {
-				return nil, err
-			}
+		for _, key := range jwks.Keys {
 			if err := parsedJWT.Claims(key, &claims); err == nil {
 				valid = true
 				break
@@ -1165,6 +1150,36 @@ func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error
 	}
 
 	return keys, nil
+}
+
+func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storage) (*jose.JSONWebKeySet, error) {
+	i.oidcCache.lock.Lock()
+	defer i.oidcCache.lock.Unlock()
+
+	if i.oidcCache.jwks != nil {
+		return i.oidcCache.jwks, nil
+	}
+
+	keyIDs, err := listOIDCPublicKeys(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	for _, keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, s, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
+	}
+
+	i.oidcCache.jwks = jwks
+
+	return jwks, nil
 }
 
 func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
