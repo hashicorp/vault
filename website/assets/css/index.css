@@ -19,6 +19,8 @@
 @import '@hashicorp/hashi-split-cta/dist/style.css';
 @import '@hashicorp/hashi-linked-text-summary-list/dist/style.css';
 @import '@hashicorp/hashi-docs-sitemap/dist/style.css';
+@import '@hashicorp/hashi-boolean-input/dist/style.css';
+@import '@hashicorp/hashi-with-validation/dist/style.css';
 
 /* to be removed pending new components */
 @import '_inner';
