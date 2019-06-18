@@ -529,7 +529,7 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 		if !leaderResp.IsSelf {
-			t.Fatal("Unstable Active Node")
+			t.Fatal("unstable active node")
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
