@@ -47,8 +47,7 @@
             class="is-block has-text-black has-text-weight-semibold"
             data-test-method-link=true
           }}
-            {{i-con glyph="role" size=14 class="has-text-grey-light"}}
-            <span class="has-text-weight-semibold">
+            <Icon @glyph="user-square-outline" class="has-text-grey-light" /> <span class="has-text-weight-semibold">
               {{item.id}}
             </span>
           {{/link-to}}
@@ -81,7 +80,7 @@
       <span>
         Create
         {{itemType}}
-        {{i-con glyph="chevron-right" size=11}}
+        <Chevron />
       </span>
     {{/link-to}}
   </EmptyState>
