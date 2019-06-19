@@ -5,8 +5,12 @@ import { inject as service } from '@ember/service';
 export default Route.extend(ListRoute, {
   store: service(),
   secretMountPath: service(),
+  pathHelp: service(),
   scope() {
     return this.paramsFor('scope').scope_name;
+  },
+  beforeModel() {
+    return this.pathHelp.getNewModel('kmip/role', null, this.secretMountPath.currentPath);
   },
   model(params) {
     return this.store
