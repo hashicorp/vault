@@ -30,7 +30,15 @@ export default Route.extend(ListRoute, {
         }
       });
   },
-
+  actions: {
+    willTransition(transition) {
+      window.scrollTo(0, 0);
+      if (transition.targetName !== this.routeName) {
+        this.store.clearAllDatasets();
+      }
+      return true;
+    },
+  },
   setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
