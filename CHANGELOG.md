@@ -37,8 +37,10 @@ CHANGES:
 
 FEATURES:
 
- * Adds an ElasticSearch database plugin which issues unique, short-lived ElasticSearch credentials [GH-6857]
- * Adds a PCF plugin that supports use of instance identity certificates for Vault authentication [GH-6847]
+ * Adds an ElasticSearch database plugin which issues unique, short-lived
+   ElasticSearch credentials [GH-6857]
+ * Adds a PCF plugin that supports use of instance identity certificates for
+   Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
@@ -49,6 +51,8 @@ IMPROVEMENTS:
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
  * identity: Allow a group alias' canonical ID to be modified
+ * namespaces: Namespaces can now be created and deleted from performance
+   replication secondaries
  * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
