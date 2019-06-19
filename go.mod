@@ -58,7 +58,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
-	github.com/hashicorp/go-hclog v0.8.0
+	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-memdb v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-rootcerts v1.0.0
@@ -74,6 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
