@@ -208,6 +208,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+
 	if c.Sealed() {
 		return nil
 	}
@@ -262,14 +263,12 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	if te != nil && te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
