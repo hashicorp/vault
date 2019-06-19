@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/physical/raft"
@@ -145,32 +146,27 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// If we have clustered storage, set it up now
 	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		// TODO: do we need to start cluster listener here? I think yes so we
-		// can get the correct cluster port in the event :0 is used. Unless we
-		// use a address provider?
-		if err := c.startClusterListener(ctx); err != nil {
-			return nil, errwrap.Wrapf("could not start cluster listener: {{err}}", err)
+		parsedClusterAddr, err := url.Parse(c.clusterAddr)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 		}
-
 		if err := c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, []raft.Peer{
 			{
 				ID:      c.underlyingPhysical.(*raft.RaftBackend).NodeID(),
-				Address: c.clusterListener.Addr().String(),
+				Address: parsedClusterAddr.Host,
 			},
 		}); err != nil {
 			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
 		}
 
-		if err := raftStorage.SetupCluster(ctx, nil, c.clusterListener); err != nil {
+		if err := raftStorage.SetupCluster(ctx, nil, nil); err != nil {
 			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
 		}
 
 		defer func() {
-			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+			if err := raftStorage.TeardownCluster(nil); err != nil {
 				c.logger.Error("failed to stop raft storage", "error", err)
 			}
-
-			c.stopClusterListener()
 		}()
 	}
 

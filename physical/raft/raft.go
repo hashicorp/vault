@@ -20,9 +20,9 @@ import (
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 
-	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -353,7 +353,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
-func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener physicalstd.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener cluster.ClusterHook) error {
 	b.logger.Trace("setting up raft cluster")
 
 	b.l.Lock()
@@ -376,11 +376,15 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 	}
 
 	switch {
-	case raftTLSKeyring == nil:
+	case raftTLSKeyring == nil && clusterListener == nil:
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap and dev modes.
-		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(clusterListener.Addr().String()))
+		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(b.localID))
+	case raftTLSKeyring == nil:
+		return errors.New("no keyring provided")
+	case clusterListener == nil:
+		return errors.New("no cluster listener provided")
 	default:
 		// Load the base TLS config from the cluster listener.
 		baseTLSConfig, err := clusterListener.TLSConfig(ctx)
@@ -474,9 +478,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 }
 
 // TeardownCluster shuts down the raft cluster
-func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) error {
-	clusterListener.StopHandler(consts.RaftStorageALPN)
-	clusterListener.RemoveClient(consts.RaftStorageALPN)
+func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error {
+	if clusterListener != nil {
+		clusterListener.StopHandler(consts.RaftStorageALPN)
+		clusterListener.RemoveClient(consts.RaftStorageALPN)
+	}
+
 	b.l.Lock()
 	future := b.raft.Shutdown()
 	b.raft = nil

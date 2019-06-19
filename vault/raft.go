@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -606,7 +607,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	clusterAddr := c.clusterListenerAddrs[0].String()
+	parsedClusterAddr, err := url.Parse(c.clusterAddr)
+	if err != nil {
+		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+	}
+	clusterAddr := parsedClusterAddr.Host
 	if UpdateClusterAddrForTests && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
