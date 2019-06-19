@@ -2,7 +2,7 @@ import BaseAdapter from './base';
 
 export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {
-    let name = snapshot.attr('name');
+    let name = snapshot.id || snapshot.attr('name');
     let url = this._url(
       type.modelName,
       {
@@ -17,5 +17,9 @@ export default BaseAdapter.extend({
         name,
       };
     });
+  },
+
+  updateRecord() {
+    return this.createRecord(...arguments);
   },
 });
