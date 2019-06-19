@@ -274,24 +274,24 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 		return nil, nil
 	}
 
-	var result awsRoleEntry
-	if err := entry.DecodeJSON(&result); err != nil {
+	result := new(awsRoleEntry)
+	if err := entry.DecodeJSON(result); err != nil {
 		return nil, err
 	}
 
-	needUpgrade, err := b.upgradeRole(ctx, s, &result)
+	needUpgrade, err := b.upgradeRole(ctx, s, result)
 	if err != nil {
 		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
-		if err = b.setRole(ctx, s, roleName, &result); err != nil {
+		if err = b.setRole(ctx, s, roleName, result); err != nil {
 			return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
 		}
 	}
 
-	b.roleCache.SetDefault(roleName, roleEntry)
+	b.roleCache.SetDefault(roleName, result)
 
-	return &result, nil
+	return result, nil
 }
 
 // setRole creates or updates a role in the storage. The caller must hold
