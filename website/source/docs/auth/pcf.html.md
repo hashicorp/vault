@@ -14,7 +14,7 @@ for PCF instances. It leverages PCF's [App and Container Identity Assurance](htt
 At a high level, this works as follows:
 
 1. You construct a request to Vault including your `CF_INSTANCE_CERT`, signed by your `CF_INSTANCE_KEY`.
-2. Vault validates that the signature is no more than 5 minutes old, or 1 minute in the future.
+2. Vault validates that the signature is no more than 300 seconds old, or 60 seconds in the future.
 3. Vault validates that the cert was issued by the CA certificate you've pre-configured.
 4. Vault validates that the request was signed by the private key for the `CF_INSTANCE_CERT`.
 5. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.

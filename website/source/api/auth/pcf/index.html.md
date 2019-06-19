@@ -25,7 +25,7 @@ on how to obtain these values, please see the [Vault PCF method
 documentation](/docs/auth/pcf.html).
 
 | Method   | Path                  |
-| :------------------------------- |
+| :--------|---------------------- |
 | `POST`   | `/auth/pcf/config`    |
 
 ### Parameters
@@ -41,11 +41,11 @@ that presently exist.
 - `pcf_api_trusted_certificates` `(array: [])`: The certificate that's presented by the
 PCF API. This configures Vault to trust this certificate when making API calls, resolving
 `x509: certificate signed by unknown authority` errors.
-- `login_max_minutes_old` `(int: 5)`: The maximum number of minutes in the past when a 
+- `login_max_seconds_old` `(int: 300)`: The maximum number of seconds in the past when a 
 signature could have been created. The lower the value, the lower the risk of replay
 attacks.
-- `login_max_minutes_ahead` `(int: 1)`: In case of clock drift, the maximum number of
-minutes in the future when a signature could have been created. The lower the value, 
+- `login_max_seconds_ahead` `(int: 60)`: In case of clock drift, the maximum number of
+seconds in the future when a signature could have been created. The lower the value, 
 the lower the risk of replay attacks.
 
 ### Sample Payload
@@ -57,8 +57,8 @@ the lower the risk of replay attacks.
   "pcf_username": "vault",
   "pcf_password": "pa55w0rd",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_minutes_old": 5,
-  "login_max_minutes_ahead": 1
+  "login_max_seconds_old": 5,
+  "login_max_seconds_ahead": 1
 }
 ```
 
@@ -77,7 +77,7 @@ $ curl \
 Returns the present PCF configuration.
 
 | Method   | Path                  |
-| :------------------------------- |
+| :--------|---------------------- |
 | `GET`    | `/auth/pcf/config`    |
 
 ### Sample Request
@@ -96,8 +96,8 @@ $ curl \
   "pcf_api_addr": "https://api.sys.somewhere.cf-app.com",
   "pcf_username": "vault",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_minutes_old": 5,
-  "login_max_minutes_ahead": 1
+  "login_max_seconds_old": 5,
+  "login_max_seconds_ahead": 1
 }
 ```
 
@@ -106,7 +106,7 @@ $ curl \
 Deletes the present PCF configuration.
 
 | Method   | Path                  |
-| :------------------------------- |
+| :--------|---------------------- |
 | `DELETE` | `/auth/pcf/config`    |
 
 ### Sample Request
@@ -129,7 +129,7 @@ If you list no `bound` parameters, then any entity with a valid
 will be able to authenticate against this role.
 
 | Method   | Path                   |
-| :-------------------------------- |
+| :--------|----------------------- |
 | `POST`   | `/auth/pcf/roles/:role`|
 
 ### Parameters
@@ -193,7 +193,7 @@ $ curl \
 Returns a PCF role.
 
 | Method   | Path                   |
-| :-------------------------------- |
+| :--------|----------------------- |
 | `GET`    | `/auth/pcf/roles/:role`|
 
 ### Sample Request
@@ -225,7 +225,7 @@ $ curl \
 Deletes a PCF role.
 
 | Method   | Path                   |
-| :-------------------------------- |
+| :--------|----------------------- |
 | `DELETE` | `/auth/pcf/roles/:role`|
 
 ### Sample Request
@@ -242,7 +242,7 @@ $ curl \
 Returns a PCF role.
 
 | Method   | Path                   |
-| :-------------------------------- |
+| :--------|----------------------- |
 | `LIST`   | `/auth/pcf/roles`      |
 
 ### Sample Request
@@ -292,7 +292,7 @@ rsa.SignPSS(rand.Reader, rsaPrivateKey, crypto.SHA256, checksum, nil)
 - Convert the signature to a string.
 
 | Method   | Path                   |
-| :-------------------------------- |
+| :--------|----------------------- |
 | `POST`   | `/auth/pcf/login`      |
 
 ### Parameters
