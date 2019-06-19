@@ -38,6 +38,7 @@ CHANGES:
 FEATURES:
 
  * Adds an ElasticSearch database plugin which issues unique, short-lived ElasticSearch credentials [GH-6857]
+ * Adds a PCF plugin that supports use of instance identity certificates for Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
