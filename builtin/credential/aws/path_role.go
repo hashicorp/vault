@@ -289,6 +289,8 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 		}
 	}
 
+	b.roleCache.SetDefault(roleName, roleEntry)
+
 	return &result, nil
 }
 
