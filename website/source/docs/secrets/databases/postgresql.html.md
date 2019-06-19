@@ -13,7 +13,8 @@ description: |-
 
 PostgreSQL is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
-the PostgreSQL database.
+the PostgreSQL database, and also supports [Static
+Roles](/docs/secrets/databases/index.html#static-roles).
 
 See the [database secrets engine](/docs/secrets/databases/index.html) docs for
 more information about setting up the database secrets engine.

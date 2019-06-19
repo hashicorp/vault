@@ -22,6 +22,8 @@ type mockPlugin struct {
 	users map[string][]string
 }
 
+var _ dbplugin.Database = &mockPlugin{}
+
 func (m *mockPlugin) Type() (string, error) { return "mock", nil }
 func (m *mockPlugin) CreateUser(_ context.Context, statements dbplugin.Statements, usernameConf dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	err = errors.New("err")
@@ -84,6 +86,14 @@ func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, 
 func (m *mockPlugin) Close() error {
 	m.users = nil
 	return nil
+}
+
+func (m *mockPlugin) GenerateCredentials(ctx context.Context) (password string, err error) {
+	return password, err
+}
+
+func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticConfig dbplugin.StaticUserConfig) (username string, password string, err error) {
+	return username, password, err
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
