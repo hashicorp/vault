@@ -56,11 +56,7 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 			t.Fatal(err)
 		}
 
-		err = backend.SetupCluster(context.Background(), nil, &noopClusterHook{
-			addr: &idAddr{
-				id: backend.NodeID(),
-			},
-		})
+		err = backend.SetupCluster(context.Background(), nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,32 +206,11 @@ func TestRaft_Recovery(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	clusterHook1 := &noopClusterHook{
-		addr: &idAddr{
-			id: raft1.NodeID(),
-		},
-	}
-	clusterHook2 := &noopClusterHook{
-		addr: &idAddr{
-			id: raft2.NodeID(),
-		},
-	}
-	clusterHook3 := &noopClusterHook{
-		addr: &idAddr{
-			id: raft3.NodeID(),
-		},
-	}
-	clusterHook4 := &noopClusterHook{
-		addr: &idAddr{
-			id: raft4.NodeID(),
-		},
-	}
-
 	// Bring down all nodes
-	raft1.TeardownCluster(clusterHook1)
-	raft2.TeardownCluster(clusterHook2)
-	raft3.TeardownCluster(clusterHook3)
-	raft4.TeardownCluster(clusterHook4)
+	raft1.TeardownCluster(nil)
+	raft2.TeardownCluster(nil)
+	raft3.TeardownCluster(nil)
+	raft4.TeardownCluster(nil)
 
 	// Prepare peers.json
 	type RecoveryPeer struct {
@@ -280,9 +255,9 @@ func TestRaft_Recovery(t *testing.T) {
 	}
 
 	// Bring up the nodes again
-	raft1.SetupCluster(context.Background(), nil, clusterHook1)
-	raft2.SetupCluster(context.Background(), nil, clusterHook2)
-	raft4.SetupCluster(context.Background(), nil, clusterHook4)
+	raft1.SetupCluster(context.Background(), nil, nil)
+	raft2.SetupCluster(context.Background(), nil, nil)
+	raft4.SetupCluster(context.Background(), nil, nil)
 
 	peers, err := raft1.Peers(context.Background())
 	if err != nil {

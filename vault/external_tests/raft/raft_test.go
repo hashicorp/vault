@@ -293,7 +293,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 				}
 				// Parse Response
 				apiResp := api.Response{Response: resp}
-				if !strings.Contains(apiResp.Error().Error(), "Could not verify hash file, snapshot could be using a different set of shamir keys") {
+				if !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
 					t.Fatal(apiResp.Error())
 				}
 			}
@@ -518,7 +518,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				}
 				// Parse Response
 				apiResp := api.Response{Response: resp}
-				if !strings.Contains(apiResp.Error().Error(), "Could not verify hash file, snapshot could be using a different set of shamir keys") {
+				if !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
 					t.Fatal(apiResp.Error())
 				}
 			}
@@ -695,7 +695,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		}
 		// Parse Response
 		apiResp := api.Response{Response: resp}
-		if !strings.Contains(apiResp.Error().Error(), "Could not verify hash file, snapshot could be using a different set of shamir keys") {
+		if !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
 			t.Fatal(apiResp.Error())
 		}
 

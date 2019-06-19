@@ -3,31 +3,17 @@ package raft
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	fmt "fmt"
 	"hash/crc64"
 	"io"
 	"io/ioutil"
-	"net"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/cluster"
 )
-
-type noopClusterHook struct {
-	addr net.Addr
-}
-
-func (c *noopClusterHook) AddClient(string, cluster.Client)               {}
-func (c *noopClusterHook) RemoveClient(string)                            {}
-func (c *noopClusterHook) AddHandler(string, cluster.Handler)             {}
-func (c *noopClusterHook) StopHandler(string)                             {}
-func (c *noopClusterHook) TLSConfig(context.Context) (*tls.Config, error) { return nil, nil }
-func (c *noopClusterHook) Addr() net.Addr                                 { return c.addr }
 
 type idAddr struct {
 	id string
@@ -52,11 +38,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 		t.Fatal(err)
 	}
 
-	err = follower.SetupCluster(context.Background(), nil, &noopClusterHook{
-		addr: &idAddr{
-			id: follower.NodeID(),
-		},
-	})
+	err = follower.SetupCluster(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,16 +322,12 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 	}
 
 	// Shutdown raft1
-	if err := raft1.TeardownCluster(&noopClusterHook{}); err != nil {
+	if err := raft1.TeardownCluster(nil); err != nil {
 		t.Fatal(err)
 	}
 
 	// Start Raft
-	err = raft1.SetupCluster(context.Background(), nil, &noopClusterHook{
-		addr: &idAddr{
-			id: raft1.NodeID(),
-		},
-	})
+	err = raft1.SetupCluster(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
