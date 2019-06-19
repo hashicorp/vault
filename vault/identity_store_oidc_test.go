@@ -2,9 +2,11 @@ package vault
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
@@ -393,6 +395,59 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	if len(responseJWKS.Keys) != 1 {
 		t.Fatalf("expected 1 public keya but instead got %d", len(responseJWKS.Keys))
 	}
+}
+
+// TestOIDC_SignIDToken tests acquiring a signed token and verifying the public portion
+// of the signing key
+func TestOIDC_SignIDToken(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// set up an entity
+	testEntity := &identity.Entity{
+		Name:      "test-entity-name",
+		ID:        "test-entity-id",
+		BucketKey: "test-entity-bucket-key",
+	}
+
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+	err := c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txn.Commit()
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test role "test-role"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Generate a token
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectSuccess(t, resp, err)
+	fmt.Printf("---resp is:\n%#v", resp)
+
+	// TODO validate the token
+
 }
 
 // some helpers

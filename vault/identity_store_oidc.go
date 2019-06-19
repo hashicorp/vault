@@ -585,17 +585,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}
 
 	// generate an OIDC token from entity data
-	accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
-	if err != nil {
-		return nil, err
-	}
-
-	if te == nil || te.EntityID == "" {
+	if req.EntityID == "" {
 		return logical.ErrorResponse("No entity associated with this Vault token"), nil
 	}
 
@@ -607,13 +597,13 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	now := time.Now()
 	idToken := idToken{
 		Issuer:   config.effectiveIssuer,
-		Subject:  te.EntityID,
+		Subject:  req.EntityID,
 		Audience: role.RoleID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
 	}
 
-	e, err := i.MemDBEntityByID(te.EntityID, true)
+	e, err := i.MemDBEntityByID(req.EntityID, true)
 	if err != nil {
 		return nil, err
 	}
