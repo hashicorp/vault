@@ -16,4 +16,5 @@ import layout from '../templates/components/field-group-show';
 export default Component.extend({
   layout,
   model: null,
+  showAllFields: false,
 });

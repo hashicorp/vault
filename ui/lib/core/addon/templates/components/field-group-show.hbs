@@ -4,7 +4,7 @@
       {{#if (or (eq group "default") (eq group "Options"))}}
         {{#each fields as |attr|}}
           <InfoTableRow
-            @alwaysRender={{true}}
+            @alwaysRender={{showAllFields}}
             @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
             @value={{get @model attr.name}}
           />
@@ -16,7 +16,7 @@
           </h2>
           {{#each fields as |attr|}}
             <InfoTableRow
-              @alwaysRender={{true}}
+              @alwaysRender={{showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
               @value={{get @model attr.name}}
             />
