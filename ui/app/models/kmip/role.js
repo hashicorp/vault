@@ -5,8 +5,8 @@ import { computed } from '@ember/object';
 const { attr } = DS;
 export default DS.Model.extend({
   useOpenAPI: true,
-  backend: attr(),
-  scope: attr(),
+  backend: attr({ readOnly: true }),
+  scope: attr({ readOnly: true }),
   getHelpUrl(path) {
     return `/v1/${path}/scope/example/role/example?help=1`;
   },
