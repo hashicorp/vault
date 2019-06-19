@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/base62"
+
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/go-hclog"
@@ -52,7 +54,7 @@ type role struct {
 	TokenTTL time.Duration `json:"token_ttl"`
 	Key      string        `json:"key"`
 	Template string        `json:"template"`
-	RoleID   string        `json:"role_id"`
+	ClientID string        `json:"client_id"`
 }
 
 // idToken contains the required OIDC fields.
@@ -61,7 +63,7 @@ type role struct {
 // include top-level keys, but those keys may not overwrite any of the
 // required OIDC fields.
 type idToken struct {
-	Issuer   string `json:"iss"` // api_addr or customer Issuer
+	Issuer   string `json:"iss"` // api_addr or custom Issuer
 	Subject  string `json:"sub"` // Entity ID
 	Audience string `json:"aud"` // role ID will be used here.
 	Expiry   int64  `json:"exp"` // Expiration, as determined by the role.
@@ -92,6 +94,7 @@ const (
 
 var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
+// TODO: add help text for most of the paths
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -336,6 +339,8 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer i.oidcCache.Flush()
+
 	name := d.Get("name").(string)
 
 	var key namedKey
@@ -407,11 +412,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
+
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
-
-	i.oidcCache.Flush()
 
 	return nil, nil
 }
@@ -424,20 +428,21 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	if err != nil {
 		return nil, err
 	}
-	if entry != nil {
-		var storedNamedKey namedKey
-		if err := entry.DecodeJSON(&storedNamedKey); err != nil {
-			return nil, err
-		}
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"rotation_period":  int64(storedNamedKey.RotationPeriod.Seconds()),
-				"verification_ttl": int64(storedNamedKey.VerificationTTL.Seconds()),
-				"algorithm":        storedNamedKey.Algorithm,
-			},
-		}, nil
+	if entry == nil {
+		return logical.ErrorResponse("no named key found at %q", name), nil
 	}
-	return logical.ErrorResponse("no named key found at %q", name), logical.ErrInvalidRequest
+
+	var storedNamedKey namedKey
+	if err := entry.DecodeJSON(&storedNamedKey); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"rotation_period":  int64(storedNamedKey.RotationPeriod.Seconds()),
+			"verification_ttl": int64(storedNamedKey.VerificationTTL.Seconds()),
+			"algorithm":        storedNamedKey.Algorithm,
+		},
+	}, nil
 }
 
 // handleOIDCDeleteKey is used to delete a key
@@ -468,7 +473,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	if len(rolesReferencingTargetKeyName) > 0 {
-		errorMessage := fmt.Sprintf("Unable to delete the key: %q because it is currently referenced by these roles: %s",
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
 			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -556,29 +561,26 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	}
 
-	entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
-	if entry == nil {
-		return logical.ErrorResponse("key %q not found", role.Key), nil
-	}
+	var key *namedKey
 
-	var key namedKey
-	if err := entry.DecodeJSON(&key); err != nil {
-		return nil, err
+	if keyRaw, found := i.oidcCache.Get("namedKeys/" + role.Key); found {
+		key = keyRaw.(*namedKey)
+	} else {
+		entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+		if entry == nil {
+			return logical.ErrorResponse("key %q not found", role.Key), nil
+		}
+
+		if err := entry.DecodeJSON(&key); err != nil {
+			return nil, err
+		}
+
+		i.oidcCache.SetDefault("namedKeys/"+role.Key, key)
 	}
 
 	// generate an OIDC token from entity data
-	accessorEntry, err := i.core.tokenStore.lookupByAccessor(ctx, req.ClientTokenAccessor, false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	te, err := i.core.LookupToken(ctx, accessorEntry.TokenID)
-	if err != nil {
-		return nil, err
-	}
-
-	if te == nil || te.EntityID == "" {
-		return logical.ErrorResponse("No entity associated with this Vault token"), nil
+	if req.EntityID == "" {
+		return logical.ErrorResponse("no entity associated with the request's token"), nil
 	}
 
 	config, err := i.getOIDCConfig(ctx, req.Storage)
@@ -589,15 +591,18 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	now := time.Now()
 	idToken := idToken{
 		Issuer:   config.effectiveIssuer,
-		Subject:  te.EntityID,
-		Audience: role.RoleID,
+		Subject:  req.EntityID,
+		Audience: role.ClientID,
 		Expiry:   now.Add(role.TokenTTL).Unix(),
 		IssuedAt: now.Unix(),
 	}
 
-	e, err := i.MemDBEntityByID(te.EntityID, true)
+	e, err := i.MemDBEntityByID(req.EntityID, true)
 	if err != nil {
 		return nil, err
+	}
+	if e == nil {
+		return nil, fmt.Errorf("error loading entity ID %q", req.EntityID)
 	}
 
 	groups, inheritedGroups, err := i.groupsByEntityID(e.ID)
@@ -620,7 +625,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"token":     signedIdToken,
-			"client_id": role.RoleID,
+			"client_id": role.ClientID,
 			"ttl":       int64(role.TokenTTL.Seconds()),
 		},
 	}, nil
@@ -733,7 +738,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("Key %q does not exist", role.Key), nil
+		return logical.ErrorResponse("key %q does not exist", role.Key), nil
 	}
 
 	if template, ok := d.GetOk("template"); ok {
@@ -758,17 +763,17 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		})
 
 		if err != nil {
-			return logical.ErrorResponse("Error parsing template: %s", err.Error()), nil
+			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
 		}
 
 		var tmp map[string]interface{}
 		if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
-			return logical.ErrorResponse("Error parsing template JSON: %s", err.Error()), nil
+			return logical.ErrorResponse("error parsing template JSON: %s", err.Error()), nil
 		}
 
 		for key := range tmp {
 			if strutil.StrListContains(requiredClaims, key) {
-				return logical.ErrorResponse(`Top level key %q not allowed. Restricted keys: %s`,
+				return logical.ErrorResponse(`top level key %q not allowed. Restricted keys: %s`,
 					key, strings.Join(requiredClaims, ", ")), nil
 			}
 		}
@@ -781,12 +786,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	// create role path
-	if role.RoleID == "" {
-		roleID, err := uuid.GenerateUUID()
+	if role.ClientID == "" {
+		clientID, err := base62.Random(26)
 		if err != nil {
 			return nil, err
 		}
-		role.RoleID = roleID
+		role.ClientID = clientID
 	}
 
 	role.Name = name // TODO: needed???
@@ -819,7 +824,7 @@ func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"client_id": role.RoleID,
+			"client_id": role.ClientID,
 			"key":       role.Key,
 			"template":  role.Template,
 			"ttl":       int64(role.TokenTTL.Seconds()),
@@ -936,7 +941,33 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 
 func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var claims jwt.Claims
-	var errResponse string
+
+	// helper for preparing the non-standard introspection response
+	introspectionResp := func(errorMsg string) (*logical.Response, error) {
+		response := map[string]interface{}{
+			"active": true,
+		}
+
+		if errorMsg != "" {
+			response["active"] = false
+			response["error"] = errorMsg
+		}
+
+		data, err := json.Marshal(response)
+		if err != nil {
+			return nil, err
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPStatusCode:  200,
+				logical.HTTPRawBody:     data,
+				logical.HTTPContentType: "application/json",
+			},
+		}
+
+		return resp, nil
+	}
 
 	rawIDToken := d.Get("token").(string)
 	clientID := d.Get("client_id").(string)
@@ -944,86 +975,58 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 	// validate basic JWT structure
 	parsedJWT, err := jwt.ParseSigned(rawIDToken)
 	if err != nil {
-		errResponse = fmt.Sprintf("error parsing token: %s", err.Error())
+		return introspectionResp(fmt.Sprintf("error parsing token: %s", err.Error()))
 	}
 
 	// validate signature
-	if errResponse == "" {
-		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
-		if err != nil {
-			return nil, err
-		}
+	jwks, err := i.generatePublicJWKS(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
 
-		var valid bool
-		for _, key := range jwks.Keys {
-			if err := parsedJWT.Claims(key, &claims); err == nil {
-				valid = true
-				break
-			}
-		}
-
-		if !valid {
-			errResponse = "unable to validate the token signature"
+	var valid bool
+	for _, key := range jwks.Keys {
+		if err := parsedJWT.Claims(key, &claims); err == nil {
+			valid = true
+			break
 		}
 	}
 
+	if !valid {
+		return introspectionResp("unable to validate the token signature")
+	}
+
+	// validate claims
 	c, err := i.getOIDCConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	// validate claims
-	if errResponse == "" {
-		expected := jwt.Expected{
-			Issuer: c.effectiveIssuer,
-			Time:   time.Now(),
-		}
+	expected := jwt.Expected{
+		Issuer: c.effectiveIssuer,
+		Time:   time.Now(),
+	}
 
-		if clientID != "" {
-			expected.Audience = []string{clientID}
-		}
+	if clientID != "" {
+		expected.Audience = []string{clientID}
+	}
 
-		if claimsErr := claims.Validate(expected); claimsErr != nil {
-			errResponse = fmt.Sprintf("error validating claims: %s", claimsErr.Error())
-		}
+	if claimsErr := claims.Validate(expected); claimsErr != nil {
+		return introspectionResp(fmt.Sprintf("error validating claims: %s", claimsErr.Error()))
 	}
 
 	// validate entity exists and is active
-	if errResponse == "" {
-		entity, err := i.MemDBEntityByID(claims.Subject, true)
-		if err != nil {
-			return nil, err
-		}
-		if entity == nil {
-			errResponse = "entity was not found"
-		} else if entity.Disabled {
-			errResponse = "entity is disabled"
-		}
-	}
-
-	response := map[string]interface{}{
-		"active": true,
-	}
-
-	if errResponse != "" {
-		response["active"] = false
-		response["error"] = errResponse
-	}
-
-	data, err := json.Marshal(response)
+	entity, err := i.MemDBEntityByID(claims.Subject, true)
 	if err != nil {
 		return nil, err
 	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     data,
-			logical.HTTPContentType: "application/json",
-		},
+	if entity == nil {
+		return introspectionResp("entity was not found")
+	} else if entity.Disabled {
+		return introspectionResp("entity is disabled")
 	}
 
-	return resp, nil
+	return introspectionResp("")
 }
 
 // namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
@@ -1045,16 +1048,18 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 		return err
 	}
 
+	now := time.Now()
+
 	// set the previous public key's expiry time
 	for _, key := range k.KeyRing {
 		if key.KeyID == k.SigningKey.KeyID {
-			key.ExpireAt = time.Now().Add(verificationTTL)
+			key.ExpireAt = now.Add(verificationTTL)
 			break
 		}
 	}
 	k.SigningKey = signingKey
 	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.KeyID})
-	k.NextRotation = time.Now().Add(k.RotationPeriod)
+	k.NextRotation = now.Add(k.RotationPeriod)
 
 	// store named key (it was modified when rotate was called on it)
 	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.Name, k)
@@ -1129,6 +1134,10 @@ func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error
 func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storage) (*jose.JSONWebKeySet, error) {
 	if jwksRaw, ok := i.oidcCache.Get("jwks"); ok {
 		return jwksRaw.(*jose.JSONWebKeySet), nil
+	}
+
+	if _, err := i.expireOIDCPublicKeys(ctx, s); err != nil {
+		return nil, err
 	}
 
 	keyIDs, err := listOIDCPublicKeys(ctx, s)
@@ -1248,8 +1257,8 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, error) {
 	// soonestRotation will be the soonest rotation time of all keys. Initialize
 	// here to a relatively distant time.
-	soonestRotation := time.Now().Add(24 * time.Hour)
 	now := time.Now()
+	soonestRotation := now.Add(24 * time.Hour)
 
 	keys, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
@@ -1322,14 +1331,4 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 			i.oidcCache.SetDefault("nextRun", nextExpiration)
 		}
 	}
-}
-
-func (c *oidcCache) purge() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	c.discoveryResponse = c.discoveryResponse[:0]
-	c.jwksResponse = c.jwksResponse[:0]
-	c.nextPeriodicRun = time.Time{}
-	c.config = nil
 }
