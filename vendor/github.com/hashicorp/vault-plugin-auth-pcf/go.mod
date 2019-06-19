@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20190201205600-f136f9222381
+	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-sockaddr v1.0.2

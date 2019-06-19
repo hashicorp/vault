@@ -70,10 +70,10 @@ func TestPCFEndToEnd(t *testing.T) {
 
 	// Configure a CA certificate like a Vault operator would in setting up PCF.
 	if _, err := client.Logical().Write("auth/pcf/config", map[string]interface{}{
-		"certificates": testPCFCerts.CACertificate,
-		"pcf_api_addr": mockPCFAPI.URL,
-		"pcf_username": pcfAPI.AuthUsername,
-		"pcf_password": pcfAPI.AuthPassword,
+		"identity_ca_certificates": testPCFCerts.CACertificate,
+		"pcf_api_addr":             mockPCFAPI.URL,
+		"pcf_username":             pcfAPI.AuthUsername,
+		"pcf_password":             pcfAPI.AuthPassword,
 	}); err != nil {
 		t.Fatal(err)
 	}

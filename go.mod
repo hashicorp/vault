@@ -74,7 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1

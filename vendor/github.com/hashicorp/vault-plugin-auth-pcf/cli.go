@@ -45,13 +45,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if err != nil {
 		return nil, err
 	}
-	certificate := string(certBytes)
+	cfInstanceCertContents := string(certBytes)
 
 	signingTime := time.Now().UTC()
 	signatureData := &signatures.SignatureData{
-		SigningTime: signingTime,
-		Role:        role,
-		Certificate: certificate,
+		SigningTime:            signingTime,
+		Role:                   role,
+		CFInstanceCertContents: cfInstanceCertContents,
 	}
 	signature, err := signatures.Sign(pathToInstanceKey, signatureData)
 	if err != nil {
@@ -59,10 +59,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	loginData := map[string]interface{}{
-		"role":         role,
-		"certificate":  certificate,
-		"signing_time": signingTime.Format(signatures.TimeFormat),
-		"signature":    signature,
+		"role":             role,
+		"cf_instance_cert": cfInstanceCertContents,
+		"signing_time":     signingTime.Format(signatures.TimeFormat),
+		"signature":        signature,
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)

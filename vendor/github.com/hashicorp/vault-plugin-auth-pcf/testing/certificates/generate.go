@@ -106,10 +106,29 @@ func (e *TestCertificates) Close() error {
 }
 
 func generate(instanceID, orgID, spaceID, appID, ipAddress string) (caCert, instanceCert, instanceKey string, err error) {
-	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	caCert, caPriv, err := generateCA("", nil)
 	if err != nil {
 		return "", "", "", err
 	}
+
+	intermediateCert, intermediatePriv, err := generateCA(caCert, caPriv)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	identityCert, identityPriv, err := generateIdentity(intermediateCert, intermediatePriv, instanceID, orgID, spaceID, appID, ipAddress)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Convert the identity key to something appropriate for a file body.
+	out := &bytes.Buffer{}
+	pem.Encode(out, pemBlockForKey(identityPriv))
+	instanceKey = out.String()
+	return caCert, fmt.Sprintf("%s%s", intermediateCert, identityCert), instanceKey, nil
+}
+
+func generateCA(caCert string, caPriv *rsa.PrivateKey) (string, *rsa.PrivateKey, error) {
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
@@ -119,35 +138,66 @@ func generate(instanceID, orgID, spaceID, appID, ipAddress string) (caCert, inst
 			CommonName:   "test-CA",
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24 * 180),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365 * 100),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(caPrivateKey), caPrivateKey)
-	if err != nil {
-		return "", "", "", err
+	// Default to self-signing certificates by listing using itself as a parent.
+	parent := &template
+
+	// If a cert is provided, use it as the parent.
+	if caCert != "" {
+		block, certBytes := pem.Decode([]byte(caCert))
+		if block == nil {
+			return "", nil, errors.New("block shouldn't be nil")
+		}
+		if len(certBytes) > 0 {
+			return "", nil, errors.New("there shouldn't be more bytes")
+		}
+		ca509cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return "", nil, err
+		}
+		parent = ca509cert
 	}
+	// If a private key isn't provided, make a new one.
+	priv := caPriv
+	if priv == nil {
+		newPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			return "", nil, err
+		}
+		priv = newPriv
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, parent, publicKey(priv), priv)
+	if err != nil {
+		return "", nil, err
+	}
+
 	out := &bytes.Buffer{}
 	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	caCert = out.String()
-	out.Reset()
+	cert := out.String()
+	return cert, priv, nil
+}
 
+func generateIdentity(caCert string, caPriv *rsa.PrivateKey, instanceID, orgID, spaceID, appID, ipAddress string) (string, *rsa.PrivateKey, error) {
 	block, certBytes := pem.Decode([]byte(caCert))
 	if block == nil {
-		return "", "", "", errors.New("block shouldn't be nil")
+		return "", nil, errors.New("block shouldn't be nil")
 	}
 	if len(certBytes) > 0 {
-		return "", "", "", errors.New("there shouldn't be more bytes")
+		return "", nil, errors.New("there shouldn't be more bytes")
 	}
 	ca509cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return "", "", "", err
+		return "", nil, err
 	}
 
-	template = x509.Certificate{
+	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			Country:      []string{"US"},
@@ -161,7 +211,7 @@ func generate(instanceID, orgID, spaceID, appID, ipAddress string) (caCert, inst
 			CommonName: instanceID,
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24 * 180),
+		NotAfter:              time.Now().Add(time.Hour * 24 * 365 * 100),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -169,25 +219,20 @@ func generate(instanceID, orgID, spaceID, appID, ipAddress string) (caCert, inst
 		IPAddresses:           []net.IP{net.ParseIP(ipAddress)},
 	}
 
-	clientPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return "", "", "", err
+		return "", nil, err
 	}
 
-	derBytes, err = x509.CreateCertificate(rand.Reader, &template, ca509cert, publicKey(clientPrivateKey), caPrivateKey)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, ca509cert, publicKey(priv), caPriv)
 	if err != nil {
-		return "", "", "", err
+		return "", nil, err
 	}
 
+	out := &bytes.Buffer{}
 	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	instanceCert = out.String()
-	out.Reset()
-
-	pem.Encode(out, pemBlockForKey(clientPrivateKey))
-	instanceKey = out.String()
-	out.Reset()
-
-	return caCert, instanceCert, instanceKey, nil
+	cert := out.String()
+	return cert, priv, nil
 }
 
 func makePathTo(certOrKey string) (string, error) {

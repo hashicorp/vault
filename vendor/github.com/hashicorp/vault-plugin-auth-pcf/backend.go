@@ -2,7 +2,7 @@ package pcf
 
 import (
 	"context"
-	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,9 +16,7 @@ const (
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	b := &backend{
-		logger: hclog.Default(),
-	}
+	b := &backend{}
 	b.Backend = &framework.Backend{
 		AuthRenew: b.pathLoginRenew,
 		Help:      backendHelp,
@@ -42,7 +40,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 type backend struct {
 	*framework.Backend
-	logger hclog.Logger
 }
 
 const backendHelp = `

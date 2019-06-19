@@ -21,7 +21,13 @@ const TimeFormat = "2006-01-02T15:04:05Z"
 type SignatureData struct {
 	SigningTime time.Time
 	Role        string
-	Certificate string
+
+	// CFInstanceCertContents are the full contents/body of the file
+	// available at CF_INSTANCE_CERT. When viewed visually, this file
+	// will contain two certificates. Generally, the first one is the
+	// identity certificate itself, and the second one is the intermediate
+	// certificate that issued it.
+	CFInstanceCertContents string
 }
 
 func (s *SignatureData) hash() []byte {
@@ -31,7 +37,7 @@ func (s *SignatureData) hash() []byte {
 
 func (s *SignatureData) toSign() string {
 	toHash := ""
-	for _, field := range []string{s.SigningTime.UTC().Format(TimeFormat), s.Certificate, s.Role} {
+	for _, field := range []string{s.SigningTime.UTC().Format(TimeFormat), s.CFInstanceCertContents, s.Role} {
 		toHash += field
 	}
 	return toHash
@@ -62,13 +68,11 @@ func Sign(pathToPrivateKey string, signatureData *SignatureData) (string, error)
 	return base64.URLEncoding.EncodeToString(signatureBytes), nil
 }
 
-// Verify ensures that a given signature was created by one of the private keys
-// matching one of the given client certificates. It is possible for a client
-// certificate string given by PCF to contain multiple certificates within its
-// body, hence the looping. The matching certificate is returned and should be
-// further checked to ensure it contains the app, space, and org ID, and CN;
-// otherwise it would be possible to match against an injected client certificate
-// to gain authentication.
+// Verify ensures that a given signature was created by a private key
+// matching one of the given instance certificates. It returns the matching
+// certificate, which should further be verified to be the identity certificate,
+// and to be issued by a chain leading to the root CA certificate. There's a
+// util function for this named Validate.
 func Verify(signature string, signatureData *SignatureData) (*x509.Certificate, error) {
 	if signatureData == nil {
 		return nil, errors.New("signatureData must be provided")
@@ -80,58 +84,35 @@ func Verify(signature string, signatureData *SignatureData) (*x509.Certificate, 
 		return nil, err
 	}
 
-	certBytes := []byte(signatureData.Certificate)
+	cfInstanceCertContentsBytes := []byte(signatureData.CFInstanceCertContents)
 	var block *pem.Block
 	var result error
 	for {
-		block, certBytes = pem.Decode(certBytes)
+		block, cfInstanceCertContentsBytes = pem.Decode(cfInstanceCertContentsBytes)
 		if block == nil {
 			break
 		}
-		clientCerts, err := x509.ParseCertificates(block.Bytes)
+		instanceCerts, err := x509.ParseCertificates(block.Bytes)
 		if err != nil {
 			result = multierror.Append(result, err)
 			continue
 		}
-		for _, clientCert := range clientCerts {
-			publicKey, ok := clientCert.PublicKey.(*rsa.PublicKey)
+		for _, instanceCert := range instanceCerts {
+			publicKey, ok := instanceCert.PublicKey.(*rsa.PublicKey)
 			if !ok {
-				result = multierror.Append(result, fmt.Errorf("not an rsa public key, it's a %t", clientCert.PublicKey))
+				result = multierror.Append(result, fmt.Errorf("not an rsa public key, it's a %t", instanceCert.PublicKey))
 				continue
 			}
-
 			if err := rsa.VerifyPSS(publicKey, crypto.SHA256, signatureData.hash(), signatureBytes, nil); err != nil {
 				result = multierror.Append(result, err)
 				continue
 			}
 			// Success
-			return clientCert, nil
+			return instanceCert, nil
 		}
 	}
 	if result == nil {
-		return nil, fmt.Errorf("no matching client certificate found for %s in %s", signature, signatureData.Certificate)
+		return nil, fmt.Errorf("no matching certificate found for %s in %s", signature, signatureData.CFInstanceCertContents)
 	}
 	return nil, result
-}
-
-func IsIssuer(pathToCACert string, clientCert *x509.Certificate) (bool, error) {
-	caCertBytes, err := ioutil.ReadFile(pathToCACert)
-	if err != nil {
-		return false, err
-	}
-
-	pool := x509.NewCertPool()
-	if ok := pool.AppendCertsFromPEM(caCertBytes); !ok {
-		return false, errors.New("couldn't append CA certificates")
-	}
-
-	verifyOpts := x509.VerifyOptions{
-		Roots: pool,
-	}
-
-	if _, err := clientCert.Verify(verifyOpts); err != nil {
-		return false, err
-	}
-	// Success
-	return true, nil
 }

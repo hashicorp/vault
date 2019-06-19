@@ -3,17 +3,16 @@ package pcf
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"net"
 	"strings"
 	"time"
 
-	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/hashicorp/vault-plugin-auth-pcf/models"
 	"github.com/hashicorp/vault-plugin-auth-pcf/signatures"
 	"github.com/hashicorp/vault-plugin-auth-pcf/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/pkg/errors"
 )
@@ -29,11 +28,11 @@ func (b *backend) pathLogin() *framework.Path {
 				DisplayValue: "internally-defined-role",
 				Description:  "The name of the role to authenticate against.",
 			},
-			"certificate": {
+			"cf_instance_cert": {
 				Required:    true,
 				Type:        framework.TypeString,
-				DisplayName: "Client Certificate",
-				Description: "The full client certificate available at the CF_INSTANCE_CERT path on the PCF instance.",
+				DisplayName: "CF_INSTANCE_CERT Contents",
+				Description: "The full body of the file available at the CF_INSTANCE_CERT path on the PCF instance.",
 			},
 			"signing_time": {
 				Required:     true,
@@ -60,8 +59,8 @@ func (b *backend) pathLogin() *framework.Path {
 }
 
 // operationLoginUpdate is called by those wanting to gain access to Vault.
-// They present a client certificate that should have been issued by the pre-configured
-// Certificate Authority, and a signature that should have been signed by the client cert's
+// They present the instance certificates that should have been issued by the pre-configured
+// Certificate Authority, and a signature that should have been signed by the instance cert's
 // private key. If this holds true, there are additional checks verifying everything looks
 // good before authentication is given.
 func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -78,9 +77,9 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("'signature' is required"), nil
 	}
 
-	clientCertificate := data.Get("certificate").(string)
-	if clientCertificate == "" {
-		return logical.ErrorResponse("'certificate' is required"), nil
+	cfInstanceCertContents := data.Get("cf_instance_cert").(string)
+	if cfInstanceCertContents == "" {
+		return logical.ErrorResponse("'cf_instance_cert' is required"), nil
 	}
 
 	signingTimeRaw := data.Get("signing_time").(string)
@@ -92,31 +91,6 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Ensure the time it was signed is no more than 5 minutes in the past
-	// or 30 seconds in the future. This is a guard against some replay attacks.
-	fiveMinutesAgo := timeReceived.Add(time.Minute * time.Duration(-5))
-	thirtySecondsFromNow := timeReceived.Add(time.Second * time.Duration(30))
-	if signingTime.Before(fiveMinutesAgo) {
-		return logical.ErrorResponse(fmt.Sprintf("request is too old; signed at %s but received request at %s; raw signing time is %s", signingTime, timeReceived, signingTimeRaw)), nil
-	}
-	if signingTime.After(thirtySecondsFromNow) {
-		return logical.ErrorResponse(fmt.Sprintf("request is too far in the future; signed at %s but received request at %s; raw signing time is %s", signingTime, timeReceived, signingTimeRaw)), nil
-	}
-
-	// Ensure the private key used to create the signature matches our client
-	// certificate, and that it signed the same data as is presented in the body.
-	// This offers some protection against MITM attacks.
-	matchingCert, err := signatures.Verify(signature, &signatures.SignatureData{
-		SigningTime: signingTime,
-		Role:        roleName,
-		Certificate: clientCertificate,
-	})
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	// Ensure the matching certificate was actually issued by the CA configured.
-	// This protects against self-generated client certificates.
 	config, err := config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -124,18 +98,49 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 	if config == nil {
 		return nil, errors.New("no CA is configured for verifying client certificates")
 	}
-	verifyOpts, err := config.VerifyOpts()
-	if err != nil {
-		return nil, err
+
+	// Ensure the time it was signed isn't too far in the past or future.
+	oldestAllowableSigningTime := timeReceived.Add(-1 * config.LoginMaxSecOld)
+	furthestFutureAllowableSigningTime := timeReceived.Add(config.LoginMaxSecAhead)
+	if signingTime.Before(oldestAllowableSigningTime) {
+		return logical.ErrorResponse(fmt.Sprintf("request is too old; signed at %s but received request at %s; allowable seconds old is %d", signingTime, timeReceived, config.LoginMaxSecOld/time.Second)), nil
 	}
-	if _, err := matchingCert.Verify(verifyOpts); err != nil {
+	if signingTime.After(furthestFutureAllowableSigningTime) {
+		return logical.ErrorResponse(fmt.Sprintf("request is too far in the future; signed at %s but received request at %s; allowable seconds in the future is %d", signingTime, timeReceived, config.LoginMaxSecAhead/time.Second)), nil
+	}
+
+	intermediateCert, identityCert, err := util.ExtractCertificates(cfInstanceCertContents)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// Ensure the private key used to create the signature matches our identity
+	// certificate, and that it signed the same data as is presented in the body.
+	// This offers some protection against MITM attacks.
+	signingCert, err := signatures.Verify(signature, &signatures.SignatureData{
+		SigningTime:            signingTime,
+		Role:                   roleName,
+		CFInstanceCertContents: cfInstanceCertContents,
+	})
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	// Make sure the identity/signing cert was actually issued by our CA.
+	if err := util.Validate(config.IdentityCACertificates, intermediateCert, identityCert, signingCert); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	// Read PCF's identity fields from the certificate.
-	pcfCert, err := models.NewPCFCertificateFromx509(matchingCert)
+	pcfCert, err := models.NewPCFCertificateFromx509(signingCert)
 	if err != nil {
 		return nil, err
+	}
+
+	// It may help some users to be able to easily view the incoming certificate information
+	// in an un-encoded format, as opposed to the encoded format that will appear in the Vault
+	// audit logs.
+	if b.Logger().IsDebug() {
+		b.Logger().Debug(fmt.Sprintf("handling login attempt from %+v", pcfCert))
 	}
 
 	// Ensure the pcf certificate meets the role's constraints.
@@ -228,13 +233,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	}
 
 	// Reconstruct the certificate and ensure it still meets all constraints.
-	pcfCert, err := models.NewPCFCertificate(
-		instanceID,
-		orgID,
-		spaceID,
-		appID,
-		ipAddr,
-	)
+	pcfCert, err := models.NewPCFCertificate(instanceID, orgID, spaceID, appID, ipAddr)
 	if err := b.validate(config, role, pcfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -269,26 +268,13 @@ func (b *backend) validate(config *models.Configuration, role *models.RoleEntry,
 	}
 
 	// Use the PCF API to ensure everything still exists and to verify whatever we can.
-	client, err := cfclient.NewClient(&cfclient.Config{
-		ApiAddress: config.PCFAPIAddr,
-		Username:   config.PCFUsername,
-		Password:   config.PCFPassword,
-	})
+	client, err := util.NewPCFClient(config)
 	if err != nil {
 		return err
 	}
 
-	// Check everything we can using the instance ID.
-	serviceInstance, err := client.GetServiceInstanceByGuid(pcfCert.InstanceID)
-	if err != nil {
-		return err
-	}
-	if serviceInstance.Guid != pcfCert.InstanceID {
-		return fmt.Errorf("cert instance ID %s doesn't match API's expected one of %s", pcfCert.InstanceID, serviceInstance.Guid)
-	}
-	if serviceInstance.SpaceGuid != pcfCert.SpaceID {
-		return fmt.Errorf("cert space ID %s doesn't match API's expected one of %s", pcfCert.SpaceID, serviceInstance.SpaceGuid)
-	}
+	// Here, if it were possible, we _would_ do an API call to check the instance ID,
+	// but currently there's no known way to do that via the pcf API.
 
 	// Check everything we can using the app ID.
 	app, err := client.AppByGuid(pcfCert.AppID)

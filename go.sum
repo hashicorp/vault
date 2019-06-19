@@ -290,6 +290,8 @@ github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190524170107-2d769dfedad4 h1
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190524170107-2d769dfedad4/go.mod h1:9866PkjxPBXclbEJBKzVGY60pgVIY9b7qZJ5Fa+p6VY=
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26 h1:mz5YaAFveImGMooFLAW14kdSBH4jVdRnKTQYAz0fEHw=
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26/go.mod h1:9866PkjxPBXclbEJBKzVGY60pgVIY9b7qZJ5Fa+p6VY=
+github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c h1:/g4Yr7pCTfKVqjUUVO4/Pkd3Vmw2TB3znuB4lF7ZNNY=
+github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c/go.mod h1:AjWJZO3nIHzc1inkx57x5qtIIcpi1sejXiwJVcNpjyc=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.1 h1:BdiASUZLOvOUs317EnaUNjGxTSw0PYGQA7zJZhDKLC4=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.1/go.mod h1:EH9CI8+0aWRBz8eIgGth0QjttmHWlGvn+8ZmX/ZUetE=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1 h1:72K91p4uLhT/jgtBq2zV5Wn8ocvny4sAN56XOcTxK1w=

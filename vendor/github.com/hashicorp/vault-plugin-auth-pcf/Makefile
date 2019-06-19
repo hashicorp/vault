@@ -22,7 +22,7 @@ testshort: fmtcheck generate
 	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -short -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -count=1 -timeout=20m -parallel=4
 
 # test runs the unit tests and vets the code
-test: gencerts fmtcheck generate
+test: fmtcheck generate
 	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test ./... -v -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -count=1 -timeout=20m -parallel=4
 
 testcompile: fmtcheck generate
@@ -44,9 +44,6 @@ bootstrap:
 
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
-
-gencerts:
-	@sh -c "'$(CURDIR)/scripts/generate-test-certs.sh'"
 
 fmt:
 	gofmt -w $(GOFMT_FILES)

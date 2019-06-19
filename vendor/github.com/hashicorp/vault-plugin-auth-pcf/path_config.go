@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/hashicorp/vault-plugin-auth-pcf/models"
+	"github.com/hashicorp/vault-plugin-auth-pcf/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -17,10 +18,18 @@ func (b *backend) pathConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"certificates": {
-				Required:    true,
-				Type:        framework.TypeStringSlice,
-				Description: "The PEM-format CA certificates.",
+			"identity_ca_certificates": {
+				Required:     true,
+				Type:         framework.TypeStringSlice,
+				DisplayName:  "Identity CA Certificates",
+				DisplayValue: `-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----`,
+				Description:  "The PEM-format CA certificates that are required to have issued the instance certificates presented for logging in.",
+			},
+			"pcf_api_trusted_certificates": {
+				Type:         framework.TypeStringSlice,
+				DisplayName:  "PCF API Trusted IdentityCACertificates",
+				DisplayValue: `-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----`,
+				Description:  "The PEM-format CA certificates that are acceptable for the PCF API to present.",
 			},
 			"pcf_api_addr": {
 				Required:     true,
@@ -43,6 +52,22 @@ func (b *backend) pathConfig() *framework.Path {
 				DisplayValue:     "admin",
 				Description:      "The password for PCF’s API.",
 				DisplaySensitive: true,
+			},
+			"login_max_seconds_old": {
+				Type:         framework.TypeDurationSecond,
+				DisplayName:  "Login Max Seconds Old",
+				DisplayValue: "300",
+				Description: `Duration in seconds for the maximum acceptable age of a "signing_time". Useful for clock drift. 
+Set low to reduce the opportunity for replay attacks.`,
+				Default: 300,
+			},
+			"login_max_seconds_ahead": {
+				Type:         framework.TypeInt,
+				DisplayName:  "Login Max Seconds Ahead",
+				DisplayValue: "60",
+				Description: `Duration in seconds for the maximum acceptable length in the future a "signing_time" can be. Useful for clock drift.
+Set low to reduce the opportunity for replay attacks.`,
+				Default: 60,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -71,9 +96,9 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 	}
 	if config == nil {
 		// They're creating a config.
-		certificates := data.Get("certificates").([]string)
-		if len(certificates) == 0 {
-			return logical.ErrorResponse("'certificates' is required"), nil
+		identityCACerts := data.Get("identity_ca_certificates").([]string)
+		if len(identityCACerts) == 0 {
+			return logical.ErrorResponse("'identity_ca_certificates' is required"), nil
 		}
 		pcfApiAddr := data.Get("pcf_api_addr").(string)
 		if pcfApiAddr == "" {
@@ -87,27 +112,35 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		if pcfPassword == "" {
 			return logical.ErrorResponse("'pcf_password' is required"), nil
 		}
-		config, err = models.NewConfiguration(certificates, pcfApiAddr, pcfUsername, pcfPassword)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+		pcfApiCertificates := data.Get("pcf_api_trusted_certificates").([]string)
+
+		// Default this to 5 minutes.
+		loginMaxSecOld := 300 * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_old"); ok {
+			loginMaxSecOld = time.Duration(raw.(int)) * time.Second
+		}
+
+		// Default this to 1 minute.
+		loginMaxSecAhead := 60 * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_ahead"); ok {
+			loginMaxSecAhead = time.Duration(raw.(int)) * time.Second
+		}
+		config = &models.Configuration{
+			IdentityCACertificates: identityCACerts,
+			PCFAPICertificates:     pcfApiCertificates,
+			PCFAPIAddr:             pcfApiAddr,
+			PCFUsername:            pcfUsername,
+			PCFPassword:            pcfPassword,
+			LoginMaxSecOld:         loginMaxSecOld,
+			LoginMaxSecAhead:       loginMaxSecAhead,
 		}
 	} else {
 		// They're updating a config. Only update the fields that have been sent in the call.
-		if raw, ok := data.GetOk("certificates"); ok {
-			switch v := raw.(type) {
-			case []interface{}:
-				certificates := make([]string, len(v))
-				for _, certificateIfc := range v {
-					certificate, ok := certificateIfc.(string)
-					if !ok {
-						continue
-					}
-					certificates = append(certificates, certificate)
-				}
-				config.Certificates = certificates
-			case string:
-				config.Certificates = []string{v}
-			}
+		if raw, ok := data.GetOk("identity_ca_certificates"); ok {
+			config.IdentityCACertificates = raw.([]string)
+		}
+		if raw, ok := data.GetOk("pcf_api_trusted_certificates"); ok {
+			config.PCFAPICertificates = raw.([]string)
 		}
 		if raw, ok := data.GetOk("pcf_api_addr"); ok {
 			config.PCFAPIAddr = raw.(string)
@@ -118,17 +151,19 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		if raw, ok := data.GetOk("pcf_password"); ok {
 			config.PCFPassword = raw.(string)
 		}
+		if raw, ok := data.GetOk("login_max_seconds_old"); ok {
+			config.LoginMaxSecOld = time.Duration(raw.(int)) * time.Second
+		}
+		if raw, ok := data.GetOk("login_max_seconds_ahead"); ok {
+			config.LoginMaxSecAhead = time.Duration(raw.(int)) * time.Second
+		}
 	}
 
 	// To give early and explicit feedback, make sure the config works by executing a test call
 	// and checking that the API version is supported. If they don't have API v2 running, we would
-	// probably expect a timeout of some sort below because it's first called in the NewClient
+	// probably expect a timeout of some sort below because it's first called in the NewPCFClient
 	// method.
-	client, err := cfclient.NewClient(&cfclient.Config{
-		ApiAddress: config.PCFAPIAddr,
-		Username:   config.PCFUsername,
-		Password:   config.PCFPassword,
-	})
+	client, err := util.NewPCFClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to establish an initial connection to the PCF API: %s", err)
 	}
@@ -160,9 +195,12 @@ func (b *backend) operationConfigRead(ctx context.Context, req *logical.Request,
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificates": config.Certificates,
-			"pcf_api_addr": config.PCFAPIAddr,
-			"pcf_username": config.PCFUsername,
+			"identity_ca_certificates":     config.IdentityCACertificates,
+			"pcf_api_trusted_certificates": config.PCFAPICertificates,
+			"pcf_api_addr":                 config.PCFAPIAddr,
+			"pcf_username":                 config.PCFUsername,
+			"login_max_seconds_old":        config.LoginMaxSecOld / time.Second,
+			"login_max_seconds_ahead":      config.LoginMaxSecAhead / time.Second,
 		},
 	}, nil
 }
@@ -183,22 +221,8 @@ func config(ctx context.Context, storage logical.Storage) (*models.Configuration
 	if entry == nil {
 		return nil, nil
 	}
-	configMap := make(map[string]interface{})
-	if err := entry.DecodeJSON(&configMap); err != nil {
-		return nil, err
-	}
-	var certificates []string
-	certificatesIfc := configMap["certificates"].([]interface{})
-	for _, certificateIfc := range certificatesIfc {
-		certificates = append(certificates, certificateIfc.(string))
-	}
-	config, err := models.NewConfiguration(
-		certificates,
-		configMap["pcf_api_addr"].(string),
-		configMap["pcf_username"].(string),
-		configMap["pcf_password"].(string),
-	)
-	if err != nil {
+	config := &models.Configuration{}
+	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
 	return config, nil
