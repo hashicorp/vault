@@ -42,6 +42,7 @@ FEATURES:
  * Adds a PCF plugin that supports use of instance identity certificates for
    Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
+ * Add HTTP Request Volume Page to the UI [GH-6925]
 
 IMPROVEMENTS: 
 
