@@ -496,7 +496,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			Version: currentRoleStorageVersion,
 		}
 	} else {
-		// We want to always use a copy so we arne't modifying items in the
+		// We want to always use a copy so we aren't modifying items in the
 		// version in the cache while other users may be looking it up (or if
 		// we fail somewhere)
 		cp, err := copystructure.Copy(roleEntry)
