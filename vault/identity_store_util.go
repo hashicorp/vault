@@ -332,11 +332,19 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	var err error
 
 	if txn == nil {
-		return fmt.Errorf("txn is nil")
+		return errors.New("txn is nil")
 	}
 
 	if entity == nil {
-		return fmt.Errorf("entity is nil")
+		return errors.New("entity is nil")
+	}
+
+	if entity.NamespaceID == "" {
+		entity.NamespaceID = namespace.RootNamespaceID
+	}
+
+	if previousEntity != nil && previousEntity.NamespaceID != entity.NamespaceID {
+		return errors.New("entity and previous entity are not in the same namespace")
 	}
 
 	aliasFactors := make([]string, len(entity.Aliases))
@@ -348,12 +356,24 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			return err
 		}
 
+		if alias.NamespaceID == "" {
+			alias.NamespaceID = namespace.RootNamespaceID
+		}
+
 		switch {
 		case aliasByFactors == nil:
-			// Not found, no merging needed
+			// Not found, no merging needed, just check namespace
+			if alias.NamespaceID != entity.NamespaceID {
+				return errors.New("alias and entity are not in the same namespace")
+			}
+
 		case aliasByFactors.CanonicalID == entity.ID:
 			// Lookup found the same entity, so it's already attached to the
 			// right place
+			if aliasByFactors.NamespaceID != entity.NamespaceID {
+				return errors.New("alias from factors and entity are not in the same namespace")
+			}
+
 		case previousEntity != nil && aliasByFactors.CanonicalID == previousEntity.ID:
 			// previousEntity isn't upserted yet so may still contain the old
 			// alias reference in memdb if it was just changed; validate
@@ -372,8 +392,10 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			}
 
 			// Otherwise it's still tied to previousEntity and fall through
-			// into merging
+			// into merging. We don't need a namespace check here as existing
+			// checks when creating the aliases should ensure that all line up.
 			fallthrough
+
 		default:
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
 
@@ -943,7 +965,7 @@ func (i *IdentityStore) sanitizeAlias(ctx context.Context, alias *identity.Alias
 		return err
 	}
 	if ns.ID != alias.NamespaceID {
-		return fmt.Errorf("alias belongs to a different namespace")
+		return errors.New("alias belongs to a different namespace")
 	}
 
 	// Set the creation and last update times
@@ -983,7 +1005,7 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 		entity.NamespaceID = ns.ID
 	}
 	if ns.ID != entity.NamespaceID {
-		return fmt.Errorf("entity does not belong to this namespace")
+		return errors.New("entity does not belong to this namespace")
 	}
 
 	// Create a name if there isn't one already
@@ -1017,7 +1039,7 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 	return nil
 }
 
-func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *identity.Group, memberGroupIDs []string) error {
+func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *identity.Group, previousGroup *identity.Group, memberGroupIDs []string) error {
 	var err error
 
 	if group == nil {
@@ -1047,7 +1069,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		return err
 	}
 	if ns.ID != group.NamespaceID {
-		return fmt.Errorf("group does not belong to this namespace")
+		return errors.New("group does not belong to this namespace")
 	}
 
 	// Create a name if there isn't one already
@@ -1199,6 +1221,16 @@ ALIAS:
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
 		err = i.sanitizeAlias(ctx, group.Alias)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If previousGroup is not nil, we are moving the alias from the previous
+	// group to the new one. As a result we need to upsert both in the context
+	// of this same transaction.
+	if previousGroup != nil {
+		err = i.UpsertGroupInTxn(ctx, txn, previousGroup, true)
 		if err != nil {
 			return err
 		}

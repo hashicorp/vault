@@ -227,7 +227,7 @@ github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
 github.com/gocql/gocql/internal/streams
-# github.com/gogo/protobuf v1.2.1
+# github.com/gogo/protobuf v1.2.0
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/gogoproto
@@ -287,7 +287,7 @@ github.com/hashicorp/go-immutable-radix
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/go-plugin v1.0.0
+# github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-retryablehttp v0.5.3
@@ -342,6 +342,8 @@ github.com/hashicorp/vault-plugin-auth-pcf/models
 github.com/hashicorp/vault-plugin-auth-pcf/util
 github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190617182336-fe4c97e18808
+github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
@@ -361,7 +363,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.2 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.11 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190618184542-f990eb162643 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -399,6 +401,7 @@ github.com/hashicorp/vault/sdk/helper/pathmanager
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
+github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
@@ -656,7 +659,7 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/clientcredentials
 # golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
+# golang.org/x/sys v0.0.0-20190410170021-cc4d4f50624c
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/cpu

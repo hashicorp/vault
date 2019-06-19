@@ -58,10 +58,14 @@
           Performance Replication is a feature of Vault Enterprise Premium.
         </p>
         <p class="has-text-centered">
-          {{#upgrade-link linkClass="button is-ghost has-icon-right" pageName="Performance Replication"}}
+          <a
+            href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
+            class="button is-ghost has-icon-right"
+            data-test-upgrade-link="true"
+          >
             Learn more
-            <Icon @glyph="chevron-right" />
-          {{/upgrade-link}}
+            <Chevron />
+          </a>
         </p>
       {{else if replicationEnabled}}
         <h5 class="title is-7 is-uppercase is-marginless">

@@ -332,7 +332,7 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	// case another process has re-written the policy; instead next time Get is
 	// called the values will be loaded back in.
 	if out == nil {
-		ps.switchedDeletePolicy(ctx, name, policyType, false)
+		ps.switchedDeletePolicy(ctx, name, policyType, false, true)
 	}
 
 	return
@@ -645,10 +645,18 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType PolicyType) error {
-	return ps.switchedDeletePolicy(ctx, name, policyType, true)
+	return ps.switchedDeletePolicy(ctx, name, policyType, true, false)
 }
 
-func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, policyType PolicyType, physicalDeletion bool) error {
+// deletePolicyForce is used to delete the named policy and force it even if
+// default or a singleton. It's used for invalidations or namespace deletion
+// where we internally need to actually remove a policy that the user normally
+// isn't allowed to remove.
+func (ps *PolicyStore) deletePolicyForce(ctx context.Context, name string, policyType PolicyType) error {
+	return ps.switchedDeletePolicy(ctx, name, policyType, true, true)
+}
+
+func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, policyType PolicyType, physicalDeletion, force bool) error {
 	defer metrics.MeasureSince([]string{"policy", "delete_policy"}, time.Now())
 
 	ns, err := namespace.FromContext(ctx)
@@ -673,11 +681,13 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 
 	switch policyType {
 	case PolicyTypeACL:
-		if strutil.StrListContains(immutablePolicies, name) {
-			return fmt.Errorf("cannot delete %q policy", name)
-		}
-		if name == "default" {
-			return fmt.Errorf("cannot delete default policy")
+		if !force {
+			if strutil.StrListContains(immutablePolicies, name) {
+				return fmt.Errorf("cannot delete %q policy", name)
+			}
+			if name == "default" {
+				return fmt.Errorf("cannot delete default policy")
+			}
 		}
 
 		if physicalDeletion {

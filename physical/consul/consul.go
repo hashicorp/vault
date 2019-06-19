@@ -237,9 +237,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 					logger.Debug("config address parsed", "scheme", parts[0])
 					logger.Debug("config scheme parsed", "address", parts[1])
 				}
-			} else {
-				return nil, errors.New("address should be host[:port], not URL")
-			}
+			} // allow "unix:" or whatever else consul supports in the future
 		}
 	}
 	if scheme, ok := conf["scheme"]; ok {

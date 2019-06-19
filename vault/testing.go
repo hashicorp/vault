@@ -989,6 +989,7 @@ type TestClusterOptions struct {
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
+	FirstCoreNumber    int
 }
 
 var DefaultNumCores = 3
@@ -1017,6 +1018,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	var firstCoreNumber int
+	if opts != nil {
+		firstCoreNumber = opts.FirstCoreNumber
 	}
 
 	certIPs := []net.IP{
@@ -1371,6 +1377,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+		c.coreNumber = firstCoreNumber + i
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
@@ -1638,6 +1645,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mysql-rds-database-plugin",
 		"mysql-legacy-database-plugin",
 		"postgresql-database-plugin",
+		"elasticsearch-database-plugin",
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",

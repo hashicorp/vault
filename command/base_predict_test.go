@@ -333,6 +333,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"centrify",
 				"cert",
 				"consul",
+				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
 				"github",

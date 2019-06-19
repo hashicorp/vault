@@ -267,9 +267,9 @@ list of available configuration options, please see the [API documentation](/api
 
     ```text
     $ vault write auth/jwt/config \
-        oidc_discovery_url="https://myco.auth0.com/"
-        oidc_client_id="m5i8bj3iofytj",
-        oidc_client_secret="f4ubv72nfiu23hnsj",
+        oidc_discovery_url="https://myco.auth0.com/" \
+        oidc_client_id="m5i8bj3iofytj" \
+        oidc_client_secret="f4ubv72nfiu23hnsj" \
         default_role="demo"
     ```
 

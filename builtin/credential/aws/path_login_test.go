@@ -114,6 +114,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	if err == nil {
 		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
 	}
+	_, err = parseIamArn("arn:aws:sts::1234556789012:assumed-role/role")
+	if err == nil {
+		t.Error("expected error from malformed assumed role ARN")
+	}
 }
 
 func TestBackend_validateVaultHeaderValue(t *testing.T) {

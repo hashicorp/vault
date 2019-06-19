@@ -153,6 +153,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			TokenPolicies:             auth.TokenPolicies,
 			IdentityPolicies:          auth.IdentityPolicies,
 			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
+			NoDefaultPolicy:           auth.NoDefaultPolicy,
 			Metadata:                  auth.Metadata,
 			EntityID:                  auth.EntityID,
 			RemainingUses:             req.ClientTokenRemainingUses,
@@ -352,6 +353,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			TokenPolicies:             resp.Auth.TokenPolicies,
 			IdentityPolicies:          resp.Auth.IdentityPolicies,
 			ExternalNamespacePolicies: resp.Auth.ExternalNamespacePolicies,
+			NoDefaultPolicy:           resp.Auth.NoDefaultPolicy,
 			Metadata:                  resp.Auth.Metadata,
 			NumUses:                   resp.Auth.NumUses,
 			EntityID:                  resp.Auth.EntityID,
@@ -397,6 +399,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			TokenPolicies:             auth.TokenPolicies,
 			IdentityPolicies:          auth.IdentityPolicies,
 			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
+			NoDefaultPolicy:           auth.NoDefaultPolicy,
 			Metadata:                  auth.Metadata,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
@@ -496,6 +499,7 @@ type AuditAuth struct {
 	TokenPolicies             []string            `json:"token_policies,omitempty"`
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
+	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
 	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
