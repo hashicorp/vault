@@ -365,14 +365,12 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description: "My Description",
 				},
 				logical.UpdateOperation: &PathOperation{
-					Summary:       "Update Summary",
-					Description:   "Update Description",
-					DisplayAction: "Save",
+					Summary:     "Update Summary",
+					Description: "Update Description",
 				},
 				logical.CreateOperation: &PathOperation{
-					Summary:       "Create Summary",
-					Description:   "Create Description",
-					DisplayAction: "Save",
+					Summary:     "Create Summary",
+					Description: "Create Description",
 				},
 				logical.ListOperation: &PathOperation{
 					Summary:     "List Summary",

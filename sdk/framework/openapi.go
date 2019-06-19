@@ -119,15 +119,14 @@ func NewOASOperation() *OASOperation {
 }
 
 type OASOperation struct {
-	Summary       string               `json:"summary,omitempty"`
-	Description   string               `json:"description,omitempty"`
-	OperationID   string               `json:"operationId,omitempty"`
-	Tags          []string             `json:"tags,omitempty"`
-	Parameters    []OASParameter       `json:"parameters,omitempty"`
-	RequestBody   *OASRequestBody      `json:"requestBody,omitempty"`
-	Responses     map[int]*OASResponse `json:"responses"`
-	Deprecated    bool                 `json:"deprecated,omitempty"`
-	DisplayAction string               `json:"x-vault-displayAction,omitempty"`
+	Summary     string               `json:"summary,omitempty"`
+	Description string               `json:"description,omitempty"`
+	OperationID string               `json:"operationId,omitempty"`
+	Tags        []string             `json:"tags,omitempty"`
+	Parameters  []OASParameter       `json:"parameters,omitempty"`
+	RequestBody *OASRequestBody      `json:"requestBody,omitempty"`
+	Responses   map[int]*OASResponse `json:"responses"`
+	Deprecated  bool                 `json:"deprecated,omitempty"`
 }
 
 type OASParameter struct {
@@ -269,14 +268,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				Description: cleanString(field.Description),
 				In:          location,
 				Schema: &OASSchema{
-					Type:    t.baseType,
-					Pattern: t.pattern,
-					Enum:    field.AllowedValues,
-					Default: field.Default,
-					//DisplayName:      field.DisplayName,
-					//DisplayValue:     field.DisplayValue,
-					//DisplaySensitive: field.DisplaySensitive,
-					//DisplayGroup:     field.DisplayGroup,
+					Type:         t.baseType,
+					Pattern:      t.pattern,
+					Enum:         field.AllowedValues,
+					Default:      field.Default,
 					DisplayAttrs: field.DisplayAttrs,
 				},
 				Required:   required,
@@ -317,7 +312,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated
-			op.DisplayAction = props.DisplayAction
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -334,17 +328,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					}
 
 					p := OASSchema{
-						Type:        openapiField.baseType,
-						Description: cleanString(field.Description),
-						Format:      openapiField.format,
-						Pattern:     openapiField.pattern,
-						Enum:        field.AllowedValues,
-						Default:     field.Default,
-						Deprecated:  field.Deprecated,
-						//DisplayName:      field.DisplayName,
-						//DisplayValue: field.DisplayValue,
-						//DisplaySensitive: field.DisplaySensitive,
-						//DisplayGroup: field.DisplayGroup,
+						Type:         openapiField.baseType,
+						Description:  cleanString(field.Description),
+						Format:       openapiField.format,
+						Pattern:      openapiField.pattern,
+						Enum:         field.AllowedValues,
+						Default:      field.Default,
+						Deprecated:   field.Deprecated,
 						DisplayAttrs: field.DisplayAttrs,
 					}
 					if openapiField.baseType == "array" {

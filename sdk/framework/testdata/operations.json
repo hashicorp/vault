@@ -62,7 +62,6 @@
         "tags": ["secrets"],
         "summary": "Update Summary",
         "description": "Update Description",
-        "x-vault-displayAction": "Save",
         "requestBody": {
           "content": {
             "application/json": {

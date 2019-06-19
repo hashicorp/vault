@@ -113,18 +113,9 @@ type Path struct {
 	HelpSynopsis    string
 	HelpDescription string
 
-	// Display* members are available to provide hints for UI and documentation
-	// generators. They will be included in OpenAPI output if set.
-	//DisplayNavigation bool
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
-}
-
-type DisplayAttributes struct {
-	Name       string      `json:"name,omitempty"`
-	Value      interface{} `json:"value,omitempty"`
-	Sensitive  bool        `json:"sensitive,omitempty"`
-	Navigation bool        `json:"navigation,omitempty"`
-	Group      string      `json:"group,omitempty"`
 }
 
 // OperationHandler defines and describes a specific operation handler.
@@ -162,9 +153,31 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
-	// Display* members are available to provide hints for UI and documentation
-	// generators. They will be included in OpenAPI output if set.
-	DisplayAction string
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
+}
+
+type DisplayAttributes struct {
+	// Name is the name of the field suitable as a label or documentation heading.
+	Name string `json:"name,omitempty"`
+
+	// Value is a sample value to display for this field. This may be used
+	// to indicate a default value, but it is for display only and completely separate
+	// from any Default member handling.
+	Value interface{} `json:"value,omitempty"`
+
+	// Sensitive indicates that the value should be masked by default in the UI.
+	Sensitive bool `json:"sensitive,omitempty"`
+
+	// Navigation indicates that the path should be available as a navigation tab
+	Navigation bool `json:"navigation,omitempty"`
+
+	// Group is the suggested UI group to place this field in.
+	Group string `json:"group,omitempty"`
+
+	// Action is the verb to use for the operation.
+	Action string `json:"action,omitempty"`
 }
 
 // RequestExample is example of request data.
@@ -186,14 +199,13 @@ type Response struct {
 
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
-	Callback      OperationFunc
-	Summary       string
-	Description   string
-	Examples      []RequestExample
-	Responses     map[int][]Response
-	Unpublished   bool
-	Deprecated    bool
-	DisplayAction string
+	Callback    OperationFunc
+	Summary     string
+	Description string
+	Examples    []RequestExample
+	Responses   map[int][]Response
+	Unpublished bool
+	Deprecated  bool
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -202,13 +214,12 @@ func (p *PathOperation) Handler() OperationFunc {
 
 func (p *PathOperation) Properties() OperationProperties {
 	return OperationProperties{
-		Summary:       strings.TrimSpace(p.Summary),
-		Description:   strings.TrimSpace(p.Description),
-		Responses:     p.Responses,
-		Examples:      p.Examples,
-		Unpublished:   p.Unpublished,
-		Deprecated:    p.Deprecated,
-		DisplayAction: p.DisplayAction,
+		Summary:     strings.TrimSpace(p.Summary),
+		Description: strings.TrimSpace(p.Description),
+		Responses:   p.Responses,
+		Examples:    p.Examples,
+		Unpublished: p.Unpublished,
+		Deprecated:  p.Deprecated,
 	}
 }
 
