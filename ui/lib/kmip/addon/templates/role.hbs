@@ -12,7 +12,5 @@
   <h3 class="title is-5">
     Allowed operations
   </h3>
-  {{#each model.allowedOperations as |attr|}}
-    {{info-table-row label=(titleize (humanize (dasherize attr))) value=true}}
-  {{/each}}
+  <FieldGroupShow @model={{model}} />
 </div>
