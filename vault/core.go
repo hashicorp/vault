@@ -1193,9 +1193,15 @@ func (c *Core) Seal(token string) error {
 func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal-internal"}, time.Now())
 
+	var unlocked bool
+	defer func() {
+		if !unlocked {
+			c.stateLock.RUnlock()
+		}
+	}()
+
 	if req == nil {
 		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1207,14 +1213,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if c.standby {
 		c.logger.Error("vault cannot seal when in standby mode; please restart instead")
 		retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1242,20 +1246,17 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1266,13 +1267,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		if err != nil {
 			c.logger.Error("failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
-			c.stateLock.RUnlock()
 			return retErr
 		}
 		if te == nil {
 			// Token is no longer valid
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-			c.stateLock.RUnlock()
 			return retErr
 		}
 	}
@@ -1282,7 +1281,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		RootPrivsRequired: true,
 	})
 	if !authResults.Allowed {
-		c.stateLock.RUnlock()
 		retErr = multierror.Append(retErr, authResults.Error)
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
@@ -1304,6 +1302,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	// Unlock; sealing will grab the lock when needed
+	unlocked = true
 	c.stateLock.RUnlock()
 
 	sealErr := c.sealInternal()
