@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -80,17 +79,6 @@ type discovery struct {
 	Scopes        []string `json:"scopes_supported"`
 	AuthMethods   []string `json:"token_endpoint_auth_methods_supported"`
 	Claims        []string `json:"claims_supported"`
-}
-
-// oidcCache stores common response data as well as when the periodic func needs
-// to run. This is conservatively managed, and most writes to the OIDC endpoints
-// will invalidate the cache.
-type oidcCache struct {
-	lock              sync.RWMutex
-	discoveryResponse []byte
-	jwksResponse      []byte
-	config            *oidcConfig
-	nextPeriodicRun   time.Time
 }
 
 const (
@@ -314,20 +302,15 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 			`using the cluster's api_addr as the issuer.`)
 	}
 
-	i.oidcCache.purge()
+	i.oidcCache.Flush()
 
 	return &resp, nil
 }
 
 func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
-	lock := i.oidcCache.lock
-
-	lock.RLock()
-	if i.oidcCache.config != nil {
-		defer lock.RUnlock()
-		return i.oidcCache.config, nil
+	if v, ok := i.oidcCache.Get("config"); ok {
+		return v.(*oidcConfig), nil
 	}
-	lock.RUnlock()
 
 	var c oidcConfig
 	entry, err := s.Get(ctx, oidcConfigStorageKey)
@@ -346,9 +329,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		c.effectiveIssuer = i.core.redirectAddr + issuerPath
 	}
 
-	lock.Lock()
-	i.oidcCache.config = &c
-	lock.Unlock()
+	i.oidcCache.SetDefault("config", &c)
 
 	return &c, nil
 }
@@ -430,7 +411,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	i.oidcCache.purge()
+	i.oidcCache.Flush()
 
 	return nil, nil
 }
@@ -503,7 +484,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.purge()
+	i.oidcCache.Flush()
 
 	return nil, nil
 }
@@ -546,7 +527,7 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.purge()
+	i.oidcCache.Flush()
 
 	return nil, nil
 }
@@ -819,7 +800,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	i.oidcCache.purge()
+	i.oidcCache.Flush()
 
 	return nil, nil
 }
@@ -886,13 +867,9 @@ func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Reque
 func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []byte
 
-	i.oidcCache.lock.RLock()
-	if len(i.oidcCache.discoveryResponse) > 0 {
-		data = i.oidcCache.discoveryResponse
-		i.oidcCache.lock.RUnlock()
+	if v, ok := i.oidcCache.Get("discoveryResponse"); ok {
+		data = v.([]byte)
 	} else {
-		i.oidcCache.lock.RUnlock()
-
 		c, err := i.getOIDCConfig(ctx, req.Storage)
 		if err != nil {
 			return nil, err
@@ -911,9 +888,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		i.oidcCache.lock.Lock()
-		i.oidcCache.discoveryResponse = data
-		i.oidcCache.lock.Unlock()
+		i.oidcCache.SetDefault("discoveryResponse", data)
 	}
 
 	resp := &logical.Response{
@@ -932,28 +907,12 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []byte
 
-	i.oidcCache.lock.RLock()
-	if len(i.oidcCache.jwksResponse) > 0 {
-		data = i.oidcCache.jwksResponse
-		i.oidcCache.lock.RUnlock()
+	if v, ok := i.oidcCache.Get("jwksResponse"); ok {
+		data = v.([]byte)
 	} else {
-		i.oidcCache.lock.RUnlock()
-
-		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage)
+		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
 		if err != nil {
 			return nil, err
-		}
-
-		jwks := jose.JSONWebKeySet{
-			Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-		}
-
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
-			if err != nil {
-				return nil, err
-			}
-			jwks.Keys = append(jwks.Keys, *key)
 		}
 
 		data, err = json.Marshal(jwks)
@@ -961,9 +920,7 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			return nil, err
 		}
 
-		i.oidcCache.lock.Lock()
-		i.oidcCache.jwksResponse = data
-		i.oidcCache.lock.Unlock()
+		i.oidcCache.SetDefault("jwksResponse", data)
 	}
 
 	resp := &logical.Response{
@@ -992,17 +949,13 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 
 	// validate signature
 	if errResponse == "" {
-		keyIDs, err := listOIDCPublicKeys(ctx, req.Storage) // TODO: use cached keys
+		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
 		if err != nil {
 			return nil, err
 		}
 
 		var valid bool
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
-			if err != nil {
-				return nil, err
-			}
+		for _, key := range jwks.Keys {
 			if err := parsedJWT.Claims(key, &claims); err == nil {
 				valid = true
 				break
@@ -1173,6 +1126,33 @@ func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error
 	return keys, nil
 }
 
+func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storage) (*jose.JSONWebKeySet, error) {
+	if jwksRaw, ok := i.oidcCache.Get("jwks"); ok {
+		return jwksRaw.(*jose.JSONWebKeySet), nil
+	}
+
+	keyIDs, err := listOIDCPublicKeys(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	for _, keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, s, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
+	}
+
+	i.oidcCache.SetDefault("jwks", jwks)
+
+	return jwks, nil
+}
+
 func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
 	var didUpdate bool
 
@@ -1259,7 +1239,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	}
 
 	if didUpdate {
-		i.oidcCache.purge()
+		i.oidcCache.Flush()
 	}
 
 	return nextExpiration, nil
@@ -1312,9 +1292,11 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage) {
-	i.oidcCache.lock.RLock()
-	nextRun := i.oidcCache.nextPeriodicRun
-	i.oidcCache.lock.RUnlock()
+	nextRun := time.Time{}
+
+	if v, ok := i.oidcCache.Get("nextRun"); ok {
+		nextRun = v.(time.Time)
+	}
 
 	// The condition here is for performance, not precise timing. The actions can
 	// be run at any time safely, but there is no need to invoke them (which
@@ -1331,16 +1313,14 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 			i.Logger().Warn("error expiring OIDC public keys", "err", err)
 		}
 
-		i.oidcCache.purge()
+		i.oidcCache.Flush()
 
 		// re-run at the soonest expiration or rotation time
-		i.oidcCache.lock.Lock()
 		if nextRotation.Before(nextExpiration) {
-			i.oidcCache.nextPeriodicRun = nextRotation
+			i.oidcCache.SetDefault("nextRun", nextRotation)
 		} else {
-			i.oidcCache.nextPeriodicRun = nextExpiration
+			i.oidcCache.SetDefault("nextRun", nextExpiration)
 		}
-		i.oidcCache.lock.Unlock()
 	}
 }
 
