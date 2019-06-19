@@ -40,8 +40,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-bootstrap-answer"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-bootstrap-answer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-bootstrap-answer"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-bootstrap-answer"][1]),
 		},
 		{
 			Pattern: "storage/raft/bootstrap/challenge",
@@ -59,8 +59,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-bootstrap-challenge"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-bootstrap-challenge"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-bootstrap-challenge"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-bootstrap-challenge"][1]),
 		},
 		{
 			Pattern: "storage/raft/remove-peer",
@@ -78,8 +78,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
 		},
 		{
 			Pattern: "storage/raft/configuration",
@@ -91,8 +91,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot",
@@ -107,8 +107,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot-force",
@@ -119,8 +119,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
 		},
 	}
 }

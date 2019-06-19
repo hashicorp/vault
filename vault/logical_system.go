@@ -4034,16 +4034,4 @@ This path responds to the following HTTP methods.
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
-	"raft-bootstrap-challenge": {
-		"Creates a challenge for the new peer to be joined to the raft cluster.",
-		"",
-	},
-	"raft-bootstrap-answer": {
-		"Accepts an answer from the peer to be joined to the fact cluster.",
-		"",
-	},
-	"raft-remove-peer": {
-		"Removes a peer from the raft cluster.",
-		"",
-	},
 }
