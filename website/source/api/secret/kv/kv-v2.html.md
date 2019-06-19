@@ -158,14 +158,6 @@ have an ACL policy granting the `update` capability.
       write will only be allowed if the key’s current version matches the
       version specified in the cas parameter.
 
-	- `delete_version_after` (`string:"0s"`) – Set the `delete_version_after`
-	  value to a duration to specify the `deletion_time` for this
-	  version. If not set, the metadata's `delete_version_after` will be used. If
-	  the metadata's `delete_version_after` is not set, the backend's
-	  `delete_version_after` will be used. If the value is greater than the
-	  metadata's `delete_version_after`, the metadata's `delete_version_after` will be
-	  used. Accepts [Go duration format string][duration-godoc].
-
 - `data` `(Map: <required>)` – The contents of the data map will be stored and
   returned on read.
 
@@ -174,8 +166,7 @@ have an ACL policy granting the `update` capability.
 ```json
 {
   "options": {
-      "cas": 0,
-	  "delete_version_after": "3m"
+      "cas": 0
   },
   "data": {
 	  "foo": "bar",
@@ -200,7 +191,7 @@ $ curl \
 {
   "data": {
     "created_time": "2018-03-22T02:36:43.986212308Z",
-    "deletion_time": "2018-03-22T02:39:43.986212308Z",
+    "deletion_time": "",
     "destroyed": false,
     "version": 1
   }
@@ -286,20 +277,11 @@ This restores the data, allowing it to be returned on get requests.
 - `versions` `([]int: <required>)` - The versions to undelete. The versions will
   be restored and their data will be returned on normal get requests.
 
-- `delete_version_after` (`string:"0s"`) – Set the `delete_version_after` value
-  to a duration to specify the `deletion_time` for the versions being
-  undeleted. If not set, the metadata's `delete_version_after` will be used. If
-  the metadata's `delete_version_after` is not set, the backend's `delete_version_after`
-  will be used. If the value is greater than the metadata's
-  `delete_version_after`, the metadata's `delete_version_after` will be used. Accepts
-  [Go duration format string][duration-godoc].
-
 ### Sample Payload
 
 ```json
 {
-    "versions": [1, 2],
-    "delete_version_after": "25m"
+    "versions": [1, 2]
 }
 ```
 

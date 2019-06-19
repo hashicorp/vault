@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -16,8 +15,7 @@ var _ cli.CommandAutocomplete = (*KVRollbackCommand)(nil)
 type KVRollbackCommand struct {
 	*BaseCommand
 
-	flagVersion            int
-	flagDeleteVersionAfter time.Duration
+	flagVersion int
 }
 
 func (c *KVRollbackCommand) Synopsis() string {
@@ -53,19 +51,6 @@ func (c *KVRollbackCommand) Flags() *FlagSets {
 		Name:   "version",
 		Target: &c.flagVersion,
 		Usage:  `Specifies the version number that should be made current again.`,
-	})
-
-	f.DurationVar(&DurationVar{
-		Name:       "delete-version-after",
-		Target:     &c.flagDeleteVersionAfter,
-		Default:    0,
-		EnvVar:     "",
-		Completion: complete.PredictAnything,
-		Usage: `Specifies the length of time before this version is
-		deleted. If not set, the metadata's delete-version-after is used.
-		Cannot be greater than the metadata's delete-version-after. The
-		delete-version-after is specified as a numeric string with a suffix
-		like "30s" or "3h25m19s".`,
 	})
 
 	return set
@@ -232,18 +217,12 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		}
 	}
 
-	data = map[string]interface{}{
+	secret, err := client.Logical().Write(path, map[string]interface{}{
 		"data": data,
 		"options": map[string]interface{}{
 			"cas": casVersion,
 		},
-	}
-
-	if c.flagDeleteVersionAfter > 0 {
-		data["options"].(map[string]interface{})["delete_version_after"] = c.flagDeleteVersionAfter.String()
-	}
-
-	secret, err := client.Logical().Write(path, data)
+	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		return 2

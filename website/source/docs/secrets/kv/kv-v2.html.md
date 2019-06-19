@@ -246,71 +246,6 @@ allows for writing keys with arbitrary values.
 	my-value    s3cr3t
     ```
 
-1. Write another version which will be deleted after a specified
-   duration. The `-delete-version-after` flag can optionally be passed to specify
-   a duration of time until the version will be deleted. The previous
-   versions will still be accessible.
-
-    ```text
-    $ vault kv put -delete-version-after=2m secret/my-secret my-value=short-lived-s3cr3t
-	Key              Value
-	---              -----
-	created_time     2019-06-19T17:23:21.834403Z
-	deletion_time    2019-06-19T17:25:21.834403Z
-	destroyed        false
-	version          3
-	```
-
-1. Reading now will return the newest version of the data and show the
-   `deletion_time`:
-
-    ```text
-	$ vault kv get secret/my-secret
-	====== Metadata ======
-	Key              Value
-	---              -----
-	created_time     2019-06-19T17:23:21.834403Z
-	deletion_time    2019-06-19T17:25:21.834403Z
-	destroyed        false
-	version          3
-
-	====== Data ======
-	Key         Value
-	---         -----
-	my-value    short-lived-s3cr3t
-	```
-
-1. Reading after the `deletion_time` will only return metadata:
-
-    ```text
-	$ vault kv get secret/my-secret
-	====== Metadata ======
-	Key              Value
-	---              -----
-	created_time     2019-06-19T17:23:21.834403Z
-	deletion_time    2019-06-19T17:25:21.834403Z
-	destroyed        false
-	version          3
-	```
-
-1. Previous versions not deleted can still be accessed with the `-version` flag:
-
-    ```text
-    $ vault kv get -version=2 secret/my-secret
-	====== Metadata ======
-	Key              Value
-	---              -----
-	created_time     2019-06-19T17:22:23.369372Z
-	deletion_time    n/a
-	destroyed        false
-	version          2
-
-	====== Data ======
-	Key         Value
-	---         -----
-	my-value    new-s3cr3t
-    ```
-
 ### Deleting and Destroying Data
 
 When deleting data the standard `vault kv delete` command will perform a
@@ -338,7 +273,7 @@ See the commands below for more information:
 1. Versions can be undeleted:
 
     ```text
-    $ vault kv undelete -versions=3 secret/my-secret
+    $ vault kv undelete -versions=2 secret/my-secret
 	Success! Data written to: secret/undelete/my-secret
 
     $ vault kv get secret/my-secret
@@ -348,7 +283,7 @@ See the commands below for more information:
 	created_time     2019-06-19T17:23:21.834403Z
 	deletion_time    n/a
 	destroyed        false
-	version          3
+	version          2
 
 	====== Data ======
 	Key         Value
@@ -359,7 +294,7 @@ See the commands below for more information:
 1. Destroying a version permanently deletes the underlying data:
 
     ```text
-    $ vault kv destroy -versions=3 secret/my-secret
+    $ vault kv destroy -versions=2 secret/my-secret
 	Success! Data written to: secret/destroy/my-secret
     ```
 
@@ -380,11 +315,11 @@ See the commands below for more information:
 	---                     -----
 	cas_required            false
 	created_time            2019-06-19T17:20:22.985303Z
-	current_version         3
+	current_version         2
 	delete_version_after    0s
 	max_versions            0
 	oldest_version          0
-	updated_time            2019-06-19T17:23:21.834403Z
+	updated_time            2019-06-19T17:22:23.369372Z
 
 	====== Version 1 ======
 	Key              Value
@@ -397,13 +332,6 @@ See the commands below for more information:
 	Key              Value
 	---              -----
 	created_time     2019-06-19T17:22:23.369372Z
-	deletion_time    n/a
-	destroyed        false
-
-	====== Version 3 ======
-	Key              Value
-	---              -----
-	created_time     2019-06-19T17:23:21.834403Z
 	deletion_time    n/a
 	destroyed        true
     ```

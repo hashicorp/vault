@@ -120,7 +120,7 @@ func TestKVPutCommand(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"-cas", "0", "-delete-version-after", "1h", "kv/write/cas", "bar=baz",
+			"-cas", "0", "kv/write/cas", "bar=baz",
 		})
 		if code != 0 {
 			t.Fatalf("expected 0 to be %d", code)
@@ -133,7 +133,7 @@ func TestKVPutCommand(t *testing.T) {
 		ui, cmd = testKVPutCommand(t)
 		cmd.client = client
 		code = cmd.Run([]string{
-			"-cas", "1", "-delete-version-after", "1h", "kv/write/cas", "bar=baz",
+			"-cas", "1", "kv/write/cas", "bar=baz",
 		})
 		if code != 0 {
 			t.Fatalf("expected 0 to be %d", code)
