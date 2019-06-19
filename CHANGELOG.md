@@ -2,6 +2,13 @@
 
 CHANGES:
 
+ * auth/token: Token store roles use new, common token fields for the values
+   that overlap with other auth backends. `period`, `explicit_max_ttl`, and
+   `bound_cidrs` will continue to work, with priority being given to the
+   `token_` prefixed versions of those parameters. They will also be returned
+   when doing a read on the role if they were used to provide values initially;
+   however, in Vault 1.4 if `period` or `explicit_max_ttl` is zero they will no
+   longer be returned. (`explicit_max_ttl` was already not returned if empty.)
  * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
    stricter about what characters it will accept in path names. Whereas before
    it would filter out unprintable characters (and this could be turned off),
@@ -30,6 +37,10 @@ CHANGES:
 
 FEATURES:
 
+ * Adds an ElasticSearch database plugin which issues unique, short-lived
+   ElasticSearch credentials [GH-6857]
+ * Adds a PCF plugin that supports use of instance identity certificates for
+   Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
@@ -37,6 +48,12 @@ IMPROVEMENTS:
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/token: Add a large set of token configuration options to token store
+   roles [GH-6662]
+ * identity: Allow a group alias' canonical ID to be modified
+ * namespaces: Namespaces can now be created and deleted from performance
+   replication secondaries
+ * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
@@ -46,9 +63,20 @@ IMPROVEMENTS:
    smaller [GH-6718]
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
- * storage/postgres: LIST now performs better on large datasets. [GH-6546]
  
 BUG FIXES: 
+
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
+   when parsing this value [GH-6917]
+ * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
+   for OIDC logins [JWT-54]
+ * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
+   response is empty [JWT-55]  
+ * identity: Fix a case where modifying aliases of an entity could end up
+   moving the entity into the wrong namespace
+ * namespaces: Fix a behavior (currently only known to be benign) where we
+   wouldn't delete policies through the official functions before wiping the
+   namespaces on deletion
 
 ## 1.1.3 (June 5th, 2019)
 

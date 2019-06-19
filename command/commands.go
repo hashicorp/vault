@@ -27,6 +27,7 @@ import (
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
+	credPCF "github.com/hashicorp/vault-plugin-auth-pcf"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -162,6 +163,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"ldap":     &credLdap.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},
+		"pcf":      &credPCF.CLIHandler{},
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
 		},

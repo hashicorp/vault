@@ -239,3 +239,12 @@ func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []stri
 	c.rawConfig["password"] = password
 	return c.rawConfig, nil
 }
+
+// GenerateCredentials returns a generated password
+func (c *Cassandra) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := c.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}

@@ -1,44 +1,32 @@
-<div class="columns">
-  {{#menu-sidebar title="Policies" class="is-3" data-test-sidebar=true}}
-    {{#if (has-permission "policies" routeParams="acl")}}
-      <li>
-        {{#link-to "vault.cluster.policies" "acl" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "acl") "is-active")}}
-          ACL Policies
-        {{/link-to}}
-      </li>
-    {{/if}}
-    {{#if (has-permission "policies" routeParams="rgp")}}
-      <li>
-        {{#link-to "vault.cluster.policies" "rgp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "rgp") "is-active")}}
-          Role Governing Policies
-
-        {{#unless (has-feature "Sentinel")}}
-          {{#if (is-version "OSS")}}
-            {{edition-badge edition="Enterprise"}}
-          {{else}}
-            {{edition-badge edition="Premium"}}
-          {{/if}}
-        {{/unless}}
-        {{/link-to}}
-      </li>
-    {{/if}}
-    {{#if (has-permission "policies" routeParams="egp")}}
-      <li>
-        {{#link-to "vault.cluster.policies" "egp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "egp") "is-active")}}
-          Endpoint Governing Policies
-
-        {{#unless (has-feature "Sentinel")}}
-          {{#if (is-version "OSS")}}
-            {{edition-badge edition="Enterprise"}}
-          {{else}}
-            {{edition-badge edition="Premium"}}
-          {{/if}}
-        {{/unless}}
-        {{/link-to}}
-      </li>
-    {{/if}}
-  {{/menu-sidebar}}
-  <div class="column is-9">
-    {{outlet}}
+{{#if (and (has-feature "Sentinel") (or (has-permission "policies" routeParams="rgp") (has-permission "policies" routeParams="egp")))}}
+  <div class="columns">
+    {{#menu-sidebar title="Policies" class="is-3" data-test-sidebar=true}}
+      {{#if (has-permission "policies" routeParams="acl")}}
+        <li>
+          {{#link-to "vault.cluster.policies" "acl" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "acl") "is-active")}}
+            ACL Policies
+          {{/link-to}}
+        </li>
+      {{/if}}
+      {{#if (has-permission "policies" routeParams="rgp")}}
+        <li>
+          {{#link-to "vault.cluster.policies" "rgp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "rgp") "is-active")}}
+            Role Governing Policies
+          {{/link-to}}
+        </li>
+      {{/if}}
+      {{#if (has-permission "policies" routeParams="egp")}}
+        <li>
+          {{#link-to "vault.cluster.policies" "egp" data-test-link=true class=(if (is-active-route "vault.cluster.policies" "egp") "is-active")}}
+            Endpoint Governing Policies
+          {{/link-to}}
+        </li>
+      {{/if}}
+    {{/menu-sidebar}}
+    <div class="column is-9">
+      {{outlet}}
+    </div>
   </div>
-</div>
+{{else}}
+  {{outlet}}
+{{/if}}

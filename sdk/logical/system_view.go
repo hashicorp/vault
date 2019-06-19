@@ -72,6 +72,7 @@ type SystemView interface {
 
 type ExtendedSystemView interface {
 	Auditor() Auditor
+	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 }
 
 type StaticSystemView struct {
@@ -102,6 +103,10 @@ func (a noopAuditor) AuditResponse(ctx context.Context, input *LogInput) error {
 
 func (d StaticSystemView) Auditor() Auditor {
 	return noopAuditor{}
+}
+
+func (d StaticSystemView) ForwardGenericRequest(ctx context.Context, req *Request) (*Response, error) {
+	return nil, errors.New("ForwardGenericRequest is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
