@@ -51,7 +51,7 @@
     {{else if list.item}}
       <ListItem @linkParams={{array "scope.roles" list.item.id}} as |Item|>
         <Item.content>
-          {{list.item.id}}
+          <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
         </Item.content>
         <Item.menu>
           <li class="action">
