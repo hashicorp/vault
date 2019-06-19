@@ -888,46 +888,54 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			}
 		}
 
-		if c.isRaftUnseal() {
-			if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
-				return false, err
-			}
-			// Reset the state
-			c.raftUnseal = false
-			c.raftChallenge = nil
-			c.raftLeaderBarrierConfig = nil
-			c.raftLeaderClient = nil
-			go func() {
-				keyringFound := false
-				defer func() {
-					if keyringFound {
-						_, err := c.unsealInternal(ctx, masterKey)
-						if err != nil {
-							c.logger.Error("failed to unseal", "error", err)
-						}
-					}
-				}()
-				for {
-					keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
+		if !c.isRaftUnseal() {
+			return c.unsealInternal(ctx, masterKey)
+		}
+
+		// If we are in the middle of a raft join send the answer and wait for
+		// data to start streaming in.
+		if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
+			return false, err
+		}
+		// Reset the state
+		c.raftUnseal = false
+		c.raftChallenge = nil
+		c.raftLeaderBarrierConfig = nil
+		c.raftLeaderClient = nil
+
+		go func() {
+			keyringFound := false
+			defer func() {
+				if keyringFound {
+					_, err := c.unsealInternal(ctx, masterKey)
 					if err != nil {
-						c.logger.Error("failed to list physical keys", "error", err)
-						return
-					}
-					if strutil.StrListContains(keys, "keyring") {
-						keyringFound = true
-						return
-					}
-					select {
-					case <-time.After(5 * time.Second):
+						c.logger.Error("failed to unseal", "error", err)
 					}
 				}
 			}()
-			// Return Vault as sealed since unsealing happens in background
-			// which gets delayed until the data from the leader is streamed to
-			// the follower.
-			return true, nil
-		}
-		return c.unsealInternal(ctx, masterKey)
+
+			// Wait until we at least have the keyring before we attempt to
+			// unseal the node.
+			for {
+				keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
+				if err != nil {
+					c.logger.Error("failed to list physical keys", "error", err)
+					return
+				}
+				if strutil.StrListContains(keys, "keyring") {
+					keyringFound = true
+					return
+				}
+				select {
+				case <-time.After(1 * time.Second):
+				}
+			}
+		}()
+
+		// Return Vault as sealed since unsealing happens in background
+		// which gets delayed until the data from the leader is streamed to
+		// the follower.
+		return true, nil
 	}
 
 	return false, nil

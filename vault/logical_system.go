@@ -388,7 +388,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		// TODO: Make sure the serverID isn't already part of the cluster?
 		uuid, err := uuid.GenerateRandomBytes(16)
 		if err != nil {
 			return nil, err
@@ -535,9 +534,9 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
 			case seal.Shamir:
-				return logical.ErrorResponse("Could not verify hash file, snapshot could be using a different set of shamir keys. Use the snapshot-force API to bypass this check."), logical.ErrInvalidRequest
+				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
-				return logical.ErrorResponse("Could not verify hash file, snapshot could be using a different AutoUnseal mechanism. Use the snapshot-force API to bypass this check."), logical.ErrInvalidRequest
+				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			}
 		case err != nil:
 			b.Core.logger.Error("raft snapshot restore: failed to write snapshot", "error", err)
@@ -563,7 +562,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			raftStorage.SetRestoreCallback(nil)
 			defer raftStorage.SetRestoreCallback(b.Core.raftSnapshotRestoreCallback(true))
 
-			b.Core.logger.Info("Applying snapshot")
+			b.Core.logger.Info("applying snapshot")
 			if err := raftStorage.RestoreSnapshot(b.Core.activeContext, metadata, snapFile); err != nil {
 				b.Core.logger.Error("error while restoring raft snapshot", "error", err)
 				return

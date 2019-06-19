@@ -6,6 +6,8 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/raft-snapshot => ../raft-snapshot
+
 require (
 	cloud.google.com/go v0.37.4
 	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible

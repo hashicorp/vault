@@ -75,29 +75,34 @@ func (s *raftFollowerStates) minIndex() uint64 {
 	return min
 }
 
+// startRaftStorage will call SetupCluster in the raft backend which starts raft
+// up and enables the cluster handler.
 func (c *Core) startRaftStorage(ctx context.Context) error {
-	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		if raftStorage.Initialized() {
-			return nil
-		}
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return nil
+	}
+	if raftStorage.Initialized() {
+		return nil
+	}
 
-		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-		if err != nil {
-			return err
-		}
-		if raftTLSEntry == nil {
-			return errors.New("could not find raft TLS configuration")
-		}
+	// Retrieve the raft TLS information
+	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+	if err != nil {
+		return err
+	}
+	if raftTLSEntry == nil {
+		return errors.New("could not find raft TLS configuration")
+	}
 
-		raftTLS := new(raft.RaftTLSKeyring)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
-			return err
-		}
+	raftTLS := new(raft.RaftTLSKeyring)
+	if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+		return err
+	}
 
-		raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
-		if err := raftStorage.SetupCluster(ctx, raftTLS, c.clusterListener); err != nil {
-			return err
-		}
+	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
+	if err := raftStorage.SetupCluster(ctx, raftTLS, c.clusterListener); err != nil {
+		return err
 	}
 
 	return nil
@@ -167,7 +172,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	// rotateKeyring writes new key data to the keyring and adds an applied
 	// index that is used to verify it has been committed. The keys written in
 	// this function can be used on standbys but the active node doesn't start
-	// usint it yet.
+	// using it yet.
 	rotateKeyring := func() (time.Time, error) {
 		// Read the existing keyring
 		keyring, err := readKeyring()

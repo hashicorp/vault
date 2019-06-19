@@ -153,7 +153,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		req.RequestReader = requestReader
 	}
 	if responseWriter != nil {
-		req.ResponseWriter = logical.NewResponseWriter(responseWriter)
+		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
 	}
 	return req, origBody, 0, nil
 }

@@ -129,7 +129,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var devMode bool
 	if devMode {
 		store := raft.NewInmemStore()
-		//raftInmem = store
 		stable = store
 		log = store
 		snap = raft.NewInmemSnapshotStore()

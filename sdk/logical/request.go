@@ -179,7 +179,7 @@ type Request struct {
 
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
-	ResponseWriter *ResponseWriter `json:"-" sentinel:""`
+	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
 }
 
 // Get returns a data field and guards for nil Data
