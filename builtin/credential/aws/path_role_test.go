@@ -742,7 +742,7 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 		Version:                     currentRoleStorageVersion,
 	}
 
-	upgraded, err := b.upgradeRoleEntry(context.Background(), storage, roleEntryToUpgrade)
+	upgraded, err := b.upgradeRole(context.Background(), storage, roleEntryToUpgrade)
 	if err != nil {
 		t.Fatalf("error upgrading role entry: %#v", err)
 	}
