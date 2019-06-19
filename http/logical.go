@@ -315,7 +315,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 
 	// If vault's core has already written to the response writer do not add any
 	// additional output. Headers have already been sent.
-	if req.ResponseWriter != nil && req.ResponseWriter.Written() {
+	if req != nil && req.ResponseWriter != nil && req.ResponseWriter.Written() {
 		return
 	}
 
