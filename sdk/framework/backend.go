@@ -543,6 +543,10 @@ type FieldSchema struct {
 
 	// DisplaySensitive indicates that the value should be masked by default in the UI.
 	DisplaySensitive bool
+
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
