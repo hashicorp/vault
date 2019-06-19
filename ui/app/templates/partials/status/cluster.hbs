@@ -116,5 +116,25 @@
           </li>
         </ul>
       </nav>
+      {{#if (has-permission 'metrics' routeParams='requests')}}
+        <hr />
+        <nav class="menu">
+          <div class="menu-label">
+            Metrics
+          </div>
+          <ul class="menu-list">
+            <li class="action">
+            {{#if activeCluster.unsealed}}
+              {{#link-to "vault.cluster.requests"}}
+                <div class="level is-mobile">
+                  <span class="level-left">HTTP Requests</span>
+                  <Chevron class="has-text-grey-light level-right" />
+                </div>
+              {{/link-to}}
+            {{/if}}
+            </li>
+          </ul>
+        </nav>
+      {{/if}}
   </div>
 </div>
