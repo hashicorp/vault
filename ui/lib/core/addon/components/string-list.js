@@ -1,8 +1,10 @@
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
+import layout from '../templates/components/string-list';
 
 export default Component.extend({
+  layout,
   'data-test-component': 'string-list',
   classNames: ['field', 'string-list', 'form-section'],
 
