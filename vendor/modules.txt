@@ -361,9 +361,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.2 => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190618184542-f990eb162643 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190618185021-07a27b1842ef => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -454,9 +454,10 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/kr/pretty
 # github.com/kr/text v0.1.0
 github.com/kr/text
-# github.com/lib/pq v1.0.0
+# github.com/lib/pq v1.1.1
 github.com/lib/pq
 github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/marstr/guid v1.1.0
 github.com/marstr/guid
 # github.com/mattn/go-colorable v0.0.9
