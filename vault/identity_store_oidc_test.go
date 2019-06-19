@@ -2,7 +2,6 @@ package vault
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -10,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 // TestOIDC_Path_OIDCRoleRole tests CRUD operations for roles
@@ -404,7 +404,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	// set up an entity
+	// Create and load an entity, an entity is required to generate an ID token
 	testEntity := &identity.Entity{
 		Name:      "test-entity-name",
 		ID:        "test-entity-id",
@@ -436,7 +436,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Storage: storage,
 	})
 
-	// Generate a token
+	// Generate a token against the role "test-role" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/token/test-role",
 		Operation: logical.ReadOperation,
@@ -444,10 +444,25 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		EntityID:  "test-entity-id",
 	})
 	expectSuccess(t, resp, err)
-	fmt.Printf("---resp is:\n%#v", resp)
+	parsedToken, err := jwt.ParseSigned(resp.Data["token"].(string))
+	if err != nil {
+		t.Fatalf("error parsing token: %s", err.Error())
+	}
 
-	// TODO validate the token
+	// Acquire the public parts of the key that signed parsedToken
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	responseJWKS := &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
+	// Validate the signature
+	claims := &jwt.Claims{}
+	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
+		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	}
 }
 
 // some helpers
