@@ -37,6 +37,7 @@ CHANGES:
 
 FEATURES:
 
+ * Adds an ElasticSearch database plugin which issues unique, short-lived ElasticSearch credentials [GH-6857]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
@@ -46,7 +47,8 @@ IMPROVEMENTS:
    of the list is one of the expected values [JWT-50]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
- * storage/postgres: LIST now performs better on large datasets. [GH-6546]
+ * identity: Allow a group alias' canonical ID to be modified
+ * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
@@ -59,6 +61,10 @@ IMPROVEMENTS:
  
 BUG FIXES: 
 
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
+   when parsing this value [GH-6917]
+ * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
+   for OIDC logins [JWT-54]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
