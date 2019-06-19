@@ -295,6 +295,8 @@ github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26 h1
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190605234735-619218abcd26/go.mod h1:9866PkjxPBXclbEJBKzVGY60pgVIY9b7qZJ5Fa+p6VY=
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c h1:/g4Yr7pCTfKVqjUUVO4/Pkd3Vmw2TB3znuB4lF7ZNNY=
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c/go.mod h1:AjWJZO3nIHzc1inkx57x5qtIIcpi1sejXiwJVcNpjyc=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f h1:BYQVawXauMXQ26I3Pn1Nw9kp/aZD60xmh9ZP3jum0YM=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f/go.mod h1:CkOYWfeuC5nAzehBztl94S6VOn2g50h1tffpcNoWCZ8=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190617182336-fe4c97e18808 h1:taTbXUW9En/vHp7tVdjhO5XLUmHYxuFJZar+35H7PPg=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190617182336-fe4c97e18808/go.mod h1:CkOYWfeuC5nAzehBztl94S6VOn2g50h1tffpcNoWCZ8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.1 h1:BdiASUZLOvOUs317EnaUNjGxTSw0PYGQA7zJZhDKLC4=
