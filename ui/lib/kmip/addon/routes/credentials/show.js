@@ -1,8 +1,7 @@
 import Route from '@ember/routing/route';
-import ListRoute from 'core/mixins/list-route';
 import { inject as service } from '@ember/service';
 
-export default Route.extend(ListRoute, {
+export default Route.extend({
   store: service(),
   secretMountPath: service(),
   credParams() {
@@ -14,22 +13,12 @@ export default Route.extend(ListRoute, {
   },
   model(params) {
     let { role, scope } = this.credParams();
-    return this.store
-      .lazyPaginatedQuery('kmip/credential', {
-        role,
-        scope,
-        backend: this.secretMountPath.currentPath,
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-      })
-      .catch(err => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+    return this.store.queryRecord('kmip/credential', {
+      role,
+      scope,
+      backend: this.secretMountPath.currentPath,
+      id: params.serial,
+    });
   },
 
   setupController(controller) {

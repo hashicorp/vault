@@ -1,7 +1,7 @@
 import DS from 'ember-data';
 import { computed } from '@ember/object';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 export default DS.Model.extend({
@@ -17,6 +17,7 @@ export default DS.Model.extend({
   fieldGroups: computed(function() {
     let groups = [{ default: ['listenAddrs', 'connectionTimeout'] }];
 
+    groups = combineFieldGroups(groups, this.newFields, []);
     return fieldToAttrs(this, groups);
   }),
 });

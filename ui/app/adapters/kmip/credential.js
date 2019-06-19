@@ -12,6 +12,7 @@ export default BaseAdapter.extend({
       // TODO change this to serial?
       return {
         ...model,
+        id: model.serial || 'foo',
       };
     });
   },

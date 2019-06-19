@@ -22,6 +22,9 @@ export default ApplicationAdapater.extend({
         base = `${encodePath(backend)}/scope/${encodePath(scope)}/role/${encodePath(role)}/credential`;
         break;
     }
+    if (id && type === 'credential') {
+      return `/v1/${base}/lookup?serial_number=${encodePath(id)}`;
+    }
 
     if (id) {
       return `/v1/${base}/${encodePath(id)}`;
