@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -758,6 +759,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.Template = template.(string)
 	} else if req.Operation == logical.CreateOperation {
 		role.Template = d.Get("template").(string)
+	}
+
+	// Attempt to decode as base64 and use that if it works
+	if decoded, err := base64.StdEncoding.DecodeString(role.Template); err == nil {
+		role.Template = string(decoded)
 	}
 
 	// Validate that template can be parsed and results in valid JSON
