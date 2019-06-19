@@ -355,6 +355,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"nomad",
 				"oidc",
 				"okta",
+				"pcf",
 				"pki",
 				"postgresql",
 				"postgresql-database-plugin",
