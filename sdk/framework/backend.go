@@ -579,6 +579,8 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 					return s.Type.Zero()
 				}
 				result = int(valInt64)
+			case time.Duration:
+				result = int(inp.Seconds())
 			default:
 				return s.Type.Zero()
 			}
