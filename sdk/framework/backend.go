@@ -530,23 +530,8 @@ type FieldSchema struct {
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
-	// Display* members are available to provide hints for UI and documentation
-	// generators. They will be included in OpenAPI output if set.
-
-	// DisplayName is the name of the field suitable as a label or documentation heading.
-	//DisplayName string
-
-	// DisplayValue is a sample value to display for this field. This may be used
-	// to indicate a default value, but it is for display only and completely separate
-	// from any Default member handling.
-	//DisplayValue interface{}
-
-	// DisplaySensitive indicates that the value should be masked by default in the UI.
-	//DisplaySensitive bool
-
-	// DisplayGroup is the suggested UI group to place this field in.
-	//DisplayGroup string
-
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
 }
 
