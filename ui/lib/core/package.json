@@ -4,6 +4,7 @@
     "ember-addon"
   ],
   "dependencies": {
+    "autosize": "*",
     "Duration.js": "*",
     "base64-js": "*",
     "ember-auto-import": "*",

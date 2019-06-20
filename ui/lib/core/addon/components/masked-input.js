@@ -1,6 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import autosize from 'autosize';
+import layout from '../templates/components/masked-input';
 
 /**
  * @module MaskedInput
@@ -24,6 +25,7 @@ import autosize from 'autosize';
  */
 
 export default Component.extend({
+  layout,
   value: null,
   placeholder: 'value',
   didInsertElement() {

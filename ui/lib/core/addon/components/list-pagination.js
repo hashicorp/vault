@@ -2,8 +2,10 @@ import { gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { range } from 'ember-composable-helpers/helpers/range';
+import layout from '../templates/components/list-pagination';
 
 export default Component.extend({
+  layout,
   classNames: ['box', 'is-shadowless', 'list-pagination'],
   page: null,
   lastPage: null,
