@@ -34,6 +34,9 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
 
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+
 	// Configure a connection
 	data := map[string]interface{}{
 		"connection_url":    connURL,
@@ -200,6 +203,9 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -391,6 +397,9 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
 
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+
 	// Configure a connection
 	data := map[string]interface{}{
 		"connection_url":    connURL,
@@ -458,13 +467,11 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 
 	// repeat, with a static role first
 	data = map[string]interface{}{
-		"name":                  "plugin-role-test-2",
-		"db_name":               "plugin-test",
-		"creation_statements":   testRoleStaticCreate,
-		"rotation_statements":   testRoleStaticUpdate,
-		"revocation_statements": defaultRevocationSQL,
-		"username":              "testusername",
-		"rotation_period":       "1h",
+		"name":                "plugin-role-test-2",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "1h",
 	}
 
 	req = &logical.Request{

@@ -106,7 +106,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Verify username/password
-	verifyPgConn(t, dbUser, "password", connURL)
+	verifyPgConn(t, dbUser, password, connURL)
 
 	// Re-read the creds, verifying they aren't changing on read
 	data = map[string]interface{}{}
@@ -187,6 +187,9 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -288,6 +291,9 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -510,6 +516,9 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
 
 	// Configure a connection
 	data := map[string]interface{}{
