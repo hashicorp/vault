@@ -94,7 +94,6 @@ const (
 
 var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
 
-// TODO: add help text for most of the paths
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{

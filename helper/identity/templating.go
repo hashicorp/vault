@@ -32,6 +32,9 @@ type PopulateStringInput struct {
 	Entity            *Entity
 	Groups            []*Group
 	Namespace         *namespace.Namespace
+
+	// Optional time to use during templating. In unset, current time will be used
+	Now time.Time
 }
 
 func PopulateString(p *PopulateStringInput) (bool, string, error) {
@@ -263,13 +266,18 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	}
 
 	performTimeTemplating := func(trimmed string) (string, error) {
+		now := p.Now
+		if now.IsZero() {
+			now = time.Now()
+		}
+
 		opsSplit := strings.SplitN(trimmed, ".", 3)
 
 		if opsSplit[0] != "now" {
 			return "", fmt.Errorf("invalid time selector %q", opsSplit[0])
 		}
 
-		result := time.Now()
+		result := now
 		switch len(opsSplit) {
 		case 1:
 			// return current time

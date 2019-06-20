@@ -3,13 +3,17 @@ package identity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
+
+// intentionally != time.Now() to catch latent used of time.Now instead of
+// passed in values
+var testNow = time.Now().Add(100 * time.Hour)
 
 func TestPopulate_Basic(t *testing.T) {
 	var tests = []struct {
@@ -29,23 +33,27 @@ func TestPopulate_Basic(t *testing.T) {
 		groupName         string
 		groupMetadata     map[string]string
 		groupMemberships  []string
+		now               time.Time
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
 		// positives due to the second changing during the test
 		{
 			name:   "time now",
 			input:  "{{time.now}}",
-			output: strconv.Itoa(int(time.Now().Unix())),
+			output: strconv.Itoa(int(testNow.Unix())),
+			now:    testNow,
 		},
 		{
 			name:   "time plus",
 			input:  "{{time.now.plus.1h}}",
-			output: strconv.Itoa(int(time.Now().Unix() + (60 * 60))),
+			output: strconv.Itoa(int(testNow.Unix() + (60 * 60))),
+			now:    testNow,
 		},
 		{
 			name:   "time plus",
 			input:  "{{time.now.minus.5m}}",
-			output: strconv.Itoa(int(time.Now().Unix() - (5 * 60))),
+			output: strconv.Itoa(int(testNow.Unix() - (5 * 60))),
+			now:    testNow,
 		},
 		{
 			name:  "invalid operator",
@@ -358,6 +366,7 @@ func TestPopulate_Basic(t *testing.T) {
 			Entity:            entity,
 			Groups:            groups,
 			Namespace:         namespace.RootNamespace,
+			Now:               test.now,
 		})
 		if err != nil {
 			if test.err == nil {
@@ -373,6 +382,31 @@ func TestPopulate_Basic(t *testing.T) {
 		if err == nil && !subst && out != test.input {
 			t.Fatalf("%s: bad subst flag", test.name)
 		}
+	}
+}
+
+func TestPopulate_CurrentTime(t *testing.T) {
+	now := time.Now()
+
+	// Test that an unset Now parameter results in current time
+	input := &PopulateStringInput{
+		Mode:   JSONTemplating,
+		String: `{{time.now}}`,
+	}
+
+	_, out, err := PopulateString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nowPopulated, err := strconv.Atoi(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	diff := math.Abs(float64(int64(nowPopulated) - now.Unix()))
+	if diff > 1 {
+		t.Fatalf("expected time within 1 second. Got diff of: %f", diff)
 	}
 }
 
@@ -414,9 +448,6 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "one not found alias metadata key": {{identity.entity.aliases.blahblah.metadata.service}},
 			    "group names": {{identity.entity.group_names}},
 			    "group ids": {{identity.entity.group_ids}},
-			    "time now": {{time.now}},
-			    "time plus": {{time.now.plus.10s}},
-			    "time minus": {{time.now.minus.1h}},
 			    "repeated and": {"nested element": {{identity.entity.name}}}
 			}`
 
@@ -433,19 +464,8 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "one not found alias metadata key": "",
 			    "group names": ["g1","g2"],
 			    "group ids": ["a08b0c02","239bef91"],
-			    "time now": <now>,
-			    "time plus": <plus>,
-			    "time minus": <minus>,
 			    "repeated and": {"nested element": "Entity Name"}
 			}`
-
-	now := time.Now().Unix()
-	minus := now - (60 * 60)
-	plus := now + 10
-
-	expected = strings.ReplaceAll(expected, "<now>", strconv.FormatInt(now, 10))
-	expected = strings.ReplaceAll(expected, "<plus>", strconv.FormatInt(plus, 10))
-	expected = strings.ReplaceAll(expected, "<minus>", strconv.FormatInt(minus, 10))
 
 	input := &PopulateStringInput{
 		Mode:   JSONTemplating,
