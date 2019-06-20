@@ -2,15 +2,11 @@ package api
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"golang.org/x/net/http2"
 )
 
 // RaftJoinResponse represents the response of the raft join API
@@ -89,33 +85,9 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 		req.Header.Set("X-Vault-Policy-Override", "true")
 	}
 
-	config := &Config{
-		Address: "https://127.0.0.1:8200",
-		// Avoiding the use of retryablehttp which reads the response body. The
-		// response body of the snapshot API is expected to be huge and it is
-		// not desired that the response is held in memory.
-		HttpClient: &http.Client{
-			Transport: cleanhttp.DefaultPooledTransport(),
-			// Giving more time to retrieve all the data
-			Timeout: time.Minute * 10,
-		},
-	}
-
-	transport := config.HttpClient.Transport.(*http.Transport)
-	transport.TLSHandshakeTimeout = 10 * time.Second
-	transport.TLSClientConfig = &tls.Config{
-		MinVersion: tls.VersionTLS12,
-	}
-	if err := http2.ConfigureTransport(transport); err != nil {
-		return err
-	}
-	if err := config.ReadEnvironment(); err != nil {
-		return err
-	}
-
 	// Avoiding the use of RawRequestWithContext which reads the response body
 	// to determine if the body contains error message.
-	resp, err := config.HttpClient.Do(req)
+	resp, err := c.c.config.HttpClient.Do(req)
 
 	// By not parsing the body and checking only status code here, the error
 	// message will land in the snapshot file, but not without the API erroring
