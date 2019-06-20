@@ -73,7 +73,7 @@ func checkForDuplicateIds(ids []string) (bool, string) {
 }
 
 // Return the topmost bucket in the tree for a given key.
-// Used as a defult if the cache is empty or bypassed.
+// Used as a default if the cache is empty or bypassed.
 func (s *StoragePackerV2) firstKey(cacheKey string) (string, error) {
 	rootShardLength := s.BaseBucketBits / 4
 	if len(cacheKey) < rootShardLength {
