@@ -119,13 +119,13 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 
 	// Swap the replacement bucket in to the cache (or delete)
 	cacheKey := s.GetCacheKey(bucketKey)
-	s.bucketsCacheLock.RLock()
+	s.bucketsCacheLock.Lock()
 	if bucketRemoved {
 		s.bucketsCache.Delete(cacheKey)
 	} else {
 		s.bucketsCache.Insert(cacheKey, replacementBucket)
 	}
-	s.bucketsCacheLock.RUnlock()
+	s.bucketsCacheLock.Unlock()
 
 	return present, deleted, nil
 
