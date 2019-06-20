@@ -123,7 +123,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"rotation_period": {
 					Type:        framework.TypeDurationSecond,
 					Description: "How often to generate a new keypair.",
-					Default:     "6h",
+					Default:     "24h",
 				},
 
 				"verification_ttl": {
