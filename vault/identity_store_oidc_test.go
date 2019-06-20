@@ -575,37 +575,6 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	if len(publicKeys) != 2 {
 		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
 	}
-
-	// v, _ = c.identityStore.oidcCache.Get("nextRun")
-	// fmt.Printf("next run time 1\n:%#v", v.(time.Time).String())
-
-	//TODO check that correct NEXTEXPERATION IS APPLIED
-
-	// fmt.Printf("\nnamedKey is:\n%#v", namedKey)
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-
-	// // namedKey has been updated
-	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-	// entry.DecodeJSON(&namedKey)
-
-	// fmt.Printf("\nnamedKey is:\n%#v", namedKey)
-
-	// fmt.Printf("namedKey is:\n%#v", namedKey)
-
-	// Sleep for 1 period
-	// time.Sleep(5 * time.Second)
-
-	// PeriodicFunc
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-
-	// Inspect namedKey
-	// fmt.Printf("namedKey is:\n%#v", namedKey)
-
-	// populate storage with public keys
-
-	// namedKey should have no
-
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
 }
 
 // some helpers
