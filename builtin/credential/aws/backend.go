@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +77,9 @@ type backend struct {
 	// accounts using their IAM instance profile to get their credentials.
 	defaultAWSAccountID string
 
+	// roleCache caches role entries to avoid locking headaches
+	roleCache *cache.Cache
+
 	resolveArnToUniqueIDFunc func(context.Context, logical.Storage, string) (string, error)
 }
 
@@ -89,6 +93,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
 		tidyBlacklistCASGuard: new(uint32),
 		tidyWhitelistCASGuard: new(uint32),
+		roleCache:             cache.New(cache.NoExpiration, cache.NoExpiration),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -201,13 +206,16 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {
-	switch key {
-	case "config/client":
+	switch {
+	case key == "config/client":
 		b.configMutex.Lock()
 		defer b.configMutex.Unlock()
 		b.flushCachedEC2Clients()
 		b.flushCachedIAMClients()
 		b.defaultAWSAccountID = ""
+	case strings.HasPrefix(key, "role"):
+		// TODO: We could make this better
+		b.roleCache.Flush()
 	}
 }
 

@@ -219,7 +219,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		AuthType: iamAuthType,
 	}
 
-	if err := b.nonLockedSetAWSRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
 		t.Fatalf("failed to set entry: %s", err)
 	}
 

@@ -163,7 +163,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Get the entry for the role mentioned in the role tag.
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, rTag.Role)
+	roleEntry, err := b.role(ctx, req.Storage, rTag.Role)
 	if err != nil {
 		return nil, err
 	}
