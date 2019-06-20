@@ -559,6 +559,8 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		return errors.New("raft storage is not initialized")
 	}
 
+	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
+
 	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 
 	return future.Error()

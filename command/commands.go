@@ -327,6 +327,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
+		"operator raft configuration": func() (cli.Command, error) {
+			return &OperatorRaftConfigurationCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft join": func() (cli.Command, error) {
+			return &OperatorRaftJoinCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft remove-peer": func() (cli.Command, error) {
+			return &OperatorRaftRemovePeerCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot restore": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotRestoreCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot save": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotSaveCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator rekey": func() (cli.Command, error) {
 			return &OperatorRekeyCommand{
 				BaseCommand: getBaseCommand(),
