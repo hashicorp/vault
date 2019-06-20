@@ -281,7 +281,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		// Check the path
 		if performTemplating {
-			_, templated, err := identity.PopulateString(&identity.PopulateStringInput{
+			_, templated, err := identity.PopulateString(identity.PopulateStringInput{
 				Mode:      identity.ACLTemplating,
 				String:    key,
 				Entity:    entity,
@@ -293,7 +293,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			}
 			key = templated
 		} else {
-			hasTemplating, _, err := identity.PopulateString(&identity.PopulateStringInput{
+			hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
 				Mode:              identity.ACLTemplating,
 				ValidityCheckOnly: true,
 				String:            key,

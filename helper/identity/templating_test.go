@@ -128,12 +128,13 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			name:          "alias_id_name",
-			input:         "path {{ identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}\n}",
+			input:         "path {{ identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}  nval = {{identity.entity.aliases.foomount.name}}\n}",
 			entityName:    "entityName",
 			aliasAccessor: "foomount",
 			aliasID:       "aliasID",
+			aliasName:     "aliasName",
 			metadata:      map[string]string{"foo": "bar"},
-			output:        "path entityName {\n\tval = aliasID\n}",
+			output:        "path entityName {\n\tval = aliasID  nval = aliasName\n}",
 		},
 		{
 			name:          "alias_id_name_bad_selector",
@@ -230,6 +231,15 @@ func TestPopulate_Basic(t *testing.T) {
 			name:   "entity name missing",
 			input:  "{{identity.entity.name}}",
 			output: `""`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "alias name/id",
+			input:         "{{identity.entity.aliases.foomount.id}} {{identity.entity.aliases.foomount.name}}",
+			aliasAccessor: "foomount",
+			aliasID:       "aliasID",
+			aliasName:     "aliasName",
+			output:        `"aliasID" "aliasName"`,
 		},
 		{
 			mode:     JSONTemplating,
@@ -359,7 +369,7 @@ func TestPopulate_Basic(t *testing.T) {
 			}
 		}
 
-		subst, out, err := PopulateString(&PopulateStringInput{
+		subst, out, err := PopulateString(PopulateStringInput{
 			Mode:              test.mode,
 			ValidityCheckOnly: test.validityCheckOnly,
 			String:            test.input,
@@ -389,7 +399,7 @@ func TestPopulate_CurrentTime(t *testing.T) {
 	now := time.Now()
 
 	// Test that an unset Now parameter results in current time
-	input := &PopulateStringInput{
+	input := PopulateStringInput{
 		Mode:   JSONTemplating,
 		String: `{{time.now}}`,
 	}
@@ -467,7 +477,7 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "repeated and": {"nested element": "Entity Name"}
 			}`
 
-	input := &PopulateStringInput{
+	input := PopulateStringInput{
 		Mode:   JSONTemplating,
 		String: template,
 		Entity: testEntity,

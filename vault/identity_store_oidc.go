@@ -653,7 +653,7 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 	// Parse and integrate the populated role template. Structural errors with the template _should_
 	// be caught during role configuration. Error found during runtime will be logged, but they will
 	// not block generation of the basic ID token. They should not be returned to the requester.
-	_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+	_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
 		Mode:   identity.JSONTemplating,
 		String: template,
 		Entity: entity,
@@ -764,7 +764,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	// Validate that template can be parsed and results in valid JSON
 	if role.Template != "" {
-		_, populatedTemplate, err := identity.PopulateString(&identity.PopulateStringInput{
+		_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
 			Mode:   identity.JSONTemplating,
 			String: role.Template,
 			Entity: new(identity.Entity),

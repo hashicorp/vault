@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -26,24 +25,91 @@ const (
 )
 
 type PopulateStringInput struct {
-	Mode              int
-	ValidityCheckOnly bool
 	String            string
+	ValidityCheckOnly bool
 	Entity            *Entity
 	Groups            []*Group
 	Namespace         *namespace.Namespace
+	Mode              int       // processing mode, ACLTemplate or JSONTemplating
+	Now               time.Time // optional, defaults to current time
 
-	// Optional time to use during templating. If unset, current time will be used
-	Now time.Time
+	templateHandler func(interface{}, ...string) (string, error)
+	groupIDs        []string
+	groupNames      []string
 }
 
-func PopulateString(p *PopulateStringInput) (bool, string, error) {
-	if p == nil {
-		return false, "", errors.New("nil input")
+// aclTemplateHandler processes known parameter data types when operating
+// in ACL mode.
+func aclTemplateHandler(v interface{}, keys ...string) (string, error) {
+	switch t := v.(type) {
+	case string:
+		if t == "" {
+			return "", ErrTemplateValueNotFound
+		}
+		return t, nil
+	case []string:
+		return "", ErrTemplateValueNotFound
+	case map[string]string:
+		if len(keys) > 0 {
+			val, ok := t[keys[0]]
+			if ok {
+				return val, nil
+			}
+		}
+		return "", ErrTemplateValueNotFound
 	}
 
+	return "", fmt.Errorf("unknown type: %T", v)
+}
+
+// jsonTemplateHandler processes known parameter data types when operating
+// in JSON mode.
+func jsonTemplateHandler(v interface{}, keys ...string) (string, error) {
+	jsonMarshaler := func(v interface{}) (string, error) {
+		enc, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		return string(enc), nil
+	}
+
+	switch t := v.(type) {
+	case string:
+		return strconv.Quote(t), nil
+	case []string:
+		return jsonMarshaler(t)
+	case map[string]string:
+		if len(keys) > 0 {
+			return strconv.Quote(t[keys[0]]), nil
+		}
+		if t == nil {
+			return "{}", nil
+		}
+		return jsonMarshaler(t)
+	}
+
+	return "", fmt.Errorf("unknown type: %T", v)
+}
+
+func PopulateString(p PopulateStringInput) (bool, string, error) {
 	if p.String == "" {
 		return false, "", nil
+	}
+
+	// preprocess groups
+	for _, g := range p.Groups {
+		p.groupNames = append(p.groupNames, g.Name)
+		p.groupIDs = append(p.groupIDs, g.ID)
+	}
+
+	// set up mode-specific handler
+	switch p.Mode {
+	case ACLTemplating:
+		p.templateHandler = aclTemplateHandler
+	case JSONTemplating:
+		p.templateHandler = jsonTemplateHandler
+	default:
+		return false, "", fmt.Errorf("unknown mode %q", p.Mode)
 	}
 
 	var subst bool
@@ -75,7 +141,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		case 2:
 			subst = true
 			if !p.ValidityCheckOnly {
-				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), p)
+				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), &p)
 				if err != nil {
 					return false, "", err
 				}
@@ -92,43 +158,20 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 
 func performTemplating(input string, p *PopulateStringInput) (string, error) {
 
-	// Handle quote wrapping uniformly. For ACL templating, this is a no-op.
-	quote := func(s string) string { return s }
-	if p.Mode == JSONTemplating {
-		quote = strconv.Quote
-	}
-
 	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
 		switch {
 		case trimmed == "id":
-			return quote(alias.ID), nil
-		case trimmed == "name":
-			if alias.Name == "" {
-				return "", ErrTemplateValueNotFound
-			}
-			return alias.Name, nil
-		case trimmed == "metadata":
-			if p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
+			return p.templateHandler(alias.ID)
 
-			jsonMetadata, err := marshalMetadata(alias.Metadata)
-			if err != nil {
-				return "", err
-			}
-			return jsonMetadata, nil
+		case trimmed == "name":
+			return p.templateHandler(alias.Name)
+
+		case trimmed == "metadata":
+			return p.templateHandler(alias.Metadata)
 
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
-
-			switch len(split) {
-			case 2:
-				val, ok := alias.Metadata[split[1]]
-				if !ok && p.Mode == ACLTemplating {
-					return "", ErrTemplateValueNotFound
-				}
-				return quote(val), nil
-			}
+			return p.templateHandler(alias.Metadata, split[1])
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -137,41 +180,23 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	performEntityTemplating := func(trimmed string) (string, error) {
 		switch {
 		case trimmed == "id":
-			return quote(p.Entity.ID), nil
-		case trimmed == "name":
-			if p.Entity.Name == "" && p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
-			return quote(p.Entity.Name), nil
-		case trimmed == "metadata":
-			if p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
+			return p.templateHandler(p.Entity.ID)
 
-			jsonMetadata, err := marshalMetadata(p.Entity.Metadata)
-			if err != nil {
-				return "", err
-			}
-			return jsonMetadata, nil
+		case trimmed == "name":
+			return p.templateHandler(p.Entity.Name)
+
+		case trimmed == "metadata":
+			return p.templateHandler(p.Entity.Metadata)
+
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
+			return p.templateHandler(p.Entity.Metadata, split[1])
 
-			val, ok := p.Entity.Metadata[split[1]]
-			if !ok && p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
-			return quote(val), nil
 		case trimmed == "group_names":
-			if p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
-			return listGroupNames(p.Groups), nil
+			return p.templateHandler(p.groupNames)
 
 		case trimmed == "group_ids":
-			if p.Mode == ACLTemplating {
-				return "", ErrTemplateValueNotFound
-			}
-			return listGroupIDs(p.Groups), nil
+			return p.templateHandler(p.groupIDs)
 
 		case strings.HasPrefix(trimmed, "aliases."):
 			split := strings.SplitN(strings.TrimPrefix(trimmed, "aliases."), ".", 2)
@@ -203,12 +228,16 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		var ids bool
 
 		selectorSplit := strings.SplitN(trimmed, ".", 2)
+
 		switch {
 		case len(selectorSplit) != 2:
 			return "", errors.New("invalid groups selector")
+
 		case selectorSplit[0] == "ids":
 			ids = true
+
 		case selectorSplit[0] == "names":
+
 		default:
 			return "", errors.New("invalid groups selector")
 		}
@@ -246,11 +275,13 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		switch {
 		case trimmed == "id":
 			return found.ID, nil
+
 		case trimmed == "name":
 			if found.Name == "" {
 				return "", ErrTemplateValueNotFound
 			}
 			return found.Name, nil
+
 		case strings.HasPrefix(trimmed, "metadata."):
 			val, ok := found.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
 			if !ok {
@@ -280,6 +311,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			// return current time
 		case 2:
 			return "", errors.New("missing time operand")
+
 		case 3:
 			duration, err := time.ParseDuration(opsSplit[2])
 			if err != nil {
@@ -317,49 +349,4 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	}
 
 	return "", ErrTemplateValueNotFound
-}
-
-func listGroupNames(groups []*Group) string {
-	return listGroupsCore(groups, "name")
-}
-
-func listGroupIDs(groups []*Group) string {
-	return listGroupsCore(groups, "id")
-}
-
-func listGroupsCore(groups []*Group, element string) string {
-	var out strings.Builder
-
-	out.WriteString("[")
-	for i, g := range groups {
-		var v string
-		switch element {
-		case "name":
-			v = g.Name
-		case "id":
-			v = g.ID
-		}
-		if i > 0 {
-			out.WriteString(",")
-		}
-		out.WriteString(strconv.Quote(v))
-	}
-	out.WriteString("]")
-
-	return out.String()
-}
-
-// marshalMetadata converts a metadata object into JSON, with special handling
-// for nil objects which are rendered as {} instead of null.
-func marshalMetadata(metadata map[string]string) (string, error) {
-	if metadata == nil {
-		return "{}", nil
-	}
-
-	enc, err := json.Marshal(metadata)
-	if err != nil {
-		return "", err
-	}
-
-	return string(enc), nil
 }
