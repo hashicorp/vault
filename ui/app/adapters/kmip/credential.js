@@ -9,11 +9,8 @@ export default BaseAdapter.extend({
     });
     url = `${url}/generate`;
     return this.ajax(url, 'POST', { data: snapshot.serialize() }).then(model => {
-      // TODO change this to serial?
-      return {
-        ...model,
-        id: model.serial || 'foo',
-      };
+      model.data.id = model.data.serial_number;
+      return model;
     });
   },
 });
