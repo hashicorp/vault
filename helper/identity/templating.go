@@ -33,7 +33,7 @@ type PopulateStringInput struct {
 	Groups            []*Group
 	Namespace         *namespace.Namespace
 
-	// Optional time to use during templating. In unset, current time will be used
+	// Optional time to use during templating. If unset, current time will be used
 	Now time.Time
 }
 
@@ -156,25 +156,22 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
 
-			switch len(split) {
-			case 2:
-				val, ok := p.Entity.Metadata[split[1]]
-				if !ok && p.Mode == ACLTemplating {
-					return "", ErrTemplateValueNotFound
-				}
-				return quote(val), nil
+			val, ok := p.Entity.Metadata[split[1]]
+			if !ok && p.Mode == ACLTemplating {
+				return "", ErrTemplateValueNotFound
 			}
+			return quote(val), nil
 		case trimmed == "group_names":
 			if p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return listGroups(p.Groups, "name"), nil
+			return listGroupNames(p.Groups), nil
 
 		case trimmed == "group_ids":
 			if p.Mode == ACLTemplating {
 				return "", ErrTemplateValueNotFound
 			}
-			return listGroups(p.Groups, "id"), nil
+			return listGroupIDs(p.Groups), nil
 
 		case strings.HasPrefix(trimmed, "aliases."):
 			split := strings.SplitN(strings.TrimPrefix(trimmed, "aliases."), ".", 2)
@@ -322,7 +319,15 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	return "", ErrTemplateValueNotFound
 }
 
-func listGroups(groups []*Group, element string) string {
+func listGroupNames(groups []*Group) string {
+	return listGroupsCore(groups, "name")
+}
+
+func listGroupIDs(groups []*Group) string {
+	return listGroupsCore(groups, "id")
+}
+
+func listGroupsCore(groups []*Group, element string) string {
 	var out strings.Builder
 
 	out.WriteString("[")
