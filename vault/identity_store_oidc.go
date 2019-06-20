@@ -145,8 +145,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.DeleteOperation: i.pathOIDCDeleteKey,
 			},
 			ExistenceCheck:  i.pathOIDCKeyExistenceCheck,
-			HelpSynopsis:    "oidc/key/:key help synopsis here",
-			HelpDescription: "oidc/key/:key help description here",
+			HelpSynopsis:    "CRUD operations for OIDC keys.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC named keys.",
 		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
@@ -163,32 +163,32 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathOIDCRotateKey,
 			},
-			HelpSynopsis:    "oidc/key/:key/rotate help synopsis here",
-			HelpDescription: "oidc/key/:key/rotate help description here",
+			HelpSynopsis:    "Rotate a named OIDC key.",
+			HelpDescription: "Manually rotate a named OIDC key. Rotating a named key will cause a new underlying signing key to be generated. The public portion of the underlying rotated signing key will continue to live for the verification_ttl duration.",
 		},
 		{
 			Pattern: "oidc/key/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListKey,
 			},
-			HelpSynopsis:    "list oidc/key/ help synopsis here",
-			HelpDescription: "list oidc/key/ help description here",
+			HelpSynopsis:    "List OIDC keys",
+			HelpDescription: "List all named OIDC keys",
 		},
 		{
 			Pattern: "oidc/.well-known/openid-configuration/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCDiscovery,
 			},
-			HelpSynopsis:    "read oidc/.well-known/discovery/ help synopsis here",
-			HelpDescription: "read oidc/.well-known/discovery/ help description here",
+			HelpSynopsis:    "Query OIDC configurations",
+			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, Subjects, and signing algorithms used by the OIDC backend.",
 		},
 		{
 			Pattern: "oidc/.well-known/keys/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
 			},
-			HelpSynopsis:    "read oidc/.well-known/keys/ help synopsis here",
-			HelpDescription: "read oidc/.well-known/keys/ help description here",
+			HelpSynopsis:    "Retrieve public keys",
+			HelpDescription: "Query this path to retrieve the public portion of keys used to sign OIDC tokens. Clients can use this to validate the authenticity of the OIDC token claims.",
 		},
 		{
 			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
@@ -201,6 +201,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCGenerateToken,
 			},
+			HelpSynopsis:    "Generate an OIDC token",
+			HelpDescription: "Generate an OIDC token against a configured role. The vault token used to call this path must have a corresponding entity.",
 		},
 		{
 			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
@@ -229,15 +231,17 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.ReadOperation:   i.pathOIDCReadRole,
 				logical.DeleteOperation: i.pathOIDCDeleteRole,
 			},
-			ExistenceCheck: i.pathOIDCRoleExistenceCheck,
+			ExistenceCheck:  i.pathOIDCRoleExistenceCheck,
+			HelpSynopsis:    "CRUD operations on OIDC Roles",
+			HelpDescription: "Create, Read, Update, and Delete OIDC Roles. OIDC tokens are generated against roles which can be configured to determine how OIDC tokens are generated.",
 		},
 		{
 			Pattern: "oidc/role/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListRole,
 			},
-			HelpSynopsis:    "list oidc/role/ help synopsis here",
-			HelpDescription: "list oidc/role/ help description here",
+			HelpSynopsis:    "List configured OIDC roles",
+			HelpDescription: "List all configured OIDC roles in the identity backend.",
 		},
 		{
 			Pattern: "oidc/introspect/?$",
@@ -254,8 +258,8 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathOIDCIntrospect,
 			},
-			HelpSynopsis:    "list oidc/introspect/ help synopsis here",
-			HelpDescription: "list oidc/introspect/ help description here",
+			HelpSynopsis:    "Verify the authenticity of an OIDC token",
+			HelpDescription: "Use this path to verify the authenticity of an OIDC token and whether the associated entity is active and enabled.",
 		},
 	}
 }
