@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
+	proto "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
@@ -32,6 +34,103 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
 		return nil
+	}
+
+	// Check for the legacy -> v2 upgrade case
+	upgradeLegacyStoragePacker := func(prefix string, packer storagepacker.StoragePacker, kind string) error {
+		c.logger.Trace("checking for identity storagepacker upgrade", "prefix", prefix)
+		bucketStorageView := logical.NewStorageView(c.identityStore.view, prefix+"buckets/")
+		vals, err := bucketStorageView.List(ctx, "")
+		if err != nil {
+			return err
+		}
+		c.logger.Trace("found buckets to upgrade", "buckets", vals)
+		bucketsToUpgrade := make([]string, 0, 256)
+		for _, val := range vals {
+			if val == "v2/" {
+				continue
+			}
+			bucketsToUpgrade = append(bucketsToUpgrade, val)
+		}
+
+		if len(bucketsToUpgrade) == 0 {
+			return nil
+		}
+
+		packer.SetQueueMode(true)
+		for _, key := range bucketsToUpgrade {
+			c.logger.Trace("upgrading bucket", "key", key)
+			storageEntry, err := bucketStorageView.Get(ctx, key)
+			if err != nil {
+				return err
+			}
+			if storageEntry == nil {
+				c.logger.Trace("bucket nil")
+				// Not clear what to do here really, but if there's really
+				// nothing there, nothing to load, so continue
+				continue
+			}
+			bucket, err := packer.DecodeBucket(storageEntry)
+			if err != nil {
+				return err
+			}
+			// Set to the new prefix
+			for _, item := range bucket.Items {
+				// Parse the entity or group from the Message (proto.Any) field
+				// and re-encode it as a proto message into the 'Data' field.
+				switch kind {
+				case "entity":
+					entity, err := c.identityStore.decodeEntity(item)
+					if err != nil {
+						return err
+					}
+					item, err = c.identityStore.encodeEntity(entity)
+					if err != nil {
+						return err
+					}
+				case "group":
+					group, err := c.identityStore.decodeGroup(item)
+					if err != nil {
+						return err
+					}
+					item, err = c.identityStore.encodeGroup(group)
+					if err != nil {
+						return err
+					}
+				}
+				packer.PutItem(ctx, item)
+			}
+		}
+		packer.SetQueueMode(false)
+		// We don't want to try persisting/deleting on a secondary. What will
+		// happen is: since the buckets will be in the cache in the storage
+		// packer with the new data, they won't get flushed, but further
+		// lookups will hit those in-memory updated buckets and return the new
+		// values, so memdb will actually use the new values. When the new
+		// buckets get written on the primary, since there is no randomness
+		// they should also match the buckets that were upgraded in memory
+		// here; when the old buckets get removed on the primary, it will then
+		// be essentially a noop here and when memdb tries to expire entries it
+		// will just not find any. I think.
+		if !c.perfStandby && !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+			if err := packer.FlushQueue(ctx); err != nil {
+				return err
+			}
+			for _, key := range bucketsToUpgrade {
+				if err := bucketStorageView.Delete(ctx, key); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	if err := upgradeLegacyStoragePacker(entityStoragePackerPrefix, c.identityStore.entityPacker, "entity"); err != nil {
+		return err
+	}
+	if err := upgradeLegacyStoragePacker(groupStoragePackerPrefix, c.identityStore.groupPacker, "group"); err != nil {
+		return err
 	}
 
 	loadFunc := func(context.Context) error {
@@ -71,6 +170,74 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	return loadFunc(ctx)
 }
 
+func (i *IdentityStore) encodeEntity(entity *identity.Entity) (*storagepacker.Item, error) {
+	if entity == nil {
+		return nil, fmt.Errorf("nil entity")
+	}
+
+	entityProto, err := proto.Marshal(entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &storagepacker.Item{
+		ID:   entity.ID,
+		Data: entityProto,
+	}, nil
+}
+
+func (i *IdentityStore) encodeGroup(group *identity.Group) (*storagepacker.Item, error) {
+	if group == nil {
+		return nil, fmt.Errorf("nil group")
+	}
+
+	groupProto, err := proto.Marshal(group)
+	if err != nil {
+		return nil, err
+	}
+
+	return &storagepacker.Item{
+		ID:   group.ID,
+		Data: groupProto,
+	}, nil
+}
+
+func (i *IdentityStore) decodeGroup(item *storagepacker.Item) (*identity.Group, error) {
+	var group identity.Group
+	if item.Message != nil {
+		err := ptypes.UnmarshalAny(item.Message, &group)
+		if err != nil {
+			return nil, err
+		}
+		return &group, nil
+	}
+
+	err := proto.Unmarshal(item.Data, &group)
+	if err != nil {
+		return nil, err
+	}
+
+	return &group, nil
+}
+
+func (i *IdentityStore) decodeEntity(item *storagepacker.Item) (*identity.Entity, error) {
+	var entity identity.Entity
+	if item.Message != nil {
+		err := ptypes.UnmarshalAny(item.Message, &entity)
+		if err != nil {
+			return nil, err
+		}
+		return &entity, nil
+	}
+
+	err := proto.Unmarshal(item.Data, &entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity, nil
+}
+
 func (i *IdentityStore) sanitizeName(name string) string {
 	if i.disableLowerCasedNames {
 		return name
@@ -80,120 +247,26 @@ func (i *IdentityStore) sanitizeName(name string) string {
 
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
-	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
+
+	allBuckets, err := i.groupPacker.BucketKeys(ctx)
 	if err != nil {
-		return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
-	}
-	i.logger.Debug("groups collected", "num_existing", len(existing))
-
-	for _, key := range existing {
-		bucket, err := i.groupPacker.GetBucket(groupBucketsPrefix + key)
-		if err != nil {
-			return err
-		}
-
-		if bucket == nil {
-			continue
-		}
-
-		for _, item := range bucket.Items {
-			group, err := i.parseGroupFromBucketItem(item)
-			if err != nil {
-				return err
-			}
-			if group == nil {
-				continue
-			}
-
-			ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
-			if err != nil {
-				return err
-			}
-			if ns == nil {
-				// Remove dangling groups
-				if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
-					// Group's namespace doesn't exist anymore but the group
-					// from the namespace still exists.
-					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
-					err = i.groupPacker.DeleteItem(ctx, group.ID)
-					if err != nil {
-						return err
-					}
-				}
-				continue
-			}
-			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
-
-			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
-			if err != nil {
-				return err
-			}
-			if groupByName != nil {
-				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
-				if !i.disableLowerCasedNames {
-					return errDuplicateIdentityName
-				}
-			}
-
-			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
-			}
-
-			txn := i.db.Txn(true)
-
-			// Before pull#5786, entity memberships in groups were not getting
-			// updated when respective entities were deleted. This is here to
-			// check that the entity IDs in the group are indeed valid, and if
-			// not remove them.
-			persist := false
-			for _, memberEntityID := range group.MemberEntityIDs {
-				entity, err := i.MemDBEntityByID(memberEntityID, false)
-				if err != nil {
-					return err
-				}
-				if entity == nil {
-					persist = true
-					group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
-				}
-			}
-
-			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
-			if err != nil {
-				txn.Abort()
-				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
-			}
-
-			txn.Commit()
-		}
+		return errwrap.Wrapf("failed to scan for group buckets: {{err}}", err)
 	}
 
-	if i.logger.IsInfo() {
-		i.logger.Info("groups restored")
-	}
-
-	return nil
-}
-
-func (i *IdentityStore) loadEntities(ctx context.Context) error {
-	// Accumulate existing entities
-	i.logger.Debug("loading entities")
-	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
-	}
-	i.logger.Debug("entities collected", "num_existing", len(existing))
+	i.logger.Debug("group buckets collected", "num_existing", len(allBuckets))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
 	quit := make(chan bool)
 
 	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan *storagepacker.Bucket, len(existing))
+	errs := make(chan error, len(allBuckets))
+	result := make(chan *storagepacker.LockedBucket, len(allBuckets))
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
+
+	var restoreCount uint64
 
 	// Create 64 workers to distribute work to
 	for j := 0; j < consts.ExpirationRestoreWorkerCount; j++ {
@@ -203,13 +276,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 			for {
 				select {
-				case key, ok := <-broker:
+				case bucketKey, ok := <-broker:
 					// broker has been closed, we are done
 					if !ok {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(storagepacker.StoragePackerBucketsPrefix + key)
+					bucket, err := i.groupPacker.GetBucket(ctx, bucketKey, false)
 					if err != nil {
 						errs <- err
 						continue
@@ -230,9 +303,9 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for j, key := range existing {
-			if j%500 == 0 {
-				i.logger.Debug("entities loading", "progress", j)
+		for j, bucketKey := range allBuckets {
+			if j%50 == 0 {
+				i.logger.Debug("group buckets loading", "progress", j)
 			}
 
 			select {
@@ -240,7 +313,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				return
 
 			default:
-				broker <- key
+				broker <- bucketKey
 			}
 		}
 
@@ -249,7 +322,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}()
 
 	// Restore each key by pulling from the result chan
-	for j := 0; j < len(existing); j++ {
+	for j := 0; j < len(allBuckets); j++ {
 		select {
 		case err := <-errs:
 			// Close all go routines
@@ -263,7 +336,189 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				continue
 			}
 
-			for _, item := range bucket.Items {
+			// Need to check both map and Items in case it's during upgrading
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
+			for id, data := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: data})
+			}
+			for _, item := range items {
+				group, err := i.parseGroupFromBucketItem(item)
+				if err != nil {
+					return err
+				}
+				if group == nil {
+					continue
+				}
+
+				// Remove dangling groups
+				if group.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+					ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
+					if err != nil {
+						return err
+					}
+					if ns == nil {
+						// Group's namespace doesn't exist anymore but the group
+						// from the namespace still exists.
+						i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
+						err = i.groupPacker.DeleteItem(ctx, group.ID)
+						if err != nil {
+							return err
+						}
+						continue
+					}
+				}
+
+				// Ensure that there are no groups with duplicate names
+				groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+				if err != nil {
+					return err
+				}
+				if groupByName != nil {
+					i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
+					if !i.disableLowerCasedNames {
+						return errDuplicateIdentityName
+					}
+				}
+
+				txn := i.db.Txn(true)
+
+				// Before pull#5786, entity memberships in groups were not getting
+				// updated when respective entities were deleted. This is here to
+				// check that the entity IDs in the group are indeed valid, and if
+				// not remove them.
+				persist := false
+				for _, memberEntityID := range group.MemberEntityIDs {
+					entity, err := i.MemDBEntityByID(memberEntityID, false)
+					if err != nil {
+						return err
+					}
+					if entity == nil {
+						persist = true
+						group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
+					}
+				}
+
+				err = i.UpsertGroupInTxn(ctx, txn, group, persist)
+				if err != nil {
+					txn.Abort()
+					return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
+				}
+
+				txn.Commit()
+
+				atomic.AddUint64(&restoreCount, 1)
+			}
+		}
+	}
+
+	// Let all go routines finish
+	wg.Wait()
+
+	if i.logger.IsInfo() {
+		i.logger.Info("groups restored", "num_restored", atomic.LoadUint64(&restoreCount))
+	}
+
+	return nil
+}
+
+func (i *IdentityStore) loadEntities(ctx context.Context) error {
+	// Accumulate existing entities
+	i.logger.Debug("loading entities")
+	allBuckets, err := i.entityPacker.BucketKeys(ctx)
+	if err != nil {
+		return errwrap.Wrapf("failed to scan for entity buckets: {{err}}", err)
+	}
+
+	i.logger.Debug("entity buckets collected", "num_existing", len(allBuckets))
+
+	// Make the channels used for the worker pool
+	broker := make(chan string)
+	quit := make(chan bool)
+
+	// Buffer these channels to prevent deadlocks
+	errs := make(chan error, len(allBuckets))
+	result := make(chan *storagepacker.LockedBucket, len(allBuckets))
+
+	// Use a wait group
+	wg := &sync.WaitGroup{}
+
+	// Create 64 workers to distribute work to
+	for j := 0; j < consts.ExpirationRestoreWorkerCount; j++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case key, ok := <-broker:
+					// broker has been closed, we are done
+					if !ok {
+						return
+					}
+
+					bucket, err := i.entityPacker.GetBucket(ctx, key, false)
+					if err != nil {
+						errs <- err
+						continue
+					}
+
+					// Write results out to the result channel
+					result <- bucket
+
+				// quit early
+				case <-quit:
+					return
+				}
+			}
+		}()
+	}
+
+	// Distribute the collected keys to the workers in a go routine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j, bucketKey := range allBuckets {
+			if j%50 == 0 {
+				i.logger.Debug("entity buckets loading", "progress", j)
+			}
+
+			select {
+			case <-quit:
+				return
+
+			default:
+				broker <- bucketKey
+			}
+		}
+
+		// Close the broker, causing worker routines to exit
+		close(broker)
+	}()
+
+	var restoreCount uint64
+
+	// Restore each key by pulling from the result chan
+	for j := 0; j < len(allBuckets); j++ {
+		select {
+		case err := <-errs:
+			// Close all go routines
+			close(quit)
+
+			return err
+
+		case bucket := <-result:
+			// If there is no entry, nothing to restore
+			if bucket == nil {
+				continue
+			}
+
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
+			for id, data := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: data})
+			}
+			for _, item := range items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					return err
@@ -308,6 +563,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
+
+				atomic.AddUint64(&restoreCount, 1)
 			}
 		}
 	}
@@ -316,7 +573,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Wait()
 
 	if i.logger.IsInfo() {
-		i.logger.Info("entities restored")
+		i.logger.Info("entities restored", "num_restored", atomic.LoadUint64(&restoreCount))
 	}
 
 	return nil
@@ -437,14 +694,12 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if persist {
 			// Persist the previous entity object
-			marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
+			item, err := i.encodeEntity(previousEntity)
 			if err != nil {
 				return err
 			}
-			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
-				ID:      previousEntity.ID,
-				Message: marshaledPreviousEntity,
-			})
+
+			err = i.entityPacker.PutItem(ctx, item)
 			if err != nil {
 				return err
 			}
@@ -458,16 +713,11 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	if persist {
-		entityAsAny, err := ptypes.MarshalAny(entity)
+		// Persist the entity
+		item, err := i.encodeEntity(entity)
 		if err != nil {
 			return err
 		}
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
-		}
-
-		// Persist the entity object
 		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return err
@@ -1418,16 +1668,10 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 	}
 
 	if persist {
-		groupAsAny, err := ptypes.MarshalAny(group)
+		item, err := i.encodeGroup(group)
 		if err != nil {
 			return err
 		}
-
-		item := &storagepacker.Item{
-			ID:      group.ID,
-			Message: groupAsAny,
-		}
-
 		sent, err := sendGroupUpgrade(i, group)
 		if err != nil {
 			return err

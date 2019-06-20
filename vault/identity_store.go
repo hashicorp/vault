@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
@@ -19,14 +20,20 @@ import (
 )
 
 const (
-	groupBucketsPrefix = "packer/group/buckets/"
+	entityStoragePackerPrefix = "packer/"
+	groupStoragePackerPrefix  = "packer/group/"
 )
 
 var (
 	sendGroupUpgrade             = func(*IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
+	StoragePackerCreationFunc    = new(atomic.Value)
 )
+
+func init() {
+	StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV2))
+}
 
 func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
@@ -61,12 +68,23 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(entitiesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
-	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
+
+	creationFunc := StoragePackerCreationFunc.Load().(storagepacker.StoragePackerFactory)
+
+	iStore.entityPacker, err = creationFunc(ctx, &storagepacker.Config{
+		BucketStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/"),
+		ConfigStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"config/"),
+		Logger:            entitiesPackerLogger,
+	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
+	iStore.groupPacker, err = creationFunc(ctx, &storagepacker.Config{
+		BucketStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/"),
+		ConfigStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"config/"),
+		Logger:            groupsPackerLogger,
+	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
@@ -101,14 +119,14 @@ func (i *IdentityStore) paths() []*framework.Path {
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
 func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
-	i.logger.Debug("invalidate notification received", "key", key)
+	i.logger.Trace("invalidate notification received", "key", key)
 
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
-	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
+	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -141,7 +159,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.entityPacker.GetBucket(key)
+		bucket, err := i.entityPacker.GetBucket(ctx, strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()), true)
 		if err != nil {
 			i.logger.Error("failed to refresh entities", "key", key, "error", err)
 			return
@@ -154,8 +172,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
+		parsedCount := 0
 		if bucket != nil {
-			for _, item := range bucket.Items {
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
+			for id, message := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: message})
+			}
+			for _, item := range items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
@@ -168,14 +192,21 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to update entity in MemDB", "error", err)
 					return
 				}
+				parsedCount++
 			}
+		}
+
+		if parsedCount > 0 {
+			i.logger.Trace("parsed entities for invalidation", "key", key, "num_entities", parsedCount)
+		} else {
+			i.logger.Error("found no groups")
 		}
 
 		txn.Commit()
 		return
 
 	// Check if the key is a storage entry key for an group bucket
-	case strings.HasPrefix(key, groupBucketsPrefix):
+	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -204,14 +235,20 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(key)
+		bucket, err := i.groupPacker.GetBucket(ctx, strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()), true)
 		if err != nil {
 			i.logger.Error("failed to refresh group", "key", key, "error", err)
 			return
 		}
 
+		parsedCount := 0
 		if bucket != nil {
-			for _, item := range bucket.Items {
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
+			for id, message := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: message})
+			}
+			for _, item := range items {
 				group, err := i.parseGroupFromBucketItem(item)
 				if err != nil {
 					i.logger.Error("failed to parse group from bucket entry item", "error", err)
@@ -242,7 +279,15 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to update group in MemDB", "error", err)
 					return
 				}
+
+				parsedCount++
 			}
+		}
+
+		if parsedCount > 0 {
+			i.logger.Trace("parsed entities for invalidation", "num_entities", parsedCount)
+		} else {
+			i.logger.Error("found no entities")
 		}
 
 		txn.Commit()
@@ -257,8 +302,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 
 	persistNeeded := false
 
-	var entity identity.Entity
-	err := ptypes.UnmarshalAny(item.Message, &entity)
+	entity, err := i.decodeEntity(item)
 	if err != nil {
 		// If we encounter an error, it would mean that the format of the
 		// entity is an older one. Try decoding using the older format and if
@@ -302,7 +346,9 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
+	entity.BucketKey = i.entityPacker.BucketKey(entity.ID)
+
+	pN, err := parseExtraEntityFromBucket(ctx, i, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -311,14 +357,9 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	}
 
 	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		entityAsAny, err := ptypes.MarshalAny(&entity)
+		item, err := i.encodeEntity(entity)
 		if err != nil {
 			return nil, err
-		}
-
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
 		}
 
 		// Store the entity with new format
@@ -332,7 +373,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.NamespaceID = namespace.RootNamespaceID
 	}
 
-	return &entity, nil
+	return entity, nil
 }
 
 func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*identity.Group, error) {
@@ -340,8 +381,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 		return nil, fmt.Errorf("nil item")
 	}
 
-	var group identity.Group
-	err := ptypes.UnmarshalAny(item.Message, &group)
+	group, err := i.decodeGroup(item)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode group from storage bucket item: {{err}}", err)
 	}
@@ -350,7 +390,9 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 		group.NamespaceID = namespace.RootNamespaceID
 	}
 
-	return &group, nil
+	group.BucketKey = i.groupPacker.BucketKey(group.ID)
+
+	return group, nil
 }
 
 // entityByAliasFactors fetches the entity based on factors of alias, i.e mount
