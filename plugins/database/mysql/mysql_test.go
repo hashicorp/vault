@@ -15,6 +15,8 @@ import (
 	"github.com/ory/dockertest"
 )
 
+var _ dbplugin.Database = &MySQL{}
+
 func prepareMySQLTestContainer(t *testing.T, legacy bool) (cleanup func(), retURL string) {
 	if os.Getenv("MYSQL_URL") != "" {
 		return func() {}, os.Getenv("MYSQL_URL")
