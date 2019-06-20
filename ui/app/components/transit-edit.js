@@ -1,9 +1,10 @@
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
-import $ from 'jquery';
 import Component from '@ember/component';
+import { task, waitForEvent } from 'ember-concurrency';
 import { set, get } from '@ember/object';
+
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
@@ -19,23 +20,21 @@ export default Component.extend(FocusOnInsertMixin, {
   key: null,
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
-  init() {
-    this._super(...arguments);
-  },
-
-  didInsertElement() {
-    this._super(...arguments);
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  },
-
   willDestroyElement() {
     this._super(...arguments);
-    const key = this.get('key');
-    if (get(key, 'isError')) {
-      key.rollbackAttributes();
+    if (this.key && this.key.isError) {
+      this.key.rollbackAttributes();
     }
-    $(document).off('keyup.keyEdit');
   },
+
+  waitForKeyUp: task(function*() {
+    while (true) {
+      let event = yield waitForEvent(document.body, 'keyup');
+      this.onEscape(event);
+    }
+  })
+    .on('didInsertElement')
+    .cancelOn('willDestroyElement'),
 
   transitionToRoute() {
     this.get('router').transitionTo(...arguments);
@@ -69,18 +68,6 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
-      e.stopPropagation();
-      if (!(e.keyCode === keys.ENTER && e.metaKey)) {
-        return;
-      }
-      let $form = this.$('form');
-      if ($form.length) {
-        $form.submit();
-      }
-      $form = null;
-    },
-
     createOrUpdateKey(type, event) {
       event.preventDefault();
 
@@ -99,10 +86,6 @@ export default Component.extend(FocusOnInsertMixin, {
         },
         type === 'create'
       );
-    },
-
-    handleChange() {
-      this.hasDataChanges();
     },
 
     setValueOnKey(key, event) {

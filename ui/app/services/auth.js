@@ -1,9 +1,10 @@
 import Ember from 'ember';
-import { resolve } from 'rsvp';
+import { resolve, reject } from 'rsvp';
 import { assign } from '@ember/polyfills';
-import $ from 'jquery';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
+
+import fetch from 'fetch';
 import { getOwner } from '@ember/application';
 import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
@@ -86,7 +87,18 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    return $.ajax(assign(defaults, options));
+    let opts = assign(defaults, options);
+
+    return fetch(url, {
+      method: opts.method || 'GET',
+      headers: opts.headers || {},
+    }).then(response => {
+      if (response.status >= 200 && response.status < 300) {
+        return resolve(response.json());
+      } else {
+        return reject();
+      }
+    });
   },
 
   renewCurrentToken() {
