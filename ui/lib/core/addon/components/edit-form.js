@@ -3,6 +3,7 @@ import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 import layout from '../templates/components/edit-form';
+import { schedule } from '@ember/runloop';
 
 export default Component.extend({
   layout,
@@ -24,6 +25,10 @@ export default Component.extend({
    */
   onSave: () => {},
 
+  // onSave may need values updated in render in a helper - if this
+  // is the case, set this value to true
+  callOnSaveAfterRender: false,
+
   save: task(function*(model, options = { method: 'save' }) {
     let { method } = options;
     let messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
@@ -38,6 +43,12 @@ export default Component.extend({
       return;
     }
     this.get('flashMessages').success(this.get(messageKey));
+    if (this.callOnSaveAfterRender) {
+      schedule('afterRender', () => {
+        this.get('onSave')({ saveType: method, model });
+      });
+      return;
+    }
     yield this.get('onSave')({ saveType: method, model });
   })
     .drop()
