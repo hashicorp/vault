@@ -12,6 +12,7 @@ import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
+import { debug } from '@ember/debug';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -36,6 +37,7 @@ export default Service.extend({
     let newModel, helpUrl;
     //if we have a factory, we need to take the existing model into account
     if (modelFactory) {
+      debug(`Model factory found for ${modelType}`);
       newModel = modelFactory.class;
       const modelProto = newModel.proto();
       if (newModel.merged || modelProto.useOpenAPI !== true) {
@@ -44,6 +46,7 @@ export default Service.extend({
       helpUrl = modelProto.getHelpUrl(backend);
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
+      debug(`Creating new Model for ${modelType}`);
       newModel = DS.Model.extend({});
       //use paths to dynamically create our openapi help url
       //if we have a brand new model
@@ -51,6 +54,7 @@ export default Service.extend({
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
         //if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
+          debug(`Creating new adapter for ${modelType}`);
           const adapter = this.getNewAdapter(backend, paths, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
@@ -72,6 +76,7 @@ export default Service.extend({
   },
 
   getPaths(apiPath, backend, itemType) {
+    debug(`Fetching relevant paths for ${backend} from ${apiPath}`);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.keys(pathInfo);
@@ -151,6 +156,7 @@ export default Service.extend({
   //Returns relevant information from OpenAPI
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
+    debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
     return this.ajax(helpUrl, backend).then(help => {
       //paths is an array but it will have a single entry
       // for the scope we're in
@@ -236,6 +242,7 @@ export default Service.extend({
       try {
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
+          debug(`Constructing fieldGroups for ${backend}`);
           fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
         }
