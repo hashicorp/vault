@@ -5,6 +5,7 @@ package snapshot
 
 import (
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,11 +23,20 @@ type Snapshot struct {
 	index uint64
 }
 
+type Sealer interface {
+	Seal(context.Context, []byte) ([]byte, error)
+	Open(context.Context, []byte) ([]byte, error)
+}
+
 // New takes a state snapshot of the given Raft instance into a temporary file
 // and returns an object that gives access to the file as an io.Reader. You must
 // arrange to call Close() on the returned object or else you will leak a
 // temporary file.
 func New(logger log.Logger, r *raft.Raft) (*Snapshot, error) {
+	return NewWithSealer(logger, r, nil)
+}
+
+func NewWithSealer(logger log.Logger, r *raft.Raft, sealer Sealer) (*Snapshot, error) {
 	// Take the snapshot.
 	future := r.Snapshot()
 	if err := future.Error(); err != nil {
@@ -69,7 +79,7 @@ func New(logger log.Logger, r *raft.Raft) (*Snapshot, error) {
 	compressor := gzip.NewWriter(archive)
 
 	// Write the archive.
-	if err := write(compressor, metadata, snap); err != nil {
+	if err := write(compressor, metadata, snap, sealer); err != nil {
 		return nil, fmt.Errorf("failed to write snapshot file: %v", err)
 	}
 
@@ -134,7 +144,7 @@ func Verify(in io.Reader) (*raft.SnapshotMeta, error) {
 
 	// Read the archive, throwing away the snapshot data.
 	var metadata raft.SnapshotMeta
-	if err := read(decomp, &metadata, ioutil.Discard); err != nil {
+	if err := read(decomp, &metadata, ioutil.Discard, nil); err != nil {
 		return nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
 	return &metadata, nil
@@ -143,10 +153,34 @@ func Verify(in io.Reader) (*raft.SnapshotMeta, error) {
 // Restore takes the snapshot from the reader and attempts to apply it to the
 // given Raft instance.
 func Restore(logger log.Logger, in io.Reader, r *raft.Raft) error {
+	return RestoreWithSealer(logger, in, r, nil)
+}
+
+func RestoreWithSealer(logger log.Logger, in io.Reader, r *raft.Raft, sealer Sealer) error {
+	var metadata raft.SnapshotMeta
+	snap, cleanupFunc, err := WriteToTempFileWithSealer(logger, in, &metadata, sealer)
+	if err != nil {
+		return err
+	}
+	defer cleanupFunc()
+
+	// Feed the snapshot into Raft.
+	if err := r.Restore(&metadata, snap, 0); err != nil {
+		return fmt.Errorf("Raft error when restoring snapshot: %v", err)
+	}
+
+	return nil
+}
+
+func WriteToTempFile(logger log.Logger, in io.Reader, metadata *raft.SnapshotMeta) (*os.File, func(), error) {
+	return WriteToTempFileWithSealer(logger, in, metadata, nil)
+}
+
+func WriteToTempFileWithSealer(logger log.Logger, in io.Reader, metadata *raft.SnapshotMeta, sealer Sealer) (*os.File, func(), error) {
 	// Wrap the reader in a gzip decompressor.
 	decomp, err := gzip.NewReader(in)
 	if err != nil {
-		return fmt.Errorf("failed to decompress snapshot: %v", err)
+		return nil, nil, fmt.Errorf("failed to decompress snapshot: %v", err)
 	}
 	defer func() {
 		if err := decomp.Close(); err != nil {
@@ -158,35 +192,32 @@ func Restore(logger log.Logger, in io.Reader, r *raft.Raft) error {
 	// we can avoid buffering in memory.
 	snap, err := ioutil.TempFile("", "snapshot")
 	if err != nil {
-		return fmt.Errorf("failed to create temp snapshot file: %v", err)
+		return nil, nil, fmt.Errorf("failed to create temp snapshot file: %v", err)
 	}
-	defer func() {
+	cleanupFunc := func() {
 		if err := snap.Close(); err != nil {
 			logger.Error("failed to close temp snapshot", "error", err)
 		}
 		if err := os.Remove(snap.Name()); err != nil {
 			logger.Error("failed to clean up temp snapshot", "error", err)
 		}
-	}()
+	}
 
 	// Read the archive.
-	var metadata raft.SnapshotMeta
-	if err := read(decomp, &metadata, snap); err != nil {
-		return fmt.Errorf("failed to read snapshot file: %v", err)
+	if err := read(decomp, metadata, snap, sealer); err != nil {
+		cleanupFunc()
+		return nil, nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
 
 	// Sync and rewind the file so it's ready to be read again.
 	if err := snap.Sync(); err != nil {
-		return fmt.Errorf("failed to sync temp snapshot: %v", err)
+		cleanupFunc()
+		return nil, nil, fmt.Errorf("failed to sync temp snapshot: %v", err)
 	}
 	if _, err := snap.Seek(0, 0); err != nil {
-		return fmt.Errorf("failed to rewind temp snapshot: %v", err)
+		cleanupFunc()
+		return nil, nil, fmt.Errorf("failed to rewind temp snapshot: %v", err)
 	}
 
-	// Feed the snapshot into Raft.
-	if err := r.Restore(&metadata, snap, 0); err != nil {
-		return fmt.Errorf("Raft error when restoring snapshot: %v", err)
-	}
-
-	return nil
+	return snap, cleanupFunc, nil
 }

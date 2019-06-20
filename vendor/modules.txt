@@ -324,7 +324,7 @@ github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/raft v1.0.2-0.20190617182316-3db06beda834
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-snapshot v1.0.0
+# github.com/hashicorp/raft-snapshot v1.0.1
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
@@ -349,7 +349,7 @@ github.com/hashicorp/vault-plugin-auth-pcf/models
 github.com/hashicorp/vault-plugin-auth-pcf/util
 github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190508211750-4152192cdc0f
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
@@ -370,7 +370,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190618185021-07a27b1842ef => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190619194539-35667f93a7af => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -389,6 +389,7 @@ github.com/hashicorp/vault/sdk/helper/ldaputil
 github.com/hashicorp/vault/sdk/helper/tlsutil
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/dbutil
+github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/helper/dbtxn
 github.com/hashicorp/vault/sdk/helper/errutil
 github.com/hashicorp/vault/sdk/helper/keysutil

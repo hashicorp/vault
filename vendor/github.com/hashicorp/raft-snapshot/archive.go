@@ -13,6 +13,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -96,7 +97,7 @@ func (hl *hashList) DecodeAndVerify(r io.Reader) error {
 
 // write takes a writer and creates an archive with the snapshot metadata,
 // the snapshot itself, and adds some integrity checking information.
-func write(out io.Writer, metadata *raft.SnapshotMeta, snap io.Reader) error {
+func write(out io.Writer, metadata *raft.SnapshotMeta, snap io.Reader, sealer Sealer) error {
 	// Start a new tarball.
 	now := time.Now()
 	archive := tar.NewWriter(out)
@@ -153,7 +154,33 @@ func write(out io.Writer, metadata *raft.SnapshotMeta, snap io.Reader) error {
 		return fmt.Errorf("failed to write snapshot hashes header: %v", err)
 	}
 	if _, err := io.Copy(archive, &shaBuffer); err != nil {
-		return fmt.Errorf("failed to write snapshot metadata: %v", err)
+		return fmt.Errorf("failed to write snapshot hashes: %v", err)
+	}
+
+	if sealer != nil {
+		// Create a SHA256SUMS.sealed file that we can use to verify on restore.
+		var shaBuffer bytes.Buffer
+		if err := hl.Encode(&shaBuffer); err != nil {
+			return fmt.Errorf("failed to encode snapshot hashes: %v", err)
+		}
+
+		sealed, err := sealer.Seal(context.Background(), shaBuffer.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to seal snapshot hashes: %v", err)
+		}
+
+		sealedSHABuffer := bytes.NewBuffer(sealed)
+		if err := archive.WriteHeader(&tar.Header{
+			Name:    "SHA256SUMS.sealed",
+			Mode:    0600,
+			Size:    int64(sealedSHABuffer.Len()),
+			ModTime: now,
+		}); err != nil {
+			return fmt.Errorf("failed to write sealed snapshot hashes header: %v", err)
+		}
+		if _, err := io.Copy(archive, sealedSHABuffer); err != nil {
+			return fmt.Errorf("failed to write sealed snapshot hashes: %v", err)
+		}
 	}
 
 	// Finalize the archive.
@@ -167,7 +194,7 @@ func write(out io.Writer, metadata *raft.SnapshotMeta, snap io.Reader) error {
 // read takes a reader and extracts the snapshot metadata and the snapshot
 // itself, and also checks the integrity of the data. You must arrange to call
 // Close() on the returned object or else you will leak a temporary file.
-func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
+func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer, sealer Sealer) error {
 	// Start a new tar reader.
 	archive := tar.NewReader(in)
 
@@ -183,6 +210,7 @@ func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 
 	// Look through the archive for the pieces we care about.
 	var shaBuffer bytes.Buffer
+	var sealedSHABuffer bytes.Buffer
 	for {
 		hdr, err := archive.Next()
 		if err == io.EOF {
@@ -220,10 +248,25 @@ func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 				return fmt.Errorf("failed to read snapshot hashes: %v", err)
 			}
 
+		case "SHA256SUMS.sealed":
+			if _, err := io.Copy(&sealedSHABuffer, archive); err != nil {
+				return fmt.Errorf("failed to read snapshot hashes: %v", err)
+			}
+
 		default:
 			return fmt.Errorf("unexpected file %q in snapshot", hdr.Name)
 		}
+	}
 
+	if sealer != nil {
+		opened, err := sealer.Open(context.Background(), sealedSHABuffer.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to open the sealed hashes: %v", err)
+		}
+		// Verify all the hashes.
+		if err := hl.DecodeAndVerify(bytes.NewBuffer(opened)); err != nil {
+			return fmt.Errorf("failed checking integrity of snapshot: %v", err)
+		}
 	}
 
 	// Verify all the hashes.
