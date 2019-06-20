@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -19,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/oklog/run"
 )
 
@@ -34,16 +37,16 @@ const (
 	// rotation taking place.
 	keyRotateCheckInterval = 10 * time.Second
 
-	// keyRotateGracePeriod is how long we allow an upgrade path
-	// for standby instances before we delete the upgrade keys
-	keyRotateGracePeriod = 2 * time.Minute
-
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
 )
 
 var (
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	KeyRotateGracePeriod = 2 * time.Minute
+
 	addEnterpriseHaActors func(*Core, *run.Group) chan func()            = addEnterpriseHaActorsNoop
 	interruptPerfStandby  func(chan func(), chan struct{}) chan struct{} = interruptPerfStandbyNoop
 )
@@ -338,11 +341,11 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		}, func(error) {})
 	}
 	{
-		// Monitor for key rotation
+		// Monitor for key rotations
 		keyRotateStop := make(chan struct{})
 
 		g.Add(func() error {
-			c.periodicCheckKeyUpgrade(context.Background(), keyRotateStop)
+			c.periodicCheckKeyUpgrades(context.Background(), keyRotateStop)
 			return nil
 		}, func(error) {
 			close(keyRotateStop)
@@ -516,6 +519,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.leaderUUID = uuid
 		}
 
 		close(continueCh)
@@ -562,6 +566,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.leaderUUID = ""
 
 			// Seal
 			if err := c.preSeal(); err != nil {
@@ -671,7 +676,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
-func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}) {
+func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
 	opCount := new(int32)
 	for {
 		select {
@@ -710,6 +715,10 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
 				}
 
+				if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+					c.logger.Error("raft tls periodic upgrade check failed", "error", err)
+				}
+
 				atomic.AddInt32(lopCount, -1)
 				return
 			}()
@@ -740,12 +749,34 @@ func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 	return nil
 }
 
+func (c *Core) reloadMasterKey(ctx context.Context) error {
+	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
+		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+	}
+
+	if c.seal.BarrierType() == seal.Shamir {
+		keyring, err := c.barrier.Keyring()
+		if err != nil {
+			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
+		}
+
+		_, err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
+			"key": base64.StdEncoding.EncodeToString(keyring.MasterKey()),
+		})
+		if err != nil {
+			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
+		}
+	}
+
+	return nil
+}
+
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
 	if err := c.checkKeyUpgrades(ctx); err != nil {
 		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
+	if err := c.reloadMasterKey(ctx); err != nil {
 		return errwrap.Wrapf("error reloading master key: {{err}}", err)
 	}
 
@@ -775,7 +806,7 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	}
 
 	// Schedule cleanup for all of them
-	time.AfterFunc(keyRotateGracePeriod, func() {
+	time.AfterFunc(KeyRotateGracePeriod, func() {
 		sealed, err := c.barrier.Sealed()
 		if err != nil {
 			c.logger.Warn("failed to check barrier status at upgrade cleanup time")
@@ -816,7 +847,9 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-chan struct{}) error {
-	go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
+	if leaderLostCh != nil {
+		go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
+	}
 
 	var key *ecdsa.PrivateKey
 	switch c.localClusterPrivateKey.Load().(type) {

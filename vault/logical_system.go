@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -121,6 +123,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"storage/raft/bootstrap/challenge",
+				"storage/raft/bootstrap/answer",
 				"init",
 				"seal-status",
 				"unseal",
@@ -196,6 +200,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
+	}
+
+	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -2380,7 +2388,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(keyRotateGracePeriod, func() {
+		time.AfterFunc(KeyRotateGracePeriod, func() {
 			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
