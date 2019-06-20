@@ -204,6 +204,8 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 
 	config.Type = d.BarrierType()
 
+	// If we are doing a raft unseal we do not want to persit the barrier config
+	// because storage isn't setup yet.
 	if d.core.isRaftUnseal() {
 		d.config.Store(config.Clone())
 		return nil
