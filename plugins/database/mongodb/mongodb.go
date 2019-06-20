@@ -224,3 +224,12 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
 }
+
+// GenerateCredentials returns a generated password
+func (m *MongoDB) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}

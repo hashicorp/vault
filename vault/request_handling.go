@@ -385,18 +385,12 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.Request, doLocking bool) (resp *logical.Response, err error) {
 	if doLocking {
 		c.stateLock.RLock()
-	}
-	unlockFunc := func() {
-		if doLocking {
-			c.stateLock.RUnlock()
-		}
+		defer c.stateLock.RUnlock()
 	}
 	if c.Sealed() {
-		unlockFunc()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
-		unlockFunc()
 		return nil, consts.ErrStandby
 	}
 
@@ -412,7 +406,6 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		unlockFunc()
 		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
@@ -421,7 +414,6 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 
 	req.SetTokenEntry(nil)
 	cancel()
-	unlockFunc()
 	return resp, err
 }
 

@@ -113,7 +113,7 @@ func (pq *PriorityQueue) Push(i *Item) error {
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
 	}
-	// copy the item value(s) so that modifications to the source item does not
+	// Copy the item value(s) so that modifications to the source item does not
 	// affect the item on the queue
 	clone, err := copystructure.Copy(i)
 	if err != nil {
@@ -126,8 +126,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 }
 
 // PopByKey searches the queue for an item with the given key and removes it
-// from the queue if found. Returns ErrItemNotFound(key) if not found. This
-// method must fix the queue after removal.
+// from the queue if found. Returns nil if not found. This method must fix the
+// queue after removing any key.
 func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
@@ -137,7 +137,7 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 		return nil, nil
 	}
 
-	// remove the item the heap and delete it from the dataMap
+	// Remove the item the heap and delete it from the dataMap
 	itemRaw := heap.Remove(&pq.data, item.index)
 	delete(pq.dataMap, key)
 

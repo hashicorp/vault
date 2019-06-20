@@ -52,14 +52,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     }
   },
 
-  beforeModel() {
+  async beforeModel() {
     const params = this.paramsFor(this.routeName);
     this.clearNonGlobalModels();
     this.get('namespaceService').setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
       this.get('auth').setCluster(id);
-      this.get('permissions').getPaths.perform();
+      await this.get('permissions').getPaths.perform();
       return this.get('version').fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });

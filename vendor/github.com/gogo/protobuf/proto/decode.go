@@ -186,6 +186,7 @@ func (p *Buffer) DecodeVarint() (x uint64, err error) {
 	if b&0x80 == 0 {
 		goto done
 	}
+	// x -= 0x80 << 63 // Always zero.
 
 	return 0, errOverflow
 

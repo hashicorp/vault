@@ -1,0 +1,41 @@
+.http-requests-table {
+  & .is-collapsed {
+    visibility: collapse;
+  }
+
+  & th,
+  td {
+    padding: $spacing-s;
+  }
+
+  & th {
+    color: $grey-dark;
+    font-weight: 500;
+    font-size: $size-8;
+  }
+
+  & tbody th {
+    font-size: $size-7;
+  }
+
+  & tr {
+    border-bottom: 1px solid $grey-light;
+  }
+
+  & td {
+    color: $grey-darkest;
+  }
+
+  & .percent-change {
+    font-weight: 500;
+    font-size: $size-7;
+  }
+
+  & .arrow-up {
+    transform: rotate(45deg);
+  }
+
+  & .arrow-down {
+    transform: rotate(-45deg);
+  }
+}
