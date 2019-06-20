@@ -8,7 +8,7 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
 	cloud.google.com/go v0.37.4
-	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
@@ -69,21 +69,21 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.1
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190619235432-b4440902a577
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.1
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190620000144-dd5238afce02
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190619235151-6a4ef1ab96ad
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190619235741-877fa44ae1ff
 	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190509203638-8a60a8656fb0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 	github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190619194539-35667f93a7af
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190619234858-76b551f81856
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
