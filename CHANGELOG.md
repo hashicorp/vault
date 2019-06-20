@@ -79,6 +79,7 @@ BUG FIXES:
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * ui: Fix timestamp on some transit keys [GH-6827]
 
 ## 1.1.3 (June 5th, 2019)
 
