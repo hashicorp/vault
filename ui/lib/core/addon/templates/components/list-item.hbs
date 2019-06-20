@@ -1,7 +1,7 @@
 {{#if componentName}}
   {{component componentName item=item}}
 {{else if linkParams}}
-  <LinkedBlock @params={{linkParams}} @class="list-item-row">
+<LinkedBlock @params={{linkParams}} @linkPrefix={{@linkPrefix}} @class="list-item-row">
     <div class="level is-mobile">
       <div class="level-left is-flex-1">
         {{#link-to params=linkParams class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"}}

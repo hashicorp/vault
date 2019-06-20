@@ -11,6 +11,7 @@ let LinkedBlockComponent = Component.extend({
   classNames: 'linked-block',
 
   queryParams: null,
+  linkPrefix: null,
 
   encode: false,
 
@@ -34,6 +35,11 @@ let LinkedBlockComponent = Component.extend({
       const queryParams = this.get('queryParams');
       if (queryParams) {
         params.push({ queryParams });
+      }
+      if (this.linkPrefix) {
+        let targetRoute = this.params[0];
+        targetRoute = `${this.linkPrefix}.${targetRoute}`;
+        this.params[0] = targetRoute;
       }
       this.get('router').transitionTo(...params);
     }
