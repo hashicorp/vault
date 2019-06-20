@@ -7,13 +7,13 @@ export default BaseAdapter.extend({
     // modelName will be config so we want to transpose the first two call args
     return this.buildURL(id, name, snapshot);
   },
-  urlForFindRecord(id, modelName, snapshot) {
+  urlForFindRecord() {
     return this._url(...arguments);
   },
   urlForCreateRecord(modelName, snapshot) {
     return this._url(snapshot.id, modelName, snapshot);
   },
-  urlForUpdateRecord(id, modelName, snapshot) {
+  urlForUpdateRecord() {
     return this._url(...arguments);
   },
 });

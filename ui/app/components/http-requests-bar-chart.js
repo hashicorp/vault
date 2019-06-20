@@ -5,7 +5,7 @@ import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
-import { run, debounce } from '@ember/runloop';
+import { run } from '@ember/runloop';
 import { task, waitForEvent } from 'ember-concurrency';
 
 /**
@@ -31,6 +31,8 @@ const HEIGHT = 240;
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
   counters: null,
+
+  /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
   margin: { top: 24, right: 16, bottom: 24, left: 16 },
   padding: 0.04,
   width: 0,
