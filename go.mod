@@ -74,7 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190620000144-dd5238afce02
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190619235151-6a4ef1ab96ad
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190619235741-877fa44ae1ff
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190620165201-6bd563e0a2a2
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
@@ -83,7 +83,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 	github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190619234858-76b551f81856
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190620155523-cedd6208b2a5
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
