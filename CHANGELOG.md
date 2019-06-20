@@ -70,10 +70,13 @@ BUG FIXES:
 
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
    when parsing this value [GH-6917]
+ * auth/aws: Fix an error complaining about a read-only view that could occur
+   during updating of a role when on a performance replication secondary
+   [GH-6926]
  * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
    for OIDC logins [JWT-54]
  * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
-   response is empty [JWT-55]  
+   response is empty [JWT-55]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
