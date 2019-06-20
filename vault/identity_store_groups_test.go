@@ -676,6 +676,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -798,6 +799,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
