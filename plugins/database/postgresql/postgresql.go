@@ -99,8 +99,8 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	if len(statements.Creation) == 0 {
-		return "", "", errors.New("empty creation statements")
+	if len(statements.Rotation) == 0 {
+		return "", "", errors.New("empty rotation statements")
 	}
 
 	username = staticUser.Username
@@ -126,16 +126,9 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 		return "", "", err
 	}
 
-	// Default to using Creation statements, which are required by the Vault
-	// backend. If the user exists, use the rotation statements, using the default
-	// ones if there are none provided
-	stmts := statements.Creation
-	if exists {
-		stmts = statements.Rotation
-		if len(stmts) == 0 {
-			stmts = []string{defaultPostgresRotateCredentialsSQL}
-		}
-	}
+	// Vault requires the database user already exist, and that the credentials
+	// used to execute the rotation statements has sufficient privileges.
+	stmts := statements.Rotation
 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)

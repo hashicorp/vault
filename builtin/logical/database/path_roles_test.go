@@ -62,17 +62,17 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	}{
 		"basic": {
 			account: map[string]interface{}{
-				"username":        "statictest",
+				"username":        dbUser,
 				"rotation_period": "5400s",
 			},
 			expected: map[string]interface{}{
-				"username":        "statictest",
+				"username":        dbUser,
 				"rotation_period": float64(5400),
 			},
 		},
 		"missing rotation period": {
 			account: map[string]interface{}{
-				"username": "statictest",
+				"username": dbUser,
 			},
 			err: errors.New("rotation_period is required to create static accounts"),
 		},
@@ -81,13 +81,9 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			data := map[string]interface{}{
-				"name":                  "plugin-role-test",
-				"db_name":               "plugin-test",
-				"creation_statements":   testRoleStaticCreate,
-				"rotation_statements":   testRoleStaticUpdate,
-				"revocation_statements": defaultRevocationSQL,
-				"default_ttl":           "5m",
-				"max_ttl":               "10m",
+				"name":                "plugin-role-test",
+				"db_name":             "plugin-test",
+				"rotation_statements": testRoleStaticUpdate,
 			}
 
 			for k, v := range tc.account {
@@ -226,15 +222,11 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 
 	data = map[string]interface{}{
-		"name":                  "plugin-role-test-updates",
-		"db_name":               "plugin-test",
-		"creation_statements":   testRoleStaticCreate,
-		"rotation_statements":   testRoleStaticUpdate,
-		"revocation_statements": defaultRevocationSQL,
-		"default_ttl":           "5m",
-		"max_ttl":               "10m",
-		"username":              "statictest",
-		"rotation_period":       "5400s",
+		"name":                "plugin-role-test-updates",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "5400s",
 	}
 
 	req = &logical.Request{
@@ -285,7 +277,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	updateData := map[string]interface{}{
 		"name":            "plugin-role-test-updates",
 		"db_name":         "plugin-test",
-		"username":        "statictest",
+		"username":        dbUser,
 		"rotation_period": "6400s",
 	}
 	req = &logical.Request{
@@ -340,7 +332,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	updateData = map[string]interface{}{
 		"name":                "plugin-role-test-updates",
 		"db_name":             "plugin-test",
-		"username":            "statictest",
+		"username":            dbUser,
 		"rotation_statements": testRoleStaticUpdateRotation,
 	}
 	req = &logical.Request{
@@ -514,7 +506,6 @@ const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
   PASSWORD '{{password}}';
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
 const testRoleStaticUpdate = `

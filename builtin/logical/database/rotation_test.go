@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -10,10 +11,13 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
+
+const dbUser = "vaultstatictest"
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
@@ -36,6 +40,11 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
 
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+
+	verifyPgConn(t, dbUser, "password", connURL)
+
 	// Configure a connection
 	data := map[string]interface{}{
 		"connection_url":    connURL,
@@ -57,13 +66,11 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	data = map[string]interface{}{
-		"name":                  "plugin-role-test",
-		"db_name":               "plugin-test",
-		"creation_statements":   testRoleStaticCreate,
-		"rotation_statements":   testRoleStaticUpdate,
-		"revocation_statements": defaultRevocationSQL,
-		"username":              "statictest",
-		"rotation_period":       "5400s",
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "5400s",
 	}
 
 	req = &logical.Request{
@@ -99,9 +106,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Verify username/password
-	if err := verifyPgConn(t, username, password, connURL); err != nil {
-		t.Fatal(err)
-	}
+	verifyPgConn(t, dbUser, "password", connURL)
 
 	// Re-read the creds, verifying they aren't changing on read
 	data = map[string]interface{}{}
@@ -156,9 +161,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Verify new username/password
-	if err := verifyPgConn(t, username, newPassword, connURL); err != nil {
-		t.Fatal(err)
-	}
+	verifyPgConn(t, username, newPassword, connURL)
 }
 
 // Sanity check to make sure we don't allow an attempt of rotating credentials
@@ -245,10 +248,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 
 	// Verify username/password
-	if err := verifyPgConn(t, username, password, connURL); err != nil {
-		t.Fatal(err)
-	}
-
+	verifyPgConn(t, dbUser, "password", connURL)
 	// Trigger rotation
 	data = map[string]interface{}{"name": "plugin-role-test"}
 	req = &logical.Request{
@@ -331,13 +331,11 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 	for k, tc := range testCases {
 		t.Run(k, func(t *testing.T) {
 			data = map[string]interface{}{
-				"name":                  "plugin-role-test",
-				"db_name":               "plugin-test",
-				"creation_statements":   testRoleStaticCreate,
-				"rotation_statements":   testRoleStaticUpdate,
-				"revocation_statements": defaultRevocationSQL,
-				"username":              "statictest",
-				"rotation_period":       "5400s",
+				"name":                "plugin-role-test",
+				"db_name":             "plugin-test",
+				"rotation_statements": testRoleStaticUpdate,
+				"username":            dbUser,
+				"rotation_period":     "5400s",
 			}
 			if tc.revoke != nil {
 				data["revoke_user_on_delete"] = *tc.revoke
@@ -376,9 +374,7 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 			}
 
 			// Verify username/password
-			if err := verifyPgConn(t, username, password, connURL); err != nil {
-				t.Fatal(err)
-			}
+			verifyPgConn(t, username, password, connURL)
 
 			// delete the role, expect the default where the user is not destroyed
 			// Read the creds
@@ -394,25 +390,58 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 			}
 
 			// Verify new username/password still work
-			if err := verifyPgConn(t, username, password, connURL); err != nil {
-				if !tc.expectVerifyErr {
-					t.Fatal(err)
-				}
-			}
+			verifyPgConn(t, username, password, connURL)
 		})
 	}
 }
 
-func verifyPgConn(t *testing.T, username, password, connURL string) error {
+func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
+	t.Helper()
+	log.Printf("[TRACE] Creating test user")
+	conn, err := pq.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("postgres", conn)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	m := map[string]string{
+		"name":     username,
+		"password": password,
+	}
+	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		t.Fatal(err)
+	}
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func verifyPgConn(t *testing.T, username, password, connURL string) {
+	t.Helper()
 	cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
 	db, err := sql.Open("postgres", cURL)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	if err := db.Ping(); err != nil {
-		return err
+		t.Fatal(err)
 	}
-	return db.Close()
 }
 
 // WAL testing
@@ -508,12 +537,10 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 
 	// Create role
 	data = map[string]interface{}{
-		"name":                  roleName,
-		"db_name":               "plugin-test",
-		"creation_statements":   testRoleStaticCreate,
-		"rotation_statements":   testRoleStaticUpdate,
-		"revocation_statements": defaultRevocationSQL,
-		"username":              "statictest",
+		"name":                roleName,
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
 		// Low value here, to make sure the backend rotates this password at least
 		// once before we compare it to the WAL
 		"rotation_period": "10s",
@@ -548,7 +575,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		RoleName:          roleName,
 		NewPassword:       walPassword,
 		LastVaultRotation: oldRotationTime,
-		Username:          "statictest",
+		Username:          dbUser,
 	})
 	if err != nil {
 		t.Fatalf("error with PutWAL: %s", err)
@@ -664,6 +691,11 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	// Configure backend, add item and confirm length
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
+	testCases := []string{"65", "130", "5400"}
+	// Create database users ahead
+	for _, tc := range testCases {
+		createTestPGUser(t, connURL, dbUser+tc, "password", testRoleStaticCreate)
+	}
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -685,17 +717,14 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	}
 
 	// Create three static roles with different rotation periods
-	testCases := []string{"65", "130", "5400"}
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
 		data = map[string]interface{}{
-			"name":                  roleName,
-			"db_name":               "plugin-test",
-			"creation_statements":   testRoleStaticCreate,
-			"rotation_statements":   testRoleStaticUpdate,
-			"revocation_statements": defaultRevocationSQL,
-			"username":              "statictest" + tc,
-			"rotation_period":       tc,
+			"name":                roleName,
+			"db_name":             "plugin-test",
+			"rotation_statements": testRoleStaticUpdate,
+			"username":            dbUser + tc,
+			"rotation_period":     tc,
 		}
 
 		req = &logical.Request{

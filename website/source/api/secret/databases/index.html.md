@@ -425,34 +425,10 @@ Static Roles, please see the database-specific documentation.
 - `db_name` `(string: <required>)` - The name of the database connection to use
   for this role.
 
-- `creation_statements` `(list: <required>)` – Specifies the database
-  statements executed to create and configure a user. See the plugin's API page
-  for more information on support and formatting for this parameter.
-
-- `revocation_statements` `(list: [])` – Specifies the database statements to
-  be executed to revoke a user. See the plugin's API page for more information
-  on support and formatting for this parameter.
-
-- `rollback_statements` `(list: [])` – Specifies the database statements to be
-  executed rollback a create operation in the event of an error. Not every
-  plugin type will support this functionality. See the plugin's API page for
-  more information on support and formatting for this parameter.
-
-- `renew_statements` `(list: [])` – Specifies the database statements to be
-  executed to renew a user. Not every plugin type will support this
-  functionality. See the plugin's API page for more information on support and
-  formatting for this parameter.
-
 - `rotation_statements` `(list: [])` – Specifies the database statements to be
   executed to rotate the password for the configured database user. Not every
   plugin type will support this functionality. See the plugin's API page for
   more information on support and formatting for this parameter.
-
-- `revoke_user_on_delete` `(boolean: false)` – Specifies if Vault should attempt
-  to revoke the database user associated with this static role, indicated by the
-  `username`. If `true`, when Vault deletes this Role it will attempt to revoke
-  the database user using the configured `revocation_statements` if they exist.
-  Default `false`
 
 
 
@@ -462,7 +438,6 @@ Static Roles, please see the database-specific documentation.
 {
     "db_name": "mysql",
     "username": "static-database-user",
-    "creation_statements": ["CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'", "GRANT SELECT ON *.* TO '{{name}}'@'%'"],
     "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
     "rotation_period": "1h"
 }
@@ -506,13 +481,8 @@ $ curl \
     "data": {
 		"db_name": "mysql",
     "username":"static-user",
-		"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"], "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
     "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
     "rotation_period":"1h",
-		"renew_statements": [],
-		"revocation_statements": [],
-		"rollback_statements": []
-		"revoke_user_on_delete": false,
 	},
 }
 ```
