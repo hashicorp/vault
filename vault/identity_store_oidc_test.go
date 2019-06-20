@@ -1,10 +1,14 @@
 package vault
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -463,6 +467,145 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
 		t.Fatalf("unable to validate signed token, err:\n%#v", err)
 	}
+}
+
+// TestOIDC_PeriodicFunc tests timing logic for running key
+// rotations and expiration actions.
+func TestOIDC_PeriodicFunc(t *testing.T) {
+	// Prepare a storage to run through periodicFunc
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// populate storage with a named key
+	period := 2 * time.Second
+	keyName := "test-key"
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	id, _ := uuid.GenerateUUID()
+	jwk := &jose.JSONWebKey{
+		Key:       key,
+		KeyID:     id,
+		Algorithm: "RS256",
+		Use:       "sig",
+	}
+	namedKey := &namedKey{
+		Name:            keyName,
+		Algorithm:       "RS256",
+		VerificationTTL: 1 * period,
+		RotationPeriod:  1 * period,
+		KeyRing:         nil,
+		SigningKey:      jwk,
+		NextRotation:    time.Now().Add(1 * time.Second),
+	}
+
+	// Store namedKey
+	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Time 0 - 1 Period
+	// PeriodicFunc should set nextRun - nothing else
+	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
+	entry.DecodeJSON(&namedKey)
+	if len(namedKey.KeyRing) != 0 {
+		t.Fatalf("expected namedKey's KeyRing to be of length 0 but was: %#v", len(namedKey.KeyRing))
+	}
+	// There should be no public keys yet
+	publicKeys, _ := storage.List(ctx, publicKeysConfigPath)
+	if len(publicKeys) != 0 {
+		t.Fatalf("expected publicKeys to be of length 0 but was: %#v", len(publicKeys))
+	}
+
+	// Next run should be set
+	v, _ := c.identityStore.oidcCache.Get("nextRun")
+	if v == nil {
+		t.Fatalf("Expected nextRun to be set but it was nil")
+	}
+	earlierNextRun := v.(time.Time)
+
+	// Time 1 - 2 Period
+	// PeriodicFunc should rotate namedKey and update nextRun
+	time.Sleep(period)
+	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
+	entry.DecodeJSON(&namedKey)
+	if len(namedKey.KeyRing) != 1 {
+		t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
+	}
+	// There should be one public key
+	publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
+	if len(publicKeys) != 1 {
+		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
+	}
+
+	v, _ = c.identityStore.oidcCache.Get("nextRun")
+	laterNextRun := v.(time.Time)
+	if !laterNextRun.After(earlierNextRun) {
+		t.Fatalf("laterNextRun: %#v is not after earlierNextRun: %#v", laterNextRun.String(), earlierNextRun.String())
+	}
+
+	// Time 2-3
+	// PeriodicFunc should rotate namedKey and expire 1 public key
+	time.Sleep(period)
+	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
+	entry.DecodeJSON(&namedKey)
+	if len(namedKey.KeyRing) != 2 {
+		t.Fatalf("expected namedKey's KeyRing to be of length 2 but was: %#v", len(namedKey.KeyRing))
+	}
+	// There should be two public keys
+	publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
+	if len(publicKeys) != 2 {
+		t.Fatalf("expected publicKeys to be of length 2 but was: %#v", len(publicKeys))
+	}
+
+	// Time 3-4
+	// PeriodicFunc should rotate namedKey and expire 1 public key
+	time.Sleep(period)
+	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
+	entry.DecodeJSON(&namedKey)
+	if len(namedKey.KeyRing) != 2 {
+		t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
+	}
+	// There should be two public keys
+	publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
+	if len(publicKeys) != 2 {
+		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
+	}
+
+	// v, _ = c.identityStore.oidcCache.Get("nextRun")
+	// fmt.Printf("next run time 1\n:%#v", v.(time.Time).String())
+
+	//TODO check that correct NEXTEXPERATION IS APPLIED
+
+	// fmt.Printf("\nnamedKey is:\n%#v", namedKey)
+	// c.identityStore.oidcPeriodicFunc(ctx, storage)
+
+	// // namedKey has been updated
+	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
+	// entry.DecodeJSON(&namedKey)
+
+	// fmt.Printf("\nnamedKey is:\n%#v", namedKey)
+
+	// fmt.Printf("namedKey is:\n%#v", namedKey)
+
+	// Sleep for 1 period
+	// time.Sleep(5 * time.Second)
+
+	// PeriodicFunc
+	// c.identityStore.oidcPeriodicFunc(ctx, storage)
+
+	// Inspect namedKey
+	// fmt.Printf("namedKey is:\n%#v", namedKey)
+
+	// populate storage with public keys
+
+	// namedKey should have no
+
+	// c.identityStore.oidcPeriodicFunc(ctx, storage)
 }
 
 // some helpers
