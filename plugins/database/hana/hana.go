@@ -293,3 +293,12 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
 }
+
+// GenerateCredentials returns a generated password
+func (h *HANA) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := h.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}

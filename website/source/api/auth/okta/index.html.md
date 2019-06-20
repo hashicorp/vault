@@ -98,7 +98,7 @@ $ curl \
 
 ## List Users
 
-List the users configurated in the Okta method.
+List the users configured in the Okta method.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
@@ -227,7 +227,7 @@ $ curl \
 
 ## List Groups
 
-List the groups configurated in the Okta method.
+List the groups configured in the Okta method.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |

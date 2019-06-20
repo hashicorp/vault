@@ -597,7 +597,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Get the entry for the role used by the instance
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +951,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	if roleName == "" {
 		return nil, fmt.Errorf("error retrieving role_name during renewal")
 	}
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1079,7 +1079,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 
 	// Ensure that role entry is not deleted
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, storedIdentity.Role)
+	roleEntry, err := b.role(ctx, req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -1205,7 +1205,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		roleName = entity.FriendlyName
 	}
 
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}

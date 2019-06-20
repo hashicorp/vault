@@ -56,7 +56,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
 
-	// exponential backoff-retry
+	// Exponential backoff-retry
 	if err = pool.Retry(func() error {
 		// This will cause a validation to run
 		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
@@ -101,12 +101,12 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain(t *testing.T) {
+func TestBackend_PluginMain_Postgres(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -850,17 +850,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if exists {
-			t.Fatal("expected not exists")
-		}
-
 		// Read the role
 		data = map[string]interface{}{}
 		req = &logical.Request{
@@ -918,17 +907,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
 		}
 
 		// Read the role
@@ -992,17 +970,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		resp, err = b.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
 		}
 
 		// Read the role

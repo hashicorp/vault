@@ -27,6 +27,10 @@ ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 	defaultPostgresRotateRootCredentialsSQL = `
 ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
+
+	defaultPostgresRotateCredentialsSQL = `
+ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
+`
 )
 
 var _ dbplugin.Database = &PostgreSQL{}
@@ -88,6 +92,86 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	if len(statements.Creation) == 0 {
+		return "", "", errors.New("empty creation statements")
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
+
+	// Get the connection
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Check if the role exists
+	var exists bool
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		return "", "", err
+	}
+
+	// Default to using Creation statements, which are required by the Vault
+	// backend. If the user exists, use the rotation statements, using the default
+	// ones if there are none provided
+	stmts := statements.Creation
+	if exists {
+		stmts = statements.Rotation
+		if len(stmts) == 0 {
+			stmts = []string{defaultPostgresRotateCredentialsSQL}
+		}
+	}
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// Execute each query
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     staticUser.Username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
@@ -129,7 +213,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	defer func() {
 		tx.Rollback()
 	}()
-	// Return the secret
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
@@ -267,7 +350,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 		return err
 	}
 
-	if exists == false {
+	if !exists {
 		return nil
 	}
 
@@ -423,4 +506,13 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 	p.RawConfig["password"] = password
 	return p.RawConfig, nil
+}
+
+// GenerateCredentials returns a generated password
+func (p *PostgreSQL) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }

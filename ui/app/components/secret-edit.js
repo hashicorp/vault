@@ -95,7 +95,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
-      if (context.mode === 'create') {
+      if (!context.model || context.mode === 'create') {
         return;
       }
       let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
@@ -116,7 +116,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   v2UpdatePath: maybeQueryRecord(
     'capabilities',
     context => {
-      if (context.mode === 'create' || context.isV2 === false) {
+      if (!context.model || context.mode === 'create' || context.isV2 === false) {
         return;
       }
       let backend = context.get('model.engine.id');
@@ -137,7 +137,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
   modelForData: computed('isV2', 'model', function() {
-    return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
+    let { model } = this;
+    if (!model) return null;
+    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -160,6 +162,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.{failedServerRead,selectedVersion.failedServerRead}',
     'isV2',
     function() {
+      if (!this.model) return;
       // if the version couldn't be read from the server
       if (this.isV2 && this.model.selectedVersion.failedServerRead) {
         return true;
