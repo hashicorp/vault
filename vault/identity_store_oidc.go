@@ -256,7 +256,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.UpdateOperation: i.pathOIDCIntrospect,
 			},
 			HelpSynopsis:    "Verify the authenticity of an OIDC token",
-			HelpDescription: "Use this path to verify the authenticity of an OIDC token and whether or not it is currently active.",
+			HelpDescription: "Use this path to verify the authenticity of an OIDC token and whether the associated entity is active and enabled.",
 		},
 	}
 }
