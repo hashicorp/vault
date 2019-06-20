@@ -270,11 +270,18 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"issuer": c.Issuer,
 		},
-	}, nil
+	}
+
+	if i.core.redirectAddr == "" && c.Issuer == "" {
+		resp.AddWarning(`Both "issuer" and Vault's "api_addr" are empty. ` +
+			`The issuer claim in generated tokens will not be network reachable.`)
+	}
+
+	return resp, nil
 }
 
 func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
