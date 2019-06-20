@@ -20,6 +20,7 @@ const Eng = Engine.extend({
       'wizard',
       'secret-mount-path',
     ],
+    externalRoutes: ['secrets'],
   },
 });
 

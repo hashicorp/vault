@@ -41,6 +41,9 @@ App = Application.extend({
           'wizard',
           'secret-mount-path',
         ],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
       },
     },
   },
