@@ -594,6 +594,66 @@ func TestStoragePackerV2_Variadic(t *testing.T) {
 	}
 }
 
+func TestStoragePackerV2_DuplicateItem(t *testing.T) {
+	storagePacker := getStoragePacker(t)
+	ctx := namespace.RootContext(nil)
+
+	n := 10
+	ids := generateLotsOfCollidingIDs(n, "")
+
+	allItems := make([]*Item, n)
+	for i, _ := range allItems {
+		allItems[i] = &Item{
+			ID:   ids[i],
+			Data: incompressibleData(1000),
+		}
+	}
+
+	err := storagePacker.PutItem(ctx, allItems...)
+	if err != nil {
+		t.Fatalf("error on PutItem: %+v", err)
+	}
+
+	// Verify that asking for the same items more than once works by
+	// returning multiple copies of the requested item.
+	items, err := storagePacker.GetItems(ctx, ids[0], ids[1], ids[0], ids[2], ids[0])
+	if err != nil {
+		t.Fatalf("error on GetItems: %+v", err)
+	}
+
+	expected := []*Item{
+		allItems[0],
+		allItems[1],
+		allItems[0],
+		allItems[2],
+		allItems[0],
+	}
+
+	if diff := deep.Equal(items, expected); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Verify that deleting the same item more than once works by
+	// ignoring the duplicates.
+	err = storagePacker.DeleteItem(ctx, ids[0], ids[1], ids[0], ids[2], ids[0])
+	if err != nil {
+		t.Fatalf("error on DeleteItem: %+v", err)
+	}
+	checkAllItems(t, storagePacker, ctx, allItems[3:])
+
+	deletedItems, err := storagePacker.GetItems(ctx, ids[:3]...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deletedItems) != 3 {
+		t.Fatalf("GetItem on deleted IDs has wrong length %d", len(deletedItems))
+	}
+	if deletedItems[0] != nil || deletedItems[1] != nil || deletedItems[2] != nil {
+		t.Fatalf("items not deleted")
+	}
+
+}
+
 func checkReturnedItems(t *testing.T, allItems []*Item, returnedItems []*Item) {
 	itemsById := make(map[string]*Item, len(allItems))
 

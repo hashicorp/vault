@@ -61,17 +61,6 @@ func sortRequests(requests []*itemRequest) []*itemRequest {
 	return duplicate
 }
 
-func checkForDuplicateIds(ids []string) (bool, string) {
-	idsSeen := make(map[string]bool, len(ids))
-	for _, id := range ids {
-		if _, found := idsSeen[id]; found {
-			return true, id
-		}
-		idsSeen[id] = true
-	}
-	return false, ""
-}
-
 // Return the topmost bucket in the tree for a given key.
 // Used as a default if the cache is empty or bypassed.
 func (s *StoragePackerV2) firstKey(cacheKey string) (string, error) {

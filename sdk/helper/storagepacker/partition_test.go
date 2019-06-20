@@ -60,9 +60,21 @@ func partitionHasAllItems(t *testing.T, partition []*partitionedRequests, ids []
 	return true
 }
 
+func checkForDuplicateIds(ids []string) (bool, string) {
+	idsSeen := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		if _, found := idsSeen[id]; found {
+			return true, id
+		}
+		idsSeen[id] = true
+	}
+	return false, ""
+}
+
 func TestStoragePackerV2_PartitionProperties(t *testing.T) {
 	checkIds := func(ids []string) bool {
 		// Higher-level function should probably check this.
+		// PutItem does; GetItem works fine without the check.
 		if dup, _ := checkForDuplicateIds(ids); dup {
 			return true
 		}
