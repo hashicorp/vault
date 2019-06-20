@@ -75,8 +75,6 @@ export default Service.extend({
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.keys(pathInfo);
-      //remove deprecated endpoints
-      paths = paths.filter(path => pathInfo[path]['x-vault-sudo'] !== true); //get rid of deprecated paths
 
       //TODO: consolidate this into a single reduce()
       //config is a get/post endpoint that doesn't take route params
