@@ -64,6 +64,7 @@ IMPROVEMENTS:
    smaller [GH-6718]
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
+ * ui: Removing jQuery from the application makes the initial JS payload smaller [GH-6768]
  
 BUG FIXES: 
 
