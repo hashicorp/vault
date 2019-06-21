@@ -132,7 +132,7 @@ func (c *client) createSP(
 		now := time.Now().UTC()
 		result, err := c.provider.CreateServicePrincipal(ctx, graphrbac.ServicePrincipalCreateParameters{
 			AppID:          app.AppID,
-			AccountEnabled: to.StringPtr("true"),
+			AccountEnabled: to.BoolPtr(true),
 			PasswordCredentials: &[]graphrbac.PasswordCredential{
 				graphrbac.PasswordCredential{
 					StartDate: &date.Time{Time: now},
