@@ -3,7 +3,7 @@ import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 import layout from '../templates/components/edit-form';
-import { schedule } from '@ember/runloop';
+import { next } from '@ember/runloop';
 
 export default Component.extend({
   layout,
@@ -44,7 +44,7 @@ export default Component.extend({
     }
     this.get('flashMessages').success(this.get(messageKey));
     if (this.callOnSaveAfterRender) {
-      schedule('afterRender', () => {
+      next(() => {
         this.get('onSave')({ saveType: method, model });
       });
       return;
