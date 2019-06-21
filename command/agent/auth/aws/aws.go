@@ -155,6 +155,14 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		a.lastCreds = creds
 
 		go a.pollForCreds(accessKey, secretKey, sessionToken, credentialPollIntervalSec)
+	} else {
+		nonceRaw, ok := conf.Config["nonce"]
+		if ok {
+			a.nonce, ok = nonceRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'nonce' value into string")
+			}
+		}
 	}
 
 	return a, nil
