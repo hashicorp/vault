@@ -29,7 +29,7 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir")))
+	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
 	coreConfig := &vault.CoreConfig{
 		Seal:            shamirSeal,
 		Physical:        phys,

@@ -402,7 +402,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
 
 				// Seal ourselves
 				c.logger.Info("failed to perform key upgrades, sealing", "error", err)
-				c.sealInternalWithOptions(false, false)
+				c.sealInternalWithOptions(false, false, true)
 				return err
 			default:
 				// If we are using an auto-unseal we can try to use the seal to
@@ -412,17 +412,17 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
 				keys, err := c.seal.GetStoredKeys(ctx)
 				if err != nil {
 					c.logger.Error("raft snapshot restore failed to get stored keys", "error", err)
-					c.sealInternalWithOptions(false, false)
+					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				if err := c.barrier.Seal(); err != nil {
 					c.logger.Error("raft snapshot restore failed to seal barrier", "error", err)
-					c.sealInternalWithOptions(false, false)
+					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				if err := c.barrier.Unseal(ctx, keys[0]); err != nil {
 					c.logger.Error("raft snapshot restore failed to unseal barrier", "error", err)
-					c.sealInternalWithOptions(false, false)
+					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				c.logger.Info("done reloading master key using auto seal")

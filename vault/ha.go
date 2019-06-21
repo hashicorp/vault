@@ -15,6 +15,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -678,6 +679,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
 	opCount := new(int32)
+	_, isRaft := c.underlyingPhysical.(*raft.RaftBackend)
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
@@ -706,7 +708,10 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
 				if entry != nil && len(entry.Value) > 0 {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-					go c.Shutdown()
+					// If we are using raft storage we do not want to shut down
+					// raft during replication secondary enablement. This will
+					// allow us to keep making progress on the raft log.
+					go c.sealInternalWithOptions(true, false, !isRaft)
 					atomic.AddInt32(lopCount, -1)
 					return
 				}

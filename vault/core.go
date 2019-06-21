@@ -1422,10 +1422,10 @@ func (c *Core) UIHeaders() (http.Header, error) {
 // sealInternal is an internal method used to seal the vault.  It does not do
 // any authorization checking.
 func (c *Core) sealInternal() error {
-	return c.sealInternalWithOptions(true, false)
+	return c.sealInternalWithOptions(true, false, true)
 }
 
-func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
@@ -1505,15 +1505,17 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 	}
 
 	// If the storage backend needs to be sealed
-	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
-			c.logger.Error("error stopping storage cluster", "error", err)
-			return err
+	if shutdownRaft {
+		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+				c.logger.Error("error stopping storage cluster", "error", err)
+				return err
+			}
 		}
-	}
 
-	// Stop the cluster listener
-	c.stopClusterListener()
+		// Stop the cluster listener
+		c.stopClusterListener()
+	}
 
 	c.logger.Debug("sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
@@ -1704,13 +1706,13 @@ func (c *Core) preSeal() error {
 
 	c.stopPeriodicRaftTLSRotate()
 
+	c.stopForwarding()
+
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping replication: {{err}}", err))
 	}
 	c.clusterParamsLock.Unlock()
-
-	c.stopForwarding()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))

@@ -834,6 +834,27 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}) <-chan struct{} {
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	// Check to see if we are already leader.
+	l.b.l.RLock()
+	if l.b.raft.State() == raft.Leader {
+		err := l.b.applyLog(context.Background(), &LogData{
+			Operations: []*LogOperation{
+				&LogOperation{
+					OpType: putOp,
+					Key:    l.key,
+					Value:  l.value,
+				},
+			},
+		})
+		l.b.l.RUnlock()
+		if err != nil {
+			return nil, err
+		}
+
+		return l.monitorLeadership(stopCh), nil
+	}
+	l.b.l.RUnlock()
+
 	for {
 		select {
 		case isLeader := <-l.b.raftNotifyCh:

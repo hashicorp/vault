@@ -483,8 +483,6 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 	addPathCheckers(c, entry, backend, viewPath)
 
-	addLicenseCallback(c, backend)
-
 	c.setCoreBackend(entry, backend, view)
 
 	// If the mount is filtered or we are on a DR secondary we don't want to
@@ -1218,6 +1216,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if b == nil {
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
+	addLicenseCallback(c, b)
+
 	return b, nil
 }
 
