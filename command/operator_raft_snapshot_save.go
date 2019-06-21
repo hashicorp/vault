@@ -84,15 +84,11 @@ func (c *OperatorRaftSnapshotSaveCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output("Saving raft snapshot; this might take a while to complete.")
-
 	err = client.Sys().RaftSnapshot(snapFile)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error taking the snapshot: %s", err))
 		return 2
 	}
-
-	c.UI.Output("Snapshot is saved successfully!")
 
 	return 0
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -87,15 +86,14 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 
 	// Avoiding the use of RawRequestWithContext which reads the response body
 	// to determine if the body contains error message.
+	var result *Response
 	resp, err := c.c.config.HttpClient.Do(req)
-
-	// By not parsing the body and checking only status code here, the error
-	// message will land in the snapshot file, but not without the API erroring
-	// out.
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 400) && resp.StatusCode != 429 {
-		return fmt.Errorf("http error code: %d", resp.StatusCode)
+	if resp == nil {
+		return nil
 	}
-	if err != nil {
+
+	result = &Response{Response: resp}
+	if err := result.Error(); err != nil {
 		return err
 	}
 
