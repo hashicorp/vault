@@ -6,7 +6,7 @@ export default Route.extend({
   secretMountPath: service(),
   pathHelp: service(),
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', null, this.secretMountPath.currentPath);
+    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
   },
   model() {
     const params = this.paramsFor(this.routeName);

@@ -10,7 +10,7 @@ export default Route.extend(ListRoute, {
     return this.paramsFor('scope').scope_name;
   },
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', null, this.secretMountPath.currentPath);
+    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
   },
   model(params) {
     return this.store
