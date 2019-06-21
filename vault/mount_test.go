@@ -735,3 +735,13 @@ func TestSingletonMountTableFunc(t *testing.T) {
 		t.Fatal("unexpected entry type for auth")
 	}
 }
+
+//type initableBackend struct {
+//	NoopBackend
+//	initialized bool
+//}
+//
+//func TestInitializableBackend(t *testing.T) {
+//
+//	var b logical.InitializableBackend = &initableBackend{}
+//}

@@ -84,13 +84,14 @@ type Backend interface {
 	Type() BackendType
 }
 
-// InitializableBackend is a backend that can be initialized.
-type InitializableBackend interface {
+// OpenableBackend is a backend that needs to perform some tasks
+// after having been mounted.
+type OpenableBackend interface {
 	Backend
 
-	// Initialize is invoked after a vault is unsealed, to allow a
-	// backend to perform any necessary initialization.
-	Initialize(context.Context, Storage) error
+	// Open is invoked just after mounting a backend to allow it to
+	// handle any tasks that need to be performed.
+	Open(context.Context, Storage) error
 }
 
 // BackendConfig is provided to the factory to initialize the backend

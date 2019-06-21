@@ -84,9 +84,9 @@ type Backend struct {
 	// Type is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
-	// Init is invoked after a vault is unsealed, to allow a
-	// backend to perform any necessary initialization.
-	Init InitializeFunc
+	// Open is invoked just after mounting a backend to allow it to
+	// handle any tasks that need to be performed.
+	Opener OpenFunc
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -113,8 +113,8 @@ type CleanupFunc func(context.Context)
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
 
-// InitializeFunc is the callback for backend initialization.
-type InitializeFunc func(context.Context, logical.Storage) error
+// OpenFunc is the callback for backend opening upon mounting.
+type OpenFunc func(context.Context, logical.Storage) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -271,10 +271,11 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	return nil
 }
 
-// Initialize is used to initialize the backend
-func (b *Backend) Initialize(ctx context.Context, s logical.Storage) error {
-	if b.Init != nil {
-		return b.Init(ctx, s)
+// Open is invoked just after mounting a backend to allow it to
+// handle any tasks that need to be performed.
+func (b *Backend) Open(ctx context.Context, storage logical.Storage) error {
+	if b.Opener != nil {
+		return b.Opener(ctx, storage)
 	}
 	return nil
 }
