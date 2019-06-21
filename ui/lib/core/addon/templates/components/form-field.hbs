@@ -100,7 +100,7 @@
     initialValue=(or (get model valuePath) attr.options.defaultValue)
     labelText=labelString
     warning=attr.options.warning
-    setDefaultValue=(or attr.options.setDefault false)
+    setDefaultValue=(or (get model valuePath) attr.options.setDefault false)
     onChange=(action (action "setAndBroadcast" valuePath))
   }}
 {{else if (eq attr.options.editType "stringArray")}}
