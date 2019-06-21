@@ -60,7 +60,7 @@ require (
 	github.com/hashicorp/go-memdb v1.0.0
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-rootcerts v1.0.0
+	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.1
@@ -83,8 +83,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
-	github.com/hashicorp/vault/api v1.0.3-0.20190618185021-07a27b1842ef
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190620182832-11e0ec8bf58f
+	github.com/hashicorp/vault/api v1.0.3-0.20190621032114-85651034ad4c
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190621032114-85651034ad4c
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -124,7 +124,7 @@ require (
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	google.golang.org/api v0.3.2
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
