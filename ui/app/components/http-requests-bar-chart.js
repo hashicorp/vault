@@ -9,6 +9,7 @@ import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
 import { task, waitForEvent } from 'ember-concurrency';
+import formatDate from 'date-fns/format';
 
 /**
  * @module HttpRequestsBarChart
@@ -114,7 +115,10 @@ export default Component.extend({
           return '';
         } else {
           const val = yScale.domain()[index];
-          return `<p>${parsedCounters[index].total}</p>`;
+          return `
+            <p>${formatDate(parsedCounters[index].start_time, 'MMMM YYYY')}</p>
+            <p>${parsedCounters[index].total}</p>
+            `;
         }
       });
 
