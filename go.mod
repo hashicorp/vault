@@ -8,7 +8,7 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
 	cloud.google.com/go v0.37.4
-	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/Microsoft/go-winio v0.4.12 // indirect
@@ -69,15 +69,15 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.1.1-0.20190620170237-51bdddce2dbd
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.1
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190416163516-aea818a71148
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190619235432-b4440902a577
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.1
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190620000144-dd5238afce02
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190621031127-2c3220b99c76
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190621030801-e469573c6fcf
 	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190619165123-fb996be2877c
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190426163411-b627ed8a028f
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
@@ -95,7 +95,6 @@ require (
 	github.com/kr/pretty v0.1.0
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.1.1
-	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.0.9
 	github.com/michaelklishin/rabbit-hole v1.5.0
 	github.com/mitchellh/cli v1.0.0
