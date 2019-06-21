@@ -13,9 +13,8 @@ var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
 
 type OperatorRaftJoinCommand struct {
-	flagRaftLeaderAPIAddr string
-	flagRaftRetry         bool
-	flagRaftCACert        string
+	flagRaftRetry  bool
+	flagRaftCACert string
 	*BaseCommand
 }
 
@@ -41,13 +40,6 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
-
-	f.StringVar(&StringVar{
-		Name:       "raft-leader-api-addr",
-		Target:     &c.flagRaftLeaderAPIAddr,
-		Completion: complete.PredictNothing,
-		Usage:      "Address of the raft leader node.",
-	})
 
 	f.StringVar(&StringVar{
 		Name:       "raft-ca-cert",
@@ -124,5 +116,6 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("Joined | %t", resp.Joined))
 	c.UI.Output(tableOutput(out, nil))
+
 	return 0
 }

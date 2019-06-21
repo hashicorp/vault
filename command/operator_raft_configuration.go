@@ -16,7 +16,7 @@ type OperatorRaftConfigurationCommand struct {
 }
 
 func (c *OperatorRaftConfigurationCommand) Synopsis() string {
-	return "Read the raft cluster configuration"
+	return "Returns the raft cluster configuration"
 }
 
 func (c *OperatorRaftConfigurationCommand) Help() string {

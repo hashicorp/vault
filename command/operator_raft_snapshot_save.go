@@ -22,11 +22,11 @@ func (c *OperatorRaftSnapshotSaveCommand) Synopsis() string {
 
 func (c *OperatorRaftSnapshotSaveCommand) Help() string {
 	helpText := `
-Usage: vault operator raft snapshot save <file>
+Usage: vault operator raft snapshot save <snapshot_file>
 
   Saves a snapshot of the current state of the raft cluster into a file.
 
-	  $ vault operator raft snapshot save out.snap
+	  $ vault operator raft snapshot save raft.snap
 
 ` + c.Flags().Help()
 

@@ -23,11 +23,11 @@ func (c *OperatorRaftSnapshotRestoreCommand) Synopsis() string {
 
 func (c *OperatorRaftSnapshotRestoreCommand) Help() string {
 	helpText := `
-Usage: vault operator raft snapshot restore <file>
+Usage: vault operator raft snapshot restore <snapshot_file>
 
   Installs the provided snapshot, returning the cluster to the state defined in it.
 
-	  $ vault operator raft snapshot restore out.snap
+	  $ vault operator raft snapshot restore raft.snap
 
 ` + c.Flags().Help()
 
@@ -99,8 +99,6 @@ func (c *OperatorRaftSnapshotRestoreCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error installing the snapshot: %s", err))
 		return 2
 	}
-
-	c.UI.Output("Snapshot is installed successfully!")
 
 	return 0
 }
