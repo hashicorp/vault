@@ -235,10 +235,15 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
 	if role.StaticAccount != nil {
 		data["username"] = role.StaticAccount.Username
+		data["rotation_statements"] = role.Statements.Rotation
 		data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
+	}
+
+	if len(role.Statements.Rotation) == 0 {
+		data["rotation_statements"] = []string{}
 	}
 
 	return &logical.Response{
@@ -261,7 +266,6 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		"revocation_statements": role.Statements.Revocation,
 		"rollback_statements":   role.Statements.Rollback,
 		"renew_statements":      role.Statements.Renewal,
-		"rotation_statements":   role.Statements.Rotation,
 		"default_ttl":           role.DefaultTTL.Seconds(),
 		"max_ttl":               role.MaxTTL.Seconds(),
 	}
@@ -276,9 +280,6 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 	}
 	if len(role.Statements.Renewal) == 0 {
 		data["renew_statements"] = []string{}
-	}
-	if len(role.Statements.Rotation) == 0 {
-		data["rotation_statements"] = []string{}
 	}
 
 	return &logical.Response{
@@ -425,7 +426,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	// createRole is a boolean to indicate if this is a new role creation. This is
 	// can be used later by database plugins that distinguish between creating and
 	// updating roles, and may use seperate statements depending on the context.
-	createRole := req.Operation == logical.CreateOperation
+	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
 			StaticAccount: &staticAccount{},
