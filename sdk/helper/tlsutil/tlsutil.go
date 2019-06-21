@@ -2,6 +2,8 @@ package tlsutil
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -64,4 +66,38 @@ func GetCipherName(cipher uint16) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("unsupported cipher %d", cipher)
+}
+
+func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+
+	switch {
+	case len(caCert) != 0 && len(clientCert) != 0 && len(clientKey) != 0:
+		// Valid
+	case len(caCert) != 0:
+		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
+	case len(clientCert) != 0:
+		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
+	case len(clientKey) != 0:
+		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
+	}
+
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(caCert)
+
+	cert, err := tls.X509KeyPair(clientCert, clientKey)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      pool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	tlsConfig.BuildNameToCertificate()
+
+	return tlsConfig, nil
 }
