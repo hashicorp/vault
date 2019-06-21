@@ -12,12 +12,7 @@ module('Integration | Component | config pki', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   const config = function(saveFn) {

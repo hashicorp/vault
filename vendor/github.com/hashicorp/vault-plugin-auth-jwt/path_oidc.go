@@ -108,7 +108,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
 	}
 
-	oidcCtx, err := b.createOIDCContext(ctx, config)
+	oidcCtx, err := b.createCAContext(ctx, config.OIDCDiscoveryCAPEM)
 	if err != nil {
 		return nil, errwrap.Wrapf("error preparing context for login operation: {{err}}", err)
 	}
@@ -215,13 +215,14 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 
 	config, err := b.config(ctx, req.Storage)
 	if err != nil {
-		logger.Warn("error loading configuration", "error", err)
-		return resp, nil
+		return nil, err
+	}
+	if config == nil {
+		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
-	if config == nil {
-		logger.Warn("nil configuration")
-		return resp, nil
+	if config.authType() != OIDCFlow {
+		return logical.ErrorResponse("OIDC login is not configured for this mount"), nil
 	}
 
 	roleName := d.Get("role").(string)
@@ -239,11 +240,10 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 
 	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
-		return resp, nil
+		return nil, err
 	}
-
-	if role == nil || role.RoleType != "oidc" {
-		return resp, nil
+	if role == nil {
+		return logical.ErrorResponse("role %q could not be found", roleName), nil
 	}
 
 	if !validRedirect(redirectURI, role.AllowedRedirectURIs) {

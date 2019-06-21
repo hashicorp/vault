@@ -597,7 +597,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Get the entry for the role used by the instance
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +951,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	if roleName == "" {
 		return nil, fmt.Errorf("error retrieving role_name during renewal")
 	}
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1079,7 +1079,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 
 	// Ensure that role entry is not deleted
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, storedIdentity.Role)
+	roleEntry, err := b.role(ctx, req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -1205,7 +1205,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		roleName = entity.FriendlyName
 	}
 
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1404,6 +1404,10 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	// now, entity.FriendlyName should either be <UserName> or <RoleName>
 	switch entity.Type {
 	case "assumed-role":
+		// Check for three parts for assumed role ARNs
+		if len(parts) < 3 {
+			return nil, fmt.Errorf("unrecognized arn: %q contains fewer than 3 slash-separated parts", fullParts[5])
+		}
 		// Assumed roles don't have paths and have a slightly different format
 		// parts[2] is <RoleSessionName>
 		entity.Path = ""

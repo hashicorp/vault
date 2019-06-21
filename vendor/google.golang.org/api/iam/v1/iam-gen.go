@@ -235,6 +235,40 @@ type RolesService struct {
 	s *Service
 }
 
+// AdminAuditData: Audit log information specific to Cloud IAM admin
+// APIs. This message is
+// serialized as an `Any` type in the `ServiceData` message of
+// an
+// `AuditLog` message.
+type AdminAuditData struct {
+	// PermissionDelta: The permission_delta when when creating or updating
+	// a Role.
+	PermissionDelta *PermissionDelta `json:"permissionDelta,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "PermissionDelta") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "PermissionDelta") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *AdminAuditData) MarshalJSON() ([]byte, error) {
+	type NoMethod AdminAuditData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // AuditConfig: Specifies the audit configuration for a service.
 // The configuration determines which permission types are logged, and
 // what
@@ -453,7 +487,7 @@ func (s *AuditableService) MarshalJSON() ([]byte, error) {
 // Binding: Associates `members` with a `role`.
 type Binding struct {
 	// Condition: The condition that is associated with this binding.
-	// NOTE: an unsatisfied condition will not allow user access via
+	// NOTE: An unsatisfied condition will not allow user access via
 	// current
 	// binding. Different bindings, including their conditions, are
 	// examined
@@ -1221,6 +1255,40 @@ type Permission struct {
 
 func (s *Permission) MarshalJSON() ([]byte, error) {
 	type NoMethod Permission
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// PermissionDelta: A PermissionDelta message to record the
+// added_permissions and
+// removed_permissions inside a role.
+type PermissionDelta struct {
+	// AddedPermissions: Added permissions.
+	AddedPermissions []string `json:"addedPermissions,omitempty"`
+
+	// RemovedPermissions: Removed permissions.
+	RemovedPermissions []string `json:"removedPermissions,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AddedPermissions") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AddedPermissions") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *PermissionDelta) MarshalJSON() ([]byte, error) {
+	type NoMethod PermissionDelta
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -4820,8 +4888,33 @@ type ProjectsServiceAccountsDisableCall struct {
 	header_                      http.Header
 }
 
-// Disable: Disables a ServiceAccount.
-// The API is currently in alpha phase.
+// Disable: DisableServiceAccount is currently in the alpha launch
+// stage.
+//
+// Disables a ServiceAccount,
+// which immediately prevents the service account from authenticating
+// and
+// gaining access to APIs.
+//
+// Disabled service accounts can be safely restored by
+// using
+// EnableServiceAccount at any point. Deleted service accounts cannot
+// be
+// restored using this method.
+//
+// Disabling a service account that is bound to VMs, Apps, Functions,
+// or
+// other jobs will cause those jobs to lose access to resources if they
+// are
+// using the disabled service account.
+//
+// To improve reliability of your services and avoid unexpected outages,
+// it
+// is recommended to first disable a service account rather than delete
+// it.
+// After disabling the service account, wait at least 24 hours to verify
+// there
+// are no unintended consequences, and then delete the service account.
 func (r *ProjectsServiceAccountsService) Disable(name string, disableserviceaccountrequest *DisableServiceAccountRequest) *ProjectsServiceAccountsDisableCall {
 	c := &ProjectsServiceAccountsDisableCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -4919,7 +5012,7 @@ func (c *ProjectsServiceAccountsDisableCall) Do(opts ...googleapi.CallOption) (*
 	}
 	return ret, nil
 	// {
-	//   "description": "Disables a ServiceAccount.\nThe API is currently in alpha phase.",
+	//   "description": "DisableServiceAccount is currently in the alpha launch stage.\n\nDisables a ServiceAccount,\nwhich immediately prevents the service account from authenticating and\ngaining access to APIs.\n\nDisabled service accounts can be safely restored by using\nEnableServiceAccount at any point. Deleted service accounts cannot be\nrestored using this method.\n\nDisabling a service account that is bound to VMs, Apps, Functions, or\nother jobs will cause those jobs to lose access to resources if they are\nusing the disabled service account.\n\nTo improve reliability of your services and avoid unexpected outages, it\nis recommended to first disable a service account rather than delete it.\nAfter disabling the service account, wait at least 24 hours to verify there\nare no unintended consequences, and then delete the service account.",
 	//   "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:disable",
 	//   "httpMethod": "POST",
 	//   "id": "iam.projects.serviceAccounts.disable",
@@ -4960,8 +5053,21 @@ type ProjectsServiceAccountsEnableCall struct {
 	header_                     http.Header
 }
 
-// Enable: Enables a ServiceAccount.
-//  The API is currently in alpha phase.
+// Enable: EnableServiceAccount is currently in the alpha launch
+// stage.
+//
+//  Restores a disabled ServiceAccount
+//  that has been manually disabled by using DisableServiceAccount.
+// Service
+//  accounts that have been disabled by other means or for other
+// reasons,
+//  such as abuse, cannot be restored using this method.
+//
+//  EnableServiceAccount will have no effect on a service account that
+// is
+//  not disabled.  Enabling an already enabled service account will have
+// no
+//  effect.
 func (r *ProjectsServiceAccountsService) Enable(name string, enableserviceaccountrequest *EnableServiceAccountRequest) *ProjectsServiceAccountsEnableCall {
 	c := &ProjectsServiceAccountsEnableCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -5059,7 +5165,7 @@ func (c *ProjectsServiceAccountsEnableCall) Do(opts ...googleapi.CallOption) (*E
 	}
 	return ret, nil
 	// {
-	//   "description": "Enables a ServiceAccount.\n The API is currently in alpha phase.",
+	//   "description": "EnableServiceAccount is currently in the alpha launch stage.\n\n Restores a disabled ServiceAccount\n that has been manually disabled by using DisableServiceAccount. Service\n accounts that have been disabled by other means or for other reasons,\n such as abuse, cannot be restored using this method.\n\n EnableServiceAccount will have no effect on a service account that is\n not disabled.  Enabling an already enabled service account will have no\n effect.",
 	//   "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:enable",
 	//   "httpMethod": "POST",
 	//   "id": "iam.projects.serviceAccounts.enable",
@@ -6494,8 +6600,7 @@ type ProjectsServiceAccountsUpdateCall struct {
 // Updates a ServiceAccount.
 //
 // Currently, only the following fields are updatable:
-// `display_name` .
-// The `etag` is mandatory.
+// `display_name` and `description`.
 func (r *ProjectsServiceAccountsService) Update(name string, serviceaccount *ServiceAccount) *ProjectsServiceAccountsUpdateCall {
 	c := &ProjectsServiceAccountsUpdateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -6593,7 +6698,7 @@ func (c *ProjectsServiceAccountsUpdateCall) Do(opts ...googleapi.CallOption) (*S
 	}
 	return ret, nil
 	// {
-	//   "description": "Note: This method is in the process of being deprecated. Use\nPatchServiceAccount instead.\n\nUpdates a ServiceAccount.\n\nCurrently, only the following fields are updatable:\n`display_name` .\nThe `etag` is mandatory.",
+	//   "description": "Note: This method is in the process of being deprecated. Use\nPatchServiceAccount instead.\n\nUpdates a ServiceAccount.\n\nCurrently, only the following fields are updatable:\n`display_name` and `description`.",
 	//   "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}",
 	//   "httpMethod": "PUT",
 	//   "id": "iam.projects.serviceAccounts.update",

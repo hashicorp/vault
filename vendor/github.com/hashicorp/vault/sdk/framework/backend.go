@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -543,6 +542,10 @@ type FieldSchema struct {
 
 	// DisplaySensitive indicates that the value should be masked by default in the UI.
 	DisplaySensitive bool
+
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
@@ -551,34 +554,11 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
 		switch s.Type {
 		case TypeDurationSecond:
-			var result int
-			switch inp := s.Default.(type) {
-			case nil:
-				return s.Type.Zero()
-			case int:
-				result = inp
-			case int64:
-				result = int(inp)
-			case float32:
-				result = int(inp)
-			case float64:
-				result = int(inp)
-			case string:
-				dur, err := parseutil.ParseDurationSecond(inp)
-				if err != nil {
-					return s.Type.Zero()
-				}
-				result = int(dur.Seconds())
-			case json.Number:
-				valInt64, err := inp.Int64()
-				if err != nil {
-					return s.Type.Zero()
-				}
-				result = int(valInt64)
-			default:
+			resultDur, err := parseutil.ParseDurationSecond(s.Default)
+			if err != nil {
 				return s.Type.Zero()
 			}
-			return result
+			return int(resultDur.Seconds())
 
 		default:
 			return s.Default

@@ -591,7 +591,6 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	roleReq.Operation = logical.ReadOperation
-
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
@@ -625,41 +624,85 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatal("role_id not found in repsonse")
 	}
 	expected["role_id"] = resp.Data["role_id"]
-
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
 
 	roleData["bound_vpc_id"] = "newvpcid"
 	roleReq.Operation = logical.UpdateOperation
-
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
-
 	expected["bound_vpc_id"] = []string{"newvpcid"}
-
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)
 	}
 
-	roleReq.Operation = logical.DeleteOperation
+	// Create a new backend so we have a new cache (thus populating from disk).
+	// Then test reading (reading from disk + lock), writing, reading,
+	// deleting, reading.
+	b, err = Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read again, make sure things are what we expect
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)
+	}
+
+	roleReq.Operation = logical.UpdateOperation
+	roleData["bound_ami_id"] = "testamiid2"
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	expected["bound_ami_id"] = []string{"testamiid2"}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Delete which should remove from disk and also cache
+	roleReq.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
 	if resp != nil {
 		t.Fatalf("failed to delete role entry")
+	}
+
+	// Verify it was deleted, e.g. it isn't found in the role cache
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil")
 	}
 }
 
@@ -742,7 +785,7 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 		Version:                     currentRoleStorageVersion,
 	}
 
-	upgraded, err := b.upgradeRoleEntry(context.Background(), storage, roleEntryToUpgrade)
+	upgraded, err := b.upgradeRole(context.Background(), storage, roleEntryToUpgrade)
 	if err != nil {
 		t.Fatalf("error upgrading role entry: %#v", err)
 	}

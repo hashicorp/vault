@@ -11,6 +11,7 @@ import (
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
+	credPCF "github.com/hashicorp/vault-plugin-auth-pcf"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -21,6 +22,7 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -75,6 +77,7 @@ func newRegistry() *registry {
 			"ldap":       credLdap.Factory,
 			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
+			"pcf":        credPCF.Factory,
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},
@@ -86,12 +89,13 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
-			"postgresql-database-plugin": dbPostgres.New,
-			"mssql-database-plugin":      dbMssql.New,
-			"cassandra-database-plugin":  dbCass.New,
-			"mongodb-database-plugin":    dbMongo.New,
-			"hana-database-plugin":       dbHana.New,
-			"influxdb-database-plugin":   dbInflux.New,
+			"postgresql-database-plugin":    dbPostgres.New,
+			"mssql-database-plugin":         dbMssql.New,
+			"cassandra-database-plugin":     dbCass.New,
+			"mongodb-database-plugin":       dbMongo.New,
+			"hana-database-plugin":          dbHana.New,
+			"influxdb-database-plugin":      dbInflux.New,
+			"elasticsearch-database-plugin": dbElastic.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":         logicalAd.Factory,

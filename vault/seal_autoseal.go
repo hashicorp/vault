@@ -40,6 +40,10 @@ func NewAutoSeal(lowLevel seal.Access) Seal {
 	return ret
 }
 
+func (d *autoSeal) GetAccess() seal.Access {
+	return d.Access
+}
+
 func (d *autoSeal) checkCore() error {
 	if d.core == nil {
 		return fmt.Errorf("seal does not have a core set")

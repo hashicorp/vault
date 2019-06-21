@@ -6,10 +6,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
 	ErrEmptyCreationStatement = errors.New("empty creation statements")
+	ErrEmptyRotationStatement = errors.New("empty rotation statements")
 )
 
 // Query templates a query for us.
@@ -49,4 +52,9 @@ func StatementCompatibilityHelper(statements dbplugin.Statements) dbplugin.State
 		statements.Rollback = []string{statements.RollbackStatements}
 	}
 	return statements
+}
+
+// Unimplemented returns a gRPC error with the Unimplemented code
+func Unimplemented() error {
+	return status.Error(codes.Unimplemented, "Not yet implemented")
 }
