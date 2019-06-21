@@ -83,6 +83,7 @@ Router.map(function() {
       this.route('secrets', function() {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function() {
+          this.mount('kmip');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
@@ -124,6 +125,7 @@ Router.map(function() {
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
+
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

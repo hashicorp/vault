@@ -58,6 +58,8 @@ IMPROVEMENTS:
  * identity: Allow a group alias' canonical ID to be modified
  * namespaces: Namespaces can now be created and deleted from performance
    replication secondaries
+ * secrets/database: Cassandra operations will now cancel on client timeout
+   [GH-6954]
  * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]

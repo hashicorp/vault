@@ -197,7 +197,7 @@ export default Service.extend({
     //we need list and create paths to set the correct urls for actions
     const { list, create } = paths;
     return generatedItemAdapter.extend({
-      urlForItem(method, id, type) {
+      urlForItem(method, id) {
         let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
@@ -211,7 +211,7 @@ export default Service.extend({
         return this.urlForItem(modelName, id, snapshot);
       },
 
-      urlForUpdateRecord(id, modelName, snapshot) {
+      urlForUpdateRecord(id) {
         let { tag, path } = create[0];
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
@@ -224,7 +224,7 @@ export default Service.extend({
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
 
-      urlForDeleteRecord(id, modelName, snapshot) {
+      urlForDeleteRecord(id) {
         let { tag, path } = paths.delete[0];
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;

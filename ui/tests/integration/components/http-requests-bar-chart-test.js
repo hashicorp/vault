@@ -32,8 +32,6 @@ module('Integration | Component | http-requests-bar-chart', function(hooks) {
   test('it formats the ticks', async function(assert) {
     await render(hbs`<HttpRequestsBarChart @counters={{counters}}/>`);
 
-    debugger;
-
     assert.equal(
       this.element.querySelector('.x-axis>.tick').textContent,
       'Apr 2019',

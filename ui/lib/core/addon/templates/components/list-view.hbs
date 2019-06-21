@@ -1,0 +1,23 @@
+{{#if
+  (or
+    (and items.meta items.meta.total)
+    items.length
+  )
+}}
+  <div class="box is-fullwidth is-bottomless is-sideless is-paddingless">
+    {{#each items as |item|}}
+      {{yield (hash item=item)}}
+    {{else}}
+      {{yield}}
+    {{/each}}
+    {{#if showPagination}}
+      <ListPagination
+        @page={{items.meta.currentPage}}
+        @lastPage={{items.meta.lastPage}}
+        @link={{@paginationRouteName}}
+      />
+    {{/if}}
+  </div>
+{{else}}
+  {{yield (hash empty=(component "empty-state" title=this.emptyTitle message=this.emptyMessage))}}
+{{/if}}
