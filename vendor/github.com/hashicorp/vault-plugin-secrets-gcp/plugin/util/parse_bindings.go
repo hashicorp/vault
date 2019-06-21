@@ -107,7 +107,7 @@ func parseResourceObject(item *ast.ObjectItem, bindings map[string]StringSet) er
 
 	resourceItemList := item.Val.(*ast.ObjectType).List
 	if resourceItemList == nil {
-		return fmt.Errorf("invalid empty roles list for item", item.Assign.Line)
+		return fmt.Errorf("invalid empty roles list for item (line %d)", item.Assign.Line)
 	}
 
 	var merr *multierror.Error
@@ -137,7 +137,7 @@ func parseRolesObject(rolesObj *ast.ObjectItem, parsedRoles StringSet) error {
 	}
 	roleList, ok := rolesObj.Val.(*ast.ListType)
 	if !ok {
-		return fmt.Errorf("parsing error, expected list of roles for key %q")
+		return fmt.Errorf("parsing error, expected list of roles for key 'roles'")
 	}
 	var merr *multierror.Error
 	for _, singleRoleObj := range roleList.List {

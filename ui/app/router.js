@@ -14,6 +14,7 @@ Router.map(function() {
       this.route('init');
       this.route('logout');
       this.route('license');
+      this.route('requests', { path: '/metrics/requests' });
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -39,6 +40,12 @@ Router.map(function() {
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
+          this.route('item', { path: '/item/:item_type' }, function() {
+            this.route('list', { path: '/' });
+            this.route('create');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/show/:item_id' });
+          });
           this.route('section', { path: '/:section_name' });
         });
         this.route('leases', function() {

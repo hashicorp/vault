@@ -2,6 +2,7 @@ package storagepacker
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -175,5 +176,64 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 
 	if !proto.Equal(&itemDecoded, entity) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, itemDecoded)
+	}
+}
+
+func TestStoragePacker_DeleteMultiple(t *testing.T) {
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	// Persist a storage entry
+	for i := 0; i < 100; i++ {
+		item := &Item{
+			ID: fmt.Sprintf("item%d", i),
+		}
+
+		err = storagePacker.PutItem(ctx, item)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify that it can be read
+		fetchedItem, err := storagePacker.GetItem(item.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fetchedItem == nil {
+			t.Fatalf("failed to read the stored item")
+		}
+
+		if item.ID != fetchedItem.ID {
+			t.Fatalf("bad: item ID; expected: %q\n actual: %q\n", item.ID, fetchedItem.ID)
+		}
+	}
+
+	itemsToDelete := make([]string, 0, 50)
+	for i := 1; i < 100; i += 2 {
+		itemsToDelete = append(itemsToDelete, fmt.Sprintf("item%d", i))
+	}
+
+	err = storagePacker.DeleteMultipleItems(ctx, nil, itemsToDelete...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the deletion was successful
+	for i := 0; i < 100; i++ {
+		fetchedItem, err := storagePacker.GetItem(fmt.Sprintf("item%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if i%2 == 0 && fetchedItem == nil {
+			t.Fatal("expected item not found")
+		}
+		if i%2 == 1 && fetchedItem != nil {
+			t.Fatalf("failed to delete item")
+		}
 	}
 }

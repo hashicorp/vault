@@ -91,7 +91,7 @@ func CreateDeletePublicKeyRequest() (request *DeletePublicKeyRequest) {
 	request = &DeletePublicKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DeletePublicKey", "ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DeletePublicKey", "", "")
 	return
 }
 

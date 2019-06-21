@@ -317,6 +317,84 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 }
 
+func TestPostgresSQL_SetCredentials(t *testing.T) {
+	cleanup, connURL := preparePostgresTestContainer(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	password, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usernameConfig := dbplugin.StaticUserConfig{
+		Username: "test",
+		Password: password,
+	}
+
+	// Test with no configured Creation Statement
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
+	if err == nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	statements := dbplugin.Statements{
+		Creation: []string{testPostgresStaticRole},
+	}
+	// User should not exist, make sure we can create
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// call SetCredentials again, the user will already exist, password will
+	// change. Without rotation statements, this should use the defaults
+	newPassword, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if password != newPassword {
+		t.Fatal("passwords should have changed")
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// generate a new password and supply owr own rotation statements
+	newPassword2, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword2
+	statements.Rotation = []string{testPostgresStaticRoleRotate, testPostgresStaticRoleGrant}
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if password != newPassword2 {
+		t.Fatal("passwords should have changed")
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	t.Helper()
 	// Log in with the new creds
@@ -397,4 +475,19 @@ REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{name}}";
 REVOKE USAGE ON SCHEMA public FROM "{{name}}";
 
 DROP ROLE IF EXISTS "{{name}}";
+`
+
+const testPostgresStaticRole = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+`
+
+const testPostgresStaticRoleRotate = `
+ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
+`
+
+const testPostgresStaticRoleGrant = `
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `

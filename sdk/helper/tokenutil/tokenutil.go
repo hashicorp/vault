@@ -195,13 +195,13 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 // PopulateTokenData adds information from TokenParams into the map
 func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_bound_cidrs"] = t.TokenBoundCIDRs
-	m["token_explicit_max_ttl"] = t.TokenExplicitMaxTTL.Seconds()
-	m["token_max_ttl"] = t.TokenMaxTTL.Seconds()
+	m["token_explicit_max_ttl"] = int64(t.TokenExplicitMaxTTL.Seconds())
+	m["token_max_ttl"] = int64(t.TokenMaxTTL.Seconds())
 	m["token_no_default_policy"] = t.TokenNoDefaultPolicy
-	m["token_period"] = t.TokenPeriod.Seconds()
+	m["token_period"] = int64(t.TokenPeriod.Seconds())
 	m["token_policies"] = t.TokenPolicies
 	m["token_type"] = t.TokenType.String()
-	m["token_ttl"] = t.TokenTTL.Seconds()
+	m["token_ttl"] = int64(t.TokenTTL.Seconds())
 	m["token_num_uses"] = t.TokenNumUses
 }
 

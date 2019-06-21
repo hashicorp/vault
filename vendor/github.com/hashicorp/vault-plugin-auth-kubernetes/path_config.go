@@ -22,20 +22,23 @@ func pathConfig(b *kubeAuthBackend) *framework.Path {
 			"kubernetes_host": {
 				Type:        framework.TypeString,
 				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.",
-				DisplayName: "Kubernetes Host",
 			},
 
 			"kubernetes_ca_cert": {
 				Type:        framework.TypeString,
 				Description: "PEM encoded CA cert for use by the TLS client used to talk with the API.",
-				DisplayName: "Kubernetes CA Certificate",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Kubernetes CA Certificate",
+				},
 			},
 			"token_reviewer_jwt": {
 				Type: framework.TypeString,
 				Description: `A service account JWT used to access the
 TokenReview API to validate other JWTs during login. If not set
 the JWT used for login will be used to access the API.`,
-				DisplayName: "Token Reviewer JWT",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Token Reviewer JWT",
+				},
 			},
 			"pem_keys": {
 				Type: framework.TypeCommaStringSlice,
@@ -43,7 +46,9 @@ the JWT used for login will be used to access the API.`,
 used to verify the signatures of kubernetes service account
 JWTs. If a certificate is given, its public key will be
 extracted. Not every installation of Kuberentes exposes these keys.`,
-				DisplayName: "Service account verification keys",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Service account verification keys",
+				},
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

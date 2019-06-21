@@ -14,6 +14,9 @@
       "description": "Synopsis",
       "x-vault-createSupported": true,
       "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "parameters": [
         {
           "name": "format",
@@ -77,9 +80,12 @@
                     "type": "integer",
                     "description": "the age",
                     "enum": [1, 2, 3],
-                    "x-vault-displayName": "Age",
-                    "x-vault-displayValue": 7,
-                    "x-vault-displaySensitive": true
+                    "x-vault-displayAttrs": {
+                      "name": "Age",
+                      "sensitive": true,
+                      "group": "Some Group",
+                      "value": 7
+                    }
                   },
                   "name": {
                     "type": "string",

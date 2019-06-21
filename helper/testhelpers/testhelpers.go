@@ -5,20 +5,26 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"reflect"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 
 	log "github.com/hashicorp/go-hclog"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -514,6 +520,21 @@ func (r *ReplicatedTestClustersBuilder) enableDrSecondary(t testing.T, tc *vault
 	EnsureCoresUnsealed(t, tc)
 }
 
+func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	activeCore := DeriveActiveCore(t, cluster)
+
+	for i := 0; i < 30; i++ {
+		leaderResp, err := activeCore.Client.Sys().Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !leaderResp.IsSelf {
+			t.Fatal("unstable active node")
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	for i := 0; i < 10; i++ {
 		for _, core := range cluster.Cores {
@@ -544,6 +565,25 @@ func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestCl
 	}
 
 	return cores
+}
+
+func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		unsealed := 0
+		for _, core := range cluster.Cores {
+			if !core.Core.Sealed() {
+				unsealed++
+			}
+		}
+
+		if unsealed >= n {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("%d cores were not sealed", n)
 }
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
@@ -621,4 +661,132 @@ func WaitForWAL(t testing.T, c *vault.TestClusterCore, wal uint64) {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func RekeyCluster(t testing.T, cluster *vault.TestCluster) {
+	client := cluster.Cores[0].Client
+
+	init, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		SecretShares:    5,
+		SecretThreshold: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var statusResp *api.RekeyUpdateResponse
+	for j := 0; j < len(cluster.BarrierKeys); j++ {
+		statusResp, err = client.Sys().RekeyUpdate(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[j]), init.Nonce)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if statusResp == nil {
+			t.Fatal("nil status response during unseal")
+		}
+		if statusResp.Complete {
+			break
+		}
+	}
+
+	if len(statusResp.KeysB64) != 5 {
+		t.Fatal("wrong number of keys")
+	}
+
+	newBarrierKeys := make([][]byte, 5)
+	for i, key := range statusResp.KeysB64 {
+		newBarrierKeys[i], err = base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cluster.BarrierKeys = newBarrierKeys
+}
+
+func CreateRaftBackend(t testing.T, logger hclog.Logger, nodeID string) (physical.Backend, func(), error) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("raft dir: %s", raftDir)
+	cleanupFunc := func() {
+		os.RemoveAll(raftDir)
+	}
+
+	logger.Info("raft dir", "dir", raftDir)
+
+	conf := map[string]string{
+		"path":    raftDir,
+		"node_id": nodeID,
+	}
+
+	backend, err := raft.NewRaftBackend(conf, logger)
+	if err != nil {
+		cleanupFunc()
+		t.Fatal(err)
+	}
+
+	return backend, cleanupFunc, nil
+}
+
+type TestRaftServerAddressProvider struct {
+	Cluster *vault.TestCluster
+}
+
+func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+	for _, core := range p.Cluster.Cores {
+		if core.NodeID == string(id) {
+			parsed, err := url.Parse(core.ClusterAddr())
+			if err != nil {
+				return "", err
+			}
+
+			return raftlib.ServerAddress(parsed.Host), nil
+		}
+	}
+
+	return "", errors.New("could not find cluster addr")
+}
+
+func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	vault.UpdateClusterAddrForTests = true
+
+	// Seal the leader so we can install an address provider
+	{
+		EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	// Join core1
+	{
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+
+	}
+
+	// Join core2
+	{
+		core := cluster.Cores[2]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+
+	WaitForNCoresUnsealed(t, cluster, 3)
 }
