@@ -340,6 +340,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"hana-database-plugin",
 				"influxdb-database-plugin",
 				"jwt",
+				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
