@@ -49,6 +49,8 @@ IMPROVEMENTS:
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/kubernetes: Allow service names/namespaces to be configured as globs
+   [KUBEAUTH-58]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
  * identity: Allow a group alias' canonical ID to be modified
