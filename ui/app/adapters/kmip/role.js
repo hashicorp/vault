@@ -19,8 +19,7 @@ export default BaseAdapter.extend({
     });
   },
 
-  updateRecord(store, type, snapshot) {
-    let changes = snapshot.changedAttributes();
+  updateRecord() {
     return this.createRecord(...arguments);
   },
 });
