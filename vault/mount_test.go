@@ -736,12 +736,67 @@ func TestSingletonMountTableFunc(t *testing.T) {
 	}
 }
 
-//type initableBackend struct {
-//	NoopBackend
-//	initialized bool
-//}
-//
-//func TestInitializableBackend(t *testing.T) {
-//
-//	var b logical.InitializableBackend = &initableBackend{}
-//}
+type openableBackend struct {
+	NoopBackend
+	opened bool
+}
+
+func (b *openableBackend) Open(context.Context, logical.Storage) error {
+	b.opened = true
+	return nil
+}
+
+func TestOpenableBackend(t *testing.T) {
+
+	b := &openableBackend{}
+	var _ logical.OpenableBackend = b
+	if b.opened {
+		t.Fatal("backend should not be open")
+	}
+
+	//---------------------------------
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return b, nil
+	}
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table:       mountTableType,
+				Path:        "foo",
+				Type:        "noop",
+				NamespaceID: namespace.RootNamespaceID,
+				namespace:   namespace.RootNamespace,
+				UUID:        "abcd",
+				Accessor:    "noop-abcd",
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	err := c.setupMounts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.mounts.Entries) != 1 {
+		t.Fatalf("expected one entry, got %d", len(c.mounts.Entries))
+	}
+
+	//---------------------------------
+
+	// run the postUnseal funcs
+	for _, f := range c.postUnsealFuncs {
+		f()
+	}
+
+	// sleep briefly so the postUnseal async call to Open() call can finish
+	time.Sleep(100 * time.Millisecond)
+
+	if !b.opened {
+		t.Fatal("backend should be open")
+	}
+}

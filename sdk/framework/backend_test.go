@@ -583,3 +583,18 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 		}
 	}
 }
+
+func TestBackendOpen(t *testing.T) {
+
+	var opened bool
+	backend := &Backend{Opener: func(context.Context, logical.Storage) error {
+		opened = true
+		return nil
+	}}
+
+	backend.Open(nil, nil)
+
+	if !opened {
+		t.Fatal("backend should be open")
+	}
+}
