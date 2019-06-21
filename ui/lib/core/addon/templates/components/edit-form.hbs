@@ -18,8 +18,8 @@
   <MessageError @model={{model}} data-test-edit-form-error />
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
-    {{#if model.attrs}}
-      {{#each model.attrs as |attr|}}
+    {{#if (or model.fields model.attrs)}}
+      {{#each (or model.fields model.attrs) as |attr|}}
         <FormField
           data-test-field
           @attr={{attr}}
