@@ -1,0 +1,22 @@
+<HeaderScope/>
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @params={{array "configure"}}
+    >
+     Configure
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+{{#if model}}
+  <FieldGroupShow @model={{model}} />
+{{else}}
+  <EmptyState
+    @title="No configuration for this secrets engine yet"
+    @message="We'll need to configure a few things before getting started."
+  >
+    {{#link-to "configure"}}
+      Configure
+    {{/link-to}}
+  </EmptyState>
+{{/if}}

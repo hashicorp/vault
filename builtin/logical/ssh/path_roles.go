@@ -218,7 +218,7 @@ func pathRoles(b *backend) *framework.Path {
 				The maximum allowed lease duration
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Value: "Max TTL",
+					Name: "Max TTL",
 				},
 			},
 			"allowed_critical_options": &framework.FieldSchema{
