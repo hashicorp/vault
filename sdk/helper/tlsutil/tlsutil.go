@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
+var ErrInvalidCertParams = errors.New("ca cert, client key and client cert must all be set, or none should be set")
+
 // TLSLookup maps the tls_min_version configuration to the internal value
 var TLSLookup = map[string]uint16{
 	"tls10": tls.VersionTLS10,
@@ -75,11 +77,7 @@ func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.C
 	case len(caCert) != 0 && len(clientCert) != 0 && len(clientKey) != 0:
 		// Valid
 	case len(caCert) != 0, len(clientCert) != 0, len(clientKey) != 0:
-		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
-	case len(clientCert) != 0:
-		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
-	case len(clientKey) != 0:
-		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
+		return nil, ErrInvalidCertParams
 	}
 
 	pool := x509.NewCertPool()
