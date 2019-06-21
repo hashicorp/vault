@@ -347,7 +347,6 @@ func (b *backend) persistUpgradableRoleEntries(ctx context.Context, s logical.St
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
-
 		err := b.persistUpgradableRoleEntry(ctx, s, roleName)
 		if err != nil {
 			return err

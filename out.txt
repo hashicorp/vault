@@ -1,0 +1,123 @@
+builtin/credential/app-id/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/app-id/backend_test.go:23:		if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/approle/backend.go:69:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/approle/backend_test.go:22:	err = b.Backend.Setup(context.Background(), config)
+builtin/credential/aws/backend.go:24:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/aws/backend_test.go:38:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:263:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:318:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:373:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:421:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:469:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:607:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:763:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:845:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:911:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:1082:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:1310:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/backend_test.go:1459:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_config_client_test.go:20:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_config_identity_test.go:20:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_login_test.go:188:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:26:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:184:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:265:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:429:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:542:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:676:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:729:	err = b.Setup(context.Background(), config)
+builtin/credential/aws/path_role_test.go:772:	err = b.Setup(ctx, config)
+builtin/credential/cert/backend.go:14:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/github/backend.go:16:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/ldap/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/ldap/backend_test.go:29:	err := b.Backend.Setup(context.Background(), config)
+builtin/credential/okta/backend.go:16:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/radius/backend.go:13:	if err := b.Setup(ctx, conf); err != nil {
+builtin/credential/userpass/backend.go:13:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/aws/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/aws/backend_test.go:124:	if err := b.Setup(context.Background(), config); err != nil {
+builtin/logical/aws/path_roles_test.go:20:	if err := b.Setup(context.Background(), config); err != nil {
+builtin/logical/cassandra/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/consul/backend.go:12:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/database/backend.go:46:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/mongodb/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/mssql/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/mysql/backend.go:17:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/nomad/backend.go:14:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/pki/backend.go:16:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/pki/backend_test.go:1433:	err := b.Setup(context.Background(), config)
+builtin/logical/pki/backend_test.go:1560:	err := b.Setup(context.Background(), config)
+builtin/logical/pki/backend_test.go:1940:	err := b.Setup(context.Background(), config)
+builtin/logical/pki/path_roles_test.go:19:	err = b.Setup(context.Background(), config)
+builtin/logical/postgresql/backend.go:18:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/rabbitmq/backend.go:18:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/rabbitmq/path_config_lease_test.go:17:	if err = b.Setup(context.Background(), config); err != nil {
+builtin/logical/ssh/backend.go:25:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/ssh/backend_test.go:116:	err = b.Setup(context.Background(), config)
+builtin/logical/ssh/path_config_ca_test.go:21:	err = b.Setup(context.Background(), config)
+builtin/logical/totp/backend.go:15:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/transit/backend.go:19:	if err := b.Setup(ctx, conf); err != nil {
+builtin/logical/transit/backend_test.go:37:	err := b.Backend.Setup(context.Background(), config)
+builtin/logical/transit/backend_test.go:58:	err := b.Backend.Setup(context.Background(), conf)
+builtin/logical/transit/backend_test.go:79:	err := b.Backend.Setup(context.Background(), conf)
+builtin/logical/transit/backend_test.go:101:	err := b.Backend.Setup(context.Background(), conf)
+builtin/logical/transit/backend_test.go:1346:	be.Setup(context.Background(), conf)
+builtin/logical/transit/backend_test.go:1351:	be.Setup(context.Background(), conf)
+builtin/plugin/backend.go:33:	if err := b.Setup(ctx, conf); err != nil {
+builtin/plugin/backend.go:57:	err = raw.Setup(ctx, conf)
+builtin/plugin/backend.go:114:	err = nb.Setup(ctx, b.config)
+sdk/framework/backend.go:261:func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+sdk/logical/logical.go:81:	Setup(context.Context, *BackendConfig) error
+sdk/plugin/grpc_backend_client.go:179:func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
+sdk/plugin/grpc_backend_client.go:224:	reply, err := b.client.Setup(ctx, args)
+sdk/plugin/grpc_backend_server.go:31:func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
+sdk/plugin/grpc_backend_test.go:164:	err = b.Setup(context.Background(), &logical.BackendConfig{
+sdk/plugin/middleware.go:75:func (b *backendTracingMiddleware) Setup(ctx context.Context, config *logical.BackendConfig) (err error) {
+sdk/plugin/middleware.go:81:	return b.next.Setup(ctx, config)
+sdk/plugin/mock/backend.go:19:	if err := b.Setup(ctx, conf); err != nil {
+sdk/plugin/mock/backend.go:31:		if err := b.Setup(ctx, conf); err != nil {
+sdk/plugin/pb/backend.pb.go:2917:	Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error)
+sdk/plugin/pb/backend.pb.go:2975:func (c *backendClient) Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error) {
+sdk/plugin/pb/backend.pb.go:3024:	Setup(context.Context, *SetupArgs) (*SetupReply, error)
+sdk/plugin/pb/backend.pb.go:3129:		return srv.(BackendServer).Setup(ctx, in)
+sdk/plugin/pb/backend.pb.go:3136:		return srv.(BackendServer).Setup(ctx, req.(*SetupArgs))
+vault/core.go:717:		if err := b.Setup(ctx, config); err != nil {
+vault/expiration_test.go:1949:	err := be.Setup(namespace.RootContext(nil), conf)
+vault/external_tests/response/allowed_response_headers_test.go:56:				err := be.Setup(ctx, conf)
+vault/identity_store.go:80:	err = iStore.Setup(ctx, config)
+vault/logical_cubbyhole.go:27:	b.Backend.Setup(ctx, conf)
+vault/logical_passthrough.go:76:	b.Backend.Setup(ctx, conf)
+vault/logical_system_test.go:1323:	err := b.Backend.Setup(namespace.RootContext(nil), bc)
+vault/logical_system_test.go:1387:	err := b.Backend.Setup(namespace.RootContext(nil), bc)
+vault/plugin_catalog.go:84:			err := client.Setup(ctx, &logical.BackendConfig{})
+vault/router_test.go:95:func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+vault/testing.go:201:		b.Setup(ctx, config)
+vault/testing.go:705:func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) error {
+vault/token_store.go:537:	t.Backend.Setup(ctx, config)
+vendor/github.com/hashicorp/vault/sdk/framework/backend.go:261:func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+vendor/github.com/hashicorp/vault/sdk/logical/logical.go:81:	Setup(context.Context, *BackendConfig) error
+vendor/github.com/hashicorp/vault/sdk/plugin/grpc_backend_client.go:179:func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
+vendor/github.com/hashicorp/vault/sdk/plugin/grpc_backend_client.go:224:	reply, err := b.client.Setup(ctx, args)
+vendor/github.com/hashicorp/vault/sdk/plugin/grpc_backend_server.go:31:func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
+vendor/github.com/hashicorp/vault/sdk/plugin/middleware.go:75:func (b *backendTracingMiddleware) Setup(ctx context.Context, config *logical.BackendConfig) (err error) {
+vendor/github.com/hashicorp/vault/sdk/plugin/middleware.go:81:	return b.next.Setup(ctx, config)
+vendor/github.com/hashicorp/vault/sdk/plugin/mock/backend.go:19:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault/sdk/plugin/mock/backend.go:31:		if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault/sdk/plugin/pb/backend.pb.go:2917:	Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error)
+vendor/github.com/hashicorp/vault/sdk/plugin/pb/backend.pb.go:2975:func (c *backendClient) Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error) {
+vendor/github.com/hashicorp/vault/sdk/plugin/pb/backend.pb.go:3024:	Setup(context.Context, *SetupArgs) (*SetupReply, error)
+vendor/github.com/hashicorp/vault/sdk/plugin/pb/backend.pb.go:3129:		return srv.(BackendServer).Setup(ctx, in)
+vendor/github.com/hashicorp/vault/sdk/plugin/pb/backend.pb.go:3136:		return srv.(BackendServer).Setup(ctx, req.(*SetupArgs))
+vendor/github.com/hashicorp/vault-plugin-auth-alicloud/backend.go:18:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-auth-azure/backend.go:14:	if err := b.Setup(ctx, c); err != nil {
+vendor/github.com/hashicorp/vault-plugin-auth-centrify/backend.go:12:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-auth-gcp/plugin/backend.go:38:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-auth-jwt/backend.go:22:	if err := b.Setup(ctx, c); err != nil {
+vendor/github.com/hashicorp/vault-plugin-auth-kubernetes/backend.go:34:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-ad/plugin/backend.go:17:	backend.Setup(ctx, conf)
+vendor/github.com/hashicorp/vault-plugin-secrets-alicloud/backend.go:16:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-azure/backend.go:28:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-gcp/plugin/backend.go:43:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-gcpkms/backend.go:48:	if err := b.Setup(ctx, c); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-kv/backend.go:141:	if err := b.Setup(ctx, conf); err != nil {
+vendor/github.com/hashicorp/vault-plugin-secrets-kv/passthrough.go:94:	backend.Setup(ctx, conf)

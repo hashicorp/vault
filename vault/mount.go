@@ -1104,6 +1104,14 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			addPathCheckers(c, entry, backend, barrierPath)
 
 			c.setCoreBackend(entry, backend, view)
+
+			// Add a post-unseal func that will call the
+			// backend's Initialize() function
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if ib, ok := backend.(logical.InitializableBackend); ok {
+					ib.Initialize(ctx)
+				}
+			})
 		}
 
 		// If the mount is filtered or we are on a DR secondary we don't want to

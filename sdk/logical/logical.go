@@ -84,6 +84,15 @@ type Backend interface {
 	Type() BackendType
 }
 
+// InitializableBackend is a backend that can be initialized.
+type InitializableBackend interface {
+	Backend
+
+	// Initialize is invoked after a vault is unsealed, to allow a
+	// backend to perform any necessary initialization.
+	Initialize(context.Context)
+}
+
 // BackendConfig is provided to the factory to initialize the backend
 type BackendConfig struct {
 	// View should not be stored, and should only be used for initialization

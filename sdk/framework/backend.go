@@ -84,6 +84,10 @@ type Backend struct {
 	// Type is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
+	// Init is invoked after a vault is unsealed, to allow a
+	// backend to perform any necessary initialization.
+	Init InitializeFunc
+
 	logger  log.Logger
 	system  logical.SystemView
 	once    sync.Once
@@ -108,6 +112,9 @@ type CleanupFunc func(context.Context)
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
+
+// InitializeFunc is the callback for backend initialization.
+type InitializeFunc func(context.Context)
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -299,6 +306,13 @@ func (b *Backend) Secret(k string) *Secret {
 	}
 
 	return nil
+}
+
+// Initialize is used to initialize the backend
+func (b *Backend) Initialize(ctx context.Context) {
+	if b.Init != nil {
+		b.Init(ctx)
+	}
 }
 
 func (b *Backend) init() {
