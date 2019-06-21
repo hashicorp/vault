@@ -28,6 +28,8 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 	})
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
 	}
 	i := 0
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -66,6 +68,8 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 	})
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
 	}
 	i := 0
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -199,6 +203,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			})
 			coreConfig := &vault.CoreConfig{
 				Logger: logger,
+				// TODO: remove this later
+				DisablePerformanceStandby: true,
 			}
 			i := 0
 			cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -384,6 +390,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			})
 			coreConfig := &vault.CoreConfig{
 				Logger: logger,
+				// TODO: remove this later
+				DisablePerformanceStandby: true,
 			}
 			i := 0
 			cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -581,6 +589,8 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	})
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
 	}
 	i := 0
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
