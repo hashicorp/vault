@@ -14,11 +14,13 @@ export default DS.Model.extend({
   name: attr('string'),
   allowedOperations: attr(),
   fieldGroups: computed(function() {
+    let fields = this.newFields.without('role');
+
     const groups = [
       {
         default: ['name'],
       },
-      { 'Allowed Operations': this.newFields },
+      { 'Allowed Operations': fields },
     ];
 
     return fieldToAttrs(this, groups);
