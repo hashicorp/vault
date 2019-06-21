@@ -504,7 +504,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		return nil
 	}
 
-	protoReader := protoio.NewDelimitedReader(r, math.MaxInt64)
+	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
 	defer protoReader.Close()
 
 	f.l.Lock()
