@@ -74,7 +74,7 @@ func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.C
 	switch {
 	case len(caCert) != 0 && len(clientCert) != 0 && len(clientKey) != 0:
 		// Valid
-	case len(caCert) != 0:
+	case len(caCert) != 0, len(clientCert) != 0, len(clientKey) != 0:
 		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
 	case len(clientCert) != 0:
 		return nil, errors.New("ca cert, client key and client cert must all be set, or none should be set")
