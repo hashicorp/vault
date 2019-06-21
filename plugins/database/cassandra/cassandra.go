@@ -130,7 +130,7 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 			err = session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": username,
 				"password": password,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 			if err != nil {
 				for _, stmt := range rollbackCQL {
 					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
@@ -141,7 +141,7 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 
 						session.Query(dbutil.QueryHelper(query, map[string]string{
 							"username": username,
-						})).Exec()
+						})).WithContext(ctx).Exec()
 					}
 				}
 				return "", "", err
@@ -186,7 +186,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 
 			err := session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": username,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 
 			result = multierror.Append(result, err)
 		}
@@ -226,7 +226,7 @@ func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []stri
 			err := session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": c.Username,
 				"password": password,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 
 			result = multierror.Append(result, err)
 		}

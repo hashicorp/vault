@@ -136,7 +136,7 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	return conf, nil
 }
 
-func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
@@ -146,7 +146,7 @@ func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}
 		return c.session, nil
 	}
 
-	session, err := c.createSession()
+	session, err := c.createSession(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (c *cassandraConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
+func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql.Session, error) {
 	hosts := strings.Split(c.Hosts, ",")
 	clusterConfig := gocql.NewCluster(hosts...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
@@ -255,7 +255,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	}
 
 	// Verify the info
-	err = session.Query(`LIST ALL`).Exec()
+	err = session.Query(`LIST ALL`).WithContext(ctx).Exec()
 	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
 		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
 			"username": c.Username,
