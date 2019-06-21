@@ -841,6 +841,8 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
+	c.logger.Debug("unseal key supplied")
+
 	ctx := context.Background()
 
 	// Explicitly check for init status. This also checks if the seal
