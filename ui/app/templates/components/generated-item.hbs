@@ -70,15 +70,6 @@
           {{/link-to}}
         {{/if}}
       </div>
-      <div class="control">
-        {{#if (eq mode "edit")}}
-          <ConfirmAction @buttonClasses="button" @onConfirmAction={{action "deleteItem"}}
-            @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}} @cancelButtonText="Cancel"
-            data-test-item-delete="true">
-            Delete
-          </ConfirmAction>
-        {{/if}}
-      </div>
     </div>
   </form>
 {{/if}}
