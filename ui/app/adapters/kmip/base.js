@@ -1,7 +1,7 @@
-import ApplicationAdapater from '../application';
+import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default ApplicationAdapater.extend({
+export default ApplicationAdapter.extend({
   namespace: 'v1',
   pathForType(type) {
     return type.replace('kmip/', '');

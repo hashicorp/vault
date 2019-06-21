@@ -7,7 +7,7 @@ export const KMIP = {
   category: 'generic',
 };
 
-export const MOUNTABLE_SECRET_ENGINES = [
+const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Active Directory',
     value: 'ad',
