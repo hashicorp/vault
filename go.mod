@@ -67,7 +67,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.0.2-0.20190617182316-3db06beda834
+	github.com/hashicorp/raft v1.1.1-0.20190620170237-51bdddce2dbd
 	github.com/hashicorp/raft-snapshot v1.0.1
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.1

@@ -132,7 +132,8 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 	var err error
 	switch len(itemIDs) {
 	case 0:
-		return fmt.Errorf("no items IDs given")
+		// Nothing
+		return nil
 
 	case 1:
 		logger = hclog.NewNullLogger()

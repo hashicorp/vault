@@ -39,6 +39,9 @@ func (s ServerSuffrage) String() string {
 // persistent FSM state can behave as a complete snapshot, and be able to recover
 // without an external snapshot just for persisting the raft configuration.
 type ConfigurationStore interface {
+	// ConfigurationStore is a superset of the FSM functionality
+	FSM
+
 	// StoreConfiguration is invoked once a log entry containing a configuration
 	// change is committed. It takes the index at which the configuration was
 	// written and the configuration value.
