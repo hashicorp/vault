@@ -33,10 +33,17 @@ type PopulateStringInput struct {
 	Mode              int       // processing mode, ACLTemplate or JSONTemplating
 	Now               time.Time // optional, defaults to current time
 
-	templateHandler func(interface{}, ...string) (string, error)
+	templateHandler templateHandlerFunc
 	groupIDs        []string
 	groupNames      []string
 }
+
+// templateHandlerFunc allows generating string outputs based on data type, and
+// different handlers can be used based on mode. For example in ACL mode, strings
+// are emitted verbatim, but they're wrapped in double quotes for JSON mode. And
+// some structures, like slices, might be rendered in one mode but prohibited in
+// another.
+type templateHandlerFunc func(interface{}, ...string) (string, error)
 
 // aclTemplateHandler processes known parameter data types when operating
 // in ACL mode.
@@ -65,7 +72,7 @@ func aclTemplateHandler(v interface{}, keys ...string) (string, error) {
 // jsonTemplateHandler processes known parameter data types when operating
 // in JSON mode.
 func jsonTemplateHandler(v interface{}, keys ...string) (string, error) {
-	jsonMarshaler := func(v interface{}) (string, error) {
+	jsonMarshaller := func(v interface{}) (string, error) {
 		enc, err := json.Marshal(v)
 		if err != nil {
 			return "", err
@@ -77,7 +84,7 @@ func jsonTemplateHandler(v interface{}, keys ...string) (string, error) {
 	case string:
 		return strconv.Quote(t), nil
 	case []string:
-		return jsonMarshaler(t)
+		return jsonMarshaller(t)
 	case map[string]string:
 		if len(keys) > 0 {
 			return strconv.Quote(t[keys[0]]), nil
@@ -85,7 +92,7 @@ func jsonTemplateHandler(v interface{}, keys ...string) (string, error) {
 		if t == nil {
 			return "{}", nil
 		}
-		return jsonMarshaler(t)
+		return jsonMarshaller(t)
 	}
 
 	return "", fmt.Errorf("unknown type: %T", v)
