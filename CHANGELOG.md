@@ -49,6 +49,10 @@ IMPROVEMENTS:
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/jwt: Leeways for `nbf` and `exp` are now configurable, as is clock skew
+   leeway [JWT-53]
+ * auth/kubernetes: Allow service names/namespaces to be configured as globs
+   [KUBEAUTH-58]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
  * identity: Allow a group alias' canonical ID to be modified
@@ -64,20 +68,25 @@ IMPROVEMENTS:
    smaller [GH-6718]
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
+ * ui: Removing jQuery from the application makes the initial JS payload smaller [GH-6768]
  
 BUG FIXES: 
 
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
    when parsing this value [GH-6917]
+ * auth/aws: Fix an error complaining about a read-only view that could occur
+   during updating of a role when on a performance replication secondary
+   [GH-6926]
  * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
    for OIDC logins [JWT-54]
  * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
-   response is empty [JWT-55]  
+   response is empty [JWT-55]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * ui: Fix timestamp on some transit keys [GH-6827]
 
 ## 1.1.3 (June 5th, 2019)
 

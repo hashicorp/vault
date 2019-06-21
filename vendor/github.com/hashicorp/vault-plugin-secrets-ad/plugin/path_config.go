@@ -32,7 +32,7 @@ func (b *backend) readConfig(ctx context.Context, storage logical.Storage) (*con
 	if entry == nil {
 		return nil, nil
 	}
-	config := &configuration{&passwordConf{}, &client.ADConf{}}
+	config := &configuration{&passwordConf{}, &client.ADConf{}, 0}
 	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
@@ -72,6 +72,11 @@ func (b *backend) configFields() map[string]*framework.FieldSchema {
 		Type:        framework.TypeString,
 		Description: `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
 	}
+	fields["last_rotation_tolerance"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Description: "The number of seconds after a Vault rotation where, if Active Directory shows a later rotation, it should be considered out-of-band.",
+		Default:     5,
+	}
 	return fields
 }
 
@@ -90,6 +95,7 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 	maxTTL := fieldData.Get("max_ttl").(int)
 	length := fieldData.Get("length").(int)
 	formatter := fieldData.Get("formatter").(string)
+	lastRotationTolerance := fieldData.Get("last_rotation_tolerance").(int)
 
 	if ttl == 0 {
 		ttl = int(b.System().DefaultLeaseTTL().Seconds())
@@ -117,7 +123,7 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 		Formatter: formatter,
 	}
 
-	config := &configuration{passwordConf, &client.ADConf{ConfigEntry: activeDirectoryConf}}
+	config := &configuration{passwordConf, &client.ADConf{ConfigEntry: activeDirectoryConf}, lastRotationTolerance}
 	entry, err := logical.StorageEntryJSON(configStorageKey, config)
 	if err != nil {
 		return nil, err
@@ -144,15 +150,16 @@ func (b *backend) configReadOperation(ctx context.Context, req *logical.Request,
 	// as we lean away from returning sensitive information unless it's absolutely necessary.
 	// Also, we don't return the full ADConf here because not all parameters are used by this engine.
 	configMap := map[string]interface{}{
-		"url":             config.ADConf.Url,
-		"starttls":        config.ADConf.StartTLS,
-		"insecure_tls":    config.ADConf.InsecureTLS,
-		"certificate":     config.ADConf.Certificate,
-		"binddn":          config.ADConf.BindDN,
-		"userdn":          config.ADConf.UserDN,
-		"upndomain":       config.ADConf.UPNDomain,
-		"tls_min_version": config.ADConf.TLSMinVersion,
-		"tls_max_version": config.ADConf.TLSMaxVersion,
+		"url":                     config.ADConf.Url,
+		"starttls":                config.ADConf.StartTLS,
+		"insecure_tls":            config.ADConf.InsecureTLS,
+		"certificate":             config.ADConf.Certificate,
+		"binddn":                  config.ADConf.BindDN,
+		"userdn":                  config.ADConf.UserDN,
+		"upndomain":               config.ADConf.UPNDomain,
+		"tls_min_version":         config.ADConf.TLSMinVersion,
+		"tls_max_version":         config.ADConf.TLSMaxVersion,
+		"last_rotation_tolerance": config.LastRotationTolerance,
 	}
 	if !config.ADConf.LastBindPasswordRotation.Equal(time.Time{}) {
 		configMap["last_bind_password_rotation"] = config.ADConf.LastBindPasswordRotation

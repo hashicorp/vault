@@ -502,6 +502,53 @@ const (
 	MaxTokenInfoClass
 )
 
+// Group attributes inside of Tokengroups.Groups[i].Attributes
+const (
+	SE_GROUP_MANDATORY          = 0x00000001
+	SE_GROUP_ENABLED_BY_DEFAULT = 0x00000002
+	SE_GROUP_ENABLED            = 0x00000004
+	SE_GROUP_OWNER              = 0x00000008
+	SE_GROUP_USE_FOR_DENY_ONLY  = 0x00000010
+	SE_GROUP_INTEGRITY          = 0x00000020
+	SE_GROUP_INTEGRITY_ENABLED  = 0x00000040
+	SE_GROUP_LOGON_ID           = 0xC0000000
+	SE_GROUP_RESOURCE           = 0x20000000
+	SE_GROUP_VALID_ATTRIBUTES   = SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_OWNER | SE_GROUP_USE_FOR_DENY_ONLY | SE_GROUP_LOGON_ID | SE_GROUP_RESOURCE | SE_GROUP_INTEGRITY | SE_GROUP_INTEGRITY_ENABLED
+)
+
+// Privilege attributes
+const (
+	SE_PRIVILEGE_ENABLED_BY_DEFAULT = 0x00000001
+	SE_PRIVILEGE_ENABLED            = 0x00000002
+	SE_PRIVILEGE_REMOVED            = 0x00000004
+	SE_PRIVILEGE_USED_FOR_ACCESS    = 0x80000000
+	SE_PRIVILEGE_VALID_ATTRIBUTES   = SE_PRIVILEGE_ENABLED_BY_DEFAULT | SE_PRIVILEGE_ENABLED | SE_PRIVILEGE_REMOVED | SE_PRIVILEGE_USED_FOR_ACCESS
+)
+
+// Token types
+const (
+	TokenPrimary       = 1
+	TokenImpersonation = 2
+)
+
+// Impersonation levels
+const (
+	SecurityAnonymous      = 0
+	SecurityIdentification = 1
+	SecurityImpersonation  = 2
+	SecurityDelegation     = 3
+)
+
+type LUID struct {
+	LowPart  uint32
+	HighPart int32
+}
+
+type LUIDAndAttributes struct {
+	Luid       LUID
+	Attributes uint32
+}
+
 type SIDAndAttributes struct {
 	Sid        *SID
 	Attributes uint32
@@ -520,10 +567,32 @@ type Tokengroups struct {
 	Groups     [1]SIDAndAttributes
 }
 
+type Tokenprivileges struct {
+	PrivilegeCount uint32
+	Privileges     [1]LUIDAndAttributes
+}
+
+type Tokenmandatorylabel struct {
+	Label SIDAndAttributes
+}
+
+func (tml *Tokenmandatorylabel) Size() uint32 {
+	return uint32(unsafe.Sizeof(Tokenmandatorylabel{})) + GetLengthSid(tml.Label.Sid)
+}
+
 // Authorization Functions
-//sys checkTokenMembership(tokenHandle Token, sidToCheck *SID, isMember *int32) (err error) = advapi32.CheckTokenMembership
-//sys	OpenProcessToken(h Handle, access uint32, token *Token) (err error) = advapi32.OpenProcessToken
-//sys	GetTokenInformation(t Token, infoClass uint32, info *byte, infoLen uint32, returnedLen *uint32) (err error) = advapi32.GetTokenInformation
+//sys	checkTokenMembership(tokenHandle Token, sidToCheck *SID, isMember *int32) (err error) = advapi32.CheckTokenMembership
+//sys	OpenProcessToken(process Handle, access uint32, token *Token) (err error) = advapi32.OpenProcessToken
+//sys	OpenThreadToken(thread Handle, access uint32, openAsSelf bool, token *Token) (err error) = advapi32.OpenThreadToken
+//sys	ImpersonateSelf(impersonationlevel uint32) (err error) = advapi32.ImpersonateSelf
+//sys	RevertToSelf() (err error) = advapi32.RevertToSelf
+//sys	SetThreadToken(thread *Handle, token Token) (err error) = advapi32.SetThreadToken
+//sys	LookupPrivilegeValue(systemname *uint16, name *uint16, luid *LUID) (err error) = advapi32.LookupPrivilegeValueW
+//sys	AdjustTokenPrivileges(token Token, disableAllPrivileges bool, newstate *Tokenprivileges, buflen uint32, prevstate *Tokenprivileges, returnlen *uint32) (err error) = advapi32.AdjustTokenPrivileges
+//sys	AdjustTokenGroups(token Token, resetToDefault bool, newstate *Tokengroups, buflen uint32, prevstate *Tokengroups, returnlen *uint32) (err error) = advapi32.AdjustTokenGroups
+//sys	GetTokenInformation(token Token, infoClass uint32, info *byte, infoLen uint32, returnedLen *uint32) (err error) = advapi32.GetTokenInformation
+//sys	SetTokenInformation(token Token, infoClass uint32, info *byte, infoLen uint32) (err error) = advapi32.SetTokenInformation
+//sys	DuplicateTokenEx(existingToken Token, desiredAccess uint32, tokenAttributes *SecurityAttributes, impersonationLevel uint32, tokenType uint32, newToken *Token) (err error) = advapi32.DuplicateTokenEx
 //sys	GetUserProfileDirectory(t Token, dir *uint16, dirLen *uint32) (err error) = userenv.GetUserProfileDirectoryW
 //sys	getSystemDirectory(dir *uint16, dirLen uint32) (len uint32, err error) = kernel32.GetSystemDirectoryW
 
@@ -537,7 +606,9 @@ type Tokengroups struct {
 type Token Handle
 
 // OpenCurrentProcessToken opens the access token
-// associated with current process.
+// associated with current process. It is a real
+// token that needs to be closed, unlike
+// GetCurrentProcessToken.
 func OpenCurrentProcessToken() (Token, error) {
 	p, e := GetCurrentProcess()
 	if e != nil {
@@ -549,6 +620,27 @@ func OpenCurrentProcessToken() (Token, error) {
 		return 0, e
 	}
 	return t, nil
+}
+
+// GetCurrentProcessToken returns the access token associated with
+// the current process. It is a pseudo token that does not need
+// to be closed.
+func GetCurrentProcessToken() Token {
+	return Token(^uintptr(4 - 1))
+}
+
+// GetCurrentThreadToken return the access token associated with
+// the current thread. It is a pseudo token that does not need
+// to be closed.
+func GetCurrentThreadToken() Token {
+	return Token(^uintptr(5 - 1))
+}
+
+// GetCurrentThreadEffectiveToken returns the effective access token
+// associated with the current thread. It is a pseudo token that does
+// not need to be closed.
+func GetCurrentThreadEffectiveToken() Token {
+	return Token(^uintptr(6 - 1))
 }
 
 // Close releases access to access token.
@@ -622,6 +714,28 @@ func (t Token) GetUserProfileDirectory() (string, error) {
 	}
 }
 
+// Returns whether the current token is elevated from a UAC perspective.
+func (token Token) IsElevated() bool {
+	var isElevated uint32
+	var outLen uint32
+	err := GetTokenInformation(token, TokenElevation, (*byte)(unsafe.Pointer(&isElevated)), uint32(unsafe.Sizeof(isElevated)), &outLen)
+	if err != nil {
+		return false
+	}
+	return outLen == uint32(unsafe.Sizeof(isElevated)) && isElevated != 0
+}
+
+// Returns the linked token, which may be an elevated UAC token.
+func (token Token) GetLinkedToken() (Token, error) {
+	var linkedToken Token
+	var outLen uint32
+	err := GetTokenInformation(token, TokenLinkedToken, (*byte)(unsafe.Pointer(&linkedToken)), uint32(unsafe.Sizeof(linkedToken)), &outLen)
+	if err != nil {
+		return Token(0), err
+	}
+	return linkedToken, nil
+}
+
 // GetSystemDirectory retrieves path to current location of the system
 // directory, which is typically, though not always, C:\Windows\System32.
 func GetSystemDirectory() (string, error) {
@@ -647,3 +761,45 @@ func (t Token) IsMember(sid *SID) (bool, error) {
 	}
 	return b != 0, nil
 }
+
+const (
+	WTS_CONSOLE_CONNECT        = 0x1
+	WTS_CONSOLE_DISCONNECT     = 0x2
+	WTS_REMOTE_CONNECT         = 0x3
+	WTS_REMOTE_DISCONNECT      = 0x4
+	WTS_SESSION_LOGON          = 0x5
+	WTS_SESSION_LOGOFF         = 0x6
+	WTS_SESSION_LOCK           = 0x7
+	WTS_SESSION_UNLOCK         = 0x8
+	WTS_SESSION_REMOTE_CONTROL = 0x9
+	WTS_SESSION_CREATE         = 0xa
+	WTS_SESSION_TERMINATE      = 0xb
+)
+
+const (
+	WTSActive       = 0
+	WTSConnected    = 1
+	WTSConnectQuery = 2
+	WTSShadow       = 3
+	WTSDisconnected = 4
+	WTSIdle         = 5
+	WTSListen       = 6
+	WTSReset        = 7
+	WTSDown         = 8
+	WTSInit         = 9
+)
+
+type WTSSESSION_NOTIFICATION struct {
+	Size      uint32
+	SessionID uint32
+}
+
+type WTS_SESSION_INFO struct {
+	SessionID         uint32
+	WindowStationName *uint16
+	State             uint32
+}
+
+//sys WTSQueryUserToken(session uint32, token *Token) (err error) = wtsapi32.WTSQueryUserToken
+//sys WTSEnumerateSessions(handle Handle, reserved uint32, version uint32, sessions **WTS_SESSION_INFO, count *uint32) (err error) = wtsapi32.WTSEnumerateSessionsW
+//sys WTSFreeMemory(ptr uintptr) = wtsapi32.WTSFreeMemory

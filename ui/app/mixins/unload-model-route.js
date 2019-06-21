@@ -5,12 +5,15 @@ import Mixin from '@ember/object/mixin';
 export default Mixin.create({
   modelPath: 'model',
   unloadModel() {
-    const model = this.controller.get(this.get('modelPath'));
+    let { modelPath } = this;
+    let model = this.controller.get(modelPath);
     if (!model || !model.unloadRecord) {
       return;
     }
     this.store.unloadRecord(model);
     model.destroy();
+    // it's important to unset the model on the controller since controllers are singletons
+    this.controller.set(modelPath, null);
   },
 
   actions: {

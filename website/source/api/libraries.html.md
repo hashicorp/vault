@@ -59,6 +59,10 @@ $ Install-Package VaultSharp
 $ Install-Package Vault
 ```
 
+### C++
+
+* [libvault](https://github.com/abedra/libvault)
+
 ### Clojure
 
 * [vault-clj](https://github.com/amperity/vault-clj)

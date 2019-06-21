@@ -28,6 +28,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
+const (
+	PrivateKeyTypeP521 = "p521"
+)
+
 // This can be one of a few key types so the different params may or may not be filled
 type ClusterKeyParams struct {
 	Type string   `json:"type" structs:"type" mapstructure:"type"`

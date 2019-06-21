@@ -51,7 +51,7 @@ func toStatus(err error) trace.Status {
 	}
 }
 
-// TODO (deklerk): switch to using OpenCensus function when it becomes available.
+// TODO(deklerk): switch to using OpenCensus function when it becomes available.
 // Reference: https://github.com/googleapis/googleapis/blob/26b634d2724ac5dd30ae0b0cbfb01f07f2e4050e/google/rpc/code.proto
 func httpStatusCodeToOCCode(httpStatusCode int) int32 {
 	switch httpStatusCode {

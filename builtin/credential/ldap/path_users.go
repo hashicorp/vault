@@ -30,17 +30,17 @@ func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the LDAP user.",
 			},
 
-			"groups": &framework.FieldSchema{
-				Type:        framework.TypeString,
+			"groups": {
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of additional groups associated with the user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated with the user.",
 			},
@@ -129,7 +129,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 		lowercaseGroups = true
 	}
 
-	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), lowercaseGroups)
+	groups := strutil.RemoveDuplicates(d.Get("groups").([]string), lowercaseGroups)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	for i, g := range groups {
 		groups[i] = strings.TrimSpace(g)

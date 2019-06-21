@@ -53,6 +53,7 @@ import (
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
+	physRaft "github.com/hashicorp/vault/physical/raft"
 	physS3 "github.com/hashicorp/vault/physical/s3"
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
@@ -145,6 +146,7 @@ var (
 		"s3":                     physS3.NewS3Backend,
 		"spanner":                physSpanner.NewBackend,
 		"swift":                  physSwift.NewSwiftBackend,
+		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
 )
@@ -323,6 +325,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand:      getBaseCommand(),
 				PhysicalBackends: physicalBackends,
 				ShutdownCh:       MakeShutdownCh(),
+			}, nil
+		},
+		"operator raft configuration": func() (cli.Command, error) {
+			return &OperatorRaftConfigurationCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft join": func() (cli.Command, error) {
+			return &OperatorRaftJoinCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft remove-peer": func() (cli.Command, error) {
+			return &OperatorRaftRemovePeerCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot restore": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotRestoreCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot save": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotSaveCommand{
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {
