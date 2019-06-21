@@ -1105,13 +1105,18 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 			c.setCoreBackend(entry, backend, view)
 
-			// Add a post-unseal func that will call the
+			// Add a post-unseal func that will asynchronously call the
 			// backend's Initialize() function
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				if ib, ok := backend.(logical.InitializableBackend); ok {
-					ib.Initialize(ctx)
-				}
-			})
+			if ib, ok := backend.(logical.InitializableBackend); ok {
+				c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+					go func() {
+						err := ib.Initialize(ctx, view)
+						if err != nil {
+							c.logger.Error("failed to initialize entry", "path", entry.Path, "error", err)
+						}
+					}()
+				})
+			}
 		}
 
 		// If the mount is filtered or we are on a DR secondary we don't want to

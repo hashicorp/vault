@@ -90,7 +90,7 @@ type InitializableBackend interface {
 
 	// Initialize is invoked after a vault is unsealed, to allow a
 	// backend to perform any necessary initialization.
-	Initialize(context.Context)
+	Initialize(context.Context, Storage) error
 }
 
 // BackendConfig is provided to the factory to initialize the backend

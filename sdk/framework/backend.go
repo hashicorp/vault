@@ -114,7 +114,7 @@ type CleanupFunc func(context.Context)
 type InvalidateFunc func(context.Context, string)
 
 // InitializeFunc is the callback for backend initialization.
-type InitializeFunc func(context.Context)
+type InitializeFunc func(context.Context, logical.Storage) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -271,6 +271,14 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	return nil
 }
 
+// Initialize is used to initialize the backend
+func (b *Backend) Initialize(ctx context.Context, s logical.Storage) error {
+	if b.Init != nil {
+		return b.Init(ctx, s)
+	}
+	return nil
+}
+
 // Logger can be used to get the logger. If no logger has been set,
 // the logs will be discarded.
 func (b *Backend) Logger() log.Logger {
@@ -306,13 +314,6 @@ func (b *Backend) Secret(k string) *Secret {
 	}
 
 	return nil
-}
-
-// Initialize is used to initialize the backend
-func (b *Backend) Initialize(ctx context.Context) {
-	if b.Init != nil {
-		b.Init(ctx)
-	}
 }
 
 func (b *Backend) init() {

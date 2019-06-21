@@ -758,7 +758,7 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 }
 
-func TestPersistUpgradableRoleEntries(t *testing.T) {
+func TestUpdateUpgradableRoleEntries(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -816,7 +816,7 @@ func TestPersistUpgradableRoleEntries(t *testing.T) {
 	}
 
 	// upgrade all the entries
-	err = b.persistUpgradableRoleEntries(ctx, storage)
+	err = b.updateUpgradableRoleEntries(ctx, storage)
 
 	// read the entries from storage
 	after := make([]testData, 0)
