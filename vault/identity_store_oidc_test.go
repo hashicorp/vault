@@ -11,6 +11,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -573,6 +574,311 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
 	if len(publicKeys) != 2 {
 		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
+	}
+}
+
+// TestOIDC_Config tests CRUD operations for configuring the OIDC backend
+func TestOIDC_Config(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	testIssuer := "https://example.com/testing:1234"
+
+	// Read Config - expect defaults
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/config",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// issuer should not be set
+	if resp.Data["issuer"].(string) != "" {
+		t.Fatalf("Expected issuer to not be set but found %q instead", resp.Data["issuer"].(string))
+	}
+
+	// Update Config
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/config",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer": testIssuer,
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read Config - expect updated issuer value
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/config",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// issuer should be set
+	if resp.Data["issuer"].(string) != testIssuer {
+		t.Fatalf("Expected issuer to be %q but found %q instead", testIssuer, resp.Data["issuer"].(string))
+	}
+}
+
+// TestOIDC_pathOIDCKeyExistenceCheck tests pathOIDCKeyExistenceCheck
+func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	keyName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCKeyExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": keyName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a namedKey
+	namedKey := &namedKey{
+		Name: keyName,
+	}
+	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCKeyExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": keyName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
+}
+
+// TestOIDC_pathOIDCRoleExistenceCheck tests pathOIDCRoleExistenceCheck
+func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	roleName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCRoleExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": roleName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a role
+	role := &role{
+		Name: roleName,
+	}
+	entry, _ := logical.StorageEntryJSON(roleConfigPath+roleName, role)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCRoleExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": roleName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
+}
+
+// TestOIDC_Path_OpenIDConfig tests read operations for the openid-configuration path
+func TestOIDC_Path_OpenIDConfig(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Expect defaults from .well-known/openid-configuration
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// Validate configurable parts - for now just issuer
+	discoveryResp := &discovery{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+issuerPath {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+issuerPath, discoveryResp.Issuer)
+	}
+
+	// Update issuer config
+	testIssuer := "https://example.com/testing:1234"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/config",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer": testIssuer,
+		},
+	})
+
+	// Expect updates from .well-known/openid-configuration
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// Validate configurable parts - for now just issuer
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if discoveryResp.Issuer != testIssuer {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", testIssuer, discoveryResp.Issuer)
+	}
+}
+
+// TestOIDC_Path_Introspect tests update operations on the introspect path
+func TestOIDC_Path_Introspect(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Expect active false and an error from a malformed token
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/introspect/",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"token": "not-a-valid-token",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+	type introspectResponse struct {
+		Active bool   `json:"active"`
+		Error  string `json:"error"`
+	}
+	iresp := &introspectResponse{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), iresp)
+	if iresp.Active {
+		t.Fatalf("expected active state of a malformed token to be false but what was found to be: %t", iresp.Active)
+	}
+	if iresp.Error == "" {
+		t.Fatalf("expected a malformed token to return an error message but instead returned %q", iresp.Error)
+	}
+
+	// Populate backend with a valid token ---
+	// Create and load an entity, an entity is required to generate an ID token
+	testEntity := &identity.Entity{
+		Name:      "test-entity-name",
+		ID:        "test-entity-id",
+		BucketKey: "test-entity-bucket-key",
+	}
+
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+	err = c.identityStore.upsertEntityInTxn(ctx, txn, testEntity, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txn.Commit()
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test role "test-role"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Generate a token against the role "test-role" -- should succeed
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	validToken := resp.Data["token"].(string)
+	// --- Populate backend with a valid token
+
+	//	Expect active true and no error from a valid token
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/introspect/",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"token": validToken,
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+	iresp2 := &introspectResponse{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), iresp2)
+	if !iresp2.Active {
+		t.Fatalf("expected active state of a valid token to be true but what was found to be: %t", iresp2.Active)
+	}
+	if iresp2.Error != "" {
+		t.Fatalf("expected a valid token to return an empty error message but instead got %q", iresp.Error)
 	}
 }
 
