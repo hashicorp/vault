@@ -754,14 +754,11 @@ func TestOpenableBackend(t *testing.T) {
 		t.Fatal("backend should not be open")
 	}
 
-	//---------------------------------
-
+	// mount an openable backend
 	c, _, _ := TestCoreUnsealed(t)
-
 	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		return b, nil
 	}
-
 	c.mounts = &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
@@ -776,9 +773,7 @@ func TestOpenableBackend(t *testing.T) {
 			},
 		},
 	}
-
-	ctx := namespace.RootContext(nil)
-	err := c.setupMounts(ctx)
+	err := c.setupMounts(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -786,15 +781,12 @@ func TestOpenableBackend(t *testing.T) {
 		t.Fatalf("expected one entry, got %d", len(c.mounts.Entries))
 	}
 
-	//---------------------------------
-
-	// run the postUnseal funcs
+	// run the postUnseal funcs, so that the backend will be opened
 	for _, f := range c.postUnsealFuncs {
 		f()
 	}
-
 	// sleep briefly so the postUnseal async call to Open() call can finish
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(time.Second)
 
 	if !b.opened {
 		t.Fatal("backend should be open")
