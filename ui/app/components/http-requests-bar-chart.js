@@ -98,28 +98,15 @@ export default Component.extend({
     const barChartSVG = d3.select('.http-requests-bar-chart');
     const barsContainer = d3.select('#bars-container');
 
-    // render the tooltip
-    // trigger it on the chart hover
-    // look up the appropriate bar based on x-coordinate
-    const chart = this;
+    // initialize the tooltip
     const tip = d3Tip()
       .attr('class', 'd3-tooltip')
+      .offset([-10, 0])
       .html(function(d) {
-        const mouseXCoord = d3.mouse(this)[0];
-        const eachBand = xScale.step();
-        const index = Math.floor(mouseXCoord / eachBand);
-        const xWithinBand = mouseXCoord % eachBand;
-        const isWithinMargin = xWithinBand < eachBand * padding;
-
-        if (isWithinMargin) {
-          return '';
-        } else {
-          const val = yScale.domain()[index];
-          return `
-            <p>${formatDate(parsedCounters[index].start_time, 'MMMM YYYY')}</p>
-            <p>${parsedCounters[index].total}</p>
-            `;
-        }
+        return `
+          <p>${formatDate(d.start_time, 'MMMM YYYY')}</p>
+          <p>${d.total}</p>
+        `;
       });
 
     barChartSVG.call(tip);
@@ -128,9 +115,7 @@ export default Component.extend({
     d3.select('.http-requests-bar-chart')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .on('mousemove', tip.show)
-      .on('mouseleave', tip.hide);
+      .attr('viewBox', `0 0 ${width} ${height}`);
 
     // scale and render the axes
     const yAxis = d3Axis
@@ -173,11 +158,33 @@ export default Component.extend({
       .merge(barsEnter)
       .attr('width', xScale.bandwidth())
       .attr('height', counter => height - yScale(counter.total))
-      // the offset between each bar
       .attr('x', counter => xScale(counter.start_time))
       .attr('y', counter => yScale(counter.total));
 
     bars.exit().remove();
+
+    // render transparent bars and bind the tooltip to them
+    const shadowBarsContainer = d3.select('.shadow-bars');
+
+    const shadowBars = shadowBarsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
+
+    const shadowBarsEnter = shadowBars
+      .enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .on('mouseenter', tip.show)
+      .on('mouseleave', tip.hide);
+
+    shadowBars
+      .merge(shadowBarsEnter)
+      .attr('width', xScale.bandwidth())
+      .attr('height', counter => height - yScale(counter.total))
+      .attr('x', counter => xScale(counter.start_time))
+      .attr('y', counter => yScale(counter.total))
+      .attr('fill', 'transparent')
+      .attr('stroke', 'transparent');
+
+    shadowBars.exit().remove();
   },
 
   updateDimensions() {
