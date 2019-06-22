@@ -1,0 +1,77 @@
+{{#if model.canDelete}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action (perform save model (hash method="destroyRecord"))}}
+        @confirmMessage="This config will be permanently deleted."
+        data-test-edit-delete="true"
+      >
+        <span data-test-edit-delete-text>
+          {{deleteButtonText}}
+        </span>
+      </ConfirmAction>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+<form {{action (queue (action "preSave" model) (perform save model)) on="submit"}}>
+  <MessageError @model={{model}} data-test-edit-form-error />
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" />
+    {{#if (eq @mode "create")}}
+      <FormField
+        data-test-field
+        @attr={{hash name="name" type="string"}}
+        @model={{model}}
+      />
+    {{/if}}
+    <h3 class="title is-5">
+      Allowed Operations
+    </h3>
+    {{#each (array
+      (hash label="Allow all" value="operationAll")
+      (hash label="Allow none" value="operationNone")
+      (hash label="Let me choose" value="choose")
+      ) as |displayType|}}
+        <RadioButton
+          @value={{displayType.value}}
+          @radioClass="radio"
+          @groupValue={{this.display}}
+          @changed={{queue
+            (action (mut this.display))
+            (action "updateModel")
+          }}
+          @name="role-display"
+          @radioId={{displayType.value}}
+          class="box-radio"
+        >
+          {{displayType.label}}
+        </RadioButton>
+    {{/each}}
+  </div>
+  {{#if (eq this.display "choose")}}
+    {{#each this.model.fields as |attr|}}
+      <FormField
+        data-test-field
+        @attr={{attr}}
+        @model={{model}}
+      />
+    {{/each}}
+  {{/if}}
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
+          {{saveButtonText}}
+        </button>
+      </div>
+      {{#if cancelLinkParams}}
+        <div class="control">
+          {{#link-to params=cancelLinkParams class="button"}}
+            Cancel
+          {{/link-to}}
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</form>
