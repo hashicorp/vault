@@ -55,6 +55,7 @@ module.exports = function(environment) {
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {
+      'font-src': ["'self'"],
       'connect-src': ["'self'"],
       'img-src': ["'self'", 'data:'],
       'form-action': ["'none'"],

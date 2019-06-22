@@ -24,6 +24,12 @@
   line-height: 2.5;
 }
 
+.obfuscated-input .masked-input .input {
+  font-size: 9px;
+  font-family: ObfuscatedPasswordFont;
+  line-height: 2.5;
+}
+
 .masked-input.display-only .masked-value {
   order: 1;
 }

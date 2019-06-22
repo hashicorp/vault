@@ -21,5 +21,9 @@ export default Controller.extend(BackendCrumbMixin, {
       this.set('preferAdvancedEdit', bool);
       this.get('backendController').set('preferAdvancedEdit', bool);
     },
+    toggleObfuscatedInput(bool) {
+      this.set('preferObfuscated', bool);
+      this.get('backendController').set('preferObfuscated', bool);
+    },
   },
 });

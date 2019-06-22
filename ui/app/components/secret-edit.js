@@ -1,14 +1,14 @@
-import { isBlank, isNone } from '@ember/utils';
-import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
-import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -19,6 +19,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   router: service(),
   store: service(),
   flashMessages: service(),
+  classNameBindings: ['showObfuscatedInputMode:obfuscated-input'],
 
   // a key model
   key: null,
@@ -41,13 +42,16 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   onDataChange() {},
   onRefresh() {},
   onToggleAdvancedEdit() {},
+  onToggleObfuscatedInput() {},
 
   // did user request advanced mode
   preferAdvancedEdit: false,
+  preferObfuscatedInput: false,
 
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
+  toggleObfuscatedInput: 'toggleObfuscatedInput',
   error: null,
 
   codemirrorString: null,
@@ -174,6 +178,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       return false;
     }
   ),
+  showObfuscatedInputMode: computed('preferObfuscatedInput', 'lastChange', function() {
+    return this.preferObfuscatedInput;
+  }),
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
@@ -349,6 +356,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     toggleAdvanced(bool) {
       this.onToggleAdvancedEdit(bool);
+    },
+    toggleObfuscated(bool) {
+      this.onToggleObfuscatedInput(bool);
     },
 
     codemirrorUpdated(val, codemirror) {
