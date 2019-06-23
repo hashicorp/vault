@@ -2,13 +2,10 @@ package http
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -31,36 +28,9 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var tlsConfig *tls.Config
-	switch {
-	case req.LeaderCACert != "" && req.LeaderClientCert != "" && req.LeaderClientKey != "":
-		// Create TLS Config
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM([]byte(req.LeaderCACert))
-
-		cert, err := tls.X509KeyPair([]byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
-		if err != nil {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("invalid key pair: %v", err))
-			return
-		}
-
-		tlsConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			RootCAs:      pool,
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			MinVersion:   tls.VersionTLS12,
-		}
-
-		tlsConfig.BuildNameToCertificate()
-
-	case req.LeaderCACert != "":
-		respondError(w, http.StatusBadRequest, errors.New("ca_cert, client_key, client_cert must all be set; or none should be set"))
-		return
-	case req.LeaderClientCert != "":
-		respondError(w, http.StatusBadRequest, errors.New("ca_cert, client_key, client_cert must all be set; or none should be set"))
-		return
-	case req.LeaderClientKey != "":
-		respondError(w, http.StatusBadRequest, errors.New("ca_cert, client_key, client_cert must all be set; or none should be set"))
+	tlsConfig, err := tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
