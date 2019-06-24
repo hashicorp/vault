@@ -120,6 +120,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
+	db.SetMaxIdleConns(maxParInt)
 
 	// Determine if we should use a function to work around lack of upsert (versions < 9.5)
 	var upsertAvailable bool
