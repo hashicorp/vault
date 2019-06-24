@@ -44,7 +44,7 @@ changed, the server will be restarted using the new settings.
    common name (CN).
 
 - `server_ips` (`list: [] || string`) - IPs to include in the server's TLS 
-   certificate as SAN IP addresses. Localhost (IPv4 and IPv6) will be automically
+   certificate as SAN IP addresses. Localhost (IPv4 and IPv6) will be automatically
    included.
    
 - `tls_ca_key_type` (`string: "ec"`) - CA key type, `rsa` or `ec`.
