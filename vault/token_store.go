@@ -400,7 +400,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"allowed_entity_aliases": &framework.FieldSchema{
 				Type:        framework.TypeStringSlice,
-				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation.",
+				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
 			},
 		},
 
@@ -2219,41 +2219,15 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
 		}
 
-		// Check if provided entity alias name is in the allowed entity aliases list
+		// Check if there is a concrete match
 		match := false
-		for _, allowedAlias := range role.AllowedEntityAliases {
-			// Check if there is a match
-			if strings.EqualFold(allowedAlias, data.EntityAlias) {
-				match = true
-				break
-			}
-
-			// Only continue when this allowed alias is a glob pattern
-			if !strings.Contains(allowedAlias, "*") {
-				continue
-			}
-
-			// Split by asterisk to get prefix and suffix
-			split := strings.Split(allowedAlias, "*")
-
-			// Multiple asterisks are not allowed. Skip this invalid glob pattern.
-			if len(split) != 2 {
-				continue
-			}
-
-			// Check if prefix matches
-			if !strings.HasPrefix(data.EntityAlias, split[0]) {
-				continue
-			}
-
-			// Check if suffix matches
-			if !strings.HasSuffix(data.EntityAlias, split[1]) {
-				continue
-			}
-
-			// Found a match
+		if strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
 			match = true
-			break
+		}
+
+		// Check if there is a matching globbing pattern
+		if !match && strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+			match = true
 		}
 
 		// Throw an error if it does not match
@@ -2277,10 +2251,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// Create or fetch entity from entity alias
 		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return nil, err
 		}
 		if entity == nil {
-			return logical.ErrorResponse("failed to create or fetch entity from given entity alias"), nil
+			return nil, errors.New("failed to create or fetch entity from given entity alias")
 		}
 
 		// Validate that the entity is not disabled

@@ -183,7 +183,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Default: "",
 		Usage: "Name of the entity alias to associate with during token creation. " +
 			"Only works in combination with -role argument and used entity alias " +
-			"must be listed in allowed entity aliases. If this has been specified, " +
+			"must be listed in allowed_entity_aliases. If this has been specified, " +
 			"the entity will not be inherited from the parent.",
 	})
 

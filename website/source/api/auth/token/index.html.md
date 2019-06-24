@@ -102,6 +102,10 @@ during this call.
 - `period` `(string: "")` - If specified, the token will be periodic; it will have
   no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root/sudo token to use.
+- `entity_alias` `string: "")` - Name of the entity alias to associate with 
+   during token creation. Only works in combination with `role_name` argument 
+   and used entity alias must be listed in `allowed_entity_aliases`. If this has 
+   been specified, the entity will not be inherited from the parent.
 
 ### Sample Payload
 
@@ -682,6 +686,9 @@ tokens created against a role to be revoked using the
   be returned unless the client requests a `batch` type token at token creation
   time. If `default-batch`, `batch` tokens will be returned unless the client
   requests a `service` type token at token creation time.
+- `allowed_entity_aliases` `(string: "", or list: [])` - String or JSON list 
+  of allowed entity aliases. If set, specifies the entity aliases which are 
+  allowed to be used during token generation. This field supports globbing. 
 
 ### Sample Payload
 

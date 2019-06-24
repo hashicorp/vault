@@ -2768,46 +2768,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 	}
 }
 
-func TestTokenStore_HandleRequest_CreateToken_GlobPattern_MultipleAsterisk_EntityAlias(t *testing.T) {
-	core, _, root := TestCoreUnsealed(t)
-	ctx := namespace.RootContext(nil)
-	entityAliasGlobPattern := "*testentity*"
-	entityAliasName := "testentity12345"
-	testRoleName := "test"
-
-	// Create token role
-	resp, err := core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/roles/" + testRoleName,
-		ClientToken: root,
-		Operation:   logical.CreateOperation,
-		Data: map[string]interface{}{
-			"period":                 "72h",
-			"path_suffix":            "happening",
-			"bound_cidrs":            []string{"0.0.0.0/0"},
-			"allowed_entity_aliases": []string{"test1", "test2", entityAliasGlobPattern},
-		},
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-
-	// Create token with non existing entity alias
-	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/create/" + testRoleName,
-		Operation:   logical.UpdateOperation,
-		ClientToken: root,
-		Data: map[string]interface{}{
-			"entity_alias": entityAliasName,
-		},
-	})
-	if err == nil {
-		t.Fatal("err is nil but should be 'invalid request'")
-	}
-	if !strings.Contains(err.Error(), "invalid request") {
-		t.Fatalf("err should contain 'invalid request' but is '%s'", err.Error())
-	}
-}
-
 func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
