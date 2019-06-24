@@ -35,7 +35,6 @@
       ) as |displayType|}}
         <RadioButton
           @value={{displayType.value}}
-          @radioClass="radio"
           @groupValue={{this.display}}
           @changed={{queue
             (action (mut this.display))
@@ -43,21 +42,25 @@
           }}
           @name="role-display"
           @radioId={{displayType.value}}
-          class="box-radio"
+          @classNames="vlt-radio is-block"
         >
+          <label for={{displayType.value}} />
           {{displayType.label}}
         </RadioButton>
     {{/each}}
+    {{#if (eq this.display "choose")}}
+
+  <div class="box is-sideless is-shadowless is-marginless">
+      {{#each this.model.fields as |attr|}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+        />
+      {{/each}}
   </div>
-  {{#if (eq this.display "choose")}}
-    {{#each this.model.fields as |attr|}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{model}}
-      />
-    {{/each}}
-  {{/if}}
+    {{/if}}
+  </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
