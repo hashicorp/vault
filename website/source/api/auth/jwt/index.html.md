@@ -120,13 +120,13 @@ entities attempting to login. At least one of the bound values must be set.
   here as the TTL for every renewal.
 - `clock_skew_leeway` `(int: <optional>)` - The amount of leeway to add to all claims to 
   account for clock skew, in seconds.  The default is `60` seconds.  This value cannot be 
-  negative and `0` is treated as a default.
+  negative and `0` will set the value to the parameter default.
 - `expiration_leeway` `(int: <optional>)` - The amount of leeway to add to epxiration claims to 
   account for clock skew, in seconds.  The default is `60` seconds.  This value cannot be 
-  negative and `0` is treated as a default.
+  negative and `0` will set the value to the parameter default.
 - `not_before_leeway` `(int: <optional>)` - The amount of leeway to add to not before claims to 
   account for clock skew, in seconds.  The default is `60` seconds.  This value cannot be 
-  negative and `0` is treated as a default.
+  negative and `0` will set the value to the parameter default.
 - `num_uses` `(int: <optional>)` - If set, puts a use-count limitation on the
   issued token.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
