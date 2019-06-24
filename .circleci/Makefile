@@ -37,7 +37,7 @@ help:
 	@[ -n "$(CCI_VERSION)" ] || echo "  $(CCI_INSTALL_MSG)"
 
 $(SOURCE_DIR):
-	@echo No source directory $(SOURCE_DIR) found. Try make init.; exit 1
+	@echo Source directory $(SOURCE_DIR)/ not found.; exit 1
 
 # Make sure our .tmp dir exists.
 $(shell [ -d .tmp ] || mkdir .tmp)
