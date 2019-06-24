@@ -85,7 +85,7 @@ $ curl \
   "renewable": false,
   "data": {
     "max_ttl": 0,
-    "policies": "default,dev",
+    "policies": ["default", "dev"],
     "ttl": 0
   },
   "warnings": null
@@ -161,7 +161,7 @@ Update policies for an existing user.
 
 ```json
 {
-  "policies": "policy1,policy2",
+  "policies": ["policy1", "policy2"],
 }
 ```
 
