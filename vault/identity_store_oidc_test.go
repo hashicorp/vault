@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -41,13 +40,22 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Read "test-role1"
-	respReadTestRole1, err1 := c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Read "test-role1" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	expectSuccess(t, respReadTestRole1, err1)
+	expectSuccess(t, resp, err)
+	if resp.Data["client_id"].(string) == "" {
+		t.Fatalf("Expected response to contain a client_id but instead got %#v", resp.Data["client_id"])
+	}
+	if resp.Data["key"].(string) != "test-key" {
+		t.Fatalf("Expected response to contain an entry \"key\":\"test-key\" but instead got %#v", resp.Data["key"])
+	}
+	if resp.Data["ttl"].(int64) != 86400 {
+		t.Fatalf("Expected response to contain an entry \"ttl\":86400 but instead got %#v", resp.Data["ttl"])
+	}
 
 	// Create a test role "test-role2" witn an invalid key -- should fail
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -72,21 +80,25 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Read "test-role1" again
-	respReadTestRole1AfterUpdate, err2 := c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Read "test-role1" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	expectSuccess(t, respReadTestRole1AfterUpdate, err2)
-
-	// Compare response for "test-role1" before and after it was updated
-	expectedDiff := map[string]interface{}{
-		"Data.map[template]:  != {\"some-key\":\"some-value\"}": true,
-		"Data.map[ttl]: 86400 != 7200":                          true, // 24h to 2h
+	expectSuccess(t, resp, err)
+	if resp.Data["client_id"].(string) == "" {
+		t.Fatalf("Expected response to contain a client_id but instead got %#v", resp.Data["client_id"])
 	}
-	diff := deep.Equal(respReadTestRole1, respReadTestRole1AfterUpdate)
-	expectStrings(t, diff, expectedDiff)
+	if resp.Data["key"].(string) != "test-key" {
+		t.Fatalf("Expected response to contain an entry \"key\":\"test-key\" but instead got %#v", resp.Data["key"])
+	}
+	if resp.Data["ttl"].(int64) != 7200 {
+		t.Fatalf("Expected response to contain an entry \"ttl\":7200 but instead got %#v", resp.Data["ttl"])
+	}
+	if resp.Data["template"].(string) != "{\"some-key\":\"some-value\"}" {
+		t.Fatalf("Expected response to contain an entry \"template\":\"{\"some-key\":\"some-value\"}\" but instead got %#v", resp.Data["template"])
+	}
 
 	// Delete "test-role1"
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -96,7 +108,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Read "test-role1" again
+	// Read "test-role1"
 	respReadTestRole1AfterDelete, err3 := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.ReadOperation,
@@ -192,13 +204,19 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Read "test-key"
-	respReadTestKey, err1 := c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Read "test-key" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	expectSuccess(t, respReadTestKey, err1)
+	expectSuccess(t, resp, err)
+	if resp.Data["rotation_period"].(int64) != 86400 {
+		t.Fatalf("Expected response to contain a data entry \"rotation_period\":86400 but instead got %#v", resp.Data["rotation_period"])
+	}
+	if resp.Data["verification_ttl"].(int64) != 86400 {
+		t.Fatalf("Expected response to contain a data entry \"verification_ttl\":86400 but instead got %#v", resp.Data["verification_ttl"])
+	}
 
 	// Update "test-key" -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -212,21 +230,19 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Read "test-key" again
-	respReadTestKeyAfterUpdate, err2 := c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Read "test-key" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	expectSuccess(t, respReadTestKeyAfterUpdate, err2)
-
-	// Compare response for "test-key" before and after it was updated
-	expectedDiff := map[string]interface{}{
-		"Data.map[rotation_period]: 86400 != 600":   true, // from 24h to 10m
-		"Data.map[verification_ttl]: 86400 != 3600": true, // from 24h to 1h
+	expectSuccess(t, resp, err)
+	if resp.Data["rotation_period"].(int64) != 600 {
+		t.Fatalf("Expected response to contain a data entry \"rotation_period\":600 but instead got %#v", resp.Data["rotation_period"])
 	}
-	diff := deep.Equal(respReadTestKey, respReadTestKeyAfterUpdate)
-	expectStrings(t, diff, expectedDiff)
+	if resp.Data["verification_ttl"].(int64) != 3600 {
+		t.Fatalf("Expected response to contain a data entry \"verification_ttl\":3600 but instead got %#v", resp.Data["verification_ttl"])
+	}
 
 	// Create a role that depends on test key
 	c.identityStore.HandleRequest(ctx, &logical.Request{
