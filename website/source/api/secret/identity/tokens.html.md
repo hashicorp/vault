@@ -1,6 +1,6 @@
 ---
 layout: "api"
-page_title: "Identity Secret Backend: OIDC - HTTP API"
+page_title: "Identity Secret Backend: Identity Tokens - HTTP API"
 sidebar_title: "Identity Tokens"
 sidebar_current: "api-http-secret-identity-tokens"
 description: |-
