@@ -146,6 +146,36 @@ $ curl \
 }
 ```
 
+## List Signing Keys
+
+This endpoint will List all Signing Keys.
+
+| Method   | Path                |
+| :------------------ | :----------------------|
+| `LIST`   | `identity/oidc/key`  |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/identity/oidc/key
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": [
+      "signing-key-001",
+      "signing-key-002"
+    ]
+  },
+}
+```
+
 ## Delete a Signing Key
 
 This endpoint deletes a signing key.
@@ -203,35 +233,6 @@ $ curl \
 
 
 
-## List Signing Keys
-
-This endpoint will List all Signing Keys.
-
-| Method   | Path                |
-| :------------------ | :----------------------|
-| `LIST`   | `identity/oidc/key`  |
-
-### Sample Request
-
-```
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request LIST \
-    http://127.0.0.1:8200/v1/identity/oidc/key
-```
-
-### Sample Response
-
-```json
-{
-  "data": {
-    "keys": [
-      "signing-key-001",
-      "signing-key-002"
-    ]
-  },
-}
-```
 
 ## Read .well-known Configurations
 
@@ -426,6 +427,7 @@ $ curl \
 
 ## Generate a Signed ID Token
 
+
 Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
@@ -463,43 +465,32 @@ $ curl \
 
 
 
+## Introspect a signed ID Token
 
+This endpoint can verify the authenticity and active state of a signed ID token.
 
+| Method   | Path                |
+| :------------------ | :----------------------|
+| `POST`   | `identity/oidc/introspect`  |
 
+### Parameters
 
+- `token` `(string)` – A signed OIDC compliant ID token
 
+- `client_id` `(string: <optional>)` - Specifying the client ID optimizes validation time
 
+### Sample Payload
 
-
-
-
-
-
-		{
-			Pattern: "oidc/role/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathOIDCListRole,
-			},
-			HelpSynopsis:    "List configured OIDC roles",
-			HelpDescription: "List all configured OIDC roles in the identity backend.",
-		},
-		{
-			Pattern: "oidc/introspect/?$",
-			Fields: map[string]*framework.FieldSchema{
-				"token": {
-					Type:        framework.TypeString,
-					Description: "Token to verify",
-				},
-				"client_id": {
-					Type:        framework.TypeString,
-					Description: "Optional client_id to verify",
-				},
-			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathOIDCIntrospect,
-			},
-			HelpSynopsis:    "Verify the authenticity of an OIDC token",
-			HelpDescription: "Use this path to verify the authenticity of an OIDC token and whether the associated entity is active and enabled.",
-		},
-	}
+```json
+{
+  "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImE4NDQ4YmVkLTk4ZTMtMDNhMC01ODY4LTdmOWYyZDc5NWY2NSJ9.eyJhdWQiOiJpUDdyV1A4dmhDVFFpOTAydGhaR0hUazJMbyIsImV4cCI6MTU2MTQ4OTE0OSwiaWF0IjoxNTYxNDAyNzQ5LCJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjgyMDAvdjEvaWRlbnRpdHkvb2lkYyIsInN1YiI6IjQ1NDQxZTg3LWMyMWQtYzY5NS0wNGM3LWU0YmU4MGU1M2Y0ZiJ9.IYZx1bBofBgwphLZggugFUE7V3ZLFDNr0UYv3hhc4RlIu5WgFZPRjpKVXPdORozYJJB_37aJW6qm5j8nNSz4WrWUmMcrVxoZi2VBExu-GcHHniEPRryR9t_45rqP2MycLBz0dICOjFDWvfkp6ddyCsQfkRnplPGCaN67MUEdgYQf5QNyxaG-yabRPiATY_OtXSjiNsMhJe6ZloYTZZc9gTTfKcKQf4mfy5yRY6471qkqeTuYNhKjwdkEnCSaEjHmCdZOYC5DAet16eQ7ankcwBno17_zs7vbPmkXNttALOrjSQgGe1td1SCfZeg5UOs7_IPk0qqdwOdyQ8wsrDmSyg"
 }
+```
+
+### Sample Response
+
+```json
+{
+  "active": true
+}
+```
