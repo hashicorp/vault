@@ -314,7 +314,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 	cleanup, connURL := prepareMySQLTestContainer(t, false)
 	defer cleanup()
 
-	// create the database user
+	// create the database user and verify we can access
 	dbUser := "vaultstatictest"
 	createTestMySQLUser(t, connURL, dbUser, "password", testRoleStaticCreate)
 	if err := testCredsExist(t, connURL, dbUser, "password"); err != nil {
@@ -341,29 +341,28 @@ func TestMySQL_SetCredentials(t *testing.T) {
 		Password: newPassword,
 	}
 
-	// Test with no configured Rotation Statement
-	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, userConfig)
-	if err == nil {
-		t.Fatalf("expected error, got none")
-	}
-
 	statements := dbplugin.Statements{
 		Rotation: []string{testRoleStaticRotate},
 	}
-	// User should not exist, make sure we can create
-	username, password, err = db.SetCredentials(context.Background(), statements, userConfig)
+
+	username, password, err := db.SetCredentials(context.Background(), statements, userConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if username != dbUser {
+		t.Fatalf("SetCredentials returned different username, expected (%s), got (%s)", dbUser, username)
+	}
+
+	// verify new password works
+	if err := testCredsExist(t, connURL, dbUser, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// call SetCredentials again, password will change
 	newPassword, _ = db.GenerateCredentials(context.Background())
 	userConfig.Password = newPassword
-	username, password, err = db.SetCredentials(context.Background(), statements, userConfig)
+	_, password, err = db.SetCredentials(context.Background(), statements, userConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -372,7 +371,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 		t.Fatal("passwords should have changed")
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := testCredsExist(t, connURL, dbUser, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
