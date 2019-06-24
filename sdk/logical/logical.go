@@ -82,6 +82,7 @@ type Backend interface {
 
 	// Open is invoked just after mounting a backend to allow it to
 	// handle any tasks that need to be performed.
+	// TODO come up with the correct signature.
 	Open(context.Context, *Request) error
 
 	// Type returns the BackendType for the particular backend
