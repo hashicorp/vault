@@ -1,30 +1,28 @@
 description: Ensures nothing obvious is broken for faster failures.
 docker:
   - image: circleci/buildpack-deps
+shell: /usr/bin/env bash -euo pipefail
 environment:
-  PATH_EXTRA: /tmp/circleci
+  CCI_VERSION: 0.1.5691
 steps:
   - checkout
   - run:
       name: Install CircleCI CLI
-      shell: /usr/bin/env bash -euo pipefail
       environment:
-        VERSION: 0.1.5691
         ARCH: linux_amd64
         BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
       command: |
-        set -x
-        mkdir -p $PATH_EXTRA
-        export PATH="$PATH_EXTRA:$PATH"
-        NAME=circleci-cli_${VERSION}_${ARCH}
-        URL=$BASE/v${VERSION}/${NAME}.tar.gz
+        export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+        mkdir -p $CCI_PATH
+        NAME=circleci-cli_${CCI_VERSION}_${ARCH}
+        URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
         curl -sSL $URL \
-          | tar --overwrite --strip-components=1 -xz -C $PATH_EXTRA "${NAME}/circleci"
+          | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
+        # Add circleci to the path for subsequent steps.
+        echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+        # Done, print some debug info.
+        set -x
+        . $BASH_ENV
         which circleci
         circleci version
-  - run:
-      name: make ci-verify
-      command: |
-        set -x
-        export PATH="$PATH_EXTRA:$PATH"
-        make ci-verify
+  - run: make ci-verify
