@@ -1,0 +1,30 @@
+description: Ensures nothing obvious is broken for faster failures.
+docker:
+  - image: circleci/buildpack-deps
+environment:
+  PATH_EXTRA: /tmp/circleci
+steps:
+  - checkout
+  - run:
+      name: Install CircleCI CLI
+      shell: /usr/bin/env bash -euo pipefail
+      environment:
+        VERSION: 0.1.5691
+        ARCH: linux_amd64
+        BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
+      command: |
+        set -x
+        mkdir -p $PATH_EXTRA
+        export PATH="$PATH_EXTRA:$PATH"
+        NAME=circleci-cli_${VERSION}_${ARCH}
+        URL=$BASE/v${VERSION}/${NAME}.tar.gz
+        curl -sSL $URL \
+          | tar --overwrite --strip-components=1 -xz -C $PATH_EXTRA "${NAME}/circleci"
+        which circleci
+        circleci version
+  - run:
+      name: make ci-verify
+      command: |
+        set -x
+        export PATH="$PATH_EXTRA:$PATH"
+        make ci-verify
