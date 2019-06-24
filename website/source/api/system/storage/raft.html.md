@@ -19,7 +19,6 @@ This endpoint joins a node to the Raft cluster.
 
 ### Parameters
 
-
 - `leader_api_addr` `(string: <required>)` – Address of the leader node in the
   Raft cluster to which this node is trying to join.
 
@@ -35,6 +34,24 @@ This endpoint joins a node to the Raft cluster.
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
 
+### Sample Payload
+```json
+{
+  "leader_api_addr": "https://127.0.0.1:8200",
+  "leader_ca_cert": "<pem encoded ca cert>",
+  "leader_client_cert": "<pem encoded client cert>",
+  "leader_client_key": "<pem encoded client key>"
+}
+```
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/join
+```
 
 ## Read Raft Configuration
 
