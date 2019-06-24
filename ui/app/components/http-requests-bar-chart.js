@@ -37,6 +37,8 @@ const COUNTERS = [
 
 const HEIGHT = 240;
 
+const HOVER_PADDING = 12;
+
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
   counters: COUNTERS,
@@ -101,7 +103,7 @@ export default Component.extend({
     // initialize the tooltip
     const tip = d3Tip()
       .attr('class', 'd3-tooltip')
-      .offset([-10, 0])
+      .offset([HOVER_PADDING / 2, 0])
       .html(function(d) {
         return `
           <p>${formatDate(d.start_time, 'MMMM YYYY')}</p>
@@ -178,9 +180,9 @@ export default Component.extend({
     shadowBars
       .merge(shadowBarsEnter)
       .attr('width', xScale.bandwidth())
-      .attr('height', counter => height - yScale(counter.total))
+      .attr('height', counter => height - yScale(counter.total) + HOVER_PADDING)
       .attr('x', counter => xScale(counter.start_time))
-      .attr('y', counter => yScale(counter.total))
+      .attr('y', counter => yScale(counter.total) - HOVER_PADDING)
       .attr('fill', 'transparent')
       .attr('stroke', 'transparent');
 
