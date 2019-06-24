@@ -2,7 +2,7 @@ package http
 
 import (
 	"context"
-	"fmt"
+	"crypto/tls"
 	"io"
 	"net/http"
 
@@ -29,12 +29,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	fmt.Printf("===== req: %#v\n", req)
-
-	tlsConfig, err := tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
-	if err != nil {
-		respondError(w, http.StatusBadRequest, err)
-		return
+	var tlsConfig *tls.Config
+	var err error
+	if len(req.LeaderCACert) != 0 || len(req.LeaderClientCert) != 0 || len(req.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
 	}
 
 	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAPIAddr, tlsConfig, req.Retry)

@@ -7,6 +7,7 @@ description: |-
 
   The `/sys/storage/raft` endpoint is used to check the high availability status and
   current leader of Vault.
+
 ---
 
 ## Join a Raft cluster
