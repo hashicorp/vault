@@ -39,11 +39,10 @@
 }
 
 .d3-tooltip {
-  line-height: 1;
-  font-weight: bold;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
+  line-height: 1.25;
+  padding: $spacing-s;
+  background: $grey;
+  color: $ui-gray-010;
   border-radius: 2px;
 }
 
@@ -53,8 +52,7 @@
   display: inline;
   font-size: 10px;
   width: 100%;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.8);
+  color: $grey;
   content: '\25BC';
   position: absolute;
   text-align: center;
@@ -62,7 +60,7 @@
 
 /* Style northward tooltips differently */
 .d3-tooltip.n:after {
-  margin: -1px 0 0 0;
+  margin: -4px 0 0 0;
   top: 100%;
   left: 0;
 }

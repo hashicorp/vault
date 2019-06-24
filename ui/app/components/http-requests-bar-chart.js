@@ -93,7 +93,7 @@ export default Component.extend({
   updateActiveDatum() {},
 
   renderBarChart() {
-    const { margin, padding, width, xScale, yScale, parsedCounters } = this;
+    const { margin, width, xScale, yScale, parsedCounters } = this;
     const height = this.height();
     const barChartSVG = d3.select('.http-requests-bar-chart');
     const barsContainer = d3.select('#bars-container');
@@ -105,7 +105,7 @@ export default Component.extend({
       .html(function(d) {
         return `
           <p>${formatDate(d.start_time, 'MMMM YYYY')}</p>
-          <p>${d.total}</p>
+          <p>${Intl.NumberFormat().format(d.total)} Requests</p>
         `;
       });
 
