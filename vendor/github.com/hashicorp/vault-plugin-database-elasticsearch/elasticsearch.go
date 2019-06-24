@@ -334,3 +334,20 @@ func buildClient(config map[string]interface{}) (*Client, error) {
 	}
 	return client, nil
 }
+
+// GenerateCredentials returns a generated password
+func (es *Elasticsearch) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := es.credentialProducer.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}
+
+// SetCredentials is used to set the credentials for a database user to a
+// specific username and password. This is not currently supported by the
+// elastic search plugin, but is needed to conform to the dbplugin.Database
+// interface
+func (es *Elasticsearch) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticConfig dbplugin.StaticUserConfig) (username string, password string, err error) {
+	return "", "", dbutil.Unimplemented()
+}

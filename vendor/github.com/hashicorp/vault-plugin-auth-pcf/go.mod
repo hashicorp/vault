@@ -10,6 +10,6 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/vault/api v1.0.2
-	github.com/hashicorp/vault/sdk v0.1.11
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190620155523-cedd6208b2a5
 	github.com/pkg/errors v0.8.1
 )

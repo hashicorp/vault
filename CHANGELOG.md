@@ -43,17 +43,28 @@ FEATURES:
    Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
  * Add HTTP Request Volume Page to the UI [GH-6925]
+ * Adds Static Accounts for the Combined Database Backed, allowing Vault to 
+   manage password retrieval and rotation for pre-existing database users, with 
+   initial support for PostgreSQL [GH-6834]
 
 IMPROVEMENTS: 
 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/jwt: Leeways for `nbf` and `exp` are now configurable, as is clock skew
+   leeway [JWT-53]
+ * auth/kubernetes: Allow service names/namespaces to be configured as globs
+   [KUBEAUTH-58]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
  * identity: Allow a group alias' canonical ID to be modified
  * namespaces: Namespaces can now be created and deleted from performance
    replication secondaries
+ * replication: Client TLS authentication is now supported when enabling or
+   updating a replication secondary
+ * secrets/database: Cassandra operations will now cancel on client timeout
+   [GH-6954]
  * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]

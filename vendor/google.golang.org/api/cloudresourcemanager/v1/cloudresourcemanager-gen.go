@@ -380,7 +380,7 @@ func (s *AuditLogConfig) MarshalJSON() ([]byte, error) {
 // Binding: Associates `members` with a `role`.
 type Binding struct {
 	// Condition: The condition that is associated with this binding.
-	// NOTE: an unsatisfied condition will not allow user access via
+	// NOTE: An unsatisfied condition will not allow user access via
 	// current
 	// binding. Different bindings, including their conditions, are
 	// examined
@@ -2147,17 +2147,17 @@ type SearchOrganizationsRequest struct {
 	//
 	// Organizations may be filtered by `owner.directoryCustomerId` or
 	// by
-	// `domain`, where the domain is a G Suite domain, for
-	// example:
+	// `domain`, where the domain is a G Suite domain, for example:
 	//
-	// |Filter|Description|
-	// |------|-----------|
-	// |owner.directorycu
-	// stomerid:123456789|Organizations with
-	// `owner.directory_customer_id` equal to
-	// `123456789`.|
-	// |domain:google.com|Organizations corresponding to the domain
-	// `google.com`.|
+	// | Filter                              | Description
+	//
+	// |
+	// |-------------------------------------|-----------------------------
+	// -----|
+	// | owner.directorycustomerid:123456789 | Organizations with
+	// `owner.directory_customer_id` equal to `123456789`.|
+	// | domain:google.com                   | Organizations corresponding
+	// to the domain `google.com`.|
 	//
 	// This field is optional.
 	Filter string `json:"filter,omitempty"`
@@ -7018,10 +7018,11 @@ type ProjectsListCall struct {
 	header_      http.Header
 }
 
-// List: Lists Projects that are visible to the user and satisfy
-// the
-// specified filter. This method returns Projects in an unspecified
-// order.
+// List: Lists Projects that the caller has the
+// `resourcemanager.projects.get`
+// permission on and satisfy the specified filter.
+//
+// This method returns Projects in an unspecified order.
 // This method is eventually consistent with project mutations; this
 // means
 // that a newly created project may not appear in the results or
@@ -7030,6 +7031,18 @@ type ProjectsListCall struct {
 // To
 // retrieve the latest state of a project, use the
 // GetProject method.
+//
+// NOTE: If the request filter contains a `parent.type` and `parent.id`
+// and
+// the caller has the `resourcemanager.projects.list` permission on
+// the
+// parent, the results will be drawn from an alternate index which
+// provides
+// more consistent results. In future versions of this API, this List
+// method
+// will be split into List and Search to properly capture the
+// behavorial
+// difference.
 func (r *ProjectsService) List() *ProjectsListCall {
 	c := &ProjectsListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	return c
@@ -7041,42 +7054,48 @@ func (r *ProjectsService) List() *ProjectsListCall {
 //
 // + `name`
 // + `id`
-// + <code>labels.<em>key</em></code> where *key* is the name of a
-// label
+// + `labels.<key>` (where *key* is the name of a label)
+// + `parent.type`
+// + `parent.id`
 //
-// Some examples of using labels as
-// filters:
+// Some examples of using labels as filters:
 //
-// |Filter|Description|
-// |------|-----------|
-// |name:how*|The project's name starts with "how".|
-// |name:Howl|The project's name is `Howl` or
-// `howl`.|
-// |name:HOWL|Equivalent to above.|
-// |NAME:howl|Equivalent to above.|
-// |labels.color:*|The project has the label
-// `color`.|
-// |labels.color:red|The project's label `color` has the value
-// `red`.|
-// |labels.color:red&nbsp;labels.size:big|The project's label `color`
-// has the value `red` and its label `size` has the value `big`.
+// | Filter           | Description
 //
-// If you specify a filter that has both `parent.type` and `parent.id`,
-// then
-// the `resourcemanager.projects.list` permission is checked on the
-// parent.
-// If the user has this permission, all projects under the parent will
-// be
-// returned after remaining filters have been applied. If the user lacks
-// this
-// permission, then all projects for which the user has
-// the
-// `resourcemanager.projects.get` permission will be returned after
-// remaining
-// filters have been applied. If no filter is specified, the call will
-// return
-// projects for which the user has `resourcemanager.projects.get`
-// permissions.
+// |
+// |------------------|------------------------------------------------
+// -----|
+// | name:how*        | The project's name starts with "how".
+//    |
+// | name:Howl        | The project's name is `Howl` or `howl`.
+//    |
+// | name:HOWL        | Equivalent to above.
+//    |
+// | NAME:howl        | Equivalent to above.
+//    |
+// | labels.color:*   | The project has the label `color`.
+//    |
+// | labels.color:red | The project's label `color` has the value `red`.
+//    |
+// | labels.color:red&nbsp;labels.size:big |The project's label `color`
+// has
+//   the value `red` and its label `size` has the value `big`.
+//    |
+//
+// If no filter is specified, the call will return projects for which
+// the user
+// has the `resourcemanager.projects.get` permission.
+//
+// NOTE: To perform a by-parent query (eg., what projects are directly
+// in a
+// Folder), the caller must have the
+// `resourcemanager.projects.list`
+// permission on the parent and the filter must contain both a
+// `parent.type`
+// and a `parent.id` restriction
+// (example: "parent.type:folder parent.id:123"). In this case an
+// alternate
+// search index is used which provides more consistent results.
 func (c *ProjectsListCall) Filter(filter string) *ProjectsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -7194,14 +7213,14 @@ func (c *ProjectsListCall) Do(opts ...googleapi.CallOption) (*ListProjectsRespon
 	}
 	return ret, nil
 	// {
-	//   "description": "Lists Projects that are visible to the user and satisfy the\nspecified filter. This method returns Projects in an unspecified order.\nThis method is eventually consistent with project mutations; this means\nthat a newly created project may not appear in the results or recent\nupdates to an existing project may not be reflected in the results. To\nretrieve the latest state of a project, use the\nGetProject method.",
+	//   "description": "Lists Projects that the caller has the `resourcemanager.projects.get`\npermission on and satisfy the specified filter.\n\nThis method returns Projects in an unspecified order.\nThis method is eventually consistent with project mutations; this means\nthat a newly created project may not appear in the results or recent\nupdates to an existing project may not be reflected in the results. To\nretrieve the latest state of a project, use the\nGetProject method.\n\nNOTE: If the request filter contains a `parent.type` and `parent.id` and\nthe caller has the `resourcemanager.projects.list` permission on the\nparent, the results will be drawn from an alternate index which provides\nmore consistent results. In future versions of this API, this List method\nwill be split into List and Search to properly capture the behavorial\ndifference.",
 	//   "flatPath": "v1/projects",
 	//   "httpMethod": "GET",
 	//   "id": "cloudresourcemanager.projects.list",
 	//   "parameterOrder": [],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "An expression for filtering the results of the request.  Filter rules are\ncase insensitive. The fields eligible for filtering are:\n\n+ `name`\n+ `id`\n+ \u003ccode\u003elabels.\u003cem\u003ekey\u003c/em\u003e\u003c/code\u003e where *key* is the name of a label\n\nSome examples of using labels as filters:\n\n|Filter|Description|\n|------|-----------|\n|name:how*|The project's name starts with \"how\".|\n|name:Howl|The project's name is `Howl` or `howl`.|\n|name:HOWL|Equivalent to above.|\n|NAME:howl|Equivalent to above.|\n|labels.color:*|The project has the label `color`.|\n|labels.color:red|The project's label `color` has the value `red`.|\n|labels.color:red\u0026nbsp;labels.size:big|The project's label `color` has the value `red` and its label `size` has the value `big`.\n\nIf you specify a filter that has both `parent.type` and `parent.id`, then\nthe `resourcemanager.projects.list` permission is checked on the parent.\nIf the user has this permission, all projects under the parent will be\nreturned after remaining filters have been applied. If the user lacks this\npermission, then all projects for which the user has the\n`resourcemanager.projects.get` permission will be returned after remaining\nfilters have been applied. If no filter is specified, the call will return\nprojects for which the user has `resourcemanager.projects.get` permissions.\n\nOptional.",
+	//       "description": "An expression for filtering the results of the request.  Filter rules are\ncase insensitive. The fields eligible for filtering are:\n\n+ `name`\n+ `id`\n+ `labels.\u003ckey\u003e` (where *key* is the name of a label)\n+ `parent.type`\n+ `parent.id`\n\nSome examples of using labels as filters:\n\n| Filter           | Description                                         |\n|------------------|-----------------------------------------------------|\n| name:how*        | The project's name starts with \"how\".               |\n| name:Howl        | The project's name is `Howl` or `howl`.             |\n| name:HOWL        | Equivalent to above.                                |\n| NAME:howl        | Equivalent to above.                                |\n| labels.color:*   | The project has the label `color`.                  |\n| labels.color:red | The project's label `color` has the value `red`.    |\n| labels.color:red\u0026nbsp;labels.size:big |The project's label `color` has\n  the value `red` and its label `size` has the value `big`.              |\n\nIf no filter is specified, the call will return projects for which the user\nhas the `resourcemanager.projects.get` permission.\n\nNOTE: To perform a by-parent query (eg., what projects are directly in a\nFolder), the caller must have the `resourcemanager.projects.list`\npermission on the parent and the filter must contain both a `parent.type`\nand a `parent.id` restriction\n(example: \"parent.type:folder parent.id:123\"). In this case an alternate\nsearch index is used which provides more consistent results.\n\nOptional.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },

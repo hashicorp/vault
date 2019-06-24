@@ -10,7 +10,11 @@ export default Controller.extend({
     onMountSuccess: function(type, path) {
       let transition;
       if (SUPPORTED_BACKENDS.includes(type)) {
-        transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
+        if (type === 'kmip') {
+          transition = this.transitionToRoute('vault.cluster.secrets.backend.kmip.scopes', path);
+        } else {
+          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
+        }
       } else {
         transition = this.transitionToRoute('vault.cluster.secrets.backends');
       }

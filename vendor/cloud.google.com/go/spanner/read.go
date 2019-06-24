@@ -40,13 +40,14 @@ type streamingReceiver interface {
 	Recv() (*sppb.PartialResultSet, error)
 }
 
-// errEarlyReadEnd returns error for read finishes when gRPC stream is still active.
+// errEarlyReadEnd returns error for read finishes when gRPC stream is still
+// active.
 func errEarlyReadEnd() error {
 	return spannerErrorf(codes.FailedPrecondition, "read completed with active stream")
 }
 
-// stream is the internal fault tolerant method for streaming data from
-// Cloud Spanner.
+// stream is the internal fault tolerant method for streaming data from Cloud
+// Spanner.
 func stream(ctx context.Context, rpc func(ct context.Context, resumeToken []byte) (streamingReceiver, error), setTimestamp func(time.Time), release func(error)) *RowIterator {
 	ctx, cancel := context.WithCancel(ctx)
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.RowIterator")
@@ -61,16 +62,17 @@ func stream(ctx context.Context, rpc func(ct context.Context, resumeToken []byte
 
 // RowIterator is an iterator over Rows.
 type RowIterator struct {
-	// The plan for the query. Available after RowIterator.Next returns iterator.Done
-	// if QueryWithStats was called.
+	// The plan for the query. Available after RowIterator.Next returns
+	// iterator.Done if QueryWithStats was called.
 	QueryPlan *sppb.QueryPlan
 
-	// Execution statistics for the query. Available after RowIterator.Next returns iterator.Done
-	// if QueryWithStats was called.
+	// Execution statistics for the query. Available after RowIterator.Next
+	// returns iterator.Done if QueryWithStats was called.
 	QueryStats map[string]interface{}
 
-	// For a DML statement, the number of rows affected. For PDML, this is a lower bound.
-	// Available for DML statements after RowIterator.Next returns iterator.Done.
+	// For a DML statement, the number of rows affected. For PDML, this is a
+	// lower bound. Available for DML statements after RowIterator.Next returns
+	// iterator.Done.
 	RowCount int64
 
 	streamd      *resumableStreamDecoder
@@ -142,8 +144,9 @@ func extractRowCount(stats *sppb.ResultSetStats) (int64, error) {
 	}
 }
 
-// Do calls the provided function once in sequence for each row in the iteration.  If the
-// function returns a non-nil error, Do immediately returns that error.
+// Do calls the provided function once in sequence for each row in the
+// iteration. If the function returns a non-nil error, Do immediately returns
+// that error.
 //
 // If there are no rows in the iterator, Do will return nil without calling the
 // provided function.
@@ -166,7 +169,8 @@ func (r *RowIterator) Do(f func(r *Row) error) error {
 	}
 }
 
-// Stop terminates the iteration. It should be called after you finish using the iterator.
+// Stop terminates the iteration. It should be called after you finish using the
+// iterator.
 func (r *RowIterator) Stop() {
 	if r.streamd != nil {
 		defer trace.EndSpan(r.streamd.ctx, r.err)
@@ -184,8 +188,8 @@ func (r *RowIterator) Stop() {
 	}
 }
 
-// partialResultQueue implements a simple FIFO queue.  The zero value is a
-// valid queue.
+// partialResultQueue implements a simple FIFO queue.  The zero value is a valid
+// queue.
 type partialResultQueue struct {
 	q     []*sppb.PartialResultSet
 	first int
@@ -231,8 +235,7 @@ func (q *partialResultQueue) push(r *sppb.PartialResultSet) {
 	q.n++
 }
 
-// pop removes an item from the head of partialResultQueue and returns
-// it.
+// pop removes an item from the head of partialResultQueue and returns it.
 func (q *partialResultQueue) pop() *sppb.PartialResultSet {
 	if q.n == 0 {
 		return nil
@@ -259,8 +262,8 @@ func (q *partialResultQueue) dump() []*sppb.PartialResultSet {
 	return dq
 }
 
-// resumableStreamDecoderState encodes resumableStreamDecoder's status.
-// See also the comments for resumableStreamDecoder.Next.
+// resumableStreamDecoderState encodes resumableStreamDecoder's status. See also
+// the comments for resumableStreamDecoder.Next.
 type resumableStreamDecoderState int
 
 const (
@@ -278,45 +281,58 @@ type resumableStreamDecoder struct {
 	// state is the current status of resumableStreamDecoder, see also
 	// the comments for resumableStreamDecoder.Next.
 	state resumableStreamDecoderState
+
 	// stateWitness when non-nil is called to observe state change,
 	// used for testing.
 	stateWitness func(resumableStreamDecoderState)
+
 	// ctx is the caller's context, used for cancel/timeout Next().
 	ctx context.Context
+
 	// rpc is a factory of streamingReceiver, which might resume
 	// a previous stream from the point encoded in restartToken.
 	// rpc is always a wrapper of a Cloud Spanner query which is
 	// resumable.
 	rpc func(ctx context.Context, restartToken []byte) (streamingReceiver, error)
+
 	// stream is the current RPC streaming receiver.
 	stream streamingReceiver
+
 	// q buffers received yet undecoded partial results.
 	q partialResultQueue
-	// bytesBetweenResumeTokens is the proxy of the byte size of PartialResultSets being queued
-	// between two resume tokens. Once bytesBetweenResumeTokens is greater than
-	// maxBytesBetweenResumeTokens, resumableStreamDecoder goes into queueingUnretryable state.
+
+	// bytesBetweenResumeTokens is the proxy of the byte size of
+	// PartialResultSets being queued between two resume tokens. Once
+	// bytesBetweenResumeTokens is greater than maxBytesBetweenResumeTokens,
+	// resumableStreamDecoder goes into queueingUnretryable state.
 	bytesBetweenResumeTokens int32
-	// maxBytesBetweenResumeTokens is the max number of bytes that can be buffered
-	// between two resume tokens. It is always copied from the global maxBytesBetweenResumeTokens
-	// atomically.
+
+	// maxBytesBetweenResumeTokens is the max number of bytes that can be
+	// buffered between two resume tokens. It is always copied from the global
+	// maxBytesBetweenResumeTokens atomically.
 	maxBytesBetweenResumeTokens int32
+
 	// np is the next sppb.PartialResultSet ready to be returned
 	// to caller of resumableStreamDecoder.Get().
 	np *sppb.PartialResultSet
+
 	// resumeToken stores the resume token that resumableStreamDecoder has
 	// last revealed to caller.
 	resumeToken []byte
+
 	// retryCount is the number of retries that have been carried out so far
 	retryCount int
+
 	// err is the last error resumableStreamDecoder has encountered so far.
 	err error
+
 	// backoff to compute delays between retries.
 	backoff backoff.ExponentialBackoff
 }
 
 // newResumableStreamDecoder creates a new resumeableStreamDecoder instance.
-// Parameter rpc should be a function that creates a new stream
-// beginning at the restartToken if non-nil.
+// Parameter rpc should be a function that creates a new stream beginning at the
+// restartToken if non-nil.
 func newResumableStreamDecoder(ctx context.Context, rpc func(ct context.Context, restartToken []byte) (streamingReceiver, error)) *resumableStreamDecoder {
 	return &resumableStreamDecoder{
 		ctx:                         ctx,
@@ -329,8 +345,8 @@ func newResumableStreamDecoder(ctx context.Context, rpc func(ct context.Context,
 // changeState fulfills state transition for resumableStateDecoder.
 func (d *resumableStreamDecoder) changeState(target resumableStreamDecoderState) {
 	if d.state == queueingRetryable && d.state != target {
-		// Reset bytesBetweenResumeTokens because it is only meaningful/changed under
-		// queueingRetryable state.
+		// Reset bytesBetweenResumeTokens because it is only meaningful/changed
+		// under queueingRetryable state.
 		d.bytesBetweenResumeTokens = 0
 	}
 	d.state = target
@@ -398,9 +414,9 @@ func (d *resumableStreamDecoder) isNewResumeToken(rt []byte) bool {
 
 */
 var (
-	// maxBytesBetweenResumeTokens is the maximum amount of bytes that resumableStreamDecoder
-	// in queueingRetryable state can use to queue PartialResultSets before getting
-	// into queueingUnretryable state.
+	// maxBytesBetweenResumeTokens is the maximum amount of bytes that
+	// resumableStreamDecoder in queueingRetryable state can use to queue
+	// PartialResultSets before getting into queueingUnretryable state.
 	maxBytesBetweenResumeTokens = int32(128 * 1024 * 1024)
 )
 
@@ -440,17 +456,20 @@ func (d *resumableStreamDecoder) next() bool {
 			// Receiving queue is not empty.
 			last, err := d.q.peekLast()
 			if err != nil {
-				// Only the case that receiving queue is empty could cause peekLast to
-				// return error and in such case, we should try to receive from stream.
+				// Only the case that receiving queue is empty could cause
+				// peekLast to return error and in such case, we should try to
+				// receive from stream.
 				d.tryRecv()
 				continue
 			}
 			if d.isNewResumeToken(last.ResumeToken) {
-				// Got new resume token, return buffered sppb.PartialResultSets to caller.
+				// Got new resume token, return buffered sppb.PartialResultSets
+				// to caller.
 				d.np = d.q.pop()
 				if d.q.empty() {
 					d.bytesBetweenResumeTokens = 0
-					// The new resume token was just popped out from queue, record it.
+					// The new resume token was just popped out from queue,
+					// record it.
 					d.resumeToken = d.np.ResumeToken
 					d.changeState(queueingRetryable)
 				}
@@ -461,9 +480,9 @@ func (d *resumableStreamDecoder) next() bool {
 				continue
 			}
 			if d.state == queueingUnretryable {
-				// When there is no resume token observed,
-				// only yield sppb.PartialResultSets to caller under
-				// queueingUnretryable state.
+				// When there is no resume token observed, only yield
+				// sppb.PartialResultSets to caller under queueingUnretryable
+				// state.
 				d.np = d.q.pop()
 				return true
 			}
@@ -472,8 +491,8 @@ func (d *resumableStreamDecoder) next() bool {
 			d.tryRecv()
 			continue
 		case aborted:
-			// Discard all pending items because none of them
-			// should be yield to caller.
+			// Discard all pending items because none of them should be yield
+			// to caller.
 			d.q.clear()
 			return false
 		case finished:
@@ -482,7 +501,8 @@ func (d *resumableStreamDecoder) next() bool {
 				// No buffered PartialResultSet.
 				return false
 			}
-			// Although query has finished, there are still buffered PartialResultSets.
+			// Although query has finished, there are still buffered
+			// PartialResultSets.
 			d.np = d.q.pop()
 			return true
 
@@ -516,16 +536,14 @@ func (d *resumableStreamDecoder) tryRecv() {
 	}
 	d.q.push(res)
 	if d.state == queueingRetryable && !d.isNewResumeToken(res.ResumeToken) {
-		// adjusting d.bytesBetweenResumeTokens
 		d.bytesBetweenResumeTokens += int32(proto.Size(res))
 	}
 	d.resetBackOff()
 	d.changeState(d.state)
 }
 
-// resetBackOff clears the internal retry counter of
-// resumableStreamDecoder so that the next exponential
-// backoff will start at a fresh state.
+// resetBackOff clears the internal retry counter of resumableStreamDecoder so
+// that the next exponential backoff will start at a fresh state.
 func (d *resumableStreamDecoder) resetBackOff() {
 	d.retryCount = 0
 }
@@ -558,8 +576,9 @@ func (d *resumableStreamDecoder) lastErr() error {
 type partialResultSetDecoder struct {
 	row     Row
 	tx      *sppb.Transaction
-	chunked bool      // if true, next value should be merged with last values entry.
-	ts      time.Time // read timestamp
+	chunked bool // if true, next value should be merged with last values
+	// entry.
+	ts time.Time // read timestamp
 }
 
 // yield checks we have a complete row, and if so returns it.  A row is not
@@ -567,9 +586,9 @@ type partialResultSetDecoder struct {
 // and there are no further values to process.
 func (p *partialResultSetDecoder) yield(chunked, last bool) *Row {
 	if len(p.row.vals) == len(p.row.fields) && (!chunked || !last) {
-		// When partialResultSetDecoder gets enough number of
-		// Column values, There are two cases that a new Row
-		// should be yield:
+		// When partialResultSetDecoder gets enough number of Column values.
+		// There are two cases that a new Row should be yield:
+		//
 		//   1. The incoming PartialResultSet is not chunked;
 		//   2. The incoming PartialResultSet is chunked, but the
 		//      proto3.Value being merged is not the last one in
@@ -594,8 +613,8 @@ func errChunkedEmptyRow() error {
 	return spannerErrorf(codes.FailedPrecondition, "got invalid chunked PartialResultSet with empty Row")
 }
 
-// add tries to merge a new PartialResultSet into buffered Row. It returns
-// any rows that have been completed as a result.
+// add tries to merge a new PartialResultSet into buffered Row. It returns any
+// rows that have been completed as a result.
 func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) {
 	var rows []*Row
 	if r.Metadata != nil {
@@ -615,14 +634,14 @@ func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) 
 	}
 	if p.chunked {
 		p.chunked = false
-		// Try to merge first value in r.Values into
-		// uncompleted row.
+		// Try to merge first value in r.Values into uncompleted row.
 		last := len(p.row.vals) - 1
 		if last < 0 { // sanity check
 			return nil, errChunkedEmptyRow()
 		}
 		var err error
-		// If p is chunked, then we should always try to merge p.last with r.first.
+		// If p is chunked, then we should always try to merge p.last with
+		// r.first.
 		if p.row.vals[last], err = p.merge(p.row.vals[last], r.Values[0]); err != nil {
 			return nil, err
 		}
@@ -635,22 +654,22 @@ func (p *partialResultSetDecoder) add(r *sppb.PartialResultSet) ([]*Row, error) 
 	for i, v := range r.Values {
 		// The rest values in r can be appened into p directly.
 		p.row.vals = append(p.row.vals, v)
-		// Again, check to see if a complete Row can be yielded because of
-		// the newly added value.
+		// Again, check to see if a complete Row can be yielded because of the
+		// newly added value.
 		if row := p.yield(r.ChunkedValue, i == len(r.Values)-1); row != nil {
 			rows = append(rows, row)
 		}
 	}
 	if r.ChunkedValue {
-		// After dealing with all values in r, if r is chunked then p must
-		// be also chunked.
+		// After dealing with all values in r, if r is chunked then p must be
+		// also chunked.
 		p.chunked = true
 	}
 	return rows, nil
 }
 
-// isMergeable returns if a protobuf Value can be potentially merged with
-// other protobuf Values.
+// isMergeable returns if a protobuf Value can be potentially merged with other
+// protobuf Values.
 func (p *partialResultSetDecoder) isMergeable(a *proto3.Value) bool {
 	switch a.Kind.(type) {
 	case *proto3.Value_StringValue:
@@ -662,14 +681,14 @@ func (p *partialResultSetDecoder) isMergeable(a *proto3.Value) bool {
 	}
 }
 
-// errIncompatibleMergeTypes returns error for incompatible protobuf types
-// that cannot be merged by partialResultSetDecoder.
+// errIncompatibleMergeTypes returns error for incompatible protobuf types that
+// cannot be merged by partialResultSetDecoder.
 func errIncompatibleMergeTypes(a, b *proto3.Value) error {
 	return spannerErrorf(codes.FailedPrecondition, "incompatible type in chunked PartialResultSet. expected (%T), got (%T)", a.Kind, b.Kind)
 }
 
-// errUnsupportedMergeType returns error for protobuf type that cannot be
-// merged to other protobufs.
+// errUnsupportedMergeType returns error for protobuf type that cannot be merged
+// to other protobufs.
 func errUnsupportedMergeType(a *proto3.Value) error {
 	return spannerErrorf(codes.FailedPrecondition, "unsupported type merge (%T)", a.Kind)
 }
@@ -701,9 +720,9 @@ func (p *partialResultSetDecoder) merge(a, b *proto3.Value) (*proto3.Value, erro
 			return b, nil
 		}
 		if la := len(t.ListValue.Values) - 1; p.isMergeable(t.ListValue.Values[la]) {
-			// When the last item in a is of type String,
-			// List or Struct(encoded into List by Cloud Spanner),
-			// try to Merge last item in a and first item in b.
+			// When the last item in a is of type String, List or Struct
+			// (encoded into List by Cloud Spanner), try to Merge last item in
+			// a and first item in b.
 			t.ListValue.Values[la], err = p.merge(t.ListValue.Values[la], l.ListValue.Values[0])
 			if err != nil {
 				return nil, err
@@ -726,8 +745,8 @@ func (p *partialResultSetDecoder) merge(a, b *proto3.Value) (*proto3.Value, erro
 // Done returns if partialResultSetDecoder has already done with all buffered
 // values.
 func (p *partialResultSetDecoder) done() bool {
-	// There is no explicit end of stream marker, but ending part way
-	// through a row is obviously bad, or ending with the last column still
-	// awaiting completion.
+	// There is no explicit end of stream marker, but ending part way through a
+	// row is obviously bad, or ending with the last column still awaiting
+	// completion.
 	return len(p.row.vals) == 0 && !p.chunked
 }

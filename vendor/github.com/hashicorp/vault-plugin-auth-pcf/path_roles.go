@@ -44,48 +44,62 @@ func (b *backend) pathRoles() *framework.Path {
 				Description: "The name of the role.",
 			},
 			"bound_application_ids": {
-				Type:         framework.TypeCommaStringSlice,
-				DisplayName:  "Bound Application IDs",
-				DisplayValue: "6b814521-5f08-4b1a-8c4e-fbe7c5f3a169",
-				Description:  "Require that the client certificate presented has at least one of these app IDs.",
+				Type: framework.TypeCommaStringSlice,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bound Application IDs",
+					Value: "6b814521-5f08-4b1a-8c4e-fbe7c5f3a169",
+				},
+				Description: "Require that the client certificate presented has at least one of these app IDs.",
 			},
 			"bound_space_ids": {
-				Type:         framework.TypeCommaStringSlice,
-				DisplayName:  "Bound Space IDs",
-				DisplayValue: "3d2eba6b-ef19-44d5-91dd-1975b0db5cc9",
-				Description:  "Require that the client certificate presented has at least one of these space IDs.",
+				Type: framework.TypeCommaStringSlice,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bound Space IDs",
+					Value: "3d2eba6b-ef19-44d5-91dd-1975b0db5cc9",
+				},
+				Description: "Require that the client certificate presented has at least one of these space IDs.",
 			},
 			"bound_organization_ids": {
-				Type:         framework.TypeCommaStringSlice,
-				DisplayName:  "Bound Organization IDs",
-				DisplayValue: "34a878d0-c2f9-4521-ba73-a9f664e82c7b",
-				Description:  "Require that the client certificate presented has at least one of these org IDs.",
+				Type: framework.TypeCommaStringSlice,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bound Organization IDs",
+					Value: "34a878d0-c2f9-4521-ba73-a9f664e82c7b",
+				},
+				Description: "Require that the client certificate presented has at least one of these org IDs.",
 			},
 			"bound_instance_ids": {
-				Type:         framework.TypeCommaStringSlice,
-				DisplayName:  "Bound Instance IDs",
-				DisplayValue: "8a886b31-ccf7-480d-54d8-cc28",
-				Description:  "Require that the client certificate presented has at least one of these instance IDs.",
+				Type: framework.TypeCommaStringSlice,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bound Instance IDs",
+					Value: "8a886b31-ccf7-480d-54d8-cc28",
+				},
+				Description: "Require that the client certificate presented has at least one of these instance IDs.",
 			},
 			"bound_cidrs": {
-				Type:         framework.TypeCommaStringSlice,
-				DisplayName:  "Bound CIDRs",
-				DisplayValue: "192.168.100.14/24",
+				Type: framework.TypeCommaStringSlice,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bound CIDRs",
+					Value: "192.168.100.14/24",
+				},
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
 			},
 			"policies": {
-				Type:         framework.TypeCommaStringSlice,
-				Default:      "default",
-				DisplayName:  "Policies",
-				DisplayValue: "default",
-				Description:  "Comma separated list of policies on the role.",
+				Type:    framework.TypeCommaStringSlice,
+				Default: "default",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Policies",
+					Value: "default",
+				},
+				Description: "Comma separated list of policies on the role.",
 			},
 			"disable_ip_matching": {
-				Type:         framework.TypeBool,
-				Default:      false,
-				DisplayName:  "Disable IP Address Matching",
-				DisplayValue: "false",
+				Type:    framework.TypeBool,
+				Default: false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Disable IP Address Matching",
+					Value: "false",
+				},
 				Description: `If set to true, disables the default behavior that logging in must be performed from 
 an acceptable IP address described by the certificate presented.`,
 			},
@@ -93,15 +107,24 @@ an acceptable IP address described by the certificate presented.`,
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in seconds after which the issued token should expire. Defaults
 to 0, in which case the value will fallback to the system/mount defaults.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "TTL",
+				},
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Max TTL",
+				},
 			},
 			"period": {
-				Type:        framework.TypeDurationSecond,
-				Default:     0,
-				DisplayName: "Period",
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Period",
+					Value: "0",
+				},
 				Description: `If set, indicates that the token generated using this role
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's

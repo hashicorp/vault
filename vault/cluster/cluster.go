@@ -33,12 +33,21 @@ type Client interface {
 // off a connection for a cluster listener application.
 type Handler interface {
 	ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error)
-	CALookup(context.Context) (*x509.Certificate, error)
+	CALookup(context.Context) ([]*x509.Certificate, error)
 
 	// Handoff is used to pass the connection lifetime off to
 	// the handler
 	Handoff(context.Context, *sync.WaitGroup, chan struct{}, *tls.Conn) error
 	Stop() error
+}
+
+type ClusterHook interface {
+	AddClient(alpn string, client Client)
+	RemoveClient(alpn string)
+	AddHandler(alpn string, handler Handler)
+	StopHandler(alpn string)
+	TLSConfig(ctx context.Context) (*tls.Config, error)
+	Addr() net.Addr
 }
 
 // Listener is the source of truth for cluster handlers and connection
@@ -79,6 +88,11 @@ func NewListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger)
 		cipherSuites:  cipherSuites,
 		logger:        logger,
 	}
+}
+
+// TODO: This probably isn't correct
+func (cl *Listener) Addr() net.Addr {
+	return cl.listenerAddrs[0]
 }
 
 func (cl *Listener) Addrs() []*net.TCPAddr {
@@ -181,12 +195,14 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 		defer cl.l.RUnlock()
 		for _, v := range clientHello.SupportedProtos {
 			if handler, ok := cl.handlers[v]; ok {
-				ca, err := handler.CALookup(ctx)
+				caList, err := handler.CALookup(ctx)
 				if err != nil {
 					return nil, err
 				}
 
-				caPool.AddCert(ca)
+				for _, ca := range caList {
+					caPool.AddCert(ca)
+				}
 				return ret, nil
 			}
 		}
@@ -206,7 +222,7 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
-// called.
+// called. This function blocks so should be called in a goroutine.
 func (cl *Listener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)
