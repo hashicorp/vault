@@ -8,12 +8,12 @@ CONFIG ?= ci-config
 # would invoke to verify the config file.
 VERIFY ?= ci-verify
 
+CIRCLECI := circleci --skip-update-check
+
 CCI_INSTALL_LINK := https://circleci.com/docs/2.0/local-cli/\#installation
 CCI_INSTALL_MSG := Please install CircleCI CLI. See $(CCI_INSTALL_LINK)
-CCI_VERSION := $(shell circleci version 2> /dev/null)
-ifneq ($(CCI_VERSION),)
-CIRCLECI := circleci
-else
+CCI_VERSION := $(shell $(CIRCLECI) version 2> /dev/null)
+ifeq ($(CCI_VERSION),)
 # Attempting to use the CLI fails with installation instructions.
 CIRCLECI := echo '$(CCI_INSTALL_MSG)'; exit 1; \#
 endif
