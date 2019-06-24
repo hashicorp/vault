@@ -14,7 +14,7 @@ The KMIP secrets engine allows Vault to act as a KMIP server provider and handle
 the lifecycle of it KMIP managed objects. KMIP, which stands for [Key Management
 Interoperability Protocol](#kmip-spec), is a standardized protocol that allows
 services and applications to perform cryptographic operations without having to
-manage cryptographic material, otherwise known a manage objects, by delegating
+manage cryptographic material, otherwise known as manage objects, by delegating
 its storage and lifecycle to a key management server.
 
 ## Setup
