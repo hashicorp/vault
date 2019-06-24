@@ -78,6 +78,39 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/configuration
 ```
 
+### Sample Response
+
+```json
+{
+  "request_id": "ca4b5a1d-38d6-e27e-e756-269521328a15",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "config": {
+      "index": 24,
+      "servers": [
+        {
+          "address": "127.0.0.1:8201",
+          "leader": true,
+          "node_id": "raft1",
+          "protocol_version": "\u0003",
+          "voter": true
+        },
+        {
+          "address": "127.0.0.2:8201",
+          "leader": false,
+          "node_id": "raft2",
+          "protocol_version": "\u0003",
+          "voter": true
+        }
+      ]
+    }
+  },
+  "warnings": null
+}
+```
+
 ## Remove a node from Raft cluster
 
 This endpoint removes a node from the raft cluster.
@@ -90,7 +123,7 @@ This endpoint removes a node from the raft cluster.
 
 ```json
 {
-  "server_id": "raft_node_1"
+  "server_id": "raft1"
 }
 ```
 ### Sample Request
