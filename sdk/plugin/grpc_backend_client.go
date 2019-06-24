@@ -140,7 +140,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendGRPCPluginClient) Open(ctx context.Context, req *logical.Request) error {
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request) error {
 	/* TODO implement this properly */
 	return nil
 }

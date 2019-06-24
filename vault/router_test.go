@@ -56,10 +56,6 @@ func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (
 	return resp, err
 }
 
-func (n *NoopBackend) Open(ctx context.Context, req *logical.Request) error {
-	return nil
-}
-
 func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
@@ -104,7 +100,7 @@ func (n *NoopBackend) Logger() log.Logger {
 	return log.NewNullLogger()
 }
 
-func (n *NoopBackend) Initialize(ctx context.Context) error {
+func (n *NoopBackend) Initialize(ctx context.Context, req *logical.Request) error {
 	return nil
 }
 

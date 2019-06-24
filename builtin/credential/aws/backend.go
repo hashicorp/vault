@@ -129,9 +129,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-		Invalidate:  b.invalidate,
-		Opener:      b.updateUpgradableRoleEntries,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		InitializeFunc: b.updateUpgradableRoleEntries,
+		BackendType:    logical.TypeCredential,
 	}
 
 	return b, nil

@@ -1106,10 +1106,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			c.setCoreBackend(entry, backend, view)
 
 			// Add a post-unseal func that will asynchronously call the
-			// backend's Open() function
+			// backend's Initialize() function
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 				go func() {
-					err := backend.Open(ctx, nil /* TODO pass in the correct parameter */)
+					err := backend.Initialize(ctx, nil /* TODO pass in the correct parameter */)
 					if err != nil {
 						c.logger.Error("failed to open entry", "path", entry.Path, "error", err)
 					}

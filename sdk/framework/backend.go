@@ -84,9 +84,9 @@ type Backend struct {
 	// Type is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
-	// Open is invoked just after mounting a backend to allow it to
-	// handle any tasks that need to be performed.
-	Opener OpenFunc
+	// Initialize is invoked just after mounting a backend to allow it to
+	// handle any initialization tasks that need to be performed.
+	InitializeFunc InitializeFunc
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -113,8 +113,8 @@ type CleanupFunc func(context.Context)
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
 
-// OpenFunc is the callback for backend opening upon mounting.
-type OpenFunc func(context.Context, *logical.Request) error
+// InitializeFunc is the callback for backend initialization upon mounting.
+type InitializeFunc func(context.Context, *logical.Request) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -271,11 +271,11 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	return nil
 }
 
-// Open is invoked just after mounting a backend to allow it to
-// handle any tasks that need to be performed.
-func (b *Backend) Open(ctx context.Context, req *logical.Request) error {
-	if b.Opener != nil {
-		return b.Opener(ctx, req)
+// Initialize is invoked just after mounting a backend to allow it to
+// handle any initialization tasks that need to be performed.
+func (b *Backend) Initialize(ctx context.Context, req *logical.Request) error {
+	if b.InitializeFunc != nil {
+		return b.InitializeFunc(ctx, req)
 	}
 	return nil
 }

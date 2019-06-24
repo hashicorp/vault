@@ -674,10 +674,6 @@ func (n *rawHTTP) HandleExistenceCheck(ctx context.Context, req *logical.Request
 	return false, false, nil
 }
 
-func (n *rawHTTP) Open(ctx context.Context, req *logical.Request) error {
-	return nil
-}
-
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
 }
@@ -697,8 +693,7 @@ func (n *rawHTTP) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *rawHTTP) Initialize(ctx context.Context) error {
-	// noop
+func (n *rawHTTP) Initialize(ctx context.Context, req *logical.Request) error {
 	return nil
 }
 

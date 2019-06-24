@@ -736,21 +736,21 @@ func TestSingletonMountTableFunc(t *testing.T) {
 	}
 }
 
-type openableBackend struct {
+type initableBackend struct {
 	NoopBackend
-	opened bool
+	inited bool
 }
 
-func (b *openableBackend) Open(context.Context, *logical.Request) error {
-	b.opened = true
+func (b *initableBackend) Initialize(context.Context, *logical.Request) error {
+	b.inited = true
 	return nil
 }
 
-func TestOpenableBackend(t *testing.T) {
+func TestInitializeBackend(t *testing.T) {
 
-	b := &openableBackend{}
-	if b.opened {
-		t.Fatal("backend should not be open")
+	b := &initableBackend{}
+	if b.inited {
+		t.Fatal("backend should not be inited")
 	}
 
 	// mount an openable backend
@@ -780,14 +780,14 @@ func TestOpenableBackend(t *testing.T) {
 		t.Fatalf("expected one entry, got %d", len(c.mounts.Entries))
 	}
 
-	// run the postUnseal funcs, so that the backend will be opened
+	// run the postUnseal funcs, so that the backend will be inited
 	for _, f := range c.postUnsealFuncs {
 		f()
 	}
-	// sleep briefly so the postUnseal async call to Open() call can finish
+	// sleep briefly so the postUnseal async call to Initialize() call can finish
 	time.Sleep(time.Second)
 
-	if !b.opened {
-		t.Fatal("backend should be open")
+	if !b.inited {
+		t.Fatal("backend should be inited")
 	}
 }
