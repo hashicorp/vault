@@ -1,6 +1,6 @@
 import EditForm from 'core/components/edit-form';
 import layout from '../templates/components/kmip-role-edit-form';
-import { computed } from '@ember/object';
+import { Promise } from 'rsvp';
 
 export default EditForm.extend({
   layout,
@@ -32,16 +32,22 @@ export default EditForm.extend({
     preSave(model) {
       let { display } = this;
 
-      if (display === 'choose') {
-        model.set('operationNone', null);
-        model.set('operationAll', null);
-        return;
-      }
-      model.newFields.without('role').forEach(field => {
-        model.set(field, null);
+      return new Promise(function(resolve) {
+        if (display === 'choose') {
+          model.set('operationNone', null);
+          model.set('operationAll', null);
+          return resolve(model);
+        }
+        model.newFields.without('role').forEach(field => {
+          // this will set operationAll or operationNone to true
+          if (field === display) {
+            model.set(field, true);
+          } else {
+            model.set(field, null);
+          }
+        });
+        return resolve(model);
       });
-      // this will set operationAll or operationNone to true
-      model.set(display, true);
     },
   },
 });
