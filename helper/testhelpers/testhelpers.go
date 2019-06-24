@@ -478,10 +478,16 @@ func getDrToken(t testing.T, tc *vault.TestCluster, id string) string {
 
 func (r *ReplicatedTestClustersBuilder) enablePerformanceSecondary(t testing.T) {
 	c := r.clusters.PerfSecondaryCluster.Cores[0]
-	_, err := c.Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
+	postData := map[string]interface{}{
 		"token":   r.perfToken,
 		"ca_file": r.clusters.PerfPrimaryCluster.CACertPEMFile,
-	})
+	}
+	if r.clusters.PerfPrimaryCluster.ClientAuthRequired {
+		p := r.clusters.PerfPrimaryCluster.Cores[0]
+		postData["client_cert_pem"] = string(p.ServerCertPEM)
+		postData["client_key_pem"] = string(p.ServerKeyPEM)
+	}
+	_, err := c.Client.Logical().Write("sys/replication/performance/secondary/enable", postData)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -773,7 +779,6 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		}
 
 		cluster.UnsealCore(t, core)
-
 	}
 
 	// Join core2
