@@ -1,13 +1,13 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: OIDC - HTTP API"
-sidebar_title: "OIDC"
-sidebar_current: "api-http-secret-identity-oidc"
+sidebar_title: "Identity Tokens"
+sidebar_current: "api-http-secret-identity-tokens"
 description: |-
-  This is the API documentation for configuring and acquiring vault issued OIDC tokens.
+  This is the API documentation for configuring, acquiring, and validating vault issued Identity tokens.
 ---
 
-## Configure OIDC Backend
+## Configure the Identity Tokens Backend
 
 This endpoint updates vault OIDC configurations.
 
@@ -48,9 +48,9 @@ $ curl \
 }
 ```
 
-## Read OIDC Backend Configurations
+## Read Configurations for the Identity Tokens Backend
 
-This endpoint queries vault OIDC configurations.
+This endpoint queries vault identity tokens configurations.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
