@@ -43,6 +43,9 @@ FEATURES:
    Vault authentication [GH-6847]
  * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
  * Add HTTP Request Volume Page to the UI [GH-6925]
+ * Adds Static Accounts for the Combined Database Backed, allowing Vault to 
+   manage password retrieval and rotation for pre-existing database users, with 
+   initial support for PostgreSQL [GH-6834]
 
 IMPROVEMENTS: 
 
