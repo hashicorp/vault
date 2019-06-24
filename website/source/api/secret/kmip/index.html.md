@@ -94,9 +94,9 @@ $ curl \
 
 ## Read Config
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `GET`    | `/kmip/config`            |
+| Method | Path           |
+|:-------|:---------------|
+| `GET`  | `/kmip/config` |
 
 ### Sample Request
 
