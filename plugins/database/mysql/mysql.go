@@ -316,15 +316,14 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 	return m.RawConfig, nil
 }
 
-// SetCredentials uses provided information to set/create a user in the
+// SetCredentials uses provided information to set the password a user in the
 // database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
+// uses the name given, instead of generating a name. This is used for setting
+// the password of static accounts, as well as rolling back passwords in the
+// database in the event an updated database fails to save in Vault's storage.
 func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	if len(statements.Creation) == 0 {
-		return "", "", errors.New("empty creation statements")
+	if len(statements.Rotation) == 0 {
+		return "", "", errors.New("empty rotation statements")
 	}
 
 	username = staticUser.Username
@@ -353,17 +352,7 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 	}()
 	// Return the secret
 
-	// Default to using Creation statements, which are required by the Vault
-	// backend. If the user exists, use the rotation statements, using the default
-	// ones if there are none provided
-	stmts := statements.Creation
-	// if exists {
-	// 	stmts = statements.Rotation
-	// 	if len(stmts) == 0 {
-	// 		stmts = []string{defaultPostgresRotateCredentialsSQL}
-	// 	}
-	// }
-
+	stmts := statements.Rotation
 	// Execute each query
 	for _, stmt := range stmts {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {

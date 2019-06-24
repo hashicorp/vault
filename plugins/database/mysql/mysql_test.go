@@ -9,9 +9,12 @@ import (
 	"testing"
 	"time"
 
+	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/ory/dockertest"
 )
 
@@ -307,6 +310,73 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 }
 
+func TestMySQL_SetCredentials(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t, false)
+	defer cleanup()
+
+	// create the database user
+	dbUser := "vaultstatictest"
+	createTestMySQLUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+	if err := testCredsExist(t, connURL, dbUser, "password"); err != nil {
+		t.Fatalf("Could not connect with credentials: %s", err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	newPassword, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userConfig := dbplugin.StaticUserConfig{
+		Username: dbUser,
+		Password: newPassword,
+	}
+
+	// Test with no configured Rotation Statement
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, userConfig)
+	if err == nil {
+		t.Fatalf("expected error, got none")
+	}
+
+	statements := dbplugin.Statements{
+		Rotation: []string{testRoleStaticRotate},
+	}
+	// User should not exist, make sure we can create
+	username, password, err = db.SetCredentials(context.Background(), statements, userConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// call SetCredentials again, password will change
+	newPassword, _ = db.GenerateCredentials(context.Background())
+	userConfig.Password = newPassword
+	username, password, err = db.SetCredentials(context.Background(), statements, userConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if password != newPassword {
+		t.Fatal("passwords should have changed")
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "root:secret", fmt.Sprintf("%s:%s", username, password), 1)
@@ -316,6 +386,60 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	}
 	defer db.Close()
 	return db.Ping()
+}
+
+func createTestMySQLUser(t *testing.T, connURL, username, password, query string) {
+	t.Helper()
+	db, err := sql.Open("mysql", connURL)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	for _, query := range strutil.ParseArbitraryStringSlice(query, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+		query = dbutil.QueryHelper(query, map[string]string{
+			"name":     username,
+			"password": password,
+		})
+
+		stmt, err := tx.PrepareContext(ctx, query)
+		if err != nil {
+			// If the error code we get back is Error 1295: This command is not
+			// supported in the prepared statement protocol yet, we will execute
+			// the statement without preparing it. This allows the caller to
+			// manually prepare statements, as well as run other not yet
+			// prepare supported commands. If there is no error when running we
+			// will continue to the next statement.
+			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+				_, err = tx.ExecContext(ctx, query)
+				if err != nil {
+					t.Fatal(err)
+				}
+				continue
+			}
+
+			t.Fatal(err)
+		}
+		if _, err := stmt.ExecContext(ctx); err != nil {
+			stmt.Close()
+			t.Fatal(err)
+		}
+		stmt.Close()
+	}
 }
 
 const testMySQLRolePreparedStmt = `
@@ -332,4 +456,13 @@ GRANT SELECT ON *.* TO '{{name}}'@'%';
 const testMySQLRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 DROP USER '{{name}}'@'%';
+`
+
+const testRoleStaticCreate = `
+CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+GRANT SELECT ON *.* TO '{{name}}'@'%';
+`
+
+const testRoleStaticRotate = `
+ALTER USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 `
