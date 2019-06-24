@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "KMIP - Secrets Engines - HTTP API"
-sidebar_title: "KMIP"
+sidebar_title: "KMIP <sup>ENTERPRISE</sup>"
 sidebar_current: "api-http-secret-gcp"
 description: |-
   This is the API documentation for the Vault KMIP secrets engine.
