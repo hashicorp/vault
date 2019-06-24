@@ -80,13 +80,13 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(ha, transactional bool) *Config {
+func DevConfig(storageType string) *Config {
 	ret := &Config{
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
 		Storage: &Storage{
-			Type: "inmem",
+			Type: storageType,
 		},
 
 		Listeners: []*Listener{
@@ -107,15 +107,6 @@ func DevConfig(ha, transactional bool) *Config {
 			PrometheusRetentionTime: prometheusDefaultRetentionTime,
 			DisableHostname:         true,
 		},
-	}
-
-	switch {
-	case ha && transactional:
-		ret.Storage.Type = "inmem_transactional_ha"
-	case !ha && transactional:
-		ret.Storage.Type = "inmem_transactional"
-	case ha && !transactional:
-		ret.Storage.Type = "inmem_ha"
 	}
 
 	return ret
