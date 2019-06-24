@@ -406,6 +406,7 @@ func createTestMySQLUser(t *testing.T, connURL, username, password, query string
 		_ = tx.Rollback()
 	}()
 
+	// copied from mysql.go
 	for _, query := range strutil.ParseArbitraryStringSlice(query, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
@@ -418,12 +419,6 @@ func createTestMySQLUser(t *testing.T, connURL, username, password, query string
 
 		stmt, err := tx.PrepareContext(ctx, query)
 		if err != nil {
-			// If the error code we get back is Error 1295: This command is not
-			// supported in the prepared statement protocol yet, we will execute
-			// the statement without preparing it. This allows the caller to
-			// manually prepare statements, as well as run other not yet
-			// prepare supported commands. If there is no error when running we
-			// will continue to the next statement.
 			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
 				_, err = tx.ExecContext(ctx, query)
 				if err != nil {
