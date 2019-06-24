@@ -19,9 +19,9 @@ update your API calls accordingly.
 
 ## Write Config
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `POST`   | `/kmip/config`            |
+| Method | Path           |
+|:-------|:---------------|
+| `POST` | `/kmip/config` |
 
 This endpoint configures shared information for the secrets engine. After writing
 to it the KMIP engine will generate a CA and start listening for KMIP requests.
@@ -129,9 +129,9 @@ $ curl \
 
 ## Read CA
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `GET`    | `/kmip/ca`            |
+| Method | Path       |
+|:-------|:-----------|
+| `GET`  | `/kmip/ca` |
 
 Returns the CA certificates in PEM format. Returns an error if config has never
 been written.
@@ -157,9 +157,9 @@ $ curl \
 
 ## Write scope
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `POST`   | `/kmip/scope/:scope`            |
+| Method | Path                 |
+|:-------|:---------------------|
+| `POST` | `/kmip/scope/:scope` |
 
 Creates a new scope with the given name.
 
@@ -178,9 +178,9 @@ $ curl \
 
 ## List scopes
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/kmip/scope`            |
+| Method | Path          |
+|:-------|:--------------|
+| `LIST` | `/kmip/scope` |
 
 List existing scopes.
 
@@ -207,9 +207,9 @@ $ curl \
 
 ## Delete scope
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `DELETE`   | `/kmip/scope/:scope`            |
+| Method   | Path                 |
+|:---------|:---------------------|
+| `DELETE` | `/kmip/scope/:scope` |
 
 Delete a scope by name.
 
@@ -231,9 +231,9 @@ $ curl \
 
 ## Write role
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `POST`   | `/kmip/scope/:scope/role/:role`            |
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `POST` | `/kmip/scope/:scope/role/:role` |
 
 Creates or updates a role. 
 
@@ -298,9 +298,9 @@ $ curl \
 
 ## Read role
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `GET`   | `/kmip/scope/:scope/role/:role`            |
+| Method | Path                            |
+|:-------|:--------------------------------|
+| `GET`  | `/kmip/scope/:scope/role/:role` |
 
 Read a role.
 
@@ -339,9 +339,9 @@ $ curl \
 
 ## List roles
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/kmip/scope/:scope/role`            |
+| Method | Path                      |
+|:-------|:--------------------------|
+| `LIST` | `/kmip/scope/:scope/role` |
 
 List roles with a scope.
 
@@ -372,9 +372,9 @@ $ curl \
 
 ## Delete role
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `DELETE`   | `/kmip/scope/:scope/role/:role`            |
+| Method   | Path                            |
+|:---------|:--------------------------------|
+| `DELETE` | `/kmip/scope/:scope/role/:role` |
 
 Delete a role by name.
 
@@ -395,9 +395,9 @@ $ curl \
 
 ## Generate credential
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `POST`   | `/kmip/scope/:scope/role/:role/credential/generate`            |
+| Method | Path                                                |
+|:-------|:----------------------------------------------------|
+| `POST` | `/kmip/scope/:scope/role/:role/credential/generate` |
 
 Create a new client certificate tied to the given role and scope.
 
@@ -435,9 +435,9 @@ $ curl \
 
 ## Lookup credential
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `GET`   | `/kmip/scope/:scope/role/:role/credential/lookup`            |
+| Method | Path                                              |
+|:-------|:--------------------------------------------------|
+| `GET`  | `/kmip/scope/:scope/role/:role/credential/lookup` |
 
 Read a certificate by serial number. The private key cannot be obtained except
 at generation time.
@@ -476,9 +476,9 @@ $ curl \
 
 ## List credential serial numbers
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/kmip/scope/:scope/role/:role/credential`            |
+| Method | Path                                       |
+|:-------|:-------------------------------------------|
+| `LIST` | `/kmip/scope/:scope/role/:role/credential` |
 
 List the serial numbers of all certificates within a role.
 
@@ -510,9 +510,9 @@ $ curl \
 
 ## Revoke credential
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `POST`   | `/kmip/scope/:scope/role/:role/credential/revoke`            |
+| Method | Path                                              |
+|:-------|:--------------------------------------------------|
+| `POST` | `/kmip/scope/:scope/role/:role/credential/revoke` |
 
 Delete a certificate, thereby revoking it.
 
