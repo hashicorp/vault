@@ -97,11 +97,21 @@ $ curl \
 
 ## Take a snapshot of the Raft cluster
 
-This endpoint returns a snapshot of the current state of the raft cluster.
+This endpoint returns a snapshot of the current state of the raft cluster. The
+snapshot is returned as binary data and should be redirected to a file.
 
 | Method                       | Path                           |
 | :--------------------------- | :----------------------------  |
 | `GET`                          | `/sys/storage/raft/snapshot`  |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > raft.snap
+```
 
 ## Restore Raft using a snapshot
 
@@ -111,5 +121,34 @@ Installs the provided snapshot, returning the cluster to the state defined in it
 | :--------------------------- | :--------------------- |
 | `POST`   | `/sys/storage/raft/snapshot`    |
 
-The snapshot should be set as the request's body.
 
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    -- data-binary @raft.snap
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot
+```
+
+## Force Restore Raft using a snapshot
+
+Installs the provided snapshot, returning the cluster to the state defined in
+it. This is same as writing to `/sys/storage/raft/snapshot` except that this
+bypasses checks ensuring the Autounseal or shamir keys are consistent with the
+snapshot data.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/storage/raft/snapshot-force`    |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @raft.snap
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+```
