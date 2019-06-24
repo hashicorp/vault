@@ -20,3 +20,4 @@ see the [Vault Identity documentation](/docs/secrets/identity/index.html).
  * [Group](group.html)
  * [Group Alias](group-alias.html)
  * [Lookup](lookup.html)
+ * [OIDC](oidc.html)
