@@ -53,7 +53,7 @@ changed, the server will be restarted using the new settings.
 
 - `tls_max_path_length` (`int: 10`) - Max path length.
 
-- `tls_min_version` (`string: "tls12"`) - Min TLS version to accept.
+- `tls_min_version` (`string: "tls12"`) - Minimum TLS version to accept.
 
 - `default_tls_client_key_type` (`string: "ec"`): - Client certificate key type, 
   `rsa` or `ec`.
