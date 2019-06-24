@@ -816,7 +816,7 @@ func TestUpdateUpgradableRoleEntries(t *testing.T) {
 	}
 
 	// upgrade all the entries
-	err = b.updateUpgradableRoleEntries(ctx, storage)
+	err = b.updateUpgradableRoleEntries(ctx, &logical.Request{Storage: storage})
 
 	// read the entries from storage
 	after := make([]testData, 0)

@@ -741,7 +741,7 @@ type openableBackend struct {
 	opened bool
 }
 
-func (b *openableBackend) Open(context.Context, logical.Storage) error {
+func (b *openableBackend) Open(context.Context, *logical.Request) error {
 	b.opened = true
 	return nil
 }
@@ -749,7 +749,6 @@ func (b *openableBackend) Open(context.Context, logical.Storage) error {
 func TestOpenableBackend(t *testing.T) {
 
 	b := &openableBackend{}
-	var _ logical.OpenableBackend = b
 	if b.opened {
 		t.Fatal("backend should not be open")
 	}

@@ -1107,16 +1107,14 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 			// Add a post-unseal func that will asynchronously call the
 			// backend's Open() function
-			if ob, ok := backend.(logical.OpenableBackend); ok {
-				c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-					go func() {
-						err := ob.Open(ctx, view)
-						if err != nil {
-							c.logger.Error("failed to open entry", "path", entry.Path, "error", err)
-						}
-					}()
-				})
-			}
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				go func() {
+					err := backend.Open(ctx, nil /* TODO pass in the correct parameter */)
+					if err != nil {
+						c.logger.Error("failed to open entry", "path", entry.Path, "error", err)
+					}
+				}()
+			})
 		}
 
 		// If the mount is filtered or we are on a DR secondary we don't want to

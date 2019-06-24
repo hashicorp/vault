@@ -80,18 +80,12 @@ type Backend interface {
 	// configuration.
 	Setup(context.Context, *BackendConfig) error
 
-	// Type returns the BackendType for the particular backend
-	Type() BackendType
-}
-
-// OpenableBackend is a backend that needs to perform some tasks
-// after having been mounted.
-type OpenableBackend interface {
-	Backend
-
 	// Open is invoked just after mounting a backend to allow it to
 	// handle any tasks that need to be performed.
-	Open(context.Context, Storage) error
+	Open(context.Context, *Request) error
+
+	// Type returns the BackendType for the particular backend
+	Type() BackendType
 }
 
 // BackendConfig is provided to the factory to initialize the backend

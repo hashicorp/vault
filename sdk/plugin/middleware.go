@@ -54,6 +54,15 @@ func (b *backendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req
 	return b.next.HandleExistenceCheck(ctx, req)
 }
 
+func (b *backendTracingMiddleware) Open(ctx context.Context, req *logical.Request) (err error) {
+	defer func(then time.Time) {
+		b.logger.Trace("open", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	b.logger.Trace("open", "path", req.Path, "status", "started")
+	return b.next.Open(ctx, req)
+}
+
 func (b *backendTracingMiddleware) Cleanup(ctx context.Context) {
 	defer func(then time.Time) {
 		b.logger.Trace("cleanup", "status", "finished", "took", time.Since(then))

@@ -674,6 +674,10 @@ func (n *rawHTTP) HandleExistenceCheck(ctx context.Context, req *logical.Request
 	return false, false, nil
 }
 
+func (n *rawHTTP) Open(ctx context.Context, req *logical.Request) error {
+	return nil
+}
+
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
 }

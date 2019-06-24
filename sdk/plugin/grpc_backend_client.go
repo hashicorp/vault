@@ -140,6 +140,11 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
+func (b *backendGRPCPluginClient) Open(ctx context.Context, req *logical.Request) error {
+	/* TODO implement this properly */
+	return nil
+}
+
 func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)

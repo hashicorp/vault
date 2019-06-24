@@ -325,7 +325,7 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 
 // updateUpgradableRoleEntries upgrades and persists all of the role entries
 // that are in need of being upgraded.
-func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) error {
+func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.Request) error {
 
 	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
 	// performance replicated standby cluster.
@@ -336,7 +336,7 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Sto
 
 	// Read all the role names.
 	b.roleMutex.RLock()
-	roleNames, err := s.List(ctx, "role/")
+	roleNames, err := req.Storage.List(ctx, "role/")
 	b.roleMutex.RUnlock()
 	if err != nil {
 		return err
@@ -344,7 +344,7 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Sto
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
-		err := b.updateUpgradableRoleEntry(ctx, s, roleName)
+		err := b.updateUpgradableRoleEntry(ctx, req.Storage, roleName)
 		if err != nil {
 			return err
 		}
@@ -355,8 +355,7 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Sto
 
 // updateUpgradableRoleEntry uses the write lock to read a role and persist it
 // if it needs to be upgraded.
-func (b *backend) updateUpgradableRoleEntry(
-	ctx context.Context, s logical.Storage, roleName string) error {
+func (b *backend) updateUpgradableRoleEntry(ctx context.Context, s logical.Storage, roleName string) error {
 
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()

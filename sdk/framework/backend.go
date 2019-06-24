@@ -114,7 +114,7 @@ type CleanupFunc func(context.Context)
 type InvalidateFunc func(context.Context, string)
 
 // OpenFunc is the callback for backend opening upon mounting.
-type OpenFunc func(context.Context, logical.Storage) error
+type OpenFunc func(context.Context, *logical.Request) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -273,9 +273,9 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 
 // Open is invoked just after mounting a backend to allow it to
 // handle any tasks that need to be performed.
-func (b *Backend) Open(ctx context.Context, storage logical.Storage) error {
+func (b *Backend) Open(ctx context.Context, req *logical.Request) error {
 	if b.Opener != nil {
-		return b.Opener(ctx, storage)
+		return b.Opener(ctx, req)
 	}
 	return nil
 }
