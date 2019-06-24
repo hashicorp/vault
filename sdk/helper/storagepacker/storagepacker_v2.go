@@ -1,3 +1,5 @@
+// Implements a storage layer that uses a radix tree and multiple buckets
+// to provide arbitrarily-scalable storage on top of fixed-maximum-size objects.
 package storagepacker
 
 import (
@@ -5,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"sort"
 )
 
 const (
