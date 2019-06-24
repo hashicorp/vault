@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -27,6 +28,8 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
+
+	fmt.Printf("===== req: %#v\n", req)
 
 	tlsConfig, err := tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
 	if err != nil {
