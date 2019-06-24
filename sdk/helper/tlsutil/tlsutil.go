@@ -72,16 +72,19 @@ func GetCipherName(cipher uint16) (string, error) {
 
 func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.Config, error) {
 	var tlsConfig *tls.Config
+	var pool *x509.CertPool
 
 	switch {
-	case len(caCert) != 0 && len(clientCert) != 0 && len(clientKey) != 0:
+	case len(clientCert) != 0 && len(clientKey) != 0:
 		// Valid
-	case len(caCert) != 0, len(clientCert) != 0, len(clientKey) != 0:
+	default:
 		return nil, ErrInvalidCertParams
 	}
 
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(caCert)
+	if len(caCert) != 0 {
+		pool = x509.NewCertPool()
+		pool.AppendCertsFromPEM(caCert)
+	}
 
 	cert, err := tls.X509KeyPair(clientCert, clientKey)
 	if err != nil {
