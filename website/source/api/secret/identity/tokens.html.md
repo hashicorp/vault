@@ -9,7 +9,7 @@ description: |-
 
 ## Configure the Identity Tokens Backend
 
-This endpoint updates vault OIDC configurations.
+This endpoint updates configurations for OIDC-compliant identity tokens issued by Vault.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
@@ -91,7 +91,7 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 
 - `verification_ttl` `(int or time string: "24h")` - Controls how long the public portion of a signing key will be available for verification after being rotated.
 
-- "algorithm" `(string: "RS256")` - Signing algorithm to use. This will default to `"RS256"`, and is currently the only allowed value.
+- `algorithm` `(string: "RS256")` - Signing algorithm to use. This will default to `"RS256"`, and is currently the only allowed value.
 
 ### Sample Payload
 
@@ -208,7 +208,7 @@ This endpoint rotates a named key.
 
 - `name` `(string)` – Name of the key to be rotated.
 
-- `verification_ttl` `(string: <optional>)` - Controls how long the public portion of the key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key."
+- `verification_ttl` `(string: <optional>)` - Controls how long the public portion of the key will be available for verification after being rotated. Setting verification_ttl here will override the verification_ttl set on the key.
 
 ### Sample Payload
 
@@ -244,7 +244,7 @@ Create or update a role. ID tokens are generated against a role and signed again
 
 -	`template` `(string: <optional>)` - The template string to use for generating tokens. This may be in string-ified JSON or base64 format.
 
-- `ttl` `(int or time string: "24h") - TTL of the tokens generated against the role. Can be specified as a number of seconds or as a time string like "30m" or "6h".
+- `ttl` `(int or time string: "24h")` - TTL of the tokens generated against the role. Can be specified as a number of seconds or as a time string like "30m" or "6h".
 
 ### Sample Payload
 
@@ -353,7 +353,6 @@ $ curl \
 
 ## Generate a Signed ID Token
 
-
 Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
@@ -408,6 +407,16 @@ This endpoint can verify the authenticity and active state of a signed ID token.
 }
 ```
 
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/oidc/introspect
+```
+
 ### Sample Response
 
 
@@ -431,7 +440,7 @@ Query this path to retrieve the configured OIDC Issuer, Keys endpoint, Subjects,
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request LIST \
+    --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/openid-configuration
 ```
 
@@ -464,7 +473,7 @@ Query this path to retrieve the public portion of named keys which are able to v
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request LIST \
+    --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/keys
 ```
 
