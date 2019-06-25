@@ -147,10 +147,10 @@ func (r *ResponseError) GrpcCode() codes.Code {
 	}
 }
 
-// ResponseErrorCode is a helper to convert an error returned from a Vault api
+// ResponseErrorCode is a helper to convert an error returned from a Vault API
 // request to a gRPC code. An example usage would be:
 //
-// 	secret, err := vaultClient.Logical().Write(path, payload)
+//  secret, err := vaultClient.Logical().Write(path, payload)
 //  if err != nil {
 //    code := api.ResponseErrorCode(err)
 //    ...
