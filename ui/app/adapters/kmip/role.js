@@ -20,6 +20,8 @@ export default BaseAdapter.extend({
   },
 
   serialize(snapshot) {
+    // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
+    // other values, so we manually check for them and send an abbreviated object
     let json = snapshot.serialize();
     if (json.operation_all) {
       return { operation_all: true };

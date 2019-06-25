@@ -19,6 +19,8 @@ export default EditForm.extend({
 
   actions: {
     updateModel(val) {
+      // here we only want to toggle operation(None|All) because we don't want to clear the other options in
+      // the case where the user clicks back to "choose" before saving
       if (val === 'operationAll') {
         this.model.set('operationNone', false);
         this.model.set('operationAll', true);
