@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -211,11 +212,13 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
-	if resp.Data["rotation_period"].(int64) != 86400 {
-		t.Fatalf("Expected response to contain a data entry \"rotation_period\":86400 but instead got %#v", resp.Data["rotation_period"])
+	expected := map[string]interface{}{
+		"rotation_period":  int64(86400),
+		"verification_ttl": int64(86400),
+		"algorithm":        "RS256",
 	}
-	if resp.Data["verification_ttl"].(int64) != 86400 {
-		t.Fatalf("Expected response to contain a data entry \"verification_ttl\":86400 but instead got %#v", resp.Data["verification_ttl"])
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Update "test-key" -- should succeed
@@ -237,11 +240,13 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
-	if resp.Data["rotation_period"].(int64) != 600 {
-		t.Fatalf("Expected response to contain a data entry \"rotation_period\":600 but instead got %#v", resp.Data["rotation_period"])
+	expected = map[string]interface{}{
+		"rotation_period":  int64(600),
+		"verification_ttl": int64(3600),
+		"algorithm":        "RS256",
 	}
-	if resp.Data["verification_ttl"].(int64) != 3600 {
-		t.Fatalf("Expected response to contain a data entry \"verification_ttl\":3600 but instead got %#v", resp.Data["verification_ttl"])
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Create a role that depends on test key
