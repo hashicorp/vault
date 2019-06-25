@@ -741,7 +741,7 @@ type initableBackend struct {
 	inited bool
 }
 
-func (b *initableBackend) Initialize(context.Context, *logical.Request) error {
+func (b *initableBackend) Initialize(context.Context, *logical.InitializationRequest) error {
 	b.inited = true
 	return nil
 }

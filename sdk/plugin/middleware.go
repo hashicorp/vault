@@ -54,12 +54,12 @@ func (b *backendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req
 	return b.next.HandleExistenceCheck(ctx, req)
 }
 
-func (b *backendTracingMiddleware) Initialize(ctx context.Context, req *logical.Request) (err error) {
+func (b *backendTracingMiddleware) Initialize(ctx context.Context, req *logical.InitializationRequest) (err error) {
 	defer func(then time.Time) {
-		b.logger.Trace("initialize", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
+		b.logger.Trace("initialize", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("initialize", "path", req.Path, "status", "started")
+	b.logger.Trace("initialize", "status", "started")
 	return b.next.Initialize(ctx, req)
 }
 

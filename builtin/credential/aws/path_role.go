@@ -325,7 +325,7 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 
 // updateUpgradableRoleEntries upgrades and persists all of the role entries
 // that are in need of being upgraded.
-func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.Request) error {
+func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.InitializationRequest) error {
 
 	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
 	// performance replicated standby cluster.

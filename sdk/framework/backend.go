@@ -114,7 +114,7 @@ type CleanupFunc func(context.Context)
 type InvalidateFunc func(context.Context, string)
 
 // InitializeFunc is the callback for backend initialization upon mounting.
-type InitializeFunc func(context.Context, *logical.Request) error
+type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -273,7 +273,7 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 
 // Initialize is invoked just after mounting a backend to allow it to
 // handle any initialization tasks that need to be performed.
-func (b *Backend) Initialize(ctx context.Context, req *logical.Request) error {
+func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	if b.InitializeFunc != nil {
 		return b.InitializeFunc(ctx, req)
 	}

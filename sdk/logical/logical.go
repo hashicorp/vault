@@ -82,15 +82,15 @@ type Backend interface {
 
 	// Initialize is invoked just after mounting a backend to allow it to
 	// handle any initialization tasks that need to be performed.
-	Initialize(context.Context, *Request) error
+	Initialize(context.Context, *InitializationRequest) error
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType
 }
 
-// BackendConfig is provided to the factory to initialize the backend
+// BackendConfig is provided to the factory to setup the backend
 type BackendConfig struct {
-	// View should not be stored, and should only be used for initialization
+	// View should not be stored, and should only be used for setup
 	StorageView Storage
 
 	// The backend should use this logger. The log should not contain any secrets.
@@ -106,6 +106,13 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+}
+
+// InitializationRequest is provided to backend.Initialize()
+type InitializationRequest struct {
+
+	// Storage can be used to durably store and retrieve state.
+	Storage Storage
 }
 
 // Factory is the factory function to create a logical backend.

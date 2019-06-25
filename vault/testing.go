@@ -693,7 +693,7 @@ func (n *rawHTTP) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *rawHTTP) Initialize(ctx context.Context, req *logical.Request) error {
+func (n *rawHTTP) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	return nil
 }
 

@@ -85,14 +85,13 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 }
 
 func (b *backendGRPCPluginServer) Initialize(ctx context.Context, args *pb.InitializeArgs) (*pb.InitializeReply, error) {
-
 	if pluginutil.InMetadataMode() {
 		return &pb.InitializeReply{}, ErrServerInMetadataMode
 	}
 
-	//req := &logical.InitializationRequest{Storage: newGRPCStorageClient(b.brokeredClient)}
-
-	respErr := b.backend.Initialize(ctx, nil /* TODO req */)
+	req := &logical.InitializationRequest{
+		Storage: newGRPCStorageClient(b.brokeredClient)}
+	respErr := b.backend.Initialize(ctx, req)
 
 	return &pb.InitializeReply{
 		Err: pb.ErrToProtoErr(respErr),

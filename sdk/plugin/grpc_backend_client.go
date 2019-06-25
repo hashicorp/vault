@@ -140,7 +140,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request /* TODO we aren't using this */) error {
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
 	if b.metadataMode {
 		return ErrClientInMetadataMode
 	}
