@@ -853,55 +853,68 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 	}
 	txn.Commit()
 
-	// Create a test key "test-key"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/key/test-key",
-		Operation: logical.CreateOperation,
-		Storage:   storage,
-	})
+	for _, alg := range []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "EdDSA"} {
+		key := "test-key-" + alg
+		role := "test-role-" + alg
 
-	// Create a test role "test-role"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/test-role",
-		Operation: logical.CreateOperation,
-		Data: map[string]interface{}{
-			"key": "test-key",
-		},
-		Storage: storage,
-	})
+		// Create a test key "test-key"
+		resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/key/" + key,
+			Operation: logical.CreateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"algorithm": alg,
+			},
+		})
+		expectSuccess(t, resp, err)
 
-	// Generate a token against the role "test-role" -- should succeed
-	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/token/test-role",
-		Operation: logical.ReadOperation,
-		Storage:   storage,
-		EntityID:  "test-entity-id",
-	})
-	validToken := resp.Data["token"].(string)
-	// --- Populate backend with a valid token
+		// Create a test role "test-role"
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/role/" + role,
+			Operation: logical.CreateOperation,
+			Data: map[string]interface{}{
+				"key": key,
+			},
+			Storage: storage,
+		})
+		expectSuccess(t, resp, err)
 
-	//	Expect active true and no error from a valid token
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/introspect/",
-		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"token": validToken,
-		},
-		Storage: storage,
-	})
-	expectSuccess(t, resp, err)
-	iresp2 := &introspectResponse{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), iresp2)
-	if !iresp2.Active {
-		t.Fatalf("expected active state of a valid token to be true but what was found to be: %t", iresp2.Active)
-	}
-	if iresp2.Error != "" {
-		t.Fatalf("expected a valid token to return an empty error message but instead got %q", iresp.Error)
+		// Generate a token against the role "test-role" -- should succeed
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/token/" + role,
+			Operation: logical.ReadOperation,
+			Storage:   storage,
+			EntityID:  "test-entity-id",
+		})
+		expectSuccess(t, resp, err)
+
+		validToken := resp.Data["token"].(string)
+		// --- Populate backend with a valid token
+
+		//	Expect active true and no error from a valid token
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/introspect/",
+			Operation: logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"token": validToken,
+			},
+			Storage: storage,
+		})
+		expectSuccess(t, resp, err)
+		iresp2 := &introspectResponse{}
+		json.Unmarshal(resp.Data["http_raw_body"].([]byte), iresp2)
+		if !iresp2.Active {
+			t.Fatalf("expected active state of a valid token to be true but what was found to be: %t", iresp2.Active)
+		}
+		if iresp2.Error != "" {
+			t.Fatalf("expected a valid token to return an empty error message but instead got %q", iresp.Error)
+		}
 	}
 }
 
 // some helpers
 func expectSuccess(t *testing.T, resp *logical.Response, err error) {
+	t.Helper()
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("expected success but got error:\n%v\nresp: %#v", err, resp)
 	}
