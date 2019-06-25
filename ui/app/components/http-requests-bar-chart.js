@@ -105,8 +105,9 @@ export default Component.extend({
       .attr('class', 'd3-tooltip')
       .offset([HOVER_PADDING / 2, 0])
       .html(function(d) {
+        const formatter = d3TimeFormat.utcFormat('%B %Y');
         return `
-          <p>${formatDate(d.start_time, 'MMMM YYYY')}</p>
+          <p class="date">${formatter(d.start_time)}</p>
           <p>${Intl.NumberFormat().format(d.total)} Requests</p>
         `;
       });
@@ -166,6 +167,7 @@ export default Component.extend({
     bars.exit().remove();
 
     // render transparent bars and bind the tooltip to them
+    // since we cannot bind the tooltip to the actual bars
     const shadowBarsContainer = d3.select('.shadow-bars');
 
     const shadowBars = shadowBarsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);

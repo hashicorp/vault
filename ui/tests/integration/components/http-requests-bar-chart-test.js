@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const COUNTERS = [
@@ -25,7 +25,7 @@ module('Integration | Component | http-requests-bar-chart', function(hooks) {
   test('it renders the correct number of bars, ticks, and gridlines', async function(assert) {
     await render(hbs`<HttpRequestsBarChart @counters={{counters}}/>`);
 
-    assert.equal(this.element.querySelectorAll('.bar').length, 3);
+    assert.equal(this.element.querySelectorAll('.bar').length, 6, 'it renders the bars and shadow bars');
     assert.equal(this.element.querySelectorAll('.tick').length, 9), 'it renders the ticks and gridlines';
   });
 
@@ -42,5 +42,13 @@ module('Integration | Component | http-requests-bar-chart', function(hooks) {
       '2k',
       'y axis ticks should round to the nearest thousand'
     );
+  });
+
+  test('it renders a tooltip', async function(assert) {
+    await render(hbs`<HttpRequestsBarChart @counters={{counters}}/>`);
+    await triggerEvent('.shadow-bars>.bar', 'mouseenter');
+    const tooltipLabel = document.querySelector('.d3-tooltip .date');
+
+    assert.equal(tooltipLabel.textContent, 'April 2019', 'it shows the tooltip with the formatted date');
   });
 });
