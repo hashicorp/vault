@@ -84,7 +84,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 	}, nil
 }
 
-func (b *backendGRPCPluginServer) Initialize(ctx context.Context, args *pb.InitializeArgs) (*pb.InitializeReply, error) {
+func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
 	if pluginutil.InMetadataMode() {
 		return &pb.InitializeReply{}, ErrServerInMetadataMode
 	}
