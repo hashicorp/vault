@@ -80,7 +80,6 @@
     "ember-cli-inject-live-reload": "^1.8.2",
     "ember-cli-page-object": "^1.15.3",
     "ember-cli-pretender": "^3.1.1",
-    "ember-cli-qunit": "^4.3.2",
     "ember-cli-sass": "^9.0.0",
     "ember-cli-sri": "meirish/ember-cli-sri#rooturl",
     "ember-cli-string-helpers": "^1.5.0",
