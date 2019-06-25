@@ -29,19 +29,13 @@ import formatDate from 'date-fns/format';
  * ]
  */
 
-const COUNTERS = [
-  { start_time: '2019-04-01T00:00:00Z', total: 5500 },
-  { start_time: '2019-05-01T00:00:00Z', total: 4500 },
-  { start_time: '2019-06-01T00:00:00Z', total: 5000 },
-];
-
 const HEIGHT = 240;
 
 const HOVER_PADDING = 12;
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
-  counters: COUNTERS,
+  counters: null,
   margin: { top: 24, right: 16, bottom: 24, left: 16 },
   padding: 0.04,
   width: 0,
@@ -91,8 +85,6 @@ export default Component.extend({
       this.renderBarChart();
     });
   },
-
-  updateActiveDatum() {},
 
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters } = this;
