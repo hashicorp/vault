@@ -577,16 +577,20 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "allowed_policies": [
-      "dev"
+    "allowed_entity_aliases": [
+      "my-entity-alias"
     ],
+    "allowed_policies": [],
     "disallowed_policies": [],
     "explicit_max_ttl": 0,
     "name": "nomad",
     "orphan": false,
     "path_suffix": "",
     "period": 0,
-    "renewable": true
+    "renewable": true,
+    "token_explicit_max_ttl": 0,
+    "token_period": 0,
+    "token_type": "default-service"
   },
   "warnings": null
 }
@@ -699,7 +703,8 @@ tokens created against a role to be revoked using the
   "name": "nomad",
   "orphan": false,
   "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"],
-  "renewable": true
+  "renewable": true,
+  "allowed_entity_aliases": ["web-entity-alias", "app-entity-*"]
 ```
 
 ### Sample Request

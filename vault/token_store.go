@@ -3047,6 +3047,7 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"path_suffix":            role.PathSuffix,
 			"renewable":              role.Renewable,
 			"token_type":             role.TokenType.String(),
+			"allowed_entity_aliases": role.AllowedEntityAliases,
 		},
 	}
 
