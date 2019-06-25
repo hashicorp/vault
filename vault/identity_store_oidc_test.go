@@ -48,14 +48,14 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
-	if resp.Data["client_id"].(string) == "" {
-		t.Fatalf("Expected response to contain a client_id but instead got %#v", resp.Data["client_id"])
+	expected := map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(86400),
+		"template":  "",
+		"client_id": resp.Data["client_id"],
 	}
-	if resp.Data["key"].(string) != "test-key" {
-		t.Fatalf("Expected response to contain an entry \"key\":\"test-key\" but instead got %#v", resp.Data["key"])
-	}
-	if resp.Data["ttl"].(int64) != 86400 {
-		t.Fatalf("Expected response to contain an entry \"ttl\":86400 but instead got %#v", resp.Data["ttl"])
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Create a test role "test-role2" witn an invalid key -- should fail
@@ -88,17 +88,14 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
-	if resp.Data["client_id"].(string) == "" {
-		t.Fatalf("Expected response to contain a client_id but instead got %#v", resp.Data["client_id"])
+	expected = map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(7200),
+		"template":  "{\"some-key\":\"some-value\"}",
+		"client_id": resp.Data["client_id"],
 	}
-	if resp.Data["key"].(string) != "test-key" {
-		t.Fatalf("Expected response to contain an entry \"key\":\"test-key\" but instead got %#v", resp.Data["key"])
-	}
-	if resp.Data["ttl"].(int64) != 7200 {
-		t.Fatalf("Expected response to contain an entry \"ttl\":7200 but instead got %#v", resp.Data["ttl"])
-	}
-	if resp.Data["template"].(string) != "{\"some-key\":\"some-value\"}" {
-		t.Fatalf("Expected response to contain an entry \"template\":\"{\"some-key\":\"some-value\"}\" but instead got %#v", resp.Data["template"])
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Delete "test-role1"
