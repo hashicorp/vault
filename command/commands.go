@@ -35,6 +35,7 @@ import (
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	credOci "github.com/hashicorp/vault/builtin/credential/oci"
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
@@ -173,6 +174,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"userpass": &credUserpass.CLIHandler{
 			DefaultMount: "userpass",
 		},
+		"oci":      &credOci.CLIHandler{},
 	}
 
 	getBaseCommand := func() *BaseCommand {
