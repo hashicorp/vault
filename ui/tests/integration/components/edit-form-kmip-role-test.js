@@ -63,7 +63,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
   });
 
   test('it renders: operationNone', async function(assert) {
-    let model = createModel({ operationNone: true, operationGet: true });
+    let model = createModel({ operationNone: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
@@ -157,26 +157,4 @@ module('Integration | Component | edit form kmip role', function(hooks) {
       });
     });
   }
-
-  //test('it calls flash message fns on save', async function(assert) {
-  //let model = createModel();
-  //let onSave = () => {
-  //return resolve();
-  //};
-  //this.set('model', model);
-  //this.set('onSave', onSave);
-  //let saveSpy = sinon.spy(this, 'onSave');
-
-  //await render(hbs`{{edit-form model=model onSave=onSave}}`);
-
-  //component.submit();
-  //later(() => run.cancelTimers(), 50);
-  //return settled().then(() => {
-  //assert.ok(saveSpy.calledOnce, 'calls passed onSave');
-  //assert.equal(saveSpy.getCall(0).args[0].saveType, 'save');
-  //assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
-  //let flash = this.owner.lookup('service:flash-messages');
-  //assert.equal(flash.success.callCount, 1, 'calls flash message success');
-  //});
-  //});
 });
