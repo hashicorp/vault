@@ -62,4 +62,4 @@ over encrypted connections.
 - `tls_skip_verify` `(string: "false")` – Disable verification of TLS certificates.
   Using this option is highly discouraged.
 
-[raft]: "https://raft.github.io/" "The Raft Consensus Algorithm"
+[raft]: https://raft.github.io/ "The Raft Consensus Algorithm"
