@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -157,8 +158,21 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 }
 
 // HandleRequest is the logical.Backend implementation.
-func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	b.once.Do(b.init)
+
+	defer func() {
+		e := recover()
+		if e != nil {
+			if _, ok := e.(runtime.Error); ok {
+				panic(e)
+			}
+			var ok bool
+			if err, ok = e.(error); !ok {
+				err = fmt.Errorf("error handling request: %v", e)
+			}
+		}
+	}()
 
 	// Check for special cased global operations. These don't route
 	// to a specific Path.
@@ -226,13 +240,6 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	fd := FieldData{
 		Raw:    raw,
 		Schema: path.Fields}
-
-	if req.Operation != logical.HelpOperation {
-		err := fd.Validate()
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	return callback(ctx, req, &fd)
 }
