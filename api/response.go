@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"google.golang.org/grpc/codes"
 )
 
 // Response is a raw response that wraps an HTTP response.
@@ -42,36 +43,106 @@ func (r *Response) Error() error {
 	r.Body.Close()
 	r.Body = ioutil.NopCloser(bodyBuf)
 
+	// Build up the error object
+	respErr := &ResponseError{
+		HTTPMethod: r.Request.Method,
+		URL:        r.Request.URL.String(),
+		StatusCode: r.StatusCode,
+	}
+
 	// Decode the error response if we can. Note that we wrap the bodyBuf
 	// in a bytes.Reader here so that the JSON decoder doesn't move the
 	// read pointer for the original buffer.
 	var resp ErrorResponse
 	if err := jsonutil.DecodeJSON(bodyBuf.Bytes(), &resp); err != nil {
-		// Ignore the decoding error and just drop the raw response
-		return fmt.Errorf(
-			"Error making API request.\n\n"+
-				"URL: %s %s\n"+
-				"Code: %d. Raw Message:\n\n%s",
-			r.Request.Method, r.Request.URL.String(),
-			r.StatusCode, bodyBuf.String())
+		// Store the fact that we couldn't decode the errors
+		respErr.RawError = true
+		respErr.Errors = []string{bodyBuf.String()}
 	}
 
-	var errBody bytes.Buffer
-	errBody.WriteString(fmt.Sprintf(
-		"Error making API request.\n\n"+
-			"URL: %s %s\n"+
-			"Code: %d. Errors:\n\n",
-		r.Request.Method, r.Request.URL.String(),
-		r.StatusCode))
-	for _, err := range resp.Errors {
-		errBody.WriteString(fmt.Sprintf("* %s", err))
-	}
-
-	return fmt.Errorf(errBody.String())
+	// Store the decoded errors
+	respErr.Errors = resp.Errors
+	return respErr
 }
 
 // ErrorResponse is the raw structure of errors when they're returned by the
 // HTTP API.
 type ErrorResponse struct {
 	Errors []string
+}
+
+// ResponseError is the error returned when Vault responds with an error or
+// non-success HTTP status code. If a request to Vault fails because of a
+// network error a different error message will be returned. ResponseError gives
+// access to the underlying errors and status code.
+type ResponseError struct {
+	// HTTPMethod is the HTTP method for the request (PUT, GET, etc).
+	HTTPMethod string
+
+	// URL is the URL of the request.
+	URL string
+
+	// StatusCode is the HTTP status code.
+	StatusCode int
+
+	// RawError marks that the underlying error messages returned by Vault were
+	// not parsable. The Errors slice will contain the raw response body as the
+	// first and only error string if this value is set to true.
+	RawError bool
+
+	// Errors are the underlying errors returned by Vault.
+	Errors []string
+}
+
+// Error returns a human-readable error string for the response error.
+func (r *ResponseError) Error() string {
+	errString := "Errors"
+	if r.RawError {
+		errString = "Raw Message"
+	}
+
+	var errBody bytes.Buffer
+	errBody.WriteString(fmt.Sprintf(
+		"Error making API request.\n\n"+
+			"URL: %s %s\n"+
+			"Code: %d. %s:\n\n",
+		r.HTTPMethod, r.URL, r.StatusCode, errString))
+
+	if r.RawError && len(r.Errors) == 1 {
+		errBody.WriteString(r.Errors[0])
+	} else {
+		for _, err := range r.Errors {
+			errBody.WriteString(fmt.Sprintf("* %s", err))
+		}
+	}
+
+	return errBody.String()
+}
+
+// GrpcCode maps the HTTP Status Code to a gRPC status code
+func (r *ResponseError) GrpcCode() codes.Code {
+	switch r.StatusCode {
+	case 200, 204:
+		// Success codes
+		return codes.OK
+	case 429, 473:
+		// Default return code for health status of standby nodes and
+		// performance standby nodes.
+		return codes.OK
+	case 400:
+		// Invalid request, missing or invalid data.
+		return codes.InvalidArgument
+	case 500:
+		// Internal server error.
+		return codes.Internal
+	case 502:
+		// A request to Vault required Vault making a request to a third party;
+		// the third party responded with an error of some kind.
+		return codes.Unavailable
+	case 503:
+		// Vault is down for maintenance or is currently sealed.
+		return codes.Unavailable
+	default:
+		return codes.Unknown
+	}
 }
