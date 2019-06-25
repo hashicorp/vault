@@ -1,4 +1,4 @@
-## Next
+## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:
 
