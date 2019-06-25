@@ -33,7 +33,7 @@ const HOVER_PADDING = 12;
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
   counters: null,
-  margin: { top: 24, right: 16, bottom: 24, left: 16 },
+  margin: Object.freeze({ top: 24, right: 16, bottom: 24, left: 16 }),
   padding: 0.04,
   width: 0,
   height() {
