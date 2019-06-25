@@ -25,8 +25,8 @@ update your API calls accordingly.
 
 This endpoint configures shared information for the secrets engine. After writing
 to it the KMIP engine will generate a CA and start listening for KMIP requests.
-If the server was already running and any of provided non-client settings are
-changed, the server will be restarted using the new settings.
+If the server was already running and any non-client settings are changed, the 
+server will be restarted using the new settings.
 
 ### Parameters
 
