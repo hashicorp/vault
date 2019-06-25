@@ -108,6 +108,7 @@ type ServerCommand struct {
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
 	flagTestServerConfig bool
+	flagDevConsul        bool
 }
 
 type ServerListener struct {
@@ -292,6 +293,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "dev-consul",
+		Target:  &c.flagDevConsul,
+		Default: false,
+		Hidden:  true,
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "combine-logs",
@@ -400,7 +408,20 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if c.flagDev {
-		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
+		var devStorageType string
+		switch {
+		case c.flagDevConsul:
+			devStorageType = "consul"
+		case c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional_ha"
+		case !c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional"
+		case c.flagDevHA && !c.flagDevTransactional:
+			devStorageType = "inmem_ha"
+		default:
+			devStorageType = "inmem"
+		}
+		config = server.DevConfig(devStorageType)
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Config["address"] = c.flagDevListenAddr
 		}
