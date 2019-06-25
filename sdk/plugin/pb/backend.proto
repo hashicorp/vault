@@ -358,7 +358,7 @@ message InitializeArgs {
 
 // InitializeReply is the reply for Initialize method.
 message InitializeReply {
-	ProtoError err = 2;
+	ProtoError err = 1;
 }
 
 // SpecialPathsReply is the reply for SpecialPaths method.
