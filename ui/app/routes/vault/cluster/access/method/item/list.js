@@ -38,6 +38,10 @@ export default Route.extend(ListRoute, {
       }
       return true;
     },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
+    },
   },
   setupController(controller) {
     this._super(...arguments);
