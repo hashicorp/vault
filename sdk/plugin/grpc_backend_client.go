@@ -140,8 +140,27 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request) error {
-	/* TODO implement this properly */
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request /* TODO we aren't using this */) error {
+	if b.metadataMode {
+		return ErrClientInMetadataMode
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
+	if err != nil {
+		if b.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
+		return err
+	}
+	if reply.Err != nil {
+		return pb.ProtoErrToErr(reply.Err)
+	}
+
 	return nil
 }
 
