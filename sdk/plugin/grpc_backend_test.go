@@ -37,6 +37,16 @@ func TestGRPCBackendPlugin_HandleRequest(t *testing.T) {
 	}
 }
 
+func TestGRPCBackendPlugin_Initialize(t *testing.T) {
+	b, cleanup := testGRPCBackend(t)
+	defer cleanup()
+
+	err := b.Initialize(context.Background(), &logical.InitializationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGRPCBackendPlugin_SpecialPaths(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
