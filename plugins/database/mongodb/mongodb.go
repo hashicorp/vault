@@ -155,6 +155,68 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	return username, password, nil
 }
 
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	session, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+
+	// Unmarshal statements.CreationStatements into mongodbRoles. While
+	// SetCredentials doesn't require the role information, we do need to parse
+	// and use the DB if it's included in the statements
+	var mongoCS mongoDBStatement
+	if len(statements.Creation) >= 1 {
+		err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	// Default to "admin" if no db provided
+	if mongoCS.DB == "" {
+		mongoCS.DB = "admin"
+	}
+
+	mongoUser := mgo.User{
+		Username: username,
+		Password: password,
+		Roles:    mongoCS.Roles.toStandardRolesStringArray(),
+	}
+
+	err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
+
+	switch {
+	case err == nil:
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		session, err := m.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
+		if err != nil {
+			return "", "", err
+		}
+	default:
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
 // RenewUser is not supported on MongoDB, so this is a no-op.
 func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP

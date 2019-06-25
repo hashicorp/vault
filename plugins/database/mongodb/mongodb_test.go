@@ -165,3 +165,75 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	session.SetSocketTimeout(1 * time.Minute)
 	return session.Ping()
 }
+
+func TestMongoDB_SetCredentials(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// create the database user in advance, and test the connection
+	dbUser := "testmongouser"
+	startingPassword := "password"
+	testCreateDBUser(t, connURL, dbUser, startingPassword)
+	if err := testCredsExist(t, connURL, dbUser, startingPassword); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	newPassword, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usernameConfig := dbplugin.StaticUserConfig{
+		Username: dbUser,
+		Password: newPassword,
+	}
+
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+	// confirm the original creds used to set still work (should be the same)
+	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	if (dbUser != username) || (newPassword != password) {
+		t.Fatalf("username/password mismatch: (%s)/(%s) vs (%s)/(%s)", dbUser, username, newPassword, password)
+	}
+}
+
+func testCreateDBUser(t testing.TB, connURL, username, password string) {
+	dialInfo, err := parseMongoURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session, err := mgo.DialWithInfo(dialInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.SetSyncTimeout(1 * time.Minute)
+	session.SetSocketTimeout(1 * time.Minute)
+	mUser := mgo.User{
+		Username: username,
+		Password: password,
+	}
+
+	if err := session.DB("admin").UpsertUser(&mUser); err != nil {
+		t.Fatal(err)
+	}
+}
