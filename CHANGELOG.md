@@ -37,10 +37,6 @@ CHANGES:
 
 FEATURES:
 
- * **New storage backend**: Integrated raft storage. Support an integrated,
-   highly-available storage backend within Vault, thereby removing the need
-   for an external storage backend. Based on Raft, the same protocol backing
-   Consul and Nomad.
  * **Combined DB credential rotation**: Alternative mode for the Combined DB
    Secret Engine to automatically rotate existing database account credentials
    and set Vault as the source of truth for credentials.
