@@ -158,8 +158,9 @@ export default Component.extend({
 
     bars.exit().remove();
 
-    // render transparent bars and bind the tooltip to them
-    // since we cannot bind the tooltip to the actual bars
+    // render transparent bars and bind the tooltip to them since we cannot
+    // bind the tooltip to the actual bars. this is because the bars are
+    // within a clipPath & you cannot bind DOM events to non-display elements.
     const shadowBarsContainer = d3.select('.shadow-bars');
 
     const shadowBars = shadowBarsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
