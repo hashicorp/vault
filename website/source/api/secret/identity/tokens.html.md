@@ -4,7 +4,7 @@ page_title: "Identity Secret Backend: Identity Tokens - HTTP API"
 sidebar_title: "Identity Tokens"
 sidebar_current: "api-http-secret-identity-tokens"
 description: |-
-  This is the API documentation for configuring, acquiring, and validating vault issued Identity tokens.
+  This is the API documentation for configuring, acquiring, and validating vault issued identity tokens.
 ---
 
 ## Configure the Identity Tokens Backend
@@ -17,7 +17,7 @@ This endpoint updates configurations for OIDC-compliant identity tokens issued b
 
 ### Parameters
 
-- `issuer` `(string: "")` – Issuer URL to be used in the iss claim of the token. If not set, Vault's api_addr will be used. The issuer is a case sensitive URL using the https scheme that contains scheme, host, and optionally, port number and path components and no query or fragment components.
+- `issuer` `(string: "")` – Issuer URL to be used in the iss claim of the token. If not set, Vault's api_addr will be used. The issuer is a case sensitive URL using the https scheme that contains scheme, host, and optionally, port number and path components, but no query or fragment components.
 
 ### Sample Payload
 
@@ -81,7 +81,7 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `POST`   | `/oidc/key/:name`  |
+| `POST`   | `identity/oidc/key/:name`  |
 
 ### Parameters
 
@@ -109,7 +109,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/identity/entity/key/named-key-001
+    http://127.0.0.1:8200/v1/identity/oidc/key/named-key-001
 ```
 
 ## Read a Named Key
@@ -118,7 +118,7 @@ This endpoint queries a named key and returns its configurations.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `GET`   | `/oidc/key/:name`  |
+| `GET`   | `identity/oidc/key/:name`  |
 
 ### Parameters
 
@@ -130,7 +130,7 @@ This endpoint queries a named key and returns its configurations.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/identity/entity/key/named-key-001
+    http://127.0.0.1:8200/v1/identity/oidc/key/named-key-001
 ```
 
 ### Sample Response
@@ -151,7 +151,7 @@ This endpoint deletes a named key.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `DELETE`   | `/oidc/key/:name`  |
+| `DELETE`   | `identity/oidc/key/:name`  |
 
 ### Parameters
 
@@ -242,7 +242,7 @@ Create or update a role. ID tokens are generated against a role and signed again
 
 - `key` `(string)` – A configured named key, the key must already exist.
 
--	`template` `(string: <optional>)` - The template string to use for generating tokens. This may be in string-ified JSON or base64 format.
+- `template` `(string: <optional>)` - The template string to use for generating tokens. This may be in string-ified JSON or base64 format.
 
 - `ttl` `(int or time string: "24h")` - TTL of the tokens generated against the role. Can be specified as a number of seconds or as a time string like "30m" or "6h".
 
@@ -267,11 +267,11 @@ $ curl \
 
 ## Read a Role
 
-This endpoint queries a Role and returs its configurations.
+This endpoint queries a role and returs its configuration.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `GET`   | `/oidc/role/:name`  |
+| `GET`   | `identity/oidc/role/:name`  |
 
 ### Parameters
 
@@ -283,7 +283,7 @@ This endpoint queries a Role and returs its configurations.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/identity/role/role-001
+    http://127.0.0.1:8200/v1/identity/oidc/role/role-001
 ```
 
 ### Sample Response
@@ -305,7 +305,7 @@ This endpoint deletes a role.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `DELETE`   | `/oidc/role/:name`  |
+| `DELETE`   | `identity/oidc/role/:name`  |
 
 ### Parameters
 
@@ -322,7 +322,7 @@ $ curl \
 
 ## List Roles
 
-This endpoint will List all Signing Keys.
+This endpoint will list all signing keys.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
@@ -429,7 +429,7 @@ $ curl \
 
 ## Read .well-known Configurations
 
-Query this path to retrieve the configured OIDC Issuer, Keys endpoint, Subjects, and signing algorithms used by the OIDC backend.
+Query this path to retrieve a set of claims about the identity tokens' configuration. The response is a compliant [OpenID Provider Configuration Response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 
 | Method   | Path                |
 | :------------------ | :----------------------|
@@ -466,7 +466,7 @@ $ curl \
 ```
 
 ## Read Active Public Keys
-Query this path to retrieve the public portion of named keys which are able to verify signed tokens. Clients can use this to validate the authenticity of an OIDC token.
+Query this path to retrieve the public portion of named keys. Clients can use this to validate the authenticity of an identity token.
 
 ### Sample Request
 

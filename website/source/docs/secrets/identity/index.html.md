@@ -138,7 +138,7 @@ subsequent login or renewal operation.
 
 Identity information is used throughout Vault, but it can also be exported for
 use by other applications. An authorized user/application can request a token
-that encapsulates identity information for the their associated entity. These
+that encapsulates identity information for their associated entity. These
 tokens are signed JWTs following the [OIDC ID
 token](https://openid.net/specs/openid-connect-core-1_0.html#IDToken) structure.
 The public keys used to authenticate the tokens are published by Vault on an
@@ -151,14 +151,14 @@ also provided by Vault for token verification.
 OIDC-compliant ID tokens are generated against a role which allows configuration
 of token claims via a templating system, token ttl, and a way to specify which
 "key" will be used to sign the token. The role template is an optional parameter
-to customizes the token contents and is described in the next section. Token TTL
+to customize the token contents and is described in the next section. Token TTL
 controls the expiration time of the token, after which verification library will
 consider the token invalid. All roles have a Vault-generated `client_id`
 attribute that is returned when the role is read. This value cannot be changed
 and will be added to the token's `aud` parameter. JWT/OIDC libraries will often
 require this value.
 
-A role's "key" parameter links a role to an existing named key. A single key may
+A role's `key` parameter links a role to an existing named key. A single key may
 be used by multiple roles, and using multiple named keys is generally not
 necessary. It is not possible to generate an unsigned ID token.
 
@@ -272,7 +272,7 @@ published by Vault, or via a Vault-provided introspection endpoint.
 Vault will serve standard "[.well-known](https://tools.ietf.org/html/rfc5785)"
 endpoints that allow easy integration with OIDC verification libraries.
 Configuring the libraries will typically involve providing an issuer URL and
-client ID. The library will then handle key requests and can validation the
+client ID. The library will then handle key requests and can validate the
 signature and claims requirements on tokens. This approach has the advantage of
 only requiring _access_ to Vault, not _authorization_, as the .well-known
 endpoints are unauthenticated.
@@ -283,7 +283,7 @@ The response will indicate whether the token is "active" or not, as well as any
 errors that occurred during validation. Beyond simply allowing the client to
 delegate verification to Vault, using this endpoint incorporates the additional
 check of whether the entity is still active or not, which is something that
-cannot be determined from the token alone. Unlike the .well-known, accessing the
+cannot be determined from the token alone. Unlike the .well-known endpoint, accessing the
 introspection endpoint does require a valid Vault token and sufficient
 authorization.
 
@@ -295,7 +295,7 @@ The identity token system has one configurable parameter: issuer. The issuer
 clients, and special consideration should be given when using Identity Tokens
 with [performance replication](docs/enterprise/replication/index.html).
 Consumers of the token will request public keys from Vault using the issuer URL,
-so it much be network reachable. Furthermore, the returned keyset will include
+so it must be network reachable. Furthermore, the returned set of keys will include
 an issuer that must match the request.
 
 By default Vault will set the issuer to the Vault instance's
@@ -303,7 +303,7 @@ By default Vault will set the issuer to the Vault instance's
 issued in a given cluster should be validated within that same cluster.
 Alternatively, the [`issuer`](api/secret/identity/tokens.html#issuer) parameter
 may be configured explicitly. This address must point to the identity/oidc path,
-and it should be reachable by any clients trying to validate identity tokens.
+and it should be reachable by any client trying to validate identity tokens.
 
 
 ## API
