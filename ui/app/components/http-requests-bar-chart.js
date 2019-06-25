@@ -4,7 +4,6 @@ import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
 import d3Tip from 'd3-tip';
-import d3Array from 'd3-array';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
