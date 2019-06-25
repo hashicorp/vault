@@ -8,7 +8,6 @@ import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
 import { task, waitForEvent } from 'ember-concurrency';
-import formatDate from 'date-fns/format';
 
 /**
  * @module HttpRequestsBarChart
@@ -29,7 +28,6 @@ import formatDate from 'date-fns/format';
  */
 
 const HEIGHT = 240;
-
 const HOVER_PADDING = 12;
 
 export default Component.extend({
@@ -86,10 +84,10 @@ export default Component.extend({
   },
 
   renderBarChart() {
-    const { margin, width, xScale, yScale, parsedCounters } = this;
+    const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();
     const barChartSVG = d3.select('.http-requests-bar-chart');
-    const barsContainer = d3.select('#bars-container');
+    const barsContainer = d3.select(`#bars-container-${elementId}`);
 
     // initialize the tooltip
     const tip = d3Tip()
