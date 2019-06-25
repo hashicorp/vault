@@ -8,7 +8,7 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-<KmipRoleEditForm
+<EditFormKmipRole
   @model={{model}}
   @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
   @cancelLinkParams={{array "role" this.scope this.role}}

@@ -1,5 +1,5 @@
 import EditForm from 'core/components/edit-form';
-import layout from '../templates/components/kmip-role-edit-form';
+import layout from '../templates/components/edit-form-kmip-role';
 import { Promise } from 'rsvp';
 
 export default EditForm.extend({
