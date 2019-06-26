@@ -786,7 +786,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 	if !strutil.StrListContains(namedKey.AllowedRoles, "*") && !strutil.StrListContainsGlob(namedKey.AllowedRoles, name) {
-		// TODO - this allows someone without access to keys to confirm whether or not a named key exists
 		return logical.ErrorResponse("The key %q does not list the role %q as an allowed_role", role.Key, name), nil
 	}
 
