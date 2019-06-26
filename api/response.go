@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"google.golang.org/grpc/codes"
 )
 
 // Response is a raw response that wraps an HTTP response.
@@ -117,55 +116,4 @@ func (r *ResponseError) Error() string {
 	}
 
 	return errBody.String()
-}
-
-// GrpcCode maps the HTTP Status Code to a gRPC status code
-func (r *ResponseError) GrpcCode() codes.Code {
-	switch r.StatusCode {
-	case 200, 204:
-		// Success codes
-		return codes.OK
-	case 429, 473:
-		// Default return code for health status of standby nodes and
-		// performance standby nodes.
-		return codes.OK
-	case 400:
-		// Invalid request, missing or invalid data.
-		return codes.InvalidArgument
-	case 500:
-		// Internal server error.
-		return codes.Internal
-	case 502:
-		// A request to Vault required Vault making a request to a third party;
-		// the third party responded with an error of some kind.
-		return codes.Unavailable
-	case 503:
-		// Vault is down for maintenance or is currently sealed.
-		return codes.Unavailable
-	default:
-		return codes.Unknown
-	}
-}
-
-// ResponseErrorCode is a helper to convert an error returned from a Vault API
-// request to a gRPC code. An example usage would be:
-//
-//  secret, err := vaultClient.Logical().Write(path, payload)
-//  if err != nil {
-//    code := api.ResponseErrorCode(err)
-//    ...
-func ResponseErrorCode(err error) codes.Code {
-	if err == nil {
-		return codes.OK
-	}
-
-	// Check if the error is of type *api.ResponseError. If it is it tells us we
-	// successfully contacted Vault rather than having a connection error.
-	resp, ok := err.(*ResponseError)
-	if !ok {
-		return codes.Unavailable
-	}
-
-	// Return the error code
-	return resp.GrpcCode()
 }
