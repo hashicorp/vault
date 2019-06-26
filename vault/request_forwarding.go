@@ -60,6 +60,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 			perfStandbySlots:      perfStandbySlots,
 			perfStandbyRepCluster: perfStandbyRepCluster,
 			perfStandbyCache:      perfStandbyCache,
+			raftFollowerStates:    c.raftFollowerStates,
 		})
 	}
 

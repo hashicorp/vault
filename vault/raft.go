@@ -145,7 +145,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		return err
 	}
 	for _, server := range raftConfig.Servers {
-		if !server.Leader {
+		if server.NodeID != raftStorage.NodeID() {
 			followerStates.update(server.NodeID, 0)
 		}
 	}
@@ -607,7 +607,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	parsedClusterAddr, err := url.Parse(c.clusterAddr)
+	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
