@@ -48,6 +48,9 @@ func pathGroups(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action: "Create",
+		},
 	}
 }
 
