@@ -170,6 +170,9 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
+	// The docker test method PrepareTestContainer defaults to a database "test"
+	// if none is provided
+	connURL = connURL + "/test"
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
 	}
@@ -233,7 +236,7 @@ func testCreateDBUser(t testing.TB, connURL, username, password string) {
 		Password: password,
 	}
 
-	if err := session.DB("admin").UpsertUser(&mUser); err != nil {
+	if err := session.DB(dialInfo.Database).UpsertUser(&mUser); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -174,29 +174,17 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	username = staticUser.Username
 	password = staticUser.Password
 
-	// Unmarshal statements.CreationStatements into mongodbRoles. While
-	// SetCredentials doesn't require the role information, we do need to parse
-	// and use the DB if it's included in the statements
-	var mongoCS mongoDBStatement
-	if len(statements.Creation) >= 1 {
-		err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
-		if err != nil {
-			return "", "", err
-		}
-	}
-
-	// Default to "admin" if no db provided
-	if mongoCS.DB == "" {
-		mongoCS.DB = "admin"
+	dialInfo, err := parseMongoURL(m.ConnectionURL)
+	if err != nil {
+		return "", "", err
 	}
 
 	mongoUser := mgo.User{
 		Username: username,
 		Password: password,
-		Roles:    mongoCS.Roles.toStandardRolesStringArray(),
 	}
 
-	err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
+	err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
 
 	switch {
 	case err == nil:
@@ -206,7 +194,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		if err != nil {
 			return "", "", err
 		}
-		err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
+		err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
 		if err != nil {
 			return "", "", err
 		}
