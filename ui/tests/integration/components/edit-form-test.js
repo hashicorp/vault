@@ -37,12 +37,7 @@ module('Integration | Component | edit form', function(hooks) {
     run(() => {
       this.owner.unregister('service:flash-messages');
       this.owner.register('service:flash-messages', flash);
-      component.setContext(this);
     });
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it renders', async function(assert) {

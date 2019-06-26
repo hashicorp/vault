@@ -564,6 +564,11 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			60,
 		},
 
+		"default duration time.Duration": {
+			&FieldSchema{Type: TypeDurationSecond, Default: 60 * time.Second},
+			60,
+		},
+
 		"default duration not set": {
 			&FieldSchema{Type: TypeDurationSecond},
 			0,

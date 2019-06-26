@@ -289,6 +289,11 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		return nil
 	}
 
+	if c.clusterListener != nil {
+		c.logger.Warn("cluster listener is already started")
+		return nil
+	}
+
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
 		c.logger.Warn("clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
@@ -307,6 +312,10 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		c.clusterAddr = fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0])
 	}
 	return nil
+}
+
+func (c *Core) ClusterAddr() string {
+	return c.clusterAddr
 }
 
 // stopClusterListener stops any existing listeners during seal. It is

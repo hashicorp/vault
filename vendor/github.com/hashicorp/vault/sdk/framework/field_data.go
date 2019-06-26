@@ -202,36 +202,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		switch inp := raw.(type) {
 		case nil:
 			return nil, false, nil
-		case int:
-			result = inp
-		case int32:
-			result = int(inp)
-		case int64:
-			result = int(inp)
-		case uint:
-			result = int(inp)
-		case uint32:
-			result = int(inp)
-		case uint64:
-			result = int(inp)
-		case float32:
-			result = int(inp)
-		case float64:
-			result = int(inp)
-		case string:
+		default:
 			dur, err := parseutil.ParseDurationSecond(inp)
 			if err != nil {
 				return nil, false, err
 			}
 			result = int(dur.Seconds())
-		case json.Number:
-			valInt64, err := inp.Int64()
-			if err != nil {
-				return nil, false, err
-			}
-			result = int(valInt64)
-		default:
-			return nil, false, fmt.Errorf("invalid input '%v'", raw)
 		}
 		if result < 0 {
 			return nil, false, fmt.Errorf("cannot provide negative value '%d'", result)

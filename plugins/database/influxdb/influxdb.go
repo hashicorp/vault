@@ -242,3 +242,12 @@ func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []strin
 	i.rawConfig["password"] = password
 	return i.rawConfig, nil
 }
+
+// GenerateCredentials returns a generated password
+func (i *Influxdb) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := i.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}

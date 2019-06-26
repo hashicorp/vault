@@ -22,31 +22,41 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
-			DisplayName: "URL",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "URL",
+			},
 		},
 
 		"userdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
-			DisplayName: "User DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User DN",
+			},
 		},
 
 		"binddn": {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
-			DisplayName: "Name of Object to bind (binddn)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Name of Object to bind (binddn)",
+			},
 		},
 
 		"bindpass": {
-			Type:             framework.TypeString,
-			Description:      "LDAP password for searching for the user DN (optional)",
-			DisplaySensitive: true,
+			Type:        framework.TypeString,
+			Description: "LDAP password for searching for the user DN (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Sensitive: true,
+			},
 		},
 
 		"groupdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
-			DisplayName: "Group DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Group DN",
+			},
 		},
 
 		"groupfilter": {
@@ -56,6 +66,9 @@ func ConfigFields() map[string]*framework.FieldSchema {
 The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Group Filter",
+			},
 		},
 
 		"groupattr": {
@@ -65,20 +78,28 @@ Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}
 in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
-			DisplayName: "Group Attribute",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "Group Attribute",
+				Value: "cn",
+			},
 		},
 
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
-			DisplayName: "User Principal (UPN) Domain",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User Principal (UPN) Domain",
+			},
 		},
 
 		"userattr": {
 			Type:        framework.TypeString,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
-			DisplayName: "User Attribute",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "User Attribute",
+				Value: "cn",
+			},
 		},
 
 		"certificate": {
@@ -89,34 +110,44 @@ Default: cn`,
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
-			DisplayName: "Discover DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Discover DN",
+			},
 		},
 
 		"insecure_tls": {
 			Type:        framework.TypeBool,
 			Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
-			DisplayName: "Insecure TLS",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Insecure TLS",
+			},
 		},
 
 		"starttls": {
 			Type:        framework.TypeBool,
 			Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
-			DisplayName: "Issue StartTLS command after establishing an unencrypted connection",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Issue StartTLS",
+			},
 		},
 
 		"tls_min_version": {
-			Type:          framework.TypeString,
-			Default:       "tls12",
-			Description:   "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
-			DisplayName:   "Minimum TLS Version",
+			Type:        framework.TypeString,
+			Default:     "tls12",
+			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Minimum TLS Version",
+			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"tls_max_version": {
-			Type:          framework.TypeString,
-			Default:       "tls12",
-			Description:   "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
-			DisplayName:   "Maximum TLS Version",
+			Type:        framework.TypeString,
+			Default:     "tls12",
+			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Maximum TLS Version",
+			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 

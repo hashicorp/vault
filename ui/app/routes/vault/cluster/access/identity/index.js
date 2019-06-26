@@ -1,5 +1,5 @@
 import Route from '@ember/routing/route';
-import ListRoute from 'vault/mixins/list-route';
+import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   model(params) {

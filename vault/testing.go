@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/copystructure"
 
@@ -758,19 +759,20 @@ func TestWaitActiveWithError(core *Core) error {
 }
 
 type TestCluster struct {
-	BarrierKeys   [][]byte
-	RecoveryKeys  [][]byte
-	CACert        *x509.Certificate
-	CACertBytes   []byte
-	CACertPEM     []byte
-	CACertPEMFile string
-	CAKey         *ecdsa.PrivateKey
-	CAKeyPEM      []byte
-	Cores         []*TestClusterCore
-	ID            string
-	RootToken     string
-	RootCAs       *x509.CertPool
-	TempDir       string
+	BarrierKeys        [][]byte
+	RecoveryKeys       [][]byte
+	CACert             *x509.Certificate
+	CACertBytes        []byte
+	CACertPEM          []byte
+	CACertPEMFile      string
+	CAKey              *ecdsa.PrivateKey
+	CAKeyPEM           []byte
+	Cores              []*TestClusterCore
+	ID                 string
+	RootToken          string
+	RootCAs            *x509.CertPool
+	TempDir            string
+	ClientAuthRequired bool
 }
 
 func (c *TestCluster) Start() {
@@ -834,6 +836,14 @@ func (c *TestCluster) UnsealCoresWithError() error {
 	}
 
 	return nil
+}
+
+func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
+	for _, key := range c.BarrierKeys {
+		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
 }
 
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
@@ -960,21 +970,23 @@ type TestListener struct {
 
 type TestClusterCore struct {
 	*Core
-	CoreConfig        *CoreConfig
-	Client            *api.Client
-	Handler           http.Handler
-	Listeners         []*TestListener
-	ReloadFuncs       *map[string][]reload.ReloadFunc
-	ReloadFuncsLock   *sync.RWMutex
-	Server            *http.Server
-	ServerCert        *x509.Certificate
-	ServerCertBytes   []byte
-	ServerCertPEM     []byte
-	ServerKey         *ecdsa.PrivateKey
-	ServerKeyPEM      []byte
-	TLSConfig         *tls.Config
-	UnderlyingStorage physical.Backend
-	Barrier           SecurityBarrier
+	CoreConfig           *CoreConfig
+	Client               *api.Client
+	Handler              http.Handler
+	Listeners            []*TestListener
+	ReloadFuncs          *map[string][]reload.ReloadFunc
+	ReloadFuncsLock      *sync.RWMutex
+	Server               *http.Server
+	ServerCert           *x509.Certificate
+	ServerCertBytes      []byte
+	ServerCertPEM        []byte
+	ServerKey            *ecdsa.PrivateKey
+	ServerKeyPEM         []byte
+	TLSConfig            *tls.Config
+	UnderlyingStorage    physical.Backend
+	UnderlyingRawStorage physical.Backend
+	Barrier              SecurityBarrier
+	NodeID               string
 }
 
 type TestClusterOptions struct {
@@ -988,7 +1000,9 @@ type TestClusterOptions struct {
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
+	PhysicalFactory    func(hclog.Logger) (physical.Backend, error)
 	FirstCoreNumber    int
+	RequireClientAuth  bool
 }
 
 var DefaultNumCores = 3
@@ -1225,6 +1239,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			NextProtos:     []string{"h2", "http/1.1"},
 			GetCertificate: certGetter.GetCertificate,
 		}
+		if opts != nil && opts.RequireClientAuth {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+			testCluster.ClientAuthRequired = true
+		}
 		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
 		lns := []*TestListener{&TestListener{
@@ -1277,6 +1295,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevLicenseDuration = base.DevLicenseDuration
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.LicensingConfig = base.LicensingConfig
+		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}
@@ -1329,13 +1348,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 	}
 
-	if coreConfig.Physical == nil {
+	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
 		coreConfig.Physical, err = physInmem.NewInmem(nil, logger)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	if coreConfig.HAPhysical == nil {
+	if coreConfig.HAPhysical == nil && (opts == nil || opts.PhysicalFactory == nil) {
 		haPhys, err := physInmem.NewInmemHA(nil, logger)
 		if err != nil {
 			t.Fatal(err)
@@ -1361,6 +1380,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		if opts != nil && opts.Logger != nil {
 			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+		}
+
+		if opts != nil && opts.PhysicalFactory != nil {
+			localConfig.Physical, err = opts.PhysicalFactory(localConfig.Logger)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			if haPhysical, ok := localConfig.Physical.(physical.HABackend); ok {
+				localConfig.HAPhysical = haPhysical
+			}
 		}
 
 		switch {
@@ -1570,19 +1600,21 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
 		tcc := &TestClusterCore{
-			Core:            cores[i],
-			CoreConfig:      coreConfigs[i],
-			ServerKey:       certInfoSlice[i].key,
-			ServerKeyPEM:    certInfoSlice[i].keyPEM,
-			ServerCert:      certInfoSlice[i].cert,
-			ServerCertBytes: certInfoSlice[i].certBytes,
-			ServerCertPEM:   certInfoSlice[i].certPEM,
-			Listeners:       listeners[i],
-			Handler:         handlers[i],
-			Server:          servers[i],
-			TLSConfig:       tlsConfigs[i],
-			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
-			Barrier:         cores[i].barrier,
+			Core:                 cores[i],
+			CoreConfig:           coreConfigs[i],
+			ServerKey:            certInfoSlice[i].key,
+			ServerKeyPEM:         certInfoSlice[i].keyPEM,
+			ServerCert:           certInfoSlice[i].cert,
+			ServerCertBytes:      certInfoSlice[i].certBytes,
+			ServerCertPEM:        certInfoSlice[i].certPEM,
+			Listeners:            listeners[i],
+			Handler:              handlers[i],
+			Server:               servers[i],
+			TLSConfig:            tlsConfigs[i],
+			Client:               getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Barrier:              cores[i].barrier,
+			NodeID:               fmt.Sprintf("core-%d", i),
+			UnderlyingRawStorage: coreConfigs[i].Physical,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
@@ -1644,6 +1676,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mysql-rds-database-plugin",
 		"mysql-legacy-database-plugin",
 		"postgresql-database-plugin",
+		"elasticsearch-database-plugin",
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",

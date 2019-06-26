@@ -28,6 +28,9 @@ const API_PATHS = {
     license: 'sys/license',
     seal: 'sys/seal',
   },
+  metrics: {
+    requests: 'sys/internal/counters/requests',
+  },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {

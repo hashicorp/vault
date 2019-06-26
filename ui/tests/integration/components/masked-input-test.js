@@ -10,14 +10,6 @@ const component = create(maskedInput);
 module('Integration | Component | masked input', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   const hasClass = (classString = '', classToFind) => {
     return classString.split(' ').includes(classToFind);
   };

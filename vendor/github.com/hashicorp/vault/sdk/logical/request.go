@@ -2,6 +2,7 @@ package logical
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
@@ -171,6 +172,14 @@ type Request struct {
 	// ClientTokenSource tells us where the client token was sourced from, so
 	// we can delete it before sending off to plugins
 	ClientTokenSource ClientTokenSource
+
+	// RequestReader if set can be used to read the full request body from the
+	// http request that generated this logical.Request object.
+	RequestReader io.ReadCloser `json:"-" sentinel:""`
+
+	// ResponseWriter if set can be used to stream a response value to the http
+	// request that generated this logical.Request object.
+	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
 }
 
 // Get returns a data field and guards for nil Data
