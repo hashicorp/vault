@@ -34,7 +34,7 @@ export const expandOpenApiProps = function(props) {
     };
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
-    if (editType !== 'ttl') {
+    if (editType !== 'ttl' && type !== 'array') {
       attrDefn.type = type;
     }
     // loop to remove empty vals
