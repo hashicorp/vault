@@ -411,7 +411,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		key.NextRotation = nextRotation
 	}
 
-	// generate keys if creating a new key
+	// generate keys if creating a new key or changing algorithms
 	if key.Algorithm != prevAlgorithm {
 		signingKey, err := generateKeys(key.Algorithm)
 		if err != nil {
