@@ -3,11 +3,12 @@
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq group "default") (eq group "Options"))}}
         {{#each fields as |attr|}}
-          <InfoTableRow
-            @alwaysRender={{showAllFields}}
-            @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-            @value={{get @model attr.name}}
-          />
+          {{debugger}}
+          {{#if (not (eq attr.options.fieldValue "id"))}}
+            <InfoTableRow @alwaysRender={{showAllFields}}
+              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+              @value={{get @model attr.name}} />
+          {{/if}}
         {{/each}}
       {{else}}
         <div class="box {{unless showAllFields 'is-shadowless'}} is-sideless is-fullwidth is-marginless">
@@ -15,11 +16,9 @@
             {{group}}
           </h2>
           {{#each fields as |attr|}}
-            <InfoTableRow
-              @alwaysRender={{showAllFields}}
+            <InfoTableRow @alwaysRender={{showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-              @value={{get @model attr.name}}
-            />
+              @value={{get @model attr.name}} />
           {{/each}}
         </div>
       {{/if}}
