@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -113,6 +114,8 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		// Ensure that the file can be successfully opened for writing;
 		// otherwise it will be too late to catch later without problems
 		// (ref: https://github.com/hashicorp/vault/issues/550)
+		b.fileLock.RLock()
+		defer b.fileLock.RUnlock()
 		if err := b.open(); err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("sanity check failed; unable to open %q for writing: {{err}}", path), err)
 		}
@@ -132,9 +135,10 @@ type Backend struct {
 	formatter    audit.AuditFormatter
 	formatConfig audit.FormatterConfig
 
-	fileLock sync.RWMutex
-	f        *os.File
-	mode     os.FileMode
+	fileLock      sync.RWMutex // locks file assignment; open/close operations.
+	fileWriteLock sync.Mutex   // locks writes to the file
+	f             *os.File
+	mode          os.FileMode
 
 	saltMutex  sync.RWMutex
 	salt       *salt.Salt
@@ -142,7 +146,19 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
+type lockedFileWriter struct {
+	fileLock *sync.Mutex
+	f        *os.File
+}
+
+func (lf lockedFileWriter) Write(p []byte) (int, error) {
+	lf.fileLock.Lock()
+	defer lf.fileLock.Unlock()
+	return lf.f.Write(p)
+}
+
 var _ audit.Backend = (*Backend)(nil)
+var _ io.Writer = lockedFileWriter{}
 
 func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.saltMutex.RLock()
@@ -173,71 +189,74 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 }
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
-
-	switch b.path {
-	case "stdout":
-		return b.formatter.FormatRequest(ctx, os.Stdout, b.formatConfig, in)
-	case "discard":
-		return b.formatter.FormatRequest(ctx, ioutil.Discard, b.formatConfig, in)
-	}
-
-	if err := b.open(); err != nil {
-		return err
-	}
-
-	if err := b.formatter.FormatRequest(ctx, b.f, b.formatConfig, in); err == nil {
-		return nil
-	}
-
-	// Opportunistically try to re-open the FD, once per call
-	b.f.Close()
-	b.f = nil
-
-	if err := b.open(); err != nil {
-		return err
-	}
-
-	return b.formatter.FormatRequest(ctx, b.f, b.formatConfig, in)
+	return b.log(ctx, in, b.formatter.FormatRequest)
 }
 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
+	return b.log(ctx, in, b.formatter.FormatResponse)
+}
 
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
+type formatter func(ctx context.Context, w io.Writer, config audit.FormatterConfig, in *logical.LogInput) error
+
+func (b *Backend) log(ctx context.Context, in *logical.LogInput, format formatter) error {
+	b.fileLock.RLock()
+	defer b.fileLock.RUnlock()
 
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatResponse(ctx, os.Stdout, b.formatConfig, in)
+		return format(ctx, os.Stdout, b.formatConfig, in)
 	case "discard":
-		return b.formatter.FormatResponse(ctx, ioutil.Discard, b.formatConfig, in)
+		return format(ctx, ioutil.Discard, b.formatConfig, in)
 	}
 
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	if err := b.formatter.FormatResponse(ctx, b.f, b.formatConfig, in); err == nil {
+	writer := lockedFileWriter{f: b.f, fileLock: &b.fileWriteLock}
+	if err := format(ctx, writer, b.formatConfig, in); err == nil {
 		return nil
 	}
 
 	// Opportunistically try to re-open the FD, once per call
-	b.f.Close()
-	b.f = nil
-
+	b.close()
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	return b.formatter.FormatResponse(ctx, b.f, b.formatConfig, in)
+	writer.f = b.f
+	return b.formatter.FormatRequest(ctx, writer, b.formatConfig, in)
 }
 
-// The file lock must be held before calling this
+// upgradeFileLock exchanges a held read lock for a write lock. It returns a
+// function which can be deferred to exchange the write lock back for a
+// read lock.
+func (b *Backend) upgradeFileLock() func() {
+	// Upgrade to a write lock
+	b.fileLock.RUnlock()
+	b.fileLock.Lock()
+	return func() {
+		// Downgrade to read lock
+		b.fileLock.Unlock()
+		b.fileLock.RLock()
+	}
+}
+
+// The file lock must be held for reading before calling this
+func (b *Backend) close() (err error) {
+	defer b.upgradeFileLock()()
+	err = b.f.Close()
+	b.f = nil
+	return
+}
+
+// The file lock must be held for reading before calling this
 func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
 	}
+
+	defer b.upgradeFileLock()()
 	if err := os.MkdirAll(filepath.Dir(b.path), b.mode); err != nil {
 		return err
 	}
@@ -270,18 +289,16 @@ func (b *Backend) Reload(_ context.Context) error {
 		return nil
 	}
 
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
+	b.fileLock.RLock()
+	defer b.fileLock.RUnlock()
 
 	if b.f == nil {
 		return b.open()
 	}
 
-	err := b.f.Close()
-	// Set to nil here so that even if we error out, on the next access open()
-	// will be tried
-	b.f = nil
-	if err != nil {
+	// b.f is set to nil inside of close.
+	// Even if we error out, on the next access open() will be tried
+	if err := b.close(); err != nil {
 		return err
 	}
 
