@@ -3,8 +3,7 @@
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq group "default") (eq group "Options"))}}
         {{#each fields as |attr|}}
-          {{debugger}}
-          {{#if (not (eq attr.options.fieldValue "id"))}}
+          {{#if (not-eq attr.options.fieldValue "id")}}
             <InfoTableRow @alwaysRender={{showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
               @value={{get @model attr.name}} />
