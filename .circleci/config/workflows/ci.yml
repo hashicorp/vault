@@ -1,6 +1,11 @@
 jobs:
-  - install-ui-dependencies
-  - go-mod-download
+  - pre-flight-checks
+  - install-ui-dependencies:
+      requires:
+        - pre-flight-checks
+  - go-mod-download:
+      requires:
+        - pre-flight-checks
   - build-go-dev:
       requires:
         - go-mod-download
