@@ -51,8 +51,6 @@ server will be restarted using the new settings.
 
 - `tls_ca_key_bits` (`int: 521`) - CA key bits, valid values depend on key type.
 
-- `tls_max_path_length` (`int: 10`) - Max path length.
-
 - `tls_min_version` (`string: "tls12"`) - Minimum TLS version to accept.
 
 - `default_tls_client_key_type` (`string: "ec"`): - Client certificate key type, 
@@ -74,7 +72,6 @@ server will be restarted using the new settings.
     "server_ips":                  "192.168.1.2",
     "tls_ca_key_type":             "ec",
     "tls_ca_key_bits":             521,
-    "tls_max_path_length":         5,
     "tls_min_version":             "tls11",
     "default_tls_client_key_type": "ec",
     "default_tls_client_key_bits": 224,
@@ -118,7 +115,6 @@ $ curl \
     "server_ips":                  ["192.168.1.2"],
     "tls_ca_key_type":             "ec",
     "tls_ca_key_bits":             521,
-    "tls_max_path_length":         5,
     "tls_min_version":             "tls11",
     "default_tls_client_key_type": "ec",
     "default_tls_client_key_bits": 224,
