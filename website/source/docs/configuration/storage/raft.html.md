@@ -44,22 +44,4 @@ cluster_addr = "http://127.0.0.1:8201"
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
 
-The following settings apply when communications between Raft nodes happens
-over encrypted connections.
-
-- `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
-  for Raft communication. This defaults to system bundle if not specified.
-
-- `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
-  certificate for Raft communication.
-
-- `tls_key_file` `(string: "")` – Specifies the path to the private key for
-  Raft communication.
-
-- `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
-  use. Accepted values are `"tls10"`, `"tls11"` or `"tls12"`.
-
-- `tls_skip_verify` `(string: "false")` – Disable verification of TLS certificates.
-  Using this option is highly discouraged.
-
 [raft]: https://raft.github.io/ "The Raft Consensus Algorithm"
