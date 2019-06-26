@@ -57,10 +57,11 @@ func (r *Response) Error() error {
 		// Store the fact that we couldn't decode the errors
 		respErr.RawError = true
 		respErr.Errors = []string{bodyBuf.String()}
+	} else {
+		// Store the decoded errors
+		respErr.Errors = resp.Errors
 	}
 
-	// Store the decoded errors
-	respErr.Errors = resp.Errors
 	return respErr
 }
 
