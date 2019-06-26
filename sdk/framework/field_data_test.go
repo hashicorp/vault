@@ -202,6 +202,105 @@ func TestFieldDataGet(t *testing.T) {
 			0,
 		},
 
+		"signed duration type, positive string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "42",
+			},
+			"foo",
+			42,
+		},
+
+		"signed duration type, positive string duration value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "42m",
+			},
+			"foo",
+			2520,
+		},
+
+		"signed duration type, positive int value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": 42,
+			},
+			"foo",
+			42,
+		},
+
+		"signed duration type, positive float value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": 42.0,
+			},
+			"foo",
+			42,
+		},
+
+		"signed duration type, negative string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "-42",
+			},
+			"foo",
+			-42,
+		},
+
+		"signed duration type, negative string duration value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "-42m",
+			},
+			"foo",
+			-2520,
+		},
+
+		"signed duration type, negative int value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": -42,
+			},
+			"foo",
+			-42,
+		},
+
+		"signed duration type, negative float value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": -42.0,
+			},
+			"foo",
+			-42,
+		},
+
+		"signed duration type, nil value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": nil,
+			},
+			"foo",
+			0,
+		},
+
 		"slice type, empty slice": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeSlice},
@@ -628,6 +727,15 @@ func TestFieldDataGet(t *testing.T) {
 			0,
 		},
 
+		"type signed duration second, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{},
+			"foo",
+			0,
+		},
+
 		"type slice, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeSlice},
@@ -743,6 +851,42 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"=value1", "key2=value2", "key3=1"},
+			},
+			"foo",
+		},
+		"duration type, negative string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "-42",
+			},
+			"foo",
+		},
+		"duration type, negative string duration value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": "-42m",
+			},
+			"foo",
+		},
+		"duration type, negative int value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": -42,
+			},
+			"foo",
+		},
+		"duration type, negative float value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": -42.0,
 			},
 			"foo",
 		},
