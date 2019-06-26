@@ -57,6 +57,7 @@
     "d3-scale": "^1.0.7",
     "d3-selection": "^1.3.0",
     "d3-time-format": "^2.1.1",
+    "d3-tip": "^0.9.1",
     "date-fns": "^1.29.0",
     "deepmerge": "^2.1.1",
     "doctoc": "^1.4.0",
@@ -158,6 +159,5 @@
       "lib/replication",
       "lib/kmip"
     ]
-  },
-  "dependencies": {}
+  }
 }
