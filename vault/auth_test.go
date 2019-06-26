@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -61,7 +60,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
+	if !matchingMountTables(c.auth, c2.auth) {
 		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
 	}
 }
@@ -113,7 +112,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	}
 
 	// Verify matching auth tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
+	if !matchingMountTables(c.auth, c2.auth) {
 		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
 	}
 }
@@ -201,7 +200,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(oldCredential, c.auth) {
+	if !matchingMountTables(oldCredential, c.auth) {
 		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldCredential, c.auth)
 	}
 
@@ -305,7 +304,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.auth, c2.auth) {
+	if !matchingMountTables(c.auth, c2.auth) {
 		t.Fatalf("mismatch: %v %v", c.auth, c2.auth)
 	}
 }

@@ -202,7 +202,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	}
 	c.mounts.Entries = compEntries
 
-	if !reflect.DeepEqual(oldMounts, c.mounts) {
+	if !matchingMountTables(oldMounts, c.mounts) {
 		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldMounts, c.mounts)
 	}
 

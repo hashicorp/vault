@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -115,96 +114,6 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 	}
 
 	return accessor, nil
-}
-
-// MountTable is used to represent the internal mount table
-type MountTable struct {
-	Type    string        `json:"type"`
-	Entries []*MountEntry `json:"entries"`
-}
-
-// shallowClone returns a copy of the mount table that
-// keeps the MountEntry locations, so as not to invalidate
-// other locations holding pointers. Care needs to be taken
-// if modifying entries rather than modifying the table itself
-func (t *MountTable) shallowClone() *MountTable {
-	mt := &MountTable{
-		Type:    t.Type,
-		Entries: make([]*MountEntry, len(t.Entries)),
-	}
-	for i, e := range t.Entries {
-		mt.Entries[i] = e
-	}
-	return mt
-}
-
-// setTaint is used to set the taint on given entry Accepts either the mount
-// entry's path or namespace + path, i.e. <ns-path>/secret/ or <ns-path>/token/
-func (t *MountTable) setTaint(ctx context.Context, path string, value bool) (*MountEntry, error) {
-	n := len(t.Entries)
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
-			t.Entries[i].Tainted = value
-			return t.Entries[i], nil
-		}
-	}
-	return nil, nil
-}
-
-// remove is used to remove a given path entry; returns the entry that was
-// removed
-func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, error) {
-	n := len(t.Entries)
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
-			t.Entries[i], t.Entries[n-1] = t.Entries[n-1], nil
-			t.Entries = t.Entries[:n-1]
-			return entry, nil
-		}
-	}
-	return nil, nil
-}
-
-func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error) {
-	n := len(t.Entries)
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
-			return entry, nil
-		}
-	}
-	return nil, nil
-}
-
-// sortEntriesByPath sorts the entries in the table by path and returns the
-// table; this is useful for tests
-func (t *MountTable) sortEntriesByPath() *MountTable {
-	sort.Slice(t.Entries, func(i, j int) bool {
-		return t.Entries[i].Path < t.Entries[j].Path
-	})
-	return t
-}
-
-// sortEntriesByPath sorts the entries in the table by path and returns the
-// table; this is useful for tests
-func (t *MountTable) sortEntriesByPathDepth() *MountTable {
-	sort.Slice(t.Entries, func(i, j int) bool {
-		return len(strings.Split(t.Entries[i].Namespace().Path+t.Entries[i].Path, "/")) < len(strings.Split(t.Entries[j].Namespace().Path+t.Entries[j].Path, "/"))
-	})
-	return t
 }
 
 // MountEntry is used to represent a mount table entry
@@ -350,6 +259,8 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 	return &MountTable{
 		Type:    mountTable.Type,
 		Entries: mountEntries,
+		core:    c,
+		logger:  c.logger,
 	}, nil
 }
 
@@ -493,17 +404,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		backend = nil
 	}
 
-	newTable := c.mounts.shallowClone()
-	newTable.Entries = append(newTable.Entries, entry)
-	if updateStorage {
-		if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
-			c.logger.Error("failed to update mount table", "error", err)
-			if err == logical.ErrReadOnly && c.perfStandby {
-				return err
-			}
-
-			return logical.CodedError(500, "failed to update mount table")
-		}
+	// TODO: remove swap of c.mounts for new one
+	newTable, err := c.mounts.addMountEntry(ctx, entry, updateStorage)
+	if err != nil {
+		return err
 	}
 	c.mounts = newTable
 
@@ -636,31 +540,11 @@ func (c *Core) removeMountEntry(ctx context.Context, path string, updateStorage 
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// Remove the entry from the mount table
-	newTable := c.mounts.shallowClone()
-	entry, err := newTable.remove(ctx, path)
+	// TODO: eliminate this swap
+	newTable, err := c.mounts.removeMountEntry(ctx, path, updateStorage)
 	if err != nil {
 		return err
 	}
-	if entry == nil {
-		c.logger.Error("nil entry found removing entry in mounts table", "path", path)
-		return logical.CodedError(500, "failed to remove entry in mounts table")
-	}
-
-	// When unmounting all entries the JSON code will load back up from storage
-	// as a nil slice, which kills tests...just set it nil explicitly
-	if len(newTable.Entries) == 0 {
-		newTable.Entries = nil
-	}
-
-	if updateStorage {
-		// Update the mount table
-		if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
-			c.logger.Error("failed to remove entry from mounts table", "error", err)
-			return logical.CodedError(500, "failed to remove entry from mounts table")
-		}
-	}
-
 	c.mounts = newTable
 	return nil
 }
@@ -670,30 +554,9 @@ func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage b
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// As modifying the taint of an entry affects shallow clones,
-	// we simply use the original
-	entry, err := c.mounts.setTaint(ctx, path, true)
-	if err != nil {
-		return err
-	}
-	if entry == nil {
-		c.logger.Error("nil entry found tainting entry in mounts table", "path", path)
-		return logical.CodedError(500, "failed to taint entry in mounts table")
-	}
-
-	if updateStorage {
-		// Update the mount table
-		if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
-			if err == logical.ErrReadOnly && c.perfStandby {
-				return err
-			}
-
-			c.logger.Error("failed to taint entry in mounts table", "error", err)
-			return logical.CodedError(500, "failed to taint entry in mounts table")
-		}
-	}
-
-	return nil
+	// Taint is done in-place
+	err := c.mounts.taintMountEntry(ctx, path, updateStorage)
+	return err
 }
 
 // remountForce takes a copy of the mount entry for the path and fully unmounts
@@ -1153,6 +1016,8 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	defer c.mountsLock.Unlock()
 
 	if c.mounts != nil {
+		// FIXME: why do we create a clone here, when the
+		// lock is held for the whole time?
 		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
 			backend := c.router.MatchingBackend(namespace.ContextWithNamespace(ctx, e.namespace), e.Path)
@@ -1236,7 +1101,9 @@ func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
 // defaultMountTable creates a default mount table
 func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
-		Type: mountTableType,
+		Type:   mountTableType,
+		core:   c,
+		logger: c.logger,
 	}
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 
@@ -1276,7 +1143,9 @@ func (c *Core) defaultMountTable() *MountTable {
 // to be available
 func (c *Core) requiredMountTable() *MountTable {
 	table := &MountTable{
-		Type: mountTableType,
+		Type:   mountTableType,
+		core:   c,
+		logger: c.logger,
 	}
 	cubbyholeUUID, err := uuid.GenerateUUID()
 	if err != nil {
