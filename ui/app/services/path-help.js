@@ -75,80 +75,60 @@ export default Service.extend({
     }
   },
 
+  reducePaths(paths, currentPath) {
+    const pathName = currentPath[0];
+    const pathInfo = currentPath[1];
+    //config is a get/post endpoint that doesn't take route params
+    //and isn't also a list endpoint
+    if (
+      pathInfo.post &&
+      pathInfo.get &&
+      (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action === 'Configure')
+    ) {
+      paths.configPath.push({ path: pathName, tag: pathInfo.get.tags[0] });
+    }
+
+    //list endpoints all have { name: "list" } in their get parameters
+    if (pathInfo.get && pathInfo.get.parameters && pathInfo.get.parameters[0].name === 'list') {
+      paths.list.push({ path: pathName, tag: pathInfo.get.tags[0] });
+    }
+
+    if (pathInfo.delete) {
+      paths.delete.push({ path: pathName, tag: pathInfo.delete.tags[0] });
+    }
+
+    //create endpoints have path an action (e.g. "Create" or "Generate")
+    if (pathInfo.post && pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action) {
+      paths.create.push({
+        path: pathName,
+        tag: pathInfo.post.tags[0],
+        action: pathInfo['x-vault-displayAttrs'].action,
+      });
+    }
+
+    if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].navigation) {
+      paths.navPaths.push({ path: pathName });
+    }
+
+    return paths;
+  },
+
   getPaths(apiPath, backend, itemType) {
     debug(`Fetching relevant paths for ${backend} from ${apiPath}`);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
-      let paths = Object.keys(pathInfo);
-
-      //TODO: consolidate this into a single reduce()
-      //config is a get/post endpoint that doesn't take route params
-      //and isn't also a list endpoint
-      const configPath = paths
-        .map(path => {
-          if (
-            pathInfo[path].post &&
-            !path.includes('{') &&
-            pathInfo[path].get &&
-            (!pathInfo[path].get.parameters || pathInfo[path].get.parameters[0].name !== 'list')
-          ) {
-            return { path: path, tag: pathInfo[path].get.tags[0] };
-          }
-        })
-        .compact();
-
-      //list endpoints all have { name: "list" } in their get parameters
-      const listPaths = paths
-        .map(path => {
-          if (
-            pathInfo[path].get &&
-            pathInfo[path].get.parameters &&
-            pathInfo[path].get.parameters[0].name == 'list'
-          ) {
-            return { path: path, tag: pathInfo[path].get.tags[0] };
-          }
-        })
-        .compact();
-
-      //we always want to keep list endpoints for menus
-      //but only use scoped post/delete endpoints
+      let paths = Object.entries(pathInfo);
       if (itemType) {
-        paths = paths.filter(path => path.includes(itemType));
+        paths = paths.filter(path => path[0].includes(itemType));
       }
-      const deletePaths = paths
-        .map(path => {
-          if (pathInfo[path].delete) {
-            return { path: path, tag: pathInfo[path].delete.tags[0] };
-          }
-        })
-        .compact();
-
-      //create endpoints have path params, signified by "{}"
-      //we have to filter out login endpoints for auth methods
-      const createPaths = paths
-        .map(path => {
-          if (pathInfo[path].post && path.includes('{') && !path.includes('login')) {
-            return { path: path, tag: pathInfo[path].post.tags[0] };
-          }
-        })
-        .compact();
-
-      const navPaths = paths
-        .map(path => {
-          if (pathInfo[path]['x-vault-displayAttrs'] && pathInfo[path]['x-vault-displayAttrs'].navigation) {
-            return { path: path };
-          }
-        })
-        .compact();
-      //return paths object with all relevant information
-      return {
-        apiPath: apiPath,
-        configPath: configPath,
-        list: listPaths,
-        create: createPaths,
-        delete: deletePaths,
-        navPaths: navPaths,
-      };
+      return paths.reduce(this.reducePaths, {
+        apiPath: [],
+        configPath: [],
+        list: [],
+        create: [],
+        delete: [],
+        navPaths: [],
+      });
     });
   },
 
@@ -198,6 +178,7 @@ export default Service.extend({
     const { list, create } = paths;
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
+        debugger; // eslint-disable-line
         let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
