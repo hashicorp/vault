@@ -178,7 +178,6 @@ export default Service.extend({
     const { list, create } = paths;
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        debugger; // eslint-disable-line
         let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
