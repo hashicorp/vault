@@ -104,7 +104,7 @@ prep: fmtcheck
 	@go generate $(go list ./... | grep -v /vendor/)
 	@# Remove old (now broken) husky git hooks.
 	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
-	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
+	@if [ -d .git/hooks ]; then cp .hooks/git/* .git/hooks/; fi
 
 ci-config:
 	@$(MAKE) -C .circleci

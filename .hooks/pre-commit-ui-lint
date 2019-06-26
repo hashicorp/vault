@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+DIR=ui LINTER=node_modules/.bin/lint-staged
+
+# Silently succeed if no changes staged for $DIR
+if git diff --name-only --cached --exit-code -- $DIR/; then
+  exit 0
+fi
+
+# Silently succeed if the linter has not been installed.
+# We assume that if you're doing UI dev, you will have installed the linter
+# by running yarn.
+if [ ! -x $DIR/$LINTER ]; then
+  exit 0
+fi
+
+echo "==> Changes detected in $DIR/: Running linter..."
+
+# Run the linter from the UI dir.
+cd $DIR
+$LINTER || { echo "UI lint failed"; exit 1; }
