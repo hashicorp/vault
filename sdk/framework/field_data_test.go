@@ -675,21 +675,23 @@ func TestFieldDataGet(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-		data := &FieldData{
-			Raw:    tc.Raw,
-			Schema: tc.Schema,
-		}
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			data := &FieldData{
+				Raw:    tc.Raw,
+				Schema: tc.Schema,
+			}
 
-		if err := data.Validate(); err != nil {
-			t.Fatalf("bad: %s", err)
-		}
+			if err := data.Validate(); err != nil {
+				t.Fatalf("bad: %s", err)
+			}
 
-		actual := data.Get(tc.Key)
-		if !reflect.DeepEqual(actual, tc.Value) {
-			t.Fatalf(
-				"bad: %s\n\nExpected: %#v\nGot: %#v",
-				name, tc.Value, actual)
-		}
+			actual := data.Get(tc.Key)
+			if !reflect.DeepEqual(actual, tc.Value) {
+				t.Fatalf("Expected: %#v\nGot: %#v", tc.Value, actual)
+			}
+		})
 	}
 }
 
@@ -746,16 +748,20 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		data := &FieldData{
-			Raw:    tc.Raw,
-			Schema: tc.Schema,
-		}
+	for name, tc := range cases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			data := &FieldData{
+				Raw:    tc.Raw,
+				Schema: tc.Schema,
+			}
 
-		_, _, err := data.GetOkErr(tc.Key)
-		if err == nil {
-			t.Fatalf("error expected, none received")
-		}
+			got, _, err := data.GetOkErr(tc.Key)
+			if err == nil {
+				t.Fatalf("error expected, none received, got result: %#v", got)
+			}
+		})
 	}
 }
 
