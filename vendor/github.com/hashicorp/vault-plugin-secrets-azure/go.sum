@@ -2,8 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 contrib.go.opencensus.io/exporter/ocagent v0.4.12 h1:jGFvw3l57ViIVEPKKEUXPcLYIXJmQxLUh6ey1eJhwyc=
 contrib.go.opencensus.io/exporter/ocagent v0.4.12/go.mod h1:450APlNTSR6FrvC3CTRqYosuDstRB9un7SOx2k/9ckA=
-github.com/Azure/azure-sdk-for-go v27.1.0+incompatible h1:/aGULErVaJsMdtew1p9OhEo8FeBzfRKRzJbc8NWJv/w=
-github.com/Azure/azure-sdk-for-go v27.1.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
+github.com/Azure/azure-sdk-for-go v29.0.0+incompatible h1:CYPU39ULbGjQBo3gXIqiWouK0C4F+Pt2Zx5CqGvqknE=
+github.com/Azure/azure-sdk-for-go v29.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-autorest v11.7.1+incompatible h1:M2YZIajBBVekV86x0rr1443Lc1F/Ylxb9w+5EtSyX3Q=
 github.com/Azure/go-autorest v11.7.1+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
@@ -90,14 +90,8 @@ github.com/hashicorp/golang-lru v0.5.1 h1:0hERBMJE1eitiLkihrMvRVBYAkpHzc/J3QdDN+
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hashicorp/vault v1.1.1 h1:gMbc62ENpjCc73SCskWS3RPIYNaDimNVKS7wZpdPwt0=
-github.com/hashicorp/vault/api v1.0.0 h1:qjLJsgBF8x9HeCS40JJkvSrOSL1yBytgP80mqJTk8LM=
-github.com/hashicorp/vault/api v1.0.0/go.mod h1:tPzfK7kCa+pz+GlTtSrJQInFz+65izu9isPn97asRsQ=
 github.com/hashicorp/vault/api v1.0.1 h1:YQI4SgOlkmbEKZI8ZClo6fm9oXlBHJUlrbEtFiRPrng=
 github.com/hashicorp/vault/api v1.0.1/go.mod h1:AV/+M5VPDpB90arloVX0rVDUIHkONiwz5Uza9HRtpUE=
-github.com/hashicorp/vault/sdk v0.1.0/go.mod h1:uBWWfHXCsALfwcqXLCYu7YE6MB0DibwDK9/Lr6F8hOs=
-github.com/hashicorp/vault/sdk v0.1.5 h1:OjV0iPHcJC4xONsEIQsEXq5I8014dIN0sVH+ziNwgLk=
-github.com/hashicorp/vault/sdk v0.1.5/go.mod h1:Xp6UD7Xw/9ip+rGHilJRmwNlHxYZgbHEgUu8fmWPUqk=
 github.com/hashicorp/vault/sdk v0.1.8 h1:pfF3KwA1yPlfpmcumNsFM4uo91WMasX5gTuIkItu9r0=
 github.com/hashicorp/vault/sdk v0.1.8/go.mod h1:tHZfc6St71twLizWNHvnnbiGFo1aq0eD2jGPLtP8kAU=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=

@@ -1,0 +1,13 @@
+<HeaderCredentials @role={{this.role}} @scope={{this.scope}} />
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @params={{array "role.edit" this.scope this.role}}
+    >
+      Edit role
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+<div class="box is-fullwidth is-sideless is-shadowless">
+  <FieldGroupShow @model={{model}} @showAllFields={{false}} />
+</div>

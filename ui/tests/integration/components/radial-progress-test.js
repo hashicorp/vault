@@ -10,14 +10,6 @@ const component = create(radialProgress);
 module('Integration | Component | radial progress', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders', async function(assert) {
     // We have to manually round the circumference, strokeDash, and strokeDashOffset because
     // ie11 truncates decimals differently than other browsers.

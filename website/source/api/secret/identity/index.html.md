@@ -19,4 +19,5 @@ see the [Vault Identity documentation](/docs/secrets/identity/index.html).
  * [Entity Alias](entity-alias.html)
  * [Group](group.html)
  * [Group Alias](group-alias.html)
+ * [Identity Tokens](tokens.html)
  * [Lookup](lookup.html)

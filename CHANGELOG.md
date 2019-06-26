@@ -1,37 +1,80 @@
-## Next
+## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:
 
- * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
-   will now be preferred over regions set in the enclosing environment.
-   This is a _breaking_ change.
- * audit: Several more values in audit logs now are omitted if they are empty.
-   This helps reduce the size of audit log entries by not reproducing keys in
-   each entry that commonly don't contain any value, which can help in cases
-   where audit log entries are above the maximum UDP packet size and others.
-   See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
- * backends: both PeriodicFunc and WALRollback functions will be called if 
-   both are provided. Previously WALRollback would only be called if PeriodicFunc 
-   was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
+ * auth/token: Token store roles use new, common token fields for the values
+   that overlap with other auth backends. `period`, `explicit_max_ttl`, and
+   `bound_cidrs` will continue to work, with priority being given to the
+   `token_` prefixed versions of those parameters. They will also be returned
+   when doing a read on the role if they were used to provide values initially;
+   however, in Vault 1.4 if `period` or `explicit_max_ttl` is zero they will no
+   longer be returned. (`explicit_max_ttl` was already not returned if empty.)
+ * Due to underlying changes in Go version 1.12 and Go > 1.11.5, Vault is now
+   stricter about what characters it will accept in path names. Whereas before
+   it would filter out unprintable characters (and this could be turned off),
+   control characters and other invalid characters are now rejected within Go's
+   HTTP library before the request is passed to Vault, and this cannot be
+   disabled. To continue using these (e.g. for already-written paths), they
+   must be properly percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes
+   `%00`, and so on).
+ * The user-configured regions on the AWSKMS seal stanza will now be preferred
+   over regions set in the enclosing environment.  This is a _breaking_ change.
+ * All values in audit logs now are omitted if they are empty.  This helps
+   reduce the size of audit log entries by not reproducing keys in each entry
+   that commonly don't contain any value, which can help in cases where audit
+   log entries are above the maximum UDP packet size and others.
+ * Both PeriodicFunc and WALRollback functions will be called if both are
+   provided. Previously WALRollback would only be called if PeriodicFunc was
+   not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for
    details.
- * Go Modules change: Vault now uses Go Modules to manage dependencies. As a
-   result to both reduce transitive dependencies for API library users and
-   plugin authors, and to work around various conflicts, we have moved various
-   helpers around, mostly under an `sdk/` submodule. A couple of functions have
-   also moved from plugin helper code to the `api/` submodule. If you are a
-   plugin author, take a look at some of our official plugins and the paths
-   they are importing for guidance.
+ * Vault now uses Go's official dependency management system, Go Modules, to
+   manage dependencies. As a result to both reduce transitive dependencies for
+   API library users and plugin authors, and to work around various conflicts,
+   we have moved various helpers around, mostly under an `sdk/` submodule. A
+   couple of functions have also moved from plugin helper code to the `api/`
+   submodule. If you are a plugin author, take a look at some of our official
+   plugins and the paths they are importing for guidance.
 
 FEATURES:
 
- * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
+ * **Combined DB credential rotation**: Alternative mode for the Combined DB
+   Secret Engine to automatically rotate existing database account credentials
+   and set Vault as the source of truth for credentials.
+ * **Identity Tokens**: Vault's Identity system can now generate OIDC-compliant
+   ID tokens. These customizable tokens allow encapsulating a signed, verifiable
+   snapshot of identity information and metadata. They can be use by other
+   applications—even those without Vault authorization—as a way of establishing
+   identity based on a Vault entity.
+ * **Pivotal Cloud Foundry plugin**: New auth method using Pivotal Cloud
+   Foundry certificates for Vault authentication.
+ * **ElasticSearch database plugin**: New ElasticSearch database plugin issues
+   unique, short-lived ElasticSearch credentials.
+ * **New UI Features**: An HTTP Request Volume Page and new UI for editing LDAP
+   Users and Groups have been added.
+ * **HA support for Postgres**: PostgreSQL versions >= 9.5 may now but used as
+   and HA storage backend.
+ * **KMIP secrets engine (Enterprise)**: Allows Vault to operate as a KMIP Server,
+  seamlessly brokering cryptographic operations for traditional infrastructure.  
 
 IMPROVEMENTS: 
 
- * agent: Now supports proxying request query parameters [GH-6772] 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/jwt: Leeways for `nbf` and `exp` are now configurable, as is clock skew
+   leeway [JWT-53]
+ * auth/kubernetes: Allow service names/namespaces to be configured as globs
+   [KUBEAUTH-58]
+ * auth/token: Add a large set of token configuration options to token store
+   roles [GH-6662]
+ * identity: Allow a group alias' canonical ID to be modified
+ * namespaces: Namespaces can now be created and deleted from performance
+   replication secondaries
+ * replication: Client TLS authentication is now supported when enabling or
+   updating a replication secondary
+ * secrets/database: Cassandra operations will now cancel on client timeout
+   [GH-6954]
+ * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
@@ -41,29 +84,83 @@ IMPROVEMENTS:
    smaller [GH-6718]
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
- * storage/postgres: LIST now performs better on large datasets. [GH-6546]
+ * ui: Removing jQuery from the application makes the initial JS payload smaller [GH-6768]
  
 BUG FIXES: 
 
- * auth/jwt: Fix bound constraint checking so `bound_claims` satisfies the requirement [JWT-49]
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
+   when parsing this value [GH-6917]
+ * auth/aws: Fix an error complaining about a read-only view that could occur
+   during updating of a role when on a performance replication secondary
+   [GH-6926]
+ * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
+   for OIDC logins [JWT-54]
+ * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
+   response is empty [JWT-55]
+ * identity: Fix a case where modifying aliases of an entity could end up
+   moving the entity into the wrong namespace
+ * namespaces: Fix a behavior (currently only known to be benign) where we
+   wouldn't delete policies through the official functions before wiping the
+   namespaces on deletion
+ * ui: Fix timestamp on some transit keys [GH-6827]
+
+## 1.1.3 (June 5th, 2019)
+
+IMPROVEMENTS: 
+
+ * agent: Now supports proxying request query parameters [GH-6772] 
+ * core: Mount table output now includes a UUID indicating the storage path [GH-6633]
+ * core: HTTP server timeout values are now configurable [GH-6666]
+ * replication: Improve performance of the reindex operation on secondary clusters 
+   when mount filters are in use
+ * replication: Replication status API now returns the state and progress of a reindex
+
+BUG FIXES:
+
+ * api: Return the Entity ID in the secret output [GH-6819]
+ * auth/jwt: Consider bound claims when considering if there is at least one
+   bound constraint [JWT-49]
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
+ * cli: Add deprecated stored-shares flag back to the init command [GH-6677]
+ * cli: Fix a panic when the KV command would return no data [GH-6675]
+ * cli: Fix issue causing CLI list operations to not return proper format when 
+   there is an empty response [GH-6776]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
- * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
- * core: Fix issue where some OpenAPI parameters were incorrectly listed as being sent
-   as a header [GH-6679]
+ * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of
+   endpoints [GH-6654]
+ * core: Fix issue where some OpenAPI parameters were incorrectly listed as
+   being sent as a header [GH-6679]
+ * core: Fix issue that would allow duplicate mount names to be used [GH-6771]
+ * namespaces: Fix behavior when using `root` instead of `root/` as the
+   namespace header value
  * pki: fix a panic when a client submits a null value [GH-5679]
- * replication: Fix an issue causing startup problems if a namespace policy
-   wasn't replicated properly
- * storage/consul: recognize `https://` address even if schema not specified [GH-6602]
- * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
-   constant switching of the active node [GH-6637]
- * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was
-   received from the DynamoDB API [GH-6640]
  * replication: Properly update mount entry cache on a secondary to apply all
    new values after a tune
- * ui: fix an issue where sensitive input values weren't being saved to the
+ * replication: Properly close connection on bootstrap error
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * replication: Fix longer than necessary WAL replay during an initial reindex
+ * replication: Fix error during mount filter invalidation on DR secondary clusters
+ * secrets/ad: Make time buffer configurable [AD-35]
+ * secrets/gcp: Check for nil config when getting credentials [SGCP-35]
+ * secrets/gcp: Fix error checking in some cases where the returned value could
+   be 403 instead of 404 [SGCP-37]
+ * secrets/gcpkms: Disable key rotation when deleting a key [GCPKMS-10]
+ * storage/consul: recognize `https://` address even if schema not specified
+   [GH-6602]
+ * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA)
+   could cause constant switching of the active node [GH-6637]
+ * storage/dynamodb: Eliminate a high-CPU condition that could occur if an
+   error was received from the DynamoDB API [GH-6640]
+ * storage/gcs: Correctly use configured chunk size values [GH-6655]
+ * storage/mssql: Use the correct database when pre-created schemas exist
+   [GH-6356]
+ * ui: Fix issue with select arrows on drop down menus [GH-6627]
+ * ui: Fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
- * ui: fix web cli parsing when using quoted values [GH-6755]
+ * ui: Fix web cli parsing when using quoted values [GH-6755]
+ * ui: Fix a namespace workflow mapping identities from external namespaces by
+   allowing arbitrary input in search-select component [GH-6728]
 
 ## 1.1.2 (April 18th, 2019)
 

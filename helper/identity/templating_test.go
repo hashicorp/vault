@@ -2,13 +2,22 @@ package identity
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
+// intentionally != time.Now() to catch latent used of time.Now instead of
+// passed in values
+var testNow = time.Now().Add(100 * time.Hour)
+
 func TestPopulate_Basic(t *testing.T) {
 	var tests = []struct {
+		mode              int
 		name              string
 		input             string
 		output            string
@@ -23,7 +32,40 @@ func TestPopulate_Basic(t *testing.T) {
 		aliasMetadata     map[string]string
 		groupName         string
 		groupMetadata     map[string]string
+		groupMemberships  []string
+		now               time.Time
 	}{
+		// time.* tests. Keep tests with time.Now() at the front to avoid false
+		// positives due to the second changing during the test
+		{
+			name:   "time now",
+			input:  "{{time.now}}",
+			output: strconv.Itoa(int(testNow.Unix())),
+			now:    testNow,
+		},
+		{
+			name:   "time plus",
+			input:  "{{time.now.plus.1h}}",
+			output: strconv.Itoa(int(testNow.Unix() + (60 * 60))),
+			now:    testNow,
+		},
+		{
+			name:   "time plus",
+			input:  "{{time.now.minus.5m}}",
+			output: strconv.Itoa(int(testNow.Unix() - (5 * 60))),
+			now:    testNow,
+		},
+		{
+			name:  "invalid operator",
+			input: "{{time.now.divide.5m}}",
+			err:   errors.New("invalid time operator \"divide\""),
+		},
+		{
+			name:  "time missing operand",
+			input: "{{time.now.plus}}",
+			err:   errors.New("missing time operand"),
+		},
+
 		{
 			name:   "no_templating",
 			input:  "path foobar {",
@@ -86,12 +128,13 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			name:          "alias_id_name",
-			input:         "path {{ identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}\n}",
+			input:         "path {{ identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}  nval = {{identity.entity.aliases.foomount.name}}\n}",
 			entityName:    "entityName",
 			aliasAccessor: "foomount",
 			aliasID:       "aliasID",
+			aliasName:     "aliasName",
 			metadata:      map[string]string{"foo": "bar"},
-			output:        "path entityName {\n\tval = aliasID\n}",
+			output:        "path entityName {\n\tval = aliasID  nval = aliasName\n}",
 		},
 		{
 			name:          "alias_id_name_bad_selector",
@@ -143,6 +186,149 @@ func TestPopulate_Basic(t *testing.T) {
 			groupName:  "groupName",
 			err:        errors.New("entity is not a member of group \"hroupName\""),
 		},
+		{
+			name:     "metadata_object_disallowed",
+			input:    "{{identity.entity.metadata}}",
+			metadata: map[string]string{"foo": "bar"},
+			err:      ErrTemplateValueNotFound,
+		},
+		{
+			name:          "alias_metadata_object_disallowed",
+			input:         "{{identity.entity.aliases.foomount.metadata}}",
+			aliasAccessor: "foomount",
+			aliasMetadata: map[string]string{"foo": "bar"},
+			err:           ErrTemplateValueNotFound,
+		},
+		{
+			name:             "group_names_disallowed",
+			input:            "{{identity.entity.group_names}}",
+			groupMemberships: []string{"foo", "bar"},
+			err:              ErrTemplateValueNotFound,
+		},
+		{
+			name:             "group_ids_disallowed",
+			input:            "{{identity.entity.group_ids}}",
+			groupMemberships: []string{"foo", "bar"},
+			err:              ErrTemplateValueNotFound,
+		},
+
+		// missing selector cases
+		{
+			mode:   JSONTemplating,
+			name:   "entity id",
+			input:  "{{identity.entity.id}}",
+			output: `"entityID"`,
+		},
+		{
+			mode:       JSONTemplating,
+			name:       "entity name",
+			input:      "{{identity.entity.name}}",
+			entityName: "entityName",
+			output:     `"entityName"`,
+		},
+		{
+			mode:   JSONTemplating,
+			name:   "entity name missing",
+			input:  "{{identity.entity.name}}",
+			output: `""`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "alias name/id",
+			input:         "{{identity.entity.aliases.foomount.id}} {{identity.entity.aliases.foomount.name}}",
+			aliasAccessor: "foomount",
+			aliasID:       "aliasID",
+			aliasName:     "aliasName",
+			output:        `"aliasID" "aliasName"`,
+		},
+		{
+			mode:     JSONTemplating,
+			name:     "one metadata key",
+			input:    "{{identity.entity.metadata.color}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `"green"`,
+		},
+		{
+			mode:     JSONTemplating,
+			name:     "one metadata key not found",
+			input:    "{{identity.entity.metadata.size}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `""`,
+		},
+		{
+			mode:     JSONTemplating,
+			name:     "all entity metadata",
+			input:    "{{identity.entity.metadata}}",
+			metadata: map[string]string{"foo": "bar", "color": "green"},
+			output:   `{"color":"green","foo":"bar"}`,
+		},
+		{
+			mode:   JSONTemplating,
+			name:   "null entity metadata",
+			input:  "{{identity.entity.metadata}}",
+			output: `{}`,
+		},
+		{
+			mode:             JSONTemplating,
+			name:             "group_names",
+			input:            "{{identity.entity.group_names}}",
+			groupMemberships: []string{"foo", "bar"},
+			output:           `["foo","bar"]`,
+		},
+		{
+			mode:             JSONTemplating,
+			name:             "group_ids",
+			input:            "{{identity.entity.group_ids}}",
+			groupMemberships: []string{"foo", "bar"},
+			output:           `["foo_0","bar_1"]`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "one alias metadata key",
+			input:         "{{identity.entity.aliases.aws_123.metadata.color}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `"green"`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "one alias metadata key not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `""`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "one alias metadata, accessor not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata.size}}",
+			aliasAccessor: "not_gonna_match",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `""`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "all alias metadata",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "aws_123",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `{"color":"green","foo":"bar"}`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "null alias metadata",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "aws_123",
+			output:        `{}`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "all alias metadata, accessor not found",
+			input:         "{{identity.entity.aliases.aws_123.metadata}}",
+			aliasAccessor: "not_gonna_match",
+			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
+			output:        `{}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -156,7 +342,7 @@ func TestPopulate_Basic(t *testing.T) {
 		}
 		if test.aliasAccessor != "" {
 			entity.Aliases = []*Alias{
-				&Alias{
+				{
 					MountAccessor: test.aliasAccessor,
 					ID:            test.aliasID,
 					Name:          test.aliasName,
@@ -173,12 +359,24 @@ func TestPopulate_Basic(t *testing.T) {
 				NamespaceID: namespace.RootNamespace.ID,
 			})
 		}
-		subst, out, err := PopulateString(&PopulateStringInput{
+
+		if test.groupMemberships != nil {
+			for i, groupName := range test.groupMemberships {
+				groups = append(groups, &Group{
+					ID:   fmt.Sprintf("%s_%d", groupName, i),
+					Name: groupName,
+				})
+			}
+		}
+
+		subst, out, err := PopulateString(PopulateStringInput{
+			Mode:              test.mode,
 			ValidityCheckOnly: test.validityCheckOnly,
 			String:            test.input,
 			Entity:            entity,
 			Groups:            groups,
 			Namespace:         namespace.RootNamespace,
+			Now:               test.now,
 		})
 		if err != nil {
 			if test.err == nil {
@@ -189,10 +387,108 @@ func TestPopulate_Basic(t *testing.T) {
 			}
 		}
 		if out != test.output {
-			t.Fatalf("%s: bad output: %s", test.name, out)
+			t.Fatalf("%s: bad output: %s, expected: %s", test.name, out, test.output)
 		}
 		if err == nil && !subst && out != test.input {
 			t.Fatalf("%s: bad subst flag", test.name)
 		}
+	}
+}
+
+func TestPopulate_CurrentTime(t *testing.T) {
+	now := time.Now()
+
+	// Test that an unset Now parameter results in current time
+	input := PopulateStringInput{
+		Mode:   JSONTemplating,
+		String: `{{time.now}}`,
+	}
+
+	_, out, err := PopulateString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nowPopulated, err := strconv.Atoi(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	diff := math.Abs(float64(int64(nowPopulated) - now.Unix()))
+	if diff > 1 {
+		t.Fatalf("expected time within 1 second. Got diff of: %f", diff)
+	}
+}
+
+func TestPopulate_FullObject(t *testing.T) {
+	var testEntity = &Entity{
+		ID:   "abc-123",
+		Name: "Entity Name",
+		Metadata: map[string]string{
+			"color":         "green",
+			"size":          "small",
+			"non-printable": "\"\n\t",
+		},
+		Aliases: []*Alias{
+			{
+				MountAccessor: "aws_123",
+				Metadata: map[string]string{
+					"service": "ec2",
+					"region":  "west",
+				},
+			},
+		},
+	}
+
+	var testGroups = []*Group{
+		{ID: "a08b0c02", Name: "g1"},
+		{ID: "239bef91", Name: "g2"},
+	}
+
+	template := `
+			{
+			    "id": {{identity.entity.id}},
+			    "name": {{identity.entity.name}},
+			    "all metadata": {{identity.entity.metadata}},
+			    "one metadata key": {{identity.entity.metadata.color}},
+			    "one metadata key not found": {{identity.entity.metadata.asldfk}},
+			    "alias metadata": {{identity.entity.aliases.aws_123.metadata}},
+			    "alias not found metadata": {{identity.entity.aliases.blahblah.metadata}},
+			    "one alias metadata key": {{identity.entity.aliases.aws_123.metadata.service}},
+			    "one not found alias metadata key": {{identity.entity.aliases.blahblah.metadata.service}},
+			    "group names": {{identity.entity.group_names}},
+			    "group ids": {{identity.entity.group_ids}},
+			    "repeated and": {"nested element": {{identity.entity.name}}}
+			}`
+
+	expected := `
+			{
+			    "id": "abc-123",
+			    "name": "Entity Name",
+			    "all metadata": {"color":"green","non-printable":"\"\n\t","size":"small"},
+			    "one metadata key": "green",
+			    "one metadata key not found": "",
+			    "alias metadata": {"region":"west","service":"ec2"},
+			    "alias not found metadata": {},
+			    "one alias metadata key": "ec2",
+			    "one not found alias metadata key": "",
+			    "group names": ["g1","g2"],
+			    "group ids": ["a08b0c02","239bef91"],
+			    "repeated and": {"nested element": "Entity Name"}
+			}`
+
+	input := PopulateStringInput{
+		Mode:   JSONTemplating,
+		String: template,
+		Entity: testEntity,
+		Groups: testGroups,
+	}
+	_, out, err := PopulateString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if out != expected {
+		t.Fatalf("expected:\n%s\n\ngot:\n%s", expected, out)
 	}
 }

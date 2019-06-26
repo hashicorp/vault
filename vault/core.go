@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -15,7 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/physical/raft"
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
@@ -34,12 +37,14 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 const (
@@ -173,8 +178,20 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
+	// underlyingPhysical will always point to the underlying backend
+	// implementation. This is an un-trusted backend with durable data
+	underlyingPhysical physical.Backend
+
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	raftUnseal bool
+
+	raftChallenge *physical.EncryptedBlobInfo
+
+	raftLeaderClient *api.Client
+
+	raftLeaderBarrierConfig *SealConfig
 
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
@@ -353,6 +370,8 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
+	// The UUID used to hold the leader lock. Only set on active node
+	leaderUUID string
 
 	// CORS Information
 	corsConfig *CORSConfig
@@ -427,6 +446,13 @@ type Core struct {
 
 	// Stores request counters
 	counters counters
+
+	// Stores the raft applied index for standby nodes
+	raftFollowerStates *raftFollowerStates
+	// Stop channel for raft TLS rotations
+	raftTLSRotationStopCh chan struct{}
+
+	coreNumber int
 }
 
 // CoreConfig is used to parameterize a core
@@ -581,6 +607,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                      entCore{},
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
+		underlyingPhysical:           conf.Physical,
 		redirectAddr:                 conf.RedirectAddr,
 		clusterAddr:                  conf.ClusterAddr,
 		seal:                         conf.Seal,
@@ -645,7 +672,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	if c.seal == nil {
-		c.seal = NewDefaultSeal()
+		c.seal = NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir")))
 	}
 	c.seal.SetCore(c)
 
@@ -814,6 +841,8 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
+	c.logger.Debug("unseal key supplied")
+
 	ctx := context.Background()
 
 	// Explicitly check for init status. This also checks if the seal
@@ -822,7 +851,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !init {
+	if !init && !c.isRaftUnseal() {
 		return false, ErrNotInit
 	}
 
@@ -850,8 +879,65 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	if masterKey != nil {
-		return c.unsealInternal(ctx, masterKey)
+		if c.seal.BarrierType() == seal.Shamir {
+			_, err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
+				"key": base64.StdEncoding.EncodeToString(masterKey),
+			})
+			if err != nil {
+				return false, err
+			}
+		}
+
+		if !c.isRaftUnseal() {
+			return c.unsealInternal(ctx, masterKey)
+		}
+
+		// If we are in the middle of a raft join send the answer and wait for
+		// data to start streaming in.
+		if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
+			return false, err
+		}
+		// Reset the state
+		c.raftUnseal = false
+		c.raftChallenge = nil
+		c.raftLeaderBarrierConfig = nil
+		c.raftLeaderClient = nil
+
+		go func() {
+			keyringFound := false
+			defer func() {
+				if keyringFound {
+					_, err := c.unsealInternal(ctx, masterKey)
+					if err != nil {
+						c.logger.Error("failed to unseal", "error", err)
+					}
+				}
+			}()
+
+			// Wait until we at least have the keyring before we attempt to
+			// unseal the node.
+			for {
+				keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
+				if err != nil {
+					c.logger.Error("failed to list physical keys", "error", err)
+					return
+				}
+				if strutil.StrListContains(keys, "keyring") {
+					keyringFound = true
+					return
+				}
+				select {
+				case <-time.After(1 * time.Second):
+				}
+			}
+		}()
+
+		// Return Vault as sealed since unsealing happens in background
+		// which gets delayed until the data from the leader is streamed to
+		// the follower.
+		return true, nil
 	}
 
 	return false, nil
@@ -882,9 +968,15 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 	var config *SealConfig
 	var err error
-	if seal.RecoveryKeySupported() && (useRecoveryKeys || c.migrationSeal != nil) {
+
+	switch {
+	case seal.RecoveryKeySupported() && (useRecoveryKeys || c.migrationSeal != nil):
 		config, err = seal.RecoveryConfig(ctx)
-	} else {
+	case c.isRaftUnseal():
+		// Ignore follower's seal config and refer to leader's barrier
+		// configuration.
+		config = c.raftLeaderBarrierConfig
+	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
 	if err != nil {
@@ -1074,15 +1166,16 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return false, err
 	}
-	if c.logger.IsInfo() {
-		c.logger.Info("vault is unsealed")
-	}
 
 	if err := preUnsealInternal(ctx, c); err != nil {
 		return false, err
 	}
 
 	if err := c.startClusterListener(ctx); err != nil {
+		return false, err
+	}
+
+	if err := c.startRaftStorage(ctx); err != nil {
 		return false, err
 	}
 
@@ -1121,6 +1214,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 	// Success!
 	atomic.StoreUint32(c.sealed, 0)
+
+	if c.logger.IsInfo() {
+		c.logger.Info("vault is unsealed")
+	}
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
@@ -1191,9 +1288,15 @@ func (c *Core) Seal(token string) error {
 func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal-internal"}, time.Now())
 
+	var unlocked bool
+	defer func() {
+		if !unlocked {
+			c.stateLock.RUnlock()
+		}
+	}()
+
 	if req == nil {
 		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1205,14 +1308,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if c.standby {
 		c.logger.Error("vault cannot seal when in standby mode; please restart instead")
 		retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1233,27 +1334,24 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		auth.TokenType = te.Type
 	}
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:    auth,
 		Request: req,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1264,13 +1362,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		if err != nil {
 			c.logger.Error("failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
-			c.stateLock.RUnlock()
 			return retErr
 		}
 		if te == nil {
 			// Token is no longer valid
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-			c.stateLock.RUnlock()
 			return retErr
 		}
 	}
@@ -1280,7 +1376,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		RootPrivsRequired: true,
 	})
 	if !authResults.Allowed {
-		c.stateLock.RUnlock()
 		retErr = multierror.Append(retErr, authResults.Error)
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
@@ -1302,6 +1397,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	// Unlock; sealing will grab the lock when needed
+	unlocked = true
 	c.stateLock.RUnlock()
 
 	sealErr := c.sealInternal()
@@ -1326,10 +1422,10 @@ func (c *Core) UIHeaders() (http.Header, error) {
 // sealInternal is an internal method used to seal the vault.  It does not do
 // any authorization checking.
 func (c *Core) sealInternal() error {
-	return c.sealInternalWithOptions(true, false)
+	return c.sealInternalWithOptions(true, false, true)
 }
 
-func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
@@ -1408,8 +1504,18 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		c.logger.Debug("runStandby done")
 	}
 
-	// Stop the cluster listener
-	c.stopClusterListener()
+	// If the storage backend needs to be sealed
+	if shutdownRaft {
+		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+				c.logger.Error("error stopping storage cluster", "error", err)
+				return err
+			}
+		}
+
+		// Stop the cluster listener
+		c.stopClusterListener()
+	}
 
 	c.logger.Debug("sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
@@ -1514,6 +1620,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
+
+		c.startPeriodicRaftTLSRotate(ctx)
 	}
 
 	c.clusterParamsLock.Lock()
@@ -1596,13 +1704,15 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
+	c.stopPeriodicRaftTLSRotate()
+
+	c.stopForwarding()
+
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping replication: {{err}}", err))
 	}
 	c.clusterParamsLock.Unlock()
-
-	c.stopForwarding()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
@@ -1663,6 +1773,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
+			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
+				// Go through the loop again, this time the stop channel case
+				// should trigger
+				continue
+			}
 			if c.perfStandby {
 				syncCounter(c)
 			} else {
@@ -1671,6 +1786,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 					c.logger.Error("writing request counters to barrier", "err", err)
 				}
 			}
+			c.stateLock.RUnlock()
 
 		case <-stopCh:
 			return

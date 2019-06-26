@@ -381,3 +381,12 @@ END
 const rotateRootCredentialsSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `
+
+// GenerateCredentials returns a generated password
+func (m *MSSQL) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
+}

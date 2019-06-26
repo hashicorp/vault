@@ -92,7 +92,7 @@ func CreateUploadPublicKeyRequest() (request *UploadPublicKeyRequest) {
 	request = &UploadPublicKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UploadPublicKey", "ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UploadPublicKey", "", "")
 	return
 }
 

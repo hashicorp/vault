@@ -11,9 +11,9 @@ import (
 type CommonRequest struct {
 	*baseRequest
 
-	Version string
-	ApiName string
-	Product string
+	Version     string
+	ApiName     string
+	Product     string
 	ServiceCode string
 
 	// roa params

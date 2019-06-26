@@ -19,8 +19,8 @@ Package spanner provides a client for reading and writing to Cloud Spanner
 databases. See the packages under admin for clients that operate on databases
 and instances.
 
-See https://cloud.google.com/spanner/docs/getting-started/go/ for an introduction
-to Cloud Spanner and additional help on using this API.
+See https://cloud.google.com/spanner/docs/getting-started/go/ for an
+introduction to Cloud Spanner and additional help on using this API.
 
 See https://godoc.org/cloud.google.com/go for authentication, timeouts,
 connection pooling and similar aspects of this package.
@@ -87,8 +87,8 @@ the Kind field to specify other boundary conditions:
 
 KeySets
 
-A KeySet represents a set of keys. A single Key or KeyRange can act as a KeySet. Use
-the KeySets function to build the union of several KeySets:
+A KeySet represents a set of keys. A single Key or KeyRange can act as a KeySet.
+Use the KeySets function to build the union of several KeySets:
 
     ks1 := spanner.KeySets(key1, key2, kr1, kr2)
 
@@ -305,22 +305,51 @@ mutations, which will all be executed at the end of the transaction:
     })
 
 
+Structs
+
+Cloud Spanner STRUCT (aka STRUCT) values
+(https://cloud.google.com/spanner/docs/data-types#struct-type) can be
+represented by a Go struct value.
+
+A proto StructType is built from the field types and field tag information of
+the Go struct. If a field in the struct type definition has a
+"spanner:<field_name>" tag, then the value of the "spanner" key in the tag is
+used as the name for that field in the built StructType, otherwise the field
+name in the struct definition is used. To specify a field with an empty field
+name in a Cloud Spanner STRUCT type, use the `spanner:""` tag annotation against
+the corresponding field in the Go struct's type definition.
+
+A STRUCT value can contain STRUCT-typed and Array-of-STRUCT typed fields and
+these can be specified using named struct-typed and []struct-typed fields inside
+a Go struct. However, embedded struct fields are not allowed. Unexported struct
+fields are ignored.
+
+NULL STRUCT values in Cloud Spanner are typed. A nil pointer to a Go struct
+value can be used to specify a NULL STRUCT value of the corresponding
+StructType.  Nil and empty slices of a Go STRUCT type can be used to specify
+NULL and empty array values respectively of the corresponding StructType. A
+slice of pointers to a Go struct type can be used to specify an array of
+NULL-able STRUCT values.
+
+
 DML and Partitioned DML
 
 Spanner supports DML statements like INSERT, UPDATE and DELETE. Use
 ReadWriteTransaction.Update to run DML statements. It returns the number of rows
-affected. (You can call use ReadWriteTransaction.Query with a DML statement. The first
-call to Next on the resulting RowIterator will return iterator.Done, and the RowCount
-field of the iterator will hold the number of affected rows.)
+affected. (You can call use ReadWriteTransaction.Query with a DML statement. The
+first call to Next on the resulting RowIterator will return iterator.Done, and
+the RowCount field of the iterator will hold the number of affected rows.)
 
-For large databases, it may be more efficient to partition the DML statement. Use
-client.PartitionedUpdate to run a DML statement in this way. Not all DML statements
-can be partitioned.
+For large databases, it may be more efficient to partition the DML statement.
+Use client.PartitionedUpdate to run a DML statement in this way. Not all DML
+statements can be partitioned.
+
 
 Tracing
 
-This client has been instrumented to use OpenCensus tracing (http://opencensus.io).
-To enable tracing, see "Enabling Tracing for a Program" at
-https://godoc.org/go.opencensus.io/trace. OpenCensus tracing requires Go 1.8 or higher.
+This client has been instrumented to use OpenCensus tracing
+(http://opencensus.io). To enable tracing, see "Enabling Tracing for a Program"
+at https://godoc.org/go.opencensus.io/trace. OpenCensus tracing requires Go 1.8
+or higher.
 */
 package spanner // import "cloud.google.com/go/spanner"

@@ -86,6 +86,24 @@ func (mw *databaseTracingMiddleware) Close() (err error) {
 	return mw.next.Close()
 }
 
+func (mw *databaseTracingMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
+	defer func(then time.Time) {
+		mw.logger.Trace("generate credentials", "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("generate credentials", "status", "started")
+	return mw.next.GenerateCredentials(ctx)
+}
+
+func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username, password string, err error) {
+	defer func(then time.Time) {
+		mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("set credentials", "status", "started")
+	return mw.next.SetCredentials(ctx, statements, staticConfig)
+}
+
 // ---- Metrics Middleware Domain ----
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
@@ -201,6 +219,38 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 	return mw.next.Close()
 }
 
+func (mw *databaseMetricsMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "GenerateCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "GenerateCredentials"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "GenerateCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "GenerateCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials"}, 1)
+	return mw.next.GenerateCredentials(ctx)
+}
+
+func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username, password string, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "SetCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "SetCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials"}, 1)
+	return mw.next.SetCredentials(ctx, statements, staticConfig)
+}
+
 // ---- Error Sanitizer Middleware Domain ----
 
 // DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
@@ -272,4 +322,14 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		}
 	}
 	return err
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
+	password, err = mw.next.GenerateCredentials(ctx)
+	return password, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username, password string, err error) {
+	username, password, err = mw.next.SetCredentials(ctx, statements, staticConfig)
+	return username, password, mw.sanitize(err)
 }

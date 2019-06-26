@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 )
@@ -176,4 +178,32 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	}
 
 	return ret, nil
+}
+
+// HTTPResponseWriter is optionally added to a request object and can be used to
+// write directly to the HTTP response writter.
+type HTTPResponseWriter struct {
+	writer  io.Writer
+	written *uint32
+}
+
+// NewHTTPResponseWriter creates a new HTTPRepoinseWriter object that wraps the
+// provided io.Writer.
+func NewHTTPResponseWriter(w io.Writer) *HTTPResponseWriter {
+	return &HTTPResponseWriter{
+		writer:  w,
+		written: new(uint32),
+	}
+}
+
+// Write will write the bytes to the underlying io.Writer.
+func (rw *HTTPResponseWriter) Write(bytes []byte) (int, error) {
+	atomic.StoreUint32(rw.written, 1)
+
+	return rw.writer.Write(bytes)
+}
+
+// Written tells us if the writer has been written to yet.
+func (rw *HTTPResponseWriter) Written() bool {
+	return atomic.LoadUint32(rw.written) == 1
 }
