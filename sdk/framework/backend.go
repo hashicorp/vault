@@ -539,7 +539,7 @@ type FieldSchema struct {
 func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
 		switch s.Type {
-		case TypeDurationSecond:
+		case TypeDurationSecond, TypeSignedDurationSecond:
 			resultDur, err := parseutil.ParseDurationSecond(s.Default)
 			if err != nil {
 				return s.Type.Zero()
@@ -567,7 +567,7 @@ func (t FieldType) Zero() interface{} {
 		return map[string]interface{}{}
 	case TypeKVPairs:
 		return map[string]string{}
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		return 0
 	case TypeSlice:
 		return []interface{}{}
