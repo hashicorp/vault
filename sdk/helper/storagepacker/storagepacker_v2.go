@@ -233,6 +233,13 @@ func (s *StoragePackerV2) GetBucket(ctx context.Context, bucketKey string) (*Loc
 func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string) error {
 	numShards := int(math.Pow(2.0, float64(s.BucketShardBits)))
 
+	if len(cacheKey)+s.BucketShardBits/4 > KeyLength {
+		// Maximum depth of the radix tree exceeded --- extremely unlikely to happen
+		// naturally because of the difficulty creating enough collisions, but a
+		// wierd configuration (very large BucketShardBits) could potentially cause this to occur.
+		return errors.New("attempting to shard past the end of the key")
+	}
+
 	// Create the shards
 	s.Logger.Info("sharding bucket", "bucket_key", bucket.Key, "num_shards", numShards)
 	defer s.Logger.Info("sharding bucket process exited", "bucket_key", bucket.Key)

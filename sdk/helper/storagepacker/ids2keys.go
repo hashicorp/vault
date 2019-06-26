@@ -25,6 +25,9 @@ func GetItemIDHash(itemID string) string {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(itemID))
 }
 
+// Length of key
+const KeyLength = 64
+
 // Given a list of IDs, calculate their keys generate itemRequests for each.
 func (s *StoragePackerV2) keysForIDs(ids []string) []*itemRequest {
 	requests := make([]*itemRequest, 0, len(ids))
