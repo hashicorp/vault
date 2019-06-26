@@ -202,6 +202,17 @@ func TestFieldDataGet(t *testing.T) {
 			0,
 		},
 
+		"duration type, 0 value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": 0,
+			},
+			"foo",
+			0,
+		},
+
 		"signed duration type, positive string value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
@@ -296,6 +307,17 @@ func TestFieldDataGet(t *testing.T) {
 			},
 			map[string]interface{}{
 				"foo": nil,
+			},
+			"foo",
+			0,
+		},
+
+		"signed duration type, 0 value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": 0,
 			},
 			"foo",
 			0,
