@@ -27,7 +27,10 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
-		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_roles": "test-role1",
+		},
+		Storage: storage,
 	})
 
 	// Create a test role "test-role1" with a valid key -- should succeed
@@ -58,7 +61,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Create a test role "test-role2" witn an invalid key -- should fail
+	// Create a test role "test-role2" with an invalid key -- should fail
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role2",
 		Operation: logical.CreateOperation,
@@ -133,7 +136,10 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
-		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_roles": "test-role1,test-role2",
+		},
+		Storage: storage,
 	})
 
 	// Create "test-role1"
@@ -213,6 +219,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		"rotation_period":  int64(86400),
 		"verification_ttl": int64(86400),
 		"algorithm":        "RS256",
+		"allowed_roles":    []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -225,6 +232,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Data: map[string]interface{}{
 			"rotation_period":  "10m",
 			"verification_ttl": "1h",
+			"allowed_roles":    "allowed-test-role",
 		},
 		Storage: storage,
 	})
@@ -241,13 +249,14 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		"rotation_period":  int64(600),
 		"verification_ttl": int64(3600),
 		"algorithm":        "RS256",
+		"allowed_roles":    []string{"allowed-test-role"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
 
-	// Create a role that depends on test key
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Create a role that depends on test key -- should fail because this role is not an allowed_role by test-key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -255,6 +264,23 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		},
 		Storage: storage,
 	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"The key \"test-key\" does not list the role \"test-role\" as an allowed_role": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Create a role that depends on test key -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/allowed-test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -264,14 +290,14 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectError(t, resp, err)
 	// validate error message
-	expectedStrings := map[string]interface{}{
-		"unable to delete key \"test-key\" because it is currently referenced by these roles: test-role": true,
+	expectedStrings = map[string]interface{}{
+		"unable to delete key \"test-key\" because it is currently referenced by these roles: allowed-test-role": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
-	// Delete test-role
+	// Delete allowed-test-role
 	c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/test-role",
+		Path:      "oidc/role/allowed-test-role",
 		Operation: logical.DeleteOperation,
 		Storage:   storage,
 	})
@@ -446,7 +472,10 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
-		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_roles": "*",
+		},
+		Storage: storage,
 	})
 
 	// Create a test role "test-role"
@@ -459,8 +488,42 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Storage: storage,
 	})
 
-	// Generate a token against the role "test-role" -- should succeed
+	// remove test-role as an allowed role from test-key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"allowed_roles": "",
+		},
+		Storage: storage,
+	})
+
+	// Generate a token against the role "test-role" -- should fail
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"The key \"test-key\" does not list the role \"test-role\" as an allowed_role": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// add test-role as an allowed role from test-key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"allowed_roles": "test-role",
+		},
+		Storage: storage,
+	})
+
+	// Generate a token against the role "test-role" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/token/test-role",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
@@ -732,9 +795,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 	}
 
 	// Populte storage with a role
-	role := &role{
-		Name: roleName,
-	}
+	role := &role{}
 	entry, _ := logical.StorageEntryJSON(roleConfigPath+roleName, role)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
@@ -863,7 +924,8 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Storage:   storage,
 			Data: map[string]interface{}{
-				"algorithm": alg,
+				"algorithm":     alg,
+				"allowed_roles": "*",
 			},
 		})
 		expectSuccess(t, resp, err)
@@ -889,7 +951,6 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 		expectSuccess(t, resp, err)
 
 		validToken := resp.Data["token"].(string)
-		// --- Populate backend with a valid token
 
 		//	Expect active true and no error from a valid token
 		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
