@@ -22,14 +22,18 @@ import { computed } from '@ember/object';
 export default Component.extend({
   classNames: ['http-requests-dropdown'],
   counters: null,
+  selectedItem: 'All',
   options: computed('counters', function() {
     let counters = this.counters || [];
-    // const options = {'All', 'Last 12 Months'};
-    if (counters.length > 2) {
-      const years = counters.map(counter => {
-        debugger;
-        return counter.start_time.slice(0, 3);
-      });
+    let options = ['All', 'Last 12 Months'];
+    if (counters.length) {
+      const years = counters.reduce((uniqueYears, counter) => {
+        const year = counter.start_time.substr(0, 4);
+        return uniqueYears.includes(year) ? uniqueYears : [...uniqueYears, year];
+      }, []);
+      years.sort().reverse();
+      options = options.concat(years);
     }
+    return options;
   }),
 });
