@@ -500,12 +500,3 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 	p.RawConfig["password"] = password
 	return p.RawConfig, nil
 }
-
-// GenerateCredentials returns a generated password
-func (p *PostgreSQL) GenerateCredentials(ctx context.Context) (string, error) {
-	password, err := p.GeneratePassword()
-	if err != nil {
-		return "", err
-	}
-	return password, nil
-}
