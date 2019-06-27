@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
 	"github.com/hashicorp/vault/sdk/helper/base62"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -922,7 +924,13 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []byte
 
-	if v, ok := i.oidcCache.Get("jwksResponse"); ok {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	i.Logger().Debug(ns.ID)
+
+	if v, ok := i.oidcCache.Get(ns.ID + "-jwksResponse"); ok {
 		data = v.([]byte)
 	} else {
 		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
@@ -935,7 +943,7 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault("jwksResponse", data)
+		i.oidcCache.SetDefault(ns.ID+"-jwksResponse", data)
 	}
 
 	resp := &logical.Response{
@@ -1142,7 +1150,11 @@ func listOIDCPublicKeys(ctx context.Context, s logical.Storage) ([]string, error
 }
 
 func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storage) (*jose.JSONWebKeySet, error) {
-	if jwksRaw, ok := i.oidcCache.Get("jwks"); ok {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if jwksRaw, ok := i.oidcCache.Get(ns.ID + "-jwks"); ok {
 		return jwksRaw.(*jose.JSONWebKeySet), nil
 	}
 
@@ -1167,7 +1179,7 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		jwks.Keys = append(jwks.Keys, *key)
 	}
 
-	i.oidcCache.SetDefault("jwks", jwks)
+	i.oidcCache.SetDefault(ns.ID+"-jwks", jwks)
 
 	return jwks, nil
 }
@@ -1321,7 +1333,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	// be run at any time safely, but there is no need to invoke them (which
 	// might be somewhat expensive if there are many roles/keys) if we're not
 	// past any rotation/expiration TTLs.
-	if time.Now().After(nextRun) {
+	if true || time.Now().After(nextRun) {
 		nextRotation, err := i.oidcKeyRotation(ctx, s)
 		if err != nil {
 			i.Logger().Warn("error rotating OIDC keys", "err", err)

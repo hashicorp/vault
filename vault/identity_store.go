@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/kalafut/q"
 )
 
 const (
@@ -73,6 +75,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
 
+	//panic("asdf")
+	q.Q("here")
 	iStore.Backend = &framework.Backend{
 		BackendType: logical.TypeLogical,
 		Paths:       iStore.paths(),
@@ -83,11 +87,28 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			q.Q("func running")
 			iStore.oidcPeriodicFunc(ctx, req.Storage)
 
 			return nil
 		},
 	}
+	go func() {
+		for {
+			children := core.namespaceManager.NamespacesUnderPath("", true, 0)
+			for _, ns := range children {
+				s := core.router.MatchingStorageByAPIPath(ctx, ns.Path+"identity/oidc")
+				iStore.oidcPeriodicFunc(ctx, s)
+				////q.Q(s)
+				//l, _ := s.List(ctx, "oidc_tokens/named_keys/")
+				//q.Q(l)
+
+			}
+			q.Q(children)
+
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	iStore.oidcCache = cache.New(cache.NoExpiration, cache.NoExpiration)
 
