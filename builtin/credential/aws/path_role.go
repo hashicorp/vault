@@ -328,24 +328,22 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.
 
 	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
 	// performance replicated standby cluster.
-	if !(b.System().LocalMount() || !b.System().ReplicationState().HasState(
-		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
-		return nil
-	}
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 
-	// Read all the role names.
-	b.roleMutex.RLock()
-	roleNames, err := req.Storage.List(ctx, "role/")
-	b.roleMutex.RUnlock()
-	if err != nil {
-		return err
-	}
-
-	// Upgrade the roles as necessary.
-	for _, roleName := range roleNames {
-		err := b.updateUpgradableRoleEntry(ctx, req.Storage, roleName)
+		// Read all the role names.
+		b.roleMutex.RLock()
+		roleNames, err := req.Storage.List(ctx, "role/")
+		b.roleMutex.RUnlock()
 		if err != nil {
 			return err
+		}
+
+		// Upgrade the roles as necessary.
+		for _, roleName := range roleNames {
+			err := b.updateUpgradableRoleEntry(ctx, req.Storage, roleName)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
