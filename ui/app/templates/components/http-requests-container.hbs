@@ -1,6 +1,6 @@
 {{!-- {{#if (gt model.counters.length 1) }} --}}
 <Toolbar>
-  <HttpRequestsDropdown @counters={{counters}} @onChange={{action "updateSelectedItem"}}/>
+  <HttpRequestsDropdown @counters={{counters}} @onChange={{action "updateTimeWindow"}} @timeWindow={{timeWindow}}/>
 </Toolbar>
 
 <HttpRequestsBarChart @counters={{counters}} />

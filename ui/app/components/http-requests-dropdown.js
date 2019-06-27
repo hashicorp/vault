@@ -22,7 +22,7 @@ import { computed } from '@ember/object';
 export default Component.extend({
   classNames: ['http-requests-dropdown'],
   counters: null,
-  selectedItem: 'All',
+  timeWindow: 'All',
   options: computed('counters', function() {
     let counters = this.counters || [];
     let options = ['All', 'Last 12 Months'];
@@ -36,4 +36,14 @@ export default Component.extend({
     }
     return options;
   }),
+  onChange() {},
+  actions: {
+    onSelectTimeWindow(e) {
+      const newValue = e.target.value;
+      const { timeWindow } = this;
+      if (newValue !== timeWindow) {
+        this.onChange(newValue);
+      }
+    },
+  },
 });

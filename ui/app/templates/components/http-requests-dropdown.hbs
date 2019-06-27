@@ -1,8 +1,8 @@
 <label for="date-range" class="is-label">
   Date Range
 </label>
-<select id="date-range" name="selectedTimeWindow" data-test-timeWindow-select>
+<select id="date-range" name="selectedTimeWindow" data-test-timeWindow-select onchange={{action "onSelectTimeWindow"}}>
   {{#each options as |op|}}
-    <option>{{op}}</option>
+    <option value={{op}} selected={{eq timeWindow op}}>{{op}}</option>
   {{/each}}
 </select>
