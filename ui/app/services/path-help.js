@@ -61,7 +61,7 @@ export default Service.extend({
         //if we have an item we want the create info for that itemType
         let tag, path;
         if (itemType) {
-          tag = paths.create[0].tag;
+          tag = paths.create[0].tag; //tag is for type of backend, e.g. auth or secret
           path = paths.create[0].path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
         } else {
