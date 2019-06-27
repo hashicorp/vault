@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -759,7 +760,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	vault.UpdateClusterAddrForTests = true
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
 
 	// Seal the leader so we can install an address provider
 	{

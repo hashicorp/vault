@@ -146,7 +146,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// If we have clustered storage, set it up now
 	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		parsedClusterAddr, err := url.Parse(c.clusterAddr)
+		parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 		}
