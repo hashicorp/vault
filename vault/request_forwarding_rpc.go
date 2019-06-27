@@ -20,6 +20,7 @@ type forwardedRequestRPCServer struct {
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
 	perfStandbyCache      *cache.Cache
+	raftFollowerStates    *raftFollowerStates
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
@@ -74,8 +75,8 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
 	}
 
-	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.core.raftFollowerStates != nil {
-		s.core.raftFollowerStates.update(in.RaftNodeID, in.RaftAppliedIndex)
+	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
+		s.raftFollowerStates.update(in.RaftNodeID, in.RaftAppliedIndex)
 	}
 
 	reply := &EchoReply{
@@ -106,7 +107,7 @@ func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
 			c.core.stateLock.RLock()
-			clusterAddr := c.core.clusterAddr
+			clusterAddr := c.core.ClusterAddr()
 			c.core.stateLock.RUnlock()
 
 			req := &EchoRequest{

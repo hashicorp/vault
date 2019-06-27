@@ -1,6 +1,7 @@
 import DS from 'ember-data';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 export default DS.Model.extend({
@@ -11,18 +12,15 @@ export default DS.Model.extend({
     return `/v1/${path}/scope/example/role/example?help=1`;
   },
 
-  name: attr('string'),
-  allowedOperations: attr(),
+  name: attr({ readOnly: true }),
   fieldGroups: computed(function() {
     let fields = this.newFields.without('role');
-
-    const groups = [
-      {
-        default: ['name'],
-      },
-      { 'Allowed Operations': fields },
-    ];
-
+    const groups = [{ 'Allowed Operations': fields }];
     return fieldToAttrs(this, groups);
+  }),
+
+  fields: computed(function() {
+    let fields = this.newFields.removeObjects(['role', 'operationAll', 'operationNone']);
+    return expandAttributeMeta(this, fields);
   }),
 });

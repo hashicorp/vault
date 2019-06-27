@@ -332,8 +332,8 @@ github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd3346
 github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652/go.mod h1:2VjVlKHTwqvcVCkZBhYks+HASDzQ4/bIsJoOpO2YJFY=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190516000311-88f9a4f11829 h1:Ipz+e4xLEDlSg9VkqGeJV3HuNCqNF0kPFlk3jXBZ1dg=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190516000311-88f9a4f11829/go.mod h1:HSCPRY1NbVn8Vfpn1qQD4fx+Y7hVo8kUlvoix5mmve8=
-github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0 h1:pb5DaAqWgGsKWFMsGotmQJREcv/B1EZGHO1hqWOxDAI=
-github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0/go.mod h1:PIjaafaRr2QlkGl2SNhIywxlejeW0iMUtmx8u9u/a6c=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578 h1:wzRbe3eDq6fs5eMEi44IO7/1yb8vzoqRIOSLphSzgJk=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578/go.mod h1:0UXCoeKxYD9fPISis75//2M3EtE6D/dpVU6OuyiC5UY=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb h1:b5rjCoWHc7eqmAS4/qyk21ZsHyb6Mxv/jykxvNTkU4M=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d h1:kJCB4vdITiW1eC1vq2e6IsrXKrZit1bv/TDYFGMp4BQ=

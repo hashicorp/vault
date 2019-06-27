@@ -3,6 +3,7 @@ import d3 from 'd3-selection';
 import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
+import d3Tip from 'd3-tip';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
@@ -27,13 +28,12 @@ import { task, waitForEvent } from 'ember-concurrency';
  */
 
 const HEIGHT = 240;
+const HOVER_PADDING = 12;
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
   counters: null,
-
-  /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-  margin: { top: 24, right: 16, bottom: 24, left: 16 },
+  margin: Object.freeze({ top: 24, right: 16, bottom: 24, left: 16 }),
   padding: 0.04,
   width: 0,
   height() {
@@ -84,10 +84,24 @@ export default Component.extend({
   },
 
   renderBarChart() {
-    const { margin, width, xScale, yScale, parsedCounters } = this;
+    const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();
     const barChartSVG = d3.select('.http-requests-bar-chart');
-    const barsContainer = d3.select('#bars-container');
+    const barsContainer = d3.select(`#bars-container-${elementId}`);
+
+    // initialize the tooltip
+    const tip = d3Tip()
+      .attr('class', 'd3-tooltip')
+      .offset([HOVER_PADDING / 2, 0])
+      .html(function(d) {
+        const formatter = d3TimeFormat.utcFormat('%B %Y');
+        return `
+          <p class="date">${formatter(d.start_time)}</p>
+          <p>${Intl.NumberFormat().format(d.total)} Requests</p>
+        `;
+      });
+
+    barChartSVG.call(tip);
 
     // render the chart
     d3.select('.http-requests-bar-chart')
@@ -127,8 +141,6 @@ export default Component.extend({
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
 
-    bars.exit().remove();
-
     const barsEnter = bars
       .enter()
       .append('rect')
@@ -138,9 +150,35 @@ export default Component.extend({
       .merge(barsEnter)
       .attr('width', xScale.bandwidth())
       .attr('height', counter => height - yScale(counter.total))
-      // the offset between each bar
       .attr('x', counter => xScale(counter.start_time))
       .attr('y', counter => yScale(counter.total));
+
+    bars.exit().remove();
+
+    // render transparent bars and bind the tooltip to them since we cannot
+    // bind the tooltip to the actual bars. this is because the bars are
+    // within a clipPath & you cannot bind DOM events to non-display elements.
+    const shadowBarsContainer = d3.select('.shadow-bars');
+
+    const shadowBars = shadowBarsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
+
+    const shadowBarsEnter = shadowBars
+      .enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .on('mouseenter', tip.show)
+      .on('mouseleave', tip.hide);
+
+    shadowBars
+      .merge(shadowBarsEnter)
+      .attr('width', xScale.bandwidth())
+      .attr('height', counter => height - yScale(counter.total) + HOVER_PADDING)
+      .attr('x', counter => xScale(counter.start_time))
+      .attr('y', counter => yScale(counter.total) - HOVER_PADDING)
+      .attr('fill', 'transparent')
+      .attr('stroke', 'transparent');
+
+    shadowBars.exit().remove();
   },
 
   updateDimensions() {
