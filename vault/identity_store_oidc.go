@@ -39,14 +39,14 @@ type expireableKey struct {
 }
 
 type namedKey struct {
-	Name            string           `json:"name"`
-	Algorithm       string           `json:"signing_algorithm"`
-	VerificationTTL time.Duration    `json:"verification_ttl"`
-	RotationPeriod  time.Duration    `json:"rotation_period"`
-	KeyRing         []*expireableKey `json:"key_ring"`
-	SigningKey      *jose.JSONWebKey `json:"signing_key"`
-	NextRotation    time.Time        `json:"next_rotation"`
-	AllowedClients  []string         `json:"allowed_clients"`
+	Name             string           `json:"name"`
+	Algorithm        string           `json:"signing_algorithm"`
+	VerificationTTL  time.Duration    `json:"verification_ttl"`
+	RotationPeriod   time.Duration    `json:"rotation_period"`
+	KeyRing          []*expireableKey `json:"key_ring"`
+	SigningKey       *jose.JSONWebKey `json:"signing_key"`
+	NextRotation     time.Time        `json:"next_rotation"`
+	AllowedClientIDs []string         `json:"allowed_clientIDs"`
 }
 
 type role struct {
@@ -136,7 +136,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Default:     "RS256",
 				},
 
-				"allowed_clients": &framework.FieldSchema{
+				"allowed_clientIDs": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Comma separated string or array of role client ids allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
 				},
@@ -393,10 +393,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
 	}
 
-	if allowedClientsRaw, ok := d.GetOk("allowed_clients"); ok {
-		key.AllowedClients = allowedClientsRaw.([]string)
+	if allowedClientIDsRaw, ok := d.GetOk("allowed_clientIDs"); ok {
+		key.AllowedClientIDs = allowedClientIDsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		key.AllowedClients = d.Get("allowed_clients").([]string)
+		key.AllowedClientIDs = d.Get("allowed_clientIDs").([]string)
 	}
 
 	prevAlgorithm := key.Algorithm
@@ -466,10 +466,10 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"rotation_period":  int64(storedNamedKey.RotationPeriod.Seconds()),
-			"verification_ttl": int64(storedNamedKey.VerificationTTL.Seconds()),
-			"algorithm":        storedNamedKey.Algorithm,
-			"allowed_clients":  storedNamedKey.AllowedClients,
+			"rotation_period":   int64(storedNamedKey.RotationPeriod.Seconds()),
+			"verification_ttl":  int64(storedNamedKey.VerificationTTL.Seconds()),
+			"algorithm":         storedNamedKey.Algorithm,
+			"allowed_clientIDs": storedNamedKey.AllowedClientIDs,
 		},
 	}, nil
 }
@@ -606,8 +606,8 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		i.oidcCache.SetDefault("namedKeys/"+role.Key, key)
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
-	if !strutil.StrListContains(key.AllowedClients, "*") && !strutil.StrListContains(key.AllowedClients, role.ClientID) {
-		return logical.ErrorResponse("The key %q does not list the client id of the role %q as an allowed_client", role.Key, roleName), nil
+	if !strutil.StrListContains(key.AllowedClientIDs, "*") && !strutil.StrListContains(key.AllowedClientIDs, role.ClientID) {
+		return logical.ErrorResponse("The key %q does not list the client id of the role %q as an allowed_clientID", role.Key, roleName), nil
 	}
 
 	// generate an OIDC token from entity data
@@ -781,8 +781,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	if err := entry.DecodeJSON(&namedKey); err != nil {
 		return nil, err
 	}
-	if !strutil.StrListContains(namedKey.AllowedClients, "*") && !strutil.StrListContainsGlob(namedKey.AllowedClients, name) {
-		warning = fmt.Sprintf("The key %q does not list the client id of the role %q as an allowed_client and needs to be updated before ID tokens can be generated against this role.", role.Key, name)
+	if !strutil.StrListContains(namedKey.AllowedClientIDs, "*") && !strutil.StrListContainsGlob(namedKey.AllowedClientIDs, name) {
+		warning = fmt.Sprintf("The key %q does not list the client id of the role %q as an allowed_clientID and needs to be updated before ID tokens can be generated against this role.", role.Key, name)
 	}
 
 	if template, ok := d.GetOk("template"); ok {

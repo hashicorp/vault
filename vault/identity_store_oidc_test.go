@@ -42,7 +42,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	// validate warning msg
-	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_client and needs to be updated before ID tokens can be generated against this role.": true}
+	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_clientID and needs to be updated before ID tokens can be generated against this role.": true}
 	expectStrings(t, resp.Warnings, expectedStrings)
 
 	// Read "test-role1" and validate
@@ -138,7 +138,7 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clients": "test-role1,test-role2",
+			"allowed_clientIDs": "test-role1,test-role2",
 		},
 		Storage: storage,
 	})
@@ -217,10 +217,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"rotation_period":  int64(86400),
-		"verification_ttl": int64(86400),
-		"algorithm":        "RS256",
-		"allowed_clients":  []string{},
+		"rotation_period":   int64(86400),
+		"verification_ttl":  int64(86400),
+		"algorithm":         "RS256",
+		"allowed_clientIDs": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -231,9 +231,9 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"rotation_period":  "10m",
-			"verification_ttl": "1h",
-			"allowed_clients":  "allowed-test-role",
+			"rotation_period":   "10m",
+			"verification_ttl":  "1h",
+			"allowed_clientIDs": "allowed-test-role",
 		},
 		Storage: storage,
 	})
@@ -247,10 +247,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"rotation_period":  int64(600),
-		"verification_ttl": int64(3600),
-		"algorithm":        "RS256",
-		"allowed_clients":  []string{"allowed-test-role"},
+		"rotation_period":   int64(600),
+		"verification_ttl":  int64(3600),
+		"algorithm":         "RS256",
+		"allowed_clientIDs": []string{"allowed-test-role"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -459,7 +459,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clients": "*",
+			"allowed_clientIDs": "*",
 		},
 		Storage: storage,
 	})
@@ -483,7 +483,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/role/test-role",
 		Operation: logical.ReadOperation,
 		Data: map[string]interface{}{
-			"allowed_clients": "",
+			"allowed_clientIDs": "",
 		},
 		Storage: storage,
 	})
@@ -495,7 +495,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clients": "",
+			"allowed_clientIDs": "",
 		},
 		Storage: storage,
 	})
@@ -510,7 +510,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_client": true,
+		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_clientID": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
@@ -519,7 +519,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clients": clientID,
+			"allowed_clientIDs": clientID,
 		},
 		Storage: storage,
 	})
@@ -926,8 +926,8 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Storage:   storage,
 			Data: map[string]interface{}{
-				"algorithm":       alg,
-				"allowed_clients": "*",
+				"algorithm":         alg,
+				"allowed_clientIDs": "*",
 			},
 		})
 		expectSuccess(t, resp, err)
