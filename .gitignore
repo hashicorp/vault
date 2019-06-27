@@ -93,7 +93,6 @@ ui/vault-ui-integration-server.pid
 
 # for building static assets
 node_modules
-package-lock.json
 
 # Website
 website/.bundle

@@ -15,13 +15,18 @@ func pathConfig(b *backend) *framework.Path {
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "RADIUS server host",
-				DisplayName: "Host",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Host",
+				},
 			},
 
 			"port": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Default:     1812,
 				Description: "RADIUS server port (default: 1812)",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: 1812,
+				},
 			},
 			"secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -31,29 +36,42 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: empty)",
-				DisplayName: "Policies for unregistered users",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Policies for unregistered users",
+				},
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
 				Description: "Number of seconds before connect times out (default: 10)",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: 10,
+				},
 			},
 			"read_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
 				Description: "Number of seconds before response times out (default: 10)",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: 10,
+				},
 			},
 			"nas_port": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Default:     10,
 				Description: "RADIUS NAS port field (default: 10)",
-				DisplayName: "NAS Port",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "NAS Port",
+					Value: 10,
+				},
 			},
 			"nas_identifier": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "RADIUS NAS Identifier field (optional)",
-				DisplayName: "NAS Identifier",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "NAS Identifier",
+				},
 			},
 		},
 

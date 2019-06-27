@@ -19,6 +19,9 @@ func pathGroupsList(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+		},
 	}
 }
 

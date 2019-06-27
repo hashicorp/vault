@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"strings"
 	"time"
 
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -16,6 +17,8 @@ import (
 )
 
 var reservedMetadata = []string{"role"}
+
+const claimDefaultLeeway = 150
 
 func pathRoleList(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
@@ -69,6 +72,24 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
+			},
+			"expiration_leeway": {
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in seconds of leeway when validating expiration of a token to account for clock skew. 
+Defaults to 150 (2.5 minutes), minimum of 1 second.`,
+				Default: claimDefaultLeeway,
+			},
+			"not_before_leeway": {
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in seconds of leeway when validating not before values of a token to account for clock skew. 
+Defaults to 150 (2.5 minutes), minimum of 1 second..`,
+				Default: claimDefaultLeeway,
+			},
+			"clock_skew_leeway": {
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in seconds of leeway when validating all claims to account for clock skew. 
+Defaults to 60 (1 minute), minimum of 1 second.`,
+				Default: jwt.DefaultLeeway,
 			},
 			"bound_subject": {
 				Type:        framework.TypeString,
@@ -151,6 +172,15 @@ type jwtRole struct {
 
 	// Duration after which an issued token should not be allowed to be renewed
 	MaxTTL time.Duration `json:"max_ttl"`
+
+	// Duration of leeway for expiration to account for clock skew
+	ExpirationLeeway time.Duration `json:"expiration_leeway"`
+
+	// Duration of leeway for not before to account for clock skew
+	NotBeforeLeeway time.Duration `json:"not_before_leeway"`
+
+	// Duration of leeway for all claims to account for clock skew
+	ClockSkewLeeway time.Duration `json:"clock_skew_leeway"`
 
 	// Period, if set, indicates that the token generated using this role
 	// should never expire. The token should be renewed within the duration
@@ -237,6 +267,9 @@ func (b *jwtAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 			"period":                int64(role.Period.Seconds()),
 			"ttl":                   int64(role.TTL.Seconds()),
 			"max_ttl":               int64(role.MaxTTL.Seconds()),
+			"expiration_leeway":     int64(role.ExpirationLeeway.Seconds()),
+			"not_before_leeway":     int64(role.NotBeforeLeeway.Seconds()),
+			"clock_skew_leeway":     int64(role.ClockSkewLeeway.Seconds()),
 			"bound_audiences":       role.BoundAudiences,
 			"bound_subject":         role.BoundSubject,
 			"bound_cidrs":           role.BoundCIDRs,
@@ -333,6 +366,18 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
 	}
 
+	if tokenExpLeewayRaw, ok := data.GetOk("expiration_leeway"); ok {
+		role.ExpirationLeeway = time.Duration(tokenExpLeewayRaw.(int)) * time.Second
+	}
+
+	if tokenNotBeforeLeewayRaw, ok := data.GetOk("not_before_leeway"); ok {
+		role.NotBeforeLeeway = time.Duration(tokenNotBeforeLeewayRaw.(int)) * time.Second
+	}
+
+	if tokenClockSkewLeeway, ok := data.GetOk("clock_skew_leeway"); ok {
+		role.ClockSkewLeeway = time.Duration(tokenClockSkewLeeway.(int)) * time.Second
+	}
+
 	if boundAudiences, ok := data.GetOk("bound_audiences"); ok {
 		role.BoundAudiences = boundAudiences.([]string)
 	}
@@ -360,11 +405,11 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		targets := make(map[string]bool)
 		for _, metadataKey := range claimMappings {
 			if strutil.StrListContains(reservedMetadata, metadataKey) {
-				return logical.ErrorResponse("metadata key '%s' is reserved and may not be a mapping destination", metadataKey), nil
+				return logical.ErrorResponse("metadata key %q is reserved and may not be a mapping destination", metadataKey), nil
 			}
 
 			if targets[metadataKey] {
-				return logical.ErrorResponse("multiple keys are mapped to metadata key '%s'", metadataKey), nil
+				return logical.ErrorResponse("multiple keys are mapped to metadata key %q", metadataKey), nil
 			}
 			targets[metadataKey] = true
 		}
@@ -401,7 +446,8 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	if roleType != "oidc" {
 		if len(role.BoundAudiences) == 0 &&
 			len(role.BoundCIDRs) == 0 &&
-			role.BoundSubject == "" {
+			role.BoundSubject == "" &&
+			len(role.BoundClaims) == 0 {
 			return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
 		}
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 func TestSealMigration(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal()
+	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
 	coreConfig := &vault.CoreConfig{
 		Seal:            shamirSeal,
 		Physical:        phys,
@@ -113,7 +114,7 @@ func TestSealMigration(t *testing.T) {
 		newSeal := vault.NewAutoSeal(seal.NewTestSeal(nil))
 		newSeal.SetCore(core)
 		autoSeal = newSeal
-		if err := adjustCoreForSealMigration(core, newSeal, nil); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, newSeal, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -210,7 +211,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(core, altSeal, autoSeal); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, altSeal, autoSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -248,7 +249,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(core, shamirSeal, altSeal); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, shamirSeal, altSeal); err != nil {
 			t.Fatal(err)
 		}
 

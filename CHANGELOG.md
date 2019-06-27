@@ -1,4 +1,10 @@
-## Next
+## 1.2-beta2 (Unreleased)
+
+IMPROVEMENTS:
+
+ * agent: Allow EC2 nonce to be passed in [GH-6953]
+
+## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:
 
@@ -37,16 +43,44 @@ CHANGES:
 
 FEATURES:
 
- * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
+ * **Combined DB credential rotation**: Alternative mode for the Combined DB
+   Secret Engine to automatically rotate existing database account credentials
+   and set Vault as the source of truth for credentials.
+ * **Identity Tokens**: Vault's Identity system can now generate OIDC-compliant
+   ID tokens. These customizable tokens allow encapsulating a signed, verifiable
+   snapshot of identity information and metadata. They can be use by other
+   applications—even those without Vault authorization—as a way of establishing
+   identity based on a Vault entity.
+ * **Pivotal Cloud Foundry plugin**: New auth method using Pivotal Cloud
+   Foundry certificates for Vault authentication.
+ * **ElasticSearch database plugin**: New ElasticSearch database plugin issues
+   unique, short-lived ElasticSearch credentials.
+ * **New UI Features**: An HTTP Request Volume Page and new UI for editing LDAP
+   Users and Groups have been added.
+ * **HA support for Postgres**: PostgreSQL versions >= 9.5 may now but used as
+   and HA storage backend.
+ * **KMIP secrets engine (Enterprise)**: Allows Vault to operate as a KMIP Server,
+  seamlessly brokering cryptographic operations for traditional infrastructure.  
 
 IMPROVEMENTS: 
 
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
+ * auth/jwt: Leeways for `nbf` and `exp` are now configurable, as is clock skew
+   leeway [JWT-53]
+ * auth/kubernetes: Allow service names/namespaces to be configured as globs
+   [KUBEAUTH-58]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
- * storage/postgres: LIST now performs better on large datasets. [GH-6546]
+ * identity: Allow a group alias' canonical ID to be modified
+ * namespaces: Namespaces can now be created and deleted from performance
+   replication secondaries
+ * replication: Client TLS authentication is now supported when enabling or
+   updating a replication secondary
+ * secrets/database: Cassandra operations will now cancel on client timeout
+   [GH-6954]
+ * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
@@ -56,14 +90,25 @@ IMPROVEMENTS:
    smaller [GH-6718]
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
+ * ui: Removing jQuery from the application makes the initial JS payload smaller [GH-6768]
  
 BUG FIXES: 
 
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
+   when parsing this value [GH-6917]
+ * auth/aws: Fix an error complaining about a read-only view that could occur
+   during updating of a role when on a performance replication secondary
+   [GH-6926]
+ * auth/jwt: Fix a regression introduced in 1.1.1 that disabled checking of client_id
+   for OIDC logins [JWT-54]
+ * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
+   response is empty [JWT-55]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * ui: Fix timestamp on some transit keys [GH-6827]
 
 ## 1.1.3 (June 5th, 2019)
 

@@ -39,6 +39,7 @@ const (
 	// resourcePrefixHeader is the name of the metadata header used to indicate
 	// the resource being operated on.
 	resourcePrefixHeader = "google-cloud-resource-prefix"
+
 	// xGoogHeaderKey is the name of the metadata header used to indicate client
 	// information.
 	xGoogHeaderKey = "x-goog-api-client"
@@ -65,13 +66,11 @@ func validDatabaseName(db string) error {
 	return nil
 }
 
-// Client is a client for reading and writing data to a Cloud Spanner database.  A
-// client is safe to use concurrently, except for its Close method.
+// Client is a client for reading and writing data to a Cloud Spanner database.
+// A client is safe to use concurrently, except for its Close method.
 type Client struct {
 	// rr must be accessed through atomic operations.
-	rr uint32
-	// TODO(deklerk): we should not keep multiple ClientConns / SpannerClients. Instead, we should
-	// have a single ClientConn that has many connections: https://github.com/googleapis/google-api-go-client/blob/003c13302b3ea5ae44344459ba080364bd46155f/internal/pool.go
+	rr      uint32
 	conns   []*grpc.ClientConn
 	clients []sppb.SpannerClient
 
@@ -88,10 +87,13 @@ type ClientConfig struct {
 	// NumChannels is the number of gRPC channels.
 	// If zero, a reasonable default is used based on the execution environment.
 	NumChannels int
+
 	// SessionPoolConfig is the configuration for session pool.
 	SessionPoolConfig
+
 	// SessionLabels for the sessions created by this client.
-	// See https://cloud.google.com/spanner/docs/reference/rpc/google.spanner.v1#session for more info.
+	// See https://cloud.google.com/spanner/docs/reference/rpc/google.spanner.v1#session
+	// for more info.
 	SessionLabels map[string]string
 }
 
@@ -111,14 +113,14 @@ func contextWithOutgoingMetadata(ctx context.Context, md metadata.MD) context.Co
 }
 
 // NewClient creates a client to a database. A valid database name has the
-// form projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID. It uses a default
-// configuration.
+// form projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID. It uses
+// a default configuration.
 func NewClient(ctx context.Context, database string, opts ...option.ClientOption) (*Client, error) {
 	return NewClientWithConfig(ctx, database, ClientConfig{}, opts...)
 }
 
-// NewClientWithConfig creates a client to a database. A valid database name has the
-// form projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID.
+// NewClientWithConfig creates a client to a database. A valid database name has
+// the form projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID.
 func NewClientWithConfig(ctx context.Context, database string, config ClientConfig, opts ...option.ClientOption) (c *Client, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.NewClient")
 	defer func() { trace.EndSpan(ctx, err) }()
@@ -133,12 +135,14 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 			resourcePrefixHeader, database,
 			xGoogHeaderKey, xGoogHeaderVal),
 	}
+
 	// Make a copy of labels.
 	c.sessionLabels = make(map[string]string)
 	for k, v := range config.SessionLabels {
 		c.sessionLabels[k] = v
 	}
-	// gRPC options
+
+	// gRPC options.
 	allOpts := []option.ClientOption{
 		option.WithEndpoint(endpoint),
 		option.WithScopes(Scope),
@@ -150,10 +154,12 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 		),
 	}
 	allOpts = append(allOpts, opts...)
+
 	// Prepare gRPC channels.
 	if config.NumChannels == 0 {
 		config.NumChannels = numChannels
 	}
+
 	// Default configs for session pool.
 	if config.MaxOpened == 0 {
 		config.MaxOpened = uint64(config.NumChannels * 100)
@@ -161,8 +167,10 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 	if config.MaxBurst == 0 {
 		config.MaxBurst = 10
 	}
-	// TODO(deklerk) This should be replaced with a balancer with config.NumChannels
-	// connections, instead of config.NumChannels clientconns.
+
+	// TODO(deklerk): This should be replaced with a balancer with
+	// config.NumChannels connections, instead of config.NumChannels
+	// clientconns.
 	for i := 0; i < config.NumChannels; i++ {
 		conn, err := gtransport.Dial(ctx, allOpts...)
 		if err != nil {
@@ -171,6 +179,7 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 		c.conns = append(c.conns, conn)
 		c.clients = append(c.clients, sppb.NewSpannerClient(conn))
 	}
+
 	// Prepare session pool.
 	config.SessionPoolConfig.getRPCClient = func() (sppb.SpannerClient, error) {
 		// TODO: support more loadbalancing options.
@@ -186,7 +195,8 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 	return c, nil
 }
 
-// rrNext returns the next available Cloud Spanner RPC client in a round-robin manner.
+// rrNext returns the next available Cloud Spanner RPC client in a round-robin
+// manner.
 func (c *Client) rrNext() sppb.SpannerClient {
 	return c.clients[atomic.AddUint32(&c.rr, 1)%uint32(len(c.clients))]
 }
@@ -259,14 +269,16 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 			s.delete(ctx)
 		}
 	}()
-	// create session
+
+	// Create session.
 	sc := c.rrNext()
 	s, err = createSession(ctx, sc, c.database, c.sessionLabels, c.md)
 	if err != nil {
 		return nil, err
 	}
 	sh = &sessionHandle{session: s}
-	// begin transaction
+
+	// Begin transaction.
 	err = runRetryable(contextWithOutgoingMetadata(ctx, sh.getMetadata()), func(ctx context.Context) error {
 		res, e := sh.getClient().BeginTransaction(ctx, &sppb.BeginTransactionRequest{
 			Session: sh.getID(),
@@ -307,7 +319,8 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 	return t, nil
 }
 
-// BatchReadOnlyTransactionFromID reconstruct a BatchReadOnlyTransaction from BatchReadOnlyTransactionID
+// BatchReadOnlyTransactionFromID reconstruct a BatchReadOnlyTransaction from
+// BatchReadOnlyTransactionID
 func (c *Client) BatchReadOnlyTransactionFromID(tid BatchReadOnlyTransactionID) *BatchReadOnlyTransaction {
 	sc := c.rrNext()
 	s := &session{valid: true, client: sc, id: tid.sid, createTime: time.Now(), md: c.md}
@@ -403,7 +416,8 @@ func (c *Client) ReadWriteTransaction(ctx context.Context, f func(context.Contex
 
 // applyOption controls the behavior of Client.Apply.
 type applyOption struct {
-	// If atLeastOnce == true, Client.Apply will execute the mutations on Cloud Spanner at least once.
+	// If atLeastOnce == true, Client.Apply will execute the mutations on Cloud
+	// Spanner at least once.
 	atLeastOnce bool
 }
 

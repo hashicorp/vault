@@ -1,0 +1,31 @@
+<PageHeader as |p|>
+  <p.top>
+    <KmipBreadcrumb />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon
+        @glyph="secrets"
+        @size="xl"
+        class="has-text-grey-light"
+      />
+      {{this.secretMountPath.currentPath}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs">
+    <ul>
+      {{#link-to "scopes.index" tagName="li"}}
+        {{#link-to "scopes.index"}}
+          Scopes
+        {{/link-to}}
+      {{/link-to}}
+      {{#link-to "configuration" tagName="li"}}
+        {{#link-to "configuration"}}
+          Configuration
+        {{/link-to}}
+      {{/link-to}}
+    </ul>
+  </nav>
+</div>

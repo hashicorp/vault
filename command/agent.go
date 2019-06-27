@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/auth/pcf"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
@@ -342,6 +343,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "pcf":
+			method, err = pcf.NewPCFAuthMethod(authConfig)
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 			return 1

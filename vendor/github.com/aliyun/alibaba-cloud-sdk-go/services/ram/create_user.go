@@ -95,7 +95,7 @@ func CreateCreateUserRequest() (request *CreateUserRequest) {
 	request = &CreateUserRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateUser", "ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateUser", "", "")
 	return
 }
 

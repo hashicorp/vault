@@ -193,14 +193,14 @@ func (b *kubeAuthBackend) parseAndValidateJWT(jwtStr string, role *roleStorageEn
 
 			// verify the namespace is allowed
 			if len(role.ServiceAccountNamespaces) > 1 || role.ServiceAccountNamespaces[0] != "*" {
-				if !strutil.StrListContains(role.ServiceAccountNamespaces, sa.namespace()) {
+				if !strutil.StrListContainsGlob(role.ServiceAccountNamespaces, sa.namespace()) {
 					return errors.New("namespace not authorized")
 				}
 			}
 
 			// verify the service account name is allowed
 			if len(role.ServiceAccountNames) > 1 || role.ServiceAccountNames[0] != "*" {
-				if !strutil.StrListContains(role.ServiceAccountNames, sa.name()) {
+				if !strutil.StrListContainsGlob(role.ServiceAccountNames, sa.name()) {
 					return errors.New("service account name not authorized")
 				}
 			}
