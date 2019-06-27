@@ -86,6 +86,93 @@ func TestRaft_Join(t *testing.T) {
 	joinFunc(cluster.Cores[2].Client)
 }
 
+func TestRaft_RemovePeer(t *testing.T) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.RaftClusterJoinNodes(t, cluster)
+
+	for i, c := range cluster.Cores {
+		if c.Core.Sealed() {
+			t.Fatalf("failed to unseal core %d", i)
+		}
+	}
+
+	client := cluster.Cores[0].Client
+
+	checkConfigFunc := func(expected map[string]bool) {
+		secret, err := client.Logical().Read("sys/storage/raft/configuration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+		for _, s := range servers {
+			server := s.(map[string]interface{})
+			delete(expected, server["node_id"].(string))
+		}
+		if len(expected) != 0 {
+			t.Fatalf("failed to read configuration successfully")
+		}
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
+
+	_, err := client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+	})
+
+	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+	})
+}
+
 func TestRaft_Configuration(t *testing.T) {
 	var cleanupFuncs []func()
 	logger := hclog.New(&hclog.LoggerOptions{
@@ -135,6 +222,9 @@ func TestRaft_Configuration(t *testing.T) {
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
+	}
+	if len(servers) != 3 {
+		t.Fatalf("incorrect number of servers in the configuration")
 	}
 	for _, s := range servers {
 		server := s.(map[string]interface{})
