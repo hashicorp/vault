@@ -1,6 +1,7 @@
 import { typeOf } from '@ember/utils';
 import { computed } from '@ember/object';
 import { or } from '@ember/object/computed';
+import { isArray } from '@ember/array';
 import Component from '@ember/component';
 import layout from '../templates/components/info-table-row';
 
@@ -28,8 +29,10 @@ export default Component.extend({
   alwaysRender: false,
   label: null,
   value: null,
-
-  valueIsBoolean: computed('value', function() {
-    return typeOf(this.get('value')) === 'boolean';
+  valueType: computed('value', function() {
+    if (isArray(this.value)) {
+      return 'array';
+    }
+    return typeOf(this.value);
   }),
 });
