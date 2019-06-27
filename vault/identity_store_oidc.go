@@ -2,6 +2,8 @@ package vault
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -9,6 +11,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/base62"
 
@@ -133,7 +137,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 
 				"algorithm": {
 					Type:        framework.TypeString,
-					Description: "Signing algorithm to use. This will default to RS256, and is currently the only allowed value.",
+					Description: "Signing algorithm to use. This will default to RS256.",
 					Default:     "RS256",
 				},
 			},
@@ -386,13 +390,18 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
 	}
 
+	prevAlgorithm := key.Algorithm
 	if algorithm, ok := d.GetOk("algorithm"); ok {
 		key.Algorithm = algorithm.(string)
 	} else if req.Operation == logical.CreateOperation {
 		key.Algorithm = d.Get("algorithm").(string)
 	}
 
-	if key.Algorithm != "RS256" {
+	switch key.Algorithm {
+	case "RS256", "RS384", "RS512",
+		"ES256", "ES384", "ES512",
+		"EdDSA":
+	default:
 		return logical.ErrorResponse("unknown signing algorithm %q", key.Algorithm), nil
 	}
 
@@ -402,8 +411,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		key.NextRotation = nextRotation
 	}
 
-	// generate keys if creating a new key
-	if key.SigningKey == nil {
+	// generate keys if creating a new key or changing algorithms
+	if key.Algorithm != prevAlgorithm {
 		signingKey, err := generateKeys(key.Algorithm)
 		if err != nil {
 			return nil, err
@@ -1085,10 +1094,37 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 
 // generateKeys returns a signingKey and publicKey pair
 func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
-	// 2048 bits is recommended by RSA Laboratories as a minimum post 2015
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
+	var key interface{}
+	var err error
+
+	switch algorithm {
+	case "RS256", "RS384", "RS512":
+		// 2048 bits is recommended by RSA Laboratories as a minimum post 2015
+		if key, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
+			return nil, err
+		}
+	case "ES256", "ES384", "ES512":
+		var curve elliptic.Curve
+
+		switch algorithm {
+		case "ES256":
+			curve = elliptic.P256()
+		case "ES384":
+			curve = elliptic.P384()
+		case "ES512":
+			curve = elliptic.P521()
+		}
+
+		if key, err = ecdsa.GenerateKey(curve, rand.Reader); err != nil {
+			return nil, err
+		}
+	case "EdDSA":
+		_, key, err = ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown algorithm %q", algorithm)
 	}
 
 	id, err := uuid.GenerateUUID()

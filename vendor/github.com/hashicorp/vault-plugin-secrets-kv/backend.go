@@ -317,8 +317,9 @@ func (b *versionedKVBackend) config(ctx context.Context, s logical.Storage) (*Co
 	if b.globalConfig != nil {
 		defer b.globalConfigLock.RUnlock()
 		return &Configuration{
-			CasRequired: b.globalConfig.CasRequired,
-			MaxVersions: b.globalConfig.MaxVersions,
+			CasRequired:        b.globalConfig.CasRequired,
+			MaxVersions:        b.globalConfig.MaxVersions,
+			DeleteVersionAfter: b.globalConfig.DeleteVersionAfter,
 		}, nil
 	}
 
@@ -329,8 +330,9 @@ func (b *versionedKVBackend) config(ctx context.Context, s logical.Storage) (*Co
 	// Verify this hasn't already changed
 	if b.globalConfig != nil {
 		return &Configuration{
-			CasRequired: b.globalConfig.CasRequired,
-			MaxVersions: b.globalConfig.MaxVersions,
+			CasRequired:        b.globalConfig.CasRequired,
+			MaxVersions:        b.globalConfig.MaxVersions,
+			DeleteVersionAfter: b.globalConfig.DeleteVersionAfter,
 		}, nil
 	}
 
