@@ -3244,8 +3244,6 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	allowedEntityAliasesRaw, ok := data.GetOk("allowed_entity_aliases")
 	if ok {
 		entry.AllowedEntityAliases = strutil.RemoveDuplicates(allowedEntityAliasesRaw.([]string), true)
-	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedEntityAliases = strutil.RemoveDuplicates(data.Get("allowed_entity_aliases").([]string), true)
 	}
 
 	ns, err := namespace.FromContext(ctx)

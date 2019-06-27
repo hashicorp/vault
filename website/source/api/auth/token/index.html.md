@@ -102,7 +102,7 @@ during this call.
 - `period` `(string: "")` - If specified, the token will be periodic; it will have
   no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root/sudo token to use.
-- `entity_alias` `string: "")` - Name of the entity alias to associate with 
+- `entity_alias` `(string: "")` - Name of the entity alias to associate with 
    during token creation. Only works in combination with `role_name` argument 
    and used entity alias must be listed in `allowed_entity_aliases`. If this has 
    been specified, the entity will not be inherited from the parent.
