@@ -23,21 +23,19 @@ const COUNTERS = [
 export default Component.extend({
   counters: COUNTERS,
   timeWindow: 'All',
-  filteredCounters: null,
-  didReceiveAttrs() {
-    this._super(...arguments);
-    const { timeWindow, counters } = this;
+  filteredCounters: computed('timeWindow', function() {
+    const { counters, timeWindow } = this;
     if (timeWindow === 'All') {
-      this.set('filteredCounters', counters);
+      return counters;
     }
+
     let filteredCounters = [];
-    console.log(timeWindow);
     filteredCounters = counters.filter(counter => {
       const year = counter.start_time.substr(0, 4);
       return year === timeWindow;
     });
-    debugger;
-  },
+    return filteredCounters;
+  }),
   actions: {
     updateTimeWindow(newValue) {
       this.set('timeWindow', newValue);

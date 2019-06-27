@@ -83,6 +83,10 @@ export default Component.extend({
     });
   },
 
+  didUpdateAttrs() {
+    this.renderBarChart();
+  },
+
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();

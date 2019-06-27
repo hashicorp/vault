@@ -3,8 +3,8 @@
   <HttpRequestsDropdown @counters={{counters}} @onChange={{action "updateTimeWindow"}} @timeWindow={{timeWindow}}/>
 </Toolbar>
 
-<HttpRequestsBarChart @counters={{counters}} />
+<HttpRequestsBarChart @counters={{filteredCounters}} />
 {{!-- {{/if}} --}}
 
 <AlertInline @type="info" @message="Metrics are recorded only for interactions that produce or use a Vault token." />
-<HttpRequestsTable @counters={{counters}} />
+<HttpRequestsTable @counters={{filteredCounters}} />
