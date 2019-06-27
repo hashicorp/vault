@@ -350,32 +350,15 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.
 	return nil
 }
 
-// updateUpgradableRoleEntry uses the write lock to read a role and persist it
-// if it needs to be upgraded.
+// updateUpgradableRoleEntry uses the write lock to call roleInternal(), which
+// will do an upgrade and save it if need be.
 func (b *backend) updateUpgradableRoleEntry(ctx context.Context, s logical.Storage, roleName string) error {
 
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	roleEntry, err := b.roleInternal(ctx, s, roleName)
-	if err != nil {
-		return err
-	}
-	if roleEntry == nil {
-		return nil
-	}
-
-	needUpgrade, err := b.upgradeRole(ctx, s, roleEntry)
-	if err != nil {
-		return err
-	}
-	if needUpgrade {
-		if err = b.setRole(ctx, s, roleName, roleEntry); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	_, err := b.roleInternal(ctx, s, roleName)
+	return err
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
