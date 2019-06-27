@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"fmt"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
@@ -65,15 +64,4 @@ func (s *InmemStorage) Underlying() *inmem.InmemBackend {
 
 func (s *InmemStorage) init() {
 	s.underlying, _ = inmem.NewInmem(nil, nil)
-}
-
-func InmemStorageWithMaxSize(maxSize int) *InmemStorage {
-	conf := map[string]string{
-		"max_value_size": fmt.Sprintf("%v", maxSize),
-	}
-	s := &InmemStorage{}
-	s.once.Do(func() {
-		s.underlying, _ = inmem.NewInmem(conf, nil)
-	})
-	return s
 }
