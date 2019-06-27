@@ -10,6 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// DEPRECATED: Don't use this. It's too inflexible, nearly impossible to use
+// with some modern Vault features, and imposes specific API designs.
+//
 // PathMap can be used to generate a path that stores mappings in the
 // storage. It is a structure that also exports functions for querying the
 // mappings.
