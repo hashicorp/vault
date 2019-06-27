@@ -2220,7 +2220,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// Check if there is a concrete match
 		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
 			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
-			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrPermissionDenied
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 		}
 
 		// Get mount accessor which is required to lookup entity alias
