@@ -15,10 +15,75 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 )
+
+func TestRaft_Join(t *testing.T) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	vault.UpdateClusterAddrForTests = true
+
+	// Seal the leader so we can install an address provider
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	joinFunc := func(client *api.Client) {
+		resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
+			LeaderAPIAddr:    leaderAPI,
+			LeaderCACert:     string(cluster.CACertPEM),
+			LeaderClientCert: string(cluster.CACertPEM),
+			LeaderClientKey:  string(cluster.CAKeyPEM),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !resp.Joined {
+			t.Fatalf("failed to join raft cluster")
+		}
+	}
+
+	joinFunc(cluster.Cores[1].Client)
+	joinFunc(cluster.Cores[2].Client)
+}
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	var cleanupFuncs []func()
