@@ -43,7 +43,7 @@ var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
 var _ raft.ConfigurationStore = (*FSM)(nil)
 
-type restoreCallback func() error
+type restoreCallback func(context.Context) error
 
 // FSMApplyResponse is returned from an FSM apply. It indicates if the apply was
 // successful or not.
@@ -398,7 +398,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 			case restoreCallbackOp:
 				if f.restoreCb != nil {
 					// Kick off the restore callback function in a go routine
-					go f.restoreCb()
+					go f.restoreCb(context.Background())
 				}
 			default:
 				return fmt.Errorf("%q is not a supported transaction operation", op.OpType)

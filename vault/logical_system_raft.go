@@ -9,9 +9,11 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -337,7 +339,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 
 		// We want to do this in a go routine so we can upgrade the lock and
 		// allow the client to disconnect.
-		go func() {
+		go func() (retErr error) {
 			// Cleanup the temp file
 			defer cleanup()
 
@@ -348,23 +350,67 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}
 			defer b.Core.stateLock.Unlock()
 
+			// If we failed to restore the snapshot we should seal this node as
+			// it's in an unknown state
+			defer func() {
+				if retErr != nil {
+					if err := b.Core.sealInternalWithOptions(false, false, true); err != nil {
+						b.Core.logger.Error("failed to seal node", "error", err)
+					}
+				}
+			}()
+
+			ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
+
 			// We are calling the callback function synchronously here while we
 			// have the lock. So set it to nil and restore the callback when we
 			// finish.
 			raftStorage.SetRestoreCallback(nil)
-			defer raftStorage.SetRestoreCallback(b.Core.raftSnapshotRestoreCallback(true))
+			defer raftStorage.SetRestoreCallback(b.Core.raftSnapshotRestoreCallback(true, true))
+
+			// Do a preSeal to clear vault's in-memory caches and shut down any
+			// systems that might be holding the encryption access.
+			b.Core.logger.Info("shutting down prior to restoring snapshot")
+			if err := b.Core.preSeal(); err != nil {
+				b.Core.logger.Error("raft snapshot restore failed preSeal", "error", err)
+				return err
+			}
 
 			b.Core.logger.Info("applying snapshot")
 			if err := raftStorage.RestoreSnapshot(b.Core.activeContext, metadata, snapFile); err != nil {
 				b.Core.logger.Error("error while restoring raft snapshot", "error", err)
-				return
+				return err
 			}
 
 			// Run invalidation logic synchronously here
-			callback := b.Core.raftSnapshotRestoreCallback(false)
-			if err := callback(); err != nil {
-				return
+			callback := b.Core.raftSnapshotRestoreCallback(false, false)
+			if err := callback(ctx); err != nil {
+				return err
 			}
+
+			{
+				// If the snapshot was taken while another node was leader we
+				// need to reset the leader information to this node.
+				if err := b.Core.underlyingPhysical.Put(ctx, &physical.Entry{
+					Key:   CoreLockPath,
+					Value: []byte(b.Core.leaderUUID),
+				}); err != nil {
+					b.Core.logger.Error("cluster setup failed", "error", err)
+					return err
+				}
+				// re-advertise our cluster information
+				if err := b.Core.advertiseLeader(ctx, b.Core.leaderUUID, nil); err != nil {
+					b.Core.logger.Error("cluster setup failed", "error", err)
+					return err
+				}
+			}
+			if err := b.Core.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
+				b.Core.logger.Error("raft snapshot restore failed postUnseal", "error", err)
+				return err
+			}
+
+			return nil
+
 		}()
 
 		return nil, nil
