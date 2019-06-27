@@ -40,7 +40,17 @@ export default DS.JSONSerializer.extend({
     if (id && !responseJSON.id) {
       responseJSON.id = id;
     }
-    return this._super(store, primaryModelClass, responseJSON, id, requestType);
+    let jsonAPIRepresentation = this._super(store, primaryModelClass, responseJSON, id, requestType);
+    if (primaryModelClass.relatedCapabilities) {
+      if (Array.isArray(jsonAPIRepresentation)) {
+        jsonAPIRepresentation = jsonAPIRepresentation.map(primaryModelClass.relatedCapabilities);
+      } else {
+        jsonAPIRepresentation = primaryModelClass.relatedCapabilities(jsonAPIRepresentation);
+      }
+      debugger;
+    }
+    console.log(jsonAPIRepresentation);
+    return jsonAPIRepresentation;
   },
 
   serializeAttribute(snapshot, json, key, attributes) {
