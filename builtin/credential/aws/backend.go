@@ -35,7 +35,7 @@ type backend struct {
 	configMutex sync.RWMutex
 
 	// Lock to make changes to role entries
-	roleMutex sync.RWMutex
+	roleMutex sync.Mutex
 
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex

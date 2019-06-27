@@ -330,10 +330,11 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, req *logical.
 	// performance replicated standby cluster.
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 
-		// Read all the role names.
-		b.roleMutex.RLock()
+		// Read all the role names.  We don't need to grab the mutex here for
+		// listing. The reason is that if we're in the process of creating a
+		// new mount, it will already happen on the active node (since it's a
+		// write) and will properly use the latest role structure.
 		roleNames, err := req.Storage.List(ctx, "role/")
-		b.roleMutex.RUnlock()
 		if err != nil {
 			return err
 		}
