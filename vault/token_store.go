@@ -7,20 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
-	"sync/atomic"
-
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-sockaddr"
-
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -399,7 +397,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			},
 
 			"allowed_entity_aliases": &framework.FieldSchema{
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
 			},
 		},
@@ -2212,7 +2210,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// Verify the entity alias
-	overwriteEntityID := ""
+	var explicitEntityID string
 	if data.EntityAlias != "" {
 		// Parameter is only allowed in combination with token role
 		if role == nil {
@@ -2220,19 +2218,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Check if there is a concrete match
-		match := false
-		if strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
-			match = true
-		}
-
-		// Check if there is a matching globbing pattern
-		if !match && strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
-			match = true
-		}
-
-		// Throw an error if it does not match
-		if !match {
-			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrPermissionDenied
 		}
 
 		// Get mount accessor which is required to lookup entity alias
@@ -2263,7 +2251,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Set new entity id
-		overwriteEntityID = entity.ID
+		explicitEntityID = entity.ID
 	}
 
 	// Setup the token entry
@@ -2502,9 +2490,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// Otherwise, if the token is not going to be an orphan, inherit the parent's
 	// entity identifier into the child token.
 	switch {
-	case overwriteEntityID != "":
+	case explicitEntityID != "":
 		// Overwrite the entity identifier
-		te.EntityID = overwriteEntityID
+		te.EntityID = explicitEntityID
 	case te.Parent != "":
 		te.EntityID = parent.EntityID
 
