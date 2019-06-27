@@ -121,7 +121,7 @@ func NewNonFatalError(err error) *NonFatalError {
 	return &NonFatalError{Err: err}
 }
 
-// IsFatalError returns true if the given error is a non-fatal error.
+// IsFatalError returns true if the given error is a fatal error.
 func IsFatalError(err error) bool {
 	return !errwrap.ContainsType(err, new(NonFatalError))
 }
