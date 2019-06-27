@@ -43,25 +43,25 @@ func pathUsers(b *backend) *framework.Path {
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "(DEPRECATED) Use 'token_policies' instead. If this and 'token_policies' are both specified only 'token_policies' will be used.",
+				Description: tokenutil.DeprecationText("token_policies"),
 				Deprecated:  true,
 			},
 
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_ttl' instead. If this and 'token_ttl' are both specified only 'token_ttl' will be used.",
+				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
 
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_max_ttl' instead. If this and 'token_max_ttl' are both specified only 'token_max_ttl' will be used.",
+				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
 
 			"bound_cidrs": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified only 'token_bound_cidrs' will be used.",
+				Description: tokenutil.DeprecationText("token_bound_cidrs"),
 				Deprecated:  true,
 			},
 		},
@@ -208,8 +208,6 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	var resp *logical.Response
-
 	// handle upgrade cases
 	{
 		policiesRaw, ok := d.GetOk("token_policies")
@@ -222,12 +220,10 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		} else {
 			_, ok = d.GetOk("policies")
 			if ok {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning("Both 'token_policies' and deprecated 'policies' values supplied, ignoring the deprecated value")
+				userEntry.Policies = userEntry.TokenPolicies
+			} else {
+				userEntry.Policies = nil
 			}
-			userEntry.Policies = nil
 		}
 
 		ttlRaw, ok := d.GetOk("token_ttl")
@@ -240,12 +236,10 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		} else {
 			_, ok = d.GetOk("ttl")
 			if ok {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning("Both 'token_ttl' and deprecated 'ttl' values supplied, ignoring the deprecated value")
+				userEntry.TTL = userEntry.TokenTTL
+			} else {
+				userEntry.TTL = 0
 			}
-			userEntry.TTL = 0
 		}
 
 		maxTTLRaw, ok := d.GetOk("token_max_ttl")
@@ -258,12 +252,10 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		} else {
 			_, ok = d.GetOk("max_ttl")
 			if ok {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning("Both 'token_max_ttl' and deprecated 'max_ttl' values supplied, ignoring the deprecated value")
+				userEntry.MaxTTL = userEntry.TokenMaxTTL
+			} else {
+				userEntry.MaxTTL = 0
 			}
-			userEntry.MaxTTL = 0
 		}
 
 		boundCIDRsRaw, ok := d.GetOk("token_bound_cidrs")
@@ -280,16 +272,14 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		} else {
 			_, ok = d.GetOk("bound_cidrs")
 			if ok {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning("Both 'token_bound_cidrs' and deprecated 'bound_cidrs' values supplied, ignoring the deprecated value")
+				userEntry.BoundCIDRs = userEntry.TokenBoundCIDRs
+			} else {
+				userEntry.BoundCIDRs = nil
 			}
-			userEntry.BoundCIDRs = nil
 		}
 	}
 
-	return resp, b.setUser(ctx, req.Storage, username, userEntry)
+	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
