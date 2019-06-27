@@ -12,22 +12,17 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
-	"github.com/hashicorp/vault/sdk/helper/base62"
-
-	"gopkg.in/square/go-jose.v2/jwt"
-
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 type oidcConfig struct {
@@ -143,7 +138,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 
 				"allowed_roles": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Comma separated string or array of role names allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
+					Description: "Comma separated string or array of role client ids allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -611,8 +606,8 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		i.oidcCache.SetDefault("namedKeys/"+role.Key, key)
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
-	if !strutil.StrListContains(key.AllowedRoles, "*") && !strutil.StrListContainsGlob(key.AllowedRoles, roleName) {
-		return logical.ErrorResponse("The key %q does not list the role %q as an allowed_role", role.Key, roleName), nil
+	if !strutil.StrListContains(key.AllowedRoles, "*") && !strutil.StrListContains(key.AllowedRoles, role.ClientID) {
+		return logical.ErrorResponse("The key %q does not list the client id of the role %q as an allowed_role", role.Key, roleName), nil
 	}
 
 	// generate an OIDC token from entity data
@@ -780,13 +775,14 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return logical.ErrorResponse("key %q does not exist", role.Key), nil
 	}
 
-	// Validate that the role is allowed to use this key
+	// Validate that the role is allowed to use this key, if it is not, warn the user
 	var namedKey namedKey
+	warning := ""
 	if err := entry.DecodeJSON(&namedKey); err != nil {
 		return nil, err
 	}
 	if !strutil.StrListContains(namedKey.AllowedRoles, "*") && !strutil.StrListContainsGlob(namedKey.AllowedRoles, name) {
-		return logical.ErrorResponse("The key %q does not list the role %q as an allowed_role", role.Key, name), nil
+		warning = fmt.Sprintf("The key %q does not list the client id of the role %q as an allowed_role and needs to be updated before ID tokens can be generated against this role.", role.Key, name)
 	}
 
 	if template, ok := d.GetOk("template"); ok {
@@ -853,6 +849,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	i.oidcCache.Flush()
 
+	if warning != "" {
+		resp := &logical.Response{}
+		resp.AddWarning(warning)
+		return resp, nil
+	}
 	return nil, nil
 }
 

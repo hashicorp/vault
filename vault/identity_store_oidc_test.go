@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -27,13 +28,10 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
-		Data: map[string]interface{}{
-			"allowed_roles": "test-role1",
-		},
-		Storage: storage,
+		Storage:   storage,
 	})
 
-	// Create a test role "test-role1" with a valid key -- should succeed
+	// Create a test role "test-role1" with a valid key -- should succeed with warning
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.CreateOperation,
@@ -43,6 +41,9 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
+	// validate warning msg
+	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_role and needs to be updated before ID tokens can be generated against this role.": true}
+	expectStrings(t, resp.Warnings, expectedStrings)
 
 	// Read "test-role1" and validate
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -255,23 +256,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Create a role that depends on test key -- should fail because this role is not an allowed_role by test-key
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/test-role",
-		Operation: logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"key": "test-key",
-		},
-		Storage: storage,
-	})
-	expectError(t, resp, err)
-	// validate error message
-	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the role \"test-role\" as an allowed_role": true,
-	}
-	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
-
-	// Create a role that depends on test key -- should succeed
+	// Create a role that depends on test key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/allowed-test-role",
 		Operation: logical.UpdateOperation,
@@ -281,6 +266,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
+	fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -290,7 +276,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectError(t, resp, err)
 	// validate error message
-	expectedStrings = map[string]interface{}{
+	expectedStrings := map[string]interface{}{
 		"unable to delete key \"test-key\" because it is currently referenced by these roles: allowed-test-role": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
@@ -478,8 +464,8 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Storage: storage,
 	})
 
-	// Create a test role "test-role"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	// Create a test role "test-role" -- expect no warning
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
@@ -487,6 +473,22 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		},
 		Storage: storage,
 	})
+	expectSuccess(t, resp, err)
+	if resp != nil {
+		t.Fatalf("was expecting a nil response but instead got: %#v", resp)
+	}
+
+	// Determine test-role's client_id
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"allowed_roles": "",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+	clientID := resp.Data["client_id"].(string)
 
 	// remove test-role as an allowed role from test-key
 	c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -499,7 +501,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	})
 
 	// Generate a token against the role "test-role" -- should fail
-	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/token/test-role",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
@@ -508,7 +510,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the role \"test-role\" as an allowed_role": true,
+		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_role": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
@@ -517,7 +519,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": "test-role",
+			"allowed_roles": clientID,
 		},
 		Storage: storage,
 	})
