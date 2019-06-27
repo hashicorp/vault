@@ -93,15 +93,14 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
 			"arn": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
-or IAM role to assume`,
-				Deprecated: true,
+				Type:        framework.TypeString,
+				Description: `Use role_arns or policy_arns instead.`,
+				Deprecated:  true,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Deprecated; use policy_document instead. IAM policy document",
+				Description: "Use policy_document instead.",
 				Deprecated:  true,
 			},
 
