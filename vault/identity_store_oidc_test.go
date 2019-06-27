@@ -42,7 +42,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	// validate warning msg
-	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_role and needs to be updated before ID tokens can be generated against this role.": true}
+	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_client and needs to be updated before ID tokens can be generated against this role.": true}
 	expectStrings(t, resp.Warnings, expectedStrings)
 
 	// Read "test-role1" and validate
@@ -138,7 +138,7 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": "test-role1,test-role2",
+			"allowed_clients": "test-role1,test-role2",
 		},
 		Storage: storage,
 	})
@@ -220,7 +220,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		"rotation_period":  int64(86400),
 		"verification_ttl": int64(86400),
 		"algorithm":        "RS256",
-		"allowed_roles":    []string{},
+		"allowed_clients":  []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -233,7 +233,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Data: map[string]interface{}{
 			"rotation_period":  "10m",
 			"verification_ttl": "1h",
-			"allowed_roles":    "allowed-test-role",
+			"allowed_clients":  "allowed-test-role",
 		},
 		Storage: storage,
 	})
@@ -250,7 +250,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		"rotation_period":  int64(600),
 		"verification_ttl": int64(3600),
 		"algorithm":        "RS256",
-		"allowed_roles":    []string{"allowed-test-role"},
+		"allowed_clients":  []string{"allowed-test-role"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -459,7 +459,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": "*",
+			"allowed_clients": "*",
 		},
 		Storage: storage,
 	})
@@ -483,7 +483,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/role/test-role",
 		Operation: logical.ReadOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": "",
+			"allowed_clients": "",
 		},
 		Storage: storage,
 	})
@@ -495,7 +495,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": "",
+			"allowed_clients": "",
 		},
 		Storage: storage,
 	})
@@ -510,7 +510,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_role": true,
+		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_client": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
@@ -519,7 +519,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_roles": clientID,
+			"allowed_clients": clientID,
 		},
 		Storage: storage,
 	})
@@ -926,8 +926,8 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Storage:   storage,
 			Data: map[string]interface{}{
-				"algorithm":     alg,
-				"allowed_roles": "*",
+				"algorithm":       alg,
+				"allowed_clients": "*",
 			},
 		})
 		expectSuccess(t, resp, err)
