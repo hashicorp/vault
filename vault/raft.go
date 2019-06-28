@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -145,7 +146,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		return err
 	}
 	for _, server := range raftConfig.Servers {
-		if !server.Leader {
+		if server.NodeID != raftStorage.NodeID() {
 			followerStates.update(server.NodeID, 0)
 		}
 	}
@@ -586,7 +587,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 }
 
 // This is used in tests to override the cluster address
-var UpdateClusterAddrForTests bool
+var UpdateClusterAddrForTests uint32
 
 func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client, challenge *physical.EncryptedBlobInfo, sealAccess seal.Access) error {
 	if challenge == nil {
@@ -607,12 +608,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	parsedClusterAddr, err := url.Parse(c.clusterAddr)
+	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if UpdateClusterAddrForTests && strings.HasSuffix(clusterAddr, ":0") {
+	if atomic.LoadUint32(&UpdateClusterAddrForTests) == 1 && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error

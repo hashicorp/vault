@@ -8,6 +8,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// DEPRECATED: Don't use this. It's too inflexible, nearly impossible to use
+// with some modern Vault features, and imposes specific API designs.
+//
 // PolicyMap is a specialization of PathMap that expects the values to
 // be lists of policies. This assists in querying and loading policies
 // from the PathMap.

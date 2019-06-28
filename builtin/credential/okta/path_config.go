@@ -24,7 +24,7 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "(DEPRECATED) Okta organization to authenticate against. Use org_name instead.",
+				Description: "Use org_name instead.",
 				Deprecated:  true,
 			},
 			"org_name": &framework.FieldSchema{
@@ -36,7 +36,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "(DEPRECATED) Okta admin API token.  Use api_token instead.",
+				Description: "Use api_token instead.",
 				Deprecated:  true,
 			},
 			"api_token": &framework.FieldSchema{
@@ -55,7 +55,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Description: `(DEPRECATED) Use base_url.`,
+				Description: `Use base_url instead.`,
 				Deprecated:  true,
 			},
 			"ttl": &framework.FieldSchema{

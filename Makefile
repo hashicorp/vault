@@ -106,8 +106,10 @@ prep: fmtcheck
 	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
+.PHONY: ci-config
 ci-config:
-	@$(MAKE) -C .circleci
+	@$(MAKE) -C .circleci ci-config
+.PHONY: ci-verify
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
