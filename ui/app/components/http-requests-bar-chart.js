@@ -4,6 +4,8 @@ import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
 import d3Tip from 'd3-tip';
+import d3Transition from 'd3-transition';
+import d3Ease from 'd3-ease';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
@@ -29,6 +31,8 @@ import { task, waitForEvent } from 'ember-concurrency';
 
 const HEIGHT = 240;
 const HOVER_PADDING = 12;
+const BASE_SPEED = 150;
+const DURATION = BASE_SPEED * 3;
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
@@ -152,9 +156,17 @@ export default Component.extend({
 
     bars
       .merge(barsEnter)
-      .attr('width', xScale.bandwidth())
-      .attr('height', counter => height - yScale(counter.total))
       .attr('x', counter => xScale(counter.start_time))
+      // set the initial y value to 0 so the bars animate upwards
+      .attr('y', counter => yScale(0))
+      .attr('width', xScale.bandwidth())
+      .transition()
+      .duration(DURATION)
+      .delay(function(d, i) {
+        return i * BASE_SPEED;
+      })
+      .ease(d3Ease.easeQuad)
+      .attr('height', counter => height - yScale(counter.total))
       .attr('y', counter => yScale(counter.total));
 
     bars.exit().remove();
