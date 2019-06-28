@@ -935,6 +935,9 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	// verify all pws are as they should
 	pass := true
 	for k, v := range pws {
+		if len(v) < 3 {
+			t.Fatalf("expected to find 3 passwords for (%s), only found (%d)", k, len(v))
+		}
 		switch {
 		case k == "plugin-static-role-65":
 			// expect all passwords to be different
