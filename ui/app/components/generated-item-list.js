@@ -1,5 +1,6 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
+import { getOwner } from '@ember/application';
 
 /**
  * @module GeneratedItemList
@@ -22,7 +23,7 @@ export default Component.extend({
   store: service(),
   actions: {
     refreshItemList() {
-      let route = Ember.getOwner(this).lookup(`route:${this.router.currentRouteName}`);
+      let route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
       this.store.clearAllDatasets();
       route.refresh();
     },
