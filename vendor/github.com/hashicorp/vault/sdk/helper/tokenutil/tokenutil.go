@@ -218,6 +218,10 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.NumUses = t.TokenNumUses
 }
 
+func DeprecationText(param string) string {
+	return fmt.Sprintf("Use %q instead. If this and %q are both specified, only %q will be used.", param, param, param)
+}
+
 const (
 	tokenPeriodHelp = `If set, tokens created via this role
 will have no max lifetime; instead, their
