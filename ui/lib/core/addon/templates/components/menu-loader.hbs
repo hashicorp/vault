@@ -1,0 +1,7 @@
+{{#if @loadingParam}}
+  <button disabled type="button" class="link button is-loading is-transparent">
+    loading
+  </button>
+{{else}}
+  {{yield}}
+{{/if}}
