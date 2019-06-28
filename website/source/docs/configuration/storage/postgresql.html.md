@@ -98,7 +98,8 @@ LANGUAGE plpgsql;
 
 - `max_idle_connections` `(int)` - Default not set. Sets the maximum number of 
   connections in the idle connection pool. See
-  [golang docs on SetMaxIdleConns][golang_SetMaxIdleConns] for more information.
+  [golang docs on SetMaxIdleConns][golang_SetMaxIdleConns] for more information. 
+  Requires 1.2 or later.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to PostgreSQL.
