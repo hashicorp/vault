@@ -16,7 +16,7 @@ export default DS.JSONSerializer.extend({
         }
         let pk = this.get('primaryKey') || 'id';
         let model = { [pk]: key };
-        // if we've added a in the adapter, we want
+        // if we've added _requestQuery in the adapter, we want
         // attach it to the individual models
         if (payload._requestQuery) {
           model = { ...model, ...payload._requestQuery };
