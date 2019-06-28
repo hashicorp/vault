@@ -5,15 +5,20 @@ import addMonths from 'date-fns/add_months';
 
 /**
  * @module HttpRequestsContainer
- * HttpRequestsContainer components are used to...
+ * The HttpRequestsContainer component is the parent component of the HttpRequestsDropdown, HttpRequestsBarChart, and HttpRequestsTable components. It is used to handle filtering the bar chart and table according to selected time window from the dropdown.
  *
  * @example
  * ```js
- * <HttpRequestsContainer @param1={param1} @param2={param2} />
+ * <HttpRequestsContainer @counters={counters}/>
  * ```
  *
- * @param param1 {String} - param1 is...
- * @param [param2=value] {String} - param2 is... //brackets mean it is optional and = sets the default value
+ * @param counters=null {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests` endpoint which looks like:
+ * COUNTERS = [
+ *    {
+ *       "start_time": "2019-05-01T00:00:00Z",
+ *       "total": 50
+ *     }
+ * ]
  */
 
 export default Component.extend({
