@@ -32,6 +32,7 @@ export const expandOpenApiProps = function(props) {
       readOnly: isId,
       defaultValue: value || null,
     };
+
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
     if (editType !== 'ttl' && type !== 'array') {

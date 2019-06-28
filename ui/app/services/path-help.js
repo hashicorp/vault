@@ -86,6 +86,7 @@ export default Service.extend({
       (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action === 'Configure')
     ) {
       paths.configPath.push({ path: pathName, tag: pathInfo.get.tags[0] });
+      return paths; //config path should only be config path
     }
 
     //list endpoints all have { name: "list" } in their get parameters
@@ -113,14 +114,12 @@ export default Service.extend({
     return paths;
   },
 
-  getPaths(apiPath, backend, itemType) {
+  getPaths(apiPath, backend) {
     debug(`Fetching relevant paths for ${backend} from ${apiPath}`);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.entries(pathInfo);
-      if (itemType) {
-        paths = paths.filter(path => path[0].includes(itemType));
-      }
+
       return paths.reduce(this.reducePaths, {
         apiPath: [],
         configPath: [],
@@ -137,6 +136,7 @@ export default Service.extend({
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
+
     return this.ajax(helpUrl, backend).then(help => {
       //paths is an array but it will have a single entry
       // for the scope we're in

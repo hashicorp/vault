@@ -55,7 +55,7 @@ export default Route.extend(ListRoute, {
     controller.set('itemType', singularize(itemType));
     controller.set('method', method);
     this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+      controller.set('paths', paths.navPaths.reduce((acc, cur) => acc.concat(cur.path), []));
     });
   },
 });
