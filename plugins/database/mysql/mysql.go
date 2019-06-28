@@ -316,7 +316,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 	return m.RawConfig, nil
 }
 
-// SetCredentials uses provided information to set the password a user in the
+// SetCredentials uses provided information to set the password to a user in the
 // database. Unlike CreateUser, this method requires a username be provided and
 // uses the name given, instead of generating a name. This is used for setting
 // the password of static accounts, as well as rolling back passwords in the
