@@ -15,8 +15,23 @@ export default BaseAdapter.extend({
       return {
         id: name,
         name,
+        backend: snapshot.record.backend,
+        scope: snapshot.record.scope,
       };
     });
+  },
+
+  deleteRecord(store, type, snapshot) {
+    let name = snapshot.id || snapshot.attr('name');
+    let url = this._url(
+      type.modelName,
+      {
+        backend: snapshot.record.backend,
+        scope: snapshot.record.scope,
+      },
+      name
+    );
+    return this.ajax(url, 'DELETE');
   },
 
   serialize(snapshot) {

@@ -13,4 +13,18 @@ export default BaseAdapter.extend({
       return model;
     });
   },
+
+  deleteRecord(store, type, snapshot) {
+    let url = this._url(type.modelName, {
+      backend: snapshot.record.backend,
+      scope: snapshot.record.scope,
+      role: snapshot.record.role,
+    });
+    url = `${url}/generate`;
+    return this.ajax(url, 'POST', {
+      data: {
+        serial_number: snapshot.id,
+      },
+    });
+  },
 });
