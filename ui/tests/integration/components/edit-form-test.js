@@ -50,17 +50,6 @@ module('Integration | Component | edit form', function(hooks) {
     assert.equal(component.deleteText, 'Delete');
   });
 
-  test('it renders: custom deleteButton', async function(assert) {
-    let model = createModel();
-    let delText = 'Exterminate';
-    this.set('model', model);
-    this.set('deleteButtonText', delText);
-    await render(hbs`{{edit-form model=model deleteButtonText=deleteButtonText}}`);
-
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, delText);
-  });
-
   test('it calls flash message fns on save', async function(assert) {
     let model = createModel();
     let onSave = () => {
