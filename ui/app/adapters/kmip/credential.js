@@ -20,7 +20,7 @@ export default BaseAdapter.extend({
       scope: snapshot.record.scope,
       role: snapshot.record.role,
     });
-    url = `${url}/generate`;
+    url = `${url}/revoke`;
     return this.ajax(url, 'POST', {
       data: {
         serial_number: snapshot.id,
