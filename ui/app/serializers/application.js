@@ -15,7 +15,14 @@ export default DS.JSONSerializer.extend({
           return key;
         }
         let pk = this.get('primaryKey') || 'id';
-        return { [pk]: key };
+        let model = { [pk]: key };
+        // if we've added a in the adapter, we want
+        // attach it to the individual models
+        if (payload._requestQuery) {
+          model = { ...model, ...payload._requestQuery };
+          delete payload._requestQuery;
+        }
+        return model;
       });
       return models;
     }
@@ -42,14 +49,8 @@ export default DS.JSONSerializer.extend({
     }
     let jsonAPIRepresentation = this._super(store, primaryModelClass, responseJSON, id, requestType);
     if (primaryModelClass.relatedCapabilities) {
-      if (Array.isArray(jsonAPIRepresentation)) {
-        jsonAPIRepresentation = jsonAPIRepresentation.map(primaryModelClass.relatedCapabilities);
-      } else {
-        jsonAPIRepresentation = primaryModelClass.relatedCapabilities(jsonAPIRepresentation);
-      }
-      debugger;
+      jsonAPIRepresentation = primaryModelClass.relatedCapabilities(jsonAPIRepresentation);
     }
-    console.log(jsonAPIRepresentation);
     return jsonAPIRepresentation;
   },
 

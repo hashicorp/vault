@@ -1,6 +1,7 @@
 import DS from 'ember-data';
-import { debug, warn } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';
+import { isArray } from '@ember/array';
 const { belongsTo } = DS;
 
 /*
@@ -34,20 +35,31 @@ export default function attachCapabilities(modelClass, capabilities) {
   }, {});
 
   debug(`adding new relationships: ${capabilityKeys.join(', ')} to ${modelClass.toString()}`);
-  modelClass.reopen(...newRelationships);
+  modelClass.reopen(newRelationships);
   modelClass.reopenClass({
     // relatedCapabilities is called in the application serializer's
     // normalizeResponse hook to add the capabilities relationships to the
     // JSON-API document used by Ember Data
-    relatedCapabilities({ data, included }) {
+    relatedCapabilities(jsonAPIDoc) {
+      let { data, included } = jsonAPIDoc;
+      if (!data) {
+        data = jsonAPIDoc;
+      }
+      if (isArray(data)) {
+        let newData = data.map(this.relatedCapabilities);
+        return {
+          data: newData,
+          included,
+        };
+      }
       let context = {
         id: data.id,
         ...data.attributes,
       };
       for (let newCapability of capabilityKeys) {
-        let templateFn = capabilityKeys[newCapability];
+        let templateFn = capabilities[newCapability];
         let type = typeOf(templateFn);
-        warn(`expected value of ${newCapability} to be a function but found ${type}.`, type !== 'function');
+        assert(`expected value of ${newCapability} to be a function but found ${type}.`, type === 'function');
         data.relationships[newCapability] = {
           data: {
             type: 'capabilities',
@@ -56,10 +68,14 @@ export default function attachCapabilities(modelClass, capabilities) {
         };
       }
 
-      return {
-        data,
-        included,
-      };
+      if (included) {
+        return {
+          data,
+          included,
+        };
+      } else {
+        return data;
+      }
     },
   });
   return modelClass;
