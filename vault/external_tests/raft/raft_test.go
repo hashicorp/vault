@@ -67,13 +67,16 @@ func TestRaft_Join(t *testing.T) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
-	joinFunc := func(client *api.Client) {
-		resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
-			LeaderAPIAddr:    leaderAPI,
-			LeaderCACert:     string(cluster.CACertPEM),
-			LeaderClientCert: string(cluster.CACertPEM),
-			LeaderClientKey:  string(cluster.CAKeyPEM),
-		})
+	joinFunc := func(client *api.Client, addClientCerts bool) {
+		req := &api.RaftJoinRequest{
+			LeaderAPIAddr: leaderAPI,
+			LeaderCACert:  string(cluster.CACertPEM),
+		}
+		if addClientCerts {
+			req.LeaderClientCert = string(cluster.CACertPEM)
+			req.LeaderClientKey = string(cluster.CAKeyPEM)
+		}
+		resp, err := client.Sys().RaftJoin(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,8 +85,25 @@ func TestRaft_Join(t *testing.T) {
 		}
 	}
 
-	joinFunc(cluster.Cores[1].Client)
-	joinFunc(cluster.Cores[2].Client)
+	joinFunc(cluster.Cores[1].Client, false)
+	joinFunc(cluster.Cores[2].Client, false)
+
+	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joinFunc(cluster.Cores[1].Client, true)
+	joinFunc(cluster.Cores[2].Client, true)
 }
 
 func TestRaft_RemovePeer(t *testing.T) {
