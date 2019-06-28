@@ -20,7 +20,6 @@ export default DS.JSONSerializer.extend({
         // attach it to the individual models
         if (payload._requestQuery) {
           model = { ...model, ...payload._requestQuery };
-          delete payload._requestQuery;
         }
         return model;
       });
@@ -44,6 +43,7 @@ export default DS.JSONSerializer.extend({
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload, requestType);
+    delete payload._requestQuery;
     if (id && !responseJSON.id) {
       responseJSON.id = id;
     }
