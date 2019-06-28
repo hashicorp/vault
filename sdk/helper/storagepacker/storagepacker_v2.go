@@ -182,9 +182,13 @@ func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 	return ret, nil
 }
 
-// Parse a bucket from storage, but don't add it to the cache here.
+// DecodeBucket parses a bucket from storage, but doesn't add it to the cache.
 // (We may want to read a v1 bucket and upgrade it?)
 func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*LockedBucket, error) {
+	if storageEntry == nil || storageEntry.Value == nil {
+		return nil, errors.New("decoding nil storageEntry")
+	}
+
 	uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decompress packed storage entry: {{err}}", err)
@@ -212,7 +216,7 @@ func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 	return lb, nil
 }
 
-// Raw access to one of the storage buckets.
+// GetBucket provides raw access to one of the storage buckets.
 // The caller is responsible for acquiring the lock and verifying that the bucket
 // has not been sharded in the meantime.
 func (s *StoragePackerV2) GetBucket(ctx context.Context, bucketKey string) (*LockedBucket, error) {
@@ -230,6 +234,7 @@ func (s *StoragePackerV2) GetBucket(ctx context.Context, bucketKey string) (*Loc
 
 }
 
+// shardBucket splits an overly-large bucket into multiple children.
 func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string) error {
 	numShards := int(math.Pow(2.0, float64(s.BucketShardBits)))
 
@@ -329,7 +334,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	return retErr.ErrorOrNil()
 }
 
-// Put a bucket into persistent storage, or at least enqueue it.
+// persistBuckets puts a bucket into persistent storage, or at least enqueues it.
 // Expect that the bucket is already locked at this point.
 func (s *StoragePackerV2) persistBucket(ctx context.Context, bucket *LockedBucket) error {
 	if atomic.LoadUint32(&s.queueMode) == 1 {
@@ -376,7 +381,7 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket,
 	return nil
 }
 
-// upsert either inserts a new item into the bucket or updates an existing one
+// upsertItems either inserts a new item into the bucket or updates an existing one
 // if an item with a matching key is already present.
 func (p *partitionedRequests) upsertItems() error {
 	if p == nil {
@@ -401,7 +406,7 @@ func (p *partitionedRequests) upsertItems() error {
 	return nil
 }
 
-// Set the value of multiple items, as an efficient but non-atomic operation.
+// PutItem sets the value of multiple items, as an efficient but non-atomic operation.
 // Each affected bucket will be written just once.
 // A multierror will be returned if some of the writes fail.
 func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
@@ -466,7 +471,7 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 	return merr.ErrorOrNil()
 }
 
-// Delete the items identified by the set of IDs.
+// DeleteItem removes the items identified by the set of IDs from storage.
 // Deletion of a non-existent ID is not signalled as an error.
 func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) error {
 	requests := s.keysForIDs(itemIDs)
@@ -504,8 +509,9 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) err
 	return merr.ErrorOrNil()
 }
 
-// Retrieve a set of items identified by ID; missing items signal by nil's in
-// the returned slice so that the the request and response lengths are the same.
+// GetsItems retrieves a set of items identified by ID.
+// Missing items signal by nil's in the returned slice so that the the request
+// and response lengths are the same.
 func (s *StoragePackerV2) GetItems(ctx context.Context, ids ...string) ([]*Item, error) {
 	requests := s.keysForIDs(ids)
 
@@ -564,8 +570,9 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 	return singleItem[0], nil
 }
 
-// Retrieve the entire set of items as a single slice
-// This *is* an atomic operation.
+// AllItems retrieve the entire set of items as a single slice.
+// This *is* an atomic operation so that it provides a point-in-time
+// view of the state.
 func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error) {
 	// Acquire all the locks ahead of time (and in order)
 	for _, l := range s.storageLocks {
@@ -689,6 +696,8 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 	return packer, nil
 }
 
+// SetQueueMode enables or disabled deferred writes of buckets to storage.
+// The client must use FlushQueue to commit the accumulated writes.
 func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 	if enabled {
 		atomic.StoreUint32(&s.queueMode, 1)
@@ -697,6 +706,7 @@ func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 	}
 }
 
+// FlushQueue writes out accumulated buckets to storage.
 // This mechanism doesn't guarantee a consistent ordering of the writes,
 // so if sharding has occurred the resulting storage could be
 // incorrectly recovered.

@@ -10,7 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Is the given storage path controlled by this StoragePacker?
+// MatchingStorage returns true if the given storage path is
+// controlled by this StoragePacker.
 func (s *StoragePackerV2) MatchingStorage(path string) bool {
 	return strings.HasPrefix(path, s.BucketStorageView.Prefix())
 }
@@ -25,6 +26,8 @@ func (s *StoragePackerV2) bucketKeyFromPath(path string) (string, error) {
 	}
 }
 
+// InvalidateItems handles invalidation of a StoragePackerV2 bucket during replication.
+//
 // Given a storage path (to a bucket) and new contents, return
 // "present": all items present in the new bucket (new, changed, or unchanged)
 // "deleted": all items that were in the cache but are now absent

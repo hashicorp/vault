@@ -11,13 +11,13 @@ import (
 )
 
 type itemRequest struct {
-	// Item ID, provided by client
+	// ID is the Item ID, provided by client
 	ID string
 
-	// Storage key == hash of ID
+	// Key is the identifier used internally, a hash of ID
 	Key string
 
-	// Stored object, nil if not found
+	// Value is the stored object, nil if not found
 	Value *Item
 }
 
@@ -28,7 +28,7 @@ func GetItemIDHash(itemID string) string {
 // Length of key
 const KeyLength = 64
 
-// Given a list of IDs, calculate their keys generate itemRequests for each.
+// keysForIDs calculates keys and generates itemRequests for each input ID.
 func (s *StoragePackerV2) keysForIDs(ids []string) []*itemRequest {
 	requests := make([]*itemRequest, 0, len(ids))
 	for _, id := range ids {
@@ -41,7 +41,7 @@ func (s *StoragePackerV2) keysForIDs(ids []string) []*itemRequest {
 	return requests
 }
 
-// Given a list of Items, calculate their keys generate itemRequests for each.
+// kesyForItems calculate keys and generates itemRequests for each input Item.
 func (s *StoragePackerV2) keysForItems(items []*Item) []*itemRequest {
 	requests := make([]*itemRequest, 0, len(items))
 	for _, i := range items {
@@ -64,7 +64,7 @@ func sortRequests(requests []*itemRequest) []*itemRequest {
 	return duplicate
 }
 
-// Return the topmost bucket in the tree for a given key.
+// firstKey returns the topmost bucket in the tree for a given key.
 // Used as a default if the cache is empty or bypassed.
 func (s *StoragePackerV2) firstKey(cacheKey string) (string, error) {
 	rootShardLength := s.BaseBucketBits / 4
@@ -74,7 +74,7 @@ func (s *StoragePackerV2) firstKey(cacheKey string) (string, error) {
 	return cacheKey[0 : s.BaseBucketBits/4], nil
 }
 
-// Return all topmost buckets in the tree.
+// getAllBaseBucketKeys returns all topmost buckets in the tree.
 func (s *StoragePackerV2) getAllBaseBucketKeys() []string {
 	numBuckets := int(math.Pow(2.0, float64(s.BaseBucketBits)))
 	rootBucketLength := s.BaseBucketBits / 4
@@ -90,6 +90,7 @@ func (s *StoragePackerV2) getAllBaseBucketKeys() []string {
 	return ret
 }
 
+// GetCacheKey returns the radix tree key corresponding to a bucket.
 // Buckets keys have / in them.
 // Entries in the radix tree do not.
 // Lock hashing uses the latter form.

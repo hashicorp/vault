@@ -12,8 +12,8 @@ type partitionedRequests struct {
 	Requests []*itemRequest
 }
 
-// Take the list of requests and partition them by which bucket the
-// Key belongs to.
+// partitionRequests takes a list of requests and partition them by which
+// bucket the Key belongs to.
 func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]*partitionedRequests, error) {
 	sortedRequests := sortRequests(unsortedRequests)
 
@@ -21,7 +21,7 @@ func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]
 	var lastBucket *partitionedRequests
 
 	// The items requests are sorted by key, so the same buckets end
-	// up together--- but the radix tree doesn't have a way to take
+	// up together. But, the radix tree doesn't have a way to take
 	// advantage of that to do a single pass.
 	//
 	// We could check whether each request has the same prefix as the
@@ -53,7 +53,7 @@ func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]
 	return partition, nil
 }
 
-// Acquire the locks for all the identified buckets, in order.
+// lockBuckets acquires the locks for all the identified buckets, in order.
 // Check that the buckets are still unsharded after the lock is acquired;
 // if not, the partitioning step must be retried, but this is an uncommon
 // operation.
