@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickmn/go-cache"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -19,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/kalafut/q"
 )
 
 const (
@@ -75,8 +72,6 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
 
-	//panic("asdf")
-	q.Q("here")
 	iStore.Backend = &framework.Backend{
 		BackendType: logical.TypeLogical,
 		Paths:       iStore.paths(),
@@ -87,30 +82,19 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
-			q.Q("func running")
-			iStore.oidcPeriodicFunc(ctx, req.Storage)
+			iStore.oidcPeriodicFunc(ctx)
 
 			return nil
 		},
 	}
 	go func() {
 		for {
-			children := core.namespaceManager.NamespacesUnderPath("", true, 0)
-			for _, ns := range children {
-				s := core.router.MatchingStorageByAPIPath(ctx, ns.Path+"identity/oidc")
-				iStore.oidcPeriodicFunc(ctx, s)
-				////q.Q(s)
-				//l, _ := s.List(ctx, "oidc_tokens/named_keys/")
-				//q.Q(l)
-
-			}
-			q.Q(children)
-
 			time.Sleep(5 * time.Second)
+			iStore.oidcPeriodicFunc(ctx)
 		}
 	}()
 
-	iStore.oidcCache = cache.New(cache.NoExpiration, cache.NoExpiration)
+	iStore.oidcCache = newOIDCCache()
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -285,7 +269,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.Flush()
+		i.oidcCache.Flush(nil)
 	}
 }
 

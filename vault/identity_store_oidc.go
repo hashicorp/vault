@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/patrickmn/go-cache"
 
 	"github.com/hashicorp/vault/sdk/helper/base62"
 
@@ -83,6 +84,37 @@ type discovery struct {
 	Scopes        []string `json:"scopes_supported"`
 	AuthMethods   []string `json:"token_endpoint_auth_methods_supported"`
 	Claims        []string `json:"claims_supported"`
+}
+
+// oidcCache is a this wrapping around go-cache to partition by namespace
+type oidcCache struct {
+	c *cache.Cache
+}
+
+func newOIDCCache() *oidcCache {
+	return &oidcCache{
+		c: cache.New(cache.NoExpiration, cache.NoExpiration),
+	}
+}
+
+func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
+	if ns == nil {
+		ns = &namespace.Namespace{ID: "__root__"}
+	}
+	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
+}
+
+func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool) {
+	return c.c.Get(c.nskey(ns, key))
+}
+
+func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) {
+	c.c.SetDefault(c.nskey(ns, key), obj)
+}
+
+func (c *oidcCache) Flush(ns *namespace.Namespace) {
+	// TODO iterate and delete by ns
+	c.c.Flush()
 }
 
 const (
@@ -290,6 +322,11 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 }
 
 func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	value, ok := d.GetOk("issuer")
 	if !ok {
 		return nil, nil
@@ -317,13 +354,18 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 			`using the cluster's api_addr as the issuer.`)
 	}
 
-	i.oidcCache.Flush()
+	i.oidcCache.Flush(ns)
 
 	return &resp, nil
 }
 
 func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
-	if v, ok := i.oidcCache.Get("config"); ok {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if v, ok := i.oidcCache.Get(ns, "config"); ok {
 		return v.(*oidcConfig), nil
 	}
 
@@ -344,14 +386,19 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		c.effectiveIssuer = i.core.redirectAddr + issuerPath
 	}
 
-	i.oidcCache.SetDefault("config", &c)
+	i.oidcCache.SetDefault(ns, "config", &c)
 
 	return &c, nil
 }
 
 // handleOIDCCreateKey is used to create a new named key or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	defer i.oidcCache.Flush()
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer i.oidcCache.Flush(ns)
 
 	name := d.Get("name").(string)
 
@@ -459,6 +506,11 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	targetKeyName := d.Get("name").(string)
 
 	// it is an error to delete a key that is actively referenced by a role
@@ -501,7 +553,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush()
+	i.oidcCache.Flush(ns)
 
 	return nil, nil
 }
@@ -517,6 +569,11 @@ func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Reques
 
 // pathOIDCRotateKey is used to manually trigger a rotation on the named key
 func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	name := d.Get("name").(string)
 
 	// load the named key and perform a rotation
@@ -544,7 +601,7 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush()
+	i.oidcCache.Flush(ns)
 
 	return nil, nil
 }
@@ -562,6 +619,11 @@ func (i *IdentityStore) pathOIDCKeyExistenceCheck(ctx context.Context, req *logi
 
 // handleOIDCGenerateSignToken generates and signs an OIDC token
 func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	roleName := d.Get("name").(string)
 
 	role, err := i.getOIDCRole(ctx, req.Storage, roleName)
@@ -575,7 +637,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	var key *namedKey
 
-	if keyRaw, found := i.oidcCache.Get("namedKeys/" + role.Key); found {
+	if keyRaw, found := i.oidcCache.Get(ns, "namedKeys/"+role.Key); found {
 		key = keyRaw.(*namedKey)
 	} else {
 		entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
@@ -587,7 +649,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault("namedKeys/"+role.Key, key)
+		i.oidcCache.SetDefault(ns, "namedKeys/"+role.Key, key)
 	}
 
 	// generate an OIDC token from entity data
@@ -721,6 +783,11 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 
 // handleOIDCCreateRole is used to create a new role or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	name := d.Get("name").(string)
 
 	var role role
@@ -817,7 +884,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	i.oidcCache.Flush()
+	i.oidcCache.Flush(ns)
 
 	return nil, nil
 }
@@ -884,7 +951,12 @@ func (i *IdentityStore) pathOIDCListRole(ctx context.Context, req *logical.Reque
 func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []byte
 
-	if v, ok := i.oidcCache.Get("discoveryResponse"); ok {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if v, ok := i.oidcCache.Get(ns, "discoveryResponse"); ok {
 		data = v.([]byte)
 	} else {
 		c, err := i.getOIDCConfig(ctx, req.Storage)
@@ -905,7 +977,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault("discoveryResponse", data)
+		i.oidcCache.SetDefault(ns, "discoveryResponse", data)
 	}
 
 	resp := &logical.Response{
@@ -928,9 +1000,8 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	if err != nil {
 		return nil, err
 	}
-	i.Logger().Debug(ns.ID)
 
-	if v, ok := i.oidcCache.Get(ns.ID + "-jwksResponse"); ok {
+	if v, ok := i.oidcCache.Get(ns, "jwksResponse"); ok {
 		data = v.([]byte)
 	} else {
 		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
@@ -943,7 +1014,7 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns.ID+"-jwksResponse", data)
+		i.oidcCache.SetDefault(ns, "jwksResponse", data)
 	}
 
 	resp := &logical.Response{
@@ -1154,7 +1225,8 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 	if err != nil {
 		return nil, err
 	}
-	if jwksRaw, ok := i.oidcCache.Get(ns.ID + "-jwks"); ok {
+
+	if jwksRaw, ok := i.oidcCache.Get(ns, "jwks"); ok {
 		return jwksRaw.(*jose.JSONWebKeySet), nil
 	}
 
@@ -1179,13 +1251,18 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		jwks.Keys = append(jwks.Keys, *key)
 	}
 
-	i.oidcCache.SetDefault(ns.ID+"-jwks", jwks)
+	i.oidcCache.SetDefault(ns, "jwks", jwks)
 
 	return jwks, nil
 }
 
 func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
 	var didUpdate bool
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
 
 	// nextExpiration will be the soonest expiration time of all keys. Initialize
 	// here to a relatively distant time.
@@ -1270,7 +1347,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	}
 
 	if didUpdate {
-		i.oidcCache.Flush()
+		i.oidcCache.Flush(ns)
 	}
 
 	return nextExpiration, nil
@@ -1322,10 +1399,12 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
-func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage) {
+func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
+	nsPaths := i.listNamespacePaths(ctx)
+
 	nextRun := time.Time{}
 
-	if v, ok := i.oidcCache.Get("nextRun"); ok {
+	if v, ok := i.oidcCache.Get(nil, "nextRun"); ok {
 		nextRun = v.(time.Time)
 	}
 
@@ -1333,24 +1412,33 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	// be run at any time safely, but there is no need to invoke them (which
 	// might be somewhat expensive if there are many roles/keys) if we're not
 	// past any rotation/expiration TTLs.
-	if true || time.Now().After(nextRun) {
-		nextRotation, err := i.oidcKeyRotation(ctx, s)
-		if err != nil {
-			i.Logger().Warn("error rotating OIDC keys", "err", err)
-		}
 
-		nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
-		if err != nil {
-			i.Logger().Warn("error expiring OIDC public keys", "err", err)
-		}
+	if time.Now().After(nextRun) {
+		for _, nsPath := range nsPaths {
+			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
-		i.oidcCache.Flush()
+			nextRotation, err := i.oidcKeyRotation(ctx, s)
+			if err != nil {
+				i.Logger().Warn("error rotating OIDC keys", "err", err)
+			}
 
-		// re-run at the soonest expiration or rotation time
-		if nextRotation.Before(nextExpiration) {
-			i.oidcCache.SetDefault("nextRun", nextRotation)
-		} else {
-			i.oidcCache.SetDefault("nextRun", nextExpiration)
+			nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
+			if err != nil {
+				i.Logger().Warn("error expiring OIDC public keys", "err", err)
+			}
+
+			i.oidcCache.Flush(nil)
+
+			// re-run at the soonest expiration or rotation time
+			if nextRotation.Before(nextRun) {
+				nextRun = nextRotation
+			}
+
+			if nextExpiration.Before(nextRun) {
+				nextRun = nextExpiration
+			}
+
 		}
+		i.oidcCache.SetDefault(nil, "nextRun", nextRun)
 	}
 }

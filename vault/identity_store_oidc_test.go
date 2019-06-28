@@ -525,7 +525,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 
 	// Time 0 - 1 Period
 	// PeriodicFunc should set nextRun - nothing else
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 0 {
@@ -537,7 +537,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 0 but was: %#v", len(publicKeys))
 	}
 	// Next run should be set
-	v, _ := c.identityStore.oidcCache.Get("nextRun")
+	v, _ := c.identityStore.oidcCache.Get(nil, "nextRun")
 	if v == nil {
 		t.Fatalf("Expected nextRun to be set but it was nil")
 	}
@@ -546,7 +546,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 1 - 2 Period
 	// PeriodicFunc should rotate namedKey and update nextRun
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 1 {
@@ -558,7 +558,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
 	}
 	// nextRun should have been updated
-	v, _ = c.identityStore.oidcCache.Get("nextRun")
+	v, _ = c.identityStore.oidcCache.Get(nil, "nextRun")
 	laterNextRun := v.(time.Time)
 	if !laterNextRun.After(earlierNextRun) {
 		t.Fatalf("laterNextRun: %#v is not after earlierNextRun: %#v", laterNextRun.String(), earlierNextRun.String())
@@ -567,7 +567,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 2-3
 	// PeriodicFunc should rotate namedKey and expire 1 public key
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 2 {
@@ -582,7 +582,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 3-4
 	// PeriodicFunc should rotate namedKey and expire 1 public key
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 2 {
