@@ -2,11 +2,14 @@ package approle
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -1157,7 +1160,6 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		"token_max_ttl":         500,
 		"token_num_uses":        600,
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
-		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // returned for backwards compatibility
 		"token_bound_cidrs":     []string{},
 		"token_type":            "default",
 	}
@@ -1175,8 +1177,8 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	}
 
 	expectedStruct.RoleID = actualStruct.RoleID
-	if !reflect.DeepEqual(expectedStruct, actualStruct) {
-		t.Fatalf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
+	if diff := deep.Equal(expectedStruct, actualStruct); diff != nil {
+		t.Fatal(diff)
 	}
 
 	roleData = map[string]interface{}{
@@ -1313,6 +1315,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	if !reflect.DeepEqual(resp.Data["policies"].([]string), []string{"a1", "b1", "c1", "d1"}) {
 		t.Fatalf("bad: policies: actual:%s\n", resp.Data["policies"].([]string))
 	}
+	if !reflect.DeepEqual(resp.Data["token_policies"].([]string), []string{"a1", "b1", "c1", "d1"}) {
+		t.Fatalf("bad: policies: actual:%s\n", resp.Data["policies"].([]string))
+	}
 	roleReq.Operation = logical.DeleteOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1325,10 +1330,10 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	expectedPolicies := []string{"default"}
-	actualPolicies := resp.Data["policies"].([]string)
+	expectedPolicies := []string{}
+	actualPolicies := resp.Data["token_policies"].([]string)
 	if !policyutil.EquivalentPolicies(expectedPolicies, actualPolicies) {
-		t.Fatalf("bad: policies: expected:%s actual:%s", expectedPolicies, actualPolicies)
+		t.Fatalf("bad: token_policies: expected:%s actual:%s", expectedPolicies, actualPolicies)
 	}
 
 	// RUD for secret-id-num-uses field
@@ -1491,7 +1496,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Data["period"].(time.Duration) != 0 {
+	if resp.Data["token_period"].(time.Duration) != 0 {
 		t.Fatalf("expected value to be reset")
 	}
 
@@ -1637,7 +1642,6 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		"token_num_uses":        600,
 		"token_bound_cidrs":     []string{"127.0.0.1/32", "127.0.0.1/16"},
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
-		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // provided for backwards compatibility
 		"token_type":            "default",
 	}
 
@@ -1753,9 +1757,13 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-	if resp.Data["token_bound_cidrs"].([]string)[0] != "127.0.0.1/32" ||
-		resp.Data["token_bound_cidrs"].([]string)[1] != "127.0.0.1/16" {
-		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/32,127.0.0.1/16 actual:%d\n", resp.Data["token_bound_cidrs"].(int))
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" ||
+		resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[1].String() != "127.0.0.1/16" {
+		m, err := json.Marshal(resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler))
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/32,127.0.0.1/16 actual:%s\n", string(m))
 	}
 
 	roleReq.Data = map[string]interface{}{"token_bound_cidrs": []string{"127.0.0.1/20"}}
@@ -1771,8 +1779,8 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Data["token_bound_cidrs"].([]string)[0] != "127.0.0.1/20" {
-		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/20 actual:%s\n", resp.Data["token_bound_cidrs"].([]string)[0])
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1/20" {
+		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/20 actual:%s\n", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0])
 	}
 
 	roleReq.Operation = logical.DeleteOperation
@@ -1787,7 +1795,7 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if len(resp.Data["token_bound_cidrs"].([]string)) != 0 {
+	if len(resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)) != 0 {
 		t.Fatalf("expected value to be reset")
 	}
 

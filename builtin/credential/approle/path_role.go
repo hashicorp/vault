@@ -264,7 +264,7 @@ IP addresses which can perform the login operation.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.UpdateOperation: b.pathRoleSecretIDBoundCIDRUpdate,
 				logical.ReadOperation:   b.pathRoleSecretIDBoundCIDRRead,
 				logical.DeleteOperation: b.pathRoleSecretIDBoundCIDRDelete,
 			},
@@ -284,7 +284,7 @@ IP addresses which can perform the login operation.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.UpdateOperation: b.pathRoleTokenBoundCIDRUpdate,
 				logical.ReadOperation:   b.pathRoleTokenBoundCIDRRead,
 				logical.DeleteOperation: b.pathRoleTokenBoundCIDRDelete,
 			},
@@ -1199,7 +1199,7 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 }
 
 func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
-	return map[string]interface{}{
+	ret := map[string]interface{}{
 		"secret_id_accessor": entry.SecretIDAccessor,
 		"secret_id_num_uses": entry.SecretIDNumUses,
 		"secret_id_ttl":      entry.SecretIDTTL / time.Second,
@@ -1210,6 +1210,10 @@ func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
 		"cidr_list":          entry.CIDRList,
 		"token_bound_cidrs":  entry.TokenBoundCIDRs,
 	}
+	if len(entry.TokenBoundCIDRs) == 0 {
+		ret["token_bound_cidrs"] = []string{}
+	}
+	return ret
 }
 
 func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1387,6 +1391,24 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 }
 
 func (b *backend) pathRoleBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "token_bound_cidrs")
+	delete(data.Raw, "secret_id_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleSecretIDBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "bound_cidr_list")
+	delete(data.Raw, "token_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleTokenBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "bound_cidr_list")
+	delete(data.Raw, "secret_id_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleBoundCIDRUpdateCommon(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1503,6 +1525,15 @@ func (b *backend) pathRoleBoundCIDRDelete(ctx context.Context, req *logical.Requ
 	}
 	if role == nil {
 		return nil, nil
+	}
+
+	switch fieldName {
+	case "bound_cidr_list":
+		role.BoundCIDRList = nil
+	case "secret_id_bound_cidrs":
+		role.SecretIDBoundCIDRs = nil
+	case "token_bound_cidrs":
+		role.TokenBoundCIDRs = nil
 	}
 
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
@@ -1683,8 +1714,12 @@ func (b *backend) pathRolePoliciesRead(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
+	p := role.TokenPolicies
+	if p == nil {
+		p = []string{}
+	}
 	d := map[string]interface{}{
-		"token_policies": role.TokenPolicies,
+		"token_policies": p,
 	}
 
 	if len(role.Policies) > 0 {
