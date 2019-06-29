@@ -97,22 +97,6 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	}
 	secretID := resp.Data["secret_id"]
 
-	/*
-		roleReadReq := &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "role/testrole/secret-id/lookup",
-			Data: map[string]interface{}{
-				"secret_id": secretID,
-			},
-			Storage: s,
-		}
-		resp, err = b.HandleRequest(context.Background(), roleReadReq)
-		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%#v", err, resp)
-		}
-		panic(pretty.Sprint(resp))
-	*/
-
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
