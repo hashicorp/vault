@@ -1,0 +1,13 @@
+{
+  "name": "open-api-explorer",
+  "keywords": [
+    "ember-addon",
+    "ember-engine"
+  ],
+  "dependencies": {
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "ember-swagger-ui": "*",
+    "swagger-ui-dist": "*"
+  }
+}

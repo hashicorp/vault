@@ -8171,6 +8171,15 @@ ember-svg-jar@^1.2.2:
     mkdirp "^0.5.1"
     path-posix "^1.0.0"
 
+ember-swagger-ui@meirish/ember-swagger-ui:
+  version "2.2.0"
+  resolved "https://codeload.github.com/meirish/ember-swagger-ui/tar.gz/9bf42f510156ec8f316b6c8c6e55ae06c258d7e6"
+  dependencies:
+    broccoli-funnel "^2.0.1"
+    broccoli-merge-trees "^3.0.1"
+    ember-cli-babel "^6.16.0"
+    resolve "^1.8.1"
+
 ember-template-lint@^1.0.0-beta.5:
   version "1.0.0-beta.5"
   resolved "https://registry.yarnpkg.com/ember-template-lint/-/ember-template-lint-1.0.0-beta.5.tgz#b9c3459752b9fb6c93f676f5a99e18372ad60af2"
@@ -17484,6 +17493,11 @@ svgo@0.6.6:
     mkdirp "~0.5.1"
     sax "~1.2.1"
     whet.extend "~0.9.9"
+
+swagger-ui-dist@^3.22.3:
+  version "3.22.3"
+  resolved "https://registry.yarnpkg.com/swagger-ui-dist/-/swagger-ui-dist-3.22.3.tgz#f2042966f8e0eef0c5730cf90891a89dab7810e1"
+  integrity sha512-tmjAsqT43pqg5UoiQ2805c+juX0ASSoI/Ash/0c19jjAOFtTfE93ZrzmFd9hjqVgre935CYeXT0uaku42Lu8xg==
 
 symbol-observable@1.0.1:
   version "1.0.1"
