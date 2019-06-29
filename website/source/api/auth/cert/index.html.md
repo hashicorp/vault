@@ -67,6 +67,13 @@ Sets a CA cert and associated parameters in a role name.
   string or array of `oid:value`. Expects the extension value to be some type
   of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
   `value`.
+- `required_subject_oids` `(string: "" or array: [])` - Requires Subject DN entries 
+  to exist and match the pattern. Value is a comma separated
+  string or array of `oid:value`. All entries should match. Supports globbing on
+  `value`.
+  Example: A 'required_subject_oids' value "0.9.2342.19200300.100.1.1:TheUID,2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:Example*2,2.5.4.11:ExampleDivision3,0.9.2342.19200300.100.1.25:ExampleDC,2.5.4.4:ExampleSN" will require a certificate
+  to contain "Subject: UID=TheUID, CN=example.com, C=US, ST=CA, L=Sunnyvale, O=ExampleOrg, OU=ExampleDivision1, OU=ExampleDivision2, OU=ExampleDivision3, DC=ExampleDC, SN=ExampleSN"
+  for the check to succeed.
 - `policies` `(string: "")` - A comma-separated list of policies to set on
   tokens issued when authenticating against this CA certificate.
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
