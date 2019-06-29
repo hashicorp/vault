@@ -172,7 +172,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		data["max_ttl"] = int64(user.MaxTTL.Seconds())
 	}
 	if len(user.Policies) > 0 {
-		data["policies"] = user.Policies
+		data["policies"] = data["token_policies"]
 	}
 	if len(user.BoundCIDRs) > 0 {
 		data["bound_cidrs"] = user.BoundCIDRs
