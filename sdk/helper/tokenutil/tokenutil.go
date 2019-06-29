@@ -172,6 +172,15 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
+	if t.TokenType == "batch" {
+		if t.Period != 0 {
+			return errors.New("'token_type' cannot be 'batch' when set to generate periodic tokens")
+		}
+		if t.TokenNumUses != 0 {
+			return errors.New("'token_type' cannot be 'batch' when set to generate tokens with limited use count")
+		}
+	}
+
 	if ttlRaw, ok := d.GetOk("token_ttl"); ok {
 		t.TokenTTL = time.Duration(ttlRaw.(int)) * time.Second
 	}
