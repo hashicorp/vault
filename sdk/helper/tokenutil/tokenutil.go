@@ -172,12 +172,12 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
-	if t.TokenType == "batch" {
-		if t.Period != 0 {
-			return errors.New("'token_type' cannot be 'batch' when set to generate periodic tokens")
+	if t.TokenType == logical.TokenTypeBatch || t.TokenType == logical.TokenTypeDefaultBatch {
+		if t.TokenPeriod != 0 {
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate periodic tokens")
 		}
 		if t.TokenNumUses != 0 {
-			return errors.New("'token_type' cannot be 'batch' when set to generate tokens with limited use count")
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate tokens with limited use count")
 		}
 	}
 
