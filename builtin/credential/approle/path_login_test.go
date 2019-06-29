@@ -89,12 +89,29 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error due to mismatching subnet relationship")
 	}
+
 	roleSecretIDReq.Data["token_bound_cidrs"] = "10.0.0.0/24"
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 	secretID := resp.Data["secret_id"]
+
+	/*
+		roleReadReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "role/testrole/secret-id/lookup",
+			Data: map[string]interface{}{
+				"secret_id": secretID,
+			},
+			Storage: s,
+		}
+		resp, err = b.HandleRequest(context.Background(), roleReadReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		panic(pretty.Sprint(resp))
+	*/
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "login",

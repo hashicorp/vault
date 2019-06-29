@@ -519,7 +519,7 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	}
 
 	// Check if the warning is being returned
-	if !strings.Contains(resp.Warnings[1], "Role identifier was missing an index back to role name.") {
+	if !strings.Contains(resp.Warnings[0], "Role identifier was missing an index back to role name.") {
 		t.Fatalf("bad: expected a warning in the response")
 	}
 
