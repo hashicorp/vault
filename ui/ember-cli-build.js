@@ -80,6 +80,8 @@ module.exports = function(defaults) {
 
   app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
   app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
+
+  app.import('node_modules/swagger-ui-dist/swagger-ui.css', { outputFile: 'assets/swagger-ui.css' });
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //
