@@ -212,6 +212,14 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = int64(t.TokenTTL.Seconds())
 	m["token_num_uses"] = t.TokenNumUses
+
+	if len(t.TokenPolicies) == 0 {
+		m["token_policies"] = []string{}
+	}
+
+	if len(t.TokenBoundCIDRs) == 0 {
+		m["token_bound_cidrs"] = []string{}
+	}
 }
 
 // PopulateTokenAuth populates Auth with parameters
