@@ -134,8 +134,10 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 
 }
 
-// Look up each item and determine whether another copy (or version) of it exists
-// in a different bucket.
+// identityItemsAbsentOrShadowed look up each item and determines whether
+// another copy (or version) of it exists in a different bucket.
+// First return value is items that are no longer present.
+// Second return value is items present elsewhere in the tree.
 func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeDeleted []*itemRequest) ([]*Item, []*Item, error) {
 	deleted := make([]*Item, 0)
 	revisit := make([]*Item, 0)
@@ -163,7 +165,8 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 		bucketsToCheck := s.bucketAndAllParents(p.Bucket)
 		for _, request := range p.Requests {
 			found := false
-			for _, b := range bucketsToCheck {
+			for i := len(bucketsToCheck) - 1; i >= 0; i-- {
+				b := bucketsToCheck[i]
 				// Skip originalBucket
 				if b.Key != bucketKey {
 					var data []byte
@@ -172,7 +175,7 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 							ID:   request.ID,
 							Data: data,
 						})
-						break
+						break // no need to check lower buckets
 					}
 				}
 			}
@@ -188,34 +191,23 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 
 }
 
-// Assemble a list (from longest key to shortest) of all the parent buckets.
+// bucketAndAllParents assembles a list of all the parent buckets.
+// The list is ordered from shortest key to longest key.
 func (s *StoragePackerV2) bucketAndAllParents(bucket *LockedBucket) []*LockedBucket {
 	s.bucketsCacheLock.RLock()
 	defer s.bucketsCacheLock.RUnlock()
 
-	parents := []*LockedBucket{bucket}
-	for k := s.parentCacheKey(bucket.Key); k != ""; k = s.parentCacheKey(k) {
-		bucketRaw, found := s.bucketsCache.Get(k)
-		if found {
-			parents = append(parents, bucketRaw.(*LockedBucket))
-		}
+	path := []*LockedBucket{}
+	walkFn := func(key string, bucketRaw interface{}) bool {
+		path = append(path, bucketRaw.(*LockedBucket))
+		return false
 	}
-	return parents
+	s.bucketsCache.WalkPath(s.GetCacheKey(bucket.Key), walkFn)
+
+	return path
 }
 
-// Given a bucket key, return the cache key for its parent
-func (s *StoragePackerV2) parentCacheKey(bucketKey string) string {
-	bucketCacheKey := s.GetCacheKey(bucketKey)
-	if len(bucketCacheKey) < s.BaseBucketBits/4 {
-		return ""
-	} else {
-		n := len(bucketCacheKey)
-		shardLen := s.BucketShardBits / 4
-		return bucketCacheKey[:(n - shardLen)]
-	}
-}
-
-// Create a placeholder empty bucket given its key
+// newEmptyBucket creates a placeholder empty bucket given its key.
 func (s *StoragePackerV2) newEmptyBucket(bucketKey string) *LockedBucket {
 	cacheKey := s.GetCacheKey(bucketKey)
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)

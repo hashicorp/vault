@@ -57,16 +57,16 @@ func TestStoragePackerV2_ParentBuckets(t *testing.T) {
 	}{
 		{[]string{"00/1", "00/2"},
 			"00/1",
-			[]string{"00/1", "00"}},
+			[]string{"00", "00/1"}},
 		{[]string{"00/1", "00/2"},
 			"00",
 			[]string{"00"}},
 		{[]string{"00/0", "00/0/0"},
 			"00/0",
-			[]string{"00/0", "00"}},
+			[]string{"00", "00/0"}},
 		{[]string{"ab/c", "ab/c/d", "ab/c/d/e"},
 			"ab/c/d/e",
-			[]string{"ab/c/d/e", "ab/c/d", "ab/c", "ab"}},
+			[]string{"ab", "ab/c", "ab/c/d", "ab/c/d/e"}},
 	}
 
 	for _, tc := range testCases {
