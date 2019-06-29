@@ -364,7 +364,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.3-0.20190627213952-21b5ec5dc34c => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190627213952-21b5ec5dc34c => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190629185034-b43299fe641c => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -376,6 +376,7 @@ github.com/hashicorp/vault/sdk/plugin
 github.com/hashicorp/vault/sdk/helper/cidrutil
 github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/locksutil
+github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/jsonutil
 github.com/hashicorp/vault/sdk/helper/certutil
 github.com/hashicorp/vault/sdk/helper/password
@@ -404,7 +405,6 @@ github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
-github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
