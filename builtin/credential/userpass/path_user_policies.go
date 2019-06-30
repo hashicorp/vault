@@ -54,7 +54,7 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 		policiesRaw, ok = d.GetOk("policies")
 		if ok {
 			userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-			userEntry.TokenPolicies = nil
+			userEntry.TokenPolicies = userEntry.Policies
 		}
 	} else {
 		userEntry.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
