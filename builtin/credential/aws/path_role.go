@@ -320,6 +320,49 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 	return nil
 }
 
+// updateUpgradableRoleEntries upgrades and persists all of the role entries
+// that are in need of being upgraded.
+func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) error {
+
+	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
+	// performance replicated standby cluster.
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+
+		// TODO come up with a way to record the fact that this has already
+		// been run and that therefore we don't need to do it every time
+
+		// Read all the role names.  We don't need to grab the mutex here for
+		// listing. The reason is that if we're in the process of creating a
+		// new mount, it will already happen on the active node (since it's a
+		// write) and will properly use the latest role structure.
+		roleNames, err := s.List(ctx, "role/")
+		if err != nil {
+			return err
+		}
+
+		// Upgrade the roles as necessary.
+		for _, roleName := range roleNames {
+			err := b.updateUpgradableRoleEntry(ctx, s, roleName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// updateUpgradableRoleEntry uses the write lock to call roleInternal(), which
+// will do an upgrade and save it if need be.
+func (b *backend) updateUpgradableRoleEntry(ctx context.Context, s logical.Storage, roleName string) error {
+
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	_, err := b.roleInternal(ctx, s, roleName)
+	return err
+}
+
 // If needed, updates the role entry and returns a bool indicating if it was updated
 // (and thus needs to be persisted)
 func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
