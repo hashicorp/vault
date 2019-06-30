@@ -1821,6 +1821,10 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 func TestBackend_Initialize(t *testing.T) {
 
+	// TODO this test is not very good. it just outputs some log entries showing
+	// that initialization ran.  lets find a way to verify that the initializer
+	// actually did something, or at least somehow trap the fact that it ran.
+
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
