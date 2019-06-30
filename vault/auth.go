@@ -703,6 +703,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		return c.persistAuth(ctx, c.auth, nil)
 	}
 
+	// TODO do we need to check for AWS auth builtin backed, and initialize it?
+	// If so, is this the right place to do that?
+
 	return nil
 }
 
