@@ -959,7 +959,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			policiesRaw, ok = data.GetOk("policies")
 			if ok {
 				role.Policies = policyutil.ParsePolicies(policiesRaw)
-				role.TokenPolicies = nil
+				role.TokenPolicies = role.Policies
 			}
 		} else {
 			_, ok = data.GetOk("policies")
@@ -975,7 +975,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			periodRaw, ok = data.GetOk("period")
 			if ok {
 				role.Period = time.Duration(periodRaw.(int)) * time.Second
-				role.TokenPeriod = 0
+				role.TokenPeriod = role.Period
 			}
 		} else {
 			_, ok = data.GetOk("period")
@@ -1679,7 +1679,7 @@ func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Reque
 		policiesRaw, ok = data.GetOk("policies")
 		if ok {
 			role.Policies = policyutil.ParsePolicies(policiesRaw)
-			role.TokenPolicies = nil
+			role.TokenPolicies = role.Policies
 		} else {
 			return logical.ErrorResponse("missing token_policies"), nil
 		}
@@ -1981,7 +1981,7 @@ func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request
 		periodRaw, ok = data.GetOk("period")
 		if ok {
 			role.Period = time.Second * time.Duration(periodRaw.(int))
-			role.TokenPeriod = 0
+			role.TokenPeriod = role.Period
 		} else {
 			return logical.ErrorResponse("missing period"), nil
 		}
