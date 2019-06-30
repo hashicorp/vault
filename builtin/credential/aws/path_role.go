@@ -358,6 +358,8 @@ func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, 
 		}
 		b.initialized = true
 
+		s := req.Storage
+
 		// kick off the role upgrader
 		go func() {
 			defer atomic.StoreUint32(b.initializeCASGuard, 0)
@@ -367,7 +369,7 @@ func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, 
 
 			logger := b.Logger().Named("initialize")
 			logger.Info("starting initialization")
-			err := b.updateUpgradableRoleEntries(ctx, req.Storage)
+			err := b.updateUpgradableRoleEntries(ctx, s)
 			if err == nil {
 				logger.Info("initialization succeeded")
 			} else {
