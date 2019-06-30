@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -191,6 +193,15 @@ auth_type is ec2.`,
 	}
 }
 
+func pathInitialize(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "initialize$",
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.pathRoleInitialize,
+		},
+	}
+}
+
 func pathListRole(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
@@ -320,32 +331,76 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 	return nil
 }
 
+// pathRoleInitialize is used to initialize the AWS roles
+func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
+	// Initialize only if we are either:
+	//   (1) A local mount.
+	//   (2) Are _not_ a replicated standby cluster.
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+
+		// TODO we need to figure out a way to persist the fact that this has
+		// already been run in the past for a given currentRoleStorageVersion,
+		// so that we only ever run it once even if the vault server is
+		// restarted.
+
+		// grab the guard
+		if !atomic.CompareAndSwapUint32(b.initializeCASGuard, 0, 1) {
+			resp := &logical.Response{}
+			resp.AddWarning("Initialize operation already in progress.")
+			return resp, nil
+		}
+
+		// check if this method has already been called
+		if b.initialized {
+			atomic.StoreUint32(b.initializeCASGuard, 0)
+			return logical.ErrorResponse("already initialized"), nil
+		}
+		b.initialized = true
+
+		// kick off the role upgrader
+		go func() {
+			defer atomic.StoreUint32(b.initializeCASGuard, 0)
+
+			// Don't cancel when the original client request goes away
+			ctx = context.Background()
+
+			logger := b.Logger().Named("initialize")
+			logger.Info("starting initialization")
+			err := b.updateUpgradableRoleEntries(ctx, req.Storage)
+			if err == nil {
+				logger.Info("initialization succeeded")
+			} else {
+				logger.Error("error running initialization", "error", err)
+			}
+		}()
+
+		resp := &logical.Response{}
+		resp.AddWarning("Initialization operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+		return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+	}
+
+	return nil, nil
+}
+
 // updateUpgradableRoleEntries upgrades and persists all of the role entries
 // that are in need of being upgraded.
 func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) error {
 
-	// Upgrade only if we are either: (1) a local mount, or (2) are _not_ a
-	// performance replicated standby cluster.
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+	// Read all the role names.  We don't need to grab the mutex here for
+	// listing. The reason is that if we're in the process of creating a new
+	// mount, it will already happen on the active node (since it's a write)
+	// and will properly use the latest role structure.
+	roleNames, err := s.List(ctx, "role/")
+	if err != nil {
+		return err
+	}
 
-		// TODO come up with a way to record the fact that this has already
-		// been run and that therefore we don't need to do it every time
-
-		// Read all the role names.  We don't need to grab the mutex here for
-		// listing. The reason is that if we're in the process of creating a
-		// new mount, it will already happen on the active node (since it's a
-		// write) and will properly use the latest role structure.
-		roleNames, err := s.List(ctx, "role/")
+	// Upgrade the roles as necessary.
+	for _, roleName := range roleNames {
+		err := b.updateUpgradableRoleEntry(ctx, s, roleName)
 		if err != nil {
 			return err
-		}
-
-		// Upgrade the roles as necessary.
-		for _, roleName := range roleNames {
-			err := b.updateUpgradableRoleEntry(ctx, s, roleName)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

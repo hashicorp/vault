@@ -34,8 +34,14 @@ type backend struct {
 	// Lock to make changes to any of the backend's configuration endpoints.
 	configMutex sync.RWMutex
 
+	// Guards the initialize function
+	initializeCASGuard *uint32
+
+	// check whether initialize has already been called
+	initialized bool
+
 	// Lock to make changes to role entries
-	roleMutex sync.RWMutex
+	roleMutex sync.Mutex
 
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex
@@ -91,6 +97,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		EC2ClientsMap:         make(map[string]map[string]*ec2.EC2),
 		IAMClientsMap:         make(map[string]map[string]*iam.IAM),
 		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
+		initializeCASGuard:    new(uint32),
 		tidyBlacklistCASGuard: new(uint32),
 		tidyWhitelistCASGuard: new(uint32),
 		roleCache:             cache.New(cache.NoExpiration, cache.NoExpiration),
@@ -115,6 +122,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		},
 		Paths: []*framework.Path{
 			pathLogin(b),
+			pathInitialize(b),
 			pathListRole(b),
 			pathListRoles(b),
 			pathRole(b),

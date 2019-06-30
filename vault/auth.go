@@ -185,6 +185,24 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return err
 	}
 
+	// TODO Its obviously hackish to check specifically for the AWS auth
+	// builtin here.  However, we only want to make the initialization request
+	// on backends that expect to be initialized, and right now AWS auth is the
+	// only one.  What is the best solution that doesn't require e.g. adding a
+	// method to logical.Backend?  Maybe we can somehow detect whether an
+	// "auth/foo/initialize" path exists, before calling?
+	if entry.Table == "auth" && entry.Path == "aws/" {
+		req := &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "auth/aws/initialize",
+		}
+
+		_, err = c.router.Route(ctx, req)
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type)
 	}
