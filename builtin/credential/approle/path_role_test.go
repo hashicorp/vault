@@ -11,6 +11,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -1836,5 +1837,54 @@ func createRole(t *testing.T, b *backend, s logical.Storage, roleName, policies 
 	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+}
+
+// TestAppRole_TokenutilUpgrade ensures that when we read values out that are
+// values with upgrade logic we see the correct struct entries populated
+func TestAppRole_TokenutilUpgrade(t *testing.T) {
+	s := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+
+	ctx := context.Background()
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	// Hand craft JSON because there is overlap between fields
+	if err := s.Put(ctx, &logical.StorageEntry{
+		Key:   "role/foo",
+		Value: []byte(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"]}`),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	fooEntry, err := b.roleEntry(ctx, s, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exp := &roleStorageEntry{
+		SecretIDPrefix: "secret_id/",
+		Policies:       []string{"foo"},
+		Period:         300 * time.Second,
+		TokenParams: tokenutil.TokenParams{
+			TokenPolicies:   []string{"foo"},
+			TokenPeriod:     300 * time.Second,
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}, &sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("10.10.10.10/24")}},
+		},
+	}
+	if diff := deep.Equal(fooEntry, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }
