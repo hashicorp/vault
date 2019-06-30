@@ -44,6 +44,10 @@ type backendGRPCPluginClient struct {
 	doneCtx    context.Context
 }
 
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request) error {
+	panic("TODO")
+}
+
 func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.metadataMode {
 		return nil, ErrClientInMetadataMode

@@ -694,8 +694,7 @@ func (n *rawHTTP) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *rawHTTP) Initialize(ctx context.Context) error {
-	// noop
+func (n *rawHTTP) Initialize(ctx context.Context, req *logical.Request) error {
 	return nil
 }
 

@@ -19,6 +19,15 @@ type backendTracingMiddleware struct {
 // Validate the backendTracingMiddle object satisfies the backend interface
 var _ logical.Backend = &backendTracingMiddleware{}
 
+func (b *backendTracingMiddleware) Initialize(ctx context.Context, req *logical.Request) (err error) {
+	defer func(then time.Time) {
+		b.logger.Trace("initialize", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	b.logger.Trace("initialize", "path", req.Path, "status", "started")
+	return b.next.Initialize(ctx, req)
+}
+
 func (b *backendTracingMiddleware) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	defer func(then time.Time) {
 		b.logger.Trace("handle request", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))

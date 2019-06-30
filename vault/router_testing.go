@@ -103,7 +103,7 @@ func (n *NoopBackend) Logger() log.Logger {
 	return log.NewNullLogger()
 }
 
-func (n *NoopBackend) Initialize(ctx context.Context) error {
+func (n *NoopBackend) Initialize(ctx context.Context, req *logical.Request) error {
 	return nil
 }
 
