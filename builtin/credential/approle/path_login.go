@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -265,14 +264,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Parse the CIDRs we should be binding the token to.
-	var tokenBoundCIDRs []*sockaddr.SockAddrMarshaler
+	tokenBoundCIDRs := role.TokenBoundCIDRs
 	if entry != nil && len(entry.TokenBoundCIDRs) > 0 {
 		tokenBoundCIDRs, err = parseutil.ParseAddrs(entry.TokenBoundCIDRs)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-	} else {
-		tokenBoundCIDRs = role.TokenBoundCIDRs
 	}
 
 	// For some reason, if metadata was set to nil while processing secret ID
