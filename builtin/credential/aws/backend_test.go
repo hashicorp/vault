@@ -14,10 +14,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 const testVaultHeaderValue = "VaultAcceptanceTesting"
@@ -1812,4 +1817,31 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.Period = auth.Period
 
 	return renewReq
+}
+
+func TestBackend_Initialize(t *testing.T) {
+
+	logger := logging.NewVaultLogger(hclog.Trace)
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		CredentialBackends: map[string]logical.Factory{
+			"aws": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	client := cluster.Cores[0].Client
+
+	// Setup Vault
+	if err := client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
+		Type: "aws",
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
