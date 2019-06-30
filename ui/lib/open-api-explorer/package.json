@@ -9,5 +9,10 @@
     "ember-cli-babel": "*",
     "ember-auto-import": "*",
     "swagger-ui-dist": "*"
+  },
+  "ember-addon": {
+    "paths": [
+      "../core"
+    ]
   }
 }

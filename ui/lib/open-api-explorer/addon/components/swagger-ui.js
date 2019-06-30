@@ -2,6 +2,9 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import parseURL from 'core/utils/parse-url';
 import layout from '../templates/components/swagger-ui';
+import config from 'open-api-explorer/config/environment';
+
+const { APP } = config;
 
 const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
   return {
@@ -25,7 +28,7 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
       req.headers['X-Vault-Token'] = componentInstance.auth.currentToken;
 
       let namespace = componentInstance.namespaceService.path;
-      if (namespace && !NAMESPACE_ROOT_URLS.some(str => req.url.includes(str))) {
+      if (namespace && !APP.NAMESPACE_ROOT_URLS.some(str => req.url.includes(str))) {
         req.headers['X-Vault-Namespace'] = namespace;
       }
       // we want to link to the right JSON in swagger UI so
