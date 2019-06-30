@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -21,7 +22,7 @@ var (
 )
 
 func pathRole(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
@@ -133,28 +134,24 @@ Defaults to an empty string, meaning that role tags are disabled. This
 is only allowed if auth_type is ec2.`,
 			},
 			"period": &framework.FieldSchema{
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				Description: `
-If set, indicates that the token generated using this role should never expire.
-The token should be renewed within the duration specified by this value. At
-each renewal, the token's TTL will be set to the value of this parameter.`,
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
 			},
 			"ttl": {
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fallback to the system/mount defaults.`,
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_ttl"),
+				Deprecated:  true,
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Default:     0,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_max_ttl"),
+				Deprecated:  true,
 			},
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
-				Default:     "default",
-				Description: "Policies to be set on tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
 			"allow_instance_migration": {
 				Type:    framework.TypeBool,
@@ -189,6 +186,9 @@ auth_type is ec2.`,
 		HelpSynopsis:    pathRoleSyn,
 		HelpDescription: pathRoleDesc,
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
 func pathListRole(b *backend) *framework.Path {
@@ -421,6 +421,21 @@ func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry 
 
 	default:
 		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
+	}
+
+	// Add tokenutil upgrades. These don't need to be persisted, they're fine
+	// being upgraded each time until changed.
+	if roleEntry.TokenTTL == 0 && roleEntry.TTL > 0 {
+		roleEntry.TokenTTL = roleEntry.TTL
+	}
+	if roleEntry.TokenMaxTTL == 0 && roleEntry.MaxTTL > 0 {
+		roleEntry.TokenMaxTTL = roleEntry.MaxTTL
+	}
+	if roleEntry.TokenPeriod == 0 && roleEntry.Period > 0 {
+		roleEntry.TokenPeriod = roleEntry.Period
+	}
+	if len(roleEntry.TokenPolicies) == 0 && len(roleEntry.Policies) > 0 {
+		roleEntry.TokenPolicies = roleEntry.Policies
 	}
 
 	return upgraded, nil
@@ -693,13 +708,6 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
-	policiesRaw, ok := data.GetOk("policies")
-	if ok {
-		roleEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.Policies = []string{}
-	}
-
 	disallowReauthenticationBool, ok := data.GetOk("disallow_reauthentication")
 	if ok {
 		if roleEntry.AuthType != ec2AuthType {
@@ -726,48 +734,93 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	var resp logical.Response
 
-	ttlRaw, ok := data.GetOk("ttl")
-	if ok {
-		ttl := time.Duration(ttlRaw.(int)) * time.Second
-		defaultLeaseTTL := b.System().DefaultLeaseTTL()
-		if ttl > defaultLeaseTTL {
-			resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", ttl/time.Second, defaultLeaseTTL/time.Second))
-		}
-		roleEntry.TTL = ttl
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
+	if err := roleEntry.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	maxTTLInt, ok := data.GetOk("max_ttl")
-	if ok {
-		maxTTL := time.Duration(maxTTLInt.(int)) * time.Second
-		systemMaxTTL := b.System().MaxLeaseTTL()
-		if maxTTL > systemMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds greater than current mount/system default of %d seconds; max_ttl will be capped at login time", maxTTL/time.Second, systemMaxTTL/time.Second))
-		}
-
-		if maxTTL < time.Duration(0) {
-			return logical.ErrorResponse("max_ttl cannot be negative"), nil
+	// Handle upgrade cases
+	{
+		policiesRaw, ok := data.GetOk("token_policies")
+		if !ok {
+			policiesRaw, ok = data.GetOk("policies")
+			if ok {
+				roleEntry.Policies = policyutil.ParsePolicies(policiesRaw)
+				roleEntry.TokenPolicies = roleEntry.Policies
+			}
+		} else {
+			_, ok = data.GetOk("policies")
+			if ok {
+				roleEntry.Policies = roleEntry.TokenPolicies
+			} else {
+				roleEntry.Policies = nil
+			}
 		}
 
-		roleEntry.MaxTTL = maxTTL
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
+		ttlRaw, ok := data.GetOk("token_ttl")
+		if !ok {
+			ttlRaw, ok = data.GetOk("ttl")
+			if !ok {
+				ttlRaw, ok = data.GetOk("lease")
+			}
+			if ok {
+				roleEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
+				roleEntry.TokenTTL = roleEntry.TTL
+			}
+		} else {
+			_, ok = data.GetOk("ttl")
+			if ok {
+				roleEntry.TTL = roleEntry.TokenTTL
+			} else {
+				roleEntry.TTL = 0
+			}
+		}
+
+		maxTTLRaw, ok := data.GetOk("token_max_ttl")
+		if !ok {
+			maxTTLRaw, ok = data.GetOk("max_ttl")
+			if ok {
+				roleEntry.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
+				roleEntry.TokenMaxTTL = roleEntry.MaxTTL
+			}
+		} else {
+			_, ok = data.GetOk("max_ttl")
+			if ok {
+				roleEntry.MaxTTL = roleEntry.TokenMaxTTL
+			} else {
+				roleEntry.MaxTTL = 0
+			}
+		}
+
+		periodRaw, ok := data.GetOk("token_period")
+		if !ok {
+			periodRaw, ok = data.GetOk("period")
+			if ok {
+				roleEntry.Period = time.Duration(periodRaw.(int)) * time.Second
+				roleEntry.TokenPeriod = roleEntry.Period
+			}
+		} else {
+			_, ok = data.GetOk("period")
+			if ok {
+				roleEntry.Period = roleEntry.TokenPeriod
+			} else {
+				roleEntry.Period = 0
+			}
+		}
 	}
 
-	if roleEntry.MaxTTL != 0 && roleEntry.MaxTTL < roleEntry.TTL {
-		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
+	defaultLeaseTTL := b.System().DefaultLeaseTTL()
+	systemMaxTTL := b.System().MaxLeaseTTL()
+	if roleEntry.TokenTTL > defaultLeaseTTL {
+		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", roleEntry.TokenTTL/time.Second, defaultLeaseTTL/time.Second))
 	}
-
-	periodRaw, ok := data.GetOk("period")
-	if ok {
-		roleEntry.Period = time.Second * time.Duration(periodRaw.(int))
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.Period = time.Second * time.Duration(data.Get("period").(int))
+	if roleEntry.TokenMaxTTL > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max ttl of %d seconds greater than current mount/system default of %d seconds; max ttl will be capped at login time", roleEntry.TokenMaxTTL/time.Second, systemMaxTTL/time.Second))
 	}
-
-	if roleEntry.Period > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	if roleEntry.TokenMaxTTL != 0 && roleEntry.TokenMaxTTL < roleEntry.TokenTTL {
+		return logical.ErrorResponse("ttl should be shorter than max ttl"), nil
+	}
+	if roleEntry.TokenPeriod > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("period of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
 	roleTagStr, ok := data.GetOk("role_tag")
@@ -805,30 +858,35 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	RoleID                      string        `json:"role_id"`
-	AuthType                    string        `json:"auth_type"`
-	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
-	BoundAccountIDs             []string      `json:"bound_account_id_list"`
-	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
-	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
-	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
-	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list"`
-	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list"`
-	BoundRegions                []string      `json:"bound_region_list"`
-	BoundSubnetIDs              []string      `json:"bound_subnet_id_list"`
-	BoundVpcIDs                 []string      `json:"bound_vpc_id_list"`
-	InferredEntityType          string        `json:"inferred_entity_type"`
-	InferredAWSRegion           string        `json:"inferred_aws_region"`
-	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids"`
-	RoleTag                     string        `json:"role_tag"`
-	AllowInstanceMigration      bool          `json:"allow_instance_migration"`
-	TTL                         time.Duration `json:"ttl"`
-	MaxTTL                      time.Duration `json:"max_ttl"`
-	Policies                    []string      `json:"policies"`
-	DisallowReauthentication    bool          `json:"disallow_reauthentication"`
-	HMACKey                     string        `json:"hmac_key"`
-	Period                      time.Duration `json:"period"`
-	Version                     int           `json:"version"`
+	tokenutil.TokenParams
+
+	RoleID                      string   `json:"role_id"`
+	AuthType                    string   `json:"auth_type"`
+	BoundAmiIDs                 []string `json:"bound_ami_id_list"`
+	BoundAccountIDs             []string `json:"bound_account_id_list"`
+	BoundEc2InstanceIDs         []string `json:"bound_ec2_instance_id_list"`
+	BoundIamPrincipalARNs       []string `json:"bound_iam_principal_arn_list"`
+	BoundIamPrincipalIDs        []string `json:"bound_iam_principal_id_list"`
+	BoundIamRoleARNs            []string `json:"bound_iam_role_arn_list"`
+	BoundIamInstanceProfileARNs []string `json:"bound_iam_instance_profile_arn_list"`
+	BoundRegions                []string `json:"bound_region_list"`
+	BoundSubnetIDs              []string `json:"bound_subnet_id_list"`
+	BoundVpcIDs                 []string `json:"bound_vpc_id_list"`
+	InferredEntityType          string   `json:"inferred_entity_type"`
+	InferredAWSRegion           string   `json:"inferred_aws_region"`
+	ResolveAWSUniqueIDs         bool     `json:"resolve_aws_unique_ids"`
+	RoleTag                     string   `json:"role_tag"`
+	AllowInstanceMigration      bool     `json:"allow_instance_migration"`
+	DisallowReauthentication    bool     `json:"disallow_reauthentication"`
+	HMACKey                     string   `json:"hmac_key"`
+	Version                     int      `json:"version"`
+
+	// Deprecated: These are superceded by TokenUtil
+	TTL      time.Duration `json:"ttl"`
+	MaxTTL   time.Duration `json:"max_ttl"`
+	Period   time.Duration `json:"period"`
+	Policies []string      `json:"policies"`
+
 	// DEPRECATED -- these are the old fields before we supported lists and exist for backwards compatibility
 	BoundAmiID                 string `json:"bound_ami_id,omitempty" `
 	BoundAccountID             string `json:"bound_account_id,omitempty"`
@@ -860,11 +918,21 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"role_id":                        r.RoleID,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
-		"ttl":                            r.TTL / time.Second,
-		"max_ttl":                        r.MaxTTL / time.Second,
-		"policies":                       r.Policies,
 		"disallow_reauthentication":      r.DisallowReauthentication,
-		"period":                         r.Period / time.Second,
+	}
+
+	r.PopulateTokenData(responseData)
+	if r.TTL > 0 {
+		responseData["ttl"] = int64(r.TTL.Seconds())
+	}
+	if r.MaxTTL > 0 {
+		responseData["max_ttl"] = int64(r.MaxTTL.Seconds())
+	}
+	if r.Period > 0 {
+		responseData["period"] = int64(r.Period.Seconds())
+	}
+	if len(r.Policies) > 0 {
+		responseData["policies"] = responseData["token_policies"]
 	}
 
 	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
