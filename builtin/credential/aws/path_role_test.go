@@ -801,6 +801,112 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 }
 
+func TestUpdateUpgradableRoleEntries(t *testing.T) {
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	err = b.Setup(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create some role entries, some of which will need to be upgraded
+	type testData struct {
+		name  string
+		entry *awsRoleEntry
+	}
+
+	before := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     1,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     2,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+
+	// put the entries in storage
+	for _, role := range before {
+		err = b.setRole(ctx, storage, role.name, role.entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// upgrade all the entries
+	err = b.updateUpgradableRoleEntries(ctx, storage)
+
+	// read the entries from storage
+	after := make([]testData, 0)
+	names, err := storage.List(ctx, "role/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		entry, err := b.role(ctx, storage, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after = append(after, testData{name: name, entry: entry})
+	}
+
+	// make sure each entry is at the current version
+	expected := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+	if diff := deep.Equal(expected, after); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
 	return "FakeUniqueId1", nil
 }
