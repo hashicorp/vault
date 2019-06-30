@@ -188,7 +188,7 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 	return resp, err
 }
 
-// HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
+// HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck that includes automatic plugin reload.
 func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	b.RLock()
 	canary := b.canary
@@ -236,4 +236,54 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 		return b.Backend.HandleExistenceCheck(ctx, req)
 	}
 	return checkFound, exists, err
+}
+
+// Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
+func (b *PluginBackend) Initialize(ctx context.Context, req *logical.Request) error {
+	b.RLock()
+	canary := b.canary
+
+	// Lazy-load backend
+	if !b.loaded {
+		// Upgrade lock
+		b.RUnlock()
+		b.Lock()
+		// Check once more after lock swap
+		if !b.loaded {
+			err := b.startBackend(ctx)
+			if err != nil {
+				b.Unlock()
+				return err
+			}
+		}
+		b.Unlock()
+		b.RLock()
+	}
+
+	err := b.Backend.Initialize(ctx, req)
+	b.RUnlock()
+	if err != nil &&
+		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
+		// Reload plugin if it's an rpc.ErrShutdown
+		b.Lock()
+		if b.canary == canary {
+			err := b.reloadBackend(ctx)
+			if err != nil {
+				b.Unlock()
+				return err
+			}
+			b.canary, err = uuid.GenerateUUID()
+			if err != nil {
+				b.Unlock()
+				return err
+			}
+		}
+		b.Unlock()
+
+		// Try request once more
+		b.RLock()
+		defer b.RUnlock()
+		return b.Backend.Initialize(ctx, req)
+	}
+	return err
 }

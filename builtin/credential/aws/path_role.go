@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -193,15 +192,6 @@ auth_type is ec2.`,
 	}
 }
 
-func pathInitialize(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "initialize$",
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathRoleInitialize,
-		},
-	}
-}
-
 func pathListRole(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
@@ -331,13 +321,15 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 	return nil
 }
 
-// pathRoleInitialize is used to initialize the AWS roles
-func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+// initialize is used to initialize the AWS roles
+func (b *backend) initialize(ctx context.Context, req *logical.Request) error {
 
 	// Initialize only if we are either:
 	//   (1) A local mount.
 	//   (2) Are _not_ a replicated standby cluster.
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+
+		logger := b.Logger().Named("initialize")
 
 		// TODO we need to figure out a way to persist the fact that this has
 		// already been run in the past for a given currentRoleStorageVersion,
@@ -346,17 +338,17 @@ func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, 
 
 		// grab the guard
 		if !atomic.CompareAndSwapUint32(b.initializeCASGuard, 0, 1) {
-			resp := &logical.Response{}
-			resp.AddWarning("Initialize operation already in progress.")
-			return resp, nil
+			logger.Error("initializational already in progress")
+			return nil
 		}
 
 		// check if this method has already been called
-		if b.initialized {
+		if b.isInitialized {
 			atomic.StoreUint32(b.initializeCASGuard, 0)
-			return logical.ErrorResponse("already initialized"), nil
+			logger.Error("already initialized")
+			return nil
 		}
-		b.initialized = true
+		b.isInitialized = true
 
 		s := req.Storage
 
@@ -367,7 +359,6 @@ func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, 
 			// Don't cancel when the original client request goes away
 			ctx = context.Background()
 
-			logger := b.Logger().Named("initialize")
 			logger.Info("starting initialization")
 			err := b.updateUpgradableRoleEntries(ctx, s)
 			if err == nil {
@@ -377,12 +368,10 @@ func (b *backend) pathRoleInitialize(ctx context.Context, req *logical.Request, 
 			}
 		}()
 
-		resp := &logical.Response{}
-		resp.AddWarning("Initialization operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-		return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+		return nil
 	}
 
-	return nil, nil
+	return nil
 }
 
 // updateUpgradableRoleEntries upgrades and persists all of the role entries

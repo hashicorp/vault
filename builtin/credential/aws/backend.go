@@ -38,7 +38,7 @@ type backend struct {
 	initializeCASGuard *uint32
 
 	// check whether initialize has already been called
-	initialized bool
+	isInitialized bool
 
 	// Lock to make changes to role entries
 	roleMutex sync.Mutex
@@ -122,7 +122,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		},
 		Paths: []*framework.Path{
 			pathLogin(b),
-			pathInitialize(b),
 			pathListRole(b),
 			pathListRoles(b),
 			pathRole(b),
@@ -142,8 +141,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		InitializeFunc: b.initialize,
+		BackendType:    logical.TypeCredential,
 	}
 
 	return b, nil
