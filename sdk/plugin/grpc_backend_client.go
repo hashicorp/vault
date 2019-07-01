@@ -44,8 +44,29 @@ type backendGRPCPluginClient struct {
 	doneCtx    context.Context
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
-	panic("TODO")
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+
+	if b.metadataMode {
+		return ErrClientInMetadataMode
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
+	if err != nil {
+		if b.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
+		return err
+	}
+	if reply.Err != nil {
+		return pb.ProtoErrToErr(reply.Err)
+	}
+
+	return nil
 }
 
 func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
