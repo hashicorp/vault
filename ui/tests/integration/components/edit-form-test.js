@@ -46,8 +46,6 @@ module('Integration | Component | edit form', function(hooks) {
     await render(hbs`{{edit-form model=model}}`);
 
     assert.ok(component.fields.length, 2);
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, 'Delete');
   });
 
   test('it calls flash message fns on save', async function(assert) {
