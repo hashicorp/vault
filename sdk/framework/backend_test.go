@@ -642,3 +642,18 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 		}
 	}
 }
+
+func TestInitializeBackend(t *testing.T) {
+
+	var inited bool
+	backend := &Backend{InitializeFunc: func(context.Context, logical.Storage) error {
+		inited = true
+		return nil
+	}}
+
+	backend.Initialize(nil, &logical.InitializationRequest{Storage: nil})
+
+	if !inited {
+		t.Fatal("backend should be open")
+	}
+}
