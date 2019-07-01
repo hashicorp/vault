@@ -110,7 +110,6 @@
     "ember-sinon": "^1.0.1",
     "ember-source": "~3.4.0",
     "ember-svg-jar": "^1.2.2",
-    "ember-swagger-ui": "meirish/ember-swagger-ui",
     "ember-test-selectors": "^2.1.0",
     "ember-truth-helpers": "^2.1.0",
     "escape-string-regexp": "^1.0.5",

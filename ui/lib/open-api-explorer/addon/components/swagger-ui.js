@@ -1,14 +1,15 @@
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import parseURL from 'core/utils/parse-url';
-import layout from '../templates/components/swagger-ui';
 import config from 'open-api-explorer/config/environment';
+import Swag from 'swagger-ui-dist';
 
+const { SwaggerUIBundle } = Swag;
 const { APP } = config;
 
-const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
+const CONFIG = (componentInstance, initialFilter) => {
   return {
-    dom_id: '#swagger-container',
+    dom_id: `#${componentInstance.elementId}`,
     url: '/v1/sys/internal/specs/openapi',
     deepLinking: false,
     presets: [SwaggerUIBundle.presets.apis],
@@ -45,23 +46,15 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
 };
 
 export default Component.extend({
-  layout,
-  tagName: '',
   auth: service(),
   namespaceService: service('namespace'),
   initialFilter: null,
   onFilterChange() {},
 
-  // sets the filter so the query param is updated so we get sharable URLs
-  updatedFilter(val) {
-    this.onFilterChange(val || '');
-  },
-
   init() {
     this._super(...arguments);
-    // we need to rebind here because the react app is calling the opsFilter function - rebinding here lets us
-    // have a reference to the component's updateFilter so that we can track the react app's state out to the
-    // ember app's url 🙃
+    // the react app (SwaggerUI) is calling the opsFilter function - rebinding here lets us have a reference
+    // to the component's updateFilter so that we can track the react app's state out to the ember app's url 🙃
     this.searchFilterPlugin = this.searchFilterPlugin.bind(this);
   },
 
@@ -70,29 +63,37 @@ export default Component.extend({
       fn: {
         // apparently this doesn't fire if `phrase` is empty so we can't zero out our query param :-/
         opsFilter: (taggedOps, phrase) => {
-          // we don't want the initial slash in the query param
+          // we don't want the initial slash in the query param, so call the component fn first
           this.updatedFilter(phrase);
           // but we do want it for
           let path = '/' + phrase;
-          return taggedOps
-            .map((tagObj, tag) => {
-              let operations = tagObj.get('operations').filter(operationObj => {
-                return operationObj.get('path').startsWith(path);
-              });
-              return tagObj.set('operations', operations);
-            })
-            .filter(tagObj => !!tagObj.get('operations').size);
+          // map over the options and filter out operations where the path doesn't match what's typed
+          return (
+            taggedOps
+              .map((tagObj, tag) => {
+                let operations = tagObj.get('operations').filter(operationObj => {
+                  // TODO: should this be includes instead of startsWith? I'm thinking yes
+                  return operationObj.get('path').startsWith(path);
+                });
+                return tagObj.set('operations', operations);
+              })
+              // then traverse again and remove the top level item if there are no operations left after filtering
+              .filter(tagObj => !!tagObj.get('operations').size)
+          );
         },
       },
     };
   },
 
-  async didInsertElement() {
+  didInsertElement() {
     this._super(...arguments);
     // trim any initial slashes
     let initialFilter = this.initialFilter.replace(/^(\/)+/, '');
-    let module = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    let SwaggerUIBundle = module.default;
-    SwaggerUIBundle(CONFIG(SwaggerUIBundle, this, initialFilter));
+    SwaggerUIBundle(CONFIG(this, initialFilter));
+  },
+
+  // sets the filter so the query param is updated so we get sharable URLs
+  updatedFilter(val) {
+    this.onFilterChange(val || '');
   },
 });
