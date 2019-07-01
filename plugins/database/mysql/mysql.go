@@ -36,7 +36,7 @@ var (
 	LegacyUsernameLen int = 16
 )
 
-var _ dbplugin.Database = &MySQL{}
+var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
 	*connutil.SQLConnectionProducer

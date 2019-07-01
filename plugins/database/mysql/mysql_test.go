@@ -355,7 +355,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 	}
 
 	// verify new password works
-	if err := testCredsExist(t, connURL, dbUser, password); err != nil {
+	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
