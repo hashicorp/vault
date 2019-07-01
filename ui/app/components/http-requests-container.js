@@ -25,7 +25,7 @@ export default Component.extend({
   classNames: ['http-requests-container'],
   counters: null,
   timeWindow: 'All',
-  filteredCounters: computed('timeWindow', function() {
+  filteredCounters: computed('counters', 'timeWindow', function() {
     const { counters, timeWindow } = this;
     if (timeWindow === 'All') {
       return counters;
