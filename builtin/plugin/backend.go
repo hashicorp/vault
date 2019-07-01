@@ -239,7 +239,7 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 }
 
 // Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
-func (b *PluginBackend) Initialize(ctx context.Context, req *logical.Request) error {
+func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	b.RLock()
 	canary := b.canary
 

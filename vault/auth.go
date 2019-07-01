@@ -186,12 +186,11 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 
 	// Initialize
-	req := &logical.Request{
-		Path: entry.Table + "/" + entry.Path,
-	}
-	err = c.router.RouteInitialize(ctx, req)
-	if err != nil {
-		return err
+	if !nilMount {
+		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.logger.IsInfo() {

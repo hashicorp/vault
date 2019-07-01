@@ -40,7 +40,7 @@ func (b BackendType) String() string {
 type Backend interface {
 
 	// Initialize is used to initialize a plugin after it has been mounted.
-	Initialize(context.Context, *Request) error
+	Initialize(context.Context, *InitializationRequest) error
 
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.

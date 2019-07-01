@@ -322,7 +322,7 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 }
 
 // initialize is used to initialize the AWS roles
-func (b *backend) initialize(ctx context.Context, req *logical.Request) error {
+func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 	// Initialize only if we are either:
 	//   (1) A local mount.
@@ -349,8 +349,6 @@ func (b *backend) initialize(ctx context.Context, req *logical.Request) error {
 			return nil
 		}
 		b.isInitialized = true
-
-		s := req.Storage
 
 		// kick off the role upgrader
 		go func() {

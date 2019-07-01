@@ -114,12 +114,12 @@ type InvalidateFunc func(context.Context, string)
 
 // InitializeFunc is the callback, which if set, will be invoked via
 // Initialize() just after a plugin has been mounted.
-type InitializeFunc func(context.Context, *logical.Request) error
+type InitializeFunc func(context.Context, logical.Storage) error
 
 // Initialize is the logical.Backend implementation.
-func (b *Backend) Initialize(ctx context.Context, req *logical.Request) error {
+func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	if b.InitializeFunc != nil {
-		return b.InitializeFunc(ctx, req)
+		return b.InitializeFunc(ctx, req.Storage)
 	}
 	return nil
 }

@@ -44,7 +44,7 @@ type backendGRPCPluginClient struct {
 	doneCtx    context.Context
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.Request) error {
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	panic("TODO")
 }
 

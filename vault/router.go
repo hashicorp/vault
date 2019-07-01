@@ -462,23 +462,17 @@ func (r *Router) matchingMountEntryByPath(ctx context.Context, path string, apiP
 
 // Route is used to route a given request
 func (r *Router) Route(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-	resp, _, _, err := r.routeCommon(ctx, req, false, false)
+	resp, _, _, err := r.routeCommon(ctx, req, false)
 	return resp, err
 }
 
 // RouteExistenceCheck is used to route a given existence check request
 func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) (*logical.Response, bool, bool, error) {
-	resp, ok, exists, err := r.routeCommon(ctx, req, true, false)
+	resp, ok, exists, err := r.routeCommon(ctx, req, true)
 	return resp, ok, exists, err
 }
 
-// RouteInitialize is used to route a given initialization request
-func (r *Router) RouteInitialize(ctx context.Context, req *logical.Request) error {
-	_, _, _, err := r.routeCommon(ctx, req, false, true)
-	return err
-}
-
-func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool, initialize bool) (*logical.Response, bool, bool, error) {
+func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, false, false, err
@@ -667,8 +661,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	if existenceCheck {
 		ok, exists, err := re.backend.HandleExistenceCheck(ctx, req)
 		return nil, ok, exists, err
-	} else if initialize {
-		return nil, false, false, re.backend.Initialize(ctx, req)
 	} else {
 		resp, err := re.backend.HandleRequest(ctx, req)
 		if resp != nil {
