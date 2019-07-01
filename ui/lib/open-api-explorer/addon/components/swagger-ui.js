@@ -9,7 +9,7 @@ const { APP } = config;
 
 const CONFIG = (componentInstance, initialFilter) => {
   return {
-    dom_id: `#${componentInstance.elementId}`,
+    dom_id: `#${componentInstance.elementId}-swagger`,
     url: '/v1/sys/internal/specs/openapi',
     deepLinking: false,
     presets: [SwaggerUIBundle.presets.apis],
