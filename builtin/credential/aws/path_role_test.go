@@ -801,7 +801,7 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 }
 
-func TestInitialize(t *testing.T) {
+func TestRoleInitialize(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}

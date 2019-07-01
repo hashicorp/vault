@@ -1819,11 +1819,13 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	return renewReq
 }
 
-func TestBackend_Initialize(t *testing.T) {
+func TestBackend_E2E_Initialize(t *testing.T) {
 
-	// TODO this test is not very good. it just outputs some log entries showing
-	// that initialization ran.  lets find a way to verify that the initializer
-	// actually did something, or at least somehow trap the fact that it ran.
+	// All this test does is load up the aws plugin, so that if we are in
+	// verbose mode we can observe in the log output that the initialization
+	// process ran:
+	//
+	//    go test -v ./builtin/credential/aws/ -run TestBackend_E2E_Initialize
 
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
