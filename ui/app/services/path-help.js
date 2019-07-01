@@ -61,8 +61,9 @@ export default Service.extend({
         //if we have an item we want the create info for that itemType
         let tag, path;
         if (itemType) {
-          tag = paths.create[0].tag; //tag is for type of backend, e.g. auth or secret
-          path = paths.create[0].path;
+          const createPath = paths.create.find(path => path.path.includes(itemType));
+          tag = createPath.tag; //tag is for type of backend, e.g. auth or secret
+          path = createPath.path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
         } else {
           //we need the mount config
@@ -70,6 +71,7 @@ export default Service.extend({
           path = paths.configPath[0].path;
         }
         helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        debugger; // eslint-disable-line
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
@@ -176,9 +178,11 @@ export default Service.extend({
   getNewAdapter(backend, paths, itemType) {
     //we need list and create paths to set the correct urls for actions
     const { list, create } = paths;
+    const createPath = create.find(path => path.path.includes(itemType));
+    const listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
+    const deletePath = paths.delete.find(path => path.path.includes(itemType));
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
         if (id) {
@@ -192,20 +196,20 @@ export default Service.extend({
       },
 
       urlForUpdateRecord(id) {
-        let { tag, path } = create[0];
+        let { tag, path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let { tag, path } = create[0];
+        let { tag, path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let { tag, path } = paths.delete[0];
+        let { tag, path } = deletePath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
