@@ -41,9 +41,6 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	// validate warning msg
-	expectedStrings := map[string]interface{}{"The key \"test-key\" does not list the client id of the role \"test-role1\" as an allowed_clientID and needs to be updated before ID tokens can be generated against this role.": true}
-	expectStrings(t, resp.Warnings, expectedStrings)
 
 	// Read "test-role1" and validate
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -61,17 +58,6 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
-
-	// Create a test role "test-role2" with an invalid key -- should fail
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/test-role2",
-		Operation: logical.CreateOperation,
-		Data: map[string]interface{}{
-			"key": "a-key-that-does-not-exist",
-		},
-		Storage: storage,
-	})
-	expectError(t, resp, err)
 
 	// Update "test-role1" with valid parameters -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -138,7 +124,7 @@ func TestOIDC_Path_OIDCRole(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clientIDs": "test-role1,test-role2",
+			"allowed_client_ids": "test-role1,test-role2",
 		},
 		Storage: storage,
 	})
@@ -217,10 +203,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"rotation_period":   int64(86400),
-		"verification_ttl":  int64(86400),
-		"algorithm":         "RS256",
-		"allowed_clientIDs": []string{},
+		"rotation_period":    int64(86400),
+		"verification_ttl":   int64(86400),
+		"algorithm":          "RS256",
+		"allowed_client_ids": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -231,9 +217,9 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"rotation_period":   "10m",
-			"verification_ttl":  "1h",
-			"allowed_clientIDs": "allowed-test-role",
+			"rotation_period":    "10m",
+			"verification_ttl":   "1h",
+			"allowed_client_ids": "allowed-test-role",
 		},
 		Storage: storage,
 	})
@@ -247,10 +233,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"rotation_period":   int64(600),
-		"verification_ttl":  int64(3600),
-		"algorithm":         "RS256",
-		"allowed_clientIDs": []string{"allowed-test-role"},
+		"rotation_period":    int64(600),
+		"verification_ttl":   int64(3600),
+		"algorithm":          "RS256",
+		"allowed_client_ids": []string{"allowed-test-role"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -389,6 +375,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 	})
+	expectSuccess(t, resp, err)
 
 	// .well-known/keys should contain 3 public keys
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -400,7 +387,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 	if len(responseJWKS.Keys) != 3 {
-		t.Fatalf("expected 3 public keya but instead got %d", len(responseJWKS.Keys))
+		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// create another named key
@@ -428,7 +415,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public keya but instead got %d", len(responseJWKS.Keys))
+		t.Fatalf("expected 1 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 }
 
@@ -459,7 +446,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clientIDs": "*",
+			"allowed_client_ids": "*",
 		},
 		Storage: storage,
 	})
@@ -483,7 +470,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/role/test-role",
 		Operation: logical.ReadOperation,
 		Data: map[string]interface{}{
-			"allowed_clientIDs": "",
+			"allowed_client_ids": "",
 		},
 		Storage: storage,
 	})
@@ -495,7 +482,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clientIDs": "",
+			"allowed_client_ids": "",
 		},
 		Storage: storage,
 	})
@@ -519,7 +506,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"allowed_clientIDs": clientID,
+			"allowed_client_ids": clientID,
 		},
 		Storage: storage,
 	})
@@ -573,7 +560,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		Use:       "sig",
 	}
 	namedKey := &namedKey{
-		Name:            keyName,
+		name:            keyName,
 		Algorithm:       "RS256",
 		VerificationTTL: 1 * period,
 		RotationPeriod:  1 * period,
@@ -736,7 +723,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 
 	// Populte storage with a namedKey
 	namedKey := &namedKey{
-		Name: keyName,
+		name: keyName,
 	}
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
@@ -926,8 +913,8 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 			Operation: logical.CreateOperation,
 			Storage:   storage,
 			Data: map[string]interface{}{
-				"algorithm":         alg,
-				"allowed_clientIDs": "*",
+				"algorithm":          alg,
+				"allowed_client_ids": "*",
 			},
 		})
 		expectSuccess(t, resp, err)

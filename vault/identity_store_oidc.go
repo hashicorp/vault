@@ -39,14 +39,14 @@ type expireableKey struct {
 }
 
 type namedKey struct {
-	Name             string           `json:"name"`
+	name             string
 	Algorithm        string           `json:"signing_algorithm"`
 	VerificationTTL  time.Duration    `json:"verification_ttl"`
 	RotationPeriod   time.Duration    `json:"rotation_period"`
 	KeyRing          []*expireableKey `json:"key_ring"`
 	SigningKey       *jose.JSONWebKey `json:"signing_key"`
 	NextRotation     time.Time        `json:"next_rotation"`
-	AllowedClientIDs []string         `json:"allowed_clientIDs"`
+	AllowedClientIDs []string         `json:"allowed_client_ids"`
 }
 
 type role struct {
@@ -136,7 +136,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Default:     "RS256",
 				},
 
-				"allowed_clientIDs": &framework.FieldSchema{
+				"allowed_client_ids": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Comma separated string or array of role client ids allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
 				},
@@ -359,7 +359,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	var key namedKey
 	if req.Operation == logical.CreateOperation {
-		key.Name = name
+		key.name = name
 	}
 	if req.Operation == logical.UpdateOperation {
 		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
@@ -393,10 +393,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
 	}
 
-	if allowedClientIDsRaw, ok := d.GetOk("allowed_clientIDs"); ok {
+	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
 		key.AllowedClientIDs = allowedClientIDsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		key.AllowedClientIDs = d.Get("allowed_clientIDs").([]string)
+		key.AllowedClientIDs = d.Get("allowed_client_ids").([]string)
 	}
 
 	prevAlgorithm := key.Algorithm
@@ -466,10 +466,10 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"rotation_period":   int64(storedNamedKey.RotationPeriod.Seconds()),
-			"verification_ttl":  int64(storedNamedKey.VerificationTTL.Seconds()),
-			"algorithm":         storedNamedKey.Algorithm,
-			"allowed_clientIDs": storedNamedKey.AllowedClientIDs,
+			"rotation_period":    int64(storedNamedKey.RotationPeriod.Seconds()),
+			"verification_ttl":   int64(storedNamedKey.VerificationTTL.Seconds()),
+			"algorithm":          storedNamedKey.Algorithm,
+			"allowed_client_ids": storedNamedKey.AllowedClientIDs,
 		},
 	}, nil
 }
@@ -549,6 +549,7 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 	if err := entry.DecodeJSON(&storedNamedKey); err != nil {
 		return nil, err
 	}
+	storedNamedKey.name = name
 
 	// call rotate with an appropriate overrideTTL where < 0 means no override
 	verificationTTLOverride := -1 * time.Second
@@ -762,29 +763,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.Key = d.Get("key").(string)
 	}
 
-	if role.Key == "" {
-		return logical.ErrorResponse("key must be provided"), nil
-	}
-
-	// Validate that key exists
-	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return logical.ErrorResponse("key %q does not exist", role.Key), nil
-	}
-
-	// Validate that the role is allowed to use this key, if it is not, warn the user
-	var namedKey namedKey
-	warning := ""
-	if err := entry.DecodeJSON(&namedKey); err != nil {
-		return nil, err
-	}
-	if !strutil.StrListContains(namedKey.AllowedClientIDs, "*") && !strutil.StrListContainsGlob(namedKey.AllowedClientIDs, name) {
-		warning = fmt.Sprintf("The key %q does not list the client id of the role %q as an allowed_clientID and needs to be updated before ID tokens can be generated against this role.", role.Key, name)
-	}
-
 	if template, ok := d.GetOk("template"); ok {
 		role.Template = template.(string)
 	} else if req.Operation == logical.CreateOperation {
@@ -839,7 +817,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	// store role (which was either just created or updated)
-	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
+	entry, err := logical.StorageEntryJSON(roleConfigPath+name, role)
 	if err != nil {
 		return nil, err
 	}
@@ -848,12 +826,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	i.oidcCache.Flush()
-
-	if warning != "" {
-		resp := &logical.Response{}
-		resp.AddWarning(warning)
-		return resp, nil
-	}
 	return nil, nil
 }
 
@@ -1109,7 +1081,7 @@ func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerifi
 	k.NextRotation = now.Add(k.RotationPeriod)
 
 	// store named key (it was modified when rotate was called on it)
-	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.Name, k)
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.name, k)
 	if err != nil {
 		return err
 	}
@@ -1297,11 +1269,11 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 			key.KeyRing = keyRing
 			entry, err := logical.StorageEntryJSON(entry.Key, key)
 			if err != nil {
-				i.Logger().Error("error updating key", "key", key.Name, "error", err)
+				i.Logger().Error("error updating key", "key", key.name, "error", err)
 			}
 
 			if err := s.Put(ctx, entry); err != nil {
-				i.Logger().Error("error saving key", "key", key.Name, "error", err)
+				i.Logger().Error("error saving key", "key", key.name, "error", err)
 
 			}
 			didUpdate = true
@@ -1349,6 +1321,7 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 		if err := entry.DecodeJSON(&key); err != nil {
 			return now, err
 		}
+		key.name = k
 
 		// Future key rotation that is the earliest we've seen.
 		if now.Before(key.NextRotation) && key.NextRotation.Before(soonestRotation) {
@@ -1357,7 +1330,7 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 
 		// Key that is due to be rotated.
 		if now.After(key.NextRotation) {
-			i.Logger().Debug("rotating OIDC key", "key", key.Name)
+			i.Logger().Debug("rotating OIDC key", "key", key.name)
 			if err := key.rotate(ctx, s, -1); err != nil {
 				return now, err
 			}
