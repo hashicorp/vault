@@ -1370,6 +1370,10 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 			return now, err
 		}
 
+		if entry == nil {
+			continue
+		}
+
 		var key namedKey
 		if err := entry.DecodeJSON(&key); err != nil {
 			return now, err
