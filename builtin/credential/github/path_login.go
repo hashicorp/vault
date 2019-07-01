@@ -63,31 +63,28 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		verifyResp = verifyResponse
 	}
 
-	config, err := b.Config(ctx, req.Storage)
-	if err != nil {
-		return nil, err
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{
+			"token": token,
+		},
+		Metadata: map[string]string{
+			"username": *verifyResp.User.Login,
+			"org":      *verifyResp.Org.Login,
+		},
+		DisplayName: *verifyResp.User.Login,
+		Alias: &logical.Alias{
+			Name: *verifyResp.User.Login,
+		},
+	}
+	verifyResp.Config.PopulateTokenAuth(auth)
+
+	// Add in configured policies from user/group mapping
+	if len(verifyResp.Policies) > 0 {
+		auth.Policies = append(auth.Policies, verifyResp.Policies...)
 	}
 
 	resp := &logical.Response{
-		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{
-				"token": token,
-			},
-			Policies: verifyResp.Policies,
-			Metadata: map[string]string{
-				"username": *verifyResp.User.Login,
-				"org":      *verifyResp.Org.Login,
-			},
-			DisplayName: *verifyResp.User.Login,
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       config.TTL,
-				MaxTTL:    config.MaxTTL,
-				Renewable: true,
-			},
-			Alias: &logical.Alias{
-				Name: *verifyResp.User.Login,
-			},
-		},
+		Auth: auth,
 	}
 
 	for _, teamName := range verifyResp.TeamNames {
@@ -125,14 +122,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	config, err := b.Config(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = config.TTL
-	resp.Auth.MaxTTL = config.MaxTTL
+	resp.Auth.TTL = verifyResp.Config.TokenTTL
+	resp.Auth.MaxTTL = verifyResp.Config.TokenMaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
@@ -151,9 +143,13 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	if err != nil {
 		return nil, nil, err
 	}
+	if config == nil {
+		return nil, logical.ErrorResponse("configuration has not been set"), nil
+	}
+
 	if config.Organization == "" {
 		return nil, logical.ErrorResponse(
-			"configure the github credential backend first"), nil
+			"organization not found in configuration"), nil
 	}
 
 	client, err := b.Client(token)
@@ -255,6 +251,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		Org:       org,
 		Policies:  append(groupPoliciesList, userPoliciesList...),
 		TeamNames: teamNames,
+		Config:    config,
 	}, nil, nil
 }
 
@@ -263,4 +260,7 @@ type verifyCredentialsResp struct {
 	Org       *github.Organization
 	Policies  []string
 	TeamNames []string
+
+	// This is just a cache to send back to the caller
+	Config *config
 }
