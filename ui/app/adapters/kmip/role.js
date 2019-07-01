@@ -1,4 +1,6 @@
 import BaseAdapter from './base';
+import { decamelize } from '@ember/string';
+import { getProperties } from '@ember/object';
 
 export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {
@@ -38,11 +40,20 @@ export default BaseAdapter.extend({
     // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
     // other values, so we manually check for them and send an abbreviated object
     let json = snapshot.serialize();
+    let keys = snapshot.record.nonOperationFields.map(decamelize);
+    let nonOperationFields = getProperties(json, keys);
     if (json.operation_all) {
-      return { operation_all: true };
+      debugger;
+      return {
+        operation_all: true,
+        ...nonOperationFields,
+      };
     }
     if (json.operation_none) {
-      return { operation_none: true };
+      return {
+        operation_none: true,
+        ...nonOperationFields,
+      };
     }
     delete json.operation_none;
     delete json.operation_all;
