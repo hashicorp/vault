@@ -25,6 +25,8 @@ type NoopBackend struct {
 	DefaultLeaseTTL time.Duration
 	MaxLeaseTTL     time.Duration
 	BackendType     logical.BackendType
+
+	isInitialized bool
 }
 
 func NoopBackendFactory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
@@ -104,6 +106,7 @@ func (n *NoopBackend) Logger() log.Logger {
 }
 
 func (n *NoopBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	n.isInitialized = true
 	return nil
 }
 

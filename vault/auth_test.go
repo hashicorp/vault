@@ -67,11 +67,14 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 }
 
 func TestCore_EnableCredential(t *testing.T) {
+
+	backend := &NoopBackend{
+		BackendType: logical.TypeCredential,
+	}
+
 	c, keys, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		return &NoopBackend{
-			BackendType: logical.TypeCredential,
-		}, nil
+		return backend, nil
 	}
 
 	me := &MountEntry{
@@ -82,6 +85,10 @@ func TestCore_EnableCredential(t *testing.T) {
 	err := c.enableCredential(namespace.RootContext(nil), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	if !backend.isInitialized {
+		t.Fatalf("backend is not initialized")
 	}
 
 	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/foo/bar")
@@ -122,11 +129,22 @@ func TestCore_EnableCredential(t *testing.T) {
 // entries, and that upon reading the entries from both are recombined
 // correctly
 func TestCore_EnableCredential_Local(t *testing.T) {
+
+	counter := 0
+	backends := []*NoopBackend{
+		&NoopBackend{
+			BackendType: logical.TypeCredential,
+		},
+		&NoopBackend{
+			BackendType: logical.TypeCredential,
+		},
+	}
+
 	c, _, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		return &NoopBackend{
-			BackendType: logical.TypeCredential,
-		}, nil
+		b := backends[counter]
+		counter++
+		return b, nil
 	}
 
 	c.auth = &MountTable{
@@ -159,6 +177,12 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	err := c.setupCredentials(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	for _, b := range backends {
+		if !b.isInitialized {
+			t.Fatalf("backend is not initialized")
+		}
 	}
 
 	rawLocal, err := c.barrier.Get(context.Background(), coreLocalAuthConfigPath)

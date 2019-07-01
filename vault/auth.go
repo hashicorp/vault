@@ -686,6 +686,15 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Populate cache
 		NamespaceByID(ctx, entry.NamespaceID, c)
+
+		// Initialize
+		if !nilMount {
+			err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+			if err != nil {
+				c.logger.Error("failed to initialize auth entry", "path", entry.Path, "error", err)
+				return errLoadAuthFailed
+			}
+		}
 	}
 
 	if persistNeeded {

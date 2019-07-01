@@ -424,6 +424,9 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	if err := c.mount(namespace.RootContext(nil), me); err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	if !noop.isInitialized {
+		t.Fatalf("backend is not initialized")
+	}
 
 	// Store the view
 	view := c.router.MatchingStorageByAPIPath(namespace.RootContext(nil), "test/")
@@ -733,5 +736,66 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	if auth.Entries[0].Type != "token" {
 		t.Fatal("unexpected entry type for auth")
+	}
+}
+
+func TestCore_SetupMounts_Initialize(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	counter := 0
+	backends := []*NoopBackend{
+		&NoopBackend{
+			BackendType: logical.TypeLogical,
+		},
+		&NoopBackend{
+			BackendType: logical.TypeLogical,
+		},
+	}
+
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		b := backends[counter]
+		counter++
+		return b, nil
+	}
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table:            mountTableType,
+				Path:             "noop/",
+				Type:             "noop",
+				UUID:             "abcd",
+				Accessor:         "kv-abcd",
+				BackendAwareUUID: "abcde",
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+			&MountEntry{
+				Table:            mountTableType,
+				Path:             "noop2/",
+				Type:             "noop",
+				UUID:             "bcde",
+				Accessor:         "kv-bcde",
+				BackendAwareUUID: "bcdea",
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+		},
+	}
+
+	// Both should set up successfully
+	err := c.setupMounts(namespace.RootContext(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
+	}
+
+	for _, b := range backends {
+		if !b.isInitialized {
+			t.Fatalf("backend is not initialized")
+		}
 	}
 }

@@ -511,6 +511,14 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return err
 	}
 
+	// Initialize
+	if !nilMount {
+		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
 	}
@@ -1129,6 +1137,15 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if err != nil {
 			c.logger.Error("failed to mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
+		}
+
+		// Initialize
+		if !nilMount {
+			err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+			if err != nil {
+				c.logger.Error("failed to initialize mount entry", "path", entry.Path, "error", err)
+				return errLoadMountsFailed
+			}
 		}
 
 		if c.logger.IsInfo() {
