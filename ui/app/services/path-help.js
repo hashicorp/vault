@@ -71,7 +71,6 @@ export default Service.extend({
           path = paths.configPath[0].path;
         }
         helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
-        debugger; // eslint-disable-line
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
