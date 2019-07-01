@@ -25,11 +25,14 @@
       <h1 class="title is-3">
         {{capitalize mode}}
         {{singularize itemType}}
+        {{#if (eq mode "edit")}}
+          {{model.id}}
+        {{/if}}
       </h1>
     {{/if}}
   </p.levelLeft>
 </PageHeader>
-{{#if (not (eq mode "create"))}}
+{{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "deleteItem"}}

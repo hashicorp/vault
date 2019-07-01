@@ -80,7 +80,7 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Default TTL",
+					Name: "Default STS TTL",
 				},
 			},
 
@@ -88,7 +88,7 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Max TTL",
+					Name: "Max STS TTL",
 				},
 			},
 

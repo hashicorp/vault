@@ -1,8 +1,25 @@
 ## 1.2-beta2 (Unreleased)
 
+CHANGES:
+
+ * auth/approle: AppRole uses new, common token fields for values that overlap
+   with other auth backends. `period` and `policies` will continue to work,
+   with priority being given to the `token_` prefixed versions of those
+   parameters. They will also be returned when doing a read on the role if they
+   were used to provide values initially.
+ * auth/approle: `"default"` is no longer automatically added to the `policies`
+   parameter. This was a no-op since it would always be added anyways by
+   Vault's core; however, this can now be explicitly disabled with the new
+   `token_no_default_policy` field.
+ * auth/approle: `bound_cidr_list` is no longer returned when reading a role
+
 IMPROVEMENTS:
 
  * agent: Allow EC2 nonce to be passed in [GH-6953]
+ * audit/file: Dramatically speed up file operations by changing
+   locking/marshaling order [GH-7024]
+ * auth/token: Allow the support of the identity system for the token backend
+   via token roles [GH-6267]
  * cli: `path-help` now allows `-format=json` to be specified, which will
    output OpenAPI [GH-7006]
 
