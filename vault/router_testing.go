@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -115,30 +114,30 @@ func (n *NoopBackend) Type() logical.BackendType {
 	return n.BackendType
 }
 
-// InitializableBackend is a backend that knows whether it has been initialized
-// properly.
-type InitializableBackend struct {
-	*NoopBackend
-	isInitialized bool
-}
-
-func (b *InitializableBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
-	if b.isInitialized {
-		return errors.New("already initialized")
-	}
-
-	//debug.PrintStack()
-	// do a dummy write to storage, to prove that the storage is not readonly
-	println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-	entry := &logical.StorageEntry{
-		Key:   "initialize/zork",
-		Value: []byte("quux"),
-	}
-	err := req.Storage.Put(ctx, entry)
-	if err != nil {
-		return err
-	}
-
-	b.isInitialized = true
-	return nil
-}
+//// InitializableBackend is a backend that knows whether it has been initialized
+//// properly.
+//type InitializableBackend struct {
+//	*NoopBackend
+//	isInitialized bool
+//}
+//
+//func (b *InitializableBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+//	if b.isInitialized {
+//		return errors.New("already initialized")
+//	}
+//
+//	//debug.PrintStack()
+//	// do a dummy write to storage, to prove that the storage is not readonly
+//	println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+//	entry := &logical.StorageEntry{
+//		Key:   "initialize/zork",
+//		Value: []byte("quux"),
+//	}
+//	err := req.Storage.Put(ctx, entry)
+//	if err != nil {
+//		return err
+//	}
+//
+//	b.isInitialized = true
+//	return nil
+//}

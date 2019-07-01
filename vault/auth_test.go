@@ -67,14 +67,11 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 }
 
 func TestCore_EnableCredential(t *testing.T) {
-
-	backend := &NoopBackend{
-		BackendType: logical.TypeCredential,
-	}
-
 	c, keys, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		return backend, nil
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
 	}
 
 	me := &MountEntry{
@@ -125,22 +122,11 @@ func TestCore_EnableCredential(t *testing.T) {
 // entries, and that upon reading the entries from both are recombined
 // correctly
 func TestCore_EnableCredential_Local(t *testing.T) {
-
-	counter := 0
-	backends := []*NoopBackend{
-		&NoopBackend{
-			BackendType: logical.TypeCredential,
-		},
-		&NoopBackend{
-			BackendType: logical.TypeCredential,
-		},
-	}
-
 	c, _, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		b := backends[counter]
-		counter++
-		return b, nil
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
 	}
 
 	c.auth = &MountTable{
