@@ -423,6 +423,7 @@ func createTestMySQLUser(t *testing.T, connURL, username, password, query string
 				if err != nil {
 					t.Fatal(err)
 				}
+				stmt.Close()
 				continue
 			}
 

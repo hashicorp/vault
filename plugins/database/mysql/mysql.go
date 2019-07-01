@@ -334,6 +334,7 @@ func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements 
 				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
 					_, err = tx.ExecContext(ctx, query)
 					if err != nil {
+						stmt.Close()
 						return err
 					}
 					continue
