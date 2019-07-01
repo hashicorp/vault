@@ -682,7 +682,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
 
-	// Do a best-effort attemt to let the standbys apply the restoreCallbackOp
+	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
 	// before we continue.
 	time.Sleep(restoreOpDelayDuration)
 	return err
