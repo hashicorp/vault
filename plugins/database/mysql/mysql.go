@@ -112,17 +112,7 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	// Grab the lock
-	m.Lock()
-	defer m.Unlock()
-
 	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	// Get the connection
-	db, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
 
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
@@ -143,57 +133,15 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 		return "", "", err
 	}
 
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
+	queryMap := map[string]string{
+		"name":       username,
+		"password":   password,
+		"expiration": expirationStr,
+	}
+
+	if err := m.executePreparedStatmentsWithMap(ctx, statements.Creation, queryMap); err != nil {
 		return "", "", err
 	}
-	defer tx.Rollback()
-
-	// Execute each query
-	for _, stmt := range statements.Creation {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
-			query = dbutil.QueryHelper(query, map[string]string{
-				"name":       username,
-				"password":   password,
-				"expiration": expirationStr,
-			})
-
-			stmt, err := tx.PrepareContext(ctx, query)
-			if err != nil {
-				// If the error code we get back is Error 1295: This command is not
-				// supported in the prepared statement protocol yet, we will execute
-				// the statement without preparing it. This allows the caller to
-				// manually prepare statements, as well as run other not yet
-				// prepare supported commands. If there is no error when running we
-				// will continue to the next statement.
-				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-					_, err = tx.ExecContext(ctx, query)
-					if err != nil {
-						return "", "", err
-					}
-					continue
-				}
-
-				return "", "", err
-			}
-			if _, err := stmt.ExecContext(ctx); err != nil {
-				stmt.Close()
-				return "", "", err
-			}
-			stmt.Close()
-		}
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return "", "", err
-	}
-
 	return username, password, nil
 }
 
@@ -332,6 +280,21 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 		return "", "", errors.New("must provide both username and password")
 	}
 
+	queryMap := map[string]string{
+		"name":     username,
+		"password": password,
+	}
+
+	if err := m.executePreparedStatmentsWithMap(ctx, statements.Rotation, queryMap); err != nil {
+		return "", "", err
+	}
+	return username, password, nil
+}
+
+// executePreparedStatmentsWithMap loops through the given templated SQL statements and
+// applies the a map to them, interpolating values into the templates,returning
+// tthe resulting username and password
+func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -339,31 +302,26 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return err
 	}
-
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	// Return the secret
 
-	stmts := statements.Rotation
 	// Execute each query
-	for _, stmt := range stmts {
+	for _, stmt := range statements {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
 				continue
 			}
-			query = dbutil.QueryHelper(query, map[string]string{
-				"name":     username,
-				"password": password,
-			})
+
+			query = dbutil.QueryHelper(query, queryMap)
 
 			stmt, err := tx.PrepareContext(ctx, query)
 			if err != nil {
@@ -376,16 +334,16 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
 					_, err = tx.ExecContext(ctx, query)
 					if err != nil {
-						return "", "", err
+						return err
 					}
 					continue
 				}
 
-				return "", "", err
+				return err
 			}
 			if _, err := stmt.ExecContext(ctx); err != nil {
 				stmt.Close()
-				return "", "", err
+				return err
 			}
 			stmt.Close()
 		}
@@ -393,10 +351,9 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return "", "", err
+		return err
 	}
-
-	return username, password, nil
+	return nil
 }
 
 // GenerateCredentials returns a generated password
