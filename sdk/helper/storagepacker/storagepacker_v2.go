@@ -89,7 +89,7 @@ func (s *StoragePackerV2) preloadBucketsFromDisk(ctx context.Context, keys []str
 	// represented in the sub-buckets.
 	//
 	// To bring these two into alignment, we can roll back to version N.
-	// It might be possible to foll forward in some cases (particularly if
+	// It might be possible to roll forward in some cases (particularly if
 	// only one item can be added at a time?) but the crash must have
 	// occurred before PutBucket() returned, so the new data need not be saved.
 	//
