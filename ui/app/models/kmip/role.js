@@ -6,15 +6,7 @@ import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
 const { attr } = DS;
-const Model = DS.Model.extend({
-  useOpenAPI: true,
-  backend: attr({ readOnly: true }),
-  scope: attr({ readOnly: true }),
-  name: attr({ readOnly: true }),
-  getHelpUrl(path) {
-    return `/v1/${path}/scope/example/role/example?help=1`;
-  },
-
+export const COMPUTEDS = {
   operationFields: computed('newFields', function() {
     return this.newFields.filter(key => key.startsWith('operation'));
   }),
@@ -27,6 +19,16 @@ const Model = DS.Model.extend({
     let excludeFields = ['role'].concat(this.operationFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
+};
+
+const Model = DS.Model.extend(COMPUTEDS, {
+  useOpenAPI: true,
+  backend: attr({ readOnly: true }),
+  scope: attr({ readOnly: true }),
+  name: attr({ readOnly: true }),
+  getHelpUrl(path) {
+    return `/v1/${path}/scope/example/role/example?help=1`;
+  },
   fieldGroups: computed('fields', 'nonOperationFields', function() {
     const groups = [{ default: this.nonOperationFields }, { 'Allowed Operations': this.operationFields }];
     let ret = fieldToAttrs(this, groups);

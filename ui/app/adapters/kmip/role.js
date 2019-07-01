@@ -42,8 +42,12 @@ export default BaseAdapter.extend({
     let json = snapshot.serialize();
     let keys = snapshot.record.nonOperationFields.map(decamelize);
     let nonOperationFields = getProperties(json, keys);
+    for (let field in nonOperationFields) {
+      if (nonOperationFields[field] == null) {
+        delete nonOperationFields[field];
+      }
+    }
     if (json.operation_all) {
-      debugger;
       return {
         operation_all: true,
         ...nonOperationFields,
