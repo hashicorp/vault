@@ -16,7 +16,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/ed25519"
 
-
 	"github.com/hashicorp/vault/sdk/helper/base62"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -77,18 +76,15 @@ type idToken struct {
 	IssuedAt int64  `json:"iat"` // Time of token creation
 }
 
-// discovery contains the required elements of OIDC discovery needed for JWT
-// verification libraries to use the .well-known endpoint.
+// discovery contains t subset the required elements of OIDC discovery needed for
+// JWT verification libraries to use the .well-known endpoint.
 //
 // https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 type discovery struct {
-	Issuer        string   `json:"issuer"`
-	Auth          string   `json:"authorization_endpoint"`
-	Token         string   `json:"token_endpoint"`
-	Keys          string   `json:"jwks_uri"`
-	ResponseTypes []string `json:"response_types_supported"`
-	Subjects      []string `json:"subject_types_supported"`
-	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
+	Issuer      string   `json:"issuer"`
+	Keys        string   `json:"jwks_uri"`
+	Subjects    []string `json:"subject_types_supported"`
+	IDTokenAlgs []string `json:"id_token_signing_alg_values_supported"`
 }
 
 // oidcCache is a this wrapping around go-cache to partition by namespace
@@ -456,11 +452,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		key.Algorithm = d.Get("algorithm").(string)
 	}
 
-	switch key.Algorithm {
-	case "RS256", "RS384", "RS512",
-		"ES256", "ES384", "ES512",
-		"EdDSA":
-	default:
+	if !strutil.StrListContains(supportedAlgs, key.Algorithm) {
 		return logical.ErrorResponse("unknown signing algorithm %q", key.Algorithm), nil
 	}
 
@@ -983,7 +975,6 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		// TODO: review required contents
 		disc := discovery{
 			Issuer:      c.effectiveIssuer,
 			Keys:        c.effectiveIssuer + "/.well-known/keys",

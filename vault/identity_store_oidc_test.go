@@ -585,7 +585,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
-	if len(namedKey.KeyRing) != 2 {
+	if len(namedKey.KeyRing) != 1 {
 		t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
 	}
 	// There should be two public keys
