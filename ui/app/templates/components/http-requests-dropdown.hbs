@@ -2,7 +2,9 @@
   Date Range
 </label>
 <select id="date-range" name="selectedTimeWindow" data-test-timeWindow-select onchange={{action "onSelectTimeWindow"}}>
+    <option value="All" selected={{eq timeWindow "All"}} data-test-timeWindow-all>All</option>/>
+    <option value="Last 12 Months" selected={{eq timeWindow "Last 12 Months"}} data-test-timeWindow-last-year>Last 12 Months</option>
   {{#each options as |op|}}
-    <option value={{op}} selected={{eq timeWindow op}}>{{op}}</option>
+    <option value={{op}} selected={{eq timeWindow op}} data-test-timeWindow-option>{{op}}</option>
   {{/each}}
 </select>

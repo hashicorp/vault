@@ -25,7 +25,7 @@ export default Component.extend({
   timeWindow: 'All',
   options: computed('counters', function() {
     let counters = this.counters || [];
-    let options = ['All', 'Last 12 Months'];
+    let options = [];
     if (counters.length) {
       const years = counters.reduce((uniqueYears, counter) => {
         const year = counter.start_time.substr(0, 4);
