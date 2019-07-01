@@ -119,7 +119,7 @@ func (c *oidcCache) Flush(ns *namespace.Namespace) {
 }
 
 const (
-	issuerPath           = "/v1/identity/oidc"
+	issuerPath           = "v1/identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
@@ -393,9 +393,9 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		nsPath := ""
+		nsPath := "/"
 		if ns.Path != "" {
-			nsPath = ns.Path
+			nsPath = "/" + ns.Path
 		}
 		c.effectiveIssuer = i.core.redirectAddr + nsPath + issuerPath
 	}
