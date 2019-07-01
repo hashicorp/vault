@@ -34,7 +34,7 @@ func pathData(b *versionedKVBackend) *framework.Path {
 			},
 			"options": {
 				Type: framework.TypeMap,
-				Description: `Options for writing a KV entry. 
+				Description: `Options for writing a KV entry.
 
 Set the "cas" value to use a Check-And-Set operation. If not set the write will
 be allowed. If set to 0 a write will only be allowed if the key doesn’t exist.
@@ -247,6 +247,21 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			CreatedTime: ptypes.TimestampNow(),
 		}
 
+		ctime, err := ptypes.Timestamp(version.CreatedTime)
+		if err != nil {
+			return logical.ErrorResponse("unexpected error converting %T(%v) to time.Time: %v", version.CreatedTime, version.CreatedTime, err), logical.ErrInvalidRequest
+		}
+
+		if !config.IsDeleteVersionAfterDisabled() {
+			if dtime, ok := deletionTime(ctime, deleteVersionAfter(config), deleteVersionAfter(meta)); ok {
+				dt, err := ptypes.TimestampProto(dtime)
+				if err != nil {
+					return logical.ErrorResponse("error setting deletion_time: converting %v to protobuf: %v", dtime, err), logical.ErrInvalidRequest
+				}
+				version.DeletionTime = dt
+			}
+		}
+
 		buf, err := proto.Marshal(version)
 		if err != nil {
 			return nil, err
@@ -260,7 +275,7 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			return nil, err
 		}
 
-		vm, versionToDelete := meta.AddVersion(version.CreatedTime, nil, config.MaxVersions)
+		vm, versionToDelete := meta.AddVersion(version.CreatedTime, version.DeletionTime, config.MaxVersions)
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		if err != nil {
 			return nil, err

@@ -1,4 +1,14 @@
-## Next
+## 1.2-beta2 (Unreleased)
+
+IMPROVEMENTS:
+
+ * agent: Allow EC2 nonce to be passed in [GH-6953]
+ * auth/token: Allow the support of the identity system for the token backend
+   via token roles [GH-6267]
+ * cli: `path-help` now allows `-format=json` to be specified, which will
+   output OpenAPI [GH-7006]
+
+## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:
 
@@ -37,12 +47,24 @@ CHANGES:
 
 FEATURES:
 
- * Adds an ElasticSearch database plugin which issues unique, short-lived
-   ElasticSearch credentials [GH-6857]
- * Adds a PCF plugin that supports use of instance identity certificates for
-   Vault authentication [GH-6847]
- * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
- * Add HTTP Request Volume Page to the UI [GH-6925]
+ * **Combined DB credential rotation**: Alternative mode for the Combined DB
+   Secret Engine to automatically rotate existing database account credentials
+   and set Vault as the source of truth for credentials.
+ * **Identity Tokens**: Vault's Identity system can now generate OIDC-compliant
+   ID tokens. These customizable tokens allow encapsulating a signed, verifiable
+   snapshot of identity information and metadata. They can be use by other
+   applications—even those without Vault authorization—as a way of establishing
+   identity based on a Vault entity.
+ * **Pivotal Cloud Foundry plugin**: New auth method using Pivotal Cloud
+   Foundry certificates for Vault authentication.
+ * **ElasticSearch database plugin**: New ElasticSearch database plugin issues
+   unique, short-lived ElasticSearch credentials.
+ * **New UI Features**: An HTTP Request Volume Page and new UI for editing LDAP
+   Users and Groups have been added.
+ * **HA support for Postgres**: PostgreSQL versions >= 9.5 may now but used as
+   and HA storage backend.
+ * **KMIP secrets engine (Enterprise)**: Allows Vault to operate as a KMIP Server,
+  seamlessly brokering cryptographic operations for traditional infrastructure.  
 
 IMPROVEMENTS: 
 
@@ -58,6 +80,10 @@ IMPROVEMENTS:
  * identity: Allow a group alias' canonical ID to be modified
  * namespaces: Namespaces can now be created and deleted from performance
    replication secondaries
+ * replication: Client TLS authentication is now supported when enabling or
+   updating a replication secondary
+ * secrets/database: Cassandra operations will now cancel on client timeout
+   [GH-6954]
  * storage/postgres: LIST now performs better on large datasets [GH-6546]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]

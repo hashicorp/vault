@@ -272,4 +272,5 @@ type TokenCreateRequest struct {
 	NumUses         int               `json:"num_uses"`
 	Renewable       *bool             `json:"renewable,omitempty"`
 	Type            string            `json:"type"`
+	EntityAlias     string            `json:"entity_alias"`
 }

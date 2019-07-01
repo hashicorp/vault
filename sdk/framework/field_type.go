@@ -14,6 +14,11 @@ const (
 	// integer or go duration format string (e.g. 24h)
 	TypeDurationSecond
 
+	// TypeSignedDurationSecond represents a positive or negative duration
+	// as seconds, this can be either an integer or go duration format
+	// string (e.g. 24h).
+	TypeSignedDurationSecond
+
 	// TypeSlice represents a slice of any type
 	TypeSlice
 
@@ -66,7 +71,7 @@ func (t FieldType) String() string {
 		return "map"
 	case TypeKVPairs:
 		return "keypair"
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		return "duration (sec)"
 	case TypeSlice, TypeStringSlice, TypeCommaStringSlice, TypeCommaIntSlice:
 		return "slice"

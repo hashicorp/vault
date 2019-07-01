@@ -12,6 +12,8 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/lib/pq"
 	"github.com/ory/dockertest"
 )
 
@@ -321,6 +323,10 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	cleanup, connURL := preparePostgresTestContainer(t)
 	defer cleanup()
 
+	// create the database user
+	dbUser := "vaultstatictest"
+	createTestPGUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
 	}
@@ -337,18 +343,18 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	}
 
 	usernameConfig := dbplugin.StaticUserConfig{
-		Username: "test",
+		Username: dbUser,
 		Password: password,
 	}
 
-	// Test with no configured Creation Statement
+	// Test with no configured Rotation Statement
 	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
 	if err == nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		Creation: []string{testPostgresStaticRole},
+		Rotation: []string{testPostgresStaticRoleRotate},
 	}
 	// User should not exist, make sure we can create
 	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
@@ -360,8 +366,7 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// call SetCredentials again, the user will already exist, password will
-	// change. Without rotation statements, this should use the defaults
+	// call SetCredentials again, password will change
 	newPassword, _ := db.GenerateCredentials(context.Background())
 	usernameConfig.Password = newPassword
 	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
@@ -370,23 +375,6 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	}
 
 	if password != newPassword {
-		t.Fatal("passwords should have changed")
-	}
-
-	if err := testCredsExist(t, connURL, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// generate a new password and supply owr own rotation statements
-	newPassword2, _ := db.GenerateCredentials(context.Background())
-	usernameConfig.Password = newPassword2
-	statements.Rotation = []string{testPostgresStaticRoleRotate, testPostgresStaticRoleGrant}
-	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if password != newPassword2 {
 		t.Fatal("passwords should have changed")
 	}
 
@@ -484,6 +472,12 @@ CREATE ROLE "{{name}}" WITH
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
+const testRoleStaticCreate = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+`
+
 const testPostgresStaticRoleRotate = `
 ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 `
@@ -491,3 +485,42 @@ ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 const testPostgresStaticRoleGrant = `
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
+
+// This is a copy of a test helper method also found in
+// builtin/logical/database/rotation_test.go , and should be moved into a shared
+// helper file in the future.
+func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
+	t.Helper()
+	conn, err := pq.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("postgres", conn)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	m := map[string]string{
+		"name":     username,
+		"password": password,
+	}
+	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		t.Fatal(err)
+	}
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -15,9 +15,11 @@ type RaftJoinResponse struct {
 
 // RaftJoinRequest represents the parameters consumed by the raft join API
 type RaftJoinRequest struct {
-	LeaderAddr string `json:"leader_api_addr"`
-	CACert     string `json:"ca_cert":`
-	Retry      bool   `json:"retry"`
+	LeaderAPIAddr    string `json:"leader_api_addr"`
+	LeaderCACert     string `json:"leader_ca_cert":`
+	LeaderClientCert string `json:"leader_client_cert"`
+	LeaderClientKey  string `json:"leader_client_key"`
+	Retry            bool   `json:"retry"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft

@@ -2,7 +2,7 @@
   {{#each-in fieldGroup as |group fields|}}
     {{#if (eq group "default")}}
       {{#each fields as |attr|}}
-        {{#unless (and (not-eq mode 'create') (eq attr.name "name"))}}
+        {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
           {{form-field data-test-field attr=attr model=model}}
         {{/unless}}
       {{/each}}

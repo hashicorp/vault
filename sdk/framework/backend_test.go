@@ -564,6 +564,11 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			60,
 		},
 
+		"illegal default duration string": {
+			&FieldSchema{Type: TypeDurationSecond, Default: "h1"},
+			0,
+		},
+
 		"default duration time.Duration": {
 			&FieldSchema{Type: TypeDurationSecond, Default: 60 * time.Second},
 			60,
@@ -574,6 +579,55 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			0,
 		},
 
+		"default signed positive duration set": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: 60},
+			60,
+		},
+
+		"default signed positive duration int64": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: int64(60)},
+			60,
+		},
+
+		"default signed positive duration string": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: "60s"},
+			60,
+		},
+
+		"illegal default signed duration string": {
+			&FieldSchema{Type: TypeDurationSecond, Default: "-h1"},
+			0,
+		},
+
+		"default signed positive duration time.Duration": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: 60 * time.Second},
+			60,
+		},
+
+		"default signed negative duration set": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: -60},
+			-60,
+		},
+
+		"default signed negative duration int64": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: int64(-60)},
+			-60,
+		},
+
+		"default signed negative duration string": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: "-60s"},
+			-60,
+		},
+
+		"default signed negative duration time.Duration": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: -60 * time.Second},
+			-60,
+		},
+
+		"default signed negative duration not set": {
+			&FieldSchema{Type: TypeSignedDurationSecond},
+			0,
+		},
 		"default header not set": {
 			&FieldSchema{Type: TypeHeader},
 			http.Header{},
@@ -583,7 +637,7 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 	for name, tc := range cases {
 		actual := tc.Schema.DefaultOrZero()
 		if !reflect.DeepEqual(actual, tc.Value) {
-			t.Fatalf("bad: %s\n\nExpected: %#v\nGot: %#v",
+			t.Errorf("bad: %s\n\nExpected: %#v\nGot: %#v",
 				name, tc.Value, actual)
 		}
 	}

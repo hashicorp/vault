@@ -2,9 +2,11 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -27,7 +29,17 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAddr, nil, req.Retry)
+	var tlsConfig *tls.Config
+	var err error
+	if len(req.LeaderCACert) != 0 || len(req.LeaderClientCert) != 0 || len(req.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAPIAddr, tlsConfig, req.Retry)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -44,7 +56,9 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
-	LeaderAddr string `json:"leader_api_addr"`
-	CACert     string `json:"ca_cert":`
-	Retry      bool   `json:"retry"`
+	LeaderAPIAddr    string `json:"leader_api_addr"`
+	LeaderCACert     string `json:"leader_ca_cert":`
+	LeaderClientCert string `json:"leader_client_cert"`
+	LeaderClientKey  string `json:"leader_client_key"`
+	Retry            bool   `json:"retry"`
 }

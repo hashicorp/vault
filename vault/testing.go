@@ -760,19 +760,20 @@ func TestWaitActiveWithError(core *Core) error {
 }
 
 type TestCluster struct {
-	BarrierKeys   [][]byte
-	RecoveryKeys  [][]byte
-	CACert        *x509.Certificate
-	CACertBytes   []byte
-	CACertPEM     []byte
-	CACertPEMFile string
-	CAKey         *ecdsa.PrivateKey
-	CAKeyPEM      []byte
-	Cores         []*TestClusterCore
-	ID            string
-	RootToken     string
-	RootCAs       *x509.CertPool
-	TempDir       string
+	BarrierKeys        [][]byte
+	RecoveryKeys       [][]byte
+	CACert             *x509.Certificate
+	CACertBytes        []byte
+	CACertPEM          []byte
+	CACertPEMFile      string
+	CAKey              *ecdsa.PrivateKey
+	CAKeyPEM           []byte
+	Cores              []*TestClusterCore
+	ID                 string
+	RootToken          string
+	RootCAs            *x509.CertPool
+	TempDir            string
+	ClientAuthRequired bool
 }
 
 func (c *TestCluster) Start() {
@@ -1002,6 +1003,7 @@ type TestClusterOptions struct {
 	CAKey              *ecdsa.PrivateKey
 	PhysicalFactory    func(hclog.Logger) (physical.Backend, error)
 	FirstCoreNumber    int
+	RequireClientAuth  bool
 }
 
 var DefaultNumCores = 3
@@ -1238,6 +1240,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			NextProtos:     []string{"h2", "http/1.1"},
 			GetCertificate: certGetter.GetCertificate,
 		}
+		if opts != nil && opts.RequireClientAuth {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+			testCluster.ClientAuthRequired = true
+		}
 		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
 		lns := []*TestListener{&TestListener{
@@ -1290,6 +1296,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevLicenseDuration = base.DevLicenseDuration
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.LicensingConfig = base.LicensingConfig
+		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}

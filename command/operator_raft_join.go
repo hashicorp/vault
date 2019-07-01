@@ -13,8 +13,10 @@ var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
 
 type OperatorRaftJoinCommand struct {
-	flagRaftRetry  bool
-	flagRaftCACert string
+	flagRaftRetry        bool
+	flagLeaderCACert     string
+	flagLeaderClientCert string
+	flagLeaderClientKey  string
 	*BaseCommand
 }
 
@@ -42,10 +44,24 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
-		Name:       "raft-ca-cert",
-		Target:     &c.flagRaftCACert,
+		Name:       "leader-ca-cert",
+		Target:     &c.flagLeaderCACert,
 		Completion: complete.PredictNothing,
 		Usage:      "CA cert to communicate with raft leader.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "leader-client-cert",
+		Target:     &c.flagLeaderClientCert,
+		Completion: complete.PredictNothing,
+		Usage:      "Client cert to to authenticate to raft leader.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "leader-client-key",
+		Target:     &c.flagLeaderClientKey,
+		Completion: complete.PredictNothing,
+		Usage:      "Client key to to authenticate to raft leader.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -97,9 +113,11 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	}
 
 	resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
-		LeaderAddr: leaderAPIAddr,
-		Retry:      c.flagRaftRetry,
-		CACert:     c.flagRaftCACert,
+		LeaderAPIAddr:    leaderAPIAddr,
+		LeaderCACert:     c.flagLeaderCACert,
+		LeaderClientCert: c.flagLeaderClientCert,
+		LeaderClientKey:  c.flagLeaderClientKey,
+		Retry:            c.flagRaftRetry,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error joining the node to the raft cluster: %s", err))
