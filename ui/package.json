@@ -93,7 +93,7 @@
     "ember-copy": "^1.0.0",
     "ember-data": "~3.4.0",
     "ember-data-model-fragments": "^3.3.0",
-    "ember-engines": "^0.7.0",
+    "ember-engines": "^0.8.0",
     "ember-export-application-global": "^2.0.0",
     "ember-fetch": "^6.5.1",
     "ember-inflector": "^3.0.0",
