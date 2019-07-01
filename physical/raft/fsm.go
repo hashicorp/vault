@@ -364,6 +364,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	command := &LogData{}
 	err := proto.Unmarshal(log.Data, command)
 	if err != nil {
+		f.logger.Error("error proto unmarshaling log data", "error", err)
 		panic("error proto unmarshaling log data")
 	}
 
@@ -380,7 +381,8 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 			Index: log.Index,
 		})
 		if err != nil {
-			panic("failed to store data")
+			f.logger.Error("unable to marshal latest index", "error", err)
+			panic("unable to marshal latest index")
 		}
 	}
 
@@ -418,6 +420,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		return nil
 	})
 	if err != nil {
+		f.logger.Error("failed to store data", "error", err)
 		panic("failed to store data")
 	}
 
@@ -575,6 +578,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 		var err error
 		indexBytes, err = proto.Marshal(latestIndex)
 		if err != nil {
+			f.logger.Error("unable to marshal latest index", "error", err)
 			panic(fmt.Sprintf("unable to marshal latest index: %v", err))
 		}
 	}
@@ -582,6 +586,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
 	configBytes, err := proto.Marshal(protoConfig)
 	if err != nil {
+		f.logger.Error("unable to marshal config", "error", err)
 		panic(fmt.Sprintf("unable to marshal config: %v", err))
 	}
 
@@ -604,6 +609,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 			return nil
 		})
 		if err != nil {
+			f.logger.Error("unable to store latest configuration", "error", err)
 			panic(fmt.Sprintf("unable to store latest configuration: %v", err))
 		}
 	}

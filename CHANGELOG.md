@@ -1,3 +1,13 @@
+## 1.2-beta2 (Unreleased)
+
+IMPROVEMENTS:
+
+ * agent: Allow EC2 nonce to be passed in [GH-6953]
+ * auth/token: Allow the support of the identity system for the token backend
+   via token roles [GH-6267]
+ * cli: `path-help` now allows `-format=json` to be specified, which will
+   output OpenAPI [GH-7006]
+
 ## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:

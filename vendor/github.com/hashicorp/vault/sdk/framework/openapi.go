@@ -552,7 +552,7 @@ func convertType(t FieldType) schemaType {
 		ret.format = "lowercase"
 	case TypeInt:
 		ret.baseType = "integer"
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		ret.baseType = "integer"
 		ret.format = "seconds"
 	case TypeBool:
