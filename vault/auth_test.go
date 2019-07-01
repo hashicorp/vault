@@ -87,10 +87,6 @@ func TestCore_EnableCredential(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !backend.isInitialized {
-		t.Fatalf("backend is not initialized")
-	}
-
 	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/foo/bar")
 	if match != "auth/foo/" {
 		t.Fatalf("missing mount, match: %q", match)
@@ -177,12 +173,6 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	err := c.setupCredentials(context.Background())
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	for _, b := range backends {
-		if !b.isInitialized {
-			t.Fatalf("backend is not initialized")
-		}
 	}
 
 	rawLocal, err := c.barrier.Get(context.Background(), coreLocalAuthConfigPath)

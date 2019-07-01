@@ -689,11 +689,12 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Initialize
 		if !nilMount {
-			err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
-			if err != nil {
-				c.logger.Error("failed to initialize auth entry", "path", entry.Path, "error", err)
-				return errLoadAuthFailed
-			}
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				if err != nil {
+					c.logger.Error("failed to initialize auth entry", "path", entry.Path, "error", err)
+				}
+			})
 		}
 	}
 
@@ -701,9 +702,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// persist non-local auth
 		return c.persistAuth(ctx, c.auth, nil)
 	}
-
-	// TODO do we need to check for AWS auth builtin backed, and initialize it?
-	// If so, is this the right place to do that?
 
 	return nil
 }
