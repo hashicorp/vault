@@ -1,9 +1,13 @@
 package framework
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/go-test/deep"
 )
 
 func TestFieldDataGet(t *testing.T) {
@@ -963,4 +967,73 @@ func TestFieldDataGetFirst(t *testing.T) {
 	if ok {
 		t.Fatal("shouldn't have gotten anything for cats")
 	}
+}
+
+func TestUpdateOrDefault(t *testing.T) {
+	type role struct {
+		Name   string
+		Age    int
+		Colors []string
+		Period time.Duration
+	}
+
+	origRole := role{
+		Name:   "Pat",
+		Age:    5,
+		Colors: []string{"green", "blue"},
+		Period: 10 * time.Second,
+	}
+
+	data := &FieldData{
+		Raw: map[string]interface{}{
+			"name":   "Terry",
+			"colors": []string{"orange", "red"},
+		},
+		Schema: map[string]*FieldSchema{
+			"name":   {Type: TypeString},
+			"age":    {Type: TypeInt, Default: 8},
+			"colors": {Type: TypeCommaStringSlice},
+		},
+	}
+
+	{
+		currentRole := origRole
+
+		data.UpdateOrDefault("name", &currentRole.Name, false)
+		data.UpdateOrDefault("colors", &currentRole.Colors, false)
+
+		expRole := role{
+			Name:   "Terry",
+			Age:    5,
+			Colors: []string{"orange", "red"},
+			Period: 10 * time.Second,
+		}
+		fmt.Println(expRole)
+		fmt.Println(currentRole)
+
+		if diff := deep.Equal(currentRole, expRole); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
+	// test useDefault capability
+	{
+		currentRole := origRole
+
+		data.UpdateOrDefault("age", &currentRole.Age, true)
+
+		expRole := role{
+			Name:   "Pat",
+			Age:    8,
+			Colors: []string{"green", "blue"},
+			Period: 10 * time.Second,
+		}
+		fmt.Println(expRole)
+		fmt.Println(currentRole)
+
+		if diff := deep.Equal(currentRole, expRole); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
 }

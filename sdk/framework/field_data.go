@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -139,6 +140,35 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 		return nil, false,
 			fmt.Errorf("unknown field type %q for field %q", schema.Type, k)
 	}
+}
+
+func (d *FieldData) UpdateOrDefault(k string, val interface{}, useDefault bool) bool {
+	var updated bool
+	var ret interface{}
+
+	if v, ok := d.GetOk(k); ok {
+		ret = v
+	} else if useDefault {
+		ret = d.Get(k)
+	}
+
+	if ret != nil {
+		switch v := val.(type) {
+		case *int:
+			*v = ret.(int)
+		case *string:
+			*v = ret.(string)
+		case *[]string:
+			*v = ret.([]string)
+		case *time.Duration:
+			*v = time.Duration(ret.(int)) * time.Second
+		default:
+			panic(fmt.Sprintf("error converting key %q", k))
+		}
+		updated = true
+	}
+
+	return updated
 }
 
 func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bool, error) {
