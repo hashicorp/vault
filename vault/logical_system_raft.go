@@ -127,8 +127,6 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 	}
 }
 
-var pendingRaftPeers = make(map[string][]byte)
-
 func (b *SystemBackend) handleRaftConfigurationGet() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
@@ -200,7 +198,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		pendingRaftPeers[serverID] = uuid
+		b.Core.pendingRaftPeers[serverID] = uuid
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -240,12 +238,12 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswer, ok := pendingRaftPeers[serverID]
+		expectedAnswer, ok := b.Core.pendingRaftPeers[serverID]
 		if !ok {
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
-		delete(pendingRaftPeers, serverID)
+		delete(b.Core.pendingRaftPeers, serverID)
 
 		if subtle.ConstantTimeCompare(answer, expectedAnswer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest

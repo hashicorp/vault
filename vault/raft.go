@@ -109,6 +109,16 @@ func (c *Core) startRaftStorage(ctx context.Context) error {
 	return nil
 }
 
+func (c *Core) setupRaftActiveNode(ctx context.Context) error {
+	c.pendingRaftPeers = make(map[string][]byte)
+	return c.startPeriodicRaftTLSRotate(ctx)
+}
+
+func (c *Core) stopRaftActiveNode() {
+	c.pendingRaftPeers = nil
+	c.stopPeriodicRaftTLSRotate()
+}
+
 // startPeriodicRaftTLSRotate will spawn a go routine in charge of periodically
 // rotating the TLS certs and keys used for raft traffic.
 //
