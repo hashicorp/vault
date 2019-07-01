@@ -6,6 +6,7 @@ import DS from 'ember-data';
 
 export default Route.extend({
   wizard: service(),
+
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {

@@ -6,13 +6,19 @@ import ListRoute from 'vault/mixins/list-route';
 export default Route.extend(ListRoute, {
   wizard: service(),
   pathHelp: service('path-help'),
-  model() {
+
+  getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { page, pageFilter } = this.paramsFor(this.routeName);
-    const methodModel = this.modelFor('vault.cluster.access.method');
-    const { type } = methodModel;
-    let modelType = `generated-${singularize(itemType)}-${type}`;
     const { path: method } = this.paramsFor('vault.cluster.access.method');
+    const methodModel = this.modelFor('vault.cluster.access.method');
+    const { apiPath, type } = methodModel;
+    return { apiPath, type, method, itemType };
+  },
+
+  model() {
+    const { type, method, itemType } = this.getMethodAndModelInfo();
+    const { page, pageFilter } = this.paramsFor(this.routeName);
+    let modelType = `generated-${singularize(itemType)}-${type}`;
 
     return this.store
       .lazyPaginatedQuery(modelType, {
@@ -38,16 +44,18 @@ export default Route.extend(ListRoute, {
       }
       return true;
     },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
+    },
   },
   setupController(controller) {
     this._super(...arguments);
-    const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    let { path } = this.paramsFor('vault.cluster.access.method');
+    const { apiPath, method, itemType } = this.getMethodAndModelInfo();
     controller.set('itemType', singularize(itemType));
-    controller.set('method', path);
-    const { apiPath } = this.modelFor('vault.cluster.access.method');
-    this.pathHelp.getPaths(apiPath, path, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+    controller.set('method', method);
+    this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
+      controller.set('paths', paths.navPaths.reduce((acc, cur) => acc.concat(cur.path), []));
     });
   },
 });

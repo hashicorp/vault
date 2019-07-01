@@ -22,6 +22,9 @@ func pathConfig(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action: "Configure",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
