@@ -345,13 +345,9 @@ func TestMySQL_SetCredentials(t *testing.T) {
 		Rotation: []string{testRoleStaticRotate},
 	}
 
-	username, password, err := db.SetCredentials(context.Background(), statements, userConfig)
+	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
-	}
-
-	if username != dbUser {
-		t.Fatalf("SetCredentials returned different username, expected (%s), got (%s)", dbUser, username)
 	}
 
 	// verify new password works
@@ -362,16 +358,12 @@ func TestMySQL_SetCredentials(t *testing.T) {
 	// call SetCredentials again, password will change
 	newPassword, _ = db.GenerateCredentials(context.Background())
 	userConfig.Password = newPassword
-	_, password, err = db.SetCredentials(context.Background(), statements, userConfig)
+	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if password != newPassword {
-		t.Fatal("passwords should have changed")
-	}
-
-	if err := testCredsExist(t, connURL, dbUser, password); err != nil {
+	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
