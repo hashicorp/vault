@@ -736,57 +736,71 @@ func TestSingletonMountTableFunc(t *testing.T) {
 	}
 }
 
-//func TestCore_SetupMounts_Initialize(t *testing.T) {
-//	c, _, _ := TestCoreUnsealed(t)
-//
-//	counter := 0
-//	backends := []*NoopBackend{
-//		&NoopBackend{
-//			BackendType: logical.TypeLogical,
-//		},
-//		&NoopBackend{
-//			BackendType: logical.TypeLogical,
-//		},
-//	}
-//
-//	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-//		b := backends[counter]
-//		counter++
-//		return b, nil
-//	}
-//
-//	c.mounts = &MountTable{
-//		Type: mountTableType,
-//		Entries: []*MountEntry{
-//			&MountEntry{
-//				Table:            mountTableType,
-//				Path:             "noop/",
-//				Type:             "noop",
-//				UUID:             "abcd",
-//				Accessor:         "kv-abcd",
-//				BackendAwareUUID: "abcde",
-//				NamespaceID:      namespace.RootNamespaceID,
-//				namespace:        namespace.RootNamespace,
-//			},
-//			&MountEntry{
-//				Table:            mountTableType,
-//				Path:             "noop2/",
-//				Type:             "noop",
-//				UUID:             "bcde",
-//				Accessor:         "kv-bcde",
-//				BackendAwareUUID: "bcdea",
-//				NamespaceID:      namespace.RootNamespaceID,
-//				namespace:        namespace.RootNamespace,
-//			},
-//		},
-//	}
-//
-//	// Both should set up successfully
-//	err := c.setupMounts(namespace.RootContext(nil))
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	if len(c.mounts.Entries) != 2 {
-//		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
-//	}
-//}
+func TestCore_MountInitialize(t *testing.T) {
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		// Mount the noop backend
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  "foo/",
+			Type:  "initable",
+		}
+		if err := c.mount(namespace.RootContext(nil), me); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		c.mounts = &MountTable{
+			Type: mountTableType,
+			Entries: []*MountEntry{
+				&MountEntry{
+					Table:            mountTableType,
+					Path:             "foo/",
+					Type:             "initable",
+					UUID:             "abcd",
+					Accessor:         "initable-abcd",
+					BackendAwareUUID: "abcde",
+					NamespaceID:      namespace.RootNamespaceID,
+					namespace:        namespace.RootNamespace,
+				},
+			},
+		}
+
+		err := c.setupMounts(namespace.RootContext(nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// run the postUnseal funcs, so that the backend will be inited
+		for _, f := range c.postUnsealFuncs {
+			f()
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+}

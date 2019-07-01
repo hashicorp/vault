@@ -513,6 +513,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 	// Initialize
 	if !nilMount {
+		// restore the original readOnlyErr, so we can write to the view in
+		// Initialize() if necessary
+		view.setReadOnlyErr(origReadOnlyErr)
+		// Initialize
 		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
