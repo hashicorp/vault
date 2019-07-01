@@ -1,12 +1,5 @@
 package mongodb
 
-import (
-	"encoding/json"
-	"fmt"
-
-	mgo "gopkg.in/mgo.v2"
-)
-
 type createUserCommand struct {
 	Username string        `bson:"createUser"`
 	Password string        `bson:"pwd"`
@@ -47,24 +40,6 @@ func (roles mongodbRoles) toStandardRolesArray() []interface{} {
 			standardRolesArray = append(standardRolesArray, role.Role)
 		} else {
 			standardRolesArray = append(standardRolesArray, role)
-		}
-	}
-	return standardRolesArray
-}
-
-// mgo.Role is a named string type
-func (roles mongodbRoles) toStandardRolesStringArray() []mgo.Role {
-	var standardRolesArray []mgo.Role
-	for _, role := range roles {
-		if role.DB == "" {
-			standardRolesArray = append(standardRolesArray, mgo.Role(role.Role))
-		} else {
-			b, err := json.Marshal(role)
-			if err != nil {
-				fmt.Println("error:", err)
-			}
-			s := string(b)
-			standardRolesArray = append(standardRolesArray, mgo.Role(s))
 		}
 	}
 	return standardRolesArray
