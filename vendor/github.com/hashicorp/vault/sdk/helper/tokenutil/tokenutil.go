@@ -73,47 +73,74 @@ func TokenFields() map[string]*framework.FieldSchema {
 		"token_bound_cidrs": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Bound CIDRs",
+			},
 		},
 
 		"token_explicit_max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenExplicitMaxTTLHelp,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Explicit Maximum TTL",
+			},
 		},
 
 		"token_max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The maximum lifetime of the generated token",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Maximum TTL",
+			},
 		},
 
 		"token_no_default_policy": &framework.FieldSchema{
 			Type:        framework.TypeBool,
 			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Do Not Attach 'default' Policy To Generated Tokens",
+			},
 		},
 
 		"token_period": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Period",
+			},
 		},
 
 		"token_policies": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Policies",
+			},
 		},
 
 		"token_type": &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Default:     "default-service",
 			Description: "The type of token to generate, service or batch",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Type",
+			},
 		},
 
 		"token_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The initial ttl of the token to generate",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Initial TTL",
+			},
 		},
 
 		"token_num_uses": &framework.FieldSchema{
 			Type:        framework.TypeInt,
 			Description: "The maximum number of times a token may be used, a value of zero means unlimited",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Maximum Uses of Generated Tokens",
+			},
 		},
 	}
 }
