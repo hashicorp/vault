@@ -1,11 +1,12 @@
 <PageHeader as |p|>
-  <p.top>
-  </p.top>
   <p.levelLeft>
+  <div>
+    <AlertBanner @type="warning" @message={{"The \"Try it out\" functionality in this API explorer will communicate to this Vault server's endpoints with your current token. Your token will also be shown on the screen in the example curl command output."}} />
     <NamespaceReminder as |R|>
       All requests will be executed with the request header <code>X-Vault-Namespace: {{R.namespace.path}}</code> though it is possible to use the namespace <code>{{R.namespace.path}}</code> as an API prefix.
       See <DocLink @path="/api/overview#namespaces">the API documentation</DocLink> for examples.
     </NamespaceReminder>
+  </div>
   </p.levelLeft>
 </PageHeader>
 
