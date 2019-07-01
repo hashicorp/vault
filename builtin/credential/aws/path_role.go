@@ -355,14 +355,16 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 			logger.Info("starting initialization")
 
-			// check if we've already upgraded to the current role storage version
+			// check if we've already upgraded to the current role storage
+			// version
 			version, err := b.upgradedRoleStorageVersion(ctx, s)
 			if err != nil {
 				logger.Error("error running initialization", "error", err)
 				return
 			}
 			if version == currentRoleStorageVersion {
-				logger.Info("initialization has already been performed for storage version", currentRoleStorageVersion)
+				logger.Info("skipping initialization -- has already been performed for storage version",
+					currentRoleStorageVersion)
 				return
 			}
 
@@ -444,8 +446,8 @@ func (b *backend) upgradedRoleStorageVersion(ctx context.Context, s logical.Stor
 	return strconv.Atoi(string(entry.Value))
 }
 
-// setUpgradedRoleStorageVersion returns the value of the roleStorageVersion that
-// we have already upgraded to, or -1 if the upgrade has never been run
+// setUpgradedRoleStorageVersion returns the value of the roleStorageVersion
+// that we have already upgraded to, or -1 if the upgrade has never been run
 func (b *backend) setUpgradedRoleStorageVersion(ctx context.Context, s logical.Storage, version int) error {
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
