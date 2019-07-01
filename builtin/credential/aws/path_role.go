@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -331,11 +332,6 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 		logger := b.Logger().Named("initialize")
 
-		// TODO we need to figure out a way to persist the fact that this has
-		// already been run in the past for a given currentRoleStorageVersion,
-		// so that we only ever run it once even if the vault server is
-		// restarted.
-
 		// grab the guard
 		if !atomic.CompareAndSwapUint32(b.initializeCASGuard, 0, 1) {
 			logger.Error("initializational already in progress")
@@ -358,12 +354,33 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 			ctx = context.Background()
 
 			logger.Info("starting initialization")
-			err := b.updateUpgradableRoleEntries(ctx, s)
-			if err == nil {
-				logger.Info("initialization succeeded")
-			} else {
+
+			// check if we've already upgraded to the current role storage version
+			version, err := b.upgradedRoleStorageVersion(ctx, s)
+			if err != nil {
 				logger.Error("error running initialization", "error", err)
+				return
 			}
+			if version == currentRoleStorageVersion {
+				logger.Info("initialization has already been performed for storage version", currentRoleStorageVersion)
+				return
+			}
+
+			// perform the upgrade
+			err = b.updateUpgradableRoleEntries(ctx, s)
+			if err != nil {
+				logger.Error("error running initialization", "error", err)
+				return
+			}
+
+			// save the current role storage version
+			err = b.setUpgradedRoleStorageVersion(ctx, s, currentRoleStorageVersion)
+			if err != nil {
+				logger.Error("error running initialization", "error", err)
+				return
+			}
+
+			logger.Info("initialization succeeded")
 		}()
 
 		return nil
@@ -405,6 +422,38 @@ func (b *backend) updateUpgradableRoleEntry(ctx context.Context, s logical.Stora
 
 	_, err := b.roleInternal(ctx, s, roleName)
 	return err
+}
+
+// upgradedRoleStorageVersion returns the value of the roleStorageVersion that
+// we have already upgraded to, or -1 if the upgrade has never been run.
+func (b *backend) upgradedRoleStorageVersion(ctx context.Context, s logical.Storage) (int, error) {
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	entry, err := s.Get(ctx, "config/role-storage-version")
+	if err != nil {
+		return -1, err
+	}
+
+	// the upgrade has never been run
+	if entry == nil {
+		return -1, nil
+	}
+
+	// return the upgraded value
+	return strconv.Atoi(string(entry.Value))
+}
+
+// setUpgradedRoleStorageVersion returns the value of the roleStorageVersion that
+// we have already upgraded to, or -1 if the upgrade has never been run
+func (b *backend) setUpgradedRoleStorageVersion(ctx context.Context, s logical.Storage, version int) error {
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	return s.Put(ctx, &logical.StorageEntry{
+		Key:   "config/role-storage-version",
+		Value: []byte(strconv.Itoa(version)),
+	})
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated

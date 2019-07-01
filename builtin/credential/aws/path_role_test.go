@@ -801,7 +801,7 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 }
 
-func TestUpdateUpgradableRoleEntries(t *testing.T) {
+func TestInitialize(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -858,8 +858,9 @@ func TestUpdateUpgradableRoleEntries(t *testing.T) {
 		}
 	}
 
-	// upgrade all the entries
-	err = b.updateUpgradableRoleEntries(ctx, storage)
+	// upgrade all the entries, and wait for the goroutine to finish
+	err = b.initialize(ctx, storage)
+	time.Sleep(time.Second)
 
 	// read the entries from storage
 	after := make([]testData, 0)
@@ -904,6 +905,49 @@ func TestUpdateUpgradableRoleEntries(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, after); diff != nil {
 		t.Fatal(diff)
+	}
+
+	// run it againg -- nothing will happen
+	err = b.initialize(ctx, storage)
+}
+
+func TestUpgradedRoleStorageVersion(t *testing.T) {
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	err = b.Setup(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//-------------------------
+
+	version, err := b.upgradedRoleStorageVersion(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if -1 != version {
+		t.Fatalf("expected version %d, got %d", -1, version)
+	}
+
+	err = b.setUpgradedRoleStorageVersion(ctx, storage, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	version, err = b.upgradedRoleStorageVersion(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if 42 != version {
+		t.Fatalf("expected version %d, got %d", 42, version)
 	}
 }
 
