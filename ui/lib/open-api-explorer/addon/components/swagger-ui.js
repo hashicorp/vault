@@ -72,8 +72,7 @@ export default Component.extend({
             taggedOps
               .map((tagObj, tag) => {
                 let operations = tagObj.get('operations').filter(operationObj => {
-                  // TODO: should this be includes instead of startsWith? I'm thinking yes
-                  return operationObj.get('path').startsWith(path);
+                  return operationObj.get('path').includes(path);
                 });
                 return tagObj.set('operations', operations);
               })
