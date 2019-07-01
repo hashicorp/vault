@@ -2,7 +2,7 @@ import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
+const uiCommands = ['clearall', 'clear', 'explore', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce(
@@ -32,26 +32,15 @@ export function extractDataAndFlags(data, flags) {
   );
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
-  const isUICommand = uiCommands.includes(command);
+export function executeUICommand(command, logAndOutput, commandFns) {
+  let cmd = command.startsWith('explore') ? 'explore' : command;
+  let isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  switch (command) {
-    case 'clearall':
-      clearLog(true);
-      break;
-    case 'clear':
-      clearLog();
-      break;
-    case 'fullscreen':
-      toggleFullscreen();
-      break;
-    case 'refresh':
-      refreshFn();
-      break;
+  if (typeof commandFns[cmd] === 'function') {
+    commandFns[cmd]();
   }
-
   return isUICommand;
 }
 
