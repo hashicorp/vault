@@ -87,10 +87,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			return nil
 		},
 	}
+
+	// TODO: REMOVE!!!!!!
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
-			iStore.oidcPeriodicFunc(ctx)
+			iStore.oidcPeriodicFunc(context.Background())
 		}
 	}()
 

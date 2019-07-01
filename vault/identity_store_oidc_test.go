@@ -491,6 +491,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 // TestOIDC_PeriodicFunc tests timing logic for running key
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
+	t.Skip()
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)

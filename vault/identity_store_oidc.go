@@ -393,7 +393,11 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		c.effectiveIssuer = i.core.redirectAddr + issuerPath
+		nsPath := ""
+		if ns.Path != "" {
+			nsPath = ns.Path
+		}
+		c.effectiveIssuer = i.core.redirectAddr + nsPath + issuerPath
 	}
 
 	i.oidcCache.SetDefault(ns, "config", &c)
@@ -1457,6 +1461,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	if time.Now().After(nextRun) {
 		for _, nsPath := range nsPaths {
 			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
+
+			if s == nil {
+				continue
+			}
 
 			nextRotation, err := i.oidcKeyRotation(ctx, s)
 			if err != nil {
