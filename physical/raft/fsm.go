@@ -55,6 +55,16 @@ type FSMApplyResponse struct {
 // that lives on local disk. FSM implements raft.FSM and physical.Backend
 // interfaces.
 type FSM struct {
+	// latestIndex and latestTerm must stay at the top of this struct to be
+	// properly 64-bit aligned.
+
+	// latestIndex and latestTerm are the term and index of the last log we
+	// received
+	latestIndex *uint64
+	latestTerm  *uint64
+	// latestConfig is the latest server configuration we've seen
+	latestConfig atomic.Value
+
 	l           sync.RWMutex
 	path        string
 	logger      log.Logger
@@ -65,13 +75,6 @@ type FSM struct {
 
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
-
-	// latestIndex and latestTerm are the term and index of the last log we
-	// received
-	latestIndex *uint64
-	latestTerm  *uint64
-	// latestConfig is the latest server configuration we've seen
-	latestConfig atomic.Value
 
 	// This is just used in tests to disable to storing the latest indexes and
 	// configs so we can conform to the standard backend tests, which expect to

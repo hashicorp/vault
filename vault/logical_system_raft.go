@@ -377,7 +377,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}
 
 			b.Core.logger.Info("applying snapshot")
-			if err := raftStorage.RestoreSnapshot(b.Core.activeContext, metadata, snapFile); err != nil {
+			if err := raftStorage.RestoreSnapshot(ctx, metadata, snapFile); err != nil {
 				b.Core.logger.Error("error while restoring raft snapshot", "error", err)
 				return err
 			}
