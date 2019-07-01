@@ -3056,7 +3056,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":              true,
 		"token_type":             "default-service",
 		"token_num_uses":         123,
-		"allowed_entity_aliases": []string{},
+		"allowed_entity_aliases": []string(nil),
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3116,7 +3116,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl":       int64(288000),
 		"renewable":              false,
 		"token_type":             "default-service",
-		"allowed_entity_aliases": []string{},
+		"allowed_entity_aliases": []string(nil),
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3166,7 +3166,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_period":           int64(0),
 		"renewable":              false,
 		"token_type":             "default-service",
-		"allowed_entity_aliases": []string{},
+		"allowed_entity_aliases": []string(nil),
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3216,7 +3216,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_period":           int64(0),
 		"renewable":              false,
 		"token_type":             "default-service",
-		"allowed_entity_aliases": []string{},
+		"allowed_entity_aliases": []string(nil),
 	}
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
