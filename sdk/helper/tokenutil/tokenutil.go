@@ -172,6 +172,15 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
+	if t.TokenType == logical.TokenTypeBatch || t.TokenType == logical.TokenTypeDefaultBatch {
+		if t.TokenPeriod != 0 {
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate periodic tokens")
+		}
+		if t.TokenNumUses != 0 {
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate tokens with limited use count")
+		}
+	}
+
 	if ttlRaw, ok := d.GetOk("token_ttl"); ok {
 		t.TokenTTL = time.Duration(ttlRaw.(int)) * time.Second
 	}
@@ -203,6 +212,14 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = int64(t.TokenTTL.Seconds())
 	m["token_num_uses"] = t.TokenNumUses
+
+	if len(t.TokenPolicies) == 0 {
+		m["token_policies"] = []string{}
+	}
+
+	if len(t.TokenBoundCIDRs) == 0 {
+		m["token_bound_cidrs"] = []string{}
+	}
 }
 
 // PopulateTokenAuth populates Auth with parameters
@@ -216,6 +233,10 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
+}
+
+func DeprecationText(param string) string {
+	return fmt.Sprintf("Use %q instead. If this and %q are both specified, only %q will be used.", param, param, param)
 }
 
 const (

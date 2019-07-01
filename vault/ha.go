@@ -91,7 +91,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// Check if we are the leader
 	if !c.standby {
 		c.stateLock.RUnlock()
-		return true, c.redirectAddr, c.clusterAddr, nil
+		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
@@ -877,7 +877,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	copy(localCert, locCert)
 	adv := &activeAdvertisement{
 		RedirectAddr:     c.redirectAddr,
-		ClusterAddr:      c.clusterAddr,
+		ClusterAddr:      c.ClusterAddr(),
 		ClusterCert:      localCert,
 		ClusterKeyParams: keyParams,
 	}

@@ -371,7 +371,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"period": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_period' instead. If this and 'token_period' are both specified only 'token_period' will be used.",
+				Description: "Use 'token_period' instead.",
 				Deprecated:  true,
 			},
 
@@ -382,7 +382,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"explicit_max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "(DEPRECATED) Use 'token_explicit_max_ttl' instead. If this and 'token_explicit_max_ttl' are both specified only 'token_explicit_max_ttl' will be used.",
+				Description: "Use 'token_explicit_max_ttl' instead.",
 				Deprecated:  true,
 			},
 
@@ -394,7 +394,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"bound_cidrs": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified only 'token_bound_cidrs' will be used.",
+				Description: "Use 'token_bound_cidrs' instead.",
 				Deprecated:  true,
 			},
 		},
@@ -3094,7 +3094,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		periodRaw, ok = data.GetOk("period")
 		if ok {
 			entry.Period = time.Second * time.Duration(periodRaw.(int))
-			entry.TokenPeriod = 0
+			entry.TokenPeriod = entry.Period
 		}
 	} else {
 		_, ok = data.GetOk("period")
@@ -3116,7 +3116,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
 			}
 			entry.BoundCIDRs = boundCIDRs
-			entry.TokenBoundCIDRs = nil
+			entry.TokenBoundCIDRs = entry.BoundCIDRs
 		}
 	} else {
 		_, ok = data.GetOk("bound_cidrs")
@@ -3135,7 +3135,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
 		if ok {
 			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
-			entry.TokenExplicitMaxTTL = 0
+			entry.TokenExplicitMaxTTL = entry.ExplicitMaxTTL
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
 	} else {
