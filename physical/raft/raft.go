@@ -542,7 +542,7 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Address:         string(server.Address),
 			Leader:          server.Address == b.raft.Leader(),
 			Voter:           server.Suffrage == raft.Voter,
-			ProtocolVersion: string(raft.ProtocolVersionMax),
+			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
 		config.Servers = append(config.Servers, entry)
 	}

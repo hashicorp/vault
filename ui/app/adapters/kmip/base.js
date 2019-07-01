@@ -38,7 +38,12 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    return this.ajax(this.urlForQuery(query, type.modelName), 'GET');
+    return this.ajax(this.urlForQuery(query, type.modelName), 'GET').then(resp => {
+      // remove pagination query items here
+      const { size, page, responsePath, pageFilter, ...modelAttrs } = query;
+      resp._requestQuery = modelAttrs;
+      return resp;
+    });
   },
 
   queryRecord(store, type, query) {

@@ -68,7 +68,8 @@ Defaults to 'client'.`,
 
 			"lease": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "DEPRECATED: Use ttl.",
+				Description: "Use ttl instead.",
+				Deprecated:  true,
 			},
 		},
 
