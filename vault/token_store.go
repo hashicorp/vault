@@ -3094,7 +3094,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		periodRaw, ok = data.GetOk("period")
 		if ok {
 			entry.Period = time.Second * time.Duration(periodRaw.(int))
-			entry.TokenPeriod = 0
+			entry.TokenPeriod = entry.Period
 		}
 	} else {
 		_, ok = data.GetOk("period")
@@ -3116,7 +3116,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
 			}
 			entry.BoundCIDRs = boundCIDRs
-			entry.TokenBoundCIDRs = nil
+			entry.TokenBoundCIDRs = entry.BoundCIDRs
 		}
 	} else {
 		_, ok = data.GetOk("bound_cidrs")
@@ -3135,7 +3135,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
 		if ok {
 			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
-			entry.TokenExplicitMaxTTL = 0
+			entry.TokenExplicitMaxTTL = entry.ExplicitMaxTTL
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
 	} else {

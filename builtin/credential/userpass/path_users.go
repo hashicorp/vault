@@ -215,7 +215,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 			policiesRaw, ok = d.GetOk("policies")
 			if ok {
 				userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-				userEntry.TokenPolicies = nil
+				userEntry.TokenPolicies = userEntry.Policies
 			}
 		} else {
 			_, ok = d.GetOk("policies")
@@ -231,7 +231,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 			ttlRaw, ok = d.GetOk("ttl")
 			if ok {
 				userEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
-				userEntry.TokenTTL = 0
+				userEntry.TokenTTL = userEntry.TTL
 			}
 		} else {
 			_, ok = d.GetOk("ttl")
@@ -247,7 +247,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 			maxTTLRaw, ok = d.GetOk("max_ttl")
 			if ok {
 				userEntry.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
-				userEntry.TokenMaxTTL = 0
+				userEntry.TokenMaxTTL = userEntry.TokenMaxTTL
 			}
 		} else {
 			_, ok = d.GetOk("max_ttl")
@@ -267,7 +267,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 					return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 				}
 				userEntry.BoundCIDRs = boundCIDRs
-				userEntry.TokenBoundCIDRs = nil
+				userEntry.TokenBoundCIDRs = userEntry.BoundCIDRs
 			}
 		} else {
 			_, ok = d.GetOk("bound_cidrs")

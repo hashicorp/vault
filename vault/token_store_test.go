@@ -3706,7 +3706,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
 		req.Data = map[string]interface{}{
 			"explicit_max_ttl": 7200,
-			"token_type":       "default-batch",
+			"token_type":       "default-service",
 			"period":           5,
 			"bound_cidrs":      boundCIDRs[0].String(),
 		}
@@ -3736,7 +3736,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"token_explicit_max_ttl": int64(7200),
 			"explicit_max_ttl":       int64(7200),
 			"renewable":              false,
-			"token_type":             "default-batch",
+			"token_type":             "default-service",
 		}
 
 		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
