@@ -73,6 +73,10 @@ type idToken struct {
 	IssuedAt int64  `json:"iat"` // Time of token creation
 }
 
+// discovery contains the required elements of OIDC discovery needed for JWT
+// verification libraries to use the .well-known endpoint.
+//
+// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 type discovery struct {
 	Issuer        string   `json:"issuer"`
 	Auth          string   `json:"authorization_endpoint"`
@@ -81,9 +85,6 @@ type discovery struct {
 	ResponseTypes []string `json:"response_types_supported"`
 	Subjects      []string `json:"subject_types_supported"`
 	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
-	Scopes        []string `json:"scopes_supported"`
-	AuthMethods   []string `json:"token_endpoint_auth_methods_supported"`
-	Claims        []string `json:"claims_supported"`
 }
 
 // oidcCache is a this wrapping around go-cache to partition by namespace
@@ -127,6 +128,15 @@ const (
 )
 
 var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
+var supportedAlgs = []string{
+	string(jose.RS256),
+	string(jose.RS384),
+	string(jose.RS512),
+	string(jose.ES256),
+	string(jose.ES384),
+	string(jose.ES512),
+	string(jose.EdDSA),
+}
 
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
@@ -969,7 +979,7 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			Issuer:      c.effectiveIssuer,
 			Keys:        c.effectiveIssuer + "/.well-known/keys",
 			Subjects:    []string{"public"},
-			IDTokenAlgs: []string{string(jose.RS256)},
+			IDTokenAlgs: supportedAlgs,
 		}
 
 		data, err = json.Marshal(disc)
