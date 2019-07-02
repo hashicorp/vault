@@ -8,6 +8,7 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -264,6 +265,133 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 
 func DeprecationText(param string) string {
 	return fmt.Sprintf("Use %q instead. If this and %q are both specified, only %q will be used.", param, param, param)
+}
+
+func upgradeDurationValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *time.Duration) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			*oldVal = time.Duration(raw.(int)) * time.Second
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = 0
+		}
+	}
+
+	return nil
+}
+
+func upgradeIntValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *int) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			*oldVal = raw.(int)
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = 0
+		}
+	}
+
+	return nil
+}
+
+func upgradeStringSliceValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *[]string) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			// Special case: if we're looking at "token_policies" parse the policies
+			if newKey == "token_policies" {
+				*oldVal = policyutil.ParsePolicies(raw)
+			} else {
+				*oldVal = raw.([]string)
+			}
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = nil
+		}
+	}
+
+	return nil
+}
+
+func upgradeSockAddrSliceValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *[]*sockaddr.SockAddrMarshaler) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			boundCIDRs, err := parseutil.ParseAddrs(raw)
+			if err != nil {
+				return err
+			}
+			*oldVal = boundCIDRs
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = nil
+		}
+	}
+
+	return nil
+}
+
+// UpgradeValue takes in old/new data keys and old/new values and calls out to
+// a helper function to perform upgrades in a standardized way. It reqiures
+// pointers in all cases so that we can set directly into the target struct.
+func UpgradeValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal interface{}) error {
+	switch typedOldVal := oldVal.(type) {
+	case *time.Duration:
+		typedNewVal, ok := newVal.(*time.Duration)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeDurationValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *int:
+		typedNewVal, ok := newVal.(*int)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeIntValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *[]string:
+		typedNewVal, ok := newVal.(*[]string)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeStringSliceValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *[]*sockaddr.SockAddrMarshaler:
+		typedNewVal, ok := newVal.(*[]*sockaddr.SockAddrMarshaler)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeSockAddrSliceValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	default:
+		return errors.New("unhandled type in tokenutil.UpgradeValue")
+	}
 }
 
 const (
