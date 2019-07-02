@@ -9,6 +9,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -153,12 +154,13 @@ func TestStoragePackerV2_InvalidateCreation(t *testing.T) {
 		// items are reported.
 		storagePacker := getStoragePacker(t)
 		ctx := namespace.RootContext(nil)
+
 		present, deleted, err := storagePacker.InvalidateItems(ctx, bucketPath, rawBucket)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(present) != n {
-			t.Fatalf("%d elements  present", len(present))
+			t.Fatalf("%d elements present", len(present))
 		}
 		if len(deleted) != 0 {
 			t.Fatalf("%d elements deleted", len(deleted))
@@ -168,6 +170,19 @@ func TestStoragePackerV2_InvalidateCreation(t *testing.T) {
 		checkReturnedItems(t, allItems, present)
 		// Also check that SP has been modified
 		checkAllItems(t, storagePacker, ctx, allItems)
+
+		// check that correct lock is in use in the cache
+		newBucket, err := storagePacker.GetBucket(ctx, key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cacheKey := storagePacker.GetCacheKey(key)
+		if newBucket.LockEntry != locksutil.LockForKey(storagePacker.storageLocks, cacheKey) {
+			t.Fatalf("incorrect LockEntry %p in replacement Bucket, should be %p",
+				newBucket.LockEntry,
+				locksutil.LockForKey(storagePacker.storageLocks, key))
+		}
+
 	}
 
 	t.Logf("invalidating existing bucket 00")

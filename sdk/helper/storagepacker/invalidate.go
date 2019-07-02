@@ -75,6 +75,7 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 	} else {
 		// Fake up a storage entry for the bucket and decode it
 		storage := &logical.StorageEntry{
+			Key:   bucketKey,
 			Value: newValue,
 		}
 		replacementBucket, err = s.DecodeBucket(storage)

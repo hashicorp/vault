@@ -203,14 +203,14 @@ func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 	}
 
-	cacheKey := s.GetCacheKey(storageEntry.Key)
+	if bucket.Key == "" {
+		bucket.Key = storageEntry.Key
+	}
+	cacheKey := s.GetCacheKey(bucket.Key)
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lb := &LockedBucket{
 		LockEntry: lock,
 		Bucket:    &bucket,
-	}
-	if lb.Key == "" {
-		lb.Key = storageEntry.Key
 	}
 
 	return lb, nil
