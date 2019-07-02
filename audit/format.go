@@ -17,8 +17,11 @@ import (
 )
 
 type AuditFormatWriter interface {
+	// WriteRequest writes the request entry to the writer or returns an error.
 	WriteRequest(io.Writer, *AuditRequestEntry) error
+	// WriteResponse writes the response entry to the writer or returns an error.
 	WriteResponse(io.Writer, *AuditResponseEntry) error
+	// Salt returns a non-nil salt or an error.
 	Salt(context.Context) (*salt.Salt, error)
 }
 
