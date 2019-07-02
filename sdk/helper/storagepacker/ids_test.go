@@ -9,7 +9,7 @@ import (
 
 func getStoragePackerBits(tb testing.TB, baseBucketBits int, bucketShardBits int) *StoragePackerV2 {
 	storage := &logical.InmemStorage{}
-	storageView := logical.NewStorageView(storage, "packer/buckets/v2")
+	storageView := logical.NewStorageView(storage, "packer/buckets")
 	storagePacker, err := NewStoragePackerV2(context.Background(), &Config{
 		BucketStorageView: storageView,
 		ConfigStorageView: logical.NewStorageView(storage, "packer/config"),
