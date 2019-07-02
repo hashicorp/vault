@@ -1,6 +1,7 @@
 /**
  * @module MenuLoader
- * MenuLoader components are used to...
+ * MenuLoader components are used to show a loading state when fetching data is triggered by opening a
+ * popup menu.
  *
  * @example
  * ```js
