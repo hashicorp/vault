@@ -543,18 +543,19 @@ func TestOIDC_SignIDToken(t *testing.T) {
 // TestOIDC_PeriodicFunc tests timing logic for running key
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
-	// tweak these
 	cyclePeriod := 2 * time.Second
 
-	// after "runTime", a namedKey's keyRing should contain "numKeys" keys
+	// after "runTime", a namedKey's keyRing should contain "numKeys" keys and "numPublicKeys" should be stored at publicKeysConfigPath
 	var testCases = []struct {
-		cycle   int
-		numKeys int
+		cycle         int
+		numKeys       int
+		numPublicKeys int
 	}{
-		{0, 0},
-		{1, 1},
-		{2, 2},
-		{3, 2},
+		{0, 0, 0},
+		{1, 1, 1},
+		{2, 1, 1},
+		{3, 2, 2},
+		{4, 2, 2},
 	}
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
@@ -589,34 +590,39 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	}
 
 	currentCycle := 0
-	samples := make([]*logical.StorageEntry, len(testCases))
-	fmt.Printf("Length of testcases: %d  -- length of samples: %d", len(testCases), len(samples))
+	lastCycle := testCases[len(testCases)-1].cycle
+	namedKeySamples := make([]*logical.StorageEntry, len(testCases))
+	publicKeysSamples := make([][]string, len(testCases))
 
+	i := 0
 	start := time.Now()
-	for i, testCase := range testCases {
+	for currentCycle <= lastCycle {
+		fmt.Printf("\nCurrent cycle: %d", currentCycle)
 		c.identityStore.oidcPeriodicFunc(ctx, storage)
-		// 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-		// 	entry.DecodeJSON(&namedKey)
-		// 	if len(namedKey.KeyRing) != 0 {
-		// 		t.Fatalf("expected namedKey's KeyRing to be of length 0 but was: %#v", len(namedKey.KeyRing))
-		// 	}
-		// collect a smaple if we are in the correct cycle
-		if currentCycle == testCase.cycle {
-			fmt.Printf("\ninside a collection, i is: %d, tescase cycle is: %d\n", i, testCase.cycle)
-			entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-			samples[i] = entry
+		if currentCycle == testCases[i].cycle {
+			namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+keyName)
+			publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+			namedKeySamples[i] = namedKeyEntry
+			publicKeysSamples[i] = publicKeysEntry
+			i = i + 1
 		}
 		currentCycle = currentCycle + 1
 		// sleep until we are in the next cycle
 		nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle))
 		time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
+		if currentCycle == 2 {
+			time.Sleep(500 * time.Milisecond)
+		}
 	}
 
 	// measure collected samples
 	for i := range testCases {
-		samples[i].DecodeJSON(&namedKey)
+		namedKeySamples[i].DecodeJSON(&namedKey)
 		if len(namedKey.KeyRing) != testCases[i].numKeys {
 			t.Fatalf("At cycle: %d expected namedKey's KeyRing to be of length %d but was: %d", testCases[i].cycle, testCases[i].numKeys, len(namedKey.KeyRing))
+		}
+		if len(publicKeysSamples[i]) != testCases[i].numPublicKeys {
+			t.Fatalf("At cycle: %d expected public keys to be of length %d but was: %d", testCases[i].cycle, testCases[i].numPublicKeys, len(publicKeysSamples[i]))
 		}
 	}
 

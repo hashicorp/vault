@@ -1354,11 +1354,14 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 		nextRun = v.(time.Time)
 	}
 
+	fmt.Printf("\ncurrent time: %#v\nnext run at:%#v", time.Now().String(), nextRun.String())
+
 	// The condition here is for performance, not precise timing. The actions can
 	// be run at any time safely, but there is no need to invoke them (which
 	// might be somewhat expensive if there are many roles/keys) if we're not
 	// past any rotation/expiration TTLs.
 	if time.Now().After(nextRun) {
+		fmt.Printf("\n-- doing stuff in oidcPeriodcFunc --\n\n")
 		nextRotation, err := i.oidcKeyRotation(ctx, s)
 		if err != nil {
 			i.Logger().Warn("error rotating OIDC keys", "err", err)
