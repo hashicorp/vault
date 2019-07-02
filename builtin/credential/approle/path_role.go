@@ -954,36 +954,12 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	// handle upgrade cases
 	{
-		policiesRaw, ok := data.GetOk("token_policies")
-		if !ok {
-			policiesRaw, ok = data.GetOk("policies")
-			if ok {
-				role.Policies = policyutil.ParsePolicies(policiesRaw)
-				role.TokenPolicies = role.Policies
-			}
-		} else {
-			_, ok = data.GetOk("policies")
-			if ok {
-				role.Policies = role.TokenPolicies
-			} else {
-				role.Policies = nil
-			}
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		periodRaw, ok := data.GetOk("token_period")
-		if !ok {
-			periodRaw, ok = data.GetOk("period")
-			if ok {
-				role.Period = time.Duration(periodRaw.(int)) * time.Second
-				role.TokenPeriod = role.Period
-			}
-		} else {
-			_, ok = data.GetOk("period")
-			if ok {
-				role.Period = role.TokenPeriod
-			} else {
-				role.Period = 0
-			}
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 

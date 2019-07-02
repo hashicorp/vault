@@ -9,8 +9,6 @@ import (
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -287,93 +285,37 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 
 	// Handle upgrade cases
 	{
-		policiesRaw, ok := d.GetOk("token_policies")
-		if !ok {
-			policiesRaw, ok = d.GetOk("policies")
-			if ok {
-				cert.Policies = policyutil.ParsePolicies(policiesRaw)
-				cert.TokenPolicies = cert.Policies
-			}
-		} else {
-			_, ok = d.GetOk("policies")
-			if ok {
-				cert.Policies = cert.TokenPolicies
-			} else {
-				cert.Policies = nil
-			}
+		if err := tokenutil.UpgradeValue(d, "policies", "token_policies", &cert.Policies, &cert.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		ttlRaw, ok := d.GetOk("token_ttl")
+		if err := tokenutil.UpgradeValue(d, "ttl", "token_ttl", &cert.TTL, &cert.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		// Special case here for old lease value
+		_, ok := d.GetOk("token_ttl")
 		if !ok {
-			ttlRaw, ok = d.GetOk("ttl")
-			if !ok {
-				ttlRaw, ok = d.GetOk("lease")
-			}
-			if ok {
-				cert.TTL = time.Duration(ttlRaw.(int)) * time.Second
-				cert.TokenTTL = cert.TTL
-			}
-		} else {
 			_, ok = d.GetOk("ttl")
-			if ok {
-				cert.TTL = cert.TokenTTL
-			} else {
-				cert.TTL = 0
-			}
-		}
-
-		maxTTLRaw, ok := d.GetOk("token_max_ttl")
-		if !ok {
-			maxTTLRaw, ok = d.GetOk("max_ttl")
-			if ok {
-				cert.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
-				cert.TokenMaxTTL = cert.MaxTTL
-			}
-		} else {
-			_, ok = d.GetOk("max_ttl")
-			if ok {
-				cert.MaxTTL = cert.TokenMaxTTL
-			} else {
-				cert.MaxTTL = 0
-			}
-		}
-
-		periodRaw, ok := d.GetOk("token_period")
-		if !ok {
-			periodRaw, ok = d.GetOk("period")
-			if ok {
-				cert.Period = time.Duration(periodRaw.(int)) * time.Second
-				cert.TokenPeriod = cert.Period
-			}
-		} else {
-			_, ok = d.GetOk("period")
-			if ok {
-				cert.Period = cert.TokenPeriod
-			} else {
-				cert.Period = 0
-			}
-		}
-
-		boundCIDRsRaw, ok := d.GetOk("token_bound_cidrs")
-		if !ok {
-			boundCIDRsRaw, ok = d.GetOk("bound_cidrs")
-			if ok {
-				boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw)
-				if err != nil {
-					return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			if !ok {
+				ttlRaw, ok := d.GetOk("lease")
+				if ok {
+					cert.TTL = time.Duration(ttlRaw.(int)) * time.Second
+					cert.TokenTTL = cert.TTL
 				}
-				cert.BoundCIDRs = boundCIDRs
-				cert.TokenBoundCIDRs = cert.BoundCIDRs
-			}
-		} else {
-			_, ok = d.GetOk("bound_cidrs")
-			if ok {
-				cert.BoundCIDRs = cert.TokenBoundCIDRs
-			} else {
-				cert.BoundCIDRs = nil
 			}
 		}
 
+		if err := tokenutil.UpgradeValue(d, "max_ttl", "token_max_ttl", &cert.MaxTTL, &cert.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(d, "period", "token_period", &cert.Period, &cert.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(d, "bound_cidrs", "token_bound_cidrs", &cert.BoundCIDRs, &cert.TokenBoundCIDRs); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	var resp logical.Response

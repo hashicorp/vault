@@ -86,36 +86,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 
 	// Handle upgrade cases
 	{
-		ttlRaw, ok := data.GetOk("token_ttl")
-		if !ok {
-			ttlRaw, ok = data.GetOk("ttl")
-			if ok {
-				c.TTL = time.Duration(ttlRaw.(int)) * time.Second
-				c.TokenTTL = c.TTL
-			}
-		} else {
-			_, ok = data.GetOk("ttl")
-			if ok {
-				c.TTL = c.TokenTTL
-			} else {
-				c.TTL = 0
-			}
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &c.TTL, &c.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		maxTTLRaw, ok := data.GetOk("token_max_ttl")
-		if !ok {
-			maxTTLRaw, ok = data.GetOk("max_ttl")
-			if ok {
-				c.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
-				c.TokenMaxTTL = c.MaxTTL
-			}
-		} else {
-			_, ok = data.GetOk("max_ttl")
-			if ok {
-				c.MaxTTL = c.TokenMaxTTL
-			} else {
-				c.MaxTTL = 0
-			}
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &c.MaxTTL, &c.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
