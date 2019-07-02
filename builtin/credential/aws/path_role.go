@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -327,32 +326,16 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 	// Initialize only if we are either:
 	//   (1) A local mount.
-	//   (2) Are _not_ a replicated standby cluster.
+	//   (2) Are _not_ a replicated secondary cluster or a performance standby node.
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-
-		logger := b.Logger().Named("initialize")
-
-		// grab the guard
-		if !atomic.CompareAndSwapUint32(b.initializeCASGuard, 0, 1) {
-			logger.Error("initialization already in progress")
-			return nil
-		}
-
-		// check if this method has already been called
-		if b.isInitialized {
-			atomic.StoreUint32(b.initializeCASGuard, 0)
-			logger.Error("already initialized")
-			return nil
-		}
-		b.isInitialized = true
 
 		// kick off the role upgrader
 		go func() {
-			defer atomic.StoreUint32(b.initializeCASGuard, 0)
 
 			// Don't cancel when the original client request goes away
 			ctx = context.Background()
 
+			logger := b.Logger().Named("initialize")
 			logger.Info("starting initialization")
 
 			updated, err := b.updateUpgradableRoleEntries(ctx, s)
@@ -367,12 +350,9 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 			logger.Info("initialization succeeded")
 		}()
-
-		return nil
 	}
 
 	return nil
-
 }
 
 // updateUpgradableRoleEntries upgrades and persists all of the role entries
