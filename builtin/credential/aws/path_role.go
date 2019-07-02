@@ -331,16 +331,27 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 		logger := b.Logger().Named("initialize")
 		logger.Info("starting initialization")
 
-		upgraded, err := b.upgrade(ctx, s)
-		if err != nil {
-			logger.Error("error running initialization", "error", err)
-			return err
-		}
-		if upgraded {
-			logger.Info("an upgrade was performed during initialization")
-		}
+		go func() {
+			// The vault will become unsealed while this goroutine is running,
+			// so we could see some role requests block until the lock is
+			// released.  However we'd rather see those requests block (and
+			// potentially start timing out) than allow a non-upgraded role to
+			// be fetched.
+			b.roleMutex.Lock()
+			defer b.roleMutex.Unlock()
 
-		logger.Info("initialization succeeded")
+			upgraded, err := b.upgrade(ctx, s)
+			if err != nil {
+				logger.Error("error running initialization", "error", err)
+				return
+			}
+			if upgraded {
+				logger.Info("an upgrade was performed during initialization")
+			}
+
+			logger.Info("initialization succeeded")
+		}()
+
 	}
 
 	return nil
@@ -355,9 +366,6 @@ type roleStorageVersion struct {
 // upgrade and persist all of the role entries that are in need of being
 // upgraded.
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
-
-	b.roleMutex.Lock()
-	defer b.roleMutex.Unlock()
 
 	// find the current role-storage-version
 	version := -1
