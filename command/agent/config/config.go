@@ -60,6 +60,7 @@ type Method struct {
 	MountPath  string        `hcl:"mount_path"`
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
+	Namespace  string        `hcl:"namespace"`
 	Config     map[string]interface{}
 }
 
@@ -338,6 +339,16 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 		m.WrapTTLRaw = nil
+	}
+
+	if m.Namespace != "" {
+		// Canonicalize the path to not have a '/' prefix
+		m.Namespace = strings.TrimPrefix(m.Namespace, "/")
+
+		// Canonicalize the path to always having a '/' suffix
+		if !strings.HasSuffix(m.Namespace, "/") {
+			m.Namespace += "/"
+		}
 	}
 
 	result.AutoAuth.Method = &m
