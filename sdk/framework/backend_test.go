@@ -646,7 +646,7 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 func TestInitializeBackend(t *testing.T) {
 
 	var inited bool
-	backend := &Backend{InitializeFunc: func(context.Context, logical.Storage) error {
+	backend := &Backend{InitializeFunc: func(context.Context, *logical.InitializationRequest) error {
 		inited = true
 		return nil
 	}}

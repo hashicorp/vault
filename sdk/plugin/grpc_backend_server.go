@@ -90,7 +90,8 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 	}
 
 	req := &logical.InitializationRequest{
-		Storage: newGRPCStorageClient(b.brokeredClient)}
+		Storage: newGRPCStorageClient(b.brokeredClient),
+	}
 
 	respErr := b.backend.Initialize(ctx, req)
 

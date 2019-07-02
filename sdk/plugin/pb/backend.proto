@@ -443,7 +443,7 @@ service Backend {
 	// and SystemView clients.
 	rpc Setup(SetupArgs) returns (SetupReply);
 
-    // Initialize is invoked just after mounting a backend to allow it to
+	// Initialize is invoked just after mounting a backend to allow it to
 	// handle any initialization tasks that need to be performed.
 	rpc Initialize(InitializeArgs) returns (InitializeReply);
 

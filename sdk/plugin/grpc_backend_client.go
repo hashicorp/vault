@@ -45,9 +45,8 @@ type backendGRPCPluginClient struct {
 }
 
 func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
-
 	if b.metadataMode {
-		return ErrClientInMetadataMode
+		return nil
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

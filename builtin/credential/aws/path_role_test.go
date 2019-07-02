@@ -868,7 +868,7 @@ func TestRoleInitialize(t *testing.T) {
 	}
 
 	// upgrade all the entries, and wait for the goroutine to finish
-	err = b.initialize(ctx, storage)
+	err = b.initialize(ctx, &logical.InitializationRequest{storage})
 	time.Sleep(time.Second)
 
 	// read the entries from storage
