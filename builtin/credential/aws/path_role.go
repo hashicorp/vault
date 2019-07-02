@@ -334,7 +334,7 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 		// grab the guard
 		if !atomic.CompareAndSwapUint32(b.initializeCASGuard, 0, 1) {
-			logger.Error("initializational already in progress")
+			logger.Error("initialization already in progress")
 			return nil
 		}
 
@@ -355,31 +355,14 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 
 			logger.Info("starting initialization")
 
-			// check if we've already upgraded to the current role storage
-			// version
-			version, err := b.upgradedRoleStorageVersion(ctx, s)
+			updated, err := b.updateUpgradableRoleEntries(ctx, s)
 			if err != nil {
 				logger.Error("error running initialization", "error", err)
 				return
 			}
-			if version == currentRoleStorageVersion {
-				logger.Info("skipping initialization -- has already been performed for storage version",
+			if !updated {
+				logger.Info("upgrade has already been performed for role storage version",
 					currentRoleStorageVersion)
-				return
-			}
-
-			// perform the upgrade
-			err = b.updateUpgradableRoleEntries(ctx, s)
-			if err != nil {
-				logger.Error("error running initialization", "error", err)
-				return
-			}
-
-			// save the current role storage version
-			err = b.setUpgradedRoleStorageVersion(ctx, s, currentRoleStorageVersion)
-			if err != nil {
-				logger.Error("error running initialization", "error", err)
-				return
 			}
 
 			logger.Info("initialization succeeded")
@@ -389,11 +372,22 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 	}
 
 	return nil
+
 }
 
 // updateUpgradableRoleEntries upgrades and persists all of the role entries
 // that are in need of being upgraded.
-func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) error {
+func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) (bool, error) {
+
+	// check if we've already upgraded to the current role storage
+	// version
+	version, err := b.upgradedRoleStorageVersion(ctx, s)
+	if err != nil {
+		return false, err
+	}
+	if version == currentRoleStorageVersion {
+		return false, nil
+	}
 
 	// Read all the role names.  We don't need to grab the mutex here for
 	// listing. The reason is that if we're in the process of creating a new
@@ -401,18 +395,24 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Sto
 	// and will properly use the latest role structure.
 	roleNames, err := s.List(ctx, "role/")
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
 		err := b.updateUpgradableRoleEntry(ctx, s, roleName)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return nil
+	// save the current role storage version
+	err = b.setUpgradedRoleStorageVersion(ctx, s, currentRoleStorageVersion)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // updateUpgradableRoleEntry uses the write lock to call roleInternal(), which

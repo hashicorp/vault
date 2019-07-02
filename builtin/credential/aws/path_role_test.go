@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -915,8 +916,14 @@ func TestRoleInitialize(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// run it againg -- nothing will happen
-	err = b.initialize(ctx, storage)
+	// run it again -- nothing will happen
+	updated, err := b.updateUpgradableRoleEntries(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated {
+		t.Fatalf("expected no updates")
+	}
 }
 
 func TestUpgradedRoleStorageVersion(t *testing.T) {
@@ -934,8 +941,6 @@ func TestUpgradedRoleStorageVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	//-------------------------
 
 	version, err := b.upgradedRoleStorageVersion(ctx, storage)
 	if err != nil {
