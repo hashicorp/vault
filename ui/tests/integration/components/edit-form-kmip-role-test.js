@@ -8,6 +8,7 @@ import { render, settled, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+import { COMPUTEDS } from 'vault/models/kmip/role';
 const resolver = engineResolverFor('kmip');
 
 const flash = Service.extend({
@@ -16,12 +17,29 @@ const flash = Service.extend({
 const namespace = Service.extend({});
 
 const createModel = options => {
-  let model = EmberObject.extend({
-    fields: computed('newFields', function() {
-      return this.newFields.map(field => ({ name: field, type: 'boolean' }));
-    }),
+  let model = EmberObject.extend(COMPUTEDS, {
     /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-    newFields: ['operationAll', 'operationNone', 'operationGet', 'operationCreate', 'operationDestroy'],
+    newFields: [
+      'role',
+      'operationActivate',
+      'operationAddAttribute',
+      'operationAll',
+      'operationCreate',
+      'operationDestroy',
+      'operationDiscoverVersion',
+      'operationGet',
+      'operationGetAttributes',
+      'operationLocate',
+      'operationNone',
+      'operationRekey',
+      'operationRevoke',
+      'tlsClientKeyBits',
+      'tlsClientKeyType',
+      'tlsClientTtl',
+    ],
+    fields: computed('operationFields', function() {
+      return this.operationFields.map(field => ({ name: field, type: 'boolean' }));
+    }),
     destroyRecord() {
       return resolve();
     },

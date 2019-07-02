@@ -34,7 +34,7 @@
     {{/each}}
     {{#if (eq this.display "choose")}}
       <div class="box is-sideless is-shadowless is-marginless">
-        {{#each this.model.fields as |attr|}}
+        {{#each this.model.operationFormFields as |attr|}}
           <FormField
             data-test-field
             @attr={{attr}}
@@ -43,6 +43,14 @@
         {{/each}}
       </div>
     {{/if}}
+
+        {{#each this.model.fields as |attr|}}
+          <FormField
+            data-test-field
+            @attr={{attr}}
+            @model={{model}}
+          />
+        {{/each}}
   </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
