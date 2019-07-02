@@ -189,8 +189,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
 		view.setReadOnlyErr(origViewReadOnlyErr)
-		// Initialize
-		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		// initialize, using the core's active context.
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}

@@ -387,6 +387,10 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
+		// make context hasn't been canceled
+		if ctx.Err() != nil {
+			return false, err
+		}
 		_, err := b.roleInternal(ctx, s, roleName)
 		if err != nil {
 			return false, err
