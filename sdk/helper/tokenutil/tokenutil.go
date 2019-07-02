@@ -8,6 +8,7 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -73,47 +74,74 @@ func TokenFields() map[string]*framework.FieldSchema {
 		"token_bound_cidrs": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Bound CIDRs",
+			},
 		},
 
 		"token_explicit_max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenExplicitMaxTTLHelp,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Explicit Maximum TTL",
+			},
 		},
 
 		"token_max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The maximum lifetime of the generated token",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Maximum TTL",
+			},
 		},
 
 		"token_no_default_policy": &framework.FieldSchema{
 			Type:        framework.TypeBool,
 			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Do Not Attach 'default' Policy To Generated Tokens",
+			},
 		},
 
 		"token_period": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Period",
+			},
 		},
 
 		"token_policies": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Policies",
+			},
 		},
 
 		"token_type": &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Default:     "default-service",
 			Description: "The type of token to generate, service or batch",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Type",
+			},
 		},
 
 		"token_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The initial ttl of the token to generate",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Generated Token's Initial TTL",
+			},
 		},
 
 		"token_num_uses": &framework.FieldSchema{
 			Type:        framework.TypeInt,
 			Description: "The maximum number of times a token may be used, a value of zero means unlimited",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Maximum Uses of Generated Tokens",
+			},
 		},
 	}
 }
@@ -172,6 +200,15 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
+	if t.TokenType == logical.TokenTypeBatch || t.TokenType == logical.TokenTypeDefaultBatch {
+		if t.TokenPeriod != 0 {
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate periodic tokens")
+		}
+		if t.TokenNumUses != 0 {
+			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate tokens with limited use count")
+		}
+	}
+
 	if ttlRaw, ok := d.GetOk("token_ttl"); ok {
 		t.TokenTTL = time.Duration(ttlRaw.(int)) * time.Second
 	}
@@ -203,6 +240,14 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = int64(t.TokenTTL.Seconds())
 	m["token_num_uses"] = t.TokenNumUses
+
+	if len(t.TokenPolicies) == 0 {
+		m["token_policies"] = []string{}
+	}
+
+	if len(t.TokenBoundCIDRs) == 0 {
+		m["token_bound_cidrs"] = []string{}
+	}
 }
 
 // PopulateTokenAuth populates Auth with parameters
@@ -213,9 +258,141 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.NoDefaultPolicy = t.TokenNoDefaultPolicy
 	auth.Period = t.TokenPeriod
 	auth.Policies = t.TokenPolicies
+	auth.Renewable = true
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
+}
+
+func DeprecationText(param string) string {
+	return fmt.Sprintf("Use %q instead. If this and %q are both specified, only %q will be used.", param, param, param)
+}
+
+func upgradeDurationValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *time.Duration) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			*oldVal = time.Duration(raw.(int)) * time.Second
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = 0
+		}
+	}
+
+	return nil
+}
+
+func upgradeIntValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *int) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			*oldVal = raw.(int)
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = 0
+		}
+	}
+
+	return nil
+}
+
+func upgradeStringSliceValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *[]string) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			// Special case: if we're looking at "token_policies" parse the policies
+			if newKey == "token_policies" {
+				*oldVal = policyutil.ParsePolicies(raw)
+			} else {
+				*oldVal = raw.([]string)
+			}
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = nil
+		}
+	}
+
+	return nil
+}
+
+func upgradeSockAddrSliceValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal *[]*sockaddr.SockAddrMarshaler) error {
+	_, ok := d.GetOk(newKey)
+	if !ok {
+		raw, ok := d.GetOk(oldKey)
+		if ok {
+			boundCIDRs, err := parseutil.ParseAddrs(raw)
+			if err != nil {
+				return err
+			}
+			*oldVal = boundCIDRs
+			*newVal = *oldVal
+		}
+	} else {
+		_, ok = d.GetOk(oldKey)
+		if ok {
+			*oldVal = *newVal
+		} else {
+			*oldVal = nil
+		}
+	}
+
+	return nil
+}
+
+// UpgradeValue takes in old/new data keys and old/new values and calls out to
+// a helper function to perform upgrades in a standardized way. It reqiures
+// pointers in all cases so that we can set directly into the target struct.
+func UpgradeValue(d *framework.FieldData, oldKey, newKey string, oldVal, newVal interface{}) error {
+	switch typedOldVal := oldVal.(type) {
+	case *time.Duration:
+		typedNewVal, ok := newVal.(*time.Duration)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeDurationValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *int:
+		typedNewVal, ok := newVal.(*int)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeIntValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *[]string:
+		typedNewVal, ok := newVal.(*[]string)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeStringSliceValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	case *[]*sockaddr.SockAddrMarshaler:
+		typedNewVal, ok := newVal.(*[]*sockaddr.SockAddrMarshaler)
+		if !ok {
+			return errors.New("mismatch in value types in tokenutil.UpgradeValue")
+		}
+		return upgradeSockAddrSliceValue(d, oldKey, newKey, typedOldVal, typedNewVal)
+
+	default:
+		return errors.New("unhandled type in tokenutil.UpgradeValue")
+	}
 }
 
 const (

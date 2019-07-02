@@ -174,118 +174,121 @@ Default: cn`,
  * Creates and initializes a ConfigEntry object with its default values,
  * as specified by the passed schema.
  */
-func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
-	cfg := new(ConfigEntry)
+func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry, error) {
+	var hadExisting bool
+	var cfg *ConfigEntry
 
-	url := d.Get("url").(string)
-	if url != "" {
-		cfg.Url = strings.ToLower(url)
+	if existing != nil {
+		cfg = existing
+		hadExisting = true
+	} else {
+		cfg = new(ConfigEntry)
 	}
-	userattr := d.Get("userattr").(string)
-	if userattr != "" {
-		cfg.UserAttr = strings.ToLower(userattr)
+
+	if _, ok := d.Raw["url"]; ok || !hadExisting {
+		cfg.Url = strings.ToLower(d.Get("url").(string))
 	}
-	userdn := d.Get("userdn").(string)
-	if userdn != "" {
-		cfg.UserDN = userdn
+
+	if _, ok := d.Raw["userattr"]; ok || !hadExisting {
+		cfg.UserAttr = strings.ToLower(d.Get("userattr").(string))
 	}
-	groupdn := d.Get("groupdn").(string)
-	if groupdn != "" {
-		cfg.GroupDN = groupdn
+
+	if _, ok := d.Raw["userdn"]; ok || !hadExisting {
+		cfg.UserDN = d.Get("userdn").(string)
 	}
-	groupfilter := d.Get("groupfilter").(string)
-	if groupfilter != "" {
-		// Validate the template before proceeding
-		_, err := template.New("queryTemplate").Parse(groupfilter)
-		if err != nil {
-			return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
+
+	if _, ok := d.Raw["groupdn"]; ok || !hadExisting {
+		cfg.GroupDN = d.Get("groupdn").(string)
+	}
+
+	if _, ok := d.Raw["groupfilter"]; ok || !hadExisting {
+		groupfilter := d.Get("groupfilter").(string)
+		if groupfilter != "" {
+			// Validate the template before proceeding
+			_, err := template.New("queryTemplate").Parse(groupfilter)
+			if err != nil {
+				return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
+			}
 		}
 
 		cfg.GroupFilter = groupfilter
 	}
-	groupattr := d.Get("groupattr").(string)
-	if groupattr != "" {
-		cfg.GroupAttr = groupattr
-	}
-	upndomain := d.Get("upndomain").(string)
-	if upndomain != "" {
-		cfg.UPNDomain = upndomain
-	}
-	certificate := d.Get("certificate").(string)
-	if certificate != "" {
-		block, _ := pem.Decode([]byte(certificate))
 
-		if block == nil || block.Type != "CERTIFICATE" {
-			return nil, fmt.Errorf("failed to decode PEM block in the certificate")
+	if _, ok := d.Raw["groupattr"]; ok || !hadExisting {
+		cfg.GroupAttr = d.Get("groupattr").(string)
+	}
+
+	if _, ok := d.Raw["upndomain"]; ok || !hadExisting {
+		cfg.UPNDomain = d.Get("upndomain").(string)
+	}
+
+	if _, ok := d.Raw["certificate"]; ok || !hadExisting {
+		certificate := d.Get("certificate").(string)
+		if certificate != "" {
+			block, _ := pem.Decode([]byte(certificate))
+
+			if block == nil || block.Type != "CERTIFICATE" {
+				return nil, errors.New("failed to decode PEM block in the certificate")
+			}
+			_, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
+			}
 		}
-		_, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
-		}
+
 		cfg.Certificate = certificate
 	}
-	insecureTLS := d.Get("insecure_tls").(bool)
-	if insecureTLS {
-		cfg.InsecureTLS = insecureTLS
-	}
-	cfg.TLSMinVersion = d.Get("tls_min_version").(string)
-	if cfg.TLSMinVersion == "" {
-		return nil, fmt.Errorf("failed to get 'tls_min_version' value")
+
+	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
+		cfg.InsecureTLS = d.Get("insecure_tls").(bool)
 	}
 
-	var ok bool
-	_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version'")
+	if _, ok := d.Raw["tls_min_version"]; ok || !hadExisting {
+		cfg.TLSMinVersion = d.Get("tls_min_version").(string)
+		_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+		if !ok {
+			return nil, errors.New("invalid 'tls_min_version'")
+		}
 	}
 
-	cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
-	if cfg.TLSMaxVersion == "" {
-		return nil, fmt.Errorf("failed to get 'tls_max_version' value")
-	}
-
-	_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_max_version'")
+	if _, ok := d.Raw["tls_max_version"]; ok || !hadExisting {
+		cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
+		_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_max_version'")
+		}
 	}
 	if cfg.TLSMaxVersion < cfg.TLSMinVersion {
 		return nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
-	startTLS := d.Get("starttls").(bool)
-	if startTLS {
-		cfg.StartTLS = startTLS
+	if _, ok := d.Raw["starttls"]; ok || !hadExisting {
+		cfg.StartTLS = d.Get("starttls").(bool)
 	}
 
-	bindDN := d.Get("binddn").(string)
-	if bindDN != "" {
-		cfg.BindDN = bindDN
+	if _, ok := d.Raw["binddn"]; ok || !hadExisting {
+		cfg.BindDN = d.Get("binddn").(string)
 	}
 
-	bindPass := d.Get("bindpass").(string)
-	if bindPass != "" {
-		cfg.BindPassword = bindPass
+	if _, ok := d.Raw["bindpass"]; ok || !hadExisting {
+		cfg.BindPassword = d.Get("bindpass").(string)
 	}
 
-	denyNullBind := d.Get("deny_null_bind").(bool)
-	if denyNullBind {
-		cfg.DenyNullBind = denyNullBind
+	if _, ok := d.Raw["deny_null_bind"]; ok || !hadExisting {
+		cfg.DenyNullBind = d.Get("deny_null_bind").(bool)
 	}
 
-	discoverDN := d.Get("discoverdn").(bool)
-	if discoverDN {
-		cfg.DiscoverDN = discoverDN
+	if _, ok := d.Raw["discoverdn"]; ok || !hadExisting {
+		cfg.DiscoverDN = d.Get("discoverdn").(bool)
 	}
 
-	caseSensitiveNames, ok := d.GetOk("case_sensitive_names")
-	if ok {
+	if _, ok := d.Raw["case_sensitive_names"]; ok || !hadExisting {
 		cfg.CaseSensitiveNames = new(bool)
-		*cfg.CaseSensitiveNames = caseSensitiveNames.(bool)
+		*cfg.CaseSensitiveNames = d.Get("case_sensitive_names").(bool)
 	}
 
-	useTokenGroups := d.Get("use_token_groups").(bool)
-	if useTokenGroups {
-		cfg.UseTokenGroups = useTokenGroups
+	if _, ok := d.Raw["use_token_groups"]; ok || !hadExisting {
+		cfg.UseTokenGroups = d.Get("use_token_groups").(bool)
 	}
 
 	return cfg, nil
