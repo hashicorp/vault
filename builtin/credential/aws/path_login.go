@@ -729,14 +729,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// attacks.
 	shortestMaxTTL := b.System().MaxLeaseTTL()
 	longestMaxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < shortestMaxTTL {
-		shortestMaxTTL = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > time.Duration(0) && roleEntry.TokenMaxTTL < shortestMaxTTL {
+		shortestMaxTTL = roleEntry.TokenMaxTTL
 	}
-	if roleEntry.MaxTTL > longestMaxTTL {
-		longestMaxTTL = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > longestMaxTTL {
+		longestMaxTTL = roleEntry.TokenMaxTTL
 	}
 
-	policies := roleEntry.Policies
+	policies := roleEntry.TokenPolicies
 	rTagMaxTTL := time.Duration(0)
 	var roleTagResp *roleTagLoginResponse
 	if roleEntry.RoleTag != "" {
@@ -812,28 +812,26 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period:   roleEntry.Period,
-			Policies: policies,
-			Metadata: map[string]string{
-				"instance_id":      identityDocParsed.InstanceID,
-				"region":           identityDocParsed.Region,
-				"account_id":       identityDocParsed.AccountID,
-				"role_tag_max_ttl": rTagMaxTTL.String(),
-				"role":             roleName,
-				"ami_id":           identityDocParsed.AmiID,
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       roleEntry.TTL,
-				MaxTTL:    shortestMaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: identityAlias,
-			},
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"instance_id":      identityDocParsed.InstanceID,
+			"region":           identityDocParsed.Region,
+			"account_id":       identityDocParsed.AccountID,
+			"role_tag_max_ttl": rTagMaxTTL.String(),
+			"role":             roleName,
+			"ami_id":           identityDocParsed.AmiID,
+		},
+		Alias: &logical.Alias{
+			Name: identityAlias,
 		},
 	}
+	roleEntry.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
+	}
+	resp.Auth.Policies = policies
+	resp.Auth.LeaseOptions.MaxTTL = shortestMaxTTL
 
 	// Return the nonce only if reauthentication is allowed and if the nonce
 	// was not supplied by the user.
@@ -909,7 +907,7 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	// Ensure that the policies on the RoleTag is a subset of policies on the role
-	if !strutil.StrListSubset(roleEntry.Policies, rTag.Policies) {
+	if !strutil.StrListSubset(roleEntry.TokenPolicies, rTag.Policies) {
 		return nil, fmt.Errorf("policies on the role tag must be subset of policies on the role")
 	}
 
@@ -1039,9 +1037,9 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = roleEntry.TTL
-	resp.Auth.MaxTTL = roleEntry.MaxTTL
-	resp.Auth.Period = roleEntry.Period
+	resp.Auth.TTL = roleEntry.TokenTTL
+	resp.Auth.MaxTTL = roleEntry.TokenMaxTTL
+	resp.Auth.Period = roleEntry.TokenPeriod
 	return resp, nil
 }
 
@@ -1098,11 +1096,11 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	// Re-evaluate the maxTTL bounds
 	shortestMaxTTL := b.System().MaxLeaseTTL()
 	longestMaxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < shortestMaxTTL {
-		shortestMaxTTL = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > time.Duration(0) && roleEntry.TokenMaxTTL < shortestMaxTTL {
+		shortestMaxTTL = roleEntry.TokenMaxTTL
 	}
-	if roleEntry.MaxTTL > longestMaxTTL {
-		longestMaxTTL = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > longestMaxTTL {
+		longestMaxTTL = roleEntry.TokenMaxTTL
 	}
 	if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < shortestMaxTTL {
 		shortestMaxTTL = rTagMaxTTL
@@ -1123,9 +1121,9 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = roleEntry.TTL
+	resp.Auth.TTL = roleEntry.TokenTTL
 	resp.Auth.MaxTTL = shortestMaxTTL
-	resp.Auth.Period = roleEntry.Period
+	resp.Auth.Period = roleEntry.TokenPeriod
 	return resp, nil
 }
 
@@ -1285,8 +1283,6 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	policies := roleEntry.Policies
-
 	inferredEntityType := ""
 	inferredEntityID := ""
 	if roleEntry.InferredEntityType == ec2EntityType {
@@ -1317,38 +1313,32 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		inferredEntityID = entity.SessionInfo
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period:   roleEntry.Period,
-			Policies: policies,
-			Metadata: map[string]string{
-				"client_arn":           callerID.Arn,
-				"canonical_arn":        entity.canonicalArn(),
-				"client_user_id":       callerUniqueId,
-				"auth_type":            iamAuthType,
-				"inferred_entity_type": inferredEntityType,
-				"inferred_entity_id":   inferredEntityID,
-				"inferred_aws_region":  roleEntry.InferredAWSRegion,
-				"account_id":           entity.AccountNumber,
-				"role_id":              roleEntry.RoleID,
-			},
-			InternalData: map[string]interface{}{
-				"role_name": roleName,
-				"role_id":   roleEntry.RoleID,
-			},
-			DisplayName: entity.FriendlyName,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       roleEntry.TTL,
-				MaxTTL:    roleEntry.MaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: identityAlias,
-			},
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"client_arn":           callerID.Arn,
+			"canonical_arn":        entity.canonicalArn(),
+			"client_user_id":       callerUniqueId,
+			"auth_type":            iamAuthType,
+			"inferred_entity_type": inferredEntityType,
+			"inferred_entity_id":   inferredEntityID,
+			"inferred_aws_region":  roleEntry.InferredAWSRegion,
+			"account_id":           entity.AccountNumber,
+			"role_id":              roleEntry.RoleID,
+		},
+		InternalData: map[string]interface{}{
+			"role_name": roleName,
+			"role_id":   roleEntry.RoleID,
+		},
+		DisplayName: entity.FriendlyName,
+		Alias: &logical.Alias{
+			Name: identityAlias,
 		},
 	}
+	roleEntry.PopulateTokenAuth(auth)
 
-	return resp, nil
+	return &logical.Response{
+		Auth: auth,
+	}, nil
 }
 
 // These two methods (hasValuesFor*) return two bools

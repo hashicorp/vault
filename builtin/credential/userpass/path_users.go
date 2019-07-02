@@ -8,8 +8,6 @@ import (
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -210,72 +208,20 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 
 	// handle upgrade cases
 	{
-		policiesRaw, ok := d.GetOk("token_policies")
-		if !ok {
-			policiesRaw, ok = d.GetOk("policies")
-			if ok {
-				userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-				userEntry.TokenPolicies = userEntry.Policies
-			}
-		} else {
-			_, ok = d.GetOk("policies")
-			if ok {
-				userEntry.Policies = userEntry.TokenPolicies
-			} else {
-				userEntry.Policies = nil
-			}
+		if err := tokenutil.UpgradeValue(d, "policies", "token_policies", &userEntry.Policies, &userEntry.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		ttlRaw, ok := d.GetOk("token_ttl")
-		if !ok {
-			ttlRaw, ok = d.GetOk("ttl")
-			if ok {
-				userEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
-				userEntry.TokenTTL = userEntry.TTL
-			}
-		} else {
-			_, ok = d.GetOk("ttl")
-			if ok {
-				userEntry.TTL = userEntry.TokenTTL
-			} else {
-				userEntry.TTL = 0
-			}
+		if err := tokenutil.UpgradeValue(d, "ttl", "token_ttl", &userEntry.TTL, &userEntry.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		maxTTLRaw, ok := d.GetOk("token_max_ttl")
-		if !ok {
-			maxTTLRaw, ok = d.GetOk("max_ttl")
-			if ok {
-				userEntry.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
-				userEntry.TokenMaxTTL = userEntry.TokenMaxTTL
-			}
-		} else {
-			_, ok = d.GetOk("max_ttl")
-			if ok {
-				userEntry.MaxTTL = userEntry.TokenMaxTTL
-			} else {
-				userEntry.MaxTTL = 0
-			}
+		if err := tokenutil.UpgradeValue(d, "max_ttl", "token_max_ttl", &userEntry.MaxTTL, &userEntry.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		boundCIDRsRaw, ok := d.GetOk("token_bound_cidrs")
-		if !ok {
-			boundCIDRsRaw, ok = d.GetOk("bound_cidrs")
-			if ok {
-				boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw)
-				if err != nil {
-					return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-				}
-				userEntry.BoundCIDRs = boundCIDRs
-				userEntry.TokenBoundCIDRs = userEntry.BoundCIDRs
-			}
-		} else {
-			_, ok = d.GetOk("bound_cidrs")
-			if ok {
-				userEntry.BoundCIDRs = userEntry.TokenBoundCIDRs
-			} else {
-				userEntry.BoundCIDRs = nil
-			}
+		if err := tokenutil.UpgradeValue(d, "bound_cidrs", "token_bound_cirs", &userEntry.BoundCIDRs, &userEntry.TokenBoundCIDRs); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 

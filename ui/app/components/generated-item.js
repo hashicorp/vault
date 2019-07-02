@@ -6,7 +6,7 @@ import DS from 'ember-data';
 
 /**
  * @module GeneratedItem
- * The `GeneratedItem` is the form to configure generated items related to mounts (e.g. groups, roles, users)
+ * The `GeneratedItem` component is the form to configure generated items related to mounts (e.g. groups, roles, users)
  *
  * @example
  * ```js

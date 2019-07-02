@@ -140,6 +140,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.Period = user.TokenPeriod
 	resp.Auth.TTL = user.TokenTTL
 	resp.Auth.MaxTTL = user.TokenMaxTTL
 	return resp, nil
