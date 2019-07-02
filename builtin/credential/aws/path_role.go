@@ -11,7 +11,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
@@ -740,71 +739,32 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	// Handle upgrade cases
 	{
-		policiesRaw, ok := data.GetOk("token_policies")
-		if !ok {
-			policiesRaw, ok = data.GetOk("policies")
-			if ok {
-				roleEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-				roleEntry.TokenPolicies = roleEntry.Policies
-			}
-		} else {
-			_, ok = data.GetOk("policies")
-			if ok {
-				roleEntry.Policies = roleEntry.TokenPolicies
-			} else {
-				roleEntry.Policies = nil
-			}
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &roleEntry.Policies, &roleEntry.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		ttlRaw, ok := data.GetOk("token_ttl")
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &roleEntry.TTL, &roleEntry.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		// Special case here for old lease value
+		_, ok := data.GetOk("token_ttl")
 		if !ok {
-			ttlRaw, ok = data.GetOk("ttl")
-			if !ok {
-				ttlRaw, ok = data.GetOk("lease")
-			}
-			if ok {
-				roleEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
-				roleEntry.TokenTTL = roleEntry.TTL
-			}
-		} else {
 			_, ok = data.GetOk("ttl")
-			if ok {
-				roleEntry.TTL = roleEntry.TokenTTL
-			} else {
-				roleEntry.TTL = 0
+			if !ok {
+				ttlRaw, ok := data.GetOk("lease")
+				if ok {
+					roleEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
+					roleEntry.TokenTTL = roleEntry.TTL
+				}
 			}
 		}
 
-		maxTTLRaw, ok := data.GetOk("token_max_ttl")
-		if !ok {
-			maxTTLRaw, ok = data.GetOk("max_ttl")
-			if ok {
-				roleEntry.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
-				roleEntry.TokenMaxTTL = roleEntry.MaxTTL
-			}
-		} else {
-			_, ok = data.GetOk("max_ttl")
-			if ok {
-				roleEntry.MaxTTL = roleEntry.TokenMaxTTL
-			} else {
-				roleEntry.MaxTTL = 0
-			}
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &roleEntry.MaxTTL, &roleEntry.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		periodRaw, ok := data.GetOk("token_period")
-		if !ok {
-			periodRaw, ok = data.GetOk("period")
-			if ok {
-				roleEntry.Period = time.Duration(periodRaw.(int)) * time.Second
-				roleEntry.TokenPeriod = roleEntry.Period
-			}
-		} else {
-			_, ok = data.GetOk("period")
-			if ok {
-				roleEntry.Period = roleEntry.TokenPeriod
-			} else {
-				roleEntry.Period = 0
-			}
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &roleEntry.Period, &roleEntry.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
