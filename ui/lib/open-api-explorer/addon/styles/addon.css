@@ -1,3 +1,7 @@
+/*THIS FILE LOADS AFTER THE SWAGGER-UI CSS, SO WE'LL USE IT TO OVERRIDE STYLES */
+
+
+
 .swagger-ui .wrapper {
   padding: 0;
 }
@@ -63,8 +67,7 @@
 	padding: 0 2px;
 	margin-right: 8px;
 }
-
-/*END: customize method, path, description so that it's:*/
+/*END: customize method, path, description*/
 
 /*START: make tags look like list items */
 .swagger-ui .opblock-tag{
