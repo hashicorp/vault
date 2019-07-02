@@ -100,6 +100,20 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 }
 
+func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
+	_, err := NewPostgreSQLBackend(map[string]string{
+		"connection_url":       "some connection url",
+		"max_idle_connections": "bad param",
+	}, logging.NewVaultLogger(log.Debug))
+	if err == nil {
+		t.Error("Expected invalid max_idle_connections param to return error")
+	}
+	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
+	if err.Error() != expectedErrStr {
+		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+	}
+}
+
 // Similar to testHABackend, but using internal implementation details to
 // trigger the lock failure scenario by setting the lock renew period for one
 // of the locks to a higher value than the lock TTL.
