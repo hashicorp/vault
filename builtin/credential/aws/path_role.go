@@ -323,11 +323,15 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 // initialize is used to initialize the AWS roles
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
 
+	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
 	// Initialize only if we are either:
 	//   (1) A local mount.
-	//   (2) Are _NOT_ a replicated secondary cluster, or a performance standby node, or a DR secondary.
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(
-		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby|consts.ReplicationDRSecondary) {
+	//   (2) Are _NOT_ a replicated performance secondary
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 
 		s := req.Storage
 
