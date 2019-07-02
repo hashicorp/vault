@@ -1470,9 +1470,10 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
-	nsPaths := i.listNamespacePaths(ctx)
+	var nextRun time.Time
+	now := time.Now()
 
-	nextRun := time.Time{}
+	nsPaths := i.listNamespacePaths(ctx)
 
 	if v, ok := i.oidcCache.Get(nil, "nextRun"); ok {
 		nextRun = v.(time.Time)
@@ -1482,8 +1483,11 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	// be run at any time safely, but there is no need to invoke them (which
 	// might be somewhat expensive if there are many roles/keys) if we're not
 	// past any rotation/expiration TTLs.
+	if now.After(nextRun) {
+		// Initialize to a fairly distant next run time. This will be brought in
+		// based on key rotation times.
+		nextRun = now.Add(24 * time.Hour)
 
-	if time.Now().After(nextRun) {
 		for _, nsPath := range nsPaths {
 			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
@@ -1511,7 +1515,6 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 			if nextExpiration.Before(nextRun) {
 				nextRun = nextExpiration
 			}
-
 		}
 		i.oidcCache.SetDefault(nil, "nextRun", nextRun)
 	}
