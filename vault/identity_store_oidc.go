@@ -70,11 +70,12 @@ type role struct {
 // include top-level keys, but those keys may not overwrite any of the
 // required OIDC fields.
 type idToken struct {
-	Issuer   string `json:"iss"` // api_addr or custom Issuer
-	Subject  string `json:"sub"` // Entity ID
-	Audience string `json:"aud"` // role ID will be used here.
-	Expiry   int64  `json:"exp"` // Expiration, as determined by the role.
-	IssuedAt int64  `json:"iat"` // Time of token creation
+	Issuer    string `json:"iss"`       // api_addr or custom Issuer
+	Namespace string `json:"namespace"` // Namespace of issuer
+	Subject   string `json:"sub"`       // Entity ID
+	Audience  string `json:"aud"`       // role ID will be used here.
+	Expiry    int64  `json:"exp"`       // Expiration, as determined by the role.
+	IssuedAt  int64  `json:"iat"`       // Time of token creation
 }
 
 // discovery contains a subset of the required elements of OIDC discovery needed
@@ -102,7 +103,7 @@ const (
 	roleConfigPath       = oidcTokensPrefix + "roles/"
 )
 
-var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub"}
+var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub", "namespace"}
 var supportedAlgs = []string{
 	string(jose.RS256),
 	string(jose.RS384),
@@ -698,11 +699,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	now := time.Now()
 	idToken := idToken{
-		Issuer:   config.effectiveIssuer,
-		Subject:  req.EntityID,
-		Audience: role.ClientID,
-		Expiry:   now.Add(role.TokenTTL).Unix(),
-		IssuedAt: now.Unix(),
+		Issuer:    config.effectiveIssuer,
+		Namespace: strings.TrimSuffix(ns.Path, "/"),
+		Subject:   req.EntityID,
+		Audience:  role.ClientID,
+		Expiry:    now.Add(role.TokenTTL).Unix(),
+		IssuedAt:  now.Unix(),
 	}
 
 	e, err := i.MemDBEntityByID(req.EntityID, true)
@@ -741,11 +743,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
 	output := map[string]interface{}{
-		"iss": tok.Issuer,
-		"sub": tok.Subject,
-		"aud": tok.Audience,
-		"exp": tok.Expiry,
-		"iat": tok.IssuedAt,
+		"iss":       tok.Issuer,
+		"namespace": tok.Namespace,
+		"sub":       tok.Subject,
+		"aud":       tok.Audience,
+		"exp":       tok.Expiry,
+		"iat":       tok.IssuedAt,
 	}
 
 	// Parse and integrate the populated role template. Structural errors with the template _should_
