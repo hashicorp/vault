@@ -27,10 +27,7 @@ export default Component.extend({
     let counters = this.counters || [];
     let options = [];
     if (counters.length) {
-      const years = counters.reduce((uniqueYears, counter) => {
-        const year = counter.start_time.substr(0, 4);
-        return uniqueYears.includes(year) ? uniqueYears : [...uniqueYears, year];
-      }, []);
+      const years = counters.map(counter => counter.start_time.substr(0, 4)).uniq();
       years.sort().reverse();
       options = options.concat(years);
     }
