@@ -19,9 +19,7 @@ func HashString(salter *salt.Salt, data string) string {
 	return salter.GetIdentifiedHMAC(data)
 }
 
-// Hash will copy and hash the given type. This has built-in support for auth,
-// requests, responses, and ResponseWrapInfo. If it is given a type that isn't
-// recognized, then it will be passed through unchanged.
+// HashAuth returns a hashed copy of the logical.Auth input.
 func HashAuth(salter *salt.Salt, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
 	if in == nil {
 		return nil, nil
@@ -39,6 +37,7 @@ func HashAuth(salter *salt.Salt, in *logical.Auth, HMACAccessor bool) (*logical.
 	return &auth, nil
 }
 
+// HashRequest returns a hashed copy of the logical.Request input.
 func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
 	if in == nil {
 		return nil, nil
@@ -104,6 +103,7 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 	return newData, nil
 }
 
+// HashResponse returns a hashed copy of the logical.Request input.
 func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Response, error) {
 	if in == nil {
 		return nil, nil
@@ -141,6 +141,7 @@ func HashResponse(salter *salt.Salt, in *logical.Response, HMACAccessor bool, no
 	return &resp, nil
 }
 
+// HashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
 func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
 	if in == nil {
 		return nil, nil
