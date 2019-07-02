@@ -999,6 +999,13 @@ func TestUpdateOrDefault(t *testing.T) {
 	{
 		currentRole := origRole
 
+		// Instead of e.g.:
+		//
+		// if verificationTTLRaw, ok := d.GetOk("verification_ttl"); ok {
+		// 	key.VerificationTTL = time.Duration(verificationTTLRaw.(int)) * time.Second
+		// } else if req.Operation == logical.CreateOperation {
+		// 	key.VerificationTTL = time.Duration(d.Get("verification_ttl").(int)) * time.Second
+		// }
 		data.UpdateOrDefault("name", &currentRole.Name, false)
 		data.UpdateOrDefault("colors", &currentRole.Colors, false)
 
