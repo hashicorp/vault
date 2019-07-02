@@ -77,8 +77,8 @@ type idToken struct {
 	IssuedAt int64  `json:"iat"` // Time of token creation
 }
 
-// discovery contains t subset the required elements of OIDC discovery needed for
-// JWT verification libraries to use the .well-known endpoint.
+// discovery contains a subset of the required elements of OIDC discovery needed
+// for JWT verification libraries to use the .well-known endpoint.
 //
 // https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 type discovery struct {
@@ -88,35 +88,9 @@ type discovery struct {
 	IDTokenAlgs []string `json:"id_token_signing_alg_values_supported"`
 }
 
-// oidcCache is a this wrapping around go-cache to partition by namespace
+// oidcCache is a thin wrapper around go-cache to partition by namespace
 type oidcCache struct {
 	c *cache.Cache
-}
-
-func newOIDCCache() *oidcCache {
-	return &oidcCache{
-		c: cache.New(cache.NoExpiration, cache.NoExpiration),
-	}
-}
-
-func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
-	if ns == nil {
-		ns = &namespace.Namespace{ID: "__root__"}
-	}
-	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
-}
-
-func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool) {
-	return c.c.Get(c.nskey(ns, key))
-}
-
-func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) {
-	c.c.SetDefault(c.nskey(ns, key), obj)
-}
-
-func (c *oidcCache) Flush(ns *namespace.Namespace) {
-	// TODO iterate and delete by ns
-	c.c.Flush()
 }
 
 const (
@@ -1541,4 +1515,30 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		}
 		i.oidcCache.SetDefault(nil, "nextRun", nextRun)
 	}
+}
+
+func newOIDCCache() *oidcCache {
+	return &oidcCache{
+		c: cache.New(cache.NoExpiration, cache.NoExpiration),
+	}
+}
+
+func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
+	if ns == nil {
+		ns = &namespace.Namespace{ID: "__root__"}
+	}
+	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
+}
+
+func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool) {
+	return c.c.Get(c.nskey(ns, key))
+}
+
+func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) {
+	c.c.SetDefault(c.nskey(ns, key), obj)
+}
+
+func (c *oidcCache) Flush(ns *namespace.Namespace) {
+	// TODO iterate and delete by ns
+	c.c.Flush()
 }
