@@ -325,8 +325,9 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 
 	// Initialize only if we are either:
 	//   (1) A local mount.
-	//   (2) Are _not_ a replicated secondary cluster or a performance standby node.
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
+	//   (2) Are _NOT_ a replicated secondary cluster, or a performance standby node, or a DR secondary.
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(
+		consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby|consts.ReplicationDRSecondary) {
 
 		s := req.Storage
 
