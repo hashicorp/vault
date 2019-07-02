@@ -7,13 +7,34 @@ import Swag from 'swagger-ui-dist';
 const { SwaggerUIBundle } = Swag;
 const { APP } = config;
 
+const SearchFilterPlugin = () => {
+  return {
+    fn: {
+      opsFilter: (taggedOps, phrase) => {
+        // map over the options and filter out operations where the path doesn't match what's typed
+        return (
+          taggedOps
+            .map(tagObj => {
+              let operations = tagObj.get('operations').filter(operationObj => {
+                return operationObj.get('path').includes(phrase);
+              });
+              return tagObj.set('operations', operations);
+            })
+            // then traverse again and remove the top level item if there are no operations left after filtering
+            .filter(tagObj => !!tagObj.get('operations').size)
+        );
+      },
+    },
+  };
+};
+
 const CONFIG = (componentInstance, initialFilter) => {
   return {
     dom_id: `#${componentInstance.elementId}-swagger`,
     url: '/v1/sys/internal/specs/openapi',
     deepLinking: false,
     presets: [SwaggerUIBundle.presets.apis],
-    plugins: [SwaggerUIBundle.plugins.DownloadUrl, componentInstance.searchFilterPlugin],
+    plugins: [SwaggerUIBundle.plugins.DownloadUrl, SearchFilterPlugin],
     // 'list' expands tags, but not operations
     docExpansion: 'list',
     operationsSorter: 'alpha',
@@ -42,6 +63,9 @@ const CONFIG = (componentInstance, initialFilter) => {
       }
       return req;
     },
+    onComplete: () => {
+      componentInstance.set('swaggerLoading', false);
+    },
   };
 };
 
@@ -50,39 +74,7 @@ export default Component.extend({
   namespaceService: service('namespace'),
   initialFilter: null,
   onFilterChange() {},
-
-  init() {
-    this._super(...arguments);
-    // the react app (SwaggerUI) is calling the opsFilter function - rebinding here lets us have a reference
-    // to the component's updateFilter so that we can track the react app's state out to the ember app's url 🙃
-    this.searchFilterPlugin = this.searchFilterPlugin.bind(this);
-  },
-
-  searchFilterPlugin() {
-    return {
-      fn: {
-        // apparently this doesn't fire if `phrase` is empty so we can't zero out our query param :-/
-        opsFilter: (taggedOps, phrase) => {
-          // we don't want the initial slash in the query param, so call the component fn first
-          this.updatedFilter(phrase);
-          // but we do want it for
-          let path = '/' + phrase;
-          // map over the options and filter out operations where the path doesn't match what's typed
-          return (
-            taggedOps
-              .map((tagObj, tag) => {
-                let operations = tagObj.get('operations').filter(operationObj => {
-                  return operationObj.get('path').includes(path);
-                });
-                return tagObj.set('operations', operations);
-              })
-              // then traverse again and remove the top level item if there are no operations left after filtering
-              .filter(tagObj => !!tagObj.get('operations').size)
-          );
-        },
-      },
-    };
-  },
+  swaggerLoading: true,
 
   didInsertElement() {
     this._super(...arguments);
@@ -91,8 +83,23 @@ export default Component.extend({
     SwaggerUIBundle(CONFIG(this, initialFilter));
   },
 
-  // sets the filter so the query param is updated so we get sharable URLs
-  updatedFilter(val) {
-    this.onFilterChange(val || '');
+  actions: {
+    // sets the filter so the query param is updated so we get sharable URLs
+    updateFilter(e) {
+      this.onFilterChange(e.target.value || '');
+    },
+    proxyEvent(e) {
+      let swaggerInput = this.element.querySelector('.operation-filter-input');
+      // if this breaks because of a react upgrade,
+      // change this to
+      //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      //originalSetter.call(swaggerInput, e.target.value);
+      // see post on triggering react events externally for an explanation of
+      // why this works: https://stackoverflow.com/a/46012210
+      let evt = new Event('input', { bubbles: true });
+      evt.simulated = true;
+      swaggerInput.value = e.target.value.replace(/^(\/)+/, '');
+      swaggerInput.dispatchEvent(evt);
+    },
   },
 });
