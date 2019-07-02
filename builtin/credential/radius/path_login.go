@@ -147,6 +147,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
+	req.Auth.Period = cfg.TokenPeriod
 	req.Auth.TTL = cfg.TokenTTL
 	req.Auth.MaxTTL = cfg.TokenMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
