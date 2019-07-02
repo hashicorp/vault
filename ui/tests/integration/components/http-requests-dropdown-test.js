@@ -19,7 +19,7 @@ module('Integration | Component | http-requests-dropdown', function(hooks) {
   test('it renders with options', async function(assert) {
     await render(hbs`<HttpRequestsDropdown @counters={{counters}} />`);
 
-    assert.dom('#date-range').hasValue('All', 'shows all data by default');
+    assert.dom('[data-test-date-range]').hasValue('All', 'shows all data by default');
 
     assert.equal(
       this.element.querySelector('#date-range').options.length,

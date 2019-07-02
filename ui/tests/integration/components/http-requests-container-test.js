@@ -1,8 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
-import { create } from 'ember-cli-page-object';
-import httpRequestsContainer from 'vault/tests/pages/components/http-requests-container';
+import { render, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const COUNTERS = [
@@ -44,19 +42,10 @@ module('Integration | Component | http-requests-container', function(hooks) {
 
   test('it filters the data according to the dropdown', async function(assert) {
     await render(hbs`<HttpRequestsContainer @counters={{counters}}/>`);
-    const component = create(httpRequestsContainer);
-    await component.select('2018');
+    await fillIn('[data-test-timewindow-select]', '2018');
 
-    assert.equal(
-      this.element.querySelectorAll('.shadow-bars> .bar').length,
-      1,
-      'filters the bar chart to the selected year'
-    );
+    assert.dom('.shadow-bars> .bar').exists({ count: 1 }, 'filters the bar chart to the selected year');
 
-    assert.equal(
-      this.element.querySelectorAll('.start-time').length,
-      1,
-      'filters the table to the selected year'
-    );
+    assert.dom('.start-time').exists({ count: 1 }, 'filters the table to the selected year');
   });
 });
