@@ -84,17 +84,15 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
 			iStore.oidcPeriodicFunc(ctx)
 
+			// TODO: REMOVE!!!!!!
+			for i := 0; i < 10; i++ {
+				time.Sleep(5 * time.Second)
+				iStore.oidcPeriodicFunc(ctx)
+			}
+
 			return nil
 		},
 	}
-
-	// TODO: REMOVE!!!!!!
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			iStore.oidcPeriodicFunc(context.Background())
-		}
-	}()
 
 	iStore.oidcCache = newOIDCCache()
 

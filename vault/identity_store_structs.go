@@ -51,8 +51,9 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// A lock to make sure things are consistent
-	lock sync.RWMutex
+	// locks to make sure things are consistent
+	lock     sync.RWMutex
+	oidcLock sync.RWMutex
 
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex

@@ -441,6 +441,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	name := d.Get("name").(string)
 
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
+
 	var key namedKey
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
@@ -523,6 +526,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
+	i.oidcLock.RLock()
+	defer i.oidcLock.RUnlock()
+
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return nil, err
@@ -553,6 +559,8 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	targetKeyName := d.Get("name").(string)
 
+	i.oidcLock.Lock()
+
 	// it is an error to delete a key that is actively referenced by a role
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
@@ -579,6 +587,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	if len(rolesReferencingTargetKeyName) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
 			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
+		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 
@@ -587,6 +596,8 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
+
+	i.oidcLock.Unlock()
 
 	_, err = i.expireOIDCPublicKeys(ctx, req.Storage)
 	if err != nil {
@@ -600,6 +611,9 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 // handleOIDCListKey is used to list named keys
 func (i *IdentityStore) pathOIDCListKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	i.oidcLock.RLock()
+	defer i.oidcLock.RUnlock()
+
 	keys, err := req.Storage.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return nil, err
@@ -615,6 +629,9 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 	}
 
 	name := d.Get("name").(string)
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	// load the named key and perform a rotation
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
@@ -648,6 +665,9 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 
 func (i *IdentityStore) pathOIDCKeyExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
+
+	i.oidcLock.RLock()
+	defer i.oidcLock.RUnlock()
 
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
@@ -1325,6 +1345,9 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
 	var didUpdate bool
 
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return time.Time{}, err
@@ -1424,6 +1447,9 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 	// here to a relatively distant time.
 	now := time.Now()
 	soonestRotation := now.Add(24 * time.Hour)
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	keys, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
