@@ -46,11 +46,11 @@ export default Component.extend({
 
     if (
       executeUICommand(command, args => this.logAndOutput(args), {
+        api: () => this.routeToExplore.perform(command),
         clearall: () => service.clearLogs(true),
         clear: () => service.clearLogs(),
         fullscreen: () => this.toggleProperty('isFullscreen'),
         refresh: () => this.refreshRoute.perform(),
-        explore: () => this.routeToExplore.perform(command),
       })
     ) {
       return;
@@ -105,7 +105,7 @@ export default Component.extend({
   }),
 
   routeToExplore: task(function*(command) {
-    let filter = command.replace('explore', '').trim();
+    let filter = command.replace('api', '').trim();
     try {
       yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
         queryParams: { filter },
@@ -113,7 +113,7 @@ export default Component.extend({
       let content =
         'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
       if (filter) {
-        content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for ${filter}.`;
+        content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
       }
       this.logAndOutput(null, {
         type: 'success',
