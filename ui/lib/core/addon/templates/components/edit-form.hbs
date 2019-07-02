@@ -1,0 +1,30 @@
+<form {{action (perform save model) on="submit"}}>
+  <MessageError @model={{model}} data-test-edit-form-error />
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" />
+    {{#if (or model.fields model.attrs)}}
+      {{#each (or model.fields model.attrs) as |attr|}}
+        <FormField data-test-field @attr={{attr}} @model={{model}} @mode={{@mode}} />
+      {{/each}}
+    {{else if model.fieldGroups}}
+      <FormFieldGroups @model={{model}} @mode={{@mode}} />
+    {{/if}}
+  </div>
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}"
+          disabled={{save.isRunning}}>
+          {{saveButtonText}}
+        </button>
+      </div>
+      {{#if cancelLinkParams}}
+        <div class="control">
+          {{#link-to params=cancelLinkParams class="button"}}
+            Cancel
+          {{/link-to}}
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</form>

@@ -2,6 +2,7 @@ package jwtauth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -81,32 +82,55 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("request originated from invalid CIDR"), nil
 	}
 
-	// Here is where things diverge. If it is using OIDC Discovery, validate
-	// that way; otherwise validate against the locally configured keys. Once
-	// things are validated, we re-unify the request path when evaluating the
-	// claims.
+	// Here is where things diverge. If it is using OIDC Discovery, validate that way;
+	// otherwise validate against the locally configured or JWKS keys. Once things are
+	// validated, we re-unify the request path when evaluating the claims.
 	allClaims := map[string]interface{}{}
+	configType := config.authType()
+
 	switch {
-	case len(config.ParsedJWTPubKeys) != 0:
-		parsedJWT, err := jwt.ParseSigned(token)
-		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error parsing token: {{err}}", err).Error()), nil
-		}
-
+	case configType == StaticKeys || configType == JWKS:
 		claims := jwt.Claims{}
+		if configType == JWKS {
+			keySet, err := b.getKeySet(config)
+			if err != nil {
+				return logical.ErrorResponse(errwrap.Wrapf("error fetching jwks keyset: {{err}}", err).Error()), nil
+			}
 
-		var valid bool
-		for _, key := range config.ParsedJWTPubKeys {
-			if err := parsedJWT.Claims(key, &claims, &allClaims); err == nil {
-				valid = true
-				break
+			// Verify signature (and only signature... other elements are checked later)
+			payload, err := keySet.VerifySignature(ctx, token)
+			if err != nil {
+				return logical.ErrorResponse(errwrap.Wrapf("error verifying token: {{err}}", err).Error()), nil
+			}
+
+			// Unmarshal payload into two copies: public claims for library verification, and a set
+			// of all received claims.
+			if err := json.Unmarshal(payload, &claims); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal claims: %v", err)
+			}
+			if err := json.Unmarshal(payload, &allClaims); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal claims: %v", err)
+			}
+		} else {
+			parsedJWT, err := jwt.ParseSigned(token)
+			if err != nil {
+				return logical.ErrorResponse(errwrap.Wrapf("error parsing token: {{err}}", err).Error()), nil
+			}
+
+			var valid bool
+			for _, key := range config.ParsedJWTPubKeys {
+				if err := parsedJWT.Claims(key, &claims, &allClaims); err == nil {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return logical.ErrorResponse("no known key successfully validated the token signature"), nil
 			}
 		}
-		if !valid {
-			return logical.ErrorResponse("no known key successfully validated the token signature"), nil
-		}
 
-		// We require notbefore or expiry; if only one is provided, we allow 5 minutes of leeway.
+		// We require notbefore or expiry; if only one is provided, we allow 5 minutes of leeway by default.
+		// Configurable by ExpirationLeeway and NotBeforeLeeway
 		if claims.IssuedAt == nil {
 			claims.IssuedAt = new(jwt.NumericDate)
 		}
@@ -119,18 +143,28 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		if *claims.IssuedAt == 0 && *claims.Expiry == 0 && *claims.NotBefore == 0 {
 			return logical.ErrorResponse("no issue time, notbefore, or expiration time encoded in token"), nil
 		}
+
 		if *claims.Expiry == 0 {
 			latestStart := *claims.IssuedAt
 			if *claims.NotBefore > *claims.IssuedAt {
 				latestStart = *claims.NotBefore
 			}
-			*claims.Expiry = latestStart + 300
+			leeway := role.ExpirationLeeway.Seconds()
+			if role.ExpirationLeeway.Seconds() == 0 {
+				leeway = claimDefaultLeeway
+			}
+			*claims.Expiry = jwt.NumericDate(int64(latestStart) + int64(leeway))
 		}
+
 		if *claims.NotBefore == 0 {
 			if *claims.IssuedAt != 0 {
 				*claims.NotBefore = *claims.IssuedAt
 			} else {
-				*claims.NotBefore = *claims.Expiry - 300
+				leeway := role.NotBeforeLeeway.Seconds()
+				if role.NotBeforeLeeway.Seconds() == 0 {
+					leeway = claimDefaultLeeway
+				}
+				*claims.NotBefore = jwt.NumericDate(int64(*claims.Expiry) - int64(leeway))
 			}
 		}
 
@@ -144,7 +178,12 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			Time:    time.Now(),
 		}
 
-		if err := claims.Validate(expected); err != nil {
+		cksLeeway := role.ClockSkewLeeway
+		if role.ClockSkewLeeway.Seconds() == 0 {
+			cksLeeway = jwt.DefaultLeeway
+		}
+
+		if err := claims.ValidateWithLeeway(expected, cksLeeway); err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
 		}
 
@@ -152,7 +191,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
 		}
 
-	case config.OIDCDiscoveryURL != "":
+	case configType == OIDCDiscovery:
 		allClaims, err = b.verifyOIDCToken(ctx, config, role, token)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -232,7 +271,12 @@ func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig,
 
 	oidcConfig := &oidc.Config{
 		SupportedSigningAlgs: config.JWTSupportedAlgs,
-		SkipClientIDCheck:    true,
+	}
+
+	if role.RoleType == "oidc" {
+		oidcConfig.ClientID = config.OIDCClientID
+	} else {
+		oidcConfig.SkipClientIDCheck = true
 	}
 
 	verifier := provider.Verifier(oidcConfig)

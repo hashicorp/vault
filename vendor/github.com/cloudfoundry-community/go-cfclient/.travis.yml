@@ -1,0 +1,14 @@
+language: go
+sudo: false
+go:
+  - "1.10"
+  - "1.11"
+
+script:
+  - FILES=`find . -iname '*.go' -type f -not -path "./vendor/*"`
+  # linting
+  - gofmt -d $FILES
+  - env GO111MODULE=on go tool vet $FILES
+  # testing
+  - go generate
+  - env GO111MODULE=on go test -v -race

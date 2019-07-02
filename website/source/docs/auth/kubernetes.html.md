@@ -84,6 +84,15 @@ list of available configuration options, please see the API documentation.
         kubernetes_ca_cert=@ca.crt
     ```
 
+    !> **NOTE:** The pattern Vault uses to authenticate Pods depends on sharing
+    the JWT token over the network. Given the [security model of
+    Vault](/docs/internals/security.html), this is allowable because Vault is
+    part of the trusted compute base. In general, Kubernetes applications should
+    **not** share this JWT with other applications, as it allows API calls to be
+    made on behalf of the Pod and can result in unintended access being granted
+    to 3rd parties.
+
+
 1. Create a named role:
 
     ```text

@@ -112,6 +112,10 @@ type Path struct {
 	// be automatically line-wrapped at 80 characters.
 	HelpSynopsis    string
 	HelpDescription string
+
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
 }
 
 // OperationHandler defines and describes a specific operation handler.
@@ -148,6 +152,32 @@ type OperationProperties struct {
 
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
+
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
+}
+
+type DisplayAttributes struct {
+	// Name is the name of the field suitable as a label or documentation heading.
+	Name string `json:"name,omitempty"`
+
+	// Value is a sample value to display for this field. This may be used
+	// to indicate a default value, but it is for display only and completely separate
+	// from any Default member handling.
+	Value interface{} `json:"value,omitempty"`
+
+	// Sensitive indicates that the value should be masked by default in the UI.
+	Sensitive bool `json:"sensitive,omitempty"`
+
+	// Navigation indicates that the path should be available as a navigation tab
+	Navigation bool `json:"navigation,omitempty"`
+
+	// Group is the suggested UI group to place this field in.
+	Group string `json:"group,omitempty"`
+
+	// Action is the verb to use for the operation.
+	Action string `json:"action,omitempty"`
 }
 
 // RequestExample is example of request data.
@@ -227,6 +257,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 				Key:         k,
 				Type:        schema.Type.String(),
 				Description: description,
+				Deprecated:  schema.Deprecated,
 			}
 		}
 
@@ -256,6 +287,7 @@ type pathTemplateData struct {
 type pathTemplateFieldData struct {
 	Key         string
 	Type        string
+	Deprecated  bool
 	Description string
 	URL         bool
 }
@@ -270,8 +302,11 @@ Matching Route: {{.RoutePattern}}
 ## PARAMETERS
 {{range .Fields}}
 {{indent 4 .Key}} ({{.Type}})
+{{if .Deprecated}}
+{{printf "(DEPRECATED) %s" .Description | indent 8}}
+{{else}}
 {{indent 8 .Description}}
-{{end}}{{end}}
+{{end}}{{end}}{{end}}
 ## DESCRIPTION
 
 {{.Description}}

@@ -20,11 +20,12 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	if ok {
 		in = jsonIn.String()
 	}
-	switch in.(type) {
+	switch inp := in.(type) {
+	case nil:
+		// return default of zero
 	case string:
-		inp := in.(string)
 		if inp == "" {
-			return time.Duration(0), nil
+			return dur, nil
 		}
 		var err error
 		// Look for a suffix otherwise its a plain second value
@@ -42,17 +43,23 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 			dur = time.Duration(secs) * time.Second
 		}
 	case int:
-		dur = time.Duration(in.(int)) * time.Second
+		dur = time.Duration(inp) * time.Second
 	case int32:
-		dur = time.Duration(in.(int32)) * time.Second
+		dur = time.Duration(inp) * time.Second
 	case int64:
-		dur = time.Duration(in.(int64)) * time.Second
+		dur = time.Duration(inp) * time.Second
 	case uint:
-		dur = time.Duration(in.(uint)) * time.Second
+		dur = time.Duration(inp) * time.Second
 	case uint32:
-		dur = time.Duration(in.(uint32)) * time.Second
+		dur = time.Duration(inp) * time.Second
 	case uint64:
-		dur = time.Duration(in.(uint64)) * time.Second
+		dur = time.Duration(inp) * time.Second
+	case float32:
+		dur = time.Duration(inp) * time.Second
+	case float64:
+		dur = time.Duration(inp) * time.Second
+	case time.Duration:
+		dur = inp
 	default:
 		return 0, errors.New("could not parse duration from input")
 	}
