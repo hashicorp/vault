@@ -602,7 +602,7 @@ func TestOIDC_Config(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 
 	// Read Config - expect defaults
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -637,6 +637,22 @@ func TestOIDC_Config(t *testing.T) {
 	// issuer should be set
 	if resp.Data["issuer"].(string) != testIssuer {
 		t.Fatalf("Expected issuer to be %q but found %q instead", testIssuer, resp.Data["issuer"].(string))
+	}
+
+	// Test bad issuers
+	for _, iss := range []string{"asldfk", "ftp://a.com", "a.com", "http://a.com/", "https://a.com/foo", "http:://a.com"} {
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/config",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"issuer": iss,
+			},
+		})
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
+		}
+
 	}
 }
 
@@ -780,12 +796,12 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	// Validate configurable parts - for now just issuer
 	discoveryResp := &discovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+issuerPath {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+issuerPath, discoveryResp.Issuer)
+	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+"/"+issuerPath {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+"/"+issuerPath, discoveryResp.Issuer)
 	}
 
 	// Update issuer config
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/config",
 		Operation: logical.UpdateOperation,
@@ -804,8 +820,9 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// Validate configurable parts - for now just issuer
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != testIssuer {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", testIssuer, discoveryResp.Issuer)
+	expected := testIssuer + "/" + issuerPath
+	if discoveryResp.Issuer != expected {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}
 }
 

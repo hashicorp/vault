@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -332,18 +333,53 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 }
 
 func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var resp *logical.Response
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	value, ok := d.GetOk("issuer")
+	issuerRaw, ok := d.GetOk("issuer")
 	if !ok {
 		return nil, nil
 	}
 
+	issuer := issuerRaw.(string)
+
+	if issuer != "" {
+		// verify that issuer is the correct format:
+		//   - http or https
+		//   - host name
+		//   - optional port
+		//   - nothing more
+		valid := false
+		if u, err := url.Parse(issuer); err == nil {
+			u2 := url.URL{
+				Scheme: u.Scheme,
+				Host:   u.Host,
+			}
+			valid = (*u == u2) &&
+				(u.Scheme == "http" || u.Scheme == "https") &&
+				u.Host != ""
+		}
+
+		if !valid {
+			return logical.ErrorResponse(
+				"invalid issuer, which must include only a scheme, host, " +
+					"and optional port (e.g. https://example.com:8200)"), nil
+		}
+
+		resp = &logical.Response{
+			Warnings: []string{`If "issuer" is set explicitly, all tokens must be ` +
+				`validated against that address, including those issued by secondary ` +
+				`clusters. Setting issuer to "" will restore the default behavior of ` +
+				`using the cluster's api_addr as the issuer.`},
+		}
+	}
+
 	c := oidcConfig{
-		Issuer: value.(string),
+		Issuer: issuer,
 	}
 
 	entry, err := logical.StorageEntryJSON(oidcConfigStorageKey, c)
@@ -355,18 +391,9 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	var resp logical.Response
-
-	if c.Issuer != "" {
-		resp.AddWarning(`If "issuer" is set explicitly, all tokens must be ` +
-			`validated against that address, including those issued by secondary ` +
-			`clusters. Setting issuer to "" will restore the default behavior of ` +
-			`using the cluster's api_addr as the issuer.`)
-	}
-
 	i.oidcCache.Flush(ns)
 
-	return &resp, nil
+	return resp, nil
 }
 
 func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*oidcConfig, error) {
@@ -393,12 +420,10 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		nsPath := "/"
-		if ns.Path != "" {
-			nsPath = "/" + ns.Path
-		}
-		c.effectiveIssuer = i.core.redirectAddr + nsPath + issuerPath
+		c.effectiveIssuer = i.core.redirectAddr
 	}
+
+	c.effectiveIssuer += "/" + ns.Path + issuerPath
 
 	i.oidcCache.SetDefault(ns, "config", &c)
 
