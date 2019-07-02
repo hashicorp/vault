@@ -916,51 +916,37 @@ func TestRoleInitialize(t *testing.T) {
 		t.Fatal(diff)
 	}
 
+	// TODO check storage version
+
 	// run it again -- nothing will happen
-	updated, err := b.updateUpgradableRoleEntries(ctx, storage)
+	upgraded, err := b.upgrade(ctx, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated {
-		t.Fatalf("expected no updates")
+	if upgraded {
+		t.Fatalf("expected no upgrade")
 	}
 }
 
-func TestUpgradedRoleStorageVersion(t *testing.T) {
+func TestRoleStorageVersion(t *testing.T) {
 
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-	b, err := Backend(config)
+	before := roleStorageVersion{
+		Version: 42,
+	}
+
+	entry, err := logical.StorageEntryJSON("config/role-storage-version", &before)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
-	err = b.Setup(ctx, config)
+	var after roleStorageVersion
+	err = entry.DecodeJSON(&after)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	version, err := b.upgradedRoleStorageVersion(ctx, storage)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if -1 != version {
-		t.Fatalf("expected version %d, got %d", -1, version)
-	}
-
-	err = b.setUpgradedRoleStorageVersion(ctx, storage, 42)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	version, err = b.upgradedRoleStorageVersion(ctx, storage)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if 42 != version {
-		t.Fatalf("expected version %d, got %d", 42, version)
+	if diff := deep.Equal(before, after); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

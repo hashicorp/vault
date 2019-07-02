@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -329,50 +328,58 @@ func (b *backend) initialize(ctx context.Context, s logical.Storage) error {
 	//   (2) Are _not_ a replicated secondary cluster or a performance standby node.
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 
-		// kick off the role upgrader
-		go func() {
+		logger := b.Logger().Named("initialize")
+		logger.Info("starting initialization")
 
-			// Don't cancel when the original client request goes away
-			ctx = context.Background()
+		upgraded, err := b.upgrade(ctx, s)
+		if err != nil {
+			logger.Error("error running initialization", "error", err)
+			return err
+		}
+		if upgraded {
+			logger.Info("an upgrade was performed during initialization")
+		}
 
-			logger := b.Logger().Named("initialize")
-			logger.Info("starting initialization")
-
-			updated, err := b.updateUpgradableRoleEntries(ctx, s)
-			if err != nil {
-				logger.Error("error running initialization", "error", err)
-				return
-			}
-			if !updated {
-				logger.Info("upgrade has already been performed for role storage version",
-					currentRoleStorageVersion)
-			}
-
-			logger.Info("initialization succeeded")
-		}()
+		logger.Info("initialization succeeded")
 	}
 
 	return nil
 }
 
-// updateUpgradableRoleEntries upgrades and persists all of the role entries
-// that are in need of being upgraded.
-func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Storage) (bool, error) {
+// roleStorageVersion stores the latest role storage version that we have
+// upgraded to.
+type roleStorageVersion struct {
+	Version int `json:"version"`
+}
 
-	// check if we've already upgraded to the current role storage
-	// version
-	version, err := b.upgradedRoleStorageVersion(ctx, s)
+// upgrade and persist all of the role entries that are in need of being
+// upgraded.
+func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
+
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	// find the current role-storage-version
+	version := -1
+	entry, err := s.Get(ctx, "config/role-storage-version")
 	if err != nil {
 		return false, err
 	}
+	if entry != nil {
+		var rsv roleStorageVersion
+		err = entry.DecodeJSON(&rsv)
+		if err != nil {
+			return false, err
+		}
+		version = rsv.Version
+	}
+
+	// check if we need to upgrade
 	if version == currentRoleStorageVersion {
 		return false, nil
 	}
 
-	// Read all the role names.  We don't need to grab the mutex here for
-	// listing. The reason is that if we're in the process of creating a new
-	// mount, it will already happen on the active node (since it's a write)
-	// and will properly use the latest role structure.
+	// Read all the role names.
 	roleNames, err := s.List(ctx, "role/")
 	if err != nil {
 		return false, err
@@ -380,62 +387,24 @@ func (b *backend) updateUpgradableRoleEntries(ctx context.Context, s logical.Sto
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
-		err := b.updateUpgradableRoleEntry(ctx, s, roleName)
+		_, err := b.roleInternal(ctx, s, roleName)
 		if err != nil {
 			return false, err
 		}
 	}
 
 	// save the current role storage version
-	err = b.setUpgradedRoleStorageVersion(ctx, s, currentRoleStorageVersion)
+	rsv := roleStorageVersion{Version: currentRoleStorageVersion}
+	entry, err = logical.StorageEntryJSON("config/role-storage-version", &rsv)
+	if err != nil {
+		return false, err
+	}
+	err = s.Put(ctx, entry)
 	if err != nil {
 		return false, err
 	}
 
 	return true, nil
-}
-
-// updateUpgradableRoleEntry uses the write lock to call roleInternal(), which
-// will do an upgrade and save it if need be.
-func (b *backend) updateUpgradableRoleEntry(ctx context.Context, s logical.Storage, roleName string) error {
-
-	b.roleMutex.Lock()
-	defer b.roleMutex.Unlock()
-
-	_, err := b.roleInternal(ctx, s, roleName)
-	return err
-}
-
-// upgradedRoleStorageVersion returns the value of the roleStorageVersion that
-// we have already upgraded to, or -1 if the upgrade has never been run.
-func (b *backend) upgradedRoleStorageVersion(ctx context.Context, s logical.Storage) (int, error) {
-	b.roleMutex.Lock()
-	defer b.roleMutex.Unlock()
-
-	entry, err := s.Get(ctx, "config/role-storage-version")
-	if err != nil {
-		return -1, err
-	}
-
-	// the upgrade has never been run
-	if entry == nil {
-		return -1, nil
-	}
-
-	// return the upgraded value
-	return strconv.Atoi(string(entry.Value))
-}
-
-// setUpgradedRoleStorageVersion returns the value of the roleStorageVersion
-// that we have already upgraded to, or -1 if the upgrade has never been run
-func (b *backend) setUpgradedRoleStorageVersion(ctx context.Context, s logical.Storage, version int) error {
-	b.roleMutex.Lock()
-	defer b.roleMutex.Unlock()
-
-	return s.Put(ctx, &logical.StorageEntry{
-		Key:   "config/role-storage-version",
-		Value: []byte(strconv.Itoa(version)),
-	})
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
