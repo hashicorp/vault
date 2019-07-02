@@ -1030,11 +1030,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		var entity *identity.Entity
 		auth = resp.Auth
 
-		// Only the token store can toggle this off, and that's via a different
-		// path since it's not a login request; it's explicitly disallowed
-		// above
-		auth.Renewable = true
-
 		mEntry := c.router.MatchingMountEntry(ctx, req.Path)
 
 		if auth.Alias != nil &&

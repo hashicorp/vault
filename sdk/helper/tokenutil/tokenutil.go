@@ -258,6 +258,7 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.NoDefaultPolicy = t.TokenNoDefaultPolicy
 	auth.Period = t.TokenPeriod
 	auth.Policies = t.TokenPolicies
+	auth.Renewable = true
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
