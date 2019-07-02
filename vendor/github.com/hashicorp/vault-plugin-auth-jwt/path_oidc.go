@@ -2,6 +2,7 @@ package jwtauth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -136,6 +137,9 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	if !ok {
 		return logical.ErrorResponse(errTokenVerification + " No id_token found in response."), nil
 	}
+	if role.VerboseOIDCLogging {
+		b.Logger().Debug("OIDC provider response", "ID token", rawToken)
+	}
 
 	// Parse and verify ID Token payload.
 	allClaims, err := b.verifyOIDCToken(ctx, config, role, rawToken)
@@ -159,6 +163,14 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 			logFunc = b.Logger().Info
 		}
 		logFunc("error reading /userinfo endpoint", "error", err)
+	}
+
+	if role.VerboseOIDCLogging {
+		if c, err := json.Marshal(allClaims); err == nil {
+			b.Logger().Debug("OIDC provider response", "claims", string(c))
+		} else {
+			b.Logger().Debug("OIDC provider response", "marshalling error", err.Error())
+		}
 	}
 
 	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {

@@ -3,11 +3,10 @@ package pcf
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault-plugin-auth-pcf/models"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -35,7 +34,7 @@ func (b *backend) operationRolesList(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathRoles() *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
@@ -75,24 +74,6 @@ func (b *backend) pathRoles() *framework.Path {
 				},
 				Description: "Require that the client certificate presented has at least one of these instance IDs.",
 			},
-			"bound_cidrs": {
-				Type: framework.TypeCommaStringSlice,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Bound CIDRs",
-					Value: "192.168.100.14/24",
-				},
-				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
-			},
-			"policies": {
-				Type:    framework.TypeCommaStringSlice,
-				Default: "default",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Policies",
-					Value: "default",
-				},
-				Description: "Comma separated list of policies on the role.",
-			},
 			"disable_ip_matching": {
 				Type:    framework.TypeBool,
 				Default: false,
@@ -103,32 +84,30 @@ IP addresses which can perform the login operation.`,
 				Description: `If set to true, disables the default behavior that logging in must be performed from 
 an acceptable IP address described by the certificate presented.`,
 			},
-			"ttl": {
-				Type: framework.TypeDurationSecond,
-				Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fallback to the system/mount defaults.`,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "TTL",
-				},
+			"policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
-			"max_ttl": {
+			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Max TTL",
-				},
+				Description: tokenutil.DeprecationText("token_ttl"),
+				Deprecated:  true,
 			},
-			"period": {
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Period",
-					Value: "0",
-				},
-				Description: `If set, indicates that the token generated using this role
-should never expire. The token should be renewed within the
-duration specified by this value. At each renewal, the token's
-TTL will be set to the value of this parameter.`,
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_max_ttl"),
+				Deprecated:  true,
+			},
+			"period": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
+			},
+			"bound_cidrs": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_bound_cidrs"),
+				Deprecated:  true,
 			},
 		},
 		ExistenceCheck: b.operationRolesExistenceCheck,
@@ -149,6 +128,9 @@ TTL will be set to the value of this parameter.`,
 		HelpSynopsis:    pathRolesHelpSyn,
 		HelpDescription: pathRolesHelpDesc,
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
 func (b *backend) operationRolesExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
@@ -184,31 +166,39 @@ func (b *backend) operationRolesCreateUpdate(ctx context.Context, req *logical.R
 	if raw, ok := data.GetOk("bound_instance_ids"); ok {
 		role.BoundInstanceIDs = raw.([]string)
 	}
-	if raw, ok := data.GetOk("bound_cidrs"); ok {
-		parsedCIDRs, err := parseutil.ParseAddrs(raw)
-		if err != nil {
-			return nil, err
-		}
-		role.BoundCIDRs = parsedCIDRs
-	}
-	if raw, ok := data.GetOk("policies"); ok {
-		role.Policies = raw.([]string)
-	}
 	if raw, ok := data.GetOk("disable_ip_matching"); ok {
 		role.DisableIPMatching = raw.(bool)
 	}
-	if raw, ok := data.GetOk("ttl"); ok {
-		role.TTL = time.Duration(raw.(int)) * time.Second
-	}
-	if raw, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Duration(raw.(int)) * time.Second
-	}
-	if raw, ok := data.GetOk("period"); ok {
-		role.Period = time.Duration(raw.(int)) * time.Second
+
+	if err := role.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if role.MaxTTL > 0 && role.TTL > role.MaxTTL {
-		return logical.ErrorResponse("ttl exceeds max_ttl"), nil
+	// Handle upgrade cases
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "bound_cidrs", "token_bound_cidrs", &role.BoundCIDRs, &role.TokenBoundCIDRs); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &role.TTL, &role.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &role.MaxTTL, &role.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	if role.TokenMaxTTL > 0 && role.TokenTTL > role.TokenMaxTTL {
+		return logical.ErrorResponse("ttl exceeds max ttl"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(roleStoragePrefix+roleName, role)
@@ -219,9 +209,9 @@ func (b *backend) operationRolesCreateUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	if role.TTL > b.System().MaxLeaseTTL() {
+	if role.TokenTTL > b.System().MaxLeaseTTL() {
 		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("ttl of %d exceeds the system max ttl of %d, the latter will be used during login", role.TTL, b.System().MaxLeaseTTL()))
+		resp.AddWarning(fmt.Sprintf("ttl of %d exceeds the system max ttl of %d, the latter will be used during login", role.TokenTTL, b.System().MaxLeaseTTL()))
 		return resp, nil
 	}
 	return nil, nil
@@ -240,19 +230,35 @@ func (b *backend) operationRolesRead(ctx context.Context, req *logical.Request, 
 	for i, cidr := range role.BoundCIDRs {
 		cidrs[i] = cidr.String()
 	}
+
+	d := map[string]interface{}{
+		"bound_application_ids":  role.BoundAppIDs,
+		"bound_space_ids":        role.BoundSpaceIDs,
+		"bound_organization_ids": role.BoundOrgIDs,
+		"bound_instance_ids":     role.BoundInstanceIDs,
+		"disable_ip_matching":    role.DisableIPMatching,
+	}
+
+	role.PopulateTokenData(d)
+
+	if len(role.Policies) > 0 {
+		d["policies"] = d["token_policies"]
+	}
+	if len(role.BoundCIDRs) > 0 {
+		d["bound_cidrs"] = d["token_bound_cidrs"]
+	}
+	if role.TTL > 0 {
+		d["ttl"] = int64(role.TTL.Seconds())
+	}
+	if role.MaxTTL > 0 {
+		d["max_ttl"] = int64(role.MaxTTL.Seconds())
+	}
+	if role.Period > 0 {
+		d["period"] = int64(role.Period.Seconds())
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"bound_application_ids":  role.BoundAppIDs,
-			"bound_space_ids":        role.BoundSpaceIDs,
-			"bound_organization_ids": role.BoundOrgIDs,
-			"bound_instance_ids":     role.BoundInstanceIDs,
-			"bound_cidrs":            cidrs,
-			"policies":               role.Policies,
-			"disable_ip_matching":    role.DisableIPMatching,
-			"ttl":                    role.TTL / time.Second,
-			"max_ttl":                role.MaxTTL / time.Second,
-			"period":                 role.Period / time.Second,
-		},
+		Data: d,
 	}, nil
 }
 
@@ -265,7 +271,7 @@ func (b *backend) operationRolesDelete(ctx context.Context, req *logical.Request
 }
 
 func getRole(ctx context.Context, storage logical.Storage, roleName string) (*models.RoleEntry, error) {
-	r := &models.RoleEntry{}
+	role := &models.RoleEntry{}
 	entry, err := storage.Get(ctx, roleStoragePrefix+roleName)
 	if err != nil {
 		return nil, err
@@ -273,10 +279,27 @@ func getRole(ctx context.Context, storage logical.Storage, roleName string) (*mo
 	if entry == nil {
 		return nil, nil
 	}
-	if err := entry.DecodeJSON(r); err != nil {
+	if err := entry.DecodeJSON(role); err != nil {
 		return nil, err
 	}
-	return r, nil
+
+	if role.TokenTTL == 0 && role.TTL > 0 {
+		role.TokenTTL = role.TTL
+	}
+	if role.TokenMaxTTL == 0 && role.MaxTTL > 0 {
+		role.TokenMaxTTL = role.MaxTTL
+	}
+	if role.TokenPeriod == 0 && role.Period > 0 {
+		role.TokenPeriod = role.Period
+	}
+	if len(role.TokenPolicies) == 0 && len(role.Policies) > 0 {
+		role.TokenPolicies = role.Policies
+	}
+	if len(role.TokenBoundCIDRs) == 0 && len(role.BoundCIDRs) > 0 {
+		role.TokenBoundCIDRs = role.BoundCIDRs
+	}
+
+	return role, nil
 }
 
 const pathListRolesHelpSyn = "List the existing roles in this backend."
