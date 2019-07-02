@@ -722,9 +722,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 	}
 
 	// Populte storage with a namedKey
-	namedKey := &namedKey{
-		name: keyName,
-	}
+	namedKey := &namedKey{}
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
@@ -783,7 +781,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a role
+	// Populate storage with a role
 	role := &role{}
 	entry, _ := logical.StorageEntryJSON(roleConfigPath+roleName, role)
 	if err := storage.Put(ctx, entry); err != nil {

@@ -358,9 +358,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	name := d.Get("name").(string)
 
 	var key namedKey
-	if req.Operation == logical.CreateOperation {
-		key.name = name
-	}
 	if req.Operation == logical.UpdateOperation {
 		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+name)
 		if err != nil {
