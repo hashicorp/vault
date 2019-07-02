@@ -91,13 +91,8 @@ type PluginBackend struct {
 	loaded bool
 }
 
-func (b *PluginBackend) reloadBackend(ctx context.Context) error {
-	b.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
-	return b.startBackend(ctx)
-}
-
 // startBackend starts a plugin backend
-func (b *PluginBackend) startBackend(ctx context.Context) error {
+func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storage) error {
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -134,11 +129,14 @@ func (b *PluginBackend) startBackend(ctx context.Context) error {
 	b.Backend = nb
 	b.loaded = true
 
-	return nil
+	// call Initialize() explicitly here.
+	return b.Backend.Initialize(ctx, &logical.InitializationRequest{
+		Storage: storage,
+	})
 }
 
 // lazyLoad lazy-loads the backend before running a method
-func (b *PluginBackend) lazyLoadBackend(ctx context.Context, methodWrapper func() error) error {
+func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Storage, methodWrapper func() error) error {
 	b.RLock()
 	canary := b.canary
 
@@ -149,7 +147,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, methodWrapper func(
 		b.Lock()
 		// Check once more after lock swap
 		if !b.loaded {
-			err := b.startBackend(ctx)
+			err := b.startBackend(ctx, storage)
 			if err != nil {
 				b.Unlock()
 				return err
@@ -169,7 +167,8 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, methodWrapper func(
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx)
+			b.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
+			err := b.startBackend(ctx, storage)
 			if err != nil {
 				b.Unlock()
 				return err
@@ -193,7 +192,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, methodWrapper func(
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 
-	err = b.lazyLoadBackend(ctx, func() error {
+	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
 		var merr error
 		resp, merr = b.Backend.HandleRequest(ctx, req)
 		return merr
@@ -205,7 +204,7 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 // HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck that includes automatic plugin reload.
 func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 
-	err = b.lazyLoadBackend(ctx, func() error {
+	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
 		var merr error
 		checkFound, exists, merr = b.Backend.HandleExistenceCheck(ctx, req)
 		return merr
@@ -217,7 +216,10 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 // Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
 func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 
-	return b.lazyLoadBackend(ctx, func() error {
-		return b.Backend.Initialize(ctx, req)
+	return b.lazyLoadBackend(ctx, req.Storage, func() error {
+		// We are guaranteed to be lazy-loaded here, so we will do a noop
+		// function.  b.Backend.Initialize() gets called from startBackend(),
+		// and we know startBackend() will be called
+		return nil
 	})
 }
