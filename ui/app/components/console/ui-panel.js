@@ -47,8 +47,8 @@ export default Component.extend({
     if (
       executeUICommand(command, args => this.logAndOutput(args), {
         api: () => this.routeToExplore.perform(command),
-        clearall: () => service.clearLogs(true),
-        clear: () => service.clearLogs(),
+        clearall: () => service.clearLog(true),
+        clear: () => service.clearLog(),
         fullscreen: () => this.toggleProperty('isFullscreen'),
         refresh: () => this.refreshRoute.perform(),
       })
