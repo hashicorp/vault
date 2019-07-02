@@ -137,8 +137,8 @@ func (b *PluginBackend) startBackend(ctx context.Context) error {
 	return nil
 }
 
-// HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+// lazyLoad lazy-loads the backend before running a method
+func (b *PluginBackend) lazyLoadBackend(ctx context.Context, methodWrapper func() error) error {
 	b.RLock()
 	canary := b.canary
 
@@ -152,14 +152,16 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 			err := b.startBackend(ctx)
 			if err != nil {
 				b.Unlock()
-				return nil, err
+				return err
 			}
 		}
 		b.Unlock()
 		b.RLock()
 	}
-	resp, err := b.Backend.HandleRequest(ctx, req)
+
+	err := methodWrapper()
 	b.RUnlock()
+
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
 	if err != nil &&
@@ -170,120 +172,52 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 			err := b.reloadBackend(ctx)
 			if err != nil {
 				b.Unlock()
-				return nil, err
+				return err
 			}
 			b.canary, err = uuid.GenerateUUID()
 			if err != nil {
 				b.Unlock()
-				return nil, err
+				return err
 			}
 		}
 		b.Unlock()
 
-		// Try request once more
+		// Try once more
 		b.RLock()
 		defer b.RUnlock()
-		return b.Backend.HandleRequest(ctx, req)
+		return methodWrapper()
 	}
-	return resp, err
+	return err
+}
+
+// HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
+func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
+
+	err = b.lazyLoadBackend(ctx, func() error {
+		var merr error
+		resp, merr = b.Backend.HandleRequest(ctx, req)
+		return merr
+	})
+
+	return
 }
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck that includes automatic plugin reload.
-func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
-	b.RLock()
-	canary := b.canary
+func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 
-	// Lazy-load backend
-	if !b.loaded {
-		// Upgrade lock
-		b.RUnlock()
-		b.Lock()
-		// Check once more after lock swap
-		if !b.loaded {
-			err := b.startBackend(ctx)
-			if err != nil {
-				b.Unlock()
-				return false, false, err
-			}
-		}
-		b.Unlock()
-		b.RLock()
-	}
+	err = b.lazyLoadBackend(ctx, func() error {
+		var merr error
+		checkFound, exists, merr = b.Backend.HandleExistenceCheck(ctx, req)
+		return merr
+	})
 
-	checkFound, exists, err := b.Backend.HandleExistenceCheck(ctx, req)
-	b.RUnlock()
-	if err != nil &&
-		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
-		// Reload plugin if it's an rpc.ErrShutdown
-		b.Lock()
-		if b.canary == canary {
-			err := b.reloadBackend(ctx)
-			if err != nil {
-				b.Unlock()
-				return false, false, err
-			}
-			b.canary, err = uuid.GenerateUUID()
-			if err != nil {
-				b.Unlock()
-				return false, false, err
-			}
-		}
-		b.Unlock()
-
-		// Try request once more
-		b.RLock()
-		defer b.RUnlock()
-		return b.Backend.HandleExistenceCheck(ctx, req)
-	}
-	return checkFound, exists, err
+	return
 }
 
 // Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
 func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
-	b.RLock()
-	canary := b.canary
 
-	// Lazy-load backend
-	if !b.loaded {
-		// Upgrade lock
-		b.RUnlock()
-		b.Lock()
-		// Check once more after lock swap
-		if !b.loaded {
-			err := b.startBackend(ctx)
-			if err != nil {
-				b.Unlock()
-				return err
-			}
-		}
-		b.Unlock()
-		b.RLock()
-	}
-
-	err := b.Backend.Initialize(ctx, req)
-	b.RUnlock()
-	if err != nil &&
-		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
-		// Reload plugin if it's an rpc.ErrShutdown
-		b.Lock()
-		if b.canary == canary {
-			err := b.reloadBackend(ctx)
-			if err != nil {
-				b.Unlock()
-				return err
-			}
-			b.canary, err = uuid.GenerateUUID()
-			if err != nil {
-				b.Unlock()
-				return err
-			}
-		}
-		b.Unlock()
-
-		// Try request once more
-		b.RLock()
-		defer b.RUnlock()
+	return b.lazyLoadBackend(ctx, func() error {
 		return b.Backend.Initialize(ctx, req)
-	}
-	return err
+	})
 }

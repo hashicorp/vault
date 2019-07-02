@@ -387,7 +387,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 
 	// Upgrade the roles as necessary.
 	for _, roleName := range roleNames {
-		// make context hasn't been canceled
+		// make sure the context hasn't been canceled
 		if ctx.Err() != nil {
 			return false, err
 		}
@@ -397,7 +397,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		}
 	}
 
-	// save the current role storage version
+	// save the current role-storage-version
 	rsv := roleStorageVersion{Version: currentRoleStorageVersion}
 	entry, err = logical.StorageEntryJSON("config/role-storage-version", &rsv)
 	if err != nil {
