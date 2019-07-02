@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -613,11 +612,20 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
-		"ttl":                            time.Duration(600),
-		"max_ttl":                        time.Duration(1200),
+		"ttl":                            int64(600),
+		"token_ttl":                      int64(600),
+		"max_ttl":                        int64(1200),
+		"token_max_ttl":                  int64(1200),
+		"token_explicit_max_ttl":         int64(0),
 		"policies":                       []string{"testpolicy1", "testpolicy2"},
+		"token_policies":                 []string{"testpolicy1", "testpolicy2"},
 		"disallow_reauthentication":      false,
-		"period":                         time.Duration(60),
+		"period":                         int64(60),
+		"token_period":                   int64(60),
+		"token_bound_cidrs":              []string{},
+		"token_no_default_policy":        false,
+		"token_num_uses":                 0,
+		"token_type":                     "default",
 	}
 
 	if resp.Data["role_id"] == nil {
@@ -749,13 +757,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if int64(resp.Data["ttl"].(time.Duration)) != 10 {
+	if int64(resp.Data["ttl"].(int64)) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if int64(resp.Data["max_ttl"].(time.Duration)) != 20 {
+	if int64(resp.Data["max_ttl"].(int64)) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if int64(resp.Data["period"].(time.Duration)) != 30 {
+	if int64(resp.Data["period"].(int64)) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }

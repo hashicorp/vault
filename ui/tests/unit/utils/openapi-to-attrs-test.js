@@ -56,7 +56,6 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     },
     awesomePeople: {
       editType: 'stringArray',
-      type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
       fieldGroup: 'default',
     },
@@ -126,7 +125,6 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     awesomePeople: attr({
       label: 'People Who Are Awesome',
       editType: 'stringArray',
-      type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
     }),
     favoriteIceCream: attr('string', {

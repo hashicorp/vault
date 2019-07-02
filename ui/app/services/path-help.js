@@ -61,8 +61,9 @@ export default Service.extend({
         //if we have an item we want the create info for that itemType
         let tag, path;
         if (itemType) {
-          tag = paths.create[0].tag;
-          path = paths.create[0].path;
+          const createPath = paths.create.find(path => path.path.includes(itemType));
+          tag = createPath.tag; //tag is for type of backend, e.g. auth or secret
+          path = createPath.path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
         } else {
           //we need the mount config
@@ -75,80 +76,59 @@ export default Service.extend({
     }
   },
 
-  getPaths(apiPath, backend, itemType) {
+  reducePaths(paths, currentPath) {
+    const pathName = currentPath[0];
+    const pathInfo = currentPath[1];
+    //config is a get/post endpoint that doesn't take route params
+    //and isn't also a list endpoint
+    if (
+      pathInfo.post &&
+      pathInfo.get &&
+      (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action === 'Configure')
+    ) {
+      paths.configPath.push({ path: pathName, tag: pathInfo.get.tags[0] });
+      return paths; //config path should only be config path
+    }
+
+    //list endpoints all have { name: "list" } in their get parameters
+    if (pathInfo.get && pathInfo.get.parameters && pathInfo.get.parameters[0].name === 'list') {
+      paths.list.push({ path: pathName, tag: pathInfo.get.tags[0] });
+    }
+
+    if (pathInfo.delete) {
+      paths.delete.push({ path: pathName, tag: pathInfo.delete.tags[0] });
+    }
+
+    //create endpoints have path an action (e.g. "Create" or "Generate")
+    if (pathInfo.post && pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action) {
+      paths.create.push({
+        path: pathName,
+        tag: pathInfo.post.tags[0],
+        action: pathInfo['x-vault-displayAttrs'].action,
+      });
+    }
+
+    if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].navigation) {
+      paths.navPaths.push({ path: pathName });
+    }
+
+    return paths;
+  },
+
+  getPaths(apiPath, backend) {
     debug(`Fetching relevant paths for ${backend} from ${apiPath}`);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
-      let paths = Object.keys(pathInfo);
+      let paths = Object.entries(pathInfo);
 
-      //TODO: consolidate this into a single reduce()
-      //config is a get/post endpoint that doesn't take route params
-      //and isn't also a list endpoint
-      const configPath = paths
-        .map(path => {
-          if (
-            pathInfo[path].post &&
-            !path.includes('{') &&
-            pathInfo[path].get &&
-            (!pathInfo[path].get.parameters || pathInfo[path].get.parameters[0].name !== 'list')
-          ) {
-            return { path: path, tag: pathInfo[path].get.tags[0] };
-          }
-        })
-        .compact();
-
-      //list endpoints all have { name: "list" } in their get parameters
-      const listPaths = paths
-        .map(path => {
-          if (
-            pathInfo[path].get &&
-            pathInfo[path].get.parameters &&
-            pathInfo[path].get.parameters[0].name == 'list'
-          ) {
-            return { path: path, tag: pathInfo[path].get.tags[0] };
-          }
-        })
-        .compact();
-
-      //we always want to keep list endpoints for menus
-      //but only use scoped post/delete endpoints
-      if (itemType) {
-        paths = paths.filter(path => path.includes(itemType));
-      }
-      const deletePaths = paths
-        .map(path => {
-          if (pathInfo[path].delete) {
-            return { path: path, tag: pathInfo[path].delete.tags[0] };
-          }
-        })
-        .compact();
-
-      //create endpoints have path params, signified by "{}"
-      //we have to filter out login endpoints for auth methods
-      const createPaths = paths
-        .map(path => {
-          if (pathInfo[path].post && path.includes('{') && !path.includes('login')) {
-            return { path: path, tag: pathInfo[path].post.tags[0] };
-          }
-        })
-        .compact();
-
-      const navPaths = paths
-        .map(path => {
-          if (pathInfo[path]['x-vault-displayAttrs'] && pathInfo[path]['x-vault-displayAttrs'].navigation) {
-            return { path: path };
-          }
-        })
-        .compact();
-      //return paths object with all relevant information
-      return {
-        apiPath: apiPath,
-        configPath: configPath,
-        list: listPaths,
-        create: createPaths,
-        delete: deletePaths,
-        navPaths: navPaths,
-      };
+      return paths.reduce(this.reducePaths, {
+        apiPath: [],
+        configPath: [],
+        list: [],
+        create: [],
+        delete: [],
+        navPaths: [],
+      });
     });
   },
 
@@ -157,6 +137,7 @@ export default Service.extend({
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
+
     return this.ajax(helpUrl, backend).then(help => {
       //paths is an array but it will have a single entry
       // for the scope we're in
@@ -196,9 +177,11 @@ export default Service.extend({
   getNewAdapter(backend, paths, itemType) {
     //we need list and create paths to set the correct urls for actions
     const { list, create } = paths;
+    const createPath = create.find(path => path.path.includes(itemType));
+    const listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
+    const deletePath = paths.delete.find(path => path.path.includes(itemType));
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
         if (id) {
@@ -212,20 +195,20 @@ export default Service.extend({
       },
 
       urlForUpdateRecord(id) {
-        let { tag, path } = create[0];
+        let { tag, path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let { tag, path } = create[0];
+        let { tag, path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let { tag, path } = paths.delete[0];
+        let { tag, path } = deletePath;
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
