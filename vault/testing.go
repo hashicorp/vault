@@ -190,9 +190,14 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 				HMACType: "hmac-sha256",
 			}
 			config.SaltView = view
-			return &noopAudit{
+
+			n := &noopAudit{
 				Config: config,
-			}, nil
+			}
+			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+				SaltFunc: n.Salt,
+			}
+			return n, nil
 		},
 	}
 
@@ -591,6 +596,8 @@ type noopAudit struct {
 	Config    *audit.BackendConfig
 	salt      *salt.Salt
 	saltMutex sync.RWMutex
+	formatter audit.AuditFormatter
+	records   [][]byte
 }
 
 func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
@@ -601,11 +608,23 @@ func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-func (n *noopAudit) LogRequest(_ context.Context, _ *logical.LogInput) error {
+func (n *noopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
+	var w bytes.Buffer
+	err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
 }
 
-func (n *noopAudit) LogResponse(_ context.Context, _ *logical.LogInput) error {
+func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
+	var w bytes.Buffer
+	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	if err != nil {
+		return err
+	}
+	n.records = append(n.records, w.Bytes())
 	return nil
 }
 
@@ -647,14 +666,13 @@ func AddNoopAudit(conf *CoreConfig) {
 				Key:   "salt",
 				Value: []byte("foo"),
 			})
-			config.SaltConfig = &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			}
-			config.SaltView = view
-			return &noopAudit{
+			n := &noopAudit{
 				Config: config,
-			}, nil
+			}
+			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+				SaltFunc: n.Salt,
+			}
+			return n, nil
 		},
 	}
 }
@@ -1297,6 +1315,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.LicensingConfig = base.LicensingConfig
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
+		coreConfig.MetricsHelper = base.MetricsHelper
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}
@@ -1347,6 +1366,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
+
+	}
+
+	addAuditBackend := len(coreConfig.AuditBackends) == 0
+	if addAuditBackend {
+		AddNoopAudit(coreConfig)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1566,6 +1591,26 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatal(err)
 		}
 		testCluster.ID = cluster.ID
+
+		if addAuditBackend {
+			// Enable auditing.
+			auditReq := &logical.Request{
+				Operation:   logical.UpdateOperation,
+				ClientToken: testCluster.RootToken,
+				Path:        "sys/audit/noop",
+				Data: map[string]interface{}{
+					"type": "noop",
+				},
+			}
+			resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if resp.IsError() {
+				t.Fatal(err)
+			}
+		}
 	}
 
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,10 +16,244 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 )
+
+func TestRaft_Join(t *testing.T) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	// Seal the leader so we can install an address provider
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	joinFunc := func(client *api.Client, addClientCerts bool) {
+		req := &api.RaftJoinRequest{
+			LeaderAPIAddr: leaderAPI,
+			LeaderCACert:  string(cluster.CACertPEM),
+		}
+		if addClientCerts {
+			req.LeaderClientCert = string(cluster.CACertPEM)
+			req.LeaderClientKey = string(cluster.CAKeyPEM)
+		}
+		resp, err := client.Sys().RaftJoin(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !resp.Joined {
+			t.Fatalf("failed to join raft cluster")
+		}
+	}
+
+	joinFunc(cluster.Cores[1].Client, false)
+	joinFunc(cluster.Cores[2].Client, false)
+
+	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	joinFunc(cluster.Cores[1].Client, true)
+	joinFunc(cluster.Cores[2].Client, true)
+}
+
+func TestRaft_RemovePeer(t *testing.T) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.RaftClusterJoinNodes(t, cluster)
+
+	for i, c := range cluster.Cores {
+		if c.Core.Sealed() {
+			t.Fatalf("failed to unseal core %d", i)
+		}
+	}
+
+	client := cluster.Cores[0].Client
+
+	checkConfigFunc := func(expected map[string]bool) {
+		secret, err := client.Logical().Read("sys/storage/raft/configuration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+		for _, s := range servers {
+			server := s.(map[string]interface{})
+			delete(expected, server["node_id"].(string))
+		}
+		if len(expected) != 0 {
+			t.Fatalf("failed to read configuration successfully")
+		}
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
+
+	_, err := client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+	})
+
+	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+		"server_id": "core-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+	})
+}
+
+func TestRaft_Configuration(t *testing.T) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.RaftClusterJoinNodes(t, cluster)
+
+	for i, c := range cluster.Cores {
+		if c.Core.Sealed() {
+			t.Fatalf("failed to unseal core %d", i)
+		}
+	}
+
+	client := cluster.Cores[0].Client
+	secret, err := client.Logical().Read("sys/storage/raft/configuration")
+	if err != nil {
+		t.Fatal(err)
+	}
+	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+	expected := map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	}
+	if len(servers) != 3 {
+		t.Fatalf("incorrect number of servers in the configuration")
+	}
+	for _, s := range servers {
+		server := s.(map[string]interface{})
+		delete(expected, server["node_id"].(string))
+	}
+	if len(expected) != 0 {
+		t.Fatalf("failed to read configuration successfully")
+	}
+}
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	var cleanupFuncs []func()

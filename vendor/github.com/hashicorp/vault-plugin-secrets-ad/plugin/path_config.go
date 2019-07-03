@@ -82,7 +82,7 @@ func (b *backend) configFields() map[string]*framework.FieldSchema {
 
 func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 	// Build and validate the ldap conf.
-	activeDirectoryConf, err := ldaputil.NewConfigEntry(fieldData)
+	activeDirectoryConf, err := ldaputil.NewConfigEntry(nil, fieldData)
 	if err != nil {
 		return nil, err
 	}

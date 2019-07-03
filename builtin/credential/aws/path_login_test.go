@@ -311,10 +311,11 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			}
 
 			loginRequest := &logical.Request{
-				Operation: logical.UpdateOperation,
-				Path:      "login",
-				Storage:   storage,
-				Data:      loginData,
+				Operation:  logical.UpdateOperation,
+				Path:       "login",
+				Storage:    storage,
+				Data:       loginData,
+				Connection: &logical.Connection{},
 			}
 
 			resp, err := b.HandleRequest(context.Background(), loginRequest)

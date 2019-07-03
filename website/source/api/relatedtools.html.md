@@ -32,5 +32,6 @@ The following list of tools is maintained by the community of Vault users; Hashi
 * [sequelize-vault](https://github.com/linyows/sequelize-vault) - A Sequelize plugin for easily integrating Vault secrets.
 * [ansible-modules-hashivault](https://github.com/TerryHowe/ansible-modules-hashivault) - An Ansible module for configuring most things in Vault including secrets, backends and policies.
 * [Docker credential helper](https://github.com/morningconsult/docker-credential-vault-login) - A program that automatically reads Docker credentials from your Vault server and passes them to the Docker daemon to authenticate to your Docker registry when pulling an image
+* [Cruise Daytona](https://github.com/cruise-automation/daytona) - An alternative implementation of the Vault client CLI for services and containers. Its core features are the abilty to automate authentication, fetching of secrets, and automated token renewal. Support for AWS, GCP, & Kubernetes Vault Auth Backends.
 
 Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/api/relatedtools.html.md).

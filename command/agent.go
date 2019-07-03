@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -321,9 +322,15 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 		}
 
+		// Check if a default namespace has been set
+		mountPath := config.AutoAuth.Method.MountPath
+		if config.AutoAuth.Method.Namespace != "" {
+			mountPath = path.Join(config.AutoAuth.Method.Namespace, mountPath)
+		}
+
 		authConfig := &auth.AuthConfig{
 			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-			MountPath: config.AutoAuth.Method.MountPath,
+			MountPath: mountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
 		switch config.AutoAuth.Method.Type {

@@ -28,13 +28,13 @@ management tool.
 
 A v2 `kv` secrets engine can be enabled by:
 
-```
+```text
 $ vault secrets enable -version=2 kv
 ```
 
 Or, you can pass `kv-v2` as the secrets engine type:
 
-```
+```text
 $ vault secrets enable kv-v2
 ```
 
@@ -44,20 +44,20 @@ different paths. Each instance of the KV secrets engine is isolated and unique.
 
 ## Upgrading from Version 1
 
-An existing version 1 kv store can be upgraded to a version 2 kv store via the CLI or API, as shown below. This will start an upgrade process to upgrade the existing key/value data to a versioned format. The mount will be inaccessible during this process. This process could take a long time, so plan accordingly.  
+An existing version 1 kv store can be upgraded to a version 2 kv store via the CLI or API, as shown below. This will start an upgrade process to upgrade the existing key/value data to a versioned format. The mount will be inaccessible during this process. This process could take a long time, so plan accordingly.
 
 Once upgraded to version 2, the former paths at which the data was accessible will no longer suffice. You will need to adjust user policies to add access to the version 2 paths as detailed in the [ACL Rules section below](/docs/secrets/kv/kv-v2.html#acl-rules). Similarly, users/applications will need to update the paths at which they interact with the kv data once it has been upgraded to version 2.
 
 An existing version 1 kv can be upgraded to a version 2 KV store with the CLI command:
 
-```
+```text
 $ vault kv enable-versioning secret/
 Success! Tuned the secrets engine at: secret/
 ```
 
 or via the API:
 
-```
+```text
 $ cat payload.json
 {
   "options": {
@@ -163,36 +163,34 @@ allows for writing keys with arbitrary values.
 
 ### Writing/Reading arbitrary data
 
-
-
 1. Write arbitrary data:
 
     ```text
     $ vault kv put secret/my-secret my-value=s3cr3t
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:11:48.589157362Z
-    deletion_time    n/a
-    destroyed        false
-    version          1
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:20:22.985303Z
+	deletion_time    n/a
+	destroyed        false
+	version          1
     ```
 
 1. Read arbitrary data:
 
     ```text
 	$ vault kv get secret/my-secret
-    ====== Metadata ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:11:48.589157362Z
-    deletion_time    n/a
-    destroyed        false
-    version          1
+	====== Metadata ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:20:22.985303Z
+	deletion_time    n/a
+	destroyed        false
+	version          1
 
-    ====== Data ======
-    Key         Value
-    ---         -----
-    my-value    s3cr3t
+	====== Data ======
+	Key         Value
+	---         -----
+	my-value    s3cr3t
     ```
 
 1. Write another version, the previous version will still be accessible. The
@@ -204,48 +202,48 @@ allows for writing keys with arbitrary values.
 
     ```text
     $ vault kv put -cas=1 secret/my-secret my-value=new-s3cr3t
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:18:37.124228658Z
-    deletion_time    n/a
-    destroyed        false
-    version          2
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:22:23.369372Z
+	deletion_time    n/a
+	destroyed        false
+	version          2
     ```
 
 1. Reading now will return the newest version of the data:
 
     ```text
     $ vault kv get secret/my-secret
-    ====== Metadata ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:18:37.124228658Z
-    deletion_time    n/a
-    destroyed        false
-    version          2
+	====== Metadata ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:22:23.369372Z
+	deletion_time    n/a
+	destroyed        false
+	version          2
 
-    ====== Data ======
-    Key         Value
-    ---         -----
-    my-value    new-s3cr3t
+	====== Data ======
+	Key         Value
+	---         -----
+	my-value    new-s3cr3t
     ```
 
 1. Previous versions can be accessed with the `-version` flag:
 
-    ```
+    ```text
     $ vault kv get -version=1 secret/my-secret
-    ====== Metadata ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:16:39.808909557Z
-    deletion_time    n/a
-    destroyed        false
-    version          1
+	====== Metadata ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:20:22.985303Z
+	deletion_time    n/a
+	destroyed        false
+	version          1
 
-    ====== Data ======
-    Key         Value
-    ---         -----
-    my-value    s3cr3t
+	====== Data ======
+	Key         Value
+	---         -----
+	my-value    s3cr3t
     ```
 
 ### Deleting and Destroying Data
@@ -253,7 +251,7 @@ allows for writing keys with arbitrary values.
 When deleting data the standard `vault kv delete` command will perform a
 soft delete. It will mark the version as deleted and populate a `deletion_time`
 timestamp. Soft deletes do not remove the underlying version data from storage,
-which allows the version to be undeleted. The `vault kv undelete` commmand
+which allows the version to be undeleted. The `vault kv undelete` command
 handles undeleting versions.
 
 A version's data is permanently deleted only when the key has more versions than
@@ -267,37 +265,37 @@ See the commands below for more information:
 1. The latest version of a key can be deleted with the delete command, this also
    takes a `-versions` flag to delete prior versions:
 
-    ```
+    ```text
     $ vault kv delete secret/my-secret
-    Success! Data deleted (if it existed) at: secret/my-secret
+	Success! Data deleted (if it existed) at: secret/my-secret
     ```
 
 1. Versions can be undeleted:
 
-    ```
+    ```text
     $ vault kv undelete -versions=2 secret/my-secret
-    Success! Data written to: secret/undelete/my-secret
+	Success! Data written to: secret/undelete/my-secret
 
     $ vault kv get secret/my-secret
-    ====== Metadata ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:18:37.124228658Z
-    deletion_time    n/a
-    destroyed        false
-    version          2
+	====== Metadata ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:23:21.834403Z
+	deletion_time    n/a
+	destroyed        false
+	version          2
 
-    ====== Data ======
-    Key         Value
-    ---         -----
-    my-value    new-s3cr3t
+	====== Data ======
+	Key         Value
+	---         -----
+	my-value    short-lived-s3cr3t
     ```
 
 1. Destroying a version permanently deletes the underlying data:
 
-    ```
+    ```text
     $ vault kv destroy -versions=2 secret/my-secret
-    Success! Data written to: secret/destroy/my-secret
+	Success! Data written to: secret/destroy/my-secret
     ```
 
 ### Key Metadata
@@ -310,78 +308,90 @@ See the commands below for more information:
 
 1. All metadata and versions for a key can be viewed:
 
-    ```
+    ```text
     $ vault kv metadata get secret/my-secret
-    ======= Metadata =======
-    Key                Value
-    ---                -----
-    created_time       2018-03-30T22:16:39.808909557Z
-    current_version    2
-    max_versions       0
-    oldest_version     0
-    updated_time       2018-03-30T22:18:37.124228658Z
+	========== Metadata ==========
+	Key                     Value
+	---                     -----
+	cas_required            false
+	created_time            2019-06-19T17:20:22.985303Z
+	current_version         2
+	delete_version_after    0s
+	max_versions            0
+	oldest_version          0
+	updated_time            2019-06-19T17:22:23.369372Z
 
-    ====== Version 1 ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:16:39.808909557Z
-    deletion_time    n/a
-    destroyed        false
+	====== Version 1 ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:20:22.985303Z
+	deletion_time    n/a
+	destroyed        false
 
-    ====== Version 2 ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:18:37.124228658Z
-    deletion_time    n/a
-    destroyed        true
+	====== Version 2 ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:22:23.369372Z
+	deletion_time    n/a
+	destroyed        true
     ```
 
 1. The metadata settings for a key can be configured:
 
-    ```
-    $ vault kv metadata put -max-versions 1 secret/my-secret
-    Success! Data written to: secret/metadata/my-secret
+    ```text
+    $ vault kv metadata put -max-versions 2 -delete-version-after="3h25m19s" secret/my-secret
+	Success! Data written to: secret/metadata/my-secret
     ```
 
-    Max versions changes will be applied on next write:
+	Delete-version-after settings will apply only to new versions. Max versions
+	changes will be applied on next write:
 
-    ```
+    ```text
     $ vault kv put secret/my-secret my-value=newer-s3cr3t
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:41:09.193643571Z
-    deletion_time    n/a
-    destroyed        false
-    version          3
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:31:16.662563Z
+	deletion_time    2019-06-19T20:56:35.662563Z
+	destroyed        false
+	version          4
     ```
 
-    Once a key has more versions than max versions the oldest versions are cleaned
-    up:
+	Once a key has more versions than max versions the oldest versions
+	are cleaned up:
 
-    ```
+    ```text
     $ vault kv metadata get secret/my-secret
-    ======= Metadata =======
-    Key                Value
-    ---                -----
-    created_time       2018-03-30T22:16:39.808909557Z
-    current_version    3
-    max_versions       1
-    oldest_version     3
-    updated_time       2018-03-30T22:41:09.193643571Z
+	========== Metadata ==========
+	Key                     Value
+	---                     -----
+	cas_required            false
+	created_time            2019-06-19T17:20:22.985303Z
+	current_version         4
+	delete_version_after    3h25m19s
+	max_versions            2
+	oldest_version          3
+	updated_time            2019-06-19T17:31:16.662563Z
 
-    ====== Version 3 ======
-    Key              Value
-    ---              -----
-    created_time     2018-03-30T22:41:09.193643571Z
-    deletion_time    n/a
-    destroyed        false
+	====== Version 3 ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:23:21.834403Z
+	deletion_time    n/a
+	destroyed        true
+
+	====== Version 4 ======
+	Key              Value
+	---              -----
+	created_time     2019-06-19T17:31:16.662563Z
+	deletion_time    2019-06-19T20:56:35.662563Z
+	destroyed        false
     ```
 
 1. Permanently delete all metadata and versions for a key:
 
-    ```
+    ```text
     $ vault kv metadata delete secret/my-secret
-    Success! Data deleted (if it existed) at: secret/metadata/my-secret
+	Success! Data deleted (if it existed) at: secret/metadata/my-secret
     ```
 
 ## API

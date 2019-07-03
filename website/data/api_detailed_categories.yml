@@ -29,6 +29,7 @@
     - api/secret/databases/index.html
     - api/secret/gcp/index.html
     - api/secret/gcpkms/index.html
+    - api/secret/kmip/index.html
     - api/secret/kv/index.html
     - api/secret/identity/index.html
     - api/secret/nomad/index.html

@@ -118,6 +118,15 @@ entities attempting to login. At least one of the bound values must be set.
 - `period` `(int: <optional>)` - If set, indicates that the token generated
   using this role should never expire, but instead always use the value set
   here as the TTL for every renewal.
+- `clock_skew_leeway` `(int: <optional>)` - The amount of leeway to add to all claims to 
+  account for clock skew, in seconds.  Defaults to `60` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles.
+- `expiration_leeway` `(int: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to 
+  account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles. 
+- `not_before_leeway` `(int: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to 
+  account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles. 
 - `num_uses` `(int: <optional>)` - If set, puts a use-count limitation on the
   issued token.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`

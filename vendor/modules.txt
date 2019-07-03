@@ -322,21 +322,21 @@ github.com/hashicorp/raft
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190416163516-aea818a71148
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190703042722-a8d100740e20
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190619235432-b4440902a577
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190703042725-86deab7df8e2
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190415180802-f00d1a611f87
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190703042729-bdd19ebba78a
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190620000144-dd5238afce02
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190703042733-7a9fc78f2664
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190621031127-2c3220b99c76
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190703042737-804281c53c5f
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190621030801-e469573c6fcf
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190703042741-1a51335bffd3
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190620165201-6bd563e0a2a2
+# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec
 github.com/hashicorp/vault-plugin-auth-pcf
 github.com/hashicorp/vault-plugin-auth-pcf/signatures
 github.com/hashicorp/vault-plugin-auth-pcf/models
@@ -345,7 +345,7 @@ github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190426163411-b627ed8a028f
+# github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
@@ -362,9 +362,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.3-0.20190627213952-21b5ec5dc34c => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190703041405-a2810eb6965d => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190627213952-21b5ec5dc34c => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190703041405-a2810eb6965d => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -376,6 +376,7 @@ github.com/hashicorp/vault/sdk/plugin
 github.com/hashicorp/vault/sdk/helper/cidrutil
 github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/locksutil
+github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/jsonutil
 github.com/hashicorp/vault/sdk/helper/certutil
 github.com/hashicorp/vault/sdk/helper/password
@@ -404,7 +405,6 @@ github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
-github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
