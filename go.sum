@@ -322,8 +322,12 @@ github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec h1
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec/go.mod h1:0HwcklMPNEM5RATfzBwmvbOcroMpASToy9tCTXYJnNU=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d h1:tHSfqnFZ7K/85dPgH3ApSP93TbzkUHGkOWPnBRjWHIM=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d/go.mod h1:855Fcz9eNj3I3ZXVm+GnvSdy8mJx67tfG7CId9VfVlo=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.1 h1:BdiASUZLOvOUs317EnaUNjGxTSw0PYGQA7zJZhDKLC4=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.1/go.mod h1:EH9CI8+0aWRBz8eIgGth0QjttmHWlGvn+8ZmX/ZUetE=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687 h1:dlbFaUPvrZNXP4DvhB5u71XWzJNfnMMzurZPcJtfszo=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687/go.mod h1:pRJAA/Gl+UaSYeULx9ecXZ3f1oxIRATRfmLZKP3HUiM=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.2 h1:DmkejbeJQzHD7+dCMheHqdg9fxRh3qwIFLtDshr8jeI=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.2/go.mod h1:pRJAA/Gl+UaSYeULx9ecXZ3f1oxIRATRfmLZKP3HUiM=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190621033057-9c576c32b635 h1:IMyMZI6YiX0FtOlG6fcXSFePKudI+MUBwqvz/3GHgac=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190621033057-9c576c32b635/go.mod h1:BwAuulKwAmq/YckIQCsBLAetJC/cAet3ErMsoTtvkB0=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190509203638-8a60a8656fb0 h1:VaW9pSSP2qeR+BtOVuOkGzQ/fH9ODgiVgUrHhzNyGKw=

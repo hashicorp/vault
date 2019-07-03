@@ -345,7 +345,7 @@ github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687
+# github.com/hashicorp/vault-plugin-secrets-ad v0.5.2
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util

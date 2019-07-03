@@ -76,7 +76,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190703042741-1a51335bffd3
 	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190621033057-9c576c32b635
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190509203638-8a60a8656fb0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
