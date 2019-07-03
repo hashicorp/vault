@@ -354,8 +354,6 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 			if upgraded {
 				logger.Info("an upgrade was performed during initialization")
 			}
-
-			logger.Trace("initialization succeeded")
 		}()
 
 	}
@@ -372,24 +370,11 @@ type awsVersion struct {
 // upgrade aws version
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
 
-	// find the persisted role version
-	roleVersion := -1
-	entry, err := s.Get(ctx, "config/version")
+	// check if we should upgrade
+	needToUpgrade, err := b.shouldUprade(ctx, s)
 	if err != nil {
 		return false, err
 	}
-	if entry != nil {
-		var rsv awsVersion
-		err = entry.DecodeJSON(&rsv)
-		if err != nil {
-			return false, err
-		}
-		roleVersion = rsv.RoleVersion
-	}
-
-	// for now, we only need to upgrade if the persisted role version
-	// has been superseded. This may change in the future.
-	needToUpgrade := roleVersion < currentRoleStorageVersion
 	if !needToUpgrade {
 		return false, nil
 	}
@@ -414,7 +399,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 
 	// save the current version
 	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
-	entry, err = logical.StorageEntryJSON("config/version", &rsv)
+	entry, err := logical.StorageEntryJSON("config/version", &rsv)
 	if err != nil {
 		return false, err
 	}
@@ -424,6 +409,40 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	}
 
 	return true, nil
+}
+
+// shouldUprade checks if we need to upgrade
+func (b *backend) shouldUprade(ctx context.Context, s logical.Storage) (bool, error) {
+
+	entry, err := s.Get(ctx, "config/version")
+	if err != nil {
+		return false, err
+	}
+
+	// if there is no persisted version, we need to upgrade
+	if entry == nil {
+		return true, nil
+	}
+
+	var version awsVersion
+	err = entry.DecodeJSON(&version)
+	if err != nil {
+		return false, err
+	}
+
+	// for now, we only need to upgrade if the role version has been
+	// superseded. This may change in the future.
+	switch version.RoleVersion {
+	case 0:
+	case 1:
+	case 2:
+		return true, nil
+
+	case currentRoleStorageVersion:
+		return false, nil
+
+	}
+	return false, fmt.Errorf("unrecognized role version: %q", version.RoleVersion)
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
