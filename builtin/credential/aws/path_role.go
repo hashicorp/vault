@@ -364,7 +364,7 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 // awsVersion stores info about the the latest aws version that we have
 // upgraded to.
 type awsVersion struct {
-	RoleVersion int `json:"role_verison"`
+	Version int `json:"version"`
 }
 
 // upgrade does an upgrade, if necessary
@@ -375,16 +375,14 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		return false, err
 	}
 	var version awsVersion
-	if entry == nil {
-		version.RoleVersion = 0
-	} else {
+	if entry != nil {
 		err = entry.DecodeJSON(&version)
 		if err != nil {
 			return false, err
 		}
 	}
 
-	switch version.RoleVersion {
+	switch version.Version {
 	case 0:
 		fallthrough
 	case 1:
@@ -398,11 +396,11 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		return false, nil
 
 	default:
-		return false, fmt.Errorf("unrecognized role version: %d", version.RoleVersion)
+		return false, fmt.Errorf("unrecognized role version: %d", version.Version)
 	}
 
 	// save the current version
-	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
+	rsv := awsVersion{Version: currentRoleStorageVersion}
 	entry, err = logical.StorageEntryJSON("config/version", &rsv)
 	if err != nil {
 		return false, err

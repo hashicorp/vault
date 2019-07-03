@@ -939,12 +939,12 @@ func TestRoleInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version.RoleVersion != currentRoleStorageVersion {
-		t.Fatalf("expected version %d, got  %d", currentRoleStorageVersion, version.RoleVersion)
+	if version.Version != currentRoleStorageVersion {
+		t.Fatalf("expected version %d, got  %d", currentRoleStorageVersion, version.Version)
 	}
 
 	// stomp on the saved version
-	version.RoleVersion = 0
+	version.Version = 0
 	e2, err := logical.StorageEntryJSON("config/version", version)
 	if err != nil {
 		t.Fatal(err)
@@ -967,7 +967,7 @@ func TestRoleInitialize(t *testing.T) {
 func TestRoleStorageVersion(t *testing.T) {
 
 	before := awsVersion{
-		RoleVersion: 42,
+		Version: 42,
 	}
 
 	entry, err := logical.StorageEntryJSON("config/version", &before)
