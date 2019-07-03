@@ -316,7 +316,7 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.1-0.20190620170237-51bdddce2dbd
+# github.com/hashicorp/raft v1.1.1-0.20190703171940-f639636d18e0
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.1
 github.com/hashicorp/raft-snapshot
