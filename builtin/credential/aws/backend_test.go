@@ -1821,20 +1821,6 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 func TestBackend_E2E_Initialize(t *testing.T) {
 
-	// TODO: All this test does is load up the aws plugin, so that if we are in
-	// verbose mode we can observe in the log output that the initialization
-	// process ran:
-	//
-	//    go test -v ./builtin/credential/aws/ -run TestBackend_E2E_Initialize
-	//
-	// We need to modify this test so that it:
-	//     loads the plugin
-	//     writes some roles
-	//     "downgrades"the roles manually by directly modifying storage
-	//     somehow re-triggers an Initialize(), which will upgrade the roles
-	//     read from storage to confirm that the roles are upgraded
-	//     read from storage to confirm that the 'config/version' entry is there
-
 	// set up a test cluster
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
@@ -1850,8 +1836,9 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	client := cluster.Cores[0].Client
+	core := cluster.Cores[0]
+	vault.TestWaitActive(t, core.Core)
+	client := core.Client
 
 	// load the auth plugin
 	if err := client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
@@ -1859,4 +1846,56 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+
+	// create some role entries
+	type testRole struct {
+		name string
+		data map[string]interface{}
+	}
+	before := []testRole{
+		{
+			name: "test-role-0",
+			data: map[string]interface{}{
+				"auth_type":               "iam",
+				"policies":                "default",
+				"bound_iam_principal_arn": "arn:aws:iam::000000000001:role/my_role_prefix",
+			},
+		},
+	}
+
+	for _, tr := range before {
+		_, err := client.Logical().Write("auth/aws/role/"+tr.name, tr.data)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	//			data: map[string]interface{}{
+	//			"bound_iam_principal_arn": os.Getenv(envVarAwsTestRoleArn)[:25] + "*",
+	//
+	//// put the entries in storage
+	//for _, role := range before {
+	//	//client.Logical().Write("auth/aws/roles/foo", map[string]interface{}{...
+	//	client.Logical().Write("auth/aws/roles/foo", nil)
+
+	//if _, err := client.Logical().Write("auth/aws/role/test", ); err != nil {
+	//	fmt.Println(err)
+	//	t.Fatal(err)
+	//}
+
+	//	//err = b.setRole(ctx, storage, role.name, role.entry)
+	//	//if err != nil {
+	//	//	t.Fatal(err)
+	//	//}
+	//}
+
+	//---------------------------------------------------
+
+	// "downgrade" some of the roles by directly modifying storage
+
+	// re-trigger Initialize(), which will upgrade the roles
+
+	// read from storage to confirm that the roles are upgraded
+
+	// read from storage to confirm that the 'config/version' entry is there
 }
