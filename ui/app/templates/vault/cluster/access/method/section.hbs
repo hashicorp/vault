@@ -27,4 +27,7 @@
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{component (concat "auth-method/" section) model=model}}
+<FieldGroupShow @model={{model}} @showAllFields=true />
+{{#if model.backend}}
+  <FieldGroupShow @model={{model.backend}} @showAllFields=true />
+{{/if}}
