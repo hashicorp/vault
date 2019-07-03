@@ -576,38 +576,15 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
-				NextRotation:    time.Now().Add(1500 * time.Millisecond),
+				NextRotation:    time.Now(),
 			},
 			[]struct {
 				cycle         int
 				numKeys       int
 				numPublicKeys int
 			}{
-				// {0, 0, 0},
 				{1, 1, 1},
-				// {2, 2, 2},
-				{3, 2, 2},
-				{4, 2, 2},
-			},
-		},
-		{
-			&namedKey{
-				name:            "test-key-2",
-				Algorithm:       "RS256",
-				VerificationTTL: 1 * cyclePeriod,
-				RotationPeriod:  1 * cyclePeriod,
-				KeyRing:         nil,
-				SigningKey:      jwk,
-				NextRotation:    time.Now().Add(1500 * time.Millisecond),
-			},
-			[]struct {
-				cycle         int
-				numKeys       int
-				numPublicKeys int
-			}{
-				// {0, 0, 0},
-				{1, 1, 1},
-				// {2, 2, 2},
+				{2, 2, 2},
 				{3, 2, 2},
 				{4, 2, 2},
 			},
@@ -622,7 +599,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			t.Fatalf("writing to in mem storage failed")
 		}
 
-		currentCycle := 0
+		currentCycle := 1
 		numCases := len(testSet.testCases)
 		lastCycle := testSet.testCases[numCases-1].cycle
 		namedKeySamples := make([]*logical.StorageEntry, numCases)
@@ -633,7 +610,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		for currentCycle <= lastCycle {
 			probe1 := time.Now()
 			c.identityStore.oidcPeriodicFunc(ctx, storage)
-			if currentCycle == 0 {
+			if currentCycle == 1 {
 				start = time.Now()
 				// testSet.namedKey.NextRotation = start.Add(3 * time.Second)
 			}
@@ -648,7 +625,6 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}
 			currentCycle = currentCycle + 1
 			// sleep until we are in the next cycle
-			// probe2 := time.Now()
 			nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
 			time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
 		}
