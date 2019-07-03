@@ -109,6 +109,9 @@ var supportedAlgs = []string{
 	string(jose.EdDSA),
 }
 
+// pseudo-namespace for cache items that don't belong to any real namespace.
+var nilNamespace = &namespace.Namespace{ID: "__NIL_NAMESPACE"}
+
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -711,7 +714,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	now := time.Now()
 	idToken := idToken{
 		Issuer:    config.effectiveIssuer,
-		Namespace: strings.TrimSuffix(ns.Path, "/"),
+		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
 		Expiry:    now.Add(role.TokenTTL).Unix(),
@@ -1476,7 +1479,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 
 	nsPaths := i.listNamespacePaths(ctx)
 
-	if v, ok := i.oidcCache.Get(nil, "nextRun"); ok {
+	if v, ok := i.oidcCache.Get(nilNamespace, "nextRun"); ok {
 		nextRun = v.(time.Time)
 	}
 
@@ -1506,7 +1509,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				i.Logger().Warn("error expiring OIDC public keys", "err", err)
 			}
 
-			i.oidcCache.Flush(nil)
+			i.oidcCache.Flush(nilNamespace)
 
 			// re-run at the soonest expiration or rotation time
 			if nextRotation.Before(nextRun) {
@@ -1517,7 +1520,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				nextRun = nextExpiration
 			}
 		}
-		i.oidcCache.SetDefault(nil, "nextRun", nextRun)
+		i.oidcCache.SetDefault(nilNamespace, "nextRun", nextRun)
 	}
 }
 
@@ -1528,9 +1531,6 @@ func newOIDCCache() *oidcCache {
 }
 
 func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
-	if ns == nil {
-		ns = &namespace.Namespace{ID: "__root__"}
-	}
 	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
 }
 

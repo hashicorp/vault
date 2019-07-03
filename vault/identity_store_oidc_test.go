@@ -589,7 +589,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 0 but was: %#v", len(publicKeys))
 	}
 	// Next run should be set
-	v, _ := c.identityStore.oidcCache.Get(nil, "nextRun")
+	v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 	if v == nil {
 		t.Fatalf("Expected nextRun to be set but it was nil")
 	}
@@ -610,7 +610,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
 	}
 	// nextRun should have been updated
-	v, _ = c.identityStore.oidcCache.Get(nil, "nextRun")
+	v, _ = c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 	laterNextRun := v.(time.Time)
 	if !laterNextRun.After(earlierNextRun) {
 		t.Fatalf("laterNextRun: %#v is not after earlierNextRun: %#v", laterNextRun.String(), earlierNextRun.String())
