@@ -362,9 +362,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.3-0.20190702221840-056e90b5d0ab => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190703021809-ed34f18c60df => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190703010025-1db05c386d79 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190703021809-ed34f18c60df => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
