@@ -80,6 +80,7 @@ module.exports = function(defaults) {
 
   app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
   app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
+
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

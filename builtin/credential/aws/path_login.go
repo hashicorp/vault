@@ -24,6 +24,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -603,6 +604,11 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 	if roleEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	if roleEntry.AuthType != ec2AuthType {
@@ -1209,6 +1215,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 	if roleEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %s not found", roleName)), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	if roleEntry.AuthType != iamAuthType {

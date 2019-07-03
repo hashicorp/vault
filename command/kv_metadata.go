@@ -24,9 +24,9 @@ Usage: vault kv metadata <subcommand> [options] [args]
   Vault's key-value store. Here are some simple examples, and more detailed
   examples are available in the subcommands or the documentation.
 
-  Create or update a metadata entry for a key: 
+  Create or update a metadata entry for a key:
 
-      $ vault kv metadata put -max-versions=5 secret/foo
+      $ vault kv metadata put -max-versions=5 -delete-version-after=3h25m19s secret/foo
 
   Get the metadata for a key, this provides information about each existing
   version:

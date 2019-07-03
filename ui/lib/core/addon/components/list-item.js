@@ -19,7 +19,7 @@ export default Component.extend({
       successCallback();
     } catch (e) {
       let errString = e.errors.join(' ');
-      flash.danger(failureMessage + errString);
+      flash.danger(failureMessage + ' ' + errString);
       model.rollbackAttributes();
     }
   }),
