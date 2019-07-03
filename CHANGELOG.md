@@ -12,10 +12,18 @@ CHANGES:
    Vault's core; however, this can now be explicitly disabled with the new
    `token_no_default_policy` field.
  * auth/approle: `bound_cidr_list` is no longer returned when reading a role
+ 
+ FEATURES:
+
+ * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
+   where you can browse the endpoints avaliable to you and make requests. To try
+   it out, open the Web CLI and type `api`.
 
 IMPROVEMENTS:
 
  * agent: Allow EC2 nonce to be passed in [GH-6953]
+ * agent: Add optional `namespace` parameter, which sets the default namespace
+   for the auto-auth functionality [GH-6988]
  * audit/file: Dramatically speed up file operations by changing
    locking/marshaling order [GH-7024]
  * auth/token: Allow the support of the identity system for the token backend

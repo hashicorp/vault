@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -146,6 +147,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 	if config == nil {
 		return nil, logical.ErrorResponse("configuration has not been set"), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	if config.Organization == "" {

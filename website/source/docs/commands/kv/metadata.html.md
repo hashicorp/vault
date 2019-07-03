@@ -16,7 +16,7 @@ engine command, and not available for Version 1.
 
 The `kv metadata` command has subcommands for interacting with the metadata and
 versions for the versioned secrets (K/V Version 2 secrets engine) at the
-specified path.  
+specified path.
 
 
 ## Usage
@@ -58,27 +58,28 @@ Retrieves the metadata of the key name, "creds":
 
 ```text
 $ vault kv metadata get secret/creds
-======= Metadata =======
-Key                Value
----                -----
-cas_required       false
-created_time       2019-06-06T04:07:33.279432Z
-current_version    5
-max_versions       0
-oldest_version     0
-updated_time       2019-06-06T06:03:26.595978Z
+========== Metadata ==========
+Key                     Value
+---                     -----
+cas_required            false
+created_time            2019-06-28T15:53:30.395814Z
+current_version         5
+delete_version_after    0s
+max_versions            0
+oldest_version          0
+updated_time            2019-06-28T16:01:47.40064Z
 
 ====== Version 1 ======
 Key              Value
 ---              -----
-created_time     2019-06-06T04:07:33.279432Z
+created_time     2019-06-28T15:53:30.395814Z
 deletion_time    n/a
 destroyed        false
 
 ====== Version 2 ======
 Key              Value
 ---              -----
-created_time     2019-06-06T06:03:12.187441Z
+created_time     2019-06-28T16:01:36.676912Z
 deletion_time    n/a
 destroyed        false
 
@@ -123,6 +124,17 @@ $ vault kv metadata put -cas-required secret/creds
 parameter to be set on all write requests. Otherwise, the backend’s
 configuration will be used.
 
+Set the length of time before a version is deleted for the key "creds":
+
+```text
+$ vault kv metadata put -delete-version-after="3h25m19s" secret/creds
+```
+
+**NOTE:** If not set, the backend's configured Delete-Version-After is used. If
+set to a duration greater than the backend's, the backend's Delete-Version-After
+setting will be used. Any changes to the Delete-Version-After setting will only
+be applied to new versions.
+
 #### Output Options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
@@ -138,3 +150,12 @@ configuration will be used.
 - `-max-versions` `(int: 0)` - The number of versions to keep per key. If not
  set, the backend’s configured max version is used. Once a key has more than the
  configured allowed versions the oldest version will be permanently deleted.
+
+- `-delete-version-after` `(string:"0s")` – Set the `delete-version-after` value
+  to a duration to specify the `deletion_time` for all new versions written to
+  this key. If not set, the backend's `delete_version_after` will be used. If
+  the value is greater than the backend's `delete_version_after`, the backend's
+  `delete_version_after` will be used. Accepts [Go duration format
+  string][duration-godoc].
+
+[duration-godoc]: https://golang.org/pkg/time/#ParseDuration

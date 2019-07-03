@@ -1,0 +1,152 @@
+.swagger-ember .swagger-ui .wrapper {
+  padding: 0;
+}
+
+.swagger-ember .swagger-ui .info {
+  margin: 25px 0;
+}
+
+/*hide the swagger-ui headers*/
+.swagger-ember .swagger-ui .filter-container,
+.swagger-ember .swagger-ui .information-container.wrapper {
+	display: none;
+}
+
+/*some general de-rounding and removing backgrounds and drop shadows*/
+.swagger-ember .swagger-ui .btn {
+	border-width: 1px;
+	box-shadow: none;
+	border-radius: 0px;
+}
+
+.swagger-ember .swagger-ui .opblock {
+	background: none;
+	border-width: 1px;
+	border-radius: 2px;
+	box-shadow: none;
+}
+
+
+/*customize method, path, description*/
+.swagger-ember .swagger-ui .opblock .opblock-summary,
+.swagger-ember .swagger-ui .opblock .opblock-summary-description {
+	display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.swagger-ember .swagger-ui .opblock .opblock-summary {
+  padding: 1rem;
+}
+
+.swagger-ember .swagger-ui .opblock .opblock-summary-description {
+  font-size: 14px;
+}
+
+.swagger-ember .swagger-ui .opblock .opblock-summary-method,
+.swagger-ember .swagger-ui .opblock .opblock-summary-path{
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+}
+
+.swagger-ember .swagger-ui .opblock .opblock-summary-method {
+	border-radius: 1px;
+	min-width: auto;
+	text-align: left;
+	font-size: 10px;
+	box-shadow: 0 0 0 1px currentColor;
+	position: relative;
+	top: -2px;
+	padding: 0 2px;
+	margin-right: 8px;
+}
+
+/*make tags look like list items */
+.swagger-ember .swagger-ui .opblock-tag{
+  font-size: 16px;
+}
+
+.swagger-ember .swagger-ui .opblock-tag-section .opblock-tag {
+  color: #0a0a0a;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  transition: box-shadow 150ms, margin 150ms, padding 150ms;
+  will-change: box-shadow, margin, padding;
+  background-color: white;
+  border-radius: 0;
+  padding: 1.25rem;
+  margin: 0;
+}
+
+.swagger-ember .swagger-ui .opblock-tag:hover,
+.swagger-ember .swagger-ui .opblock-tag:focus,
+.swagger-ember .swagger-ui .opblock-tag:active {
+  margin-left: -0.75rem !important;
+  margin-right: -0.75rem !important;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  position: relative;
+  box-shadow: 0 2px 0 -1px #BAC1CC, 0 -2px 0 -1px #BAC1CC, 0 0 0 1px #BAC1CC, 0 8px 4px -4px rgba(10, 10, 10, 0.1), 0 6px 8px -2px rgba(10, 10, 10, 0.05);
+}
+
+/*shrink the size of the arrows*/
+.swagger-ember .swagger-ui .expand-methods svg,
+.swagger-ember .swagger-ui .expand-operation svg {
+  height: 12px;
+  width: 12px;
+}
+
+
+/*operation box - GET (blue) */
+.swagger-ember .swagger-ui .opblock.opblock-get {
+	background: #f5f8ff;
+	border: 1px solid #bfd4ff;
+}
+
+/*operation label*/
+.swagger-ember .swagger-ui .opblock.opblock-get .opblock-summary-method {
+	color: #1563ff;
+	background: none;
+}
+ /*and expanded tab highlight */
+.swagger-ember .swagger-ui .opblock.opblock-get .tab-header .tab-item.active h4 span::after {
+	background: #1563ff;
+}
+
+
+/*operation box - POST (green) */
+.swagger-ember .swagger-ui .opblock.opblock-post {
+	background: #fafdfa;
+	border: 1px solid #c6e9c9;
+}
+.swagger-ember .swagger-ui .opblock.opblock-post .opblock-summary-method {
+	color: #2eb039;
+  background: none;
+}
+.swagger-ember .swagger-ui .opblock.opblock-post .tab-header .tab-item.active h4 span::after {
+	background: #2eb039;
+}
+
+/*operation box - POST (red) */
+.swagger-ember .swagger-ui .opblock.opblock-delete {
+	background: #fdfafb;
+	border: 1px solid #f9ecee;
+}
+.swagger-ember .swagger-ui .opblock.opblock-delete .opblock-summary-method {
+  color: #c73445;
+	background: none;
+}
+.swagger-ember .swagger-ui .opblock.opblock-delete .tab-header .tab-item.active h4 span::after {
+	background: #c73445;
+}
+
+/*remove "LOADING" from initial loading spinner*/
+.swagger-ember .swagger-ui .loading-container .loading::after {
+	content: "";
+}
+
+/*add text about requests to a live vault server*/
+.swagger-ember .swagger-ui .btn.execute::after {
+	content: " - send a request with your token to Vault."
+}

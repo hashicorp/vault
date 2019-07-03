@@ -80,6 +80,19 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("'role-name' is required"), nil
 	}
 
+	// Ensure the pcf certificate meets the role's constraints.
+	role, err := getRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, errors.New("no matching role")
+	}
+
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
+	}
+
 	signature := data.Get("signature").(string)
 	if signature == "" {
 		return logical.ErrorResponse("'signature' is required"), nil
@@ -151,45 +164,32 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		b.Logger().Debug(fmt.Sprintf("handling login attempt from %+v", pcfCert))
 	}
 
-	// Ensure the pcf certificate meets the role's constraints.
-	role, err := getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return nil, errors.New("no matching role")
-	}
-
 	if err := b.validate(config, role, pcfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	// Everything checks out.
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Period:   role.Period,
-			Policies: role.Policies,
-			InternalData: map[string]interface{}{
-				"role":        roleName,
-				"instance_id": pcfCert.InstanceID,
-				"ip_address":  pcfCert.IPAddress.String(),
-			},
-			DisplayName: pcfCert.InstanceID,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: pcfCert.AppID,
-				Metadata: map[string]string{
-					"org_id":   pcfCert.OrgID,
-					"app_id":   pcfCert.AppID,
-					"space_id": pcfCert.SpaceID,
-				},
-			},
-			BoundCIDRs: role.BoundCIDRs,
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{
+			"role":        roleName,
+			"instance_id": pcfCert.InstanceID,
+			"ip_address":  pcfCert.IPAddress.String(),
 		},
+		DisplayName: pcfCert.InstanceID,
+		Alias: &logical.Alias{
+			Name: pcfCert.AppID,
+			Metadata: map[string]string{
+				"org_id":   pcfCert.OrgID,
+				"app_id":   pcfCert.AppID,
+				"space_id": pcfCert.SpaceID,
+			},
+		},
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	return &logical.Response{
+		Auth: auth,
 	}, nil
 }
 
@@ -247,9 +247,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 
@@ -271,10 +271,6 @@ func (b *backend) validate(config *models.Configuration, role *models.RoleEntry,
 	if !meetsBoundConstraints(pcfCert.SpaceID, role.BoundSpaceIDs) {
 		return fmt.Errorf("space ID %s doesn't match role constraints of %s", pcfCert.SpaceID, role.BoundSpaceIDs)
 	}
-	if !cidrutil.RemoteAddrIsOk(reqConnRemoteAddr, role.BoundCIDRs) {
-		return fmt.Errorf("remote address %s doesn't match role constraints of %s", reqConnRemoteAddr, role.BoundCIDRs)
-	}
-
 	// Use the PCF API to ensure everything still exists and to verify whatever we can.
 	client, err := util.NewPCFClient(config)
 	if err != nil {

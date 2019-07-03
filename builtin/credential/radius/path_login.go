@@ -12,6 +12,7 @@ import (
 	. "layeh.com/radius/rfc2865"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -68,6 +69,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 	if cfg == nil {
 		return logical.ErrorResponse("radius backend not configured"), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	username := d.Get("username").(string)
