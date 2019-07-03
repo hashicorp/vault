@@ -393,18 +393,21 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	// upgrade if persisted roleVersion is out of date
 	switch version.RoleVersion {
 	case 0:
+		fallthrough
 	case 1:
+		fallthrough
 	case 2:
 		err = b.upgradeRoles(ctx, s)
 		if err != nil {
 			return false, err
 		}
+		return true, nil
 
 	case currentRoleStorageVersion:
 		return false, nil
 
 	}
-	return false, fmt.Errorf("unrecognized role version: %q", version.RoleVersion)
+	return false, fmt.Errorf("unrecognized role version: %d", version.RoleVersion)
 }
 
 // upgradeRoles upgrades the various aws roles

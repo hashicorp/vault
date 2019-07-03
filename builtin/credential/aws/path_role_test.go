@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -867,9 +866,14 @@ func TestRoleInitialize(t *testing.T) {
 		}
 	}
 
-	// upgrade all the entries, and wait for the goroutine to finish
-	err = b.initialize(ctx, &logical.InitializationRequest{storage})
-	time.Sleep(time.Second)
+	// upgrade all the entries
+	upgraded, err := b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
+	}
 
 	// read the entries from storage
 	after := make([]testData, 0)
@@ -916,15 +920,47 @@ func TestRoleInitialize(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// TODO check storage version
-
 	// run it again -- nothing will happen
-	upgraded, err := b.upgrade(ctx, storage)
+	upgraded, err = b.upgrade(ctx, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if upgraded {
 		t.Fatalf("expected no upgrade")
+	}
+
+	// make sure saved role version is correct
+	entry, err := storage.Get(ctx, "config/version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var version awsVersion
+	err = entry.DecodeJSON(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version.RoleVersion != currentRoleStorageVersion {
+		t.Fatalf("expected version %d, got  %d", currentRoleStorageVersion, version.RoleVersion)
+	}
+
+	// stomp on the saved version
+	version.RoleVersion = 0
+	e2, err := logical.StorageEntryJSON("config/version", version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(ctx, e2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// run it again -- now an upgrade will happen
+	upgraded, err = b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
 	}
 }
 
