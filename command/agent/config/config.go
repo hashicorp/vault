@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
@@ -341,15 +341,8 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		m.WrapTTLRaw = nil
 	}
 
-	if m.Namespace != "" {
-		// Canonicalize the path to not have a '/' prefix
-		m.Namespace = strings.TrimPrefix(m.Namespace, "/")
-
-		// Canonicalize the path to always having a '/' suffix
-		if !strings.HasSuffix(m.Namespace, "/") {
-			m.Namespace += "/"
-		}
-	}
+	// Canonicalize namespace path if provided
+	m.Namespace = namespace.Canonicalize(m.Namespace)
 
 	result.AutoAuth.Method = &m
 	return nil
