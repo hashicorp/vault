@@ -363,18 +363,17 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	return nil
 }
 
-// awsVersion stores the latest role storage version that we have
+// awsVersion stores info about the the latest aws version that we have
 // upgraded to.
 type awsVersion struct {
 	RoleVersion int `json:"role_verison"`
 }
 
-// upgrade and persist all of the role entries that are in need of being
-// upgraded.
+// upgrade aws version
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
 
-	// find the current version
-	version := -1
+	// find the persisted role version
+	roleVersion := -1
 	entry, err := s.Get(ctx, "config/version")
 	if err != nil {
 		return false, err
@@ -385,11 +384,13 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		if err != nil {
 			return false, err
 		}
-		version = rsv.RoleVersion
+		roleVersion = rsv.RoleVersion
 	}
 
-	// check if we need to upgrade
-	if version == currentRoleStorageVersion {
+	// for now, we only need to upgrade if the persisted role version
+	// has been superseded. This may change in the future.
+	needToUpgrade := roleVersion < currentRoleStorageVersion
+	if !needToUpgrade {
 		return false, nil
 	}
 
