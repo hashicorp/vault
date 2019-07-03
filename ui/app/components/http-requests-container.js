@@ -34,9 +34,9 @@ export default Component.extend({
     let filteredCounters = [];
     if (timeWindow === 'Last 12 Months') {
       const today = new Date();
-      const TwelveMonthsAgo = addMonths(today, -12);
+      const twelveMonthsAgo = addMonths(today, -12);
       filteredCounters = counters.filter(counter => {
-        return isWithinRange(counter.start_time, TwelveMonthsAgo, today);
+        return isWithinRange(counter.start_time, twelveMonthsAgo, today);
       });
 
       return filteredCounters;
