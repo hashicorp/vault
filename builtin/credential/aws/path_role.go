@@ -374,23 +374,16 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	if err != nil {
 		return false, err
 	}
-
-	// if there is no persisted version, we need to upgrade
+	var version awsVersion
 	if entry == nil {
-		err = b.upgradeRoles(ctx, s)
+		version.RoleVersion = 0
+	} else {
+		err = entry.DecodeJSON(&version)
 		if err != nil {
 			return false, err
 		}
-		return true, nil
 	}
 
-	var version awsVersion
-	err = entry.DecodeJSON(&version)
-	if err != nil {
-		return false, err
-	}
-
-	// upgrade if persisted roleVersion is out of date
 	switch version.RoleVersion {
 	case 0:
 		fallthrough
