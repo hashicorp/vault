@@ -367,6 +367,8 @@ type awsVersion struct {
 	Version int `json:"version"`
 }
 
+const currentAwsVersion = 1
+
 // upgrade does an upgrade, if necessary
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
 
@@ -384,15 +386,11 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 
 	switch version.Version {
 	case 0:
-		fallthrough
-	case 1:
-		fallthrough
-	case 2:
 		err = b.upgradeRoles(ctx, s)
 		if err != nil {
 			return false, err
 		}
-	case currentRoleStorageVersion:
+	case currentAwsVersion:
 		return false, nil
 
 	default:
@@ -400,7 +398,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	}
 
 	// save the current version
-	rsv := awsVersion{Version: currentRoleStorageVersion}
+	rsv := awsVersion{Version: currentAwsVersion}
 	entry, err = logical.StorageEntryJSON("config/version", &rsv)
 	if err != nil {
 		return false, err
