@@ -9,7 +9,6 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // TestRequest is a helper to create a purely in-memory Request struct.
@@ -19,7 +18,7 @@ func TestRequest(t testing.T, op Operation, path string) *Request {
 		Path:       path,
 		Data:       make(map[string]interface{}),
 		Storage:    new(InmemStorage),
-		Connection: &logical.Connection{},
+		Connection: &Connection{},
 	}
 }
 

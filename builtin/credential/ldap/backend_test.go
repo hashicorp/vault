@@ -233,8 +233,9 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 					"groups":   "EngineerS",
 					"policies": "userpolicy",
 				},
-				Path:    "users/tesla",
-				Storage: storage,
+				Path:       "users/tesla",
+				Storage:    storage,
+				Connection: &logical.Connection{},
 			}
 			resp, err = b.HandleRequest(ctx, userReq)
 			if err != nil || (resp != nil && resp.IsError()) {
@@ -248,7 +249,8 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 			Data: map[string]interface{}{
 				"password": "password",
 			},
-			Storage: storage,
+			Storage:    storage,
+			Connection: &logical.Connection{},
 		}
 		resp, err = b.HandleRequest(ctx, loginReq)
 		if err != nil || (resp != nil && resp.IsError()) {
@@ -328,8 +330,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"policies": "grouppolicy",
 		},
-		Path:    "groups/engineers",
-		Storage: storage,
+		Path:       "groups/engineers",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -342,8 +345,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 			"groups":   "engineers",
 			"policies": "userpolicy",
 		},
-		Path:    "users/tesla",
-		Storage: storage,
+		Path:       "users/tesla",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), userReq)
@@ -357,7 +361,8 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "password",
 		},
-		Storage: storage,
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), loginReq)
@@ -866,7 +871,8 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 		},
-		Storage: storage,
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(ctx, configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
