@@ -1532,23 +1532,6 @@ func newOIDCCache() *oidcCache {
 }
 
 func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
-	if ns == nil {
-		ns = &namespace.Namespace{ID: "__root__"}
-	}
-	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
-	}
-
-func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool) {
-	return c.c.Get(c.nskey(ns, key))
-}
-
-func newOIDCCache() *oidcCache {
-	return &oidcCache{
-		c: cache.New(cache.NoExpiration, cache.NoExpiration),
-	}
-}
-
-func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
 	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
 }
 

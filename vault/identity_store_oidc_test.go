@@ -628,7 +628,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}
 			currentCycle = currentCycle + 1
 			// sleep until we are in the next cycle - where a next run will happen
-			v, _ := c.identityStore.oidcCache.Get(nil, "nextRun")
+			v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 			nextRun := v.(time.Time)
 
 			//nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
@@ -750,7 +750,6 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 
 	// Populte storage with a namedKey
 	namedKey := &namedKey{}
-		name: keyName,
 	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
