@@ -55,7 +55,7 @@ module('Integration | Component | http-requests-table', function(hooks) {
     await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
     // the expectedValues are in reverse chronological order because that is the order
     // that the table shows its data.
-    let expectedValues = ['', '50%', '100%', ''];
+    let expectedValues = ['', '-50%', '100%', ''];
 
     this.element.querySelectorAll('[data-test-change]').forEach((td, i) => {
       return assert.equal(td.textContent.trim(), expectedValues[i]);
