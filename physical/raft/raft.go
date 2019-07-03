@@ -45,6 +45,8 @@ var (
 	// ErrCommandTooLarge is returned when the backend tries to apply a log
 	// greater than the max allowed size.
 	ErrCommandTooLarge = fmt.Errorf("%s: exceeds %d byte limit", physical.ErrValueTooLarge, maxCommandSizeBytes)
+
+	restoreOpDelayDuration = 5 * time.Second
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -679,6 +681,10 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
+
+	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
+	// before we continue.
+	time.Sleep(restoreOpDelayDuration)
 	return err
 }
 

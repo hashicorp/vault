@@ -28,6 +28,18 @@ var (
 // followerReplication is in charge of sending snapshots and log entries from
 // this leader during this particular term to a remote follower.
 type followerReplication struct {
+	// currentTerm and nextIndex must be kept at the top of the struct so
+	// they're 64 bit aligned which is a requirement for atomic ops on 32 bit
+	// platforms.
+
+	// currentTerm is the term of this leader, to be included in AppendEntries
+	// requests.
+	currentTerm uint64
+
+	// nextIndex is the index of the next log entry to send to the follower,
+	// which may fall past the end of the log.
+	nextIndex uint64
+
 	// peer contains the network address and ID of the remote follower.
 	peer Server
 
@@ -48,14 +60,6 @@ type followerReplication struct {
 	// triggerDeferErrorCh is used to provide a backchannel. By sending a
 	// deferErr, the sender can be notifed when the replication is done.
 	triggerDeferErrorCh chan *deferError
-
-	// currentTerm is the term of this leader, to be included in AppendEntries
-	// requests.
-	currentTerm uint64
-
-	// nextIndex is the index of the next log entry to send to the follower,
-	// which may fall past the end of the log.
-	nextIndex uint64
 
 	// lastContact is updated to the current time whenever any response is
 	// received from the follower (successful or not). This is used to check

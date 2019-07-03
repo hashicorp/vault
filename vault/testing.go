@@ -598,6 +598,7 @@ type noopAudit struct {
 	saltMutex sync.RWMutex
 	formatter audit.AuditFormatter
 	records   [][]byte
+	l         sync.RWMutex
 }
 
 func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
@@ -609,6 +610,8 @@ func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
 }
 
 func (n *noopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
+	n.l.Lock()
+	defer n.l.Unlock()
 	var w bytes.Buffer
 	err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
@@ -619,6 +622,8 @@ func (n *noopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error 
 }
 
 func (n *noopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
+	n.l.Lock()
+	defer n.l.Unlock()
 	var w bytes.Buffer
 	err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
