@@ -546,6 +546,14 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
+	// ns := &namespace.Namespace{
+	// 	ID:   "test",
+	// 	Path: "test",
+	// }
+	// ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	namespaces := c.identityStore.listNamespacePaths(ctx)
+	fmt.Printf("\nnamespacepaths: %#v", namespaces)
 
 	// Prepare a dummy signing key
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -597,6 +605,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		if err := storage.Put(ctx, entry); err != nil {
 			t.Fatalf("writing to in mem storage failed")
 		}
+		// time.Sleep(1 * time.Second)
+		keyss, _ := storage.List(ctx, namedKeyConfigPath)
+		fmt.Printf("\nKEYS: %#v", keyss)
 
 		currentCycle := 1
 		numCases := len(testSet.testCases)
