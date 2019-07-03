@@ -22,7 +22,7 @@ module('Integration | Component | http-requests-dropdown', function(hooks) {
     assert.dom('[data-test-date-range]').hasValue('All', 'shows all data by default');
 
     assert.equal(
-      this.element.querySelector('#date-range').options.length,
+      this.element.querySelector('[data-test-date-range]').options.length,
       4,
       'it adds an option for each year in the data set'
     );
