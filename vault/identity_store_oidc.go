@@ -1477,7 +1477,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	var nextRun time.Time
 	now := time.Now()
 
-	nsPaths := i.listNamespacePaths(ctx)
+	nsPaths := i.listNamespacePaths()
 
 	if v, ok := i.oidcCache.Get(nilNamespace, "nextRun"); ok {
 		nextRun = v.(time.Time)
