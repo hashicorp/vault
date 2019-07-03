@@ -165,12 +165,26 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 			// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
 			// to clean up the dangling accessor entries.
 			if len(accessorMap) > 0 {
+				logger.Trace(fmt.Sprintf("found %d dangling accessors", len(accessorMap)))
 				for _, lock := range b.secretIDLocks {
 					lock.Lock()
 					defer lock.Unlock()
 				}
-				for accessorHash, _ := range accessorMap {
-					logger.Trace("found dangling accessor, verifying")
+
+				// Since all secret-id backends have a write lock we can just grab the list
+				// of secret-id HMACs once rather than getting them from the API for each
+				// dangling accessor
+				allSecretIDHMACs := make([]string, 0)
+				for _, roleNameHMAC := range roleNameHMACs {
+					secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
+					if err != nil {
+						return err
+					}
+					allSecretIDHMACs = append(allSecretIDHMACs, secretIDHMACs...)
+				}
+
+				for accessorHash := range accessorMap {
+					logger.Trace(fmt.Sprintf("found dangling accessor: %q, verifying", accessorHash))
 					// Ideally, locking on accessors should be performed here too
 					// but for that, accessors are required in plaintext, which are
 					// not available. The code above helps but it may still be
@@ -197,21 +211,15 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 						// actually hit this very often
 						var found bool
 					searchloop:
-						for _, roleNameHMAC := range roleNameHMACs {
-							secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
-							if err != nil {
-								return err
-							}
-							for _, v := range secretIDHMACs {
-								if v == entry.SecretIDHMAC {
-									found = true
-									logger.Trace("accessor verified, not removing")
-									break searchloop
-								}
+						for _, v := range allSecretIDHMACs {
+							if v == entry.SecretIDHMAC {
+								found = true
+								logger.Trace(fmt.Sprintf("accessor verified: %q, not removing", accessorHash))
+								break searchloop
 							}
 						}
 						if !found {
-							logger.Trace("could not verify dangling accessor, removing")
+							logger.Trace(fmt.Sprintf("could not verify dangling accessor: %q, removing", accessorHash))
 							err = s.Delete(ctx, entryIndex)
 							if err != nil {
 								return err
