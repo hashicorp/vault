@@ -99,8 +99,8 @@ func (b *PluginBackend) foo(ctx context.Context, storage logical.Storage) error 
 		return err
 	}
 
-	// Ensure proper cleanup of the backend (i.e. call client.Kill())
-	b.Backend.Cleanup(ctx)
+	//// Ensure proper cleanup of the backend (i.e. call client.Kill())
+	//b.Backend.Cleanup(ctx)
 
 	//nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
 	//if err != nil {

@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func TestBackend_startBackend(t *testing.T) {
+
+	var err error
 
 	ctx := context.Background()
 	//logger := logging.NewVaultLogger(log.Trace)
@@ -22,12 +22,12 @@ func TestBackend_startBackend(t *testing.T) {
 		},
 	}
 
-	meta, err := plugin.NewBackend(
-		ctx, "test-plugin", consts.PluginTypeSecrets, config.System, config, true)
+	//meta, err := plugin.NewBackend(
+	//	ctx, "test-plugin", consts.PluginTypeSecrets, config.System, config, true)
 
 	b := &PluginBackend{
-		Backend: meta,
-		config:  config,
+		//Backend: meta,
+		config: config,
 	}
 
 	err = b.foo(ctx, storage)
