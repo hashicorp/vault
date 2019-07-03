@@ -513,7 +513,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	_, err = i.expireOIDCPublicKeys(ctx, req.Storage)
+	_, err = i.expireOIDCPublicKeys(ctx, req.Storage, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -1182,7 +1182,7 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return jwksRaw.(*jose.JSONWebKeySet), nil
 	}
 
-	if _, err := i.expireOIDCPublicKeys(ctx, s); err != nil {
+	if _, err := i.expireOIDCPublicKeys(ctx, s, time.Now()); err != nil {
 		return nil, err
 	}
 
@@ -1208,13 +1208,13 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 	return jwks, nil
 }
 
-func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage) (time.Time, error) {
+func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Storage, now time.Time) (time.Time, error) {
 	var didUpdate bool
 
 	// nextExpiration will be the soonest expiration time of all keys. Initialize
 	// here to a relatively distant time.
 	nextExpiration := time.Now().Add(24 * time.Hour)
-	now := time.Now()
+	// now := time.Now()
 
 	publicKeyIDs, err := listOIDCPublicKeys(ctx, s)
 	if err != nil {
@@ -1300,10 +1300,10 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	return nextExpiration, nil
 }
 
-func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, error) {
+func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage, now time.Time) (time.Time, error) {
 	// soonestRotation will be the soonest rotation time of all keys. Initialize
 	// here to a relatively distant time.
-	now := time.Now()
+	// now := time.Now()
 	soonestRotation := now.Add(24 * time.Hour)
 
 	keys, err := s.List(ctx, namedKeyConfigPath)
@@ -1348,26 +1348,24 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage) {
+	now := time.Now()
 	nextRun := time.Time{}
 
 	if v, ok := i.oidcCache.Get("nextRun"); ok {
 		nextRun = v.(time.Time)
 	}
 
-	fmt.Printf("\ncurrent time: %#v\nnext run at:%#v", time.Now().String(), nextRun.String())
-
 	// The condition here is for performance, not precise timing. The actions can
 	// be run at any time safely, but there is no need to invoke them (which
 	// might be somewhat expensive if there are many roles/keys) if we're not
 	// past any rotation/expiration TTLs.
-	if time.Now().After(nextRun) {
-		fmt.Printf("\n-- doing stuff in oidcPeriodcFunc --\n\n")
-		nextRotation, err := i.oidcKeyRotation(ctx, s)
+	if now.After(nextRun) {
+		nextRotation, err := i.oidcKeyRotation(ctx, s, now)
 		if err != nil {
 			i.Logger().Warn("error rotating OIDC keys", "err", err)
 		}
 
-		nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
+		nextExpiration, err := i.expireOIDCPublicKeys(ctx, s, now)
 		if err != nil {
 			i.Logger().Warn("error expiring OIDC public keys", "err", err)
 		}

@@ -543,28 +543,12 @@ func TestOIDC_SignIDToken(t *testing.T) {
 // TestOIDC_PeriodicFunc tests timing logic for running key
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
-	cyclePeriod := 2 * time.Second
-
-	// after "runTime", a namedKey's keyRing should contain "numKeys" keys and "numPublicKeys" should be stored at publicKeysConfigPath
-	var testCases = []struct {
-		cycle         int
-		numKeys       int
-		numPublicKeys int
-	}{
-		{0, 0, 0},
-		{1, 1, 1},
-		{2, 1, 1},
-		{3, 2, 2},
-		{4, 2, 2},
-	}
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	storage := &logical.InmemStorage{}
+	// storage := &logical.InmemStorage{}
 
-	// populate storage with a named key
-	// period := 2 * time.Second
-	keyName := "test-key"
+	// Prepare a dummy signing key
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	id, _ := uuid.GenerateUUID()
 	jwk := &jose.JSONWebKey{
@@ -573,129 +557,113 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		Algorithm: "RS256",
 		Use:       "sig",
 	}
-	namedKey := &namedKey{
-		name:            keyName,
-		Algorithm:       "RS256",
-		VerificationTTL: 1 * cyclePeriod,
-		RotationPeriod:  1 * cyclePeriod,
-		KeyRing:         nil,
-		SigningKey:      jwk,
-		NextRotation:    time.Now().Add(1 * time.Second),
+
+	cyclePeriod := 2 * time.Second
+
+	var testSets = []struct {
+		namedKey  *namedKey
+		testCases []struct {
+			cycle         int
+			numKeys       int
+			numPublicKeys int
+		}
+	}{
+		{
+			&namedKey{
+				name:            "test-key",
+				Algorithm:       "RS256",
+				VerificationTTL: 1 * cyclePeriod,
+				RotationPeriod:  1 * cyclePeriod,
+				KeyRing:         nil,
+				SigningKey:      jwk,
+				NextRotation:    time.Now().Add(1500 * time.Millisecond),
+			},
+			[]struct {
+				cycle         int
+				numKeys       int
+				numPublicKeys int
+			}{
+				// {0, 0, 0},
+				{1, 1, 1},
+				// {2, 2, 2},
+				{3, 2, 2},
+				{4, 2, 2},
+			},
+		},
+		{
+			&namedKey{
+				name:            "test-key-2",
+				Algorithm:       "RS256",
+				VerificationTTL: 1 * cyclePeriod,
+				RotationPeriod:  1 * cyclePeriod,
+				KeyRing:         nil,
+				SigningKey:      jwk,
+				NextRotation:    time.Now().Add(1500 * time.Millisecond),
+			},
+			[]struct {
+				cycle         int
+				numKeys       int
+				numPublicKeys int
+			}{
+				// {0, 0, 0},
+				{1, 1, 1},
+				// {2, 2, 2},
+				{3, 2, 2},
+				{4, 2, 2},
+			},
+		},
 	}
 
-	// Store namedKey
-	entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+keyName, namedKey)
-	if err := storage.Put(ctx, entry); err != nil {
-		t.Fatalf("writing to in mem storage failed")
+	for _, testSet := range testSets {
+		// Store namedKey
+		storage := &logical.InmemStorage{}
+		entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
+		if err := storage.Put(ctx, entry); err != nil {
+			t.Fatalf("writing to in mem storage failed")
+		}
+
+		currentCycle := 0
+		numCases := len(testSet.testCases)
+		lastCycle := testSet.testCases[numCases-1].cycle
+		namedKeySamples := make([]*logical.StorageEntry, numCases)
+		publicKeysSamples := make([][]string, numCases)
+
+		i := 0
+		var start time.Time
+		for currentCycle <= lastCycle {
+			probe1 := time.Now()
+			c.identityStore.oidcPeriodicFunc(ctx, storage)
+			if currentCycle == 0 {
+				start = time.Now()
+				// testSet.namedKey.NextRotation = start.Add(3 * time.Second)
+			}
+			probe2 := time.Now()
+
+			if currentCycle == testSet.testCases[i].cycle {
+				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
+				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+				namedKeySamples[i] = namedKeyEntry
+				publicKeysSamples[i] = publicKeysEntry
+				i = i + 1
+			}
+			currentCycle = currentCycle + 1
+			// sleep until we are in the next cycle
+			// probe2 := time.Now()
+			nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
+			time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
+		}
+
+		// measure collected samples
+		for i := range testSet.testCases {
+			namedKeySamples[i].DecodeJSON(&testSet.namedKey)
+			if len(testSet.namedKey.KeyRing) != testSet.testCases[i].numKeys {
+				t.Fatalf("At cycle: %d expected namedKey's KeyRing to be of length %d but was: %d", testSet.testCases[i].cycle, testSet.testCases[i].numKeys, len(testSet.namedKey.KeyRing))
+			}
+			if len(publicKeysSamples[i]) != testSet.testCases[i].numPublicKeys {
+				t.Fatalf("At cycle: %d expected public keys to be of length %d but was: %d", testSet.testCases[i].cycle, testSet.testCases[i].numPublicKeys, len(publicKeysSamples[i]))
+			}
+		}
 	}
-
-	currentCycle := 0
-	lastCycle := testCases[len(testCases)-1].cycle
-	namedKeySamples := make([]*logical.StorageEntry, len(testCases))
-	publicKeysSamples := make([][]string, len(testCases))
-
-	i := 0
-	start := time.Now()
-	for currentCycle <= lastCycle {
-		fmt.Printf("\nCurrent cycle: %d", currentCycle)
-		c.identityStore.oidcPeriodicFunc(ctx, storage)
-		if currentCycle == testCases[i].cycle {
-			namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+keyName)
-			publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
-			namedKeySamples[i] = namedKeyEntry
-			publicKeysSamples[i] = publicKeysEntry
-			i = i + 1
-		}
-		currentCycle = currentCycle + 1
-		// sleep until we are in the next cycle
-		nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle))
-		time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
-		if currentCycle == 2 {
-			time.Sleep(500 * time.Milisecond)
-		}
-	}
-
-	// measure collected samples
-	for i := range testCases {
-		namedKeySamples[i].DecodeJSON(&namedKey)
-		if len(namedKey.KeyRing) != testCases[i].numKeys {
-			t.Fatalf("At cycle: %d expected namedKey's KeyRing to be of length %d but was: %d", testCases[i].cycle, testCases[i].numKeys, len(namedKey.KeyRing))
-		}
-		if len(publicKeysSamples[i]) != testCases[i].numPublicKeys {
-			t.Fatalf("At cycle: %d expected public keys to be of length %d but was: %d", testCases[i].cycle, testCases[i].numPublicKeys, len(publicKeysSamples[i]))
-		}
-	}
-
-	// // Time 0 - 1 Period
-	// // PeriodicFunc should set nextRun - nothing else
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-	// entry.DecodeJSON(&namedKey)
-	// if len(namedKey.KeyRing) != 0 {
-	// 	t.Fatalf("expected namedKey's KeyRing to be of length 0 but was: %#v", len(namedKey.KeyRing))
-	// }
-	// // There should be no public keys yet
-	// publicKeys, _ := storage.List(ctx, publicKeysConfigPath)
-	// if len(publicKeys) != 0 {
-	// 	t.Fatalf("expected publicKeys to be of length 0 but was: %#v", len(publicKeys))
-	// }
-	// // Next run should be set
-	// v, _ := c.identityStore.oidcCache.Get("nextRun")
-	// if v == nil {
-	// 	t.Fatalf("Expected nextRun to be set but it was nil")
-	// }
-	// earlierNextRun := v.(time.Time)
-
-	// // Time 1 - 2 Period
-	// // PeriodicFunc should rotate namedKey and update nextRun
-	// time.Sleep(period)
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-	// entry.DecodeJSON(&namedKey)
-	// if len(namedKey.KeyRing) != 1 {
-	// 	t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
-	// }
-	// // There should be one public key
-	// publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
-	// if len(publicKeys) != 1 {
-	// 	t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
-	// }
-	// // nextRun should have been updated
-	// v, _ = c.identityStore.oidcCache.Get("nextRun")
-	// laterNextRun := v.(time.Time)
-	// if !laterNextRun.After(earlierNextRun) {
-	// 	t.Fatalf("laterNextRun: %#v is not after earlierNextRun: %#v", laterNextRun.String(), earlierNextRun.String())
-	// }
-
-	// // Time 2-3
-	// // PeriodicFunc should rotate namedKey and expire 1 public key
-	// time.Sleep(period)
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-	// entry.DecodeJSON(&namedKey)
-	// if len(namedKey.KeyRing) != 2 {
-	// 	t.Fatalf("expected namedKey's KeyRing to be of length 2 but was: %#v", len(namedKey.KeyRing))
-	// }
-	// // There should be two public keys
-	// publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
-	// if len(publicKeys) != 2 {
-	// 	t.Fatalf("expected publicKeys to be of length 2 but was: %#v", len(publicKeys))
-	// }
-
-	// // Time 3-4
-	// // PeriodicFunc should rotate namedKey and expire 1 public key
-	// time.Sleep(period)
-	// c.identityStore.oidcPeriodicFunc(ctx, storage)
-	// entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
-	// entry.DecodeJSON(&namedKey)
-	// if len(namedKey.KeyRing) != 2 {
-	// 	t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
-	// }
-	// // There should be two public keys
-	// publicKeys, _ = storage.List(ctx, publicKeysConfigPath)
-	// if len(publicKeys) != 2 {
-	// 	t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
-	// }
 }
 
 // TestOIDC_Config tests CRUD operations for configuring the OIDC backend
