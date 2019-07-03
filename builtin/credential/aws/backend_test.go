@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -482,13 +484,13 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	stepCreate := logicaltest.TestStep{
 		Operation: logical.CreateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Data:      data,
 	}
 
 	stepUpdate := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Data:      data,
 	}
 
@@ -497,7 +499,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 	stepInvalidAccessKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Data:      data3,
 		ErrorOk:   true,
 	}
@@ -507,7 +509,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 	stepInvalidSecretKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Data:      data4,
 		ErrorOk:   true,
 	}
@@ -526,23 +528,23 @@ func TestBackend_ConfigClient(t *testing.T) {
 	// test existence check returning false
 	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/client'")
+		t.Fatal("existence check not found for path 'config/core.Client'")
 	}
 	if exists {
-		t.Fatal("existence check should have returned 'false' for 'config/client'")
+		t.Fatal("existence check should have returned 'false' for 'config/core.Client'")
 	}
 
 	// create an entry
 	configClientCreateRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Data:      data,
 		Storage:   storage,
 	}
@@ -554,17 +556,17 @@ func TestBackend_ConfigClient(t *testing.T) {
 	//test existence check returning true
 	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/client'")
+		t.Fatal("existence check not found for path 'config/core.Client'")
 	}
 	if !exists {
-		t.Fatal("existence check should have returned 'true' for 'config/client'")
+		t.Fatal("existence check should have returned 'true' for 'config/core.Client'")
 	}
 
 	endpointData := map[string]interface{}{
@@ -575,7 +577,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	endpointReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Storage:   storage,
 		Data:      endpointData,
 	}
@@ -1110,7 +1112,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Storage:   storage,
-			Path:      "config/client",
+			Path:      "config/core.Client",
 			Data:      clientConfig,
 		})
 		if err != nil {
@@ -1120,7 +1122,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	loginInput := map[string]interface{}{
 		"pkcs7": pkcs7,
-		"nonce": "vault-client-nonce",
+		"nonce": "vault-core.Client-nonce",
 	}
 
 	parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
@@ -1249,17 +1251,17 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	_, ok := resp.Auth.Metadata["nonce"]
 	if ok {
-		t.Fatalf("client nonce should not have been returned")
+		t.Fatalf("core.Client nonce should not have been returned")
 	}
 
-	loginInput["nonce"] = "changed-vault-client-nonce"
+	loginInput["nonce"] = "changed-vault-core.Client-nonce"
 	// try to login again with changed nonce
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("login attempt should have failed due to client nonce mismatch")
+		t.Fatalf("login attempt should have failed due to core.Client nonce mismatch")
 	}
 
 	// Check if a whitelist identity entry is created after the login.
@@ -1507,7 +1509,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// Test setup largely done
 	// At this point, we're going to:
-	// 1. Configure the client to require our test header value
+	// 1. Configure the core.Client to require our test header value
 	// 2. Configure identity to use the ARN for the alias
 	// 3. Configure two different roles:
 	//    a. One bound to our test user
@@ -1526,7 +1528,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	clientRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/client",
+		Path:      "config/core.Client",
 		Storage:   storage,
 		Data:      clientConfigData,
 	}
@@ -1838,10 +1840,9 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)
-	client := core.Client
 
 	// load the auth plugin
-	if err := client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
+	if err := core.Client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
 		Type: "aws",
 	}); err != nil {
 		t.Fatal(err)
@@ -1856,15 +1857,14 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 		{
 			name: "test-role-0",
 			data: map[string]interface{}{
-				"auth_type":               "iam",
-				"policies":                "default",
-				"bound_iam_principal_arn": "arn:aws:iam::000000000001:role/my_role_prefix",
+				"auth_type":       "ec2",
+				"policies":        "default",
+				"bound_subnet_id": "subnet-abcdef",
 			},
 		},
 	}
-
 	for _, tr := range before {
-		_, err := client.Logical().Write("auth/aws/role/"+tr.name, tr.data)
+		_, err := core.Client.Logical().Write("auth/aws/role/"+tr.name, tr.data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1875,10 +1875,10 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	//
 	//// put the entries in storage
 	//for _, role := range before {
-	//	//client.Logical().Write("auth/aws/roles/foo", map[string]interface{}{...
-	//	client.Logical().Write("auth/aws/roles/foo", nil)
+	//	//core.Client.Logical().Write("auth/aws/roles/foo", map[string]interface{}{...
+	//	core.Client.Logical().Write("auth/aws/roles/foo", nil)
 
-	//if _, err := client.Logical().Write("auth/aws/role/test", ); err != nil {
+	//if _, err := core.Client.Logical().Write("auth/aws/role/test", ); err != nil {
 	//	fmt.Println(err)
 	//	t.Fatal(err)
 	//}
@@ -1891,7 +1891,37 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 
 	//---------------------------------------------------
 
-	// "downgrade" some of the roles by directly modifying storage
+	// fetch the auth backend's uuid in storage
+	ctx := context.Background()
+	uuid, err := core.UnderlyingStorage.List(ctx, "auth/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// "downgrade" some of the roles by directly modifying them in storage
+	for _, tr := range before {
+
+		key := "auth/" + uuid[0] + "role/" + tr.name
+		entry, err := core.UnderlyingStorage.Get(ctx, key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fmt.Printf("storage %T\n", core.UnderlyingStorage)
+		fmt.Printf("storage backend %T\n", core.UnderlyingStorage.(*physical.StorageEncoding).Backend)
+		fmt.Printf("entry %T\n", entry)
+		fmt.Printf("key %s\n", entry.Key)
+		fmt.Printf("value %s\n", hex.EncodeToString(entry.Value))
+
+		//roleEntry := new(awsRoleEntry)
+		//err = jsonutil.DecodeJSON(entry.Value, roleEntry)
+		//if err != nil {
+		//	t.Fatal(err)
+		//}
+		//if err := entry.DecodeJSON(role); err != nil {
+		//	t.Fatal(err)
+		//}
+	}
 
 	// re-trigger Initialize(), which will upgrade the roles
 
