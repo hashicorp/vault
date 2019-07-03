@@ -3138,10 +3138,12 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	// We handle token type a bit differently than tokenutil does so we need to
 	// cache and handle it after
 	var tokenTypeStr *string
+	oldEntryTokenType := entry.TokenType
 	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
 		tokenTypeStr = new(string)
 		*tokenTypeStr = tokenTypeRaw.(string)
 		delete(data.Raw, "token_type")
+		entry.TokenType = logical.TokenTypeDefault
 	}
 
 	// Next parse token fields from the helper
@@ -3149,9 +3151,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
 	}
 
-	tokenType := entry.TokenType
-	if tokenType == logical.TokenTypeDefault {
-		tokenType = logical.TokenTypeDefaultService
+	entry.TokenType = oldEntryTokenType
+	if entry.TokenType == logical.TokenTypeDefault {
+		entry.TokenType = logical.TokenTypeDefaultService
 	}
 	if tokenTypeStr != nil {
 		switch *tokenTypeStr {
