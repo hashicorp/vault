@@ -12,9 +12,6 @@ CHANGES:
    Vault's core; however, this can now be explicitly disabled with the new
    `token_no_default_policy` field.
  * auth/approle: `bound_cidr_list` is no longer returned when reading a role
- * auth/approle: `token_type` no longer allows `default-service` or
-   `default-batch` to be set; they didn't really make sense anyways as that's
-   only meant when mount-tuning to indicate what to do if `default` is chosen.
  
  FEATURES:
 

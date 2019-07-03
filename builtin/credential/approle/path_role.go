@@ -886,6 +886,20 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), logical.ErrUnsupportedPath
 	}
 
+	var resp *logical.Response
+
+	// Handle a backwards compat case
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		switch tokenTypeRaw.(string) {
+		case "default-service":
+			data.Raw["token_type"] = "service"
+			resp.AddWarning("default-service has no useful meaning; adjusting to service")
+		case "default-batch":
+			data.Raw["token_type"] = "batch"
+			resp.AddWarning("default-batch has no useful meaning; adjusting to batch")
+		}
+	}
+
 	if err := role.ParseTokenFields(req, data); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -967,7 +981,6 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
-	var resp *logical.Response
 	if role.TokenMaxTTL > b.System().MaxLeaseTTL() {
 		resp = &logical.Response{}
 		resp.AddWarning("token_max_ttl is greater than the backend mount's maximum TTL value; issued tokens' max TTL value will be truncated")
