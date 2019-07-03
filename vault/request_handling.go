@@ -590,33 +590,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// logical.Request's token-related fields.
 	switch req.Path {
 	case "sys/wrapping/rewrap", "sys/wrapping/unwrap":
-		valid, err := c.validateWrappingToken(ctx, req)
-
-		// Perform audit logging before returning if there's an issue with checking
-		// the wrapping token
-		if err != nil || !valid {
-			// We log the Auth object like so here since the wrapping token can
-			// come from the header, which gets set as the ClientToken
-			auth := &logical.Auth{
-				ClientToken: req.ClientToken,
-				Accessor:    req.ClientTokenAccessor,
-			}
-
-			logInput := &audit.LogInput{
-				Auth:               auth,
-				Request:            req,
-				NonHMACReqDataKeys: nonHMACReqDataKeys,
-			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
-			}
-
-			switch {
-			case err != nil:
-				return nil, auth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-			case !valid:
-				return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), auth, logical.ErrInvalidRequest
-			}
+		valid, wtAuth, err := c.validateWrappingToken(ctx, req, nonHMACReqDataKeys)
+		if err != nil {
+			return nil, wtAuth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), wtAuth, logical.ErrInvalidRequest
 		}
 	}
 
@@ -958,33 +937,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// logical.Request's token-related fields.
 	switch req.Path {
 	case "sys/wrapping/lookup":
-		valid, err := c.validateWrappingToken(ctx, req)
-		// Perform audit logging before returning if there's an issue with checking
-		// the wrapping token
-		if err != nil || !valid {
-			// We log the Auth object like so here since the wrapping token can
-			// come from the header, which gets set as the ClientToken
-			auth := &logical.Auth{
-				ClientToken: req.ClientToken,
-				Accessor:    req.ClientTokenAccessor,
-			}
-
-			logInput := &audit.LogInput{
-				Auth:               auth,
-				Request:            req,
-				NonHMACReqDataKeys: nonHMACReqDataKeys,
-			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
-			}
-
-			switch {
-			case err != nil:
-				return nil, auth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-			case !valid:
-				return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), auth, logical.ErrInvalidRequest
-
-			}
+		valid, wtAuth, err := c.validateWrappingToken(ctx, req, nonHMACReqDataKeys)
+		if err != nil {
+			return nil, wtAuth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), wtAuth, logical.ErrInvalidRequest
 		}
 	}
 

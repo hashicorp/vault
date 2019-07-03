@@ -312,12 +312,33 @@ DONELISTHANDLING:
 // validateWrappingToken checks whether a token is a wrapping token. The passed
 // in logical request will be updated if the wrapping token was provided within
 // a JWT token.
-func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (bool, error) {
+func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request, nonHMACReqDataKeys []string) (valid bool, auth *logical.Auth, err error) {
+	defer func() {
+		// Perform audit logging before returning if there's an issue with checking
+		// the wrapping token
+		if err != nil || !valid {
+			// We log the Auth object like so here since the wrapping token can
+			// come from the header, which gets set as the ClientToken
+			auth = &logical.Auth{
+				ClientToken: req.ClientToken,
+				Accessor:    req.ClientTokenAccessor,
+			}
+
+			logInput := &logical.LogInput{
+				Auth:               auth,
+				Request:            req,
+				NonHMACReqDataKeys: nonHMACReqDataKeys,
+			}
+			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			}
+		}
+	}()
+
 	if req == nil {
-		return false, fmt.Errorf("invalid request")
+		return false, nil, fmt.Errorf("invalid request")
 	}
 
-	var err error
 	var token string
 	var thirdParty bool
 
@@ -326,9 +347,9 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	if req.Data != nil && req.Data["token"] != nil {
 		thirdParty = true
 		if tokenStr, ok := req.Data["token"].(string); !ok {
-			return false, fmt.Errorf("could not decode token in request body")
+			return false, nil, fmt.Errorf("could not decode token in request body")
 		} else if tokenStr == "" {
-			return false, fmt.Errorf("empty token in request body")
+			return false, nil, fmt.Errorf("empty token in request body")
 		} else {
 			token = tokenStr
 		}
@@ -346,23 +367,23 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {
-			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
+			return false, nil, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
 		}
 		var claims squarejwt.Claims
 		var allClaims = make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
-			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
+			return false, nil, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
 		}
 		typeClaimRaw, ok := allClaims["type"]
 		if !ok {
-			return false, errors.New("could not validate type claim")
+			return false, nil, errors.New("could not validate type claim")
 		}
 		typeClaim, ok := typeClaimRaw.(string)
 		if !ok {
-			return false, errors.New("could not parse type claim")
+			return false, nil, errors.New("could not parse type claim")
 		}
 		if typeClaim != "wrapping" {
-			return false, errors.New("unexpected type claim")
+			return false, nil, errors.New("unexpected type claim")
 		}
 		if !thirdParty {
 			req.ClientToken = claims.ID
@@ -374,33 +395,33 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	if token == "" {
-		return false, fmt.Errorf("token is empty")
+		return false, nil, fmt.Errorf("token is empty")
 	}
 
 	if c.Sealed() {
-		return false, consts.ErrSealed
+		return false, nil, consts.ErrSealed
 	}
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.standby && !c.perfStandby {
-		return false, consts.ErrStandby
+		return false, nil, consts.ErrStandby
 	}
 
 	te, err := c.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	if te == nil {
-		return false, nil
+		return false, nil, nil
 	}
 
 	if len(te.Policies) != 1 {
-		return false, nil
+		return false, nil, nil
 	}
 
 	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
-		return false, nil
+		return false, nil, nil
 	}
 
 	if !thirdParty {
@@ -409,5 +430,5 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 		req.SetTokenEntry(te)
 	}
 
-	return true, nil
+	return true, nil, nil
 }
