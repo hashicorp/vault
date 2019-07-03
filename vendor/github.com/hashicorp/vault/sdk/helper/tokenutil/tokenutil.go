@@ -186,14 +186,12 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		var tokenType logical.TokenType
 		tokenTypeStr := tokenTypeRaw.(string)
 		switch tokenTypeStr {
+		case "", "default":
+			tokenType = logical.TokenTypeDefault
 		case "service":
 			tokenType = logical.TokenTypeService
 		case "batch":
 			tokenType = logical.TokenTypeBatch
-		case "", "default", "default-service":
-			tokenType = logical.TokenTypeDefaultService
-		case "default-batch":
-			tokenType = logical.TokenTypeDefaultBatch
 		default:
 			return fmt.Errorf("invalid 'token_type' value %q", tokenTypeStr)
 		}

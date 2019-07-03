@@ -74,6 +74,35 @@
             View role
           {{/link-to}}
         </li>
+        {{#if list.item.updatePath.canUpdate}}
+          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+            {{#link-to "role.edit" this.scope list.item.id class="is-block"}}
+              Edit role
+            {{/link-to}}
+          </MenuLoader>
+        {{/if}}
+        {{#if list.item.updatePath.canDelete}}
+          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+            <ConfirmAction
+              @buttonClasses="link is-destroy"
+              @onConfirmAction={{action
+                (perform
+                  Item.callMethod
+                  "destroyRecord"
+                  list.item
+                  (concat "Successfully deleted role " list.item.id)
+                  (concat "There was an error deleting the role " list.item.id)
+                  (action "refresh")
+                )
+              }}
+              @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+              @cancelButtonText="Cancel"
+              data-test-scope-delete="true"
+              >
+                Delete role
+            </ConfirmAction>
+          </MenuLoader>
+        {{/if}}
       </Item.menu>
     </ListItem>
   {{else}}

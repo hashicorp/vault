@@ -113,7 +113,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 	if config == nil {
-		return nil, fmt.Errorf("configuration object not found")
+		return nil, nil
 	}
 
 	d := map[string]interface{}{
@@ -140,7 +140,6 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 	if err != nil {
 		return nil, err
 	}
-
 	if entry == nil {
 		return nil, nil
 	}

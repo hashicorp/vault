@@ -24,7 +24,7 @@ with the value "passcode=my-long-passcode":
 $ vault kv put secret/creds passcode=my-long-passcode
 Key              Value
 ---              -----
-created_time     2019-06-06T04:07:33.279432Z
+created_time     2019-06-28T15:53:30.395814Z
 deletion_time    n/a
 destroyed        false
 version          1
@@ -37,7 +37,7 @@ $ vault kv get secret/creds
 ====== Metadata ======
 Key              Value
 ---              -----
-created_time     2019-06-06T04:07:33.279432Z
+created_time     2019-06-28T15:53:30.395814Z
 deletion_time    n/a
 destroyed        false
 version          1
@@ -52,20 +52,21 @@ Get metadata for the key named "creds":
 
 ```text
 $ vault kv metadata get secret/creds
-======= Metadata =======
-Key                Value
----                -----
-cas_required       false
-created_time       2019-06-06T04:07:33.279432Z
-current_version    1
-max_versions       0
-oldest_version     0
-updated_time       2019-06-06T04:07:33.279432Z
+========== Metadata ==========
+Key                     Value
+---                     -----
+cas_required            false
+created_time            2019-06-28T15:53:30.395814Z
+current_version         1
+delete_version_after    0s
+max_versions            0
+oldest_version          0
+updated_time            2019-06-28T15:53:30.395814Z
 
 ====== Version 1 ======
 Key              Value
 ---              -----
-created_time     2019-06-06T04:07:33.279432Z
+created_time     2019-06-28T15:53:30.395814Z
 deletion_time    n/a
 destroyed        false
 ```
@@ -78,7 +79,7 @@ $ vault kv get -version=1 secret/creds
 ====== Metadata ======
 Key              Value
 ---              -----
-created_time     2019-06-06T04:07:33.279432Z
+created_time     2019-06-28T15:53:30.395814Z
 deletion_time    n/a
 destroyed        false
 version          1

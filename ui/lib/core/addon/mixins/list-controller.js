@@ -48,5 +48,9 @@ export default Mixin.create({
     setFilterFocus(bool) {
       this.set('filterFocused', bool);
     },
+    refresh() {
+      // bubble to the list-route
+      this.send('reload');
+    },
   },
 });

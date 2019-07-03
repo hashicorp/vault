@@ -14,6 +14,11 @@ App = Application.extend({
   podModulePrefix: config.podModulePrefix,
   Resolver,
   engines: {
+    openApiExplorer: {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
+      },
+    },
     replication: {
       dependencies: {
         services: [
