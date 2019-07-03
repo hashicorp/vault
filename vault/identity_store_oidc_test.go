@@ -577,7 +577,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 
 	// Time 0 - 1 Period
 	// PeriodicFunc should set nextRun - nothing else
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 0 {
@@ -589,7 +589,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 0 but was: %#v", len(publicKeys))
 	}
 	// Next run should be set
-	v, _ := c.identityStore.oidcCache.Get("nextRun")
+	v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 	if v == nil {
 		t.Fatalf("Expected nextRun to be set but it was nil")
 	}
@@ -598,7 +598,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 1 - 2 Period
 	// PeriodicFunc should rotate namedKey and update nextRun
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 1 {
@@ -610,7 +610,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		t.Fatalf("expected publicKeys to be of length 1 but was: %#v", len(publicKeys))
 	}
 	// nextRun should have been updated
-	v, _ = c.identityStore.oidcCache.Get("nextRun")
+	v, _ = c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 	laterNextRun := v.(time.Time)
 	if !laterNextRun.After(earlierNextRun) {
 		t.Fatalf("laterNextRun: %#v is not after earlierNextRun: %#v", laterNextRun.String(), earlierNextRun.String())
@@ -619,7 +619,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 2-3
 	// PeriodicFunc should rotate namedKey and expire 1 public key
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
 	if len(namedKey.KeyRing) != 2 {
@@ -634,10 +634,10 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Time 3-4
 	// PeriodicFunc should rotate namedKey and expire 1 public key
 	time.Sleep(period)
-	c.identityStore.oidcPeriodicFunc(ctx, storage)
+	c.identityStore.oidcPeriodicFunc(ctx)
 	entry, _ = storage.Get(ctx, namedKeyConfigPath+keyName)
 	entry.DecodeJSON(&namedKey)
-	if len(namedKey.KeyRing) != 2 {
+	if len(namedKey.KeyRing) != 1 {
 		t.Fatalf("expected namedKey's KeyRing to be of length 1 but was: %#v", len(namedKey.KeyRing))
 	}
 	// There should be two public keys
@@ -653,7 +653,7 @@ func TestOIDC_Config(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 
 	// Read Config - expect defaults
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -688,6 +688,22 @@ func TestOIDC_Config(t *testing.T) {
 	// issuer should be set
 	if resp.Data["issuer"].(string) != testIssuer {
 		t.Fatalf("Expected issuer to be %q but found %q instead", testIssuer, resp.Data["issuer"].(string))
+	}
+
+	// Test bad issuers
+	for _, iss := range []string{"asldfk", "ftp://a.com", "a.com", "http://a.com/", "https://a.com/foo", "http:://a.com"} {
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/config",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"issuer": iss,
+			},
+		})
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
+		}
+
 	}
 }
 
@@ -827,12 +843,12 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	// Validate configurable parts - for now just issuer
 	discoveryResp := &discovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+issuerPath {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+issuerPath, discoveryResp.Issuer)
+	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+"/"+issuerPath {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+"/"+issuerPath, discoveryResp.Issuer)
 	}
 
 	// Update issuer config
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/config",
 		Operation: logical.UpdateOperation,
@@ -851,8 +867,9 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// Validate configurable parts - for now just issuer
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != testIssuer {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", testIssuer, discoveryResp.Issuer)
+	expected := testIssuer + "/" + issuerPath
+	if discoveryResp.Issuer != expected {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}
 }
 
