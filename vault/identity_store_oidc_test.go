@@ -497,7 +497,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the client ID of the role \"test-role\" as an allowed client ID": true,
+		"the key \"test-key\" does not list the client ID of the role \"test-role\" as an allowed client ID": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 

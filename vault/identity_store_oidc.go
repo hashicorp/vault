@@ -698,7 +698,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
 	if !strutil.StrListContains(key.AllowedClientIDs, "*") && !strutil.StrListContains(key.AllowedClientIDs, role.ClientID) {
-		return logical.ErrorResponse("The key %q does not list the client ID of the role %q as an allowed client ID", role.Key, roleName), nil
+		return logical.ErrorResponse("the key %q does not list the client ID of the role %q as an allowed client ID", role.Key, roleName), nil
 	}
 
 	// generate an OIDC token from entity data
