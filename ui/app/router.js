@@ -13,6 +13,7 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('requests', { path: '/metrics/requests' });
       this.route('settings', function() {

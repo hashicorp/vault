@@ -78,8 +78,8 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("missing token"), nil
 	}
 
-	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
-		return logical.ErrorResponse("request originated from invalid CIDR"), nil
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	// Here is where things diverge. If it is using OIDC Discovery, validate that way;
@@ -150,7 +150,9 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 				latestStart = *claims.NotBefore
 			}
 			leeway := role.ExpirationLeeway.Seconds()
-			if role.ExpirationLeeway.Seconds() == 0 {
+			if role.ExpirationLeeway.Seconds() < 0 {
+				leeway = 0
+			} else if role.ExpirationLeeway.Seconds() == 0 {
 				leeway = claimDefaultLeeway
 			}
 			*claims.Expiry = jwt.NumericDate(int64(latestStart) + int64(leeway))
@@ -161,7 +163,9 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 				*claims.NotBefore = *claims.IssuedAt
 			} else {
 				leeway := role.NotBeforeLeeway.Seconds()
-				if role.NotBeforeLeeway.Seconds() == 0 {
+				if role.NotBeforeLeeway.Seconds() < 0 {
+					leeway = 0
+				} else if role.NotBeforeLeeway.Seconds() == 0 {
 					leeway = claimDefaultLeeway
 				}
 				*claims.NotBefore = jwt.NumericDate(int64(*claims.Expiry) - int64(leeway))
@@ -179,7 +183,9 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 		cksLeeway := role.ClockSkewLeeway
-		if role.ClockSkewLeeway.Seconds() == 0 {
+		if role.ClockSkewLeeway.Seconds() < 0 {
+			cksLeeway = 0
+		} else if role.ClockSkewLeeway.Seconds() == 0 {
 			cksLeeway = jwt.DefaultLeeway
 		}
 
@@ -215,28 +221,21 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		tokenMetadata[k] = v
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:     role.Policies,
-			DisplayName:  alias.Name,
-			Period:       role.Period,
-			NumUses:      role.NumUses,
-			Alias:        alias,
-			GroupAliases: groupAliases,
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
-			Metadata: tokenMetadata,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			BoundCIDRs: role.BoundCIDRs,
+	auth := &logical.Auth{
+		DisplayName:  alias.Name,
+		Alias:        alias,
+		GroupAliases: groupAliases,
+		InternalData: map[string]interface{}{
+			"role": roleName,
 		},
+		Metadata: tokenMetadata,
 	}
 
-	return resp, nil
+	role.PopulateTokenAuth(auth)
+
+	return &logical.Response{
+		Auth: auth,
+	}, nil
 }
 
 func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -255,9 +254,9 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

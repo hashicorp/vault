@@ -80,8 +80,8 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 		}
 
 		// Check for a CIDR match.
-		if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
-			return logical.ErrorResponse("request originated from invalid CIDR"), nil
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
 		}
 
 		config, err := b.config(ctx, req.Storage)
@@ -103,41 +103,34 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 			return nil, err
 		}
 
-		resp := &logical.Response{
-			Auth: &logical.Auth{
-				NumUses: role.NumUses,
-				Period:  role.Period,
-				Alias: &logical.Alias{
-					Name: serviceAccount.uid(),
-					Metadata: map[string]string{
-						"service_account_uid":         serviceAccount.uid(),
-						"service_account_name":        serviceAccount.name(),
-						"service_account_namespace":   serviceAccount.namespace(),
-						"service_account_secret_name": serviceAccount.SecretName,
-					},
-				},
-				InternalData: map[string]interface{}{
-					"role": roleName,
-				},
-				Policies: role.Policies,
+		auth := &logical.Auth{
+			Alias: &logical.Alias{
+				Name: serviceAccount.uid(),
 				Metadata: map[string]string{
 					"service_account_uid":         serviceAccount.uid(),
 					"service_account_name":        serviceAccount.name(),
 					"service_account_namespace":   serviceAccount.namespace(),
 					"service_account_secret_name": serviceAccount.SecretName,
-					"role":                        roleName,
 				},
-				DisplayName: fmt.Sprintf("%s-%s", serviceAccount.namespace(), serviceAccount.name()),
-				LeaseOptions: logical.LeaseOptions{
-					Renewable: true,
-					TTL:       role.TTL,
-					MaxTTL:    role.MaxTTL,
-				},
-				BoundCIDRs: role.BoundCIDRs,
 			},
+			InternalData: map[string]interface{}{
+				"role": roleName,
+			},
+			Metadata: map[string]string{
+				"service_account_uid":         serviceAccount.uid(),
+				"service_account_name":        serviceAccount.name(),
+				"service_account_namespace":   serviceAccount.namespace(),
+				"service_account_secret_name": serviceAccount.SecretName,
+				"role":                        roleName,
+			},
+			DisplayName: fmt.Sprintf("%s-%s", serviceAccount.namespace(), serviceAccount.name()),
 		}
 
-		return resp, nil
+		role.PopulateTokenAuth(auth)
+
+		return &logical.Response{
+			Auth: auth,
+		}, nil
 	}
 }
 
@@ -383,9 +376,9 @@ func (b *kubeAuthBackend) pathLoginRenew() framework.OperationFunc {
 		}
 
 		resp := &logical.Response{Auth: req.Auth}
-		resp.Auth.TTL = role.TTL
-		resp.Auth.MaxTTL = role.MaxTTL
-		resp.Auth.Period = role.Period
+		resp.Auth.TTL = role.TokenTTL
+		resp.Auth.MaxTTL = role.TokenMaxTTL
+		resp.Auth.Period = role.TokenPeriod
 		return resp, nil
 	}
 }
