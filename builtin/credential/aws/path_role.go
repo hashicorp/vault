@@ -367,6 +367,8 @@ type awsVersion struct {
 	Version int `json:"version"`
 }
 
+// currentAwsVersion stores the latest version that we have upgraded to.
+// Note that this is tracked independently from currentRoleStorageVersion.
 const currentAwsVersion = 1
 
 // upgrade does an upgrade, if necessary
