@@ -546,7 +546,6 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	// storage := &logical.InmemStorage{}
 
 	// Prepare a dummy signing key
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -606,16 +605,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		publicKeysSamples := make([][]string, numCases)
 
 		i := 0
-		var start time.Time
+		// var start time.Time
 		for currentCycle <= lastCycle {
-			probe1 := time.Now()
-			c.identityStore.oidcPeriodicFunc(ctx, storage)
-			if currentCycle == 1 {
-				start = time.Now()
-				// testSet.namedKey.NextRotation = start.Add(3 * time.Second)
-			}
-			probe2 := time.Now()
-
+			c.identityStore.oidcPeriodicFunc(ctx)
 			if currentCycle == testSet.testCases[i].cycle {
 				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
 				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
@@ -624,9 +616,22 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				i = i + 1
 			}
 			currentCycle = currentCycle + 1
-			// sleep until we are in the next cycle
-			nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
-			time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
+			// sleep until we are in the next cycle - where a next run will happen
+			v, _ := c.identityStore.oidcCache.Get(nil, "nextRun")
+			nextRun := v.(time.Time)
+
+			//nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
+			//time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
+			now := time.Now()
+			diff := nextRun.Sub(now)
+			fmt.Printf("\ntime.Now(): %#v\nnext run  : %#v\ndiff: %#v", now.String(), nextRun.String(), diff.String())
+
+			if diff.Hours() >= time.Hour.Hours() {
+				continue
+			}
+			if now.Before(nextRun) {
+				time.Sleep(diff)
+			}
 		}
 
 		// measure collected samples
@@ -648,7 +653,7 @@ func TestOIDC_Config(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 
 	// Read Config - expect defaults
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -683,6 +688,22 @@ func TestOIDC_Config(t *testing.T) {
 	// issuer should be set
 	if resp.Data["issuer"].(string) != testIssuer {
 		t.Fatalf("Expected issuer to be %q but found %q instead", testIssuer, resp.Data["issuer"].(string))
+	}
+
+	// Test bad issuers
+	for _, iss := range []string{"asldfk", "ftp://a.com", "a.com", "http://a.com/", "https://a.com/foo", "http:://a.com"} {
+		resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/config",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"issuer": iss,
+			},
+		})
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
+		}
+
 	}
 }
 
@@ -824,12 +845,12 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	// Validate configurable parts - for now just issuer
 	discoveryResp := &discovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+issuerPath {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+issuerPath, discoveryResp.Issuer)
+	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+"/"+issuerPath {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+"/"+issuerPath, discoveryResp.Issuer)
 	}
 
 	// Update issuer config
-	testIssuer := "https://example.com/testing:1234"
+	testIssuer := "https://example.com:1234"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/config",
 		Operation: logical.UpdateOperation,
@@ -848,8 +869,9 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// Validate configurable parts - for now just issuer
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != testIssuer {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", testIssuer, discoveryResp.Issuer)
+	expected := testIssuer + "/" + issuerPath
+	if discoveryResp.Issuer != expected {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}
 }
 
