@@ -1821,12 +1821,21 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 func TestBackend_E2E_Initialize(t *testing.T) {
 
-	// All this test does is load up the aws plugin, so that if we are in
+	// TODO: All this test does is load up the aws plugin, so that if we are in
 	// verbose mode we can observe in the log output that the initialization
 	// process ran:
 	//
 	//    go test -v ./builtin/credential/aws/ -run TestBackend_E2E_Initialize
+	//
+	// We need to modify this test so that it:
+	//     loads the plugin
+	//     writes some roles
+	//     "downgrades"the roles manually by directly modifying storage
+	//     somehow re-triggers an Initialize(), which will upgrade the roles
+	//     read from storage to confirm that the roles are upgraded
+	//     read from storage to confirm that the 'config/version' entry is there
 
+	// set up a test cluster
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -1844,7 +1853,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
-	// Setup Vault
+	// load the auth plugin
 	if err := client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
 		Type: "aws",
 	}); err != nil {

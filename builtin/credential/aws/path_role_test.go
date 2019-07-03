@@ -930,16 +930,16 @@ func TestRoleInitialize(t *testing.T) {
 
 func TestRoleStorageVersion(t *testing.T) {
 
-	before := roleStorageVersion{
-		Version: 42,
+	before := awsVersion{
+		RoleVersion: 42,
 	}
 
-	entry, err := logical.StorageEntryJSON("config/role-storage-version", &before)
+	entry, err := logical.StorageEntryJSON("config/version", &before)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var after roleStorageVersion
+	var after awsVersion
 	err = entry.DecodeJSON(&after)
 	if err != nil {
 		t.Fatal(err)

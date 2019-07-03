@@ -355,7 +355,7 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 				logger.Info("an upgrade was performed during initialization")
 			}
 
-			logger.Info("initialization succeeded")
+			logger.Trace("initialization succeeded")
 		}()
 
 	}
@@ -363,29 +363,29 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	return nil
 }
 
-// roleStorageVersion stores the latest role storage version that we have
+// awsVersion stores the latest role storage version that we have
 // upgraded to.
-type roleStorageVersion struct {
-	Version int `json:"version"`
+type awsVersion struct {
+	RoleVersion int `json:"role_verison"`
 }
 
 // upgrade and persist all of the role entries that are in need of being
 // upgraded.
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
 
-	// find the current role-storage-version
+	// find the current version
 	version := -1
-	entry, err := s.Get(ctx, "config/role-storage-version")
+	entry, err := s.Get(ctx, "config/version")
 	if err != nil {
 		return false, err
 	}
 	if entry != nil {
-		var rsv roleStorageVersion
+		var rsv awsVersion
 		err = entry.DecodeJSON(&rsv)
 		if err != nil {
 			return false, err
 		}
-		version = rsv.Version
+		version = rsv.RoleVersion
 	}
 
 	// check if we need to upgrade
@@ -411,9 +411,9 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		}
 	}
 
-	// save the current role-storage-version
-	rsv := roleStorageVersion{Version: currentRoleStorageVersion}
-	entry, err = logical.StorageEntryJSON("config/role-storage-version", &rsv)
+	// save the current version
+	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
+	entry, err = logical.StorageEntryJSON("config/version", &rsv)
 	if err != nil {
 		return false, err
 	}
