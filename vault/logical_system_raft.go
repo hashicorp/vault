@@ -276,7 +276,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"peers":       peers,
-				"tls_keyring": keyring,
+				"tls_keyring": &keyring,
 			},
 		}, nil
 	}
