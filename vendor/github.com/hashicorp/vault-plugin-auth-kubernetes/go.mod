@@ -11,8 +11,8 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-sockaddr v1.0.2
-	github.com/hashicorp/vault/api v1.0.3-0.20190702145914-28c317008926
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190702142346-e39f88dbdf82
+	github.com/hashicorp/vault/api v1.0.3-0.20190703041405-a2810eb6965d
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190703041405-a2810eb6965d
 	github.com/mitchellh/mapstructure v1.1.2
 	k8s.io/api v0.0.0-20190409092523-d687e77c8ae9
 	k8s.io/apimachinery v0.0.0-20190409092423-760d1845f48b
