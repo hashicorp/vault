@@ -1475,6 +1475,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	now := time.Now()
 
 	nsPaths := i.listNamespacePaths(ctx)
+	fmt.Printf("\nnsPaths: %#v", nsPaths)
 
 	if v, ok := i.oidcCache.Get(nil, "nextRun"); ok {
 		nextRun = v.(time.Time)
@@ -1489,34 +1490,34 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, nsPath := range nsPaths {
-			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
+		// for _, nsPath := range nsPaths {
+		// 	s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
-			if s == nil {
-				continue
-			}
+		// 	if s == nil {
+		// 		continue
+		// 	}
 
-			nextRotation, err := i.oidcKeyRotation(ctx, s)
-			if err != nil {
-				i.Logger().Warn("error rotating OIDC keys", "err", err)
-			}
-
-			nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
-			if err != nil {
-				i.Logger().Warn("error expiring OIDC public keys", "err", err)
-			}
-
-			i.oidcCache.Flush(nil)
-
-			// re-run at the soonest expiration or rotation time
-			if nextRotation.Before(nextRun) {
-				nextRun = nextRotation
-			}
-
-			if nextExpiration.Before(nextRun) {
-				nextRun = nextExpiration
-			}
+		nextRotation, err := i.oidcKeyRotation(ctx, s)
+		if err != nil {
+			i.Logger().Warn("error rotating OIDC keys", "err", err)
 		}
+
+		nextExpiration, err := i.expireOIDCPublicKeys(ctx, s)
+		if err != nil {
+			i.Logger().Warn("error expiring OIDC public keys", "err", err)
+		}
+
+		i.oidcCache.Flush(nil)
+
+		// re-run at the soonest expiration or rotation time
+		if nextRotation.Before(nextRun) {
+			nextRun = nextRotation
+		}
+
+		if nextExpiration.Before(nextRun) {
+			nextRun = nextExpiration
+		}
+		// }
 		i.oidcCache.SetDefault(nil, "nextRun", nextRun)
 	}
 }
