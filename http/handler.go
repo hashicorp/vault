@@ -69,6 +69,7 @@ var (
 	// perfStandbyAlwaysForwardPaths is used to check a requested path against
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
+	alwaysRedirectPaths           = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
 		"/v1/sys/audit",
@@ -95,6 +96,13 @@ var (
 	}
 )
 
+func init() {
+	alwaysRedirectPaths.AddPaths([]string{
+		"sys/storage/raft/snapshot",
+		"sys/storage/raft/snapshot-force",
+	})
+}
+
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func Handler(props *vault.HandlerProperties) http.Handler {
@@ -117,6 +125,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+	mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 	for _, path := range injectDataIntoTopRoutes {
 		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 	}
@@ -472,7 +481,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 			switch {
-			case !perfStandbyAlwaysForwardPaths.HasPath(path):
+			case !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
 				return
 			case strings.HasPrefix(path, "auth/token/create/"):
@@ -522,6 +531,17 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 		// Forwarding explicitly disabled, fall back to previous behavior
 		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
+		respondStandby(core, w, r.URL)
+		return
+	}
+
+	ns, err := namespace.FromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+	if alwaysRedirectPaths.HasPath(path) {
 		respondStandby(core, w, r.URL)
 		return
 	}
@@ -594,6 +614,14 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 			// so nil out the response now that the headers are written out
 			resp = nil
 		}
+	}
+
+	// If vault's core has already written to the response writer do not add any
+	// additional output. Headers have already been sent. If the response writer
+	// is set but has not been written to it likely means there was some kind of
+	// error
+	if r.ResponseWriter != nil && r.ResponseWriter.Written() {
+		return nil, true, false
 	}
 
 	if respondErrorCommon(w, r, resp, err) {

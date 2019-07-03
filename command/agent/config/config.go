@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
@@ -60,6 +60,7 @@ type Method struct {
 	MountPath  string        `hcl:"mount_path"`
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
+	Namespace  string        `hcl:"namespace"`
 	Config     map[string]interface{}
 }
 
@@ -339,6 +340,9 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		}
 		m.WrapTTLRaw = nil
 	}
+
+	// Canonicalize namespace path if provided
+	m.Namespace = namespace.Canonicalize(m.Namespace)
 
 	result.AutoAuth.Method = &m
 	return nil

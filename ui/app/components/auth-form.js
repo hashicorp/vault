@@ -175,15 +175,17 @@ export default Component.extend(DEFAULTS, {
 
   handleError(e, prefixMessage = true) {
     this.set('loading', false);
-    if (!e.errors) {
-      return e;
+    let errors;
+    if (e.errors) {
+      errors = e.errors.map(error => {
+        if (error.detail) {
+          return error.detail;
+        }
+        return error;
+      });
+    } else {
+      errors = [e];
     }
-    let errors = e.errors.map(error => {
-      if (error.detail) {
-        return error.detail;
-      }
-      return error;
-    });
     let message = prefixMessage ? 'Authentication failed: ' : '';
     this.set('error', `${message}${errors.join('.')}`);
   },

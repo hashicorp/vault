@@ -335,13 +335,16 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description: "the name",
 				},
 				"age": {
-					Type:             TypeInt,
-					Description:      "the age",
-					AllowedValues:    []interface{}{1, 2, 3},
-					Required:         true,
-					DisplayName:      "Age",
-					DisplayValue:     7,
-					DisplaySensitive: true,
+					Type:          TypeInt,
+					Description:   "the age",
+					AllowedValues: []interface{}{1, 2, 3},
+					Required:      true,
+					DisplayAttrs: &DisplayAttributes{
+						Name:      "Age",
+						Sensitive: true,
+						Group:     "Some Group",
+						Value:     7,
+					},
 				},
 				"x-abc-token": {
 					Type:          TypeHeader,
@@ -377,6 +380,9 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Summary:     "This shouldn't show up",
 					Unpublished: true,
 				},
+			},
+			DisplayAttrs: &DisplayAttributes{
+				Navigation: true,
 			},
 		}
 

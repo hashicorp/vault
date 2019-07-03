@@ -12,7 +12,16 @@ import (
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+)
+
+var (
+	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
+	// to bootstrap mounting plugins.
+	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
+
+	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
+	// plugin.
+	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
 
 // PluginAPIClientMeta is a helper that plugins can use to configure TLS connections
@@ -61,12 +70,12 @@ func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 // VaultPluginTLSProvider is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
-	if os.Getenv(pluginutil.PluginMetadataModeEnv) == "true" {
+	if os.Getenv(PluginMetadataModeEnv) == "true" {
 		return nil
 	}
 
 	return func() (*tls.Config, error) {
-		unwrapToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
+		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
 		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
 		if err != nil {

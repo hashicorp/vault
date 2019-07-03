@@ -395,7 +395,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Ensure the cache is populated, don't need the result
 	NamespaceByID(ctx, ns.ID, c)
 
-	// Verify there are no conflicting mounts
+	// Basic check for matching names
+	for _, ent := range c.mounts.Entries {
+		if ns.ID == ent.NamespaceID {
+			switch {
+			// Existing is oauth/github/ new is oauth/ or
+			// existing is oauth/ and new is oauth/github/
+			case strings.HasPrefix(ent.Path, entry.Path):
+				fallthrough
+			case strings.HasPrefix(entry.Path, ent.Path):
+				return logical.CodedError(409, fmt.Sprintf("path is already in use at %s", ent.Path))
+			}
+		}
+	}
+
+	// Verify there are no conflicting mounts in the router
 	if match := c.router.MountConflict(ctx, entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
@@ -571,18 +585,22 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		backend.Cleanup(ctx)
 	}
 
-	// Unmount the backend entirely
-	if err := c.router.Unmount(ctx, path); err != nil {
-		return err
-	}
-
 	viewPath := entry.ViewPath()
 	switch {
 	case !updateStorage:
 		// Don't attempt to clear data, replication will handle this
-	case c.IsDRSecondary(), entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case c.IsDRSecondary():
+		// If we are a dr secondary we want to clear the view, but the provided
+		// view is marked as read only. We use the barrier here to get around
+		// it.
+		if err := logical.ClearViewWithLogging(ctx, NewBarrierView(c.barrier, viewPath), c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
+			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
+			return err
+		}
+
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
-		if err := logical.ClearView(ctx, view); err != nil {
+		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
@@ -592,9 +610,15 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			return err
 		}
 	}
+
 	// Remove the mount table entry
 	if err := c.removeMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to remove mount entry for path being unmounted", "error", err, "path", path)
+		return err
+	}
+
+	// Unmount the backend entirely
+	if err := c.router.Unmount(ctx, path); err != nil {
 		return err
 	}
 
@@ -1142,7 +1166,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	}
 
 	c.mounts = nil
-	c.router = NewRouter()
+	c.router.reset()
 	c.systemBarrierView = nil
 	return nil
 }
@@ -1184,6 +1208,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		BackendUUID: entry.BackendAwareUUID,
 	}
 
+	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {
 		return nil, err
@@ -1191,6 +1216,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if b == nil {
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
+	addLicenseCallback(c, b)
+
 	return b, nil
 }
 
@@ -1198,9 +1225,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
-	return dynamicSystemView{
-		core:       c,
-		mountEntry: entry,
+	return extendedSystemView{
+		dynamicSystemView{
+			core:       c,
+			mountEntry: entry,
+		},
 	}
 }
 

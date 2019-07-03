@@ -205,18 +205,17 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			"error fetching CA certificate: %s", caErr)}
 	}
 
-	input := &dataBundle{
-		req:           req,
-		apiData:       data,
-		role:          role,
-		signingBundle: signingBundle,
+	input := &inputBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
 	}
 	var parsedBundle *certutil.ParsedCertBundle
 	var err error
 	if useCSR {
-		parsedBundle, err = signCert(b, input, false, useCSRValues)
+		parsedBundle, err = signCert(b, input, signingBundle, false, useCSRValues)
 	} else {
-		parsedBundle, err = generateCert(ctx, b, input, false)
+		parsedBundle, err = generateCert(ctx, b, input, signingBundle, false)
 	}
 	if err != nil {
 		switch err.(type) {

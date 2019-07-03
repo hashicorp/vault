@@ -90,11 +90,11 @@ certificate. When users or machines generate credentials, they are generated
 against this role:
 
     ```text
-    $ vault write pki/roles/my-role \
+    $ vault write pki/roles/example-dot-com \
         allowed_domains=my-website.com \
         allow_subdomains=true \
         max_ttl=72h
-    Success! Data written to: pki/roles/my-role
+    Success! Data written to: pki/roles/example-dot-com
     ```
 
 ## Usage
@@ -106,7 +106,7 @@ the proper permission, it can generate credentials.
 of the role:
 
     ```text
-    $ vault write pki/issue/my-role \
+    $ vault write pki/issue/example-dot-com \
         common_name=www.my-website.com
 
     Key                 Value
@@ -443,7 +443,7 @@ Successfully mounted 'pki' at 'pki_int'!
 #### Configure an Intermediate CA
 
 ```text
-$ vault secrets tune -max-lease-ttl=43800h pki_int
+$ vault secrets tune -max-lease-ttl=4380h pki_int
 Successfully tuned mount 'pki_int'!
 ```
 
@@ -453,7 +453,7 @@ value should be less than or equal to the root certificate authority.
 Now, we generate our intermediate certificate signing request:
 
 ```text
-$ vault write pki_int/intermediate/generate/internal common_name="myvault.com Intermediate Authority" ttl=43800h
+$ vault write pki_int/intermediate/generate/internal common_name="myvault.com Intermediate Authority" ttl=4380h
 Key Value
 csr -----BEGIN CERTIFICATE REQUEST-----
 MIICsjCCAZoCAQAwLTErMCkGA1UEAxMibXl2YXVsdC5jb20gSW50ZXJtZWRpYXRl
@@ -479,7 +479,7 @@ another certificate authority, in this case the root certificate authority
 generated in the first example.
 
 ```text
-$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle ttl=43800h
+$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle ttl=4380h
 Key             Value
 certificate     -----BEGIN CERTIFICATE-----
 MIIDZTCCAk2gAwIBAgIUENxQD7KIJi1zE/jEiYqAG1VC4NwwDQYJKoZIhvcNAQEL

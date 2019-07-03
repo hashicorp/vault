@@ -14,12 +14,7 @@ module('Integration | Component | identity/item details', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it renders the disabled warning', async function(assert) {

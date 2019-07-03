@@ -22,31 +22,41 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
-			DisplayName: "URL",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "URL",
+			},
 		},
 
 		"userdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
-			DisplayName: "User DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User DN",
+			},
 		},
 
 		"binddn": {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
-			DisplayName: "Name of Object to bind (binddn)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Name of Object to bind (binddn)",
+			},
 		},
 
 		"bindpass": {
-			Type:             framework.TypeString,
-			Description:      "LDAP password for searching for the user DN (optional)",
-			DisplaySensitive: true,
+			Type:        framework.TypeString,
+			Description: "LDAP password for searching for the user DN (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Sensitive: true,
+			},
 		},
 
 		"groupdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
-			DisplayName: "Group DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Group DN",
+			},
 		},
 
 		"groupfilter": {
@@ -56,6 +66,9 @@ func ConfigFields() map[string]*framework.FieldSchema {
 The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Group Filter",
+			},
 		},
 
 		"groupattr": {
@@ -65,20 +78,28 @@ Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}
 in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
-			DisplayName: "Group Attribute",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "Group Attribute",
+				Value: "cn",
+			},
 		},
 
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
-			DisplayName: "User Principal (UPN) Domain",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User Principal (UPN) Domain",
+			},
 		},
 
 		"userattr": {
 			Type:        framework.TypeString,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
-			DisplayName: "User Attribute",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "User Attribute",
+				Value: "cn",
+			},
 		},
 
 		"certificate": {
@@ -89,34 +110,44 @@ Default: cn`,
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
-			DisplayName: "Discover DN",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Discover DN",
+			},
 		},
 
 		"insecure_tls": {
 			Type:        framework.TypeBool,
 			Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
-			DisplayName: "Insecure TLS",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Insecure TLS",
+			},
 		},
 
 		"starttls": {
 			Type:        framework.TypeBool,
 			Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
-			DisplayName: "Issue StartTLS command after establishing an unencrypted connection",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Issue StartTLS",
+			},
 		},
 
 		"tls_min_version": {
-			Type:          framework.TypeString,
-			Default:       "tls12",
-			Description:   "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
-			DisplayName:   "Minimum TLS Version",
+			Type:        framework.TypeString,
+			Default:     "tls12",
+			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Minimum TLS Version",
+			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"tls_max_version": {
-			Type:          framework.TypeString,
-			Default:       "tls12",
-			Description:   "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
-			DisplayName:   "Maxumum TLS Version",
+			Type:        framework.TypeString,
+			Default:     "tls12",
+			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Maximum TLS Version",
+			},
 			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
@@ -143,118 +174,121 @@ Default: cn`,
  * Creates and initializes a ConfigEntry object with its default values,
  * as specified by the passed schema.
  */
-func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
-	cfg := new(ConfigEntry)
+func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry, error) {
+	var hadExisting bool
+	var cfg *ConfigEntry
 
-	url := d.Get("url").(string)
-	if url != "" {
-		cfg.Url = strings.ToLower(url)
+	if existing != nil {
+		cfg = existing
+		hadExisting = true
+	} else {
+		cfg = new(ConfigEntry)
 	}
-	userattr := d.Get("userattr").(string)
-	if userattr != "" {
-		cfg.UserAttr = strings.ToLower(userattr)
+
+	if _, ok := d.Raw["url"]; ok || !hadExisting {
+		cfg.Url = strings.ToLower(d.Get("url").(string))
 	}
-	userdn := d.Get("userdn").(string)
-	if userdn != "" {
-		cfg.UserDN = userdn
+
+	if _, ok := d.Raw["userattr"]; ok || !hadExisting {
+		cfg.UserAttr = strings.ToLower(d.Get("userattr").(string))
 	}
-	groupdn := d.Get("groupdn").(string)
-	if groupdn != "" {
-		cfg.GroupDN = groupdn
+
+	if _, ok := d.Raw["userdn"]; ok || !hadExisting {
+		cfg.UserDN = d.Get("userdn").(string)
 	}
-	groupfilter := d.Get("groupfilter").(string)
-	if groupfilter != "" {
-		// Validate the template before proceeding
-		_, err := template.New("queryTemplate").Parse(groupfilter)
-		if err != nil {
-			return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
+
+	if _, ok := d.Raw["groupdn"]; ok || !hadExisting {
+		cfg.GroupDN = d.Get("groupdn").(string)
+	}
+
+	if _, ok := d.Raw["groupfilter"]; ok || !hadExisting {
+		groupfilter := d.Get("groupfilter").(string)
+		if groupfilter != "" {
+			// Validate the template before proceeding
+			_, err := template.New("queryTemplate").Parse(groupfilter)
+			if err != nil {
+				return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
+			}
 		}
 
 		cfg.GroupFilter = groupfilter
 	}
-	groupattr := d.Get("groupattr").(string)
-	if groupattr != "" {
-		cfg.GroupAttr = groupattr
-	}
-	upndomain := d.Get("upndomain").(string)
-	if upndomain != "" {
-		cfg.UPNDomain = upndomain
-	}
-	certificate := d.Get("certificate").(string)
-	if certificate != "" {
-		block, _ := pem.Decode([]byte(certificate))
 
-		if block == nil || block.Type != "CERTIFICATE" {
-			return nil, fmt.Errorf("failed to decode PEM block in the certificate")
+	if _, ok := d.Raw["groupattr"]; ok || !hadExisting {
+		cfg.GroupAttr = d.Get("groupattr").(string)
+	}
+
+	if _, ok := d.Raw["upndomain"]; ok || !hadExisting {
+		cfg.UPNDomain = d.Get("upndomain").(string)
+	}
+
+	if _, ok := d.Raw["certificate"]; ok || !hadExisting {
+		certificate := d.Get("certificate").(string)
+		if certificate != "" {
+			block, _ := pem.Decode([]byte(certificate))
+
+			if block == nil || block.Type != "CERTIFICATE" {
+				return nil, errors.New("failed to decode PEM block in the certificate")
+			}
+			_, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
+			}
 		}
-		_, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
-		}
+
 		cfg.Certificate = certificate
 	}
-	insecureTLS := d.Get("insecure_tls").(bool)
-	if insecureTLS {
-		cfg.InsecureTLS = insecureTLS
-	}
-	cfg.TLSMinVersion = d.Get("tls_min_version").(string)
-	if cfg.TLSMinVersion == "" {
-		return nil, fmt.Errorf("failed to get 'tls_min_version' value")
+
+	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
+		cfg.InsecureTLS = d.Get("insecure_tls").(bool)
 	}
 
-	var ok bool
-	_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version'")
+	if _, ok := d.Raw["tls_min_version"]; ok || !hadExisting {
+		cfg.TLSMinVersion = d.Get("tls_min_version").(string)
+		_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+		if !ok {
+			return nil, errors.New("invalid 'tls_min_version'")
+		}
 	}
 
-	cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
-	if cfg.TLSMaxVersion == "" {
-		return nil, fmt.Errorf("failed to get 'tls_max_version' value")
-	}
-
-	_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_max_version'")
+	if _, ok := d.Raw["tls_max_version"]; ok || !hadExisting {
+		cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
+		_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_max_version'")
+		}
 	}
 	if cfg.TLSMaxVersion < cfg.TLSMinVersion {
 		return nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
-	startTLS := d.Get("starttls").(bool)
-	if startTLS {
-		cfg.StartTLS = startTLS
+	if _, ok := d.Raw["starttls"]; ok || !hadExisting {
+		cfg.StartTLS = d.Get("starttls").(bool)
 	}
 
-	bindDN := d.Get("binddn").(string)
-	if bindDN != "" {
-		cfg.BindDN = bindDN
+	if _, ok := d.Raw["binddn"]; ok || !hadExisting {
+		cfg.BindDN = d.Get("binddn").(string)
 	}
 
-	bindPass := d.Get("bindpass").(string)
-	if bindPass != "" {
-		cfg.BindPassword = bindPass
+	if _, ok := d.Raw["bindpass"]; ok || !hadExisting {
+		cfg.BindPassword = d.Get("bindpass").(string)
 	}
 
-	denyNullBind := d.Get("deny_null_bind").(bool)
-	if denyNullBind {
-		cfg.DenyNullBind = denyNullBind
+	if _, ok := d.Raw["deny_null_bind"]; ok || !hadExisting {
+		cfg.DenyNullBind = d.Get("deny_null_bind").(bool)
 	}
 
-	discoverDN := d.Get("discoverdn").(bool)
-	if discoverDN {
-		cfg.DiscoverDN = discoverDN
+	if _, ok := d.Raw["discoverdn"]; ok || !hadExisting {
+		cfg.DiscoverDN = d.Get("discoverdn").(bool)
 	}
 
-	caseSensitiveNames, ok := d.GetOk("case_sensitive_names")
-	if ok {
+	if _, ok := d.Raw["case_sensitive_names"]; ok || !hadExisting {
 		cfg.CaseSensitiveNames = new(bool)
-		*cfg.CaseSensitiveNames = caseSensitiveNames.(bool)
+		*cfg.CaseSensitiveNames = d.Get("case_sensitive_names").(bool)
 	}
 
-	useTokenGroups := d.Get("use_token_groups").(bool)
-	if useTokenGroups {
-		cfg.UseTokenGroups = useTokenGroups
+	if _, ok := d.Raw["use_token_groups"]; ok || !hadExisting {
+		cfg.UseTokenGroups = d.Get("use_token_groups").(bool)
 	}
 
 	return cfg, nil

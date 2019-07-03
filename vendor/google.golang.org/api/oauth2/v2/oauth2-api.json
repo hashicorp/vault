@@ -3,7 +3,7 @@
     "oauth2": {
       "scopes": {
         "https://www.googleapis.com/auth/plus.me": {
-          "description": "Know who you are on Google"
+          "description": "Associate you with your personal info on Google"
         },
         "https://www.googleapis.com/auth/userinfo.email": {
           "description": "View your email address"
@@ -20,7 +20,7 @@
   "description": "Obtains end-user authorization grants for use with other Google APIs.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/accounts/docs/OAuth2",
-  "etag": "\"VPK3KBfpaEgZ16pozGOoMYfKc0U/PVo8fMts0HzonBA6xcVtQnCz1KI\"",
+  "etag": "\"VPK3KBfpaEgZ16pozGOoMYfKc0U/W-JRJm0Bex0eEJ4XYBVnRKTeRQ8\"",
   "icons": {
     "x16": "https://www.gstatic.com/images/branding/product/1x/googleg_16dp.png",
     "x32": "https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"

@@ -1,0 +1,41 @@
+.hs-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  justify-content: center;
+  align-items: flex-start;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  margin: 2px 4px;
+}
+
+.hs-icon svg {
+  fill: currentColor;
+  flex: 1 1 0;
+}
+
+.hs-icon-button-right {
+  margin-left: 0.25rem;
+  margin-right: -0.5rem;
+  align-items: center;
+}
+
+.hs-icon-s {
+  width: 12px;
+  height: 12px;
+}
+
+.hs-icon-l {
+  width: 20px;
+  height: 20px;
+}
+
+.hs-icon-xl {
+  width: 28px;
+  height: 28px;
+}
+
+.hs-icon-xxl {
+  width: 32px;
+  height: 32px;
+}

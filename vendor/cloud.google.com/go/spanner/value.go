@@ -35,12 +35,11 @@ import (
 const commitTimestampPlaceholderString = "spanner.commit_timestamp()"
 
 var (
-	// CommitTimestamp is a special value used to tell Cloud Spanner
-	// to insert the commit timestamp of the transaction into a column.
-	// It can be used in a Mutation, or directly used in
-	// InsertStruct or InsertMap. See ExampleCommitTimestamp.
-	// This is just a placeholder and the actual value stored in this
-	// variable has no meaning.
+	// CommitTimestamp is a special value used to tell Cloud Spanner to insert
+	// the commit timestamp of the transaction into a column. It can be used in
+	// a Mutation, or directly used in InsertStruct or InsertMap. See
+	// ExampleCommitTimestamp. This is just a placeholder and the actual value
+	// stored in this variable has no meaning.
 	CommitTimestamp = commitTimestamp
 	commitTimestamp = time.Unix(0, 0).In(time.FixedZone("CommitTimestamp placeholder", 0xDB))
 )
@@ -78,25 +77,6 @@ type NullFloat64 struct {
 	Float64 float64
 	Valid   bool // Valid is true if Float64 is not NULL.
 }
-
-// Cloud Spanner STRUCT (aka STRUCT) values (https://cloud.google.com/spanner/docs/data-types#struct-type)
-// can be represented by a Go struct value.
-// The spanner.StructType  of such values is built from the field types and field tag information
-// of the Go struct. If a field in the struct type definition has a "spanner:<field_name>" tag,
-// then the value of the "spanner" key in the tag is used as the name for that field in the
-// built spanner.StructType, otherwise the field name in the struct definition is used. To specify a
-// field with an empty field name in a Cloud Spanner STRUCT type, use the `spanner:""` tag
-// annotation against the corresponding field in the Go struct's type definition.
-//
-// A STRUCT value can contain STRUCT-typed and Array-of-STRUCT typed fields and these can be
-// specified using named struct-typed and []struct-typed fields inside a Go struct. However,
-// embedded struct fields are not allowed. Unexported struct fields are ignored.
-//
-// NULL STRUCT values in Cloud Spanner are typed. A nil pointer to a Go struct value can be used to
-// specify a NULL STRUCT value of the corresponding spanner.StructType.  Nil and empty slices of a
-// Go STRUCT type can be used to specify NULL and empty array values respectively of the
-// corresponding spanner.StructType. A slice of pointers to a Go struct type can be used to specify
-// an array of NULL-able STRUCT values.
 
 // String implements Stringer.String for NullFloat64
 func (n NullFloat64) String() string {
@@ -1106,28 +1086,33 @@ func decodeRowArray(ty *sppb.StructType, pb *proto3.ListValue) ([]NullRow, error
 	return a, nil
 }
 
-// errNilSpannerStructType returns error for unexpected nil Cloud Spanner STRUCT schema type in decoding.
+// errNilSpannerStructType returns error for unexpected nil Cloud Spanner STRUCT
+// schema type in decoding.
 func errNilSpannerStructType() error {
 	return spannerErrorf(codes.FailedPrecondition, "unexpected nil StructType in decoding Cloud Spanner STRUCT")
 }
 
-// errUnnamedField returns error for decoding a Cloud Spanner STRUCT with unnamed field into a Go struct.
+// errUnnamedField returns error for decoding a Cloud Spanner STRUCT with
+// unnamed field into a Go struct.
 func errUnnamedField(ty *sppb.StructType, i int) error {
 	return spannerErrorf(codes.InvalidArgument, "unnamed field %v in Cloud Spanner STRUCT %+v", i, ty)
 }
 
 // errNoOrDupGoField returns error for decoding a Cloud Spanner
-// STRUCT into a Go struct which is either missing a field, or has duplicate fields.
+// STRUCT into a Go struct which is either missing a field, or has duplicate
+// fields.
 func errNoOrDupGoField(s interface{}, f string) error {
 	return spannerErrorf(codes.InvalidArgument, "Go struct %+v(type %T) has no or duplicate fields for Cloud Spanner STRUCT field %v", s, s, f)
 }
 
-// errDupColNames returns error for duplicated Cloud Spanner STRUCT field names found in decoding a Cloud Spanner STRUCT into a Go struct.
+// errDupColNames returns error for duplicated Cloud Spanner STRUCT field names
+// found in decoding a Cloud Spanner STRUCT into a Go struct.
 func errDupSpannerField(f string, ty *sppb.StructType) error {
 	return spannerErrorf(codes.InvalidArgument, "duplicated field name %q in Cloud Spanner STRUCT %+v", f, ty)
 }
 
-// errDecodeStructField returns error for failure in decoding a single field of a Cloud Spanner STRUCT.
+// errDecodeStructField returns error for failure in decoding a single field of
+// a Cloud Spanner STRUCT.
 func errDecodeStructField(ty *sppb.StructType, f string, err error) error {
 	se, ok := toSpannerError(err).(*Error)
 	if !ok {
@@ -1138,7 +1123,8 @@ func errDecodeStructField(ty *sppb.StructType, f string, err error) error {
 	return se
 }
 
-// decodeStruct decodes proto3.ListValue pb into struct referenced by pointer ptr, according to
+// decodeStruct decodes proto3.ListValue pb into struct referenced by pointer
+// ptr, according to
 // the structural information given in sppb.StructType ty.
 func decodeStruct(ty *sppb.StructType, pb *proto3.ListValue, ptr interface{}) error {
 	if reflect.ValueOf(ptr).IsNil() {
@@ -1192,7 +1178,8 @@ func isPtrStructPtrSlice(t reflect.Type) bool {
 	return true
 }
 
-// decodeStructArray decodes proto3.ListValue pb into struct slice referenced by pointer ptr, according to the
+// decodeStructArray decodes proto3.ListValue pb into struct slice referenced by
+// pointer ptr, according to the
 // structural information given in a sppb.StructType.
 func decodeStructArray(ty *sppb.StructType, pb *proto3.ListValue, ptr interface{}) error {
 	if pb == nil {
@@ -1229,8 +1216,8 @@ func decodeStructArray(ty *sppb.StructType, pb *proto3.ListValue, ptr interface{
 	return nil
 }
 
-// errEncoderUnsupportedType returns error for not being able to encode a value of
-// certain type.
+// errEncoderUnsupportedType returns error for not being able to encode a value
+// of certain type.
 func errEncoderUnsupportedType(v interface{}) error {
 	return spannerErrorf(codes.InvalidArgument, "client doesn't support type %T", v)
 }
@@ -1443,8 +1430,8 @@ func encodeValue(v interface{}) (*proto3.Value, *sppb.Type, error) {
 	return pb, pt, nil
 }
 
-// Encodes a Go struct value/ptr in v to the spanner Value and Type protos. v itself must
-// be non-nil.
+// Encodes a Go struct value/ptr in v to the spanner Value and Type protos. v
+// itself must be non-nil.
 func encodeStruct(v interface{}) (*proto3.Value, *sppb.Type, error) {
 	typ := reflect.TypeOf(v)
 	val := reflect.ValueOf(v)
@@ -1453,8 +1440,8 @@ func encodeStruct(v interface{}) (*proto3.Value, *sppb.Type, error) {
 	if typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Struct {
 		typ = typ.Elem()
 		if val.IsNil() {
-			// nil pointer to struct, representing a NULL STRUCT value. Use a dummy value to
-			// get the type.
+			// nil pointer to struct, representing a NULL STRUCT value. Use a
+			// dummy value to get the type.
 			_, st, err := encodeStruct(reflect.Zero(typ).Interface())
 			if err != nil {
 				return nil, nil, err
@@ -1504,8 +1491,8 @@ func encodeStruct(v interface{}) (*proto3.Value, *sppb.Type, error) {
 	return listProto(stv...), structType(stf...), nil
 }
 
-// Encodes a slice of Go struct values/ptrs in v to the spanner Value and Type protos. v itself
-// must be non-nil.
+// Encodes a slice of Go struct values/ptrs in v to the spanner Value and Type
+// protos. v itself must be non-nil.
 func encodeStructArray(v interface{}) (*proto3.Value, *sppb.Type, error) {
 	etyp := reflect.TypeOf(v).Elem()
 	sliceval := reflect.ValueOf(v)
@@ -1515,7 +1502,7 @@ func encodeStructArray(v interface{}) (*proto3.Value, *sppb.Type, error) {
 		etyp = etyp.Elem()
 	}
 
-	// Use a dummy struct value to get the element type
+	// Use a dummy struct value to get the element type.
 	_, elemTyp, err := encodeStruct(reflect.Zero(etyp).Interface())
 	if err != nil {
 		return nil, nil, err
@@ -1582,7 +1569,8 @@ func encodeValueArray(vs []interface{}) (*proto3.ListValue, error) {
 	return lv, nil
 }
 
-// encodeArray assumes that all values of the array element type encode without error.
+// encodeArray assumes that all values of the array element type encode without
+// error.
 func encodeArray(len int, at func(int) interface{}) (*proto3.Value, error) {
 	vs := make([]*proto3.Value, len)
 	var err error

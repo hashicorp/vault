@@ -11,11 +11,6 @@ export default create({
   allowAnyName: clickable('[data-test-input="allowAnyName"]'),
   allowedDomains: fillable('[data-test-input="allowedDomains"] input'),
   save: clickable('[data-test-role-create]'),
-  deleteBtn: clickable('[data-test-role-delete] button'),
-  confirmBtn: clickable('[data-test-confirm-button]'),
-  deleteRole() {
-    return this.deleteBtn().confirmBtn();
-  },
 
   createRole(name, allowedDomains) {
     return this.toggleDomain()

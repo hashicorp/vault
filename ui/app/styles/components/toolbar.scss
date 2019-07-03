@@ -1,0 +1,108 @@
+.tabs-container + .toolbar {
+  border-top: 0;
+}
+
+.toolbar {
+  background-color: $ui-gray-010;
+  border: 1px solid $ui-gray-100;
+  border-bottom-color: $ui-gray-300;
+  border-top-color: $ui-gray-300;
+  position: relative;
+
+  &::after {
+    background: linear-gradient(to right, $ui-gray-010, rgba($ui-gray-010, 0));
+    bottom: 0;
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: $spacing-xxs;
+    z-index: 2;
+  }
+
+  .input,
+  .select {
+    min-width: 190px;
+  }
+}
+
+.toolbar-scroller {
+  align-items: center;
+  display: flex;
+  height: 44px;
+  justify-content: space-between;
+  overflow-x: auto;
+  width: 100%;
+
+  @include from($mobile) {
+    padding: 0 $spacing-xxs;
+  }
+
+  &::-webkit-scrollbar {
+    border-bottom: $base-border;
+    height: $spacing-xxs;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $ui-gray-300;
+    border-radius: $spacing-xxs;
+  }
+}
+
+.toolbar-filters,
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.toolbar-filters + .toolbar-actions {
+  @include until($mobile) {
+    border-left: $base-border;
+    margin-left: $spacing-xs;
+    padding-left: $spacing-xs;
+  }
+}
+
+.toolbar-actions {
+  @include from($mobile) {
+    justify-content: flex-end;
+  }
+}
+
+.toolbar-link {
+  @extend .button;
+  @extend .is-ghost;
+  @extend .has-icon-right;
+  border: 0;
+  color: $black;
+  transition: background-color $speed;
+
+  &:hover {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+
+  &:active {
+    box-shadow: none;
+  }
+
+  &.popup-menu-trigger {
+    height: 2.5rem;
+    padding: $size-10 $size-8;
+  }
+}
+
+.toolbar-label {
+  padding: $spacing-xs;
+  color: $grey;
+}
+
+.toolbar-separator {
+  border-right: $light-border;
+  height: 32px;
+  margin: 0 $spacing-xs;
+  width: 0;
+}

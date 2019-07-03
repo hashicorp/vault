@@ -18,7 +18,7 @@ message InitRequest {
 }
 
 message CreateUserRequest {
-	Statements     statements = 1;
+	Statements		 statements = 1;
 	UsernameConfig username_config = 2;
 	google.protobuf.Timestamp expiration = 3;
 }
@@ -44,14 +44,15 @@ message Statements {
 	// DEPRECATED, will be removed in 0.12
 	string revocation_statements = 2 [deprecated=true];
 	// DEPRECATED, will be removed in 0.12
-	string rollback_statements  = 3 [deprecated=true];
+	string rollback_statements	= 3 [deprecated=true];
 	// DEPRECATED, will be removed in 0.12
 	string renew_statements = 4 [deprecated=true];
 
 	repeated string creation = 5;
 	repeated string revocation = 6;
-	repeated string rollback  = 7;
+	repeated string rollback	= 7;
 	repeated string renewal = 8;
+	repeated string rotation = 9;
 }
 
 message UsernameConfig {
@@ -78,6 +79,26 @@ message RotateRootCredentialsResponse {
 
 message Empty {}
 
+message GenerateCredentialsResponse {
+	string password = 1;
+}
+
+message StaticUserConfig{
+	string username = 1;
+	string password = 2;
+	bool create = 3;
+}
+
+message SetCredentialsRequest {
+	Statements statements = 1;
+	StaticUserConfig static_user_config = 2;
+}
+
+message SetCredentialsResponse {
+	string username = 1;
+	string password = 2;
+}
+
 service Database {
 	rpc Type(Empty) returns (TypeResponse);
 	rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
@@ -86,6 +107,8 @@ service Database {
 	rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (RotateRootCredentialsResponse);
 	rpc Init(InitRequest) returns (InitResponse);
 	rpc Close(Empty) returns (Empty);
+	rpc SetCredentials(SetCredentialsRequest) returns (SetCredentialsResponse);
+	rpc GenerateCredentials(Empty) returns (GenerateCredentialsResponse);
 	
 	rpc Initialize(InitializeRequest) returns (Empty) {
 		option deprecated = true;

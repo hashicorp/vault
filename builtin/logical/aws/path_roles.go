@@ -41,7 +41,9 @@ func pathRoles(b *backend) *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
-				DisplayName: "Policy Name",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Policy Name",
+				},
 			},
 
 			"credential_type": &framework.FieldSchema{
@@ -52,13 +54,17 @@ func pathRoles(b *backend) *framework.Path {
 			"role_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is " + assumedRoleCred,
-				DisplayName: "Role ARNs",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Role ARNs",
+				},
 			},
 
 			"policy_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
-				DisplayName: "Policy ARNs",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Policy ARNs",
+				},
 			},
 
 			"policy_document": &framework.FieldSchema{
@@ -73,33 +79,39 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 			"default_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
-				DisplayName: "Default TTL",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Default STS TTL",
+				},
 			},
 
 			"max_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
-				DisplayName: "Max TTL",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Max STS TTL",
+				},
 			},
 
 			"arn": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
-or IAM role to assume`,
-				Deprecated: true,
+				Type:        framework.TypeString,
+				Description: `Use role_arns or policy_arns instead.`,
+				Deprecated:  true,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Deprecated; use policy_document instead. IAM policy document",
+				Description: "Use policy_document instead.",
 				Deprecated:  true,
 			},
 
 			"user_path": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Path for IAM User. Only valid when credential_type is " + iamUserCred,
-				DisplayName: "User Path",
-				Default:     "/",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "User Path",
+					Value: "/",
+				},
+				Default: "/",
 			},
 		},
 

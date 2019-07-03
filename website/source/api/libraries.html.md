@@ -59,6 +59,10 @@ $ Install-Package VaultSharp
 $ Install-Package Vault
 ```
 
+### C++
+
+* [libvault](https://github.com/abedra/libvault)
+
 ### Clojure
 
 * [vault-clj](https://github.com/amperity/vault-clj)
@@ -148,6 +152,10 @@ $ pip install hvac
 ```shell
 $ pip install async-hvac
 ```
+
+### R
+
+* [vaultr](https://github.com/vimc/vaultr)
 
 ### Rust
 

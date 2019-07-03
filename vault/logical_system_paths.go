@@ -850,7 +850,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{
@@ -877,7 +877,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{
@@ -904,7 +904,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{

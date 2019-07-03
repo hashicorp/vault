@@ -5,82 +5,81 @@ import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-let generateTransitKeys = async () => {
-  const ts = new Date().getTime();
-  const keys = [
-    {
-      name: `aes-${ts}`,
-      type: 'aes256-gcm96',
-      exportable: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `aes-convergent-${ts}`,
-      type: 'aes256-gcm96',
-      convergent: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `chacha-${ts}`,
-      type: 'chacha20-poly1305',
-      exportable: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `chacha-convergent-${ts}`,
-      type: 'chacha20-poly1305',
-      convergent: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `ecdsa-${ts}`,
-      type: 'ecdsa-p256',
-      exportable: true,
-      supportsSigning: true,
-    },
-    {
-      name: `ed25519-${ts}`,
-      type: 'ed25519',
-      derived: true,
-      supportsSigning: true,
-    },
-    {
-      name: `rsa-2048-${ts}`,
-      type: `rsa-2048`,
-      supportsSigning: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `rsa-4096-${ts}`,
-      type: `rsa-4096`,
-      supportsSigning: true,
-      supportsEncryption: true,
-    },
-  ];
+const keyTypes = [
+  {
+    name: ts => `aes-${ts}`,
+    type: 'aes256-gcm96',
+    exportable: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `aes-convergent-${ts}`,
+    type: 'aes256-gcm96',
+    convergent: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `chacha-${ts}`,
+    type: 'chacha20-poly1305',
+    exportable: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `chacha-convergent-${ts}`,
+    type: 'chacha20-poly1305',
+    convergent: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `ecdsa-${ts}`,
+    type: 'ecdsa-p256',
+    exportable: true,
+    supportsSigning: true,
+  },
+  {
+    name: ts => `ed25519-${ts}`,
+    type: 'ed25519',
+    derived: true,
+    supportsSigning: true,
+  },
+  {
+    name: ts => `rsa-2048-${ts}`,
+    type: `rsa-2048`,
+    supportsSigning: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `rsa-4096-${ts}`,
+    type: `rsa-4096`,
+    supportsSigning: true,
+    supportsEncryption: true,
+  },
+];
 
-  for (let key of keys) {
-    await click('[data-test-secret-create]');
-    await fillIn('[data-test-transit-key-name]', key.name);
-    await fillIn('[data-test-transit-key-type]', key.type);
-    if (key.exportable) {
-      await click('[data-test-transit-key-exportable]');
-    }
-    if (key.derived) {
-      await click('[data-test-transit-key-derived]');
-    }
-    if (key.convergent) {
-      await click('[data-test-transit-key-convergent-encryption]');
-    }
-    await click('[data-test-transit-key-create]');
-
-    // link back to the list
-    await click('[data-test-secret-root-link]');
+let generateTransitKey = async function(key, now) {
+  let name = key.name(now);
+  await click('[data-test-secret-create]');
+  await fillIn('[data-test-transit-key-name]', name);
+  await fillIn('[data-test-transit-key-type]', key.type);
+  if (key.exportable) {
+    await click('[data-test-transit-key-exportable]');
   }
+  if (key.derived) {
+    await click('[data-test-transit-key-derived]');
+  }
+  if (key.convergent) {
+    await click('[data-test-transit-key-convergent-encryption]');
+  }
+  await click('[data-test-transit-key-create]');
   await settled();
-  return keys;
+
+  // link back to the list
+  await click('[data-test-secret-root-link]');
+  await settled();
+  return name;
 };
 
-const testEncryption = async (assert, keyName) => {
+const testConvergentEncryption = async function(assert, keyName) {
   const tests = [
     // raw bytes for plaintext and context
     {
@@ -204,14 +203,17 @@ const testEncryption = async (assert, keyName) => {
       await click('[data-test-transit-b64-toggle="context"]');
     }
     await click('[data-test-button-encrypt]');
+    await settled();
     if (testCase.assertAfterEncrypt) {
       testCase.assertAfterEncrypt(keyName);
     }
     await click('[data-test-transit-action-link="decrypt"]');
+    await settled();
     if (testCase.assertBeforeDecrypt) {
       testCase.assertBeforeDecrypt(keyName);
     }
     await click('[data-test-button-decrypt]');
+    await settled();
 
     if (testCase.assertAfterDecrypt) {
       if (testCase.decodeAfterDecrypt) {
@@ -225,56 +227,58 @@ const testEncryption = async (assert, keyName) => {
 };
 module('Acceptance | transit', function(hooks) {
   setupApplicationTest(hooks);
+  let path;
+  let now;
 
   hooks.beforeEach(async function() {
     await authPage.login();
-    const now = new Date().getTime();
-    hooks.transitPath = `transit-${now}`;
+    now = new Date().getTime();
+    path = `transit-${now}`;
 
-    await enablePage.enable('transit', hooks.transitPath);
-    // create a bunch of different kinds of keys
-    hooks.transitKeys = await generateTransitKeys();
+    await enablePage.enable('transit', path);
+    await settled();
   });
 
-  test('transit backend', async function(assert) {
-    assert.expect(47);
-    for (let [index, key] of hooks.transitKeys.entries()) {
-      await visit(`vault/secrets/${hooks.transitPath}/show/${key.name}`);
-      if (index === 0) {
-        await click('[data-test-transit-link="versions"]');
-        assert
-          .dom('[data-test-transit-key-version-row]')
-          .exists({ count: 1 }, `${key.name}: only one key version`);
-        await click('[data-test-transit-key-rotate] button');
-        await click('[data-test-confirm-button]');
-        assert
-          .dom('[data-test-transit-key-version-row]')
-          .exists({ count: 2 }, `${key.name}: two key versions after rotate`);
-      }
+  for (let key of keyTypes) {
+    test(`transit backend: ${key.type}`, async function(assert) {
+      let name = await generateTransitKey(key, now);
+      await visit(`vault/secrets/${path}/show/${name}`);
+      await settled();
+      await click('[data-test-transit-link="versions"]');
+      // wait for capabilities
+      await settled();
+      assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await click('[data-test-confirm-action-trigger');
+      await click('[data-test-confirm-button]');
+      // wait for rotate call
+      await settled();
+      assert
+        .dom('[data-test-transit-key-version-row]')
+        .exists({ count: 2 }, `${name}: two key versions after rotate`);
       await click('[data-test-transit-key-actions-link]');
+      await settled();
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${hooks.transitPath}/actions/${key.name}`),
-        `${key.name}: navigates to tranist actions`
+        currentURL().startsWith(`/vault/secrets/${path}/actions/${name}`),
+        `${name}: navigates to tranist actions`
       );
-      if (index === 0) {
-        assert.ok(
-          find('[data-test-transit-key-version-select]'),
-          `${key.name}: the rotated key allows you to select versions`
-        );
-      }
+      assert.ok(
+        find('[data-test-transit-key-version-select]'),
+        `${name}: the rotated key allows you to select versions`
+      );
       if (key.exportable) {
         assert.ok(
           find('[data-test-transit-action-link="export"]'),
-          `${key.name}: exportable key has a link to export action`
+          `${name}: exportable key has a link to export action`
         );
       } else {
         assert
           .dom('[data-test-transit-action-link="export"]')
-          .doesNotExist(`${key.name}: non-exportable key does not link to export action`);
+          .doesNotExist(`${name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
-        await testEncryption(assert, key.name);
+        await testConvergentEncryption(assert, name);
       }
-    }
-  });
+      await settled();
+    });
+  }
 });

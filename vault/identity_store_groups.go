@@ -90,7 +90,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(groupHelp["group-id-list"][1]),
 		},
 		{
-			Pattern: "group/name/" + framework.GenericNameRegex("name"),
+			Pattern: "group/name/(?P<name>.+)",
 			Fields:  groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupNameUpdate(),
@@ -255,7 +255,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		memberGroupIDs = memberGroupIDsRaw.([]string)
 	}
 
-	err = i.sanitizeAndUpsertGroup(ctx, group, memberGroupIDs)
+	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return nil, err
 	}
 	if ns.ID != group.NamespaceID {
-		return nil, nil
+		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 	}
 
 	respData := map[string]interface{}{}
@@ -335,6 +335,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
 	respData["modify_index"] = group.ModifyIndex
 	respData["type"] = group.Type
+	respData["namespace_id"] = group.NamespaceID
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {
@@ -425,7 +426,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return nil, nil
+		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 	}
 
 	// Delete group alias from memdb
