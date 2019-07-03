@@ -367,52 +367,8 @@ type awsVersion struct {
 	RoleVersion int `json:"role_verison"`
 }
 
-// upgrade aws version
+// upgrade does an upgrade, if necessary
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
-
-	// check if we should upgrade
-	needToUpgrade, err := b.shouldUprade(ctx, s)
-	if err != nil {
-		return false, err
-	}
-	if !needToUpgrade {
-		return false, nil
-	}
-
-	// Read all the role names.
-	roleNames, err := s.List(ctx, "role/")
-	if err != nil {
-		return false, err
-	}
-
-	// Upgrade the roles as necessary.
-	for _, roleName := range roleNames {
-		// make sure the context hasn't been canceled
-		if ctx.Err() != nil {
-			return false, err
-		}
-		_, err := b.roleInternal(ctx, s, roleName)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	// save the current version
-	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
-	entry, err := logical.StorageEntryJSON("config/version", &rsv)
-	if err != nil {
-		return false, err
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
-// shouldUprade checks if we need to upgrade
-func (b *backend) shouldUprade(ctx context.Context, s logical.Storage) (bool, error) {
 
 	entry, err := s.Get(ctx, "config/version")
 	if err != nil {
@@ -421,6 +377,10 @@ func (b *backend) shouldUprade(ctx context.Context, s logical.Storage) (bool, er
 
 	// if there is no persisted version, we need to upgrade
 	if entry == nil {
+		err = b.upgradeRoles(ctx, s)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
@@ -430,19 +390,56 @@ func (b *backend) shouldUprade(ctx context.Context, s logical.Storage) (bool, er
 		return false, err
 	}
 
-	// for now, we only need to upgrade if the role version has been
-	// superseded. This may change in the future.
+	// upgrade if persisted roleVersion is out of date
 	switch version.RoleVersion {
 	case 0:
 	case 1:
 	case 2:
-		return true, nil
+		err = b.upgradeRoles(ctx, s)
+		if err != nil {
+			return false, err
+		}
 
 	case currentRoleStorageVersion:
 		return false, nil
 
 	}
 	return false, fmt.Errorf("unrecognized role version: %q", version.RoleVersion)
+}
+
+// upgradeRoles upgrades the various aws roles
+func (b *backend) upgradeRoles(ctx context.Context, s logical.Storage) error {
+
+	// Read all the role names.
+	roleNames, err := s.List(ctx, "role/")
+	if err != nil {
+		return err
+	}
+
+	// Upgrade the roles as necessary.
+	for _, roleName := range roleNames {
+		// make sure the context hasn't been canceled
+		if ctx.Err() != nil {
+			return err
+		}
+		_, err := b.roleInternal(ctx, s, roleName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// save the current version
+	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
+	entry, err := logical.StorageEntryJSON("config/version", &rsv)
+	if err != nil {
+		return err
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
