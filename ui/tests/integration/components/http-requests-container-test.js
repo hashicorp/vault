@@ -4,9 +4,10 @@ import { render, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const COUNTERS = [
-  { start_time: '2018-04-01T00:00:00Z', total: 5500 },
-  { start_time: '2019-05-01T00:00:00Z', total: 4500 },
-  { start_time: '2019-06-01T00:00:00Z', total: 5000 },
+  { start_time: '2018-12-01T00:00:00Z', total: 5500 },
+  { start_time: '2019-01-01T00:00:00Z', total: 4500 },
+  { start_time: '2019-02-01T00:00:00Z', total: 5000 },
+  { start_time: '2019-03-01T00:00:00Z', total: 5000 },
 ];
 
 module('Integration | Component | http-requests-container', function(hooks) {
@@ -45,7 +46,6 @@ module('Integration | Component | http-requests-container', function(hooks) {
     await fillIn('[data-test-timewindow-select]', '2018');
 
     assert.dom('.shadow-bars> .bar').exists({ count: 1 }, 'filters the bar chart to the selected year');
-
     assert.dom('.start-time').exists({ count: 1 }, 'filters the table to the selected year');
   });
 });
