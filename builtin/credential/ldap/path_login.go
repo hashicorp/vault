@@ -3,9 +3,9 @@ package ldap
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -51,6 +51,19 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("auth method not configured"), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
+	}
+
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
@@ -68,10 +81,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		resp = &logical.Response{}
 	}
 
-	sort.Strings(policies)
-
-	resp.Auth = &logical.Auth{
-		Policies: policies,
+	auth := &logical.Auth{
 		Metadata: map[string]string{
 			"username": username,
 		},
@@ -79,13 +89,19 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
 	}
+
+	cfg.PopulateTokenAuth(auth)
+
+	// Add in configured policies from mappings
+	if len(policies) > 0 {
+		auth.Policies = append(auth.Policies, policies...)
+	}
+
+	resp.Auth = auth
 
 	for _, groupName := range groupNames {
 		if groupName == "" {
@@ -99,6 +115,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("auth method not configured"), nil
+	}
+
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
@@ -106,12 +130,19 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if len(loginPolicies) == 0 {
 		return resp, err
 	}
+	finalPolicies := cfg.TokenPolicies
+	if len(loginPolicies) > 0 {
+		finalPolicies = append(finalPolicies, loginPolicies...)
+	}
 
-	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(finalPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp.Auth = req.Auth
+	resp.Auth.Period = cfg.TokenPeriod
+	resp.Auth.TTL = cfg.TokenTTL
+	resp.Auth.MaxTTL = cfg.TokenMaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil

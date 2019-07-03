@@ -196,8 +196,8 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	// Decide the expiration time based on the max_ttl values. Since this is
 	// restricting access, use the greatest duration, not the least.
 	maxDur := rTag.MaxTTL
-	if roleEntry.MaxTTL > maxDur {
-		maxDur = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > maxDur {
+		maxDur = roleEntry.TokenMaxTTL
 	}
 	if b.System().MaxLeaseTTL() > maxDur {
 		maxDur = b.System().MaxLeaseTTL()

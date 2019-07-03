@@ -22,6 +22,7 @@ func pathUsersList(b *backend) *framework.Path {
 		HelpDescription: pathUserHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Navigation: true,
+			Action:     "Create",
 		},
 	}
 }
@@ -54,6 +55,9 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action: "Create",
+		},
 	}
 }
 

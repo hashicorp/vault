@@ -79,6 +79,7 @@
     - docs/secrets/databases/index.html
     - docs/secrets/gcp/index.html
     - docs/secrets/gcpkms/index.html
+    - docs/secrets/kmip/index.html
     - docs/secrets/kv/index.html
     - docs/secrets/identity/index.html
     - docs/secrets/nomad/index.html

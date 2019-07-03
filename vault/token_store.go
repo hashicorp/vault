@@ -7,20 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
-	"sync/atomic"
-
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/armon/go-metrics"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-
-	metrics "github.com/armon/go-metrics"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -397,6 +395,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Description: "Use 'token_bound_cidrs' instead.",
 				Deprecated:  true,
 			},
+
+			"allowed_entity_aliases": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -611,6 +614,9 @@ type tsRoleEntry struct {
 
 	// The set of CIDRs that tokens generated using this role will be bound to
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// The set of allowed entity aliases used during token creation
+	AllowedEntityAliases []string `json:"allowed_entity_aliases" mapstructure:"allowed_entity_aliases" structs:"allowed_entity_aliases"`
 }
 
 type accessorEntry struct {
@@ -2106,6 +2112,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
 		Type            string `mapstructure:"type"`
+		EntityAlias     string `mapstructure:"entity_alias"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -2200,6 +2207,51 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if data.NumUses < 0 {
 		return logical.ErrorResponse("number of uses cannot be negative"),
 			logical.ErrInvalidRequest
+	}
+
+	// Verify the entity alias
+	var explicitEntityID string
+	if data.EntityAlias != "" {
+		// Parameter is only allowed in combination with token role
+		if role == nil {
+			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
+		}
+
+		// Check if there is a concrete match
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+		}
+
+		// Get mount accessor which is required to lookup entity alias
+		mountValidationResp := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
+		if mountValidationResp == nil {
+			return logical.ErrorResponse("auth token mount accessor not found"), nil
+		}
+
+		// Create alias for later processing
+		alias := &logical.Alias{
+			Name:          data.EntityAlias,
+			MountAccessor: mountValidationResp.Accessor,
+			MountType:     mountValidationResp.Type,
+		}
+
+		// Create or fetch entity from entity alias
+		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+		if entity == nil {
+			return nil, errors.New("failed to create or fetch entity from given entity alias")
+		}
+
+		// Validate that the entity is not disabled
+		if entity.Disabled {
+			return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
+		}
+
+		// Set new entity id
+		explicitEntityID = entity.ID
 	}
 
 	// Setup the token entry
@@ -2434,9 +2486,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// At this point, it is clear whether the token is going to be an orphan or
-	// not. If the token is not going to be an orphan, inherit the parent's
+	// not. If setEntityID is set, the entity identifier will be overwritten.
+	// Otherwise, if the token is not going to be an orphan, inherit the parent's
 	// entity identifier into the child token.
-	if te.Parent != "" {
+	switch {
+	case explicitEntityID != "":
+		// Overwrite the entity identifier
+		te.EntityID = explicitEntityID
+	case te.Parent != "":
 		te.EntityID = parent.EntityID
 
 		// If the parent has bound CIDRs, copy those into the child. We don't
@@ -2978,6 +3035,7 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"path_suffix":            role.PathSuffix,
 			"renewable":              role.Renewable,
 			"token_type":             role.TokenType.String(),
+			"allowed_entity_aliases": role.AllowedEntityAliases,
 		},
 	}
 
@@ -3077,9 +3135,39 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		}
 	}
 
+	// We handle token type a bit differently than tokenutil does so we need to
+	// cache and handle it after
+	var tokenTypeStr *string
+	oldEntryTokenType := entry.TokenType
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		tokenTypeStr = new(string)
+		*tokenTypeStr = tokenTypeRaw.(string)
+		delete(data.Raw, "token_type")
+		entry.TokenType = logical.TokenTypeDefault
+	}
+
 	// Next parse token fields from the helper
 	if err := entry.ParseTokenFields(req, data); err != nil {
 		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
+	}
+
+	entry.TokenType = oldEntryTokenType
+	if entry.TokenType == logical.TokenTypeDefault {
+		entry.TokenType = logical.TokenTypeDefaultService
+	}
+	if tokenTypeStr != nil {
+		switch *tokenTypeStr {
+		case "service":
+			entry.TokenType = logical.TokenTypeService
+		case "batch":
+			entry.TokenType = logical.TokenTypeBatch
+		case "default-service":
+			entry.TokenType = logical.TokenTypeDefaultService
+		case "default-batch":
+			entry.TokenType = logical.TokenTypeDefaultBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", *tokenTypeStr)), nil
+		}
 	}
 
 	var resp *logical.Response
@@ -3094,7 +3182,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		periodRaw, ok = data.GetOk("period")
 		if ok {
 			entry.Period = time.Second * time.Duration(periodRaw.(int))
-			entry.TokenPeriod = 0
+			entry.TokenPeriod = entry.Period
 		}
 	} else {
 		_, ok = data.GetOk("period")
@@ -3116,7 +3204,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
 			}
 			entry.BoundCIDRs = boundCIDRs
-			entry.TokenBoundCIDRs = nil
+			entry.TokenBoundCIDRs = entry.BoundCIDRs
 		}
 	} else {
 		_, ok = data.GetOk("bound_cidrs")
@@ -3135,7 +3223,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
 		if ok {
 			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
-			entry.TokenExplicitMaxTTL = 0
+			entry.TokenExplicitMaxTTL = entry.ExplicitMaxTTL
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
 	} else {
@@ -3181,6 +3269,11 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		if entry.ExplicitMaxTTL != 0 || entry.TokenExplicitMaxTTL != 0 {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with an explicit max TTL"), nil
 		}
+	}
+
+	allowedEntityAliasesRaw, ok := data.GetOk("allowed_entity_aliases")
+	if ok {
+		entry.AllowedEntityAliases = strutil.RemoveDuplicates(allowedEntityAliasesRaw.([]string), true)
 	}
 
 	ns, err := namespace.FromContext(ctx)

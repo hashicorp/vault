@@ -394,6 +394,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		return nil, consts.ErrStandby
 	}
 
+	if c.activeContext == nil || c.activeContext.Err() != nil {
+		return nil, errors.New("active context canceled after getting state lock")
+	}
+
 	ctx, cancel := context.WithCancel(c.activeContext)
 	go func(ctx context.Context, httpCtx context.Context) {
 		select {
@@ -1025,11 +1029,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		var entity *identity.Entity
 		auth = resp.Auth
-
-		// Only the token store can toggle this off, and that's via a different
-		// path since it's not a login request; it's explicitly disallowed
-		// above
-		auth.Renewable = true
 
 		mEntry := c.router.MatchingMountEntry(ctx, req.Path)
 

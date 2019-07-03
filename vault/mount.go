@@ -1166,7 +1166,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	}
 
 	c.mounts = nil
-	c.router = NewRouter()
+	c.router.reset()
 	c.systemBarrierView = nil
 	return nil
 }
