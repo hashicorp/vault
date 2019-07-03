@@ -1825,11 +1825,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
-			countCubbyholeKeys,
-			deletedCountAccessorEmptyToken,
-			deletedCountAccessorInvalidToken,
-			deletedCountInvalidTokenInAccessor,
-			deletedCountInvalidCubbyholeKey int64
+				countCubbyholeKeys,
+				deletedCountAccessorEmptyToken,
+				deletedCountAccessorInvalidToken,
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
 
 			validCubbyholeKeys := make(map[string]bool)
 
@@ -3135,9 +3135,39 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		}
 	}
 
+	// We handle token type a bit differently than tokenutil does so we need to
+	// cache and handle it after
+	var tokenTypeStr *string
+	oldEntryTokenType := entry.TokenType
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		tokenTypeStr = new(string)
+		*tokenTypeStr = tokenTypeRaw.(string)
+		delete(data.Raw, "token_type")
+		entry.TokenType = logical.TokenTypeDefault
+	}
+
 	// Next parse token fields from the helper
 	if err := entry.ParseTokenFields(req, data); err != nil {
 		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
+	}
+
+	entry.TokenType = oldEntryTokenType
+	if entry.TokenType == logical.TokenTypeDefault {
+		entry.TokenType = logical.TokenTypeDefaultService
+	}
+	if tokenTypeStr != nil {
+		switch *tokenTypeStr {
+		case "service":
+			entry.TokenType = logical.TokenTypeService
+		case "batch":
+			entry.TokenType = logical.TokenTypeBatch
+		case "default-service":
+			entry.TokenType = logical.TokenTypeDefaultService
+		case "default-batch":
+			entry.TokenType = logical.TokenTypeDefaultBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", *tokenTypeStr)), nil
+		}
 	}
 
 	var resp *logical.Response

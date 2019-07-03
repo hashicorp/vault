@@ -648,6 +648,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	atomic.StoreUint32(c.sealed, 1)
 	c.allLoggers = append(c.allLoggers, c.logger)
 
+	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
 	c.localClusterParsedCert.Store((*x509.Certificate)(nil))

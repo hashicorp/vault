@@ -68,13 +68,13 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.1.1-0.20190620170237-51bdddce2dbd
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190702221522-09547745a56a
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190702223727-09f27c65e7bf
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190702221732-34fd24e5fbba
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190702221946-29633ed48184
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190702223652-a1f3eda09add
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190702223403-435b68537b62
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190702223121-526a523d9326
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190703042722-a8d100740e20
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190703042725-86deab7df8e2
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190703042729-bdd19ebba78a
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190703042733-7a9fc78f2664
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190703042737-804281c53c5f
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190703042741-1a51335bffd3
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190621033057-9c576c32b635
@@ -82,8 +82,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190516000311-88f9a4f11829
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
-	github.com/hashicorp/vault/api v1.0.3-0.20190702221840-056e90b5d0ab
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190702221840-056e90b5d0ab
+	github.com/hashicorp/vault/api v1.0.3-0.20190703041405-a2810eb6965d
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190703041405-a2810eb6965d
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect

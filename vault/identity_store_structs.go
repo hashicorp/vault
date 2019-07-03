@@ -4,10 +4,8 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/patrickmn/go-cache"
-
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -53,8 +51,9 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// A lock to make sure things are consistent
-	lock sync.RWMutex
+	// locks to make sure things are consistent
+	lock     sync.RWMutex
+	oidcLock sync.RWMutex
 
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
@@ -62,7 +61,7 @@ type IdentityStore struct {
 	// oidcCache stores common response data as well as when the periodic func needs
 	// to run. This is conservatively managed, and most writes to the OIDC endpoints
 	// will invalidate the cache.
-	oidcCache *cache.Cache
+	oidcCache *oidcCache
 
 	// logger is the server logger copied over from core
 	logger log.Logger

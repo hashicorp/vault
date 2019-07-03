@@ -322,21 +322,21 @@ github.com/hashicorp/raft
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190702221522-09547745a56a
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190703042722-a8d100740e20
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190702223727-09f27c65e7bf
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190703042725-86deab7df8e2
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190702221732-34fd24e5fbba
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190703042729-bdd19ebba78a
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190702221946-29633ed48184
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190703042733-7a9fc78f2664
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190702223652-a1f3eda09add
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190703042737-804281c53c5f
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190702223403-435b68537b62
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190703042741-1a51335bffd3
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190702223121-526a523d9326
+# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec
 github.com/hashicorp/vault-plugin-auth-pcf
 github.com/hashicorp/vault-plugin-auth-pcf/signatures
 github.com/hashicorp/vault-plugin-auth-pcf/models
@@ -362,9 +362,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.3-0.20190702221840-056e90b5d0ab => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190703041405-a2810eb6965d => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190702221840-056e90b5d0ab => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190703041405-a2810eb6965d => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
