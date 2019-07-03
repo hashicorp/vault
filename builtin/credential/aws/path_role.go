@@ -394,13 +394,25 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		if err != nil {
 			return false, err
 		}
-		return true, nil
-
 	case currentRoleStorageVersion:
 		return false, nil
 
+	default:
+		return false, fmt.Errorf("unrecognized role version: %d", version.RoleVersion)
 	}
-	return false, fmt.Errorf("unrecognized role version: %d", version.RoleVersion)
+
+	// save the current version
+	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
+	entry, err = logical.StorageEntryJSON("config/version", &rsv)
+	if err != nil {
+		return false, err
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // upgradeRoles upgrades the various aws roles
@@ -422,17 +434,6 @@ func (b *backend) upgradeRoles(ctx context.Context, s logical.Storage) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	// save the current version
-	rsv := awsVersion{RoleVersion: currentRoleStorageVersion}
-	entry, err := logical.StorageEntryJSON("config/version", &rsv)
-	if err != nil {
-		return err
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		return err
 	}
 
 	return nil
