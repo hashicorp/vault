@@ -59,6 +59,28 @@
               View scope
             {{/link-to}}
           </li>
+          {{#if list.item.updatePath.canDelete}}
+            <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+              <ConfirmAction
+                @buttonClasses="link is-destroy"
+                @onConfirmAction={{action
+                  (perform
+                    Item.callMethod
+                    "destroyRecord"
+                    list.item
+                    (concat "Successfully deleted scope " list.item.id)
+                    (concat "There was an error deleting the scope " list.item.id)
+                    (action "refresh")
+                  )
+                }}
+                @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+                @cancelButtonText="Cancel"
+                data-test-scope-delete="true"
+                >
+                  Delete scope
+              </ConfirmAction>
+            </MenuLoader>
+          {{/if}}
         </Item.menu>
       </ListItem>
     {{else}}

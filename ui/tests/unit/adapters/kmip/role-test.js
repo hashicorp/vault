@@ -6,10 +6,28 @@ module('Unit | Adapter | kmip/role', function(hooks) {
 
   let serializeTests = [
     [
-      'operation_all is the only item present after serialization',
+      'operation_all is the only operation item present after serialization',
+      {
+        serialize() {
+          return { operation_all: true, operation_get: true, operation_create: true, tls_ttl: '10s' };
+        },
+        record: {
+          nonOperationFields: ['tlsTtl'],
+        },
+      },
+      {
+        operation_all: true,
+        tls_ttl: '10s',
+      },
+    ],
+    [
+      'serialize does not include nonOperationFields values if they are not set',
       {
         serialize() {
           return { operation_all: true, operation_get: true, operation_create: true };
+        },
+        record: {
+          nonOperationFields: ['tlsTtl'],
         },
       },
       {
@@ -17,14 +35,18 @@ module('Unit | Adapter | kmip/role', function(hooks) {
       },
     ],
     [
-      'operation_none is the only item present after serialization',
+      'operation_none is the only operation item present after serialization',
       {
         serialize() {
-          return { operation_none: true, operation_get: true, operation_add_attribute: true };
+          return { operation_none: true, operation_get: true, operation_add_attribute: true, tls_ttl: '10s' };
+        },
+        record: {
+          nonOperationFields: ['tlsTtl'],
         },
       },
       {
         operation_none: true,
+        tls_ttl: '10s',
       },
     ],
     [
@@ -39,6 +61,9 @@ module('Unit | Adapter | kmip/role', function(hooks) {
             operation_destroy: true,
           };
         },
+        record: {
+          nonOperationFields: ['tlsTtl'],
+        },
       },
       {
         operation_get: true,
@@ -49,7 +74,6 @@ module('Unit | Adapter | kmip/role', function(hooks) {
   ];
   for (let testCase of serializeTests) {
     let [name, snapshotStub, expected] = testCase;
-
     test(`adapter serialize: ${name}`, function(assert) {
       let adapter = this.owner.lookup('adapter:kmip/role');
       let result = adapter.serialize(snapshotStub);

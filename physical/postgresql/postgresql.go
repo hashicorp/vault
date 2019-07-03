@@ -114,12 +114,28 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		maxParInt = physical.DefaultParallelOperations
 	}
 
+	maxIdleConnsStr, maxIdleConnsIsSet := conf["max_idle_connections"]
+	var maxIdleConns int
+	if maxIdleConnsIsSet {
+		maxIdleConns, err = strconv.Atoi(maxIdleConnsStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnsStr)
+		}
+	}
+
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
+
+	if maxIdleConnsIsSet {
+		db.SetMaxIdleConns(maxIdleConns)
+	}
 
 	// Determine if we should use a function to work around lack of upsert (versions < 9.5)
 	var upsertAvailable bool

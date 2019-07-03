@@ -8,6 +8,7 @@ import (
 	"github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -63,6 +64,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 	if cfg == nil {
 		return nil, logical.ErrorResponse("Okta auth method not configured"), nil, nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+		return nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	client := cfg.OktaClient()
