@@ -546,14 +546,6 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 	// Prepare a storage to run through periodicFunc
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	// ns := &namespace.Namespace{
-	// 	ID:   "test",
-	// 	Path: "test",
-	// }
-	// ctx := namespace.ContextWithNamespace(context.Background(), ns)
-
-	namespaces := c.identityStore.listNamespacePaths(ctx)
-	fmt.Printf("\nnamespacepaths: %#v", namespaces)
 
 	// Prepare a dummy signing key
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -600,14 +592,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 
 	for _, testSet := range testSets {
 		// Store namedKey
-		storage := &logical.InmemStorage{}
+		storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
 		entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
 		if err := storage.Put(ctx, entry); err != nil {
 			t.Fatalf("writing to in mem storage failed")
 		}
-		// time.Sleep(1 * time.Second)
-		keyss, _ := storage.List(ctx, namedKeyConfigPath)
-		fmt.Printf("\nKEYS: %#v", keyss)
 
 		currentCycle := 1
 		numCases := len(testSet.testCases)
@@ -627,19 +616,12 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				i = i + 1
 			}
 			currentCycle = currentCycle + 1
+
 			// sleep until we are in the next cycle - where a next run will happen
 			v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
 			nextRun := v.(time.Time)
-
-			//nextCycleBeginsAt := start.Add(cyclePeriod * time.Duration(currentCycle)).Add(probe2.Sub(probe1))
-			//time.Sleep(nextCycleBeginsAt.Sub(time.Now()))
 			now := time.Now()
 			diff := nextRun.Sub(now)
-			fmt.Printf("\ntime.Now(): %#v\nnext run  : %#v\ndiff: %#v", now.String(), nextRun.String(), diff.String())
-
-			if diff.Hours() >= time.Hour.Hours() {
-				continue
-			}
 			if now.Before(nextRun) {
 				time.Sleep(diff)
 			}

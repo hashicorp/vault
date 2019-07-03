@@ -1429,7 +1429,6 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 	defer i.oidcLock.Unlock()
 
 	keys, err := s.List(ctx, namedKeyConfigPath)
-	fmt.Printf("\nKeys in rotation: %#v", keys)
 	if err != nil {
 		return now, err
 	}
