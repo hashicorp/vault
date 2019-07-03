@@ -90,7 +90,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(groupHelp["group-id-list"][1]),
 		},
 		{
-			Pattern: "group/name/" + framework.GenericNameRegex("name"),
+			Pattern: "group/name/(?P<name>.+)",
 			Fields:  groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupNameUpdate(),
