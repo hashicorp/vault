@@ -386,6 +386,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		}
 	}
 
+	upgraded := version.Version < currentAwsVersion
 	switch version.Version {
 	case 0:
 		err = b.upgradeRoles(ctx, s)
@@ -393,24 +394,25 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 			return false, err
 		}
 	case currentAwsVersion:
-		return false, nil
-
+		break
 	default:
 		return false, fmt.Errorf("unrecognized role version: %d", version.Version)
 	}
 
 	// save the current version
-	rsv := awsVersion{Version: currentAwsVersion}
-	entry, err = logical.StorageEntryJSON("config/version", &rsv)
-	if err != nil {
-		return false, err
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		return false, err
+	if upgraded {
+		cv := awsVersion{Version: currentAwsVersion}
+		entry, err = logical.StorageEntryJSON("config/version", &cv)
+		if err != nil {
+			return false, err
+		}
+		err = s.Put(ctx, entry)
+		if err != nil {
+			return false, err
+		}
 	}
 
-	return true, nil
+	return upgraded, nil
 }
 
 // upgradeRoles upgrades the various aws roles
