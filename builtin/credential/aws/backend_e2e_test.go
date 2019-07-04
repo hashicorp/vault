@@ -83,8 +83,8 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 		t.Fatalf("version found")
 	}
 
-	// Seal, and then Unseal. This will once again trigger an Initialize(), only this time
-	// there will be a role for it to upgrade.
+	// Seal, and then Unseal. This will once again trigger an Initialize(),
+	// only this time there will be a role for it to upgrade.
 	core.Seal(t)
 	cluster.UnsealCores(t)
 	time.Sleep(time.Second)
