@@ -389,9 +389,22 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	upgraded := version.Version < currentAwsVersion
 	switch version.Version {
 	case 0:
-		err = b.upgradeRoles(ctx, s)
+		// Read all the role names.
+		roleNames, err := s.List(ctx, "role/")
 		if err != nil {
 			return false, err
+		}
+
+		// Upgrade the roles as necessary.
+		for _, roleName := range roleNames {
+			// make sure the context hasn't been canceled
+			if ctx.Err() != nil {
+				return false, err
+			}
+			_, err := b.roleInternal(ctx, s, roleName)
+			if err != nil {
+				return false, err
+			}
 		}
 	case currentAwsVersion:
 		break
@@ -413,30 +426,6 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 	}
 
 	return upgraded, nil
-}
-
-// upgradeRoles upgrades the various aws roles
-func (b *backend) upgradeRoles(ctx context.Context, s logical.Storage) error {
-
-	// Read all the role names.
-	roleNames, err := s.List(ctx, "role/")
-	if err != nil {
-		return err
-	}
-
-	// Upgrade the roles as necessary.
-	for _, roleName := range roleNames {
-		// make sure the context hasn't been canceled
-		if ctx.Err() != nil {
-			return err
-		}
-		_, err := b.roleInternal(ctx, s, roleName)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
