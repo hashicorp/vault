@@ -93,6 +93,15 @@ func (c *KVListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2
 	}
+
+	_, ok := extractListData(secret)
+	if Format(c.UI) != "table" {
+		if secret == nil || secret.Data == nil || !ok {
+			OutputData(c.UI, map[string]interface{}{})
+			return 2
+		}
+	}
+
 	if secret == nil || secret.Data == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
@@ -103,7 +112,7 @@ func (c *KVListCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if _, ok := extractListData(secret); !ok {
+	if !ok {
 		c.UI.Error(fmt.Sprintf("No entries found at %s", path))
 		return 2
 	}

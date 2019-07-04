@@ -77,7 +77,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	if ok {
 		policies = policyutil.ParsePolicies(policiesRaw)
 	}
-	if !strutil.StrListSubset(roleEntry.Policies, policies) {
+	if !strutil.StrListSubset(roleEntry.TokenPolicies, policies) {
 		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")
 	}
 
@@ -135,8 +135,8 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the mount maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, b.System().MaxLeaseTTL()/time.Second))
 	}
 	// If max_ttl is set for the role, check the bounds for tag's max_ttl value using that.
-	if roleEntry.MaxTTL != time.Duration(0) && maxTTL > roleEntry.MaxTTL {
-		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the role maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, roleEntry.MaxTTL/time.Second))
+	if roleEntry.TokenMaxTTL != time.Duration(0) && maxTTL > roleEntry.TokenMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the role maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, roleEntry.TokenMaxTTL/time.Second))
 	}
 
 	if maxTTL < time.Duration(0) {
@@ -349,7 +349,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.lockedAWSRole(ctx, s, rTag.Role)
+	roleEntry, err := b.role(ctx, s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

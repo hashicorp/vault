@@ -44,6 +44,19 @@ type Database interface {
 	// the API.
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 
+	// GenerateCredentials returns a generated password for the plugin. This is
+	// used in combination with SetCredentials to set a specific password for a
+	// database user and preserve the password in WAL entries.
+	GenerateCredentials(ctx context.Context) (string, error)
+
+	// SetCredentials uses provided information to create or set the credentials
+	// for a database user. Unlike CreateUser, this method requires both a
+	// username and a password given instead of generating them. This is used for
+	// creating and setting the password of static accounts, as well as rolling
+	// back passwords in the database in the event an updated database fails to
+	// save in Vault's storage.
+	SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username string, password string, err error)
+
 	// Init is called on `$ vault write database/config/:db-name`, or when you
 	// do a creds call after Vault's been restarted. The config provided won't
 	// hold all the keys and values provided in the API call, some will be

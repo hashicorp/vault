@@ -1,10 +1,10 @@
 {{#basic-dropdown-hover horizontalPosition="auto-left" verticalPosition="below" renderInPlace=media.isMobile as |d|}}
   {{#d.trigger tagName=(if (eq type "replication") "span" "button") class=(if (eq type "replication") "" "button is-transparent")}}
-    <ICon @glyph={{glyphName}} @size=24 @aria-label={{ariaLabel}} />
+    <Icon @glyph={{glyphName}} @size="l" aria-label={{ariaLabel}} />
     <div class="status-menu-label">
       {{label}}
     </div>
-    <ICon @glyph="chevron-down" @size=8 @aria-hidden="true" @class="has-text-white is-status-chevron"/>
+    <Chevron @direction="down" class="has-text-white is-status-chevron"/>
   {{/d.trigger}}
   {{#d.content class=(concat "status-menu-content status-menu-content-" type)}}
     {{partial partialName}}

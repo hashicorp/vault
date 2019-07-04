@@ -97,7 +97,7 @@
             @class="button is-ghost"
             @stringify={{true}}
           >
-            <ICon @glyph="download" @size=16 /> Download keys
+            <Icon @glyph="download" /> Download keys
           </DownloadButton>
         </div>
       </div>
@@ -136,6 +136,7 @@
                 data-test-key-shares="true"
                 class="input"
                 autocomplete="off"
+                spellcheck="false"
                 name="key-shares"
                 type="number"
                 step="1"
@@ -158,7 +159,9 @@
             <div class="control">
               {{input
                 data-test-key-threshold="true"
-                class="input" autocomplete="off"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
                 name="key-threshold"
                 type="number"
                 step="1"
@@ -218,7 +221,7 @@
             Initialize
           </button>
           <div class="init-illustration">
-            {{partial "svg/initialize"}}
+            {{svg-jar "initialize"}}
           </div>
         </div>
       </form>

@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -121,6 +123,21 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"storage/raft/bootstrap/challenge",
+				"storage/raft/bootstrap/answer",
+				"init",
+				"seal-status",
+				"unseal",
+				"leader",
+				"health",
+				"generate-root/attempt",
+				"generate-root/update",
+				"rekey/init",
+				"rekey/update",
+				"rekey/verify",
+				"rekey-recovery-key/init",
+				"rekey-recovery-key/update",
+				"rekey-recovery-key/verify",
 			},
 
 			LocalStorage: []string{
@@ -183,6 +200,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
+	}
+
+	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -661,6 +682,7 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"local":       entry.Local,
 		"seal_wrap":   entry.SealWrap,
 		"options":     entry.Options,
+		"uuid":        entry.UUID,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -2366,8 +2388,9 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
+		time.AfterFunc(KeyRotateGracePeriod, func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", KeyRotateGracePeriod)
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})

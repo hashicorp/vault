@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -418,16 +417,27 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 	}
 }
 
-// handleRollback invokes the PeriodicFunc set on the backend. It also does a WAL rollback operation.
+// handleRollback invokes the PeriodicFunc set on the backend. It also does a
+// WAL rollback operation.
 func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Response is not expected from the periodic operation.
+	var resp *logical.Response
+
+	merr := new(multierror.Error)
 	if b.PeriodicFunc != nil {
 		if err := b.PeriodicFunc(ctx, req); err != nil {
-			return nil, err
+			merr = multierror.Append(merr, err)
 		}
 	}
 
-	return b.handleWALRollback(ctx, req)
+	if b.WALRollback != nil {
+		var err error
+		resp, err = b.handleWALRollback(ctx, req)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		}
+	}
+	return resp, merr.ErrorOrNil()
 }
 
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -519,19 +529,9 @@ type FieldSchema struct {
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
-	// Display* members are available to provide hints for UI and documentation
-	// generators. They will be included in OpenAPI output if set.
-
-	// DisplayName is the name of the field suitable as a label or documentation heading.
-	DisplayName string
-
-	// DisplayValue is a sample value to display for this field. This may be used
-	// to indicate a default value, but it is for display only and completely separate
-	// from any Default member handling.
-	DisplayValue interface{}
-
-	// DisplaySensitive indicates that the value should be masked by default in the UI.
-	DisplaySensitive bool
+	// DisplayAttrs provides hints for UI and documentation generators. They
+	// will be included in OpenAPI output if set.
+	DisplayAttrs *DisplayAttributes
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
@@ -539,35 +539,12 @@ type FieldSchema struct {
 func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
 		switch s.Type {
-		case TypeDurationSecond:
-			var result int
-			switch inp := s.Default.(type) {
-			case nil:
-				return s.Type.Zero()
-			case int:
-				result = inp
-			case int64:
-				result = int(inp)
-			case float32:
-				result = int(inp)
-			case float64:
-				result = int(inp)
-			case string:
-				dur, err := parseutil.ParseDurationSecond(inp)
-				if err != nil {
-					return s.Type.Zero()
-				}
-				result = int(dur.Seconds())
-			case json.Number:
-				valInt64, err := inp.Int64()
-				if err != nil {
-					return s.Type.Zero()
-				}
-				result = int(valInt64)
-			default:
+		case TypeDurationSecond, TypeSignedDurationSecond:
+			resultDur, err := parseutil.ParseDurationSecond(s.Default)
+			if err != nil {
 				return s.Type.Zero()
 			}
-			return result
+			return int(resultDur.Seconds())
 
 		default:
 			return s.Default
@@ -590,7 +567,7 @@ func (t FieldType) Zero() interface{} {
 		return map[string]interface{}{}
 	case TypeKVPairs:
 		return map[string]string{}
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		return 0
 	case TypeSlice:
 		return []interface{}{}

@@ -4,7 +4,7 @@ import Controller from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
-import ListController from 'vault/mixins/list-controller';
+import ListController from 'core/mixins/list-controller';
 
 export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNearestAncestor, {
   flashMessages: service(),
@@ -14,6 +14,10 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   filterIsFolder: computed('filter', function() {
     return !!utils.keyIsFolder(this.get('filter'));
+  }),
+
+  isConfigurableTab: computed('isCertTab', 'isConfigure', function() {
+    return this.get('isCertTab') || this.get('isConfigure');
   }),
 
   actions: {

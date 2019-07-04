@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 )
@@ -85,7 +86,7 @@ func (c *ServerCommand) enableFourClusterDev(base *vault.CoreConfig, info map[st
 			return errors.New("")
 		}
 		base.Physical = backend
-		base.Seal = vault.NewDefaultSeal()
+		base.Seal = vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir")))
 
 		testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,

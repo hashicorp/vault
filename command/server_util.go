@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/pkg/errors"
 )
 
@@ -13,7 +15,7 @@ var (
 	onEnterprise = false
 )
 
-func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
+func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error checking for existing seal: %s", err)
@@ -61,7 +63,7 @@ func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.
 	switch existBarrierSealConfig.Type {
 	case vaultseal.Shamir:
 		// The value reflected in config is what we're going to
-		existSeal = vault.NewDefaultSeal()
+		existSeal = vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
 		newSeal = barrierSeal
 		newBarrierSealConfig := &vault.SealConfig{
 			Type:            newSeal.BarrierType(),

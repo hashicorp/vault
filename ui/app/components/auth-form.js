@@ -175,15 +175,17 @@ export default Component.extend(DEFAULTS, {
 
   handleError(e, prefixMessage = true) {
     this.set('loading', false);
-    if (!e.errors) {
-      return e;
+    let errors;
+    if (e.errors) {
+      errors = e.errors.map(error => {
+        if (error.detail) {
+          return error.detail;
+        }
+        return error;
+      });
+    } else {
+      errors = [e];
     }
-    let errors = e.errors.map(error => {
-      if (error.detail) {
-        return error.detail;
-      }
-      return error;
-    });
     let message = prefixMessage ? 'Authentication failed: ' : '';
     this.set('error', `${message}${errors.join('.')}`);
   },
@@ -198,7 +200,7 @@ export default Component.extend(DEFAULTS, {
       let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
       // returning this w/then because if we keep it
       // in the task, it will get cancelled when the component in un-rendered
-      return transition.followRedirects().then(() => {
+      yield transition.followRedirects().then(() => {
         if (isRoot) {
           this.flashMessages.warning(
             'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'

@@ -46,6 +46,15 @@ text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once a
 * `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 * `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
 
+### Other parameters
+
+* `last_rotation_tolerance` (string, optional) - Tolerance duration to use when checking the last rotation time. 
+Active Directory often shows a "pwdLastSet" time after Vault's because it takes
+a while for password updates to be propagated across a large cluster. By default, if Active Directory's last rotation time is
+within 5 seconds of Vault's, Vault considers itself to have been the last entity that rotated the password. However, if it's been 
+more than 5 seconds, Vault thinks that something rotated the password out-of-band, and re-rotates it so it will "know" it and be
+able to continue returning it. This may be too low for larger Active Directory clusters, and too high for smaller ones.
+
 ## Config management
 
 At present, this endpoint does not confirm that the provided AD credentials are

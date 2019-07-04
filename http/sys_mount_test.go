@@ -2,9 +2,10 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/go-test/deep"
 	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/vault"
@@ -134,8 +135,13 @@ func TestSysMounts(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
@@ -300,8 +306,13 @@ func TestSysMount(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
@@ -486,8 +497,13 @@ func TestSysRemount(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
@@ -628,8 +644,13 @@ func TestSysUnmount(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
@@ -876,8 +897,13 @@ func TestSysTuneMount(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
@@ -1069,8 +1095,13 @@ func TestSysTuneMount(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {

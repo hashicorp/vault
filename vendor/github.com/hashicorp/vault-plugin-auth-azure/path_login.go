@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -62,6 +63,19 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 	if roleName == "" {
 		return logical.ErrorResponse("role is required"), nil
 	}
+
+	role, err := b.role(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid role name %q", roleName)), nil
+	}
+
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
+	}
+
 	subscriptionID := data.Get("subscription_id").(string)
 	resourceGroupName := data.Get("resource_group_name").(string)
 	vmssName := data.Get("vmss_name").(string)
@@ -73,14 +87,6 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 	}
 	if config == nil {
 		config = new(azureConfig)
-	}
-
-	role, err := b.role(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid role name %q", roleName)), nil
 	}
 
 	provider, err := b.getProvider(config)
@@ -109,27 +115,23 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:    role.Policies,
-			DisplayName: idToken.Subject,
-			Period:      role.Period,
-			NumUses:     role.NumUses,
-			Alias: &logical.Alias{
-				Name: idToken.Subject,
-			},
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
-			Metadata: map[string]string{
-				"role": roleName,
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
+	auth := &logical.Auth{
+		DisplayName: idToken.Subject,
+		Alias: &logical.Alias{
+			Name: idToken.Subject,
 		},
+		InternalData: map[string]interface{}{
+			"role": roleName,
+		},
+		Metadata: map[string]string{
+			"role": roleName,
+		},
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	// Add groups to group aliases
@@ -291,9 +293,9 @@ func (b *azureAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Requ
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

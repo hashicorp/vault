@@ -1,0 +1,42 @@
+<Toolbar>
+  <ToolbarActions>
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @confirmMessage="This will affect which data gets replicated to this secondary."
+      @onConfirmAction={{action "saveConfig" model.config true}}
+      data-test-delete-mount-config="true"
+    >
+      Delete config
+    </ConfirmAction>
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-shadowless is-marginless">
+  <h4 class="title is-5 is-marginless">
+    Edit mount filter config for <code>{{model.config.id}}</code>
+  </h4>
+</div>
+<form {{action "saveConfig" model.config on="submit"}}>
+  {{mount-filter-config-list
+    mounts=model.mounts
+    config=model.config
+  }}
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" class="button is-primary" >
+          Save
+        </button>
+      </div>
+      <div class="control">
+        {{#link-to
+          "mode.secondaries.config-show"
+          model.config.id
+          class="button"
+          }}
+          Cancel
+        {{/link-to}}
+      </div>
+    </div>
+  </div>
+</form>

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/go-sockaddr"
 
 	"golang.org/x/net/http2"
@@ -39,6 +40,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -1112,18 +1114,34 @@ func TestBackend_ext_singleCert(t *testing.T) {
 
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_dns_singleCert(t *testing.T) {
-	connState, err := testConnState(
-		"test-fixtures/root/rootcawdnscert.pem",
-		"test-fixtures/root/rootcawdnskey.pem",
-		"test-fixtures/root/rootcacert.pem",
-	)
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -1143,18 +1161,34 @@ func TestBackend_dns_singleCert(t *testing.T) {
 
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_email_singleCert(t *testing.T) {
-	connState, err := testConnState(
-		"test-fixtures/root/rootcawemailcert.pem",
-		"test-fixtures/root/rootcawemailkey.pem",
-		"test-fixtures/root/rootcacert.pem",
-	)
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		EmailAddresses: []string{"valid@example.com"},
+		IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -1915,5 +1949,62 @@ func Test_Renew(t *testing.T) {
 	}
 	if !resp.IsError() {
 		t.Fatal("expected error")
+	}
+}
+
+func TestBackend_CertUpgrade(t *testing.T) {
+	s := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+
+	ctx := context.Background()
+
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	foo := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+	}
+
+	entry, err := logical.StorageEntryJSON("cert/foo", foo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certEntry, err := b.Cert(ctx, s, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exp := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		TokenParams: tokenutil.TokenParams{
+			TokenPolicies:   []string{"foo"},
+			TokenPeriod:     time.Second,
+			TokenTTL:        time.Second,
+			TokenMaxTTL:     time.Second,
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		},
+	}
+	if diff := deep.Equal(certEntry, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }

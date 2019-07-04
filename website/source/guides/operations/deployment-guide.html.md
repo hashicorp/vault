@@ -262,7 +262,7 @@ The following parameters are set for the `consul` storage stanza:
 
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
-If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
+If you decide to configure Vault to publish telemetry data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
 
 ### High Availability Parameters
 

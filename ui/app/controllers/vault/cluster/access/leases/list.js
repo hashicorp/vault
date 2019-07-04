@@ -2,7 +2,7 @@ import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
 import utils from 'vault/lib/key-utils';
-import ListController from 'vault/mixins/list-controller';
+import ListController from 'core/mixins/list-controller';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),

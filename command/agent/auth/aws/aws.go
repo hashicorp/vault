@@ -134,6 +134,14 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		}
 	}
 
+	nonceRaw, ok := conf.Config["nonce"]
+	if ok {
+		a.nonce, ok = nonceRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'nonce' value into string")
+		}
+	}
+
 	if a.authType == typeIAM {
 
 		// Check for an optional custom frequency at which we should poll for creds.

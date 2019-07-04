@@ -1,15 +1,19 @@
-{{#with (tabs-for-auth-section model.type tabType) as |tabs|}}
+{{#with (tabs-for-auth-section model tabType paths) as |tabs|}}
   {{#if tabs.length}}
-    <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+    <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
-        {{#each tabs as |tab|}}
-          {{#link-to params=tab.routeParams tagName="li" data-test-auth-section-tab=true}}
-            {{#link-to params=tab.routeParams}}
-              {{tab.label}}
+          {{#each tabs as |tab|}}
+            {{#link-to
+              params=tab.routeParams
+              tagName="li"
+              data-test-auth-section-tab=true
+            }}
+              {{#link-to params=tab.routeParams}}
+                {{tab.label}}
+              {{/link-to}}
             {{/link-to}}
-          {{/link-to}}
-        {{/each}}
+          {{/each}}
         </ul>
       </nav>
     </div>

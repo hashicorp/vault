@@ -3,72 +3,21 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"testing"
 	"time"
 
-	mgo "gopkg.in/mgo.v2"
-
-	"strings"
-
+	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/ory/dockertest"
+	"gopkg.in/mgo.v2"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 const testMongoDBWriteConcern = `{ "wmode": "majority", "wtimeout": 5000 }`
 
-func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
-	if os.Getenv("MONGODB_URL") != "" {
-		return func() {}, os.Getenv("MONGODB_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("mongo", "latest", []string{})
-	if err != nil {
-		t.Fatalf("Could not start local mongo docker container: %s", err)
-	}
-
-	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
-	}
-
-	retURL = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		dialInfo, err := parseMongoURL(retURL)
-		if err != nil {
-			return err
-		}
-
-		session, err := mgo.DialWithInfo(dialInfo)
-		if err != nil {
-			return err
-		}
-		defer session.Close()
-		session.SetSyncTimeout(1 * time.Minute)
-		session.SetSocketTimeout(1 * time.Minute)
-		return session.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to mongo docker container: %s", err)
-	}
-
-	return
-}
-
 func TestMongoDB_Initialize(t *testing.T) {
-	cleanup, connURL := prepareMongoDBTestContainer(t)
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -92,7 +41,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser(t *testing.T) {
-	cleanup, connURL := prepareMongoDBTestContainer(t)
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -125,7 +74,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
-	cleanup, connURL := prepareMongoDBTestContainer(t)
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -159,7 +108,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 }
 
 func TestMongoDB_RevokeUser(t *testing.T) {
-	cleanup, connURL := prepareMongoDBTestContainer(t)
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{

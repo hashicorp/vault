@@ -152,9 +152,9 @@ type ADGroup struct {
 	Mail *string `json:"mail,omitempty"`
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// ObjectID - The object ID.
+	// ObjectID - READ-ONLY; The object ID.
 	ObjectID *string `json:"objectId,omitempty"`
-	// DeletionTimestamp - The time at which the directory object was deleted.
+	// DeletionTimestamp - READ-ONLY; The time at which the directory object was deleted.
 	DeletionTimestamp *date.Time `json:"deletionTimestamp,omitempty"`
 	// ObjectType - Possible values include: 'ObjectTypeDirectoryObject', 'ObjectTypeApplication', 'ObjectTypeGroup', 'ObjectTypeServicePrincipal', 'ObjectTypeUser'
 	ObjectType ObjectType `json:"objectType,omitempty"`
@@ -178,12 +178,6 @@ func (ag ADGroup) MarshalJSON() ([]byte, error) {
 	}
 	if ag.Mail != nil {
 		objectMap["mail"] = ag.Mail
-	}
-	if ag.ObjectID != nil {
-		objectMap["objectId"] = ag.ObjectID
-	}
-	if ag.DeletionTimestamp != nil {
-		objectMap["deletionTimestamp"] = ag.DeletionTimestamp
 	}
 	if ag.ObjectType != "" {
 		objectMap["objectType"] = ag.ObjectType
@@ -391,9 +385,9 @@ type Application struct {
 	WwwHomepage *string `json:"wwwHomepage,omitempty"`
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// ObjectID - The object ID.
+	// ObjectID - READ-ONLY; The object ID.
 	ObjectID *string `json:"objectId,omitempty"`
-	// DeletionTimestamp - The time at which the directory object was deleted.
+	// DeletionTimestamp - READ-ONLY; The time at which the directory object was deleted.
 	DeletionTimestamp *date.Time `json:"deletionTimestamp,omitempty"`
 	// ObjectType - Possible values include: 'ObjectTypeDirectoryObject', 'ObjectTypeApplication', 'ObjectTypeGroup', 'ObjectTypeServicePrincipal', 'ObjectTypeUser'
 	ObjectType ObjectType `json:"objectType,omitempty"`
@@ -498,12 +492,6 @@ func (a Application) MarshalJSON() ([]byte, error) {
 	}
 	if a.WwwHomepage != nil {
 		objectMap["wwwHomepage"] = a.WwwHomepage
-	}
-	if a.ObjectID != nil {
-		objectMap["objectId"] = a.ObjectID
-	}
-	if a.DeletionTimestamp != nil {
-		objectMap["deletionTimestamp"] = a.DeletionTimestamp
 	}
 	if a.ObjectType != "" {
 		objectMap["objectType"] = a.ObjectType
@@ -1367,9 +1355,9 @@ type BasicDirectoryObject interface {
 type DirectoryObject struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// ObjectID - The object ID.
+	// ObjectID - READ-ONLY; The object ID.
 	ObjectID *string `json:"objectId,omitempty"`
-	// DeletionTimestamp - The time at which the directory object was deleted.
+	// DeletionTimestamp - READ-ONLY; The time at which the directory object was deleted.
 	DeletionTimestamp *date.Time `json:"deletionTimestamp,omitempty"`
 	// ObjectType - Possible values include: 'ObjectTypeDirectoryObject', 'ObjectTypeApplication', 'ObjectTypeGroup', 'ObjectTypeServicePrincipal', 'ObjectTypeUser'
 	ObjectType ObjectType `json:"objectType,omitempty"`
@@ -1428,12 +1416,6 @@ func unmarshalBasicDirectoryObjectArray(body []byte) ([]BasicDirectoryObject, er
 func (do DirectoryObject) MarshalJSON() ([]byte, error) {
 	do.ObjectType = ObjectTypeDirectoryObject
 	objectMap := make(map[string]interface{})
-	if do.ObjectID != nil {
-		objectMap["objectId"] = do.ObjectID
-	}
-	if do.DeletionTimestamp != nil {
-		objectMap["deletionTimestamp"] = do.DeletionTimestamp
-	}
 	if do.ObjectType != "" {
 		objectMap["objectType"] = do.ObjectType
 	}
@@ -1710,11 +1692,11 @@ type Domain struct {
 	autorest.Response `json:"-"`
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// AuthenticationType - the type of the authentication into the domain.
+	// AuthenticationType - READ-ONLY; the type of the authentication into the domain.
 	AuthenticationType *string `json:"authenticationType,omitempty"`
-	// IsDefault - if this is the default domain in the tenant.
+	// IsDefault - READ-ONLY; if this is the default domain in the tenant.
 	IsDefault *bool `json:"isDefault,omitempty"`
-	// IsVerified - if this domain's ownership is verified.
+	// IsVerified - READ-ONLY; if this domain's ownership is verified.
 	IsVerified *bool `json:"isVerified,omitempty"`
 	// Name - the domain name.
 	Name *string `json:"name,omitempty"`
@@ -1723,15 +1705,6 @@ type Domain struct {
 // MarshalJSON is the custom marshaler for Domain.
 func (d Domain) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if d.AuthenticationType != nil {
-		objectMap["authenticationType"] = d.AuthenticationType
-	}
-	if d.IsDefault != nil {
-		objectMap["isDefault"] = d.IsDefault
-	}
-	if d.IsVerified != nil {
-		objectMap["isVerified"] = d.IsVerified
-	}
 	if d.Name != nil {
 		objectMap["name"] = d.Name
 	}
@@ -3081,13 +3054,14 @@ func (ra *ResourceAccess) UnmarshalJSON(body []byte) error {
 type ServicePrincipal struct {
 	autorest.Response `json:"-"`
 	// AccountEnabled - whether or not the service principal account is enabled
-	AccountEnabled *string `json:"accountEnabled,omitempty"`
+	AccountEnabled *bool `json:"accountEnabled,omitempty"`
 	// AlternativeNames - alternative names
 	AlternativeNames *[]string `json:"alternativeNames,omitempty"`
-	// AppDisplayName - The display name exposed by the associated application.
+	// AppDisplayName - READ-ONLY; The display name exposed by the associated application.
 	AppDisplayName *string `json:"appDisplayName,omitempty"`
 	// AppID - The application ID.
-	AppID            *string `json:"appId,omitempty"`
+	AppID *string `json:"appId,omitempty"`
+	// AppOwnerTenantID - READ-ONLY
 	AppOwnerTenantID *string `json:"appOwnerTenantId,omitempty"`
 	// AppRoleAssignmentRequired - Specifies whether an AppRoleAssignment to a user or group is required before Azure AD will issue a user or access token to the application.
 	AppRoleAssignmentRequired *bool `json:"appRoleAssignmentRequired,omitempty"`
@@ -3103,7 +3077,7 @@ type ServicePrincipal struct {
 	KeyCredentials *[]KeyCredential `json:"keyCredentials,omitempty"`
 	// LogoutURL - A URL provided by the author of the associated application to logout
 	LogoutURL *string `json:"logoutUrl,omitempty"`
-	// Oauth2Permissions - The OAuth 2.0 permissions exposed by the associated application.
+	// Oauth2Permissions - READ-ONLY; The OAuth 2.0 permissions exposed by the associated application.
 	Oauth2Permissions *[]OAuth2Permission `json:"oauth2Permissions,omitempty"`
 	// PasswordCredentials - The collection of password credentials associated with the service principal.
 	PasswordCredentials *[]PasswordCredential `json:"passwordCredentials,omitempty"`
@@ -3123,9 +3097,9 @@ type ServicePrincipal struct {
 	Tags *[]string `json:"tags,omitempty"`
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// ObjectID - The object ID.
+	// ObjectID - READ-ONLY; The object ID.
 	ObjectID *string `json:"objectId,omitempty"`
-	// DeletionTimestamp - The time at which the directory object was deleted.
+	// DeletionTimestamp - READ-ONLY; The time at which the directory object was deleted.
 	DeletionTimestamp *date.Time `json:"deletionTimestamp,omitempty"`
 	// ObjectType - Possible values include: 'ObjectTypeDirectoryObject', 'ObjectTypeApplication', 'ObjectTypeGroup', 'ObjectTypeServicePrincipal', 'ObjectTypeUser'
 	ObjectType ObjectType `json:"objectType,omitempty"`
@@ -3141,14 +3115,8 @@ func (sp ServicePrincipal) MarshalJSON() ([]byte, error) {
 	if sp.AlternativeNames != nil {
 		objectMap["alternativeNames"] = sp.AlternativeNames
 	}
-	if sp.AppDisplayName != nil {
-		objectMap["appDisplayName"] = sp.AppDisplayName
-	}
 	if sp.AppID != nil {
 		objectMap["appId"] = sp.AppID
-	}
-	if sp.AppOwnerTenantID != nil {
-		objectMap["appOwnerTenantId"] = sp.AppOwnerTenantID
 	}
 	if sp.AppRoleAssignmentRequired != nil {
 		objectMap["appRoleAssignmentRequired"] = sp.AppRoleAssignmentRequired
@@ -3170,9 +3138,6 @@ func (sp ServicePrincipal) MarshalJSON() ([]byte, error) {
 	}
 	if sp.LogoutURL != nil {
 		objectMap["logoutUrl"] = sp.LogoutURL
-	}
-	if sp.Oauth2Permissions != nil {
-		objectMap["oauth2Permissions"] = sp.Oauth2Permissions
 	}
 	if sp.PasswordCredentials != nil {
 		objectMap["passwordCredentials"] = sp.PasswordCredentials
@@ -3197,12 +3162,6 @@ func (sp ServicePrincipal) MarshalJSON() ([]byte, error) {
 	}
 	if sp.Tags != nil {
 		objectMap["tags"] = sp.Tags
-	}
-	if sp.ObjectID != nil {
-		objectMap["objectId"] = sp.ObjectID
-	}
-	if sp.DeletionTimestamp != nil {
-		objectMap["deletionTimestamp"] = sp.DeletionTimestamp
 	}
 	if sp.ObjectType != "" {
 		objectMap["objectType"] = sp.ObjectType
@@ -3254,7 +3213,7 @@ func (sp *ServicePrincipal) UnmarshalJSON(body []byte) error {
 		switch k {
 		case "accountEnabled":
 			if v != nil {
-				var accountEnabled string
+				var accountEnabled bool
 				err = json.Unmarshal(*v, &accountEnabled)
 				if err != nil {
 					return err
@@ -3490,7 +3449,7 @@ func (sp *ServicePrincipal) UnmarshalJSON(body []byte) error {
 // PATCH
 type ServicePrincipalBase struct {
 	// AccountEnabled - whether or not the service principal account is enabled
-	AccountEnabled *string `json:"accountEnabled,omitempty"`
+	AccountEnabled *bool `json:"accountEnabled,omitempty"`
 	// AppRoleAssignmentRequired - Specifies whether an AppRoleAssignment to a user or group is required before Azure AD will issue a user or access token to the application.
 	AppRoleAssignmentRequired *bool `json:"appRoleAssignmentRequired,omitempty"`
 	// KeyCredentials - The collection of key credentials associated with the service principal.
@@ -3508,7 +3467,7 @@ type ServicePrincipalCreateParameters struct {
 	// AppID - The application ID.
 	AppID *string `json:"appId,omitempty"`
 	// AccountEnabled - whether or not the service principal account is enabled
-	AccountEnabled *string `json:"accountEnabled,omitempty"`
+	AccountEnabled *bool `json:"accountEnabled,omitempty"`
 	// AppRoleAssignmentRequired - Specifies whether an AppRoleAssignment to a user or group is required before Azure AD will issue a user or access token to the application.
 	AppRoleAssignmentRequired *bool `json:"appRoleAssignmentRequired,omitempty"`
 	// KeyCredentials - The collection of key credentials associated with the service principal.
@@ -3667,7 +3626,7 @@ type ServicePrincipalObjectResult struct {
 // ServicePrincipalUpdateParameters request parameters for update an existing service principal.
 type ServicePrincipalUpdateParameters struct {
 	// AccountEnabled - whether or not the service principal account is enabled
-	AccountEnabled *string `json:"accountEnabled,omitempty"`
+	AccountEnabled *bool `json:"accountEnabled,omitempty"`
 	// AppRoleAssignmentRequired - Specifies whether an AppRoleAssignment to a user or group is required before Azure AD will issue a user or access token to the application.
 	AppRoleAssignmentRequired *bool `json:"appRoleAssignmentRequired,omitempty"`
 	// KeyCredentials - The collection of key credentials associated with the service principal.
@@ -3778,9 +3737,9 @@ type User struct {
 	SignInNames *[]SignInName `json:"signInNames,omitempty"`
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
 	AdditionalProperties map[string]interface{} `json:""`
-	// ObjectID - The object ID.
+	// ObjectID - READ-ONLY; The object ID.
 	ObjectID *string `json:"objectId,omitempty"`
-	// DeletionTimestamp - The time at which the directory object was deleted.
+	// DeletionTimestamp - READ-ONLY; The time at which the directory object was deleted.
 	DeletionTimestamp *date.Time `json:"deletionTimestamp,omitempty"`
 	// ObjectType - Possible values include: 'ObjectTypeDirectoryObject', 'ObjectTypeApplication', 'ObjectTypeGroup', 'ObjectTypeServicePrincipal', 'ObjectTypeUser'
 	ObjectType ObjectType `json:"objectType,omitempty"`
@@ -3822,12 +3781,6 @@ func (u User) MarshalJSON() ([]byte, error) {
 	}
 	if u.SignInNames != nil {
 		objectMap["signInNames"] = u.SignInNames
-	}
-	if u.ObjectID != nil {
-		objectMap["objectId"] = u.ObjectID
-	}
-	if u.DeletionTimestamp != nil {
-		objectMap["deletionTimestamp"] = u.DeletionTimestamp
 	}
 	if u.ObjectType != "" {
 		objectMap["objectType"] = u.ObjectType

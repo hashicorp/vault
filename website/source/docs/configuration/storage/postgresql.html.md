@@ -13,8 +13,8 @@ description: |-
 The PostgreSQL storage backend is used to persist Vault's data in a
 [PostgreSQL][postgresql] server or cluster.
 
-- **No High Availability** – the PostgreSQL storage backend does not support
-  high availability.
+- **High Availability** – the PostgreSQL storage backend supports
+  high availability. Requires PostgreSQL 9.5 or later.
 
 - **Community Supported** – the PostgreSQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -41,6 +41,19 @@ CREATE TABLE vault_kv_store (
 
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
 ```
+
+Store for HAEnabled backend
+
+```sql
+CREATE TABLE vault_ha_locks (
+  ha_key                                      TEXT COLLATE "C" NOT NULL,
+  ha_identity                                 TEXT COLLATE "C" NOT NULL,          
+  ha_value                                    TEXT COLLATE "C",  
+  valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL,
+  CONSTRAINT ha_key PRIMARY KEY (ha_key)
+);
+```
+
 
 If you're using a version of PostgreSQL prior to 9.5, create the following function:
 
@@ -83,8 +96,15 @@ LANGUAGE plpgsql;
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
 
+- `max_idle_connections` `(int)` - Default not set. Sets the maximum number of 
+  connections in the idle connection pool. See
+  [golang docs on SetMaxIdleConns][golang_SetMaxIdleConns] for more information. 
+  Requires 1.2 or later.
+
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to PostgreSQL.
+
+- `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
 
 ## `postgresql` Examples
 
@@ -108,5 +128,6 @@ storage "postgresql" {
 }
 ```
 
+[golang_SetMaxIdleConns]: https://golang.org/pkg/database/sql/#DB.SetMaxIdleConns
 [postgresql]: https://www.postgresql.org/
 [pglib]: https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters

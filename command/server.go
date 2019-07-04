@@ -47,6 +47,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -106,6 +107,8 @@ type ServerCommand struct {
 	flagDevAutoSeal      bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
+	flagTestServerConfig bool
+	flagDevConsul        bool
 }
 
 type ServerListener struct {
@@ -290,6 +293,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "dev-consul",
+		Target:  &c.flagDevConsul,
+		Default: false,
+		Hidden:  true,
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "combine-logs",
@@ -301,6 +311,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "test-server-config",
+		Target:  &c.flagTestServerConfig,
 		Default: false,
 		Hidden:  true,
 	})
@@ -391,7 +408,20 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if c.flagDev {
-		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
+		var devStorageType string
+		switch {
+		case c.flagDevConsul:
+			devStorageType = "consul"
+		case c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional_ha"
+		case !c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional"
+		case c.flagDevHA && !c.flagDevTransactional:
+			devStorageType = "inmem_ha"
+		default:
+			devStorageType = "inmem"
+		}
+		config = server.DevConfig(devStorageType)
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Config["address"] = c.flagDevListenAddr
 		}
@@ -485,6 +515,10 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
+	if config.Storage.Type == "raft" && len(config.ClusterAddr) == 0 {
+		c.UI.Error("Cluster address must be set when using raft storage")
+		return 1
+	}
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
 	allLoggers = append(allLoggers, namedStorageLogger)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
@@ -533,7 +567,7 @@ func (c *ServerCommand) Run(args []string) int {
 			var seal vault.Seal
 			sealLogger := c.logger.Named(sealType)
 			allLoggers = append(allLoggers, sealLogger)
-			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -964,7 +998,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(core, barrierSeal, unwrapSeal); err != nil {
+	if err := adjustCoreForSealMigration(c.logger, core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -1146,6 +1180,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 		}
 
+		// server defaults
 		server := &http.Server{
 			Handler:           handler,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -1153,7 +1188,54 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}
+
+		// override server defaults with config values for read/write/idle timeouts if configured
+		if readHeaderTimeoutInterface, ok := ln.config["http_read_header_timeout"]; ok {
+			readHeaderTimeout, err := parseutil.ParseDurationSecond(readHeaderTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_header_timeout %v", readHeaderTimeout))
+				return 1
+			}
+			server.ReadHeaderTimeout = readHeaderTimeout
+		}
+
+		if readTimeoutInterface, ok := ln.config["http_read_timeout"]; ok {
+			readTimeout, err := parseutil.ParseDurationSecond(readTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_timeout %v", readTimeout))
+				return 1
+			}
+			server.ReadTimeout = readTimeout
+		}
+
+		if writeTimeoutInterface, ok := ln.config["http_write_timeout"]; ok {
+			writeTimeout, err := parseutil.ParseDurationSecond(writeTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_write_timeout %v", writeTimeout))
+				return 1
+			}
+			server.WriteTimeout = writeTimeout
+		}
+
+		if idleTimeoutInterface, ok := ln.config["http_idle_timeout"]; ok {
+			idleTimeout, err := parseutil.ParseDurationSecond(idleTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_idle_timeout %v", idleTimeout))
+				return 1
+			}
+			server.IdleTimeout = idleTimeout
+		}
+
+		// server config tests can exit now
+		if c.flagTestServerConfig {
+			continue
+		}
+
 		go server.Serve(ln.Listener)
+	}
+
+	if c.flagTestServerConfig {
+		return 0
 	}
 
 	if sealConfigError != nil {
