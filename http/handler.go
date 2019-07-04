@@ -295,6 +295,25 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 	})
 }
 
+// A lookup on a token that is about to expire returns nil, which means by the
+// time we can validate a wrapping token lookup will return nil since it will
+// be revoked after the call. So we have to do the validation here.
+func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logical.Request) error {
+	if req == nil {
+		return fmt.Errorf("invalid request")
+	}
+
+	valid, err := core.ValidateWrappingToken(ctx, req)
+	if err != nil {
+		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+	}
+	if !valid {
+		return fmt.Errorf("wrapping token is not valid or does not exist")
+	}
+
+	return nil
+}
+
 // stripPrefix is a helper to strip a prefix from the path. It will
 // return false from the second return value if it the prefix doesn't exist.
 func stripPrefix(prefix, path string) (string, bool) {

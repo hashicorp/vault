@@ -584,21 +584,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return
 	}
 
-	// If this is a wrapping request that contains a wrapping token, check for
-	// token validity. We perform this before c.checkToken since wrapping token
-	// validation performs a token store lookup, and can potentially modify
-	// logical.Request's token-related fields.
-	switch req.Path {
-	case "sys/wrapping/rewrap", "sys/wrapping/unwrap":
-		valid, wtAuth, err := c.validateWrappingToken(ctx, req, nonHMACReqDataKeys)
-		if err != nil {
-			return nil, wtAuth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), wtAuth, logical.ErrInvalidRequest
-		}
-	}
-
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
@@ -928,21 +913,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
-		}
-	}
-
-	// If this is a wrapping token lookup, validate the token and produce an
-	// audit log. We perform this before c.checkToken since wrapping token
-	// validation performs a token store lookup, and can potentially modify
-	// logical.Request's token-related fields.
-	switch req.Path {
-	case "sys/wrapping/lookup":
-		valid, wtAuth, err := c.validateWrappingToken(ctx, req, nonHMACReqDataKeys)
-		if err != nil {
-			return nil, wtAuth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), wtAuth, logical.ErrInvalidRequest
 		}
 	}
 

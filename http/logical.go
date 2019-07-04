@@ -211,6 +211,13 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			// Route the token wrapping request to its respective sys NS
 			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 				r = r.WithContext(newCtx)
+				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
+					if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+						respondError(w, http.StatusForbidden, err)
+					} else {
+						respondError(w, http.StatusBadRequest, err)
+					}
+				}
 
 			// The -self paths have no meaning outside of the token NS, so
 			// requests for these paths always go to the token NS
