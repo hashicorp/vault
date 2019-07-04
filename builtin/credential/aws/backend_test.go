@@ -3,7 +3,6 @@ package awsauth
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,16 +14,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault"
 )
 
 const testVaultHeaderValue = "VaultAcceptanceTesting"
@@ -1819,113 +1812,4 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.Period = auth.Period
 
 	return renewReq
-}
-
-func TestBackend_E2E_Initialize(t *testing.T) {
-
-	// set up a test cluster
-	logger := logging.NewVaultLogger(hclog.Trace)
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		CredentialBackends: map[string]logical.Factory{
-			"aws": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		NumCores:    1,
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
-
-	// load the auth plugin
-	if err := core.Client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
-		Type: "aws",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// create some role entries
-	type testRole struct {
-		name string
-		data map[string]interface{}
-	}
-	before := []testRole{
-		{
-			name: "test-role-0",
-			data: map[string]interface{}{
-				"auth_type":       "ec2",
-				"policies":        "default",
-				"bound_subnet_id": "subnet-abcdef",
-			},
-		},
-	}
-	for _, tr := range before {
-		_, err := core.Client.Logical().Write("auth/aws/role/"+tr.name, tr.data)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	//			data: map[string]interface{}{
-	//			"bound_iam_principal_arn": os.Getenv(envVarAwsTestRoleArn)[:25] + "*",
-	//
-	//// put the entries in storage
-	//for _, role := range before {
-	//	//core.Client.Logical().Write("auth/aws/roles/foo", map[string]interface{}{...
-	//	core.Client.Logical().Write("auth/aws/roles/foo", nil)
-
-	//if _, err := core.Client.Logical().Write("auth/aws/role/test", ); err != nil {
-	//	fmt.Println(err)
-	//	t.Fatal(err)
-	//}
-
-	//	//err = b.setRole(ctx, storage, role.name, role.entry)
-	//	//if err != nil {
-	//	//	t.Fatal(err)
-	//	//}
-	//}
-
-	//---------------------------------------------------
-
-	// fetch the auth backend's uuid in storage
-	ctx := context.Background()
-	uuid, err := core.UnderlyingStorage.List(ctx, "auth/")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// "downgrade" some of the roles by directly modifying them in storage
-	for _, tr := range before {
-
-		key := "auth/" + uuid[0] + "role/" + tr.name
-		entry, err := core.UnderlyingStorage.Get(ctx, key)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		fmt.Printf("storage %T\n", core.UnderlyingStorage)
-		fmt.Printf("storage backend %T\n", core.UnderlyingStorage.(*physical.StorageEncoding).Backend)
-		fmt.Printf("entry %T\n", entry)
-		fmt.Printf("key %s\n", entry.Key)
-		fmt.Printf("value %s\n", hex.EncodeToString(entry.Value))
-
-		//roleEntry := new(awsRoleEntry)
-		//err = jsonutil.DecodeJSON(entry.Value, roleEntry)
-		//if err != nil {
-		//	t.Fatal(err)
-		//}
-		//if err := entry.DecodeJSON(role); err != nil {
-		//	t.Fatal(err)
-		//}
-	}
-
-	// re-trigger Initialize(), which will upgrade the roles
-
-	// read from storage to confirm that the roles are upgraded
-
-	// read from storage to confirm that the 'config/version' entry is there
 }
