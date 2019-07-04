@@ -378,6 +378,10 @@ role.
 
 - `name` `(string: <required>)` – Specifies the name of the role to create
   credentials against. This is specified as part of the URL.
+- `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
+  than the role's `max_ttl` value. If not provided, the role's `default_ttl` value will
+  be used. Note that the role values default to system values if not explicitly
+  set.
 
 ### Sample Request
 

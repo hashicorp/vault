@@ -19,6 +19,12 @@ func pathCredsCreate(b *databaseBackend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
+			"ttl": &framework.FieldSchema{
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				Description: `Duration in seconds after which the issued credentials should expire.
+Defaults to 0, in which the value will fallback to default_ttl on the role`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -63,11 +69,16 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		ttl, _, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, 0, role.MaxTTL, 0, time.Time{})
+		var ttl time.Duration
+		if rawTTL, ok := data.GetOk("ttl"); ok {
+			ttl = time.Duration(rawTTL.(int)) * time.Second
+		}
+
+		calcTTL, warnings, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, ttl, role.MaxTTL, 0, time.Time{})
 		if err != nil {
 			return nil, err
 		}
-		expiration := time.Now().Add(ttl)
+		expiration := time.Now().Add(calcTTL)
 		// Adding a small buffer since the TTL will be calculated again after this call
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
@@ -93,8 +104,11 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"db_name":               role.DBName,
 			"revocation_statements": role.Statements.Revocation,
 		})
-		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.TTL = calcTTL
 		resp.Secret.MaxTTL = role.MaxTTL
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
+		}
 		return resp, nil
 	}
 }
