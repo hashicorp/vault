@@ -19,16 +19,26 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 
 	// Set up the cluster.  This will trigger an Initialize(); we sleep briefly
 	// awaiting its completion.
-	cluster, awsStoragePath := setupAwsTestCluster(t, ctx)
+	cluster := setupAwsTestCluster(t, ctx)
 	defer cluster.Cleanup()
 	time.Sleep(time.Second)
 	core := cluster.Cores[0]
+
+	// fetch the auth aws auth's path in storage
+	authPaths, err := core.UnderlyingStorage.List(ctx, "auth/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(authPaths) != 1 {
+		t.Fatalf("expected exactly one auth path")
+	}
+	awsPath := "auth/" + authPaths[0]
 
 	// Make sure that the upgrade happened, by fishing the 'config/version'
 	// entry out of storage.  We can't use core.Client.Logical().Read() to do
 	// this, because 'config/version' hasn't been exposed as a path.
 	// TODO: should we expose 'config/version' as a path?
-	version, err := core.UnderlyingStorage.Get(ctx, awsStoragePath+"config/version")
+	version, err := core.UnderlyingStorage.Get(ctx, awsPath+"config/version")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,10 +47,10 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 
 	// Nuke the version, so we can pretend that Initialize() has never been run
-	if err := core.UnderlyingStorage.Delete(ctx, awsStoragePath+"config/version"); err != nil {
+	if err := core.UnderlyingStorage.Delete(ctx, awsPath+"config/version"); err != nil {
 		t.Fatal(err)
 	}
-	version, err = core.UnderlyingStorage.Get(ctx, awsStoragePath+"config/version")
+	version, err = core.UnderlyingStorage.Get(ctx, awsPath+"config/version")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +75,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 
 	// There should _still_ be no config version
-	version, err = core.UnderlyingStorage.Get(ctx, awsStoragePath+"config/version")
+	version, err = core.UnderlyingStorage.Get(ctx, awsPath+"config/version")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +90,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// Now the config version should be there again
-	version, err = core.UnderlyingStorage.Get(ctx, awsStoragePath+"config/version")
+	version, err = core.UnderlyingStorage.Get(ctx, awsPath+"config/version")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,8 +99,9 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 }
 
-func setupAwsTestCluster(t *testing.T, ctx context.Context) (*vault.TestCluster, string) {
+func setupAwsTestCluster(t *testing.T, ctx context.Context) *vault.TestCluster {
 
+	// create a cluster with the aws auth backend built-in
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -102,12 +113,11 @@ func setupAwsTestCluster(t *testing.T, ctx context.Context) (*vault.TestCluster,
 		NumCores:    1,
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 
+	cluster.Start()
 	if len(cluster.Cores) != 1 {
 		t.Fatalf("expected exactly one core")
 	}
-
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)
 
@@ -118,11 +128,5 @@ func setupAwsTestCluster(t *testing.T, ctx context.Context) (*vault.TestCluster,
 		t.Fatal(err)
 	}
 
-	// fetch the aws backend's uuid in storage
-	authUuids, err := core.UnderlyingStorage.List(ctx, "auth/")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return cluster, "auth/" + authUuids[0]
+	return cluster
 }
