@@ -28,12 +28,6 @@ module.exports = function(defaults) {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
     },
-    babel: {
-      plugins: ['transform-object-rest-spread'],
-    },
-    'ember-cli-babel': {
-      includePolyfill: isTest || isProd || isCI,
-    },
     hinting: isTest,
     tests: isTest,
     sourcemaps: {
@@ -50,12 +44,7 @@ module.exports = function(defaults) {
       browsers: ['defaults', 'ie 11'],
     },
     autoImport: {
-      webpack: {
-        // this makes `unsafe-eval` CSP unnecessary
-        // see https://github.com/ef4/ember-auto-import/issues/50
-        // and https://github.com/webpack/webpack/issues/5627
-        devtool: 'inline-source-map',
-      },
+      forbidEval: true,
     },
     'ember-test-selectors': {
       strip: isProd,
