@@ -45,6 +45,8 @@ var (
 	// ErrCommandTooLarge is returned when the backend tries to apply a log
 	// greater than the max allowed size.
 	ErrCommandTooLarge = fmt.Errorf("%s: exceeds %d byte limit", physical.ErrValueTooLarge, maxCommandSizeBytes)
+
+	restoreOpDelayDuration = 5 * time.Second
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -111,7 +113,7 @@ func EnsurePath(path string, dir bool) error {
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Create the FSM.
 	var err error
-	fsm, err := NewFSM(conf, logger)
+	fsm, err := NewFSM(conf, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
@@ -379,8 +381,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 	case raftTLSKeyring == nil && clusterListener == nil:
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
-		// network. This will be true during bootstrap and dev modes.
-		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(b.localID))
+		// network. This will be true during bootstrap, tests and dev modes.
+		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case raftTLSKeyring == nil:
 		return errors.New("no keyring provided")
 	case clusterListener == nil:
@@ -542,7 +544,7 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Address:         string(server.Address),
 			Leader:          server.Address == b.raft.Leader(),
 			Voter:           server.Suffrage == raft.Voter,
-			ProtocolVersion: string(raft.ProtocolVersionMax),
+			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
 		config.Servers = append(config.Servers, entry)
 	}
@@ -679,6 +681,10 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
+
+	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
+	// before we continue.
+	time.Sleep(restoreOpDelayDuration)
 	return err
 }
 
@@ -819,11 +825,11 @@ type RaftLock struct {
 
 // monitorLeadership waits until we receive an update on the raftNotifyCh and
 // closes the leaderLost channel.
-func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}) <-chan struct{} {
+func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
 		select {
-		case <-l.b.raftNotifyCh:
+		case <-leaderNotifyCh:
 			close(leaderLost)
 		case <-stopCh:
 		}
@@ -834,8 +840,12 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}) <-chan struct{} {
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
-	// Check to see if we are already leader.
 	l.b.l.RLock()
+
+	// Cache the notifyCh locally
+	leaderNotifyCh := l.b.raftNotifyCh
+
+	// Check to see if we are already leader.
 	if l.b.raft.State() == raft.Leader {
 		err := l.b.applyLog(context.Background(), &LogData{
 			Operations: []*LogOperation{
@@ -851,13 +861,13 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			return nil, err
 		}
 
-		return l.monitorLeadership(stopCh), nil
+		return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 	}
 	l.b.l.RUnlock()
 
 	for {
 		select {
-		case isLeader := <-l.b.raftNotifyCh:
+		case isLeader := <-leaderNotifyCh:
 			if isLeader {
 				// We are leader, set the key
 				l.b.l.RLock()
@@ -875,7 +885,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 					return nil, err
 				}
 
-				return l.monitorLeadership(stopCh), nil
+				return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 			}
 		case <-stopCh:
 			return nil, nil

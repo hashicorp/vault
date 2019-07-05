@@ -284,7 +284,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 // only starts cluster listeners. Once the listener is started handlers/clients
 // can start being registered to it.
 func (c *Core) startClusterListener(ctx context.Context) error {
-	if c.clusterAddr == "" {
+	if c.ClusterAddr() == "" {
 		c.logger.Info("clustering disabled, not starting listeners")
 		return nil
 	}
@@ -307,15 +307,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if strings.HasSuffix(c.clusterAddr, ":0") {
+	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr = fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0])
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0]))
 	}
 	return nil
 }
 
 func (c *Core) ClusterAddr() string {
-	return c.clusterAddr
+	return c.clusterAddr.Load().(string)
 }
 
 // stopClusterListener stops any existing listeners during seal. It is
@@ -336,8 +336,8 @@ func (c *Core) stopClusterListener() {
 
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	c.clusterListenerAddrs = addrs
-	if c.clusterAddr == "" && len(addrs) == 1 {
-		c.clusterAddr = fmt.Sprintf("https://%s", addrs[0].String())
+	if c.ClusterAddr() == "" && len(addrs) == 1 {
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
 	}
 }
 

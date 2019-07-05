@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -18,7 +19,6 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -101,12 +101,22 @@ func (c *Core) startRaftStorage(ctx context.Context) error {
 		return err
 	}
 
-	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
+	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 	if err := raftStorage.SetupCluster(ctx, raftTLS, c.clusterListener); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c *Core) setupRaftActiveNode(ctx context.Context) error {
+	c.pendingRaftPeers = make(map[string][]byte)
+	return c.startPeriodicRaftTLSRotate(ctx)
+}
+
+func (c *Core) stopRaftActiveNode() {
+	c.pendingRaftPeers = nil
+	c.stopPeriodicRaftTLSRotate()
 }
 
 // startPeriodicRaftTLSRotate will spawn a go routine in charge of periodically
@@ -145,7 +155,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		return err
 	}
 	for _, server := range raftConfig.Servers {
-		if !server.Leader {
+		if server.NodeID != raftStorage.NodeID() {
 			followerStates.update(server.NodeID, 0)
 		}
 	}
@@ -372,8 +382,8 @@ func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
 // handleSnapshotRestore is for the raft backend to hook back into core after a
 // snapshot is restored so we can clear the necessary caches and handle changing
 // keyrings or master keys
-func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
-	return func() error {
+func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(context.Context) error {
+	return func(ctx context.Context) (retErr error) {
 		c.logger.Info("running post snapshot restore invalidations")
 
 		if grabLock {
@@ -384,7 +394,18 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
 			}
 			defer c.stateLock.Unlock()
 		}
-		ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
+
+		if sealNode {
+			// If we failed to restore the snapshot we should seal this node as
+			// it's in an unknown state
+			defer func() {
+				if retErr != nil {
+					if err := c.sealInternalWithOptions(false, false, true); err != nil {
+						c.logger.Error("failed to seal node", "error", err)
+					}
+				}
+			}()
+		}
 
 		// Purge the cache so we make sure we are operating on fresh data
 		c.physicalCache.Purge(ctx)
@@ -402,7 +423,6 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
 
 				// Seal ourselves
 				c.logger.Info("failed to perform key upgrades, sealing", "error", err)
-				c.sealInternalWithOptions(false, false, true)
 				return err
 			default:
 				// If we are using an auto-unseal we can try to use the seal to
@@ -412,50 +432,17 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool) func() error {
 				keys, err := c.seal.GetStoredKeys(ctx)
 				if err != nil {
 					c.logger.Error("raft snapshot restore failed to get stored keys", "error", err)
-					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				if err := c.barrier.Seal(); err != nil {
 					c.logger.Error("raft snapshot restore failed to seal barrier", "error", err)
-					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				if err := c.barrier.Unseal(ctx, keys[0]); err != nil {
 					c.logger.Error("raft snapshot restore failed to unseal barrier", "error", err)
-					c.sealInternalWithOptions(false, false, true)
 					return err
 				}
 				c.logger.Info("done reloading master key using auto seal")
-			}
-		}
-
-		if !c.standby {
-			// Go through a preSeal, postUnseal cycle to clear the rest of
-			// vault's in-memory caches
-			c.logger.Info("restarting system after raft snapshot restore")
-			if err := c.preSeal(); err != nil {
-				c.logger.Error("raft snapshot restore failed preSeal", "error", err)
-				return err
-			}
-			{
-				// If the snapshot was taken while another node was leader we
-				// need to reset the leader information to this node.
-				if err := c.underlyingPhysical.Put(ctx, &physical.Entry{
-					Key:   CoreLockPath,
-					Value: []byte(c.leaderUUID),
-				}); err != nil {
-					c.logger.Error("cluster setup failed", "error", err)
-					return err
-				}
-				// re-advertise our cluster information
-				if err := c.advertiseLeader(ctx, c.leaderUUID, nil); err != nil {
-					c.logger.Error("cluster setup failed", "error", err)
-					return err
-				}
-			}
-			if err := c.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
-				c.logger.Error("raft snapshot restore failed postUnseal", "error", err)
-				return err
 			}
 		}
 
@@ -586,7 +573,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 }
 
 // This is used in tests to override the cluster address
-var UpdateClusterAddrForTests bool
+var UpdateClusterAddrForTests uint32
 
 func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client, challenge *physical.EncryptedBlobInfo, sealAccess seal.Access) error {
 	if challenge == nil {
@@ -607,12 +594,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
 
-	parsedClusterAddr, err := url.Parse(c.clusterAddr)
+	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if UpdateClusterAddrForTests && strings.HasSuffix(clusterAddr, ":0") {
+	if atomic.LoadUint32(&UpdateClusterAddrForTests) == 1 && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error
@@ -651,7 +638,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errwrap.Wrapf("error starting cluster: {{err}}", err)
 	}
 
-	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true))
+	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 	err = raftStorage.SetupCluster(ctx, answerResp.Data.TLSKeyring, c.clusterListener)
 	if err != nil {
 		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)

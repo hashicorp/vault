@@ -17,4 +17,13 @@ export default Route.extend({
       }
     });
   },
+
+  afterModel(model) {
+    if (model) {
+      return this.store.findRecord('kmip/ca', this.secretMountPath.currentPath).then(ca => {
+        model.set('ca', ca);
+        return model;
+      });
+    }
+  },
 });

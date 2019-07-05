@@ -257,6 +257,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 				Key:         k,
 				Type:        schema.Type.String(),
 				Description: description,
+				Deprecated:  schema.Deprecated,
 			}
 		}
 
@@ -286,6 +287,7 @@ type pathTemplateData struct {
 type pathTemplateFieldData struct {
 	Key         string
 	Type        string
+	Deprecated  bool
 	Description string
 	URL         bool
 }
@@ -300,8 +302,11 @@ Matching Route: {{.RoutePattern}}
 ## PARAMETERS
 {{range .Fields}}
 {{indent 4 .Key}} ({{.Type}})
+{{if .Deprecated}}
+{{printf "(DEPRECATED) %s" .Description | indent 8}}
+{{else}}
 {{indent 8 .Description}}
-{{end}}{{end}}
+{{end}}{{end}}{{end}}
 ## DESCRIPTION
 
 {{.Description}}

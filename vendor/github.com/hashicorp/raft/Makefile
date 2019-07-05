@@ -7,6 +7,9 @@ test:
 integ: test
 	INTEG_TESTS=yes go test -timeout=25s -run=Integ .
 
+ci.test-norace:
+	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s
+
 ci.test:
 	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s -race .
 

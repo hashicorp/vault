@@ -64,6 +64,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Get the user and validate auth
 	user, userError := b.user(ctx, req.Storage, username)
 
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
+	}
+
 	var userPassword []byte
 	var legacyPassword bool
 	// If there was an error or it's nil, we fake a password for the bcrypt
@@ -103,28 +108,19 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("invalid username or password"), nil
 	}
 
-	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
-		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"username": username,
+		},
+		DisplayName: username,
+		Alias: &logical.Alias{
+			Name: username,
+		},
 	}
+	user.PopulateTokenAuth(auth)
 
 	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: user.Policies,
-			Metadata: map[string]string{
-				"username": username,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       user.TTL,
-				MaxTTL:    user.MaxTTL,
-				Renewable: true,
-			},
-			Alias: &logical.Alias{
-				Name: username,
-			},
-			BoundCIDRs: user.BoundCIDRs,
-		},
+		Auth: auth,
 	}, nil
 }
 
@@ -139,13 +135,14 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(user.TokenPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = user.TTL
-	resp.Auth.MaxTTL = user.MaxTTL
+	resp.Auth.Period = user.TokenPeriod
+	resp.Auth.TTL = user.TokenTTL
+	resp.Auth.MaxTTL = user.TokenMaxTTL
 	return resp, nil
 }
 

@@ -45,13 +45,13 @@ export default Component.extend({
     let serviceArgs;
 
     if (
-      executeUICommand(
-        command,
-        args => this.logAndOutput(args),
-        args => service.clearLog(args),
-        () => this.toggleProperty('isFullscreen'),
-        () => this.get('refreshRoute').perform()
-      )
+      executeUICommand(command, args => this.logAndOutput(args), {
+        api: () => this.routeToExplore.perform(command),
+        clearall: () => service.clearLog(true),
+        clear: () => service.clearLog(),
+        fullscreen: () => this.toggleProperty('isFullscreen'),
+        refresh: () => this.refreshRoute.perform(),
+      })
     ) {
       return;
     }
@@ -101,6 +101,29 @@ export default Component.extend({
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
       this.logAndOutput(null, { type: 'error', content: 'The was a problem refreshing the current screen.' });
+    }
+  }),
+
+  routeToExplore: task(function*(command) {
+    let filter = command.replace('api', '').trim();
+    try {
+      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+        queryParams: { filter },
+      });
+      let content =
+        'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
+      if (filter) {
+        content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
+      }
+      this.logAndOutput(null, {
+        type: 'success',
+        content,
+      });
+    } catch (error) {
+      this.logAndOutput(null, {
+        type: 'error',
+        content: 'There was a problem navigating to the api explorer.',
+      });
     }
   }),
 

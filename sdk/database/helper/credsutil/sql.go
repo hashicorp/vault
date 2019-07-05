@@ -1,6 +1,7 @@
 package credsutil
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -17,6 +18,14 @@ type SQLCredentialsProducer struct {
 	RoleNameLen    int
 	UsernameLen    int
 	Separator      string
+}
+
+func (scp *SQLCredentialsProducer) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := scp.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }
 
 func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConfig) (string, error) {

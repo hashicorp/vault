@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -722,8 +723,9 @@ func CreateRaftBackend(t testing.T, logger hclog.Logger, nodeID string) (physica
 	logger.Info("raft dir", "dir", raftDir)
 
 	conf := map[string]string{
-		"path":    raftDir,
-		"node_id": nodeID,
+		"path":                   raftDir,
+		"node_id":                nodeID,
+		"performance_multiplier": "8",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger)
@@ -759,7 +761,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	vault.UpdateClusterAddrForTests = true
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
 
 	// Seal the leader so we can install an address provider
 	{
