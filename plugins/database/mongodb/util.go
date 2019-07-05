@@ -6,12 +6,6 @@ type createUserCommand struct {
 	Roles    []interface{} `bson:"roles"`
 }
 
-type upsertUserCommand struct {
-	Username string        `bson:"updateUser"`
-	Password string        `bson:"pwd"`
-	Roles    []interface{} `bson:"roles"`
-}
-
 type mongodbRole struct {
 	Role string `json:"role" bson:"role"`
 	DB   string `json:"db"   bson:"db"`
