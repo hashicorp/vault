@@ -5,6 +5,7 @@ type createUserCommand struct {
 	Password string        `bson:"pwd"`
 	Roles    []interface{} `bson:"roles"`
 }
+
 type mongodbRole struct {
 	Role string `json:"role" bson:"role"`
 	DB   string `json:"db"   bson:"db"`
