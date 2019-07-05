@@ -1,0 +1,10 @@
+{{#if (gt counters.length 1) }}
+  <Toolbar>
+    <HttpRequestsDropdown @counters={{counters}} @onChange={{action "updateTimeWindow"}} @timeWindow={{timeWindow}}/>
+  </Toolbar>
+
+  <HttpRequestsBarChart @counters={{filteredCounters}} />
+{{/if}}
+
+<AlertInline @type="info" @message="Metrics are recorded only for interactions that produce or use a Vault token." />
+<HttpRequestsTable @counters={{filteredCounters}} />

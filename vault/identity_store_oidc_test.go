@@ -497,7 +497,7 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"The key \"test-key\" does not list the client id of the role \"test-role\" as an allowed_clientID": true,
+		"the key \"test-key\" does not list the client ID of the role \"test-role\" as an allowed client ID": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
@@ -836,8 +836,9 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	// Validate configurable parts - for now just issuer
 	discoveryResp := &discovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+"/"+issuerPath {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+"/"+issuerPath, discoveryResp.Issuer)
+	expected := "/v1/identity/oidc"
+	if discoveryResp.Issuer != expected {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}
 
 	// Update issuer config
@@ -860,7 +861,7 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// Validate configurable parts - for now just issuer
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	expected := testIssuer + "/" + issuerPath
+	expected = "https://example.com:1234/v1/identity/oidc"
 	if discoveryResp.Issuer != expected {
 		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}

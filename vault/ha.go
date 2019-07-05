@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -472,18 +473,31 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
-				// We call this in a goroutine so that we can give up the
-				// statelock and have this shut us down; sealInternal has a
-				// workflow where it watches for the stopCh to close so we want
-				// to return from here
 				c.logger.Error("error performing key upgrades", "error", err)
-				go c.Shutdown()
+
+				// If we fail due to anything other than a context canceled
+				// error we should shutdown as we may have the incorrect Keys.
+				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+					// We call this in a goroutine so that we can give up the
+					// statelock and have this shut us down; sealInternal has a
+					// workflow where it watches for the stopCh to close so we want
+					// to return from here
+					go c.Shutdown()
+				}
+
 				c.heldHALock = nil
 				lock.Unlock()
 				close(continueCh)
 				c.stateLock.Unlock()
 				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
-				return
+
+				// If we are shutting down we should return from this function,
+				// otherwise continue
+				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+					continue
+				} else {
+					return
+				}
 			}
 		}
 

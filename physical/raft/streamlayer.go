@@ -293,7 +293,11 @@ func (l *raftLayer) Stop() error {
 // Handoff is used to hand off a connection to the
 // RaftLayer. This allows it to be Accept()'ed
 func (l *raftLayer) Handoff(ctx context.Context, wg *sync.WaitGroup, quit chan struct{}, conn *tls.Conn) error {
-	if l.closed {
+	l.closeLock.Lock()
+	closed := l.closed
+	l.closeLock.Unlock()
+
+	if closed {
 		return errors.New("raft is shutdown")
 	}
 

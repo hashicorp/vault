@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,6 +19,8 @@ import (
 )
 
 const dbUser = "vaultstatictest"
+
+const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
@@ -791,6 +794,142 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	// Verify all pws are as they should
 	pass := true
 	for k, v := range pws {
+		switch {
+		case k == "plugin-static-role-65":
+			// expect all passwords to be different
+			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
+				pass = false
+			}
+		case k == "plugin-static-role-130":
+			// expect the first two to be equal, but different from the third
+			if v[0] != v[1] || v[0] == v[2] {
+				pass = false
+			}
+		case k == "plugin-static-role-5400":
+			// expect all passwords to be equal
+			if v[0] != v[1] || v[1] != v[2] {
+				pass = false
+			}
+		}
+	}
+	if !pass {
+		t.Fatalf("password rotations did not match expected: %#v", pws)
+	}
+}
+
+func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	// allow initQueue to finish
+	bd := b.(*databaseBackend)
+	if bd.credRotationQueue == nil {
+		t.Fatal("database backend had no credential rotation queue")
+	}
+
+	// configure backend, add item and confirm length
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	defer cleanup()
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "mongodb-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-mongo-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-mongo-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// create three static roles with different rotation periods
+	testCases := []string{"65", "130", "5400"}
+	for _, tc := range testCases {
+		roleName := "plugin-static-role-" + tc
+		data = map[string]interface{}{
+			"name":            roleName,
+			"db_name":         "plugin-mongo-test",
+			"username":        "statictestMongo" + tc,
+			"rotation_period": tc,
+		}
+
+		req = &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "static-roles/" + roleName,
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+	}
+
+	// verify the queue has 3 items in it
+	if bd.credRotationQueue.Len() != 3 {
+		t.Fatalf("expected 3 items in the rotation queue, got: (%d)", bd.credRotationQueue.Len())
+	}
+
+	// List the roles
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles/",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 3 {
+		t.Fatalf("expected 3 roles, got: (%d)", len(keys))
+	}
+
+	// capture initial passwords, before the periodic function is triggered
+	pws := make(map[string][]string, 0)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// sleep to make sure the 65s role will be up for rotation by the time the
+	// periodic function ticks
+	time.Sleep(7 * time.Second)
+
+	// sleep 75 to make sure the periodic func has time to actually run
+	time.Sleep(75 * time.Second)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// sleep more, this should allow both sr65 and sr130 to rotate
+	time.Sleep(140 * time.Second)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// verify all pws are as they should
+	pass := true
+	for k, v := range pws {
+		if len(v) < 3 {
+			t.Fatalf("expected to find 3 passwords for (%s), only found (%d)", k, len(v))
+		}
 		switch {
 		case k == "plugin-static-role-65":
 			// expect all passwords to be different

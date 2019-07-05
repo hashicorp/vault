@@ -224,7 +224,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 	var cancelFunc context.CancelFunc
 	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
-	_, err = m.router.Route(ctx, req)
+	resp, err := m.router.Route(ctx, req)
 	if grabStatelock && releaseLock {
 		m.core.stateLock.RUnlock()
 	}
@@ -236,7 +236,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 		err = nil
 	}
 	// If we failed due to read-only storage, we can't do anything; ignore
-	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+	if (err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error())) ||
+		(resp.IsError() && strings.Contains(resp.Error().Error(), logical.ErrReadOnly.Error())) {
 		err = nil
 	}
 	if err != nil {

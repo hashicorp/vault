@@ -90,7 +90,7 @@ type oidcCache struct {
 }
 
 const (
-	issuerPath           = "v1/identity/oidc"
+	issuerPath           = "identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
@@ -401,7 +401,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		c.effectiveIssuer = i.core.redirectAddr
 	}
 
-	c.effectiveIssuer += "/" + ns.Path + issuerPath
+	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
 
 	i.oidcCache.SetDefault(ns, "config", &c)
 
@@ -698,7 +698,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
 	if !strutil.StrListContains(key.AllowedClientIDs, "*") && !strutil.StrListContains(key.AllowedClientIDs, role.ClientID) {
-		return logical.ErrorResponse("The key %q does not list the client id of the role %q as an allowed_clientID", role.Key, roleName), nil
+		return logical.ErrorResponse("the key %q does not list the client ID of the role %q as an allowed client ID", role.Key, roleName), nil
 	}
 
 	// generate an OIDC token from entity data

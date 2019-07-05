@@ -44,11 +44,21 @@ module('Integration | Component | http-requests-table', function(hooks) {
   });
 
   test('it shows the percent change between each time window', async function(assert) {
-    await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
-    const expected = Math.abs(
-      (((COUNTERS[1].total - COUNTERS[0].total) / COUNTERS[1].total) * 100).toFixed(1)
-    );
+    const simple_counters = [
+      { start_time: '2019-04-01T00:00:00Z', total: 1 },
+      { start_time: '2019-05-01T00:00:00Z', total: 2 },
+      { start_time: '2019-06-01T00:00:00Z', total: 1 },
+      { start_time: '2019-07-01T00:00:00Z', total: 1 },
+    ];
+    this.set('counters', simple_counters);
 
-    assert.ok(this.element.textContent.includes(expected));
+    await render(hbs`<HttpRequestsTable @counters={{counters}}/>`);
+    // the expectedValues are in reverse chronological order because that is the order
+    // that the table shows its data.
+    let expectedValues = ['', '-50%', '100%', ''];
+
+    this.element.querySelectorAll('[data-test-change]').forEach((td, i) => {
+      return assert.equal(td.textContent.trim(), expectedValues[i]);
+    });
   });
 });

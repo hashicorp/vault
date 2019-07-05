@@ -26,6 +26,8 @@ IMPROVEMENTS:
    for the auto-auth functionality [GH-6988]
  * audit/file: Dramatically speed up file operations by changing
    locking/marshaling order [GH-7024]
+ * auth/jwt: A new `verbose_oidc_logging` role parameter has been added to help
+   troubleshoot OIDC configuration [JWT-57]
  * auth/token: Allow the support of the identity system for the token backend
    via token roles [GH-6267]
  * cli: `path-help` now allows `-format=json` to be specified, which will

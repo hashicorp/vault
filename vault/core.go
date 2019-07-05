@@ -451,6 +451,8 @@ type Core struct {
 	raftFollowerStates *raftFollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
+	// Stores the pending peers we are waiting to give answers
+	pendingRaftPeers map[string][]byte
 
 	coreNumber int
 }
@@ -1620,7 +1622,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
-		c.startPeriodicRaftTLSRotate(ctx)
+		if err := c.setupRaftActiveNode(ctx); err != nil {
+			return err
+		}
 
 		if err := c.startForwarding(ctx); err != nil {
 			return err
@@ -1710,7 +1714,7 @@ func (c *Core) preSeal() error {
 
 	c.stopForwarding()
 
-	c.stopPeriodicRaftTLSRotate()
+	c.stopRaftActiveNode()
 
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {
