@@ -406,16 +406,18 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 				return false, err
 			}
 		}
+		fallthrough
+
 	case currentAwsVersion:
-		break
+
 	default:
 		return false, fmt.Errorf("unrecognized role version: %d", version.Version)
 	}
 
 	// save the current version
 	if upgraded {
-		cv := awsVersion{Version: currentAwsVersion}
-		entry, err = logical.StorageEntryJSON("config/version", &cv)
+		version.Version = currentAwsVersion
+		entry, err = logical.StorageEntryJSON("config/version", &version)
 		if err != nil {
 			return false, err
 		}
