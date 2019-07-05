@@ -212,7 +212,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	rotateStatements := statements
 	if len(rotateStatements) == 0 {
-		rotateStatements = []string{defaultMySQLRotateRootCredentialsSQL}
+		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
 	}
 
 	db, err := m.getConnection(ctx)
@@ -270,8 +270,9 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 // the password of static accounts, as well as rolling back passwords in the
 // database in the event an updated database fails to save in Vault's storage.
 func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	if len(statements.Rotation) == 0 {
-		return "", "", errors.New("empty rotation statements")
+	rotateStatements := statements.Rotation
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
 	}
 
 	username = staticUser.Username
