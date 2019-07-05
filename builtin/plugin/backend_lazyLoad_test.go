@@ -14,7 +14,39 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
-func TestBackend_startBackend(t *testing.T) {
+func TestBackend_lazyLoad(t *testing.T) {
+
+	// normal load
+	var invocations int
+	b := testLazyLoad(t, func() error {
+		invocations++
+		return nil
+	})
+	if invocations != 1 {
+		t.Fatalf("expected 1 invocation")
+	}
+	if b.canary != "" {
+		t.Fatalf("expected empty canary")
+	}
+
+	// load with plugin shutdown
+	invocations = 0
+	b = testLazyLoad(t, func() error {
+		invocations++
+		if invocations == 1 {
+			return plugin.ErrPluginShutdown
+		}
+		return nil
+	})
+	if invocations != 2 {
+		t.Fatalf("expected 2 invocations")
+	}
+	if b.canary == "" {
+		t.Fatalf("expected canary")
+	}
+}
+
+func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
 
 	sysView := newTestSystemView()
 
@@ -28,6 +60,7 @@ func TestBackend_startBackend(t *testing.T) {
 		},
 	}
 
+	// this is a dummy plugin that hasn't really been loaded yet
 	orig, err := plugin.NewBackend(ctx, "test-plugin", consts.PluginTypeSecrets, sysView, config, true)
 	if err != nil {
 		t.Fatal(err)
@@ -38,15 +71,16 @@ func TestBackend_startBackend(t *testing.T) {
 		config:  config,
 	}
 
-	err = b.startBackend(ctx, &logical.InmemStorage{})
+	// lazy load
+	err = b.lazyLoadBackend(ctx, &logical.InmemStorage{}, methodWrapper)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if !b.loaded {
 		t.Fatalf("not loaded")
 	}
 
+	// make sure dummy plugin was handled properly
 	ob := orig.(*testBackend)
 	if !ob.cleaned {
 		t.Fatalf("not cleaned")
@@ -58,6 +92,7 @@ func TestBackend_startBackend(t *testing.T) {
 		t.Fatalf("initialized")
 	}
 
+	// make sure our newly initialized plugin was handled properly
 	nb := b.Backend.(*testBackend)
 	if nb.cleaned {
 		t.Fatalf("cleaned")
@@ -68,6 +103,8 @@ func TestBackend_startBackend(t *testing.T) {
 	if !nb.initialized {
 		t.Fatalf("not initialized")
 	}
+
+	return b
 }
 
 //------------------------------------------------------------------
@@ -104,13 +141,14 @@ func (b *testBackend) SpecialPaths() *logical.Paths {
 	}
 }
 
+func (b *testBackend) Logger() hclog.Logger {
+	return logging.NewVaultLogger(hclog.Trace)
+}
+
 func (b *testBackend) HandleRequest(context.Context, *logical.Request) (*logical.Response, error) {
 	panic("not needed")
 }
 func (b *testBackend) System() logical.SystemView {
-	panic("not needed")
-}
-func (b *testBackend) Logger() hclog.Logger {
 	panic("not needed")
 }
 func (b *testBackend) HandleExistenceCheck(context.Context, *logical.Request) (bool, bool, error) {
@@ -123,12 +161,7 @@ func (b *testBackend) InvalidateKey(context.Context, string) {
 //------------------------------------------------------------------
 
 type testSystemView struct {
-
-	// its probably not StaticSystemView's intended purpose to be embedded this
-	// way, but we are doing it anyway for testing, so we don't have to define
-	// a whole logical.SystemView
 	logical.StaticSystemView
-
 	factory logical.Factory
 }
 
