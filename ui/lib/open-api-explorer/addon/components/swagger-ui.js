@@ -2,9 +2,8 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
-import Swag from 'swagger-ui-dist';
+//import Swag from 'swagger-ui-dist';
 
-const { SwaggerUIBundle } = Swag;
 const { APP } = config;
 
 const SearchFilterPlugin = () => {
@@ -28,7 +27,7 @@ const SearchFilterPlugin = () => {
   };
 };
 
-const CONFIG = (componentInstance, initialFilter) => {
+const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
   return {
     dom_id: `#${componentInstance.elementId}-swagger`,
     url: '/v1/sys/internal/specs/openapi',
@@ -76,11 +75,12 @@ export default Component.extend({
   onFilterChange() {},
   swaggerLoading: true,
 
-  didInsertElement() {
+  async didInsertElement() {
+    const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
     this._super(...arguments);
     // trim any initial slashes
     let initialFilter = this.initialFilter.replace(/^(\/)+/, '');
-    SwaggerUIBundle(CONFIG(this, initialFilter));
+    SwaggerUIBundle(CONFIG(SwaggerUIBundle, this, initialFilter));
   },
 
   actions: {
