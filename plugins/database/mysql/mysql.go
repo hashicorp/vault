@@ -22,7 +22,7 @@ const (
 		DROP USER '{{name}}'@'%'
 	`
 
-	defaultMySQLRotateRootCredentialsSQL = `
+	defaultMySQLRotateCredentialsSQL = `
 		ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
 	`
 
