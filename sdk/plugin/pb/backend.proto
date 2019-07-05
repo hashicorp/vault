@@ -355,6 +355,15 @@ message HandleRequestReply {
 	ProtoError err = 2;
 }
 
+// InitializeArgs is the args for Initialize method.
+message InitializeArgs {
+}
+
+// InitializeReply is the reply for Initialize method.
+message InitializeReply {
+	ProtoError err = 1;
+}
+
 // SpecialPathsReply is the reply for SpecialPaths method.
 message SpecialPathsReply {
 	Paths paths = 1;
@@ -433,6 +442,10 @@ service Backend {
 	// broker_id to create a connection back to Vault for use with the Storage
 	// and SystemView clients.
 	rpc Setup(SetupArgs) returns (SetupReply);
+
+	// Initialize is invoked just after mounting a backend to allow it to
+	// handle any initialization tasks that need to be performed.
+	rpc Initialize(InitializeArgs) returns (InitializeReply);
 
    	// Type returns the BackendType for the particular backend
 	rpc Type(Empty) returns (TypeReply);

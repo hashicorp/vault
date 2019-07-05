@@ -185,6 +185,17 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return err
 	}
 
+	if !nilMount {
+		// restore the original readOnlyErr, so we can write to the view in
+		// Initialize() if necessary
+		view.setReadOnlyErr(origViewReadOnlyErr)
+		// initialize, using the core's active context.
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -678,6 +689,21 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Populate cache
 		NamespaceByID(ctx, entry.NamespaceID, c)
+
+		// Initialize
+		if !nilMount {
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if backend == nil {
+					c.logger.Error("skipping initialization on nil backend", "path", entry.Path)
+					return
+				}
+
+				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				if err != nil {
+					c.logger.Error("failed to initialize auth entry", "path", entry.Path, "error", err)
+				}
+			})
+		}
 	}
 
 	if persistNeeded {
