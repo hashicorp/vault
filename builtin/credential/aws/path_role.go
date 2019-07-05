@@ -335,7 +335,10 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 		s := req.Storage
 
 		logger := b.Logger().Named("initialize")
-		logger.Info("starting initialization")
+		logger.Debug("starting initialization")
+
+		var upgradeCtx context.Context
+		upgradeCtx, b.upgradeCancelFunc = context.WithCancel(context.Background())
 
 		go func() {
 			// The vault will become unsealed while this goroutine is running,
@@ -346,7 +349,7 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 			b.roleMutex.Lock()
 			defer b.roleMutex.Unlock()
 
-			upgraded, err := b.upgrade(ctx, s)
+			upgraded, err := b.upgrade(upgradeCtx, s)
 			if err != nil {
 				logger.Error("error running initialization", "error", err)
 				return
@@ -373,7 +376,6 @@ const currentAwsVersion = 1
 
 // upgrade does an upgrade, if necessary
 func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
-
 	entry, err := s.Get(ctx, "config/version")
 	if err != nil {
 		return false, err
