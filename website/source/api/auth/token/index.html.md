@@ -590,7 +590,8 @@ $ curl \
     "renewable": true,
     "token_explicit_max_ttl": 0,
     "token_period": 0,
-    "token_type": "default-service"
+    "token_type": "default-service",
+    "token_num_uses": 1
   },
   "warnings": null
 }
@@ -690,6 +691,12 @@ tokens created against a role to be revoked using the
   be returned unless the client requests a `batch` type token at token creation
   time. If `default-batch`, `batch` tokens will be returned unless the client
   requests a `service` type token at token creation time.
+- `token_num_uses` `(int: 0)` - The maximum number of times tokens can be used 
+  when they're issued by this role. The default of zero represents an unlimited
+  amount of times. Setting this to a negative number will error. Setting it to 
+  a positive number will cause the count of uses to be incremented on each use
+  of an individual token. For example, if set to one, the first call to Vault
+  using the token will succeed, but the second will fail with a 403.
 - `allowed_entity_aliases` `(string: "", or list: [])` - String or JSON list 
   of allowed entity aliases. If set, specifies the entity aliases which are 
   allowed to be used during token generation. This field supports globbing. 
@@ -704,7 +711,8 @@ tokens created against a role to be revoked using the
   "orphan": false,
   "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"],
   "renewable": true,
-  "allowed_entity_aliases": ["web-entity-alias", "app-entity-*"]
+  "allowed_entity_aliases": ["web-entity-alias", "app-entity-*"],
+  "token_num_uses": 1
 ```
 
 ### Sample Request
