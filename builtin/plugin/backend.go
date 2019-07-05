@@ -91,56 +91,6 @@ type PluginBackend struct {
 	loaded bool
 }
 
-// foo starts a plugin backend
-func (b *PluginBackend) foo(ctx context.Context, storage logical.Storage) error {
-	pluginName := b.config.Config["plugin_name"]
-	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
-	if err != nil {
-		return err
-	}
-
-	//// Ensure proper cleanup of the backend (i.e. call client.Kill())
-	//b.Backend.Cleanup(ctx)
-
-	//nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
-	//if err != nil {
-	//	return err
-	//}
-	//err = nb.Setup(ctx, b.config)
-	//if err != nil {
-	//	return err
-	//}
-
-	//// If the backend has not been loaded (i.e. still in metadata mode),
-	//// check if type and special paths still matches
-	//if !b.loaded {
-	//	if b.Backend.Type() != nb.Type() {
-	//		nb.Cleanup(ctx)
-	//		b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
-	//		return ErrMismatchType
-	//	}
-	//	if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
-	//		nb.Cleanup(ctx)
-	//		b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
-	//		return ErrMismatchPaths
-	//	}
-	//}
-
-	//b.Backend = nb
-	//b.loaded = true
-
-	//// call Initialize() explicitly here.
-	//return b.Backend.Initialize(ctx, &logical.InitializationRequest{
-	//	Storage: storage,
-	//})
-
-	//-----------------------------------------------------------
-
-	println(pluginName, pluginType)
-
-	return nil
-}
-
 // startBackend starts a plugin backend
 func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storage) error {
 	pluginName := b.config.Config["plugin_name"]
