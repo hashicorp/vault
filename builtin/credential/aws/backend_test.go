@@ -477,13 +477,13 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	stepCreate := logicaltest.TestStep{
 		Operation: logical.CreateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Data:      data,
 	}
 
 	stepUpdate := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Data:      data,
 	}
 
@@ -492,7 +492,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 	stepInvalidAccessKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Data:      data3,
 		ErrorOk:   true,
 	}
@@ -502,7 +502,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 	stepInvalidSecretKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Data:      data4,
 		ErrorOk:   true,
 	}
@@ -521,23 +521,23 @@ func TestBackend_ConfigClient(t *testing.T) {
 	// test existence check returning false
 	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/core.Client'")
+		t.Fatal("existence check not found for path 'config/client'")
 	}
 	if exists {
-		t.Fatal("existence check should have returned 'false' for 'config/core.Client'")
+		t.Fatal("existence check should have returned 'false' for 'config/client'")
 	}
 
 	// create an entry
 	configClientCreateRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Data:      data,
 		Storage:   storage,
 	}
@@ -549,17 +549,17 @@ func TestBackend_ConfigClient(t *testing.T) {
 	//test existence check returning true
 	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/core.Client'")
+		t.Fatal("existence check not found for path 'config/client'")
 	}
 	if !exists {
-		t.Fatal("existence check should have returned 'true' for 'config/core.Client'")
+		t.Fatal("existence check should have returned 'true' for 'config/client'")
 	}
 
 	endpointData := map[string]interface{}{
@@ -570,7 +570,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	endpointReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Storage:   storage,
 		Data:      endpointData,
 	}
@@ -1105,7 +1105,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Storage:   storage,
-			Path:      "config/core.Client",
+			Path:      "config/client",
 			Data:      clientConfig,
 		})
 		if err != nil {
@@ -1115,7 +1115,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	loginInput := map[string]interface{}{
 		"pkcs7": pkcs7,
-		"nonce": "vault-core.Client-nonce",
+		"nonce": "vault-client-nonce",
 	}
 
 	parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
@@ -1244,17 +1244,17 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	_, ok := resp.Auth.Metadata["nonce"]
 	if ok {
-		t.Fatalf("core.Client nonce should not have been returned")
+		t.Fatalf("client nonce should not have been returned")
 	}
 
-	loginInput["nonce"] = "changed-vault-core.Client-nonce"
+	loginInput["nonce"] = "changed-vault-client-nonce"
 	// try to login again with changed nonce
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("login attempt should have failed due to core.Client nonce mismatch")
+		t.Fatalf("login attempt should have failed due to client nonce mismatch")
 	}
 
 	// Check if a whitelist identity entry is created after the login.
@@ -1502,7 +1502,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// Test setup largely done
 	// At this point, we're going to:
-	// 1. Configure the core.Client to require our test header value
+	// 1. Configure the client to require our test header value
 	// 2. Configure identity to use the ARN for the alias
 	// 3. Configure two different roles:
 	//    a. One bound to our test user
@@ -1521,7 +1521,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	clientRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/core.Client",
+		Path:      "config/client",
 		Storage:   storage,
 		Data:      clientConfigData,
 	}
