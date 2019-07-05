@@ -24,15 +24,16 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	time.Sleep(time.Second)
 	core := cluster.Cores[0]
 
-	// fetch the auth aws auth's path in storage
-	authPaths, err := core.UnderlyingStorage.List(ctx, "auth/")
+	// Fetch the aws auth's path in storage.  This is a uuid that is different
+	// every time we run the test
+	authUuids, err := core.UnderlyingStorage.List(ctx, "auth/")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(authPaths) != 1 {
+	if len(authUuids) != 1 {
 		t.Fatalf("expected exactly one auth path")
 	}
-	awsPath := "auth/" + authPaths[0]
+	awsPath := "auth/" + authUuids[0]
 
 	// Make sure that the upgrade happened, by fishing the 'config/version'
 	// entry out of storage.  We can't use core.Client.Logical().Read() to do
@@ -84,7 +85,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 
 	// Seal, and then Unseal. This will once again trigger an Initialize(),
-	// only this time there will be a role for it to upgrade.
+	// only this time there will be a role present during the upgrade.
 	core.Seal(t)
 	cluster.UnsealCores(t)
 	time.Sleep(time.Second)
