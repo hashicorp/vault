@@ -64,7 +64,6 @@
     "date-fns": "^1.29.0",
     "deepmerge": "^2.1.1",
     "doctoc": "^1.4.0",
-    "ember-ajax": "^3.1.0",
     "ember-api-actions": "^0.1.8",
     "ember-auto-import": "^1.2.3",
     "ember-basic-dropdown": "^1.0.0",
