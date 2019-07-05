@@ -553,10 +553,8 @@ func isControlGroupRun(req *logical.Request) bool {
 func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
-	if err != nil {
-		if shouldForward(c, err) {
-			return forward(ctx, c, req)
-		}
+	if shouldForward(c, resp, err) {
+		return forward(ctx, c, req)
 	}
 	atomic.AddUint64(c.counters.requests, 1)
 	return resp, err

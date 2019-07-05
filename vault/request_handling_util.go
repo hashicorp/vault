@@ -19,7 +19,7 @@ func checkErrControlGroupTokenNeedsCreated(err error) bool {
 	return false
 }
 
-func shouldForward(c *Core, routeErr error) bool {
+func shouldForward(c *Core, resp *logical.Response, err error) bool {
 	return false
 }
 
