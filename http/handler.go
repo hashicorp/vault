@@ -308,7 +308,7 @@ func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logica
 		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
 	}
 	if !valid {
-		return fmt.Errorf("wrapping token is not valid or does not exist")
+		return consts.ErrInvalidWrappingToken
 	}
 
 	return nil

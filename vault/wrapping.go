@@ -339,6 +339,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 				Request:            req,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
+			if err != nil {
+				logInput.OuterErr = errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+			}
+			if !valid {
+				logInput.OuterErr = consts.ErrInvalidWrappingToken
+			}
 			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}

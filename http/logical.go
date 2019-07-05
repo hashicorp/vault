@@ -217,6 +217,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 					} else {
 						respondError(w, http.StatusBadRequest, err)
 					}
+					return
 				}
 
 			// The -self paths have no meaning outside of the token NS, so

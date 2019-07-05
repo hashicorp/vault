@@ -907,6 +907,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
+	req.Unauthenticated = true
+
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
@@ -915,8 +917,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			nonHMACReqDataKeys = rawVals.([]string)
 		}
 	}
-
-	req.Unauthenticated = true
 
 	// Do an unauth check. This will cause EGP policies to be checked
 	var auth *logical.Auth
