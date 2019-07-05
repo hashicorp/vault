@@ -2,7 +2,6 @@ import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
-//import Swag from 'swagger-ui-dist';
 
 const { APP } = config;
 
