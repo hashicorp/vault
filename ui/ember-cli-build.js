@@ -7,13 +7,10 @@ const config = require('./config/environment')();
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
-const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
     svgJar: {
-      //optimize: false,
-      //paths: [],
       optimizer: {},
       sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
       rootURL: '/ui/',
