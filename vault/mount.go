@@ -1145,6 +1145,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Initialize
 		if !nilMount {
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if backend == nil {
+					c.logger.Error("skipping initialization on nil backend", "path", entry.Path)
+					return
+				}
+
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					c.logger.Error("failed to initialize mount entry", "path", entry.Path, "error", err)
