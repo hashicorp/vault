@@ -317,16 +317,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		// Perform audit logging before returning if there's an issue with checking
 		// the wrapping token
 		if err != nil || !valid {
-			// Get non-HMAC'ed request data keys
-			var nonHMACReqDataKeys []string
-			entry := c.router.MatchingMountEntry(ctx, req.Path)
-			if entry != nil {
-				// Get and set ignored HMAC'd value.
-				if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-					nonHMACReqDataKeys = rawVals.([]string)
-				}
-			}
-
 			// We log the Auth object like so here since the wrapping token can
 			// come from the header, which gets set as the ClientToken
 			auth := &logical.Auth{
@@ -335,12 +325,11 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 			}
 
 			logInput := &logical.LogInput{
-				Auth:               auth,
-				Request:            req,
-				NonHMACReqDataKeys: nonHMACReqDataKeys,
+				Auth:    auth,
+				Request: req,
 			}
 			if err != nil {
-				logInput.OuterErr = errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+				logInput.OuterErr = errors.New("error validating wrapping token")
 			}
 			if !valid {
 				logInput.OuterErr = consts.ErrInvalidWrappingToken

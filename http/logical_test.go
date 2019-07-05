@@ -406,34 +406,34 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	}
 
 	{
-		// Make a wrapping/unwrap request with an invalid token
-		resp := testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
-			"token": "foo",
-		})
-		testResponseStatus(t, resp, 400)
-		body := map[string][]string{}
+		resp := testHttpPostWrapped(t, root, addr+"/v1/auth/token/create", nil, 10*time.Second)
+		testResponseStatus(t, resp, 200)
+		body := map[string]interface{}{}
 		testResponseBody(t, resp, &body)
-		if body["errors"][0] != "wrapping token is not valid or does not exist" {
-			t.Fatal(body)
-		}
+
+		wrapToken := body["wrap_info"].(map[string]interface{})["token"].(string)
+
+		// Make a wrapping/unwrap request with an invalid token
+		resp = testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+			"token": wrapToken,
+		})
+		testResponseStatus(t, resp, 200)
 
 		// Check the audit trail on request and response
-		if len(noop.ReqAuth) != 2 {
+		if len(noop.ReqAuth) != 3 {
 			t.Fatalf("bad: %#v", noop)
 		}
-		auth := noop.ReqAuth[1]
+		auth := noop.ReqAuth[2]
 		if auth.ClientToken != root {
 			t.Fatalf("bad client token: %#v", auth)
 		}
-		if len(noop.Req) != 2 || noop.Req[1].Path != "sys/wrapping/unwrap" {
-			t.Fatalf("bad:\ngot:\n%#v", noop.Req[1])
+		if len(noop.Req) != 3 || noop.Req[2].Path != "sys/wrapping/unwrap" {
+			t.Fatalf("bad:\ngot:\n%#v", noop.Req[2])
 		}
 
-		if len(noop.ReqErrs) != 2 {
+		// Make sure there is only one error in the logs
+		if noop.ReqErrs[1] != nil || noop.ReqErrs[2] != nil {
 			t.Fatalf("bad: %#v", noop.RespErrs)
-		}
-		if noop.ReqErrs[1] != consts.ErrInvalidWrappingToken {
-			t.Fatalf("bad: %#v", noop.ReqErrs)
 		}
 	}
 }
