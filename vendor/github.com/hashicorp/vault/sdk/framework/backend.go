@@ -49,6 +49,10 @@ type Backend struct {
 	// and ease specifying callbacks for revocation, renewal, etc.
 	Secrets []*Secret
 
+	// InitializeFunc is the callback, which if set, will be invoked via
+	// Initialize() just after a plugin has been mounted.
+	InitializeFunc InitializeFunc
+
 	// PeriodicFunc is the callback, which if set, will be invoked when the
 	// periodic timer of RollbackManager ticks. This can be used by
 	// backends to do anything it wishes to do periodically.
@@ -107,6 +111,18 @@ type CleanupFunc func(context.Context)
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
+
+// InitializeFunc is the callback, which if set, will be invoked via
+// Initialize() just after a plugin has been mounted.
+type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// Initialize is the logical.Backend implementation.
+func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	if b.InitializeFunc != nil {
+		return b.InitializeFunc(ctx, req)
+	}
+	return nil
+}
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
