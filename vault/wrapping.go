@@ -313,6 +313,21 @@ DONELISTHANDLING:
 // in logical request will be updated if the wrapping token was provided within
 // a JWT token.
 func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
+	if req == nil {
+		return false, fmt.Errorf("invalid request")
+	}
+
+	if c.Sealed() {
+		return false, consts.ErrSealed
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.standby && !c.perfStandby {
+		return false, consts.ErrStandby
+	}
+
 	defer func() {
 		// Perform audit logging before returning if there's an issue with checking
 		// the wrapping token
@@ -339,10 +354,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 			}
 		}
 	}()
-
-	if req == nil {
-		return false, fmt.Errorf("invalid request")
-	}
 
 	var token string
 	var thirdParty bool
@@ -401,16 +412,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 
 	if token == "" {
 		return false, fmt.Errorf("token is empty")
-	}
-
-	if c.Sealed() {
-		return false, consts.ErrSealed
-	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.standby && !c.perfStandby {
-		return false, consts.ErrStandby
 	}
 
 	te, err := c.tokenStore.Lookup(ctx, token)
