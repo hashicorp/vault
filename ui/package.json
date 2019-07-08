@@ -151,6 +151,9 @@
     "jsdoc-to-markdown": "^4.0.1",
     "lint-staged": "^8.0.4"
   },
+  "resolutions": {
+    "handlebars": "^4.1.2"
+  },
   "engines": {
     "node": " >= 10.*"
   },
