@@ -362,9 +362,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.3-0.20190703041405-a2810eb6965d => ./api
+# github.com/hashicorp/vault/api v1.0.3-0.20190708230447-ffa4dc93e6d0 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190703041405-a2810eb6965d => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.12-0.20190708230402-d89b4f2aacc4 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -717,8 +717,8 @@ google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/spanner/v1
-google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/googleapis/api/httpbody
