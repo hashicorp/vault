@@ -182,7 +182,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 		// for backwards compatibility reasons.
 		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
 		Completion: complete.PredictSet("standard", "json"),
-		Usage:      "Log format. Supported values are \"standard\" and \"json\".",
+		Usage:      `Log format. Supported values are "standard" and "json".`,
 	})
 
 	f = set.NewFlagSet("Dev Options")
