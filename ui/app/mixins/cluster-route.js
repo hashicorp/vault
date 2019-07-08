@@ -14,18 +14,23 @@ export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
 export default Mixin.create({
   auth: service(),
   store: service(),
+  router: service(),
 
   transitionToTargetRoute(transition) {
     const targetRoute = this.targetRouteName(transition);
-    if (targetRoute && targetRoute !== this.routeName) {
+
+    if (targetRoute && targetRoute !== this.routeName && transition.targetName !== targetRoute) {
+      if (targetRoute === AUTH) {
+        return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
+      }
       return this.transitionTo(targetRoute);
     }
 
     return RSVP.resolve();
   },
 
-  beforeModel() {
-    return this.transitionToTargetRoute();
+  beforeModel(transition) {
+    return this.transitionToTargetRoute(transition);
   },
 
   clusterModel() {
