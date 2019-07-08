@@ -2,6 +2,7 @@ package logging
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -31,6 +32,46 @@ func Test_ParseLogFormat(t *testing.T) {
 		}
 		if !reflect.DeepEqual(test.expectedErr, err) {
 			t.Errorf("expected error %v, got %v", test.expectedErr, err)
+		}
+	}
+}
+
+func Test_ParseEnv_VAULT_LOG_FORMAT(t *testing.T) {
+
+	oldVLF := os.Getenv("VAULT_LOG_FORMAT")
+	defer os.Setenv("VAULT_LOG_FORMAT", oldVLF)
+
+	testParseEnvLogFormat(t, "VAULT_LOG_FORMAT")
+}
+
+func Test_ParseEnv_LOGXI_FORMAT(t *testing.T) {
+
+	oldVLF := os.Getenv("VAULT_LOG_FORMAT")
+	defer os.Setenv("VAULT_LOG_FORMAT", oldVLF)
+
+	oldLogxi := os.Getenv("LOGXI_FORMAT")
+	defer os.Setenv("LOGXI_FORMAT", oldLogxi)
+
+	os.Setenv("VAULT_LOG_FORMAT", "")
+	testParseEnvLogFormat(t, "LOGXI_FORMAT")
+}
+
+func testParseEnvLogFormat(t *testing.T, name string) {
+
+	env := []string{
+		"json", "vauLT_Json", "VAULT-JSON", "vaulTJSon",
+		"standard", "STANDARD",
+		"bogus"}
+
+	formats := []LogFormat{
+		JSONFormat, JSONFormat, JSONFormat, JSONFormat,
+		StandardFormat, StandardFormat,
+		UnspecifiedFormat}
+
+	for i, e := range env {
+		os.Setenv(name, e)
+		if lf := ParseEnvLogFormat(); formats[i] != lf {
+			t.Errorf("expected %s, got %s", formats[i], lf)
 		}
 	}
 }
