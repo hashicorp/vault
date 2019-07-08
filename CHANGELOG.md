@@ -36,6 +36,11 @@ IMPROVEMENTS:
    duration and can be set on the mount and/or the metadata for a specific key
    [GH-7005]
 
+BUG FIXES:
+
+ * secret/database: Escape username/password before using in connection URL
+   [GH-7089]
+
 ## 1.2-beta1 (June 25th, 2019)
 
 CHANGES:
