@@ -457,8 +457,10 @@ func (c *ServerCommand) Run(args []string) int {
 		})
 	} else {
 		c.logger = log.New(&log.LoggerOptions{
-			Output:     c.logWriter,
-			Level:      level,
+			Output: c.logWriter,
+			Level:  level,
+			// Note that if logFormat is either unspecified or standard, then
+			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
 		})
 	}
