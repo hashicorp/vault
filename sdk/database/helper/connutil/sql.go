@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -54,9 +55,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
+	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
+	// then maybe we won't be able to use it to do URL substitution any more.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
-		"username": c.Username,
-		"password": c.Password,
+		"username": url.PathEscape(c.Username),
+		"password": url.PathEscape(c.Password),
 	})
 
 	if c.MaxOpenConnections == 0 {
