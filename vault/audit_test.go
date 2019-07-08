@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -18,92 +17,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
-
-type NoopAudit struct {
-	Config         *audit.BackendConfig
-	ReqErr         error
-	ReqAuth        []*logical.Auth
-	Req            []*logical.Request
-	ReqHeaders     []map[string][]string
-	ReqNonHMACKeys []string
-	ReqErrs        []error
-
-	RespErr            error
-	RespAuth           []*logical.Auth
-	RespReq            []*logical.Request
-	Resp               []*logical.Response
-	RespNonHMACKeys    []string
-	RespReqNonHMACKeys []string
-	RespErrs           []error
-
-	salt      *salt.Salt
-	saltMutex sync.RWMutex
-}
-
-func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	n.ReqAuth = append(n.ReqAuth, in.Auth)
-	n.Req = append(n.Req, in.Request)
-	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
-	n.ReqNonHMACKeys = in.NonHMACReqDataKeys
-	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
-	return n.ReqErr
-}
-
-func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	n.RespAuth = append(n.RespAuth, in.Auth)
-	n.RespReq = append(n.RespReq, in.Request)
-	n.Resp = append(n.Resp, in.Response)
-	n.RespErrs = append(n.RespErrs, in.OuterErr)
-
-	if in.Response != nil {
-		n.RespNonHMACKeys = in.NonHMACRespDataKeys
-		n.RespReqNonHMACKeys = in.NonHMACReqDataKeys
-	}
-
-	return n.RespErr
-}
-
-func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
-	n.saltMutex.RLock()
-	if n.salt != nil {
-		defer n.saltMutex.RUnlock()
-		return n.salt, nil
-	}
-	n.saltMutex.RUnlock()
-	n.saltMutex.Lock()
-	defer n.saltMutex.Unlock()
-	if n.salt != nil {
-		return n.salt, nil
-	}
-	salt, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
-	if err != nil {
-		return nil, err
-	}
-	n.salt = salt
-	return salt, nil
-}
-
-func (n *NoopAudit) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := n.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return salt.GetIdentifiedHMAC(data), nil
-}
-
-func (n *NoopAudit) Reload(ctx context.Context) error {
-	return nil
-}
-
-func (n *NoopAudit) Invalidate(ctx context.Context) {
-	n.saltMutex.Lock()
-	defer n.saltMutex.Unlock()
-	n.salt = nil
-}
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

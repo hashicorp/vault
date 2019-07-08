@@ -424,3 +424,72 @@ func verifyDefaultAuthTable(t *testing.T, table *MountTable) {
 		}
 	}
 }
+
+func TestCore_CredentialInitialize(t *testing.T) {
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeCredential,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		me := &MountEntry{
+			Table: credentialTableType,
+			Path:  "foo/",
+			Type:  "initable",
+		}
+		err := c.enableCredential(namespace.RootContext(nil), me)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeCredential,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		c.auth = &MountTable{
+			Type: credentialTableType,
+			Entries: []*MountEntry{
+				&MountEntry{
+					Table:            credentialTableType,
+					Path:             "foo/",
+					Type:             "initable",
+					UUID:             "abcd",
+					Accessor:         "initable-abcd",
+					BackendAwareUUID: "abcde",
+					NamespaceID:      namespace.RootNamespaceID,
+					namespace:        namespace.RootNamespace,
+				},
+			},
+		}
+
+		err := c.setupCredentials(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// run the postUnseal funcs, so that the backend will be inited
+		for _, f := range c.postUnsealFuncs {
+			f()
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+}

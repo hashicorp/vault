@@ -836,8 +836,9 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	// Validate configurable parts - for now just issuer
 	discoveryResp := &discovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	if discoveryResp.Issuer != c.identityStore.core.redirectAddr+"/"+issuerPath {
-		t.Fatalf("Expected Issuer path to be %q but found %q instead", c.identityStore.core.redirectAddr+"/"+issuerPath, discoveryResp.Issuer)
+	expected := "/v1/identity/oidc"
+	if discoveryResp.Issuer != expected {
+		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}
 
 	// Update issuer config
@@ -860,7 +861,7 @@ func TestOIDC_Path_OpenIDConfig(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// Validate configurable parts - for now just issuer
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
-	expected := testIssuer + "/" + issuerPath
+	expected = "https://example.com:1234/v1/identity/oidc"
 	if discoveryResp.Issuer != expected {
 		t.Fatalf("Expected Issuer path to be %q but found %q instead", expected, discoveryResp.Issuer)
 	}

@@ -44,6 +44,7 @@
     "@hashicorp/structure-icons": "^1.3.0",
     "Duration.js": "icholy/Duration.js#golang_compatible",
     "autosize": "^4.0.0",
+    "babel-eslint": "^10.0.2",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "base64-js": "1.2.1",
     "broccoli-asset-rev": "^2.7.0",
@@ -63,7 +64,6 @@
     "date-fns": "^1.29.0",
     "deepmerge": "^2.1.1",
     "doctoc": "^1.4.0",
-    "ember-ajax": "^3.1.0",
     "ember-api-actions": "^0.1.8",
     "ember-auto-import": "^1.2.3",
     "ember-basic-dropdown": "^1.0.0",
@@ -150,6 +150,9 @@
     "babel-loader": "^8.0.5",
     "jsdoc-to-markdown": "^4.0.1",
     "lint-staged": "^8.0.4"
+  },
+  "resolutions": {
+    "handlebars": "^4.1.2"
   },
   "engines": {
     "node": " >= 10.*"

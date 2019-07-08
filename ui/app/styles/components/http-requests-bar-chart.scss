@@ -44,6 +44,7 @@
   background: $grey;
   color: $ui-gray-010;
   border-radius: 2px;
+  pointer-events: none !important;
 }
 
 /* Creates a small triangle extender for the tooltip */

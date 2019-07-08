@@ -35,7 +35,7 @@ type backend struct {
 	configMutex sync.RWMutex
 
 	// Lock to make changes to role entries
-	roleMutex sync.RWMutex
+	roleMutex sync.Mutex
 
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex
@@ -81,6 +81,10 @@ type backend struct {
 	roleCache *cache.Cache
 
 	resolveArnToUniqueIDFunc func(context.Context, logical.Storage, string) (string, error)
+
+	// upgradeCancelFunc is used to cancel the context used in the upgrade
+	// function
+	upgradeCancelFunc context.CancelFunc
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -134,8 +138,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		InitializeFunc: b.initialize,
+		BackendType:    logical.TypeCredential,
+		Clean:          b.cleanup,
 	}
 
 	return b, nil
@@ -203,6 +209,12 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
 	}
 	return nil
+}
+
+func (b *backend) cleanup(ctx context.Context) {
+	if b.upgradeCancelFunc != nil {
+		b.upgradeCancelFunc()
+	}
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {

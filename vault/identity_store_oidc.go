@@ -90,7 +90,7 @@ type oidcCache struct {
 }
 
 const (
-	issuerPath           = "v1/identity/oidc"
+	issuerPath           = "identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
@@ -401,7 +401,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		c.effectiveIssuer = i.core.redirectAddr
 	}
 
-	c.effectiveIssuer += "/" + ns.Path + issuerPath
+	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
 
 	i.oidcCache.SetDefault(ns, "config", &c)
 
