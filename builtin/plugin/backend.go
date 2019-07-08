@@ -212,15 +212,3 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 
 	return
 }
-
-// Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
-func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
-	// This method is only ever called just after mounting, so we know that the
-	// call to lazyLoadBackend() will call startBackend().  Since
-	// startBackend() calls Initialize() on the underlying logical.Backend, the
-	// method wrapper that we pass in here is a no-op
-	return b.lazyLoadBackend(ctx, req.Storage, func() error {
-		return nil
-	})
-}
