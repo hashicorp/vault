@@ -189,7 +189,8 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 	return err
 }
 
-// HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
+// HandleRequest is a thin wrapper implementation of HandleRequest that includes
+// automatic plugin reload.
 func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 
 	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
@@ -201,7 +202,8 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 	return
 }
 
-// HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck that includes automatic plugin reload.
+// HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck
+// that includes automatic plugin reload.
 func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 
 	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
@@ -213,14 +215,8 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 	return
 }
 
-// Initialize is a thin wrapper implementation of Initialize that includes automatic plugin reload.
+// Initialize is intentionally a no-op here, the backend will instead be
+// initialized when it is lazily loaded.
 func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
-	// This method is only ever called just after mounting, so we know that the
-	// call to lazyLoadBackend() will call startBackend().  Since
-	// startBackend() calls Initialize() on the underlying logical.Backend, the
-	// method wrapper that we pass in here is a no-op
-	return b.lazyLoadBackend(ctx, req.Storage, func() error {
-		return nil
-	})
+	return nil
 }
