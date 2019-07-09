@@ -36,7 +36,9 @@ vault auth enable github
 vault auth enable jwt
 vault auth enable kubernetes
 vault auth enable ldap
+vault auth enable oidc
 vault auth enable okta
+vault auth enable pcf
 vault auth enable radius
 vault auth enable userpass
 
@@ -49,6 +51,7 @@ vault secrets enable cassandra
 vault secrets enable consul
 vault secrets enable database
 vault secrets enable gcp
+vault secrets enable gcpkms
 vault secrets enable kv
 vault secrets enable mongodb
 vault secrets enable mssql
