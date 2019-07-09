@@ -1,6 +1,12 @@
 {{#if (gt counters.length 1) }}
   <Toolbar>
-    <HttpRequestsDropdown @counters={{counters}} @onChange={{action "updateTimeWindow"}} @timeWindow={{timeWindow}}/>
+    <SelectDropdown
+      @dropdownLabel='Date Range'
+      @options={{dropdownOptions}}
+      @onChange={{action "updateTimeWindow"}}
+      @selectedItem={{timeWindow}}
+      @isInline={{true}}
+      />
   </Toolbar>
 
   <HttpRequestsBarChart @counters={{filteredCounters}} />

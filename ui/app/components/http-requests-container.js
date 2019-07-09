@@ -25,6 +25,21 @@ export default Component.extend({
   classNames: ['http-requests-container'],
   counters: null,
   timeWindow: 'All',
+  dropdownOptions: computed('counters', function() {
+    let counters = this.counters || [];
+    let options = ['All', 'Last 12 Months'];
+    if (counters.length) {
+      const years = counters
+        .map(counter => {
+          const year = new Date(counter.start_time);
+          return year.getUTCFullYear();
+        })
+        .uniq();
+      years.sort().reverse();
+      options = options.concat(years);
+    }
+    return options;
+  }),
   filteredCounters: computed('counters', 'timeWindow', function() {
     const { counters, timeWindow } = this;
     if (timeWindow === 'All') {
