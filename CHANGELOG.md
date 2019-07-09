@@ -40,6 +40,8 @@ BUG FIXES:
 
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
+ * audit: Log requests and responses due to invalid wrapping token provided
+   [GH-6541]
 
 ## 1.2-beta1 (June 25th, 2019)
 
