@@ -134,7 +134,9 @@ func (cl *Listener) StopHandler(alpn string) {
 
 // Handler returns the handler for the provided ALPN name
 func (cl *Listener) Handler(alpn string) (Handler, bool) {
+	cl.l.RLock()
 	handler, ok := cl.handlers[alpn]
+	cl.l.RUnlock()
 	return handler, ok
 }
 

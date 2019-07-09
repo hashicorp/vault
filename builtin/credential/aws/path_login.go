@@ -607,7 +607,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
 		return nil, logical.ErrPermissionDenied
 	}
 
@@ -1218,7 +1218,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
 		return nil, logical.ErrPermissionDenied
 	}
 

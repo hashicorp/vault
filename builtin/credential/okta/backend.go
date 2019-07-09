@@ -67,7 +67,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
 		return nil, nil, nil, logical.ErrPermissionDenied
 	}
 
