@@ -3250,6 +3250,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
+				Storage: req.Storage,
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
