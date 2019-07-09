@@ -1,4 +1,4 @@
-FROM debian:testing
+FROM debian:buster
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \
