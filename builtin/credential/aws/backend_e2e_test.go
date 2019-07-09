@@ -38,7 +38,6 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	// Make sure that the upgrade happened, by fishing the 'config/version'
 	// entry out of storage.  We can't use core.Client.Logical().Read() to do
 	// this, because 'config/version' hasn't been exposed as a path.
-	// TODO: should we expose 'config/version' as a path?
 	version, err := core.UnderlyingStorage.Get(ctx, awsPath+"config/version")
 	if err != nil {
 		t.Fatal(err)
