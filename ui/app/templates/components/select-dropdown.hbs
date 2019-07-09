@@ -1,0 +1,19 @@
+<div class="field">
+  <label for="select-dropdown-{{this.elementId}}" class="is-label">
+    {{dropdownLabel}}
+  </label>
+  <div class="control  {{if isInline "is-inline-block"}}">
+    <div class="select">
+    <select
+      id="select-dropdown-{{this.elementId}}"
+      name="selectedItem"
+      onchange={{action "onSelectItem"}}
+      data-test-select-dropdown
+      >
+      {{#each options as |op|}}
+        <option value={{op}} selected={{eq selectedItem op}}>{{op}}</option>
+      {{/each}}
+    </select>
+    </div>
+  </div>
+</div>
