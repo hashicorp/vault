@@ -6,21 +6,41 @@ const INIT = 'vault.cluster.init';
 const UNSEAL = 'vault.cluster.unseal';
 const AUTH = 'vault.cluster.auth';
 const CLUSTER = 'vault.cluster';
+const CLUSTER_INDEX = 'vault.cluster.index';
 const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
 
-export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
+export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
 
 export default Mixin.create({
   auth: service(),
   store: service(),
   router: service(),
 
-  transitionToTargetRoute(transition) {
+  transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
 
-    if (targetRoute && targetRoute !== this.routeName && transition.targetName !== targetRoute) {
-      if (targetRoute === AUTH) {
+    if (
+      targetRoute &&
+      targetRoute !== this.routeName &&
+      targetRoute !== transition.targetName &&
+      targetRoute !== this.router.currentRouteName
+    ) {
+      console.log(
+        'routeName: ',
+        this.routeName,
+        ' targetName: ',
+        transition.targetName,
+        ' targetRoute: ',
+        targetRoute,
+        ' currentRouteName: ',
+        this.router.currentRouteName
+      );
+      if (
+        // only want to redirect if we're going to authenticate
+        targetRoute === AUTH &&
+        transition.targetName !== CLUSTER_INDEX
+      ) {
         return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
       }
       return this.transitionTo(targetRoute);
