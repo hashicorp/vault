@@ -14,7 +14,11 @@ CHANGES:
  * auth/approle: `bound_cidr_list` is no longer returned when reading a role
  
  FEATURES:
-
+ 
+ * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
+   manage storage directly within a Vault cluster. This new integrated storage
+   solution is based on the Raft protocol which is also used to back HashiCorp
+   Consul and HashiCorp Nomad.
  * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
    where you can browse the endpoints avaliable to you and make requests. To try
    it out, open the Web CLI and type `api`.
