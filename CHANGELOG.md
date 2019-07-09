@@ -1,4 +1,4 @@
-## 1.2-beta2 (Unreleased)
+## 1.2-beta2 (July 9th, 2019)
 
 CHANGES:
 
