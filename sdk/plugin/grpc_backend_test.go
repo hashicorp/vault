@@ -137,6 +137,16 @@ func TestGRPCBackendPlugin_Setup(t *testing.T) {
 	defer cleanup()
 }
 
+func TestGRPCBackendPlugin_Initialize(t *testing.T) {
+	b, cleanup := testGRPCBackend(t)
+	defer cleanup()
+
+	err := b.Initialize(context.Background(), &logical.InitializationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	// Create a mock provider
 	pluginMap := map[string]gplugin.Plugin{

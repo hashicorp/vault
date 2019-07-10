@@ -319,6 +319,119 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 	return nil
 }
 
+// initialize is used to initialize the AWS roles
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+
+	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
+	// Initialize only if we are either:
+	//   (1) A local mount.
+	//   (2) Are _NOT_ a replicated performance secondary
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+
+		s := req.Storage
+
+		logger := b.Logger().Named("initialize")
+		logger.Debug("starting initialization")
+
+		var upgradeCtx context.Context
+		upgradeCtx, b.upgradeCancelFunc = context.WithCancel(context.Background())
+
+		go func() {
+			// The vault will become unsealed while this goroutine is running,
+			// so we could see some role requests block until the lock is
+			// released.  However we'd rather see those requests block (and
+			// potentially start timing out) than allow a non-upgraded role to
+			// be fetched.
+			b.roleMutex.Lock()
+			defer b.roleMutex.Unlock()
+
+			upgraded, err := b.upgrade(upgradeCtx, s)
+			if err != nil {
+				logger.Error("error running initialization", "error", err)
+				return
+			}
+			if upgraded {
+				logger.Info("an upgrade was performed during initialization")
+			}
+		}()
+
+	}
+
+	return nil
+}
+
+// awsVersion stores info about the the latest aws version that we have
+// upgraded to.
+type awsVersion struct {
+	Version int `json:"version"`
+}
+
+// currentAwsVersion stores the latest version that we have upgraded to.
+// Note that this is tracked independently from currentRoleStorageVersion.
+const currentAwsVersion = 1
+
+// upgrade does an upgrade, if necessary
+func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
+	entry, err := s.Get(ctx, "config/version")
+	if err != nil {
+		return false, err
+	}
+	var version awsVersion
+	if entry != nil {
+		err = entry.DecodeJSON(&version)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	upgraded := version.Version < currentAwsVersion
+	switch version.Version {
+	case 0:
+		// Read all the role names.
+		roleNames, err := s.List(ctx, "role/")
+		if err != nil {
+			return false, err
+		}
+
+		// Upgrade the roles as necessary.
+		for _, roleName := range roleNames {
+			// make sure the context hasn't been canceled
+			if ctx.Err() != nil {
+				return false, err
+			}
+			_, err := b.roleInternal(ctx, s, roleName)
+			if err != nil {
+				return false, err
+			}
+		}
+		fallthrough
+
+	case currentAwsVersion:
+		version.Version = currentAwsVersion
+
+	default:
+		return false, fmt.Errorf("unrecognized role version: %d", version.Version)
+	}
+
+	// save the current version
+	if upgraded {
+		entry, err = logical.StorageEntryJSON("config/version", &version)
+		if err != nil {
+			return false, err
+		}
+		err = s.Put(ctx, entry)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgraded, nil
+}
+
 // If needed, updates the role entry and returns a bool indicating if it was updated
 // (and thus needs to be persisted)
 func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {

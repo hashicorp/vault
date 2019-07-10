@@ -27,7 +27,12 @@ export default Component.extend({
     let counters = this.counters || [];
     let options = [];
     if (counters.length) {
-      const years = counters.map(counter => counter.start_time.substr(0, 4)).uniq();
+      const years = counters
+        .map(counter => {
+          const year = new Date(counter.start_time);
+          return year.getUTCFullYear();
+        })
+        .uniq();
       years.sort().reverse();
       options = options.concat(years);
     }

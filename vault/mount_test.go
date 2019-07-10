@@ -735,3 +735,72 @@ func TestSingletonMountTableFunc(t *testing.T) {
 		t.Fatal("unexpected entry type for auth")
 	}
 }
+
+func TestCore_MountInitialize(t *testing.T) {
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		// Mount the noop backend
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  "foo/",
+			Type:  "initable",
+		}
+		if err := c.mount(namespace.RootContext(nil), me); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		c.mounts = &MountTable{
+			Type: mountTableType,
+			Entries: []*MountEntry{
+				&MountEntry{
+					Table:            mountTableType,
+					Path:             "foo/",
+					Type:             "initable",
+					UUID:             "abcd",
+					Accessor:         "initable-abcd",
+					BackendAwareUUID: "abcde",
+					NamespaceID:      namespace.RootNamespaceID,
+					namespace:        namespace.RootNamespace,
+				},
+			},
+		}
+
+		err := c.setupMounts(namespace.RootContext(nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// run the postUnseal funcs, so that the backend will be inited
+		for _, f := range c.postUnsealFuncs {
+			f()
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+}

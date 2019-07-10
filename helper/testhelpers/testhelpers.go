@@ -723,8 +723,9 @@ func CreateRaftBackend(t testing.T, logger hclog.Logger, nodeID string) (physica
 	logger.Info("raft dir", "dir", raftDir)
 
 	conf := map[string]string{
-		"path":    raftDir,
-		"node_id": nodeID,
+		"path":                   raftDir,
+		"node_id":                nodeID,
+		"performance_multiplier": "8",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger)

@@ -309,16 +309,57 @@ DONELISTHANDLING:
 	return nil, nil
 }
 
-// ValidateWrappingToken checks whether a token is a wrapping token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (bool, error) {
+// validateWrappingToken checks whether a token is a wrapping token. The passed
+// in logical request will be updated if the wrapping token was provided within
+// a JWT token.
+func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
 
-	var err error
+	if c.Sealed() {
+		return false, consts.ErrSealed
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.standby && !c.perfStandby {
+		return false, consts.ErrStandby
+	}
+
+	defer func() {
+		// Perform audit logging before returning if there's an issue with checking
+		// the wrapping token
+		if err != nil || !valid {
+			// We log the Auth object like so here since the wrapping token can
+			// come from the header, which gets set as the ClientToken
+			auth := &logical.Auth{
+				ClientToken: req.ClientToken,
+				Accessor:    req.ClientTokenAccessor,
+			}
+
+			logInput := &logical.LogInput{
+				Auth:    auth,
+				Request: req,
+			}
+			if err != nil {
+				logInput.OuterErr = errors.New("error validating wrapping token")
+			}
+			if !valid {
+				logInput.OuterErr = consts.ErrInvalidWrappingToken
+			}
+			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			}
+		}
+	}()
 
 	var token string
 	var thirdParty bool
+
+	// Check if the wrapping token is coming from the request body, and if not
+	// assume that req.ClientToken is the wrapping token
 	if req.Data != nil && req.Data["token"] != nil {
 		thirdParty = true
 		if tokenStr, ok := req.Data["token"].(string); !ok {
@@ -365,21 +406,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		} else {
 			req.Data["token"] = claims.ID
 		}
+
 		token = claims.ID
 	}
 
 	if token == "" {
 		return false, fmt.Errorf("token is empty")
-	}
-
-	if c.Sealed() {
-		return false, consts.ErrSealed
-	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.standby && !c.perfStandby {
-		return false, consts.ErrStandby
 	}
 
 	te, err := c.tokenStore.Lookup(ctx, token)
