@@ -1,5 +1,9 @@
 <div class="field">
-  <label for="select-dropdown-{{this.elementId}}" class="is-label">
+  <label
+    for="select-dropdown-{{this.elementId}}"
+    class="is-label"
+    data-test-select-label
+    >
     {{dropdownLabel}}
   </label>
   <div class="control {{if isInline "select is-inline-block"}}">

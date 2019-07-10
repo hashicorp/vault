@@ -3,24 +3,34 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
+const OPTIONS = ['foo', 'bar', 'baz'];
+const LABEL = 'Boop';
+
 module('Integration | Component | select-dropdown', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
+  hooks.beforeEach(function() {
+    this.set('options', OPTIONS);
+    this.set('dropdownLabel', LABEL);
+  });
 
-    await render(hbs`{{select-dropdown}}`);
+  test('it renders with options', async function(assert) {
+    await render(hbs`<SelectDropdown @options={{options}} @dropdownLabel={{dropdownLabel}}/>`);
 
-    assert.equal(this.element.textContent.trim(), '');
+    assert.dom('[data-test-select-label]').hasText('Boop');
+    assert.dom('[data-test-select-dropdown]').hasValue('foo', 'shows the first item by default');
 
-    // Template block usage:
-    await render(hbs`
-      {{#select-dropdown}}
-        template block text
-      {{/select-dropdown}}
-    `);
+    assert.equal(
+      this.element.querySelector('[data-test-select-dropdown]').options.length,
+      3,
+      'it adds an option for each year in the data set'
+    );
+  });
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+  test('it renders the selectedItem as selected by default', async function(assert) {
+    this.set('selectedItem', 'baz');
+    await render(hbs`<SelectDropdown @options={{options}} @selectedItem={{selectedItem}}/>`);
+
+    assert.dom('[data-test-select-dropdown]').hasValue('baz');
   });
 });
