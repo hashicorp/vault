@@ -15,7 +15,10 @@ SelectDropdown components are used to render a dropdown.
 **Example**
   
 ```js
-<SelectDropdown dropdownLabel='Date Range' @options={{options}} @onChange={{onChange}}/>
+<SelectDropdown
+  dropdownLabel='Date Range'
+  @options={{options}}
+  @onChange={{onChange}}/>
 ```
 
 **See**
