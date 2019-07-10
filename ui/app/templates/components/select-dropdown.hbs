@@ -2,9 +2,10 @@
   <label for="select-dropdown-{{this.elementId}}" class="is-label">
     {{dropdownLabel}}
   </label>
-  <div class="control  {{if isInline "is-inline-block"}}">
+  <div class="control {{if isInline "select is-inline-block"}}">
     <div class="select">
     <select
+      class="select"
       id="select-dropdown-{{this.elementId}}"
       name="selectedItem"
       onchange={{action "onSelectItem"}}
