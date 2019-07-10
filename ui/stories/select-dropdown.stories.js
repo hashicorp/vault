@@ -20,6 +20,11 @@ storiesOf('SelectDropdown/', module)
         <br />
         <h5 class="title is-5">Select Dropdown - Inline</h5>
         <SelectDropdown @options={{options}} @dropdownLabel={{dropdownLabel}} @isInline={{true}}/>
+
+        <br />
+        <br />
+        <h5 class="title is-5">Select Dropdown - Fullwidth</h5>
+        <SelectDropdown @options={{options}} @dropdownLabel={{dropdownLabel}} @isFullwidth={{true}}/>
     `,
       context: {
         options: array('options', OPTIONS),

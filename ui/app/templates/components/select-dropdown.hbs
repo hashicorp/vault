@@ -7,7 +7,7 @@
     {{dropdownLabel}}
   </label>
   <div class="control {{if isInline "select is-inline-block"}}">
-    <div class="select">
+    <div class="select {{if isFullwidth "is-fullwidth"}}">
     <select
       class="select"
       id="select-dropdown-{{this.elementId}}"
