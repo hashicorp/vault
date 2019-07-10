@@ -27,7 +27,7 @@
     </ToolbarActions>
   </Toolbar>
 {{/if}}
+{{#each model.authConfigs as |config|}}
+  <FieldGroupShow @model={{config}} @showAllFields=true />
+{{/each}}
 <FieldGroupShow @model={{model}} @showAllFields=true />
-{{#if model.backend}}
-  <FieldGroupShow @model={{model.backend}} @showAllFields=true />
-{{/if}}

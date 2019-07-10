@@ -1,34 +1,33 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { allSettled } from 'rsvp';
 
 export default Route.extend({
   wizard: service(),
   pathHelp: service('path-help'),
 
-  modelType(backendType, section) {
-    const MODELS = {
-      'aws-client': 'auth-config/aws/client',
-      'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',
-      'aws-roletag-blacklist': 'auth-config/aws/roletag-blacklist',
-      'azure-configuration': 'auth-config/azure',
-      'github-configuration': 'auth-config/github',
-      'gcp-configuration': 'auth-config/gcp',
-      'jwt-configuration': 'auth-config/jwt',
-      'oidc-configuration': 'auth-config/oidc',
-      'kubernetes-configuration': 'auth-config/kubernetes',
-      'ldap-configuration': 'auth-config/ldap',
-      'okta-configuration': 'auth-config/okta',
-      'radius-configuration': 'auth-config/radius',
-    };
-    return MODELS[`${backendType}-${section}`];
+  configModels(backendType) {
+    const backends = ['azure', 'github', 'gcp', 'jwt', 'oidc', 'kubernetes', 'ldap', 'okta', 'radius'];
+    if (backendType === 'aws') {
+      return [
+        'auth-config/aws/client',
+        'auth-config/aws/identity-whitelist',
+        'auth-config/aws/roletag-blacklist',
+      ];
+    }
+    if (backends.includes(backendType)) {
+      return [`auth-config/${backendType}`];
+    }
+    return [];
   },
 
   beforeModel() {
     const { apiPath, method, type } = this.getMethodAndModelInfo();
-    let modelType = this.modelType(type, 'configuration');
-    if (modelType) {
-      return this.pathHelp.getNewModel(modelType, method, apiPath);
-    }
+    let configModelTypes = this.configModels(type);
+    let configModels = configModelTypes.map(config => {
+      return this.pathHelp.getNewModel(config, method, apiPath);
+    });
+    return allSettled(configModels);
   },
 
   getMethodAndModelInfo() {
@@ -40,27 +39,14 @@ export default Route.extend({
 
   model() {
     const backend = this.modelFor('vault.cluster.access.method');
-    const modelType = this.modelType(backend.type, 'configuration');
     this.wizard.transitionFeatureMachine(this.wizard.featureState, 'DETAILS', backend.type);
+    let configModelTypes = this.configModels(backend.type);
+    let authConfigs = configModelTypes.map(config => this.store.findRecord(config, backend.id));
 
-    if (!modelType) {
-      return backend; //tune options
-    }
-
-    return this.store
-      .findRecord(modelType, backend.id)
-      .then(methodConfig => {
-        methodConfig.set('backend', backend);
-        return methodConfig;
-      })
-      .catch(e => {
-        // if you haven't saved a config, the API 404s
-        // we still have tune options
-        if (e.httpStatus === 404) {
-          return backend;
-        }
-        throw e;
-      });
+    return allSettled(authConfigs).then(configs => {
+      backend.authConfigs.pushObjects(configs.filter(config => config.state === 'fulfilled').mapBy('value'));
+      return backend;
+    });
   },
 
   setupController(controller) {
