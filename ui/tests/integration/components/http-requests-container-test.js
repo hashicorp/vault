@@ -21,7 +21,7 @@ module('Integration | Component | http-requests-container', function(hooks) {
     await render(hbs`<HttpRequestsContainer @counters={{counters}}/>`);
 
     assert.dom('.http-requests-container').exists();
-    assert.dom('.http-requests-dropdown').exists();
+    assert.dom('.select-dropdown').exists();
     assert.dom('.http-requests-bar-chart-container').exists();
     assert.dom('.http-requests-table').exists();
   });
@@ -43,7 +43,7 @@ module('Integration | Component | http-requests-container', function(hooks) {
 
   test('it filters the data according to the dropdown', async function(assert) {
     await render(hbs`<HttpRequestsContainer @counters={{counters}}/>`);
-    await fillIn('[data-test-timewindow-select]', '2018');
+    await fillIn('[data-test-select-dropdown]', '2018');
 
     assert.dom('.shadow-bars> .bar').exists({ count: 1 }, 'filters the bar chart to the selected year');
     assert.dom('.start-time').exists({ count: 1 }, 'filters the table to the selected year');
