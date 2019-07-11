@@ -6,10 +6,10 @@ import Component from '@ember/component';
  *
  * @example
  * ```js
- * <SelectDropdown dropdownLabel='Date Range' @options={{options}} @onChange={{onChange}}/>
+ * <SelectDropdown label='Date Range' @options={{options}} @onChange={{onChange}}/>
  * ```
  *
- * @param dropdownLabel=null {String} - The label for the select element.
+ * @param label=null {String} - The label for the select element.
  * @param [selectedItem=null] {String} - The currently selected item.
  * @param options=null {Array} - A list of items that the user will select from.
  * @param [isInline=false] {Bool} - Whether or not the select should be displayed as inline-block or block.
@@ -19,7 +19,7 @@ import Component from '@ember/component';
 
 export default Component.extend({
   classNames: ['select-dropdown', 'field'],
-  dropdownLabel: null,
+  label: null,
   selectedItem: null,
   options: null,
   isInline: false,

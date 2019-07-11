@@ -6,7 +6,7 @@ SelectDropdown components are used to render a dropdown.
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| dropdownLabel | <code>String</code> | <code></code> | The label for the select element. |
+| label | <code>String</code> | <code></code> | The label for the select element. |
 | [selectedItem] | <code>String</code> | <code></code> | The currently selected item. |
 | options | <code>Array</code> | <code></code> | A list of items that the user will select from. |
 | [isInline] | <code>Bool</code> | <code>false</code> | Whether or not the select should be displayed as inline-block or block. |
@@ -17,7 +17,7 @@ SelectDropdown components are used to render a dropdown.
   
 ```js
 <SelectDropdown
-  dropdownLabel='Date Range'
+  label='Date Range'
   @options={{options}}
   @onChange={{onChange}}/>
 ```

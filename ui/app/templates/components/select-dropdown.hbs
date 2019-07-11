@@ -4,14 +4,13 @@
     class="is-label"
     data-test-select-label
     >
-    {{dropdownLabel}}
+    {{label}}
   </label>
   <div class="control {{if isInline "select is-inline-block"}}">
     <div class="select {{if isFullwidth "is-fullwidth"}}">
     <select
       class="select"
       id="select-dropdown-{{this.elementId}}"
-      name="selectedItem"
       onchange={{action this.onChange value="target.value"}}
       data-test-select-dropdown
       >

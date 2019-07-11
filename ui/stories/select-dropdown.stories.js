@@ -16,14 +16,14 @@ storiesOf('SelectDropdown/', module)
         <h5 class="title is-5">Select Dropdown</h5>
         <SelectDropdown
           @options={{options}}
-          @dropdownLabel={{dropdownLabel}}
+          @label={{label}}
           @isInline={{isInline}}
           @isFullwidth={{isFullwidth}}
         />
     `,
       context: {
         options: array('options', OPTIONS),
-        dropdownLabel: text('dropdownLabel', 'Favorite fruit'),
+        label: text('label', 'Favorite fruit'),
         isFullwidth: boolean('isFullwidth', false),
         isInline: boolean('isInline', false),
       },
@@ -38,13 +38,13 @@ storiesOf('SelectDropdown/', module)
         <Toolbar>
           <SelectDropdown
             @options={{options}}
-            @dropdownLabel={{dropdownLabel}}
+            @label={{label}}
             @isInline={{true}}/>
         </Toolbar>
     `,
       context: {
         options: array('options', OPTIONS),
-        dropdownLabel: text('dropdownLabel', 'Favorite fruit'),
+        label: text('label', 'Favorite fruit'),
       },
     }),
     { notes }

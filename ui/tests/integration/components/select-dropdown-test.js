@@ -11,11 +11,11 @@ module('Integration | Component | select-dropdown', function(hooks) {
 
   hooks.beforeEach(function() {
     this.set('options', OPTIONS);
-    this.set('dropdownLabel', LABEL);
+    this.set('label', LABEL);
   });
 
   test('it renders with options', async function(assert) {
-    await render(hbs`<SelectDropdown @options={{options}} @dropdownLabel={{dropdownLabel}}/>`);
+    await render(hbs`<SelectDropdown @options={{options}} @label={{label}}/>`);
 
     assert.dom('[data-test-select-label]').hasText('Boop');
     assert.dom('[data-test-select-dropdown]').hasValue('foo', 'shows the first item by default');
