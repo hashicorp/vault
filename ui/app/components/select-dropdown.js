@@ -18,20 +18,11 @@ import Component from '@ember/component';
  */
 
 export default Component.extend({
-  classNames: ['select-dropdown'],
+  classNames: ['select-dropdown', 'field'],
   dropdownLabel: null,
   selectedItem: null,
   options: null,
   isInline: false,
   isFullwidth: false,
   onChange() {},
-  actions: {
-    onSelectItem(e) {
-      const newValue = e.target.value;
-      const { selectedItem } = this;
-      if (newValue !== selectedItem) {
-        this.onChange(newValue);
-      }
-    },
-  },
 });

@@ -1,4 +1,4 @@
-<div class="field">
+
   <label
     for="select-dropdown-{{this.elementId}}"
     class="is-label"
@@ -12,7 +12,7 @@
       class="select"
       id="select-dropdown-{{this.elementId}}"
       name="selectedItem"
-      onchange={{action "onSelectItem"}}
+      onchange={{action this.onChange value="target.value"}}
       data-test-select-dropdown
       >
       {{#each options as |op|}}
@@ -21,4 +21,4 @@
     </select>
     </div>
   </div>
-</div>
+
