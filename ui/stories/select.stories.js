@@ -2,19 +2,19 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, array, text, boolean } from '@storybook/addon-knobs';
-import notes from './select-dropdown.md';
+import notes from './select.md';
 
 const OPTIONS = ['apple', 'blueberry', 'cherry'];
 
-storiesOf('SelectDropdown/', module)
+storiesOf('Select/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(
-    `SelectDropdown`,
+    `Select`,
     () => ({
       template: hbs`
-        <h5 class="title is-5">Select Dropdown</h5>
-        <SelectDropdown
+        <h5 class="title is-5">Select</h5>
+        <Select
           @options={{options}}
           @label={{label}}
           @isInline={{isInline}}
@@ -31,12 +31,12 @@ storiesOf('SelectDropdown/', module)
     { notes }
   )
   .add(
-    `SelectDropdown in a Toolbar`,
+    `Select in a Toolbar`,
     () => ({
       template: hbs`
-        <h5 class="title is-5">Select Dropdown</h5>
+        <h5 class="title is-5">Select</h5>
         <Toolbar>
-          <SelectDropdown
+          <Select
             @options={{options}}
             @label={{label}}
             @isInline={{true}}/>

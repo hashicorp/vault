@@ -1,6 +1,6 @@
 {{#if (gt counters.length 1) }}
   <Toolbar>
-    <SelectDropdown
+    <Select
       @label='Date Range'
       @options={{dropdownOptions}}
       @onChange={{action "updateTimeWindow"}}

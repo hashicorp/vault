@@ -1,12 +1,12 @@
 import Component from '@ember/component';
 
 /**
- * @module SelectDropdown
- * SelectDropdown components are used to render a dropdown.
+ * @module Select
+ * Select components are used to render a dropdown.
  *
  * @example
  * ```js
- * <SelectDropdown label='Date Range' @options={{options}} @onChange={{onChange}}/>
+ * <Select label='Date Range' @options={{options}} @onChange={{onChange}}/>
  * ```
  *
  * @param label=null {String} - The label for the select element.
@@ -18,7 +18,7 @@ import Component from '@ember/component';
  */
 
 export default Component.extend({
-  classNames: ['select-dropdown', 'field'],
+  classNames: ['field'],
   label: null,
   selectedItem: null,
   options: null,

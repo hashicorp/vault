@@ -1,6 +1,6 @@
 
   <label
-    for="select-dropdown-{{this.elementId}}"
+    for="select-{{this.elementId}}"
     class="is-label"
     data-test-select-label
     >
@@ -10,9 +10,9 @@
     <div class="select {{if isFullwidth "is-fullwidth"}}">
     <select
       class="select"
-      id="select-dropdown-{{this.elementId}}"
+      id="select-{{this.elementId}}"
       onchange={{action this.onChange value="target.value"}}
-      data-test-select-dropdown
+      data-test-select
       >
       {{#each options as |op|}}
         <option value={{op}} selected={{eq selectedItem op}}>{{op}}</option>

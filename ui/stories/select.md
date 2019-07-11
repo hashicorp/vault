@@ -1,7 +1,7 @@
-<!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/select-dropdown.js. To make changes, first edit that file and run "yarn gen-story-md select-dropdown" to re-generate the content.-->
+<!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/select.js. To make changes, first edit that file and run "yarn gen-story-md select" to re-generate the content.-->
 
-## SelectDropdown
-SelectDropdown components are used to render a dropdown.
+## Select
+Select components are used to render a dropdown.
 
 
 | Param | Type | Default | Description |
@@ -16,7 +16,7 @@ SelectDropdown components are used to render a dropdown.
 **Example**
   
 ```js
-<SelectDropdown
+<Select
   label='Date Range'
   @options={{options}}
   @onChange={{onChange}}/>
@@ -24,7 +24,7 @@ SelectDropdown components are used to render a dropdown.
 
 **See**
 
-- [Uses of SelectDropdown](https://github.com/hashicorp/vault/search?l=Handlebars&q=SelectDropdown+OR+select-dropdown)
-- [SelectDropdown Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/select-dropdown.js)
+- [Uses of Select](https://github.com/hashicorp/vault/search?l=Handlebars&q=Select+OR+select)
+- [Select Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/select.js)
 
 ---
