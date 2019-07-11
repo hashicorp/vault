@@ -456,6 +456,10 @@ WRITE_RESPONSE:
 		w.Header().Set("Content-Type", contentType)
 	}
 
+	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
+		w.Header().Set("Cache-Control", cacheControl)
+	}
+
 	w.WriteHeader(status)
 	w.Write(body)
 }
