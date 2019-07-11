@@ -1,7 +1,7 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import { withKnobs, array, text, boolean } from '@storybook/addon-knobs';
+import { withKnobs, object, text, boolean } from '@storybook/addon-knobs';
 import notes from './select.md';
 
 const OPTIONS = ['apple', 'blueberry', 'cherry'];
@@ -22,7 +22,9 @@ storiesOf('Select/', module)
         />
     `,
       context: {
-        options: array('options', OPTIONS),
+        options: object('options', OPTIONS),
+        valueAttribute: text('valueAttribute', 'value'),
+        labelAttribute: text('labelAttribute', 'label'),
         label: text('label', 'Favorite fruit'),
         isFullwidth: boolean('isFullwidth', false),
         isInline: boolean('isInline', false),
@@ -43,7 +45,9 @@ storiesOf('Select/', module)
         </Toolbar>
     `,
       context: {
-        options: array('options', OPTIONS),
+        options: object('options', OPTIONS),
+        valueAttribute: text('valueAttribute', 'value'),
+        labelAttribute: text('labelAttribute', 'label'),
         label: text('label', 'Favorite fruit'),
       },
     }),
