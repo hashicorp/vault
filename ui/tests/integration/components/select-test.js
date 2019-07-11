@@ -1,7 +1,8 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import sinon from 'sinon';
 
 const OPTIONS = ['foo', 'bar', 'baz'];
 const LABEL = 'Boop';
@@ -32,5 +33,13 @@ module('Integration | Component | Select', function(hooks) {
     await render(hbs`<Select @options={{options}} @selectedItem={{selectedItem}}/>`);
 
     assert.dom('[data-test-select]').hasValue('baz');
+  });
+
+  test('it calls onChange when an item is selected', async function(assert) {
+    this.set('onChange', sinon.spy());
+    await render(hbs`<Select @options={{options}} @onChange={{onChange}}/>`);
+    await fillIn('[data-test-select]', 'bar');
+
+    assert.ok(this.onChange.calledOnce);
   });
 });
