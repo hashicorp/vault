@@ -26,16 +26,6 @@ export default Mixin.create({
       targetRoute !== transition.targetName &&
       targetRoute !== this.router.currentRouteName
     ) {
-      console.log(
-        'routeName: ',
-        this.routeName,
-        ' targetName: ',
-        transition.targetName,
-        ' targetRoute: ',
-        targetRoute,
-        ' currentRouteName: ',
-        this.router.currentRouteName
-      );
       if (
         // only want to redirect if we're going to authenticate
         targetRoute === AUTH &&
