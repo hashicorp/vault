@@ -7,7 +7,6 @@ Select components are used to render a dropdown.
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | label | <code>String</code> | <code></code> | The label for the select element. |
-| [selectedItem] | <code>String</code> | <code></code> | The currently selected item. |
 | options | <code>Array</code> | <code></code> | A list of items that the user will select from. |
 | [isInline] | <code>Bool</code> | <code>false</code> | Whether or not the select should be displayed as inline-block or block. |
 | [isFullwidth] | <code>Bool</code> | <code>false</code> | Whether or not the select should take up the full width of the parent element. |

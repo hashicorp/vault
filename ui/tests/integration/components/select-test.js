@@ -28,13 +28,6 @@ module('Integration | Component | Select', function(hooks) {
     );
   });
 
-  test('it renders the selectedItem as selected by default', async function(assert) {
-    this.set('selectedItem', 'baz');
-    await render(hbs`<Select @options={{options}} @selectedItem={{selectedItem}}/>`);
-
-    assert.dom('[data-test-select]').hasValue('baz');
-  });
-
   test('it calls onChange when an item is selected', async function(assert) {
     this.set('onChange', sinon.spy());
     await render(hbs`<Select @options={{options}} @onChange={{onChange}}/>`);
