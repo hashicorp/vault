@@ -160,8 +160,8 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-			// safety_buffer defaults to 180 days for roletag blacklist
-			safety_buffer := 15552000
+			// safetyBuffer defaults to 180 days for roletag blacklist
+			safetyBuffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 			if err != nil {
 				return err
@@ -173,12 +173,12 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 				if tidyBlacklistConfigEntry.DisablePeriodicTidy {
 					skipBlacklistTidy = true
 				}
-				// overwrite the default safety_buffer with the configured value
-				safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
+				// overwrite the default safetyBuffer with the configured value
+				safetyBuffer = tidyBlacklistConfigEntry.SafetyBuffer
 			}
 			// tidy role tags if explicitly not disabled
 			if !skipBlacklistTidy {
-				b.tidyBlacklistRoleTag(ctx, req, safety_buffer)
+				b.tidyBlacklistRoleTag(ctx, req, safetyBuffer)
 			}
 		}
 

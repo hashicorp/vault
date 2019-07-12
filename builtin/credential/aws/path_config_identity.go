@@ -63,7 +63,7 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 	return &entry, nil
 }
 
-func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := identityConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
