@@ -25,9 +25,13 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathConfigIdentityRead,
-			logical.UpdateOperation: pathConfigIdentityUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathConfigIdentityHelpSyn,

@@ -33,11 +33,19 @@ Defaults to 4320h (180 days).`,
 
 		ExistenceCheck: b.pathConfigTidyRoletagBlacklistExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyRoletagBlacklistCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyRoletagBlacklistCreateUpdate,
-			logical.ReadOperation:   b.pathConfigTidyRoletagBlacklistRead,
-			logical.DeleteOperation: b.pathConfigTidyRoletagBlacklistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigTidyRoletagBlacklistHelpSyn,

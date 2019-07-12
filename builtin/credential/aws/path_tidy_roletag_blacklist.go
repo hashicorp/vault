@@ -25,8 +25,10 @@ expiration, before it is removed from the backend storage.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidyRoletagBlacklistUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathTidyRoletagBlacklistUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathTidyRoletagBlacklistSyn,

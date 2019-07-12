@@ -19,9 +19,13 @@ gets cached in this whitelist, keyed off of instance ID.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathIdentityWhitelistRead,
-			logical.DeleteOperation: b.pathIdentityWhitelistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathIdentityWhitelistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathIdentityWhitelistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathIdentityWhitelistSyn,
@@ -33,8 +37,10 @@ func (b *backend) pathListIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathWhitelistIdentitiesList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathWhitelistIdentitiesList,
+			},
 		},
 
 		HelpSynopsis:    pathListIdentityWhitelistHelpSyn,

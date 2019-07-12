@@ -109,9 +109,13 @@ needs to be supplied along with 'identity' parameter.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLoginUpdate,
-			logical.AliasLookaheadOperation: b.pathLoginUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLoginUpdate,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLoginUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathLoginSyn,

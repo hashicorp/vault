@@ -25,8 +25,10 @@ expiration, before it is removed from the backend storage.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidyIdentityWhitelistUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathTidyIdentityWhitelistUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathTidyIdentityWhitelistSyn,

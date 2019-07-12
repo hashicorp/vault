@@ -56,11 +56,19 @@ func (b *backend) pathConfigClient() *framework.Path {
 
 		ExistenceCheck: b.pathConfigClientExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigClientCreateUpdate,
-			logical.UpdateOperation: b.pathConfigClientCreateUpdate,
-			logical.DeleteOperation: b.pathConfigClientDelete,
-			logical.ReadOperation:   b.pathConfigClientRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientCreateUpdate,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientDelete,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientRead,
+			},
 		},
 
 		HelpSynopsis:    pathConfigClientHelpSyn,

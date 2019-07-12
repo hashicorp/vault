@@ -59,8 +59,10 @@ If set, the created tag can only be used by the instance with the given ID.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRoleTagUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleTagUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathRoleTagSyn,

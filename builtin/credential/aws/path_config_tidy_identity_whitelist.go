@@ -31,11 +31,19 @@ expiration, before it is removed from the backend storage.`,
 
 		ExistenceCheck: b.pathConfigTidyIdentityWhitelistExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
-			logical.ReadOperation:   b.pathConfigTidyIdentityWhitelistRead,
-			logical.DeleteOperation: b.pathConfigTidyIdentityWhitelistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigTidyIdentityWhitelistHelpSyn,

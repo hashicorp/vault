@@ -20,10 +20,16 @@ to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRoletagBlacklistUpdate,
-			logical.ReadOperation:   b.pathRoletagBlacklistRead,
-			logical.DeleteOperation: b.pathRoletagBlacklistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathRoletagBlacklistSyn,
@@ -36,8 +42,10 @@ func (b *backend) pathListRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoletagBlacklistsList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistsList,
+			},
 		},
 
 		HelpSynopsis:    pathListRoletagBlacklistHelpSyn,

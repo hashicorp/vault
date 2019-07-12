@@ -68,8 +68,10 @@ func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathCertificatesList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCertificatesList,
+			},
 		},
 
 		HelpSynopsis:    pathListCertificatesHelpSyn,
@@ -103,11 +105,19 @@ vary. Defaults to "pkcs7".`,
 
 		ExistenceCheck: b.pathConfigCertificateExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.ReadOperation:   b.pathConfigCertificateRead,
-			logical.DeleteOperation: b.pathConfigCertificateDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCertificateSyn,

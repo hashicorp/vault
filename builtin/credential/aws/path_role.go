@@ -175,11 +175,19 @@ auth_type is ec2.`,
 
 		ExistenceCheck: b.pathRoleExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathRoleCreateUpdate,
-			logical.UpdateOperation: b.pathRoleCreateUpdate,
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleDelete,
+			},
 		},
 
 		HelpSynopsis:    pathRoleSyn,
@@ -194,8 +202,10 @@ func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
@@ -207,8 +217,10 @@ func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
