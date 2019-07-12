@@ -132,7 +132,7 @@ of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
 is only allowed if auth_type is ec2.`,
 			},
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_period"),
 				Deprecated:  true,

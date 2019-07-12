@@ -17,7 +17,7 @@ func (b *backend) pathTidyRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/roletag-blacklist$",
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 259200, // 72h
 				Description: `The amount of extra time that must have passed beyond the roletag

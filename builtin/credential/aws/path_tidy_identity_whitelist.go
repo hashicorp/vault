@@ -17,7 +17,7 @@ func (b *backend) pathTidyIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/identity-whitelist$",
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 259200,
 				Description: `The amount of extra time that must have passed beyond the identity's
