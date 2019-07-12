@@ -58,11 +58,13 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
+
 			"allowed_sts_header_values": {
 				Type:        framework.TypeCommaStringSlice,
 				Default:     nil,
 				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
+
 			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
