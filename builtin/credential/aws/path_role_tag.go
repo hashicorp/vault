@@ -20,7 +20,7 @@ import (
 
 const roleTagVersion = "v1"
 
-func pathRoleTag(b *backend) *framework.Path {
+func (b *backend) pathRoleTag() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
 		Fields: map[string]*framework.FieldSchema{

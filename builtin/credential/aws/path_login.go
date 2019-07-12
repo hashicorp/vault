@@ -37,7 +37,7 @@ const (
 	ec2EntityType                 = "ec2_instance"
 )
 
-func pathLogin(b *backend) *framework.Path {
+func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{

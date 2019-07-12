@@ -12,7 +12,7 @@ const (
 	roletagBlacklistConfigPath = "config/tidy/roletag-blacklist"
 )
 
-func pathConfigTidyRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathConfigTidyRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", roletagBlacklistConfigPath),
 		Fields: map[string]*framework.FieldSchema{

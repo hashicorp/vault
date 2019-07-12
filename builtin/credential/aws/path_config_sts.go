@@ -13,7 +13,7 @@ type awsStsEntry struct {
 	StsRole string `json:"sts_role"`
 }
 
-func pathListSts(b *backend) *framework.Path {
+func (b *backend) pathListSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/?",
 
@@ -26,7 +26,7 @@ func pathListSts(b *backend) *framework.Path {
 	}
 }
 
-func pathConfigSts(b *backend) *framework.Path {
+func (b *backend) pathConfigSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
 		Fields: map[string]*framework.FieldSchema{

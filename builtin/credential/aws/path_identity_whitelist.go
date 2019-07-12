@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
@@ -29,7 +29,7 @@ gets cached in this whitelist, keyed off of instance ID.`,
 	}
 }
 
-func pathListIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathListIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/?",
 

@@ -6,18 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// dsaSignature represents the contents of the signature of a signed
-// content using digital signature algorithm.
-type dsaSignature struct {
-	R, S *big.Int
-}
 
 // This certificate is used to verify the PKCS#7 signature of the instance
 // identity document. As per AWS documentation, this public key is valid for
@@ -71,7 +64,7 @@ C1haGgSI/A1uZUKs/Zfnph0oEI0/hu1IIJ/SKBDtN5lvmZ/IzbOPIJWirlsllQIQ
 
 // pathListCertificates creates a path that enables listing of all
 // the AWS public certificates registered with Vault.
-func pathListCertificates(b *backend) *framework.Path {
+func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
@@ -84,7 +77,7 @@ func pathListCertificates(b *backend) *framework.Path {
 	}
 }
 
-func pathConfigCertificate(b *backend) *framework.Path {
+func (b *backend) pathConfigCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 		Fields: map[string]*framework.FieldSchema{

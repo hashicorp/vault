@@ -87,7 +87,7 @@ type backend struct {
 	upgradeCancelFunc context.CancelFunc
 }
 
-func Backend(conf *logical.BackendConfig) (*backend, error) {
+func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
@@ -118,25 +118,25 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			},
 		},
 		Paths: []*framework.Path{
-			pathLogin(b),
-			pathListRole(b),
-			pathListRoles(b),
-			pathRole(b),
-			pathRoleTag(b),
-			pathConfigClient(b),
-			pathConfigCertificate(b),
-			pathConfigIdentity(b),
-			pathConfigSts(b),
-			pathListSts(b),
-			pathConfigTidyRoletagBlacklist(b),
-			pathConfigTidyIdentityWhitelist(b),
-			pathListCertificates(b),
-			pathListRoletagBlacklist(b),
-			pathRoletagBlacklist(b),
-			pathTidyRoletagBlacklist(b),
-			pathListIdentityWhitelist(b),
-			pathIdentityWhitelist(b),
-			pathTidyIdentityWhitelist(b),
+			b.pathLogin(),
+			b.pathListRole(),
+			b.pathListRoles(),
+			b.pathRole(),
+			b.pathRoleTag(),
+			b.pathConfigClient(),
+			b.pathConfigCertificate(),
+			b.pathConfigIdentity(),
+			b.pathConfigSts(),
+			b.pathListSts(),
+			b.pathConfigTidyRoletagBlacklist(),
+			b.pathConfigTidyIdentityWhitelist(),
+			b.pathListCertificates(),
+			b.pathListRoletagBlacklist(),
+			b.pathRoletagBlacklist(),
+			b.pathTidyRoletagBlacklist(),
+			b.pathListIdentityWhitelist(),
+			b.pathIdentityWhitelist(),
+			b.pathTidyIdentityWhitelist(),
 		},
 		Invalidate:     b.invalidate,
 		InitializeFunc: b.initialize,

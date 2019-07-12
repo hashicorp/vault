@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathTidyIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathTidyIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/identity-whitelist$",
 		Fields: map[string]*framework.FieldSchema{

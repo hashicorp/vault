@@ -12,7 +12,7 @@ const (
 	identityWhitelistConfigPath = "config/tidy/identity-whitelist"
 )
 
-func pathConfigTidyIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathConfigTidyIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", identityWhitelistConfigPath),
 		Fields: map[string]*framework.FieldSchema{

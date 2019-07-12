@@ -20,7 +20,7 @@ var (
 	currentRoleStorageVersion = 3
 )
 
-func pathRole(b *backend) *framework.Path {
+func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
@@ -190,7 +190,7 @@ auth_type is ec2.`,
 	return p
 }
 
-func pathListRole(b *backend) *framework.Path {
+func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
@@ -203,7 +203,7 @@ func pathListRole(b *backend) *framework.Path {
 	}
 }
 
-func pathListRoles(b *backend) *framework.Path {
+func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
 

@@ -1690,7 +1690,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	empty_login_fd := &framework.FieldData{
 		Raw:    map[string]interface{}{},
-		Schema: pathLogin(b).Fields,
+		Schema: b.pathLogin().Fields,
 	}
 	// ensure we can renew
 	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
