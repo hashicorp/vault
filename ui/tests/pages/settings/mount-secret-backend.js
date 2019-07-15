@@ -6,9 +6,9 @@ export default create({
   ...mountForm,
   version: fillable('[data-test-input="options.version"]'),
   maxTTLVal: fillable('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]'),
-  maxTTLUnit: fillable('[data-test-select="ttl-unit"]'),
+  maxTTLUnit: fillable('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]'),
   defaultTTLVal: fillable('[data-test-input="config.defaultLeaseTtl"] [data-test-ttl-value]'),
-  defaultTTLUnit: fillable('[data-test-select="ttl-unit"]'),
+  defaultTTLUnit: fillable('[data-test-input="config.defaultLeaseTtl"] [data-test-select="ttl-unit"]'),
   enable: async function(type, path) {
     await this.visit();
     await this.mount(type, path);
