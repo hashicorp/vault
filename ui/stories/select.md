@@ -8,7 +8,8 @@ Select components are used to render a dropdown.
 | --- | --- | --- | --- |
 | label | <code>String</code> | <code></code> | The label for the select element. |
 | options | <code>Array</code> | <code></code> | A list of items that the user will select from. This can be an array of strings or objects. |
-| [selectedItem] | <code>String</code> | <code></code> | The currently selected item. |
+| [name] | <code>String</code> | <code></code> | The name of the select, used for the test selector. |
+| [selectedItem] | <code>String</code> | <code></code> | The currently selected item. Can also be used to set the default selected item. |
 | [valueAttribute] | <code>String</code> | <code>value</code> | When `options` is an array objects, the key to check for when assigning the option elements value. |
 | [labelAttribute] | <code>String</code> | <code>label</code> | When `options` is an array objects, the key to check for when assigning the option elements' inner text. |
 | [isInline] | <code>Bool</code> | <code>false</code> | Whether or not the select should be displayed as inline-block or block. |
@@ -19,7 +20,7 @@ Select components are used to render a dropdown.
   
 ```js
 <Select
-  label='Date Range'
+  @label='Date Range'
   @options={{[{ value: 'berry', label: 'Berry' }]}}
   @onChange={{onChange}}/>
 ```

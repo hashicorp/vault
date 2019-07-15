@@ -6,6 +6,12 @@
       pattern="[0-9]*" />
   </div>
   <div class="control is-expanded">
-    <Select @options={{unitOptions}} @onChange={{action 'changedValue' 'unit'}} @isFullwidth={{true}} @name='ttl-unit' @selectedItem={{unit}}/>
+    <Select
+      @name='ttl-unit'
+      @options={{unitOptions}}
+      @onChange={{action 'changedValue' 'unit'}}
+      @selectedItem={{unit}}
+      @isFullwidth={{true}}
+      />
   </div>
 </div>

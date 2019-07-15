@@ -23,11 +23,11 @@ storiesOf('Select/', module)
     `,
       context: {
         options: object('options', OPTIONS),
-        valueAttribute: text('valueAttribute', 'value'),
-        labelAttribute: text('labelAttribute', 'label'),
         label: text('label', 'Favorite fruit'),
         isFullwidth: boolean('isFullwidth', false),
         isInline: boolean('isInline', false),
+        valueAttribute: text('valueAttribute', 'value'),
+        labelAttribute: text('labelAttribute', 'label'),
       },
     }),
     { notes }
@@ -45,10 +45,10 @@ storiesOf('Select/', module)
         </Toolbar>
     `,
       context: {
+        label: text('label', 'Favorite fruit'),
         options: object('options', OPTIONS),
         valueAttribute: text('valueAttribute', 'value'),
         labelAttribute: text('labelAttribute', 'label'),
-        label: text('label', 'Favorite fruit'),
       },
     }),
     { notes }

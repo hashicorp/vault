@@ -6,13 +6,13 @@ import Component from '@ember/component';
  *
  * @example
  * ```js
- * <Select label='Date Range' @options={{[{ value: 'berry', label: 'Berry' }]}} @onChange={{onChange}}/>
+ * <Select @label='Date Range' @options={{[{ value: 'berry', label: 'Berry' }]}} @onChange={{onChange}}/>
  * ```
  *
  * @param label=null {String} - The label for the select element.
  * @param options=null {Array} - A list of items that the user will select from. This can be an array of strings or objects.
- * @param [selectedItem=null] {String} - The currently selected item.
- * @param name
+ * @param [selectedItem=null] {String} - The currently selected item. Can also be used to set the default selected item.
+ * @param [name=null] {String} - The name of the select, used for the test selector.
  * @param [valueAttribute=value] {String} - When `options` is an array objects, the key to check for when assigning the option elements value.
  * @param [labelAttribute=label] {String} - When `options` is an array objects, the key to check for when assigning the option elements' inner text.
  * @param [isInline=false] {Bool} - Whether or not the select should be displayed as inline-block or block.
