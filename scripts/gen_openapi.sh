@@ -36,7 +36,6 @@ vault auth enable github
 vault auth enable jwt
 vault auth enable kubernetes
 vault auth enable ldap
-vault auth enable oidc
 vault auth enable okta
 vault auth enable pcf
 vault auth enable radius
