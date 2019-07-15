@@ -65,7 +65,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	user, userError := b.user(ctx, req.Storage, username)
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+	if user != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
 		return nil, logical.ErrPermissionDenied
 	}
 
