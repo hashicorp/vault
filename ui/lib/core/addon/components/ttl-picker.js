@@ -103,7 +103,6 @@ export default Component.extend({
 
   actions: {
     changedValue(key, value) {
-      debugger;
       if (value && key === 'time') {
         value = parseInt(value, 10);
         if (Number.isNaN(value)) {
@@ -114,8 +113,6 @@ export default Component.extend({
       this.set('errorMessage', null);
 
       set(this, key, value);
-      // this will pass a string '60s'
-      console.log(this.TTL);
       this.onChange(this.TTL);
     },
   },
