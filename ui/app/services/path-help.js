@@ -62,7 +62,6 @@ export default Service.extend({
         //if we have an item we want the create info for that itemType
         let path;
         if (itemType) {
-          debugger; // eslint-disable-line
           const createPath = paths.create.find(path => path.path.includes(itemType));
           path = createPath.path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
