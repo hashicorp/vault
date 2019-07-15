@@ -2,6 +2,7 @@
   <Toolbar>
     <Select
       @label='Date Range'
+      @name='requests-timewindow'
       @options={{dropdownOptions}}
       @onChange={{action "updateTimeWindow"}}
       @selectedItem={{timeWindow}}

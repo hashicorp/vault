@@ -13,29 +13,29 @@ module('Integration | Component | Select', function(hooks) {
   hooks.beforeEach(function() {
     this.set('options', OPTIONS);
     this.set('label', LABEL);
+    this.set('name', 'foo');
   });
 
   test('it renders', async function(assert) {
-    await render(hbs`<Select @options={{options}} @label={{label}}/>`);
-
+    await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
     assert.dom('[data-test-select-label]').hasText('Boop');
-    assert.dom('[data-test-select]').exists();
+    assert.dom('[data-test-select="foo"]').exists();
   });
 
   test('it renders when options is an array of strings', async function(assert) {
-    await render(hbs`<Select @options={{options}} @label={{label}}/>`);
+    await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
 
-    assert.dom('[data-test-select]').hasValue('foo');
-    assert.equal(this.element.querySelector('[data-test-select]').options.length, 3);
+    assert.dom('[data-test-select="foo"]').hasValue('foo');
+    assert.equal(this.element.querySelector('[data-test-select="foo"]').options.length, 3);
   });
 
   test('it renders when options is an array of objects', async function(assert) {
     const objectOptions = [{ value: 'berry', label: 'Berry' }, { value: 'cherry', label: 'Cherry' }];
     this.set('options', objectOptions);
-    await render(hbs`<Select @options={{options}} @label={{label}}/>`);
+    await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
 
-    assert.dom('[data-test-select]').hasValue('berry');
-    assert.equal(this.element.querySelector('[data-test-select]').options.length, 2);
+    assert.dom('[data-test-select="foo"]').hasValue('berry');
+    assert.equal(this.element.querySelector('[data-test-select="foo"]').options.length, 2);
   });
 
   test('it renders when options is an array of custom objects', async function(assert) {
@@ -51,25 +51,26 @@ module('Integration | Component | Select', function(hooks) {
         <Select
           @options={{options}}
           @label={{label}}
+          @name={{name}}
           @valueAttribute={{valueAttribute}}
           @labelAttribute={{labelAttribute}}/>`
     );
 
-    assert.dom('[data-test-select]').hasValue('mon');
-    assert.equal(this.element.querySelector('[data-test-select]').options[1].textContent, 'Tuesday');
+    assert.dom('[data-test-select="foo"]').hasValue('mon');
+    assert.equal(this.element.querySelector('[data-test-select="foo"]').options[1].textContent, 'Tuesday');
   });
 
   test('it renders the selectedItem as selected by default', async function(assert) {
     this.set('selectedItem', 'baz');
-    await render(hbs`<Select @options={{options}} @selectedItem={{selectedItem}}/>`);
+    await render(hbs`<Select @options={{options}} @name={{name}} @selectedItem={{selectedItem}}/>`);
 
-    assert.dom('[data-test-select]').hasValue('baz');
+    assert.dom('[data-test-select="foo"]').hasValue('baz');
   });
 
   test('it calls onChange when an item is selected', async function(assert) {
     this.set('onChange', sinon.spy());
-    await render(hbs`<Select @options={{options}} @onChange={{onChange}}/>`);
-    await fillIn('[data-test-select]', 'bar');
+    await render(hbs`<Select @options={{options}} @name={{name}} @onChange={{onChange}}/>`);
+    await fillIn('[data-test-select="foo"]', 'bar');
 
     assert.ok(this.onChange.calledOnce);
   });
