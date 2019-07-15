@@ -10,6 +10,7 @@ import { getOwner } from '@ember/application';
 import { capitalize } from '@ember/string';
 import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
+import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
 import { debug } from '@ember/debug';
@@ -55,22 +56,21 @@ export default Service.extend({
         //if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
           debug(`Creating new adapter for ${modelType}`);
-          const adapter = this.getNewAdapter(backend, paths, itemType);
+          const adapter = this.getNewAdapter(paths, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
         //if we have an item we want the create info for that itemType
-        let tag, path;
+        let path;
         if (itemType) {
+          debugger; // eslint-disable-line
           const createPath = paths.create.find(path => path.path.includes(itemType));
-          tag = createPath.tag; //tag is for type of backend, e.g. auth or secret
           path = createPath.path;
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
         } else {
           //we need the mount config
-          tag = paths.configPath[0].tag;
           path = paths.configPath[0].path;
         }
-        helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        helpUrl = `/v1/${apiPath}${path}?help=true`;
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
@@ -79,31 +79,31 @@ export default Service.extend({
   reducePaths(paths, currentPath) {
     const pathName = currentPath[0];
     const pathInfo = currentPath[1];
+
     //config is a get/post endpoint that doesn't take route params
-    //and isn't also a list endpoint
+    //and isn't also a list endpoint and has an Action of Configure
     if (
       pathInfo.post &&
       pathInfo.get &&
       (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action === 'Configure')
     ) {
-      paths.configPath.push({ path: pathName, tag: pathInfo.get.tags[0] });
+      paths.configPath.push({ path: pathName });
       return paths; //config path should only be config path
     }
 
     //list endpoints all have { name: "list" } in their get parameters
     if (pathInfo.get && pathInfo.get.parameters && pathInfo.get.parameters[0].name === 'list') {
-      paths.list.push({ path: pathName, tag: pathInfo.get.tags[0] });
+      paths.list.push({ path: pathName });
     }
 
     if (pathInfo.delete) {
-      paths.delete.push({ path: pathName, tag: pathInfo.delete.tags[0] });
+      paths.delete.push({ path: pathName });
     }
 
     //create endpoints have path an action (e.g. "Create" or "Generate")
     if (pathInfo.post && pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action) {
       paths.create.push({
         path: pathName,
-        tag: pathInfo.post.tags[0],
         action: pathInfo['x-vault-displayAttrs'].action,
       });
     }
@@ -122,7 +122,7 @@ export default Service.extend({
       let paths = Object.entries(pathInfo);
 
       return paths.reduce(this.reducePaths, {
-        apiPath: [],
+        apiPath: apiPath,
         configPath: [],
         list: [],
         create: [],
@@ -174,16 +174,16 @@ export default Service.extend({
     });
   },
 
-  getNewAdapter(backend, paths, itemType) {
+  getNewAdapter(paths, itemType) {
     //we need list and create paths to set the correct urls for actions
-    const { list, create } = paths;
+    const { list, create, apiPath } = paths;
     const createPath = create.find(path => path.path.includes(itemType));
     const listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
     const deletePath = paths.delete.find(path => path.path.includes(itemType));
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        let { tag, path } = listPath;
-        let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
+        let { path } = listPath;
+        let url = `${this.buildURL()}/${apiPath}${path}/`;
         if (id) {
           url = url + encodePath(id);
         }
@@ -195,22 +195,22 @@ export default Service.extend({
       },
 
       urlForUpdateRecord(id) {
-        let { tag, path } = createPath;
+        let { path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
-        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+        return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let { tag, path } = createPath;
+        let { path } = createPath;
         path = path.slice(0, path.indexOf('{') - 1);
-        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+        return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let { tag, path } = deletePath;
+        let { path } = deletePath;
         path = path.slice(0, path.indexOf('{') - 1);
-        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+        return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });
   },
