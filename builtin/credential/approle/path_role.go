@@ -118,6 +118,10 @@ func rolePaths(b *backend) []*framework.Path {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Bind Secret ID",
+					Value: true,
+				},
 			},
 
 			"bound_cidr_list": &framework.FieldSchema{
@@ -130,6 +134,9 @@ func rolePaths(b *backend) []*framework.Path {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Secret ID Bound CIDRs",
+				},
 			},
 
 			"policies": &framework.FieldSchema{
@@ -142,12 +149,18 @@ IP addresses which can perform the login operation.`,
 				Type: framework.TypeInt,
 				Description: `Number of times a SecretID can access the role, after which the SecretID
 will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Secret ID Number of Uses",
+				},
 			},
 
 			"secret_id_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Secret ID TTL",
+				},
 			},
 
 			"period": &framework.FieldSchema{
@@ -159,12 +172,18 @@ to 0, meaning no expiration.`,
 			"role_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Identifier of the role. Defaults to a UUID.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Role Identifier",
+				},
 			},
 
 			"local_secret_ids": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Local Secret IDs",
+				},
 			},
 		},
 		ExistenceCheck: b.pathRoleExistenceCheck,
@@ -176,6 +195,9 @@ can only be set during role creation and once set, it can't be reset later.`,
 		},
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action: "Create",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
@@ -189,6 +211,9 @@ can only be set during role creation and once set, it can't be reset later.`,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
+			DisplayAttrs: &framework.DisplayAttributes{
+				Navigation: true,
+			},
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
