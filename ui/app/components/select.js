@@ -11,6 +11,7 @@ import Component from '@ember/component';
  *
  * @param label=null {String} - The label for the select element.
  * @param options=null {Array} - A list of items that the user will select from. This can be an array of strings or objects.
+ * @param [selectedItem=null] {String} - The currently selected item.
  * @param [valueAttribute=value] {String} - When `options` is an array objects, the key to check for when assigning the option elements value.
  * @param [labelAttribute=label] {String} - When `options` is an array objects, the key to check for when assigning the option elements' inner text.
  * @param [isInline=false] {Bool} - Whether or not the select should be displayed as inline-block or block.
@@ -21,6 +22,7 @@ import Component from '@ember/component';
 export default Component.extend({
   classNames: ['field'],
   label: null,
+  selectedItem: null,
   options: null,
   valueAttribute: 'value',
   labelAttribute: 'label',

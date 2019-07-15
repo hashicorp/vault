@@ -15,7 +15,7 @@
       data-test-select
       >
       {{#each options as |op|}}
-        <option value={{or (get op valueAttribute) op}}>{{or (get op labelAttribute) op}}</option>
+        <option value={{or (get op valueAttribute) op}} selected={{eq selectedItem op}}>{{or (get op labelAttribute) op}}</option>
       {{/each}}
     </select>
     </div>
