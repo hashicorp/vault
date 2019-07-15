@@ -1,0 +1,27 @@
+box:
+    id: golang
+    ports:
+        - "5000"
+
+build:
+    steps:
+        - script:
+             name: golint-prepare
+             code: |
+                 go get golang.org/x/lint/golint
+                 go install golang.org/x/lint/golint
+                 go get -v github.com/stretchr/testify
+
+        - script:
+             name: symlinking src code
+             code: |
+                 mkdir -p $GOPATH/src/github.com/oracle
+                 ln -s $WERCKER_SOURCE_DIR $GOPATH/src/github.com/oracle/oci-go-sdk
+                 ls -al $GOPATH/src/github.com/oracle/oci-go-sdk
+
+        - script:
+             name: make-build
+             code: |
+                 make build
+
+
