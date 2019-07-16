@@ -203,9 +203,9 @@ $ curl \
 
 ## Delete scope
 
-| Method   | Path                 |
-|:---------|:---------------------|
-| `DELETE` | `/kmip/scope/:scope` |
+| Method | Path                        |
+|:-------|:----------------------------|
+| `POST` | `/kmip/scope/:scope/delete` |
 
 Delete a scope by name.
 
@@ -221,8 +221,8 @@ Delete a scope by name.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request DELETE \
-    https://127.0.0.1:8200/v1/kmip/scope/myscope
+    --request POST \
+    https://127.0.0.1:8200/v1/kmip/scope/myscope/delete
 ```
 
 ## Write role
