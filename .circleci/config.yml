@@ -33,6 +33,7 @@ jobs:
   install-ui-dependencies:
     docker:
     - image: node:10-stretch
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - checkout
@@ -53,6 +54,7 @@ jobs:
   go-mod-download:
     docker:
     - image: golang:1.12.4-stretch
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - add_ssh_keys:
@@ -74,6 +76,7 @@ jobs:
   build-go-dev:
     docker:
     - image: golang:1.12.4-stretch
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - checkout
@@ -99,6 +102,7 @@ jobs:
   test-ui:
     docker:
     - image: node:10-stretch
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
     steps:
@@ -133,8 +137,26 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
+  test-ui-browserstack:
+    docker:
+    - image: node:10-stretch
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /src
+    steps:
+    - checkout
+    - restore_cache:
+        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+    - attach_workspace:
+        at: .
+    - run:
+        command: |
+          # Add ./bin to the PATH so vault binary can be found.
+          export PATH="${PWD}"/bin:${PATH}
+          make test-ui-browserstack
+        name: Run Browserstack Tests
   test-go:
     machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: ~/src
     parallelism: 2
     steps:
@@ -207,6 +229,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: ~/src
     steps:
     - checkout
@@ -290,6 +313,10 @@ workflows:
         requires:
         - go-mod-download
     - test-ui:
+        requires:
+        - install-ui-dependencies
+        - build-go-dev
+    - test-ui-browserstack:
         requires:
         - install-ui-dependencies
         - build-go-dev
@@ -382,6 +409,7 @@ workflows:
 #   go:
 #     docker:
 #     - image: golang:1.12.4-stretch
+#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
 #     environment:
@@ -390,10 +418,12 @@ workflows:
 #       GO_VERSION: 1.12.4
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
+#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: ~/src
 #   node:
 #     docker:
 #     - image: node:10-stretch
+#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 # jobs:
 #   build-go-dev:
@@ -546,6 +576,19 @@ workflows:
 #         path: ui/test-results
 #     - store_test_results:
 #         path: ui/test-results
+#   test-ui-browserstack:
+#     executor: node
+#     steps:
+#     - checkout
+#     - restore_yarn_cache
+#     - attach_workspace:
+#         at: .
+#     - run:
+#         command: |
+#           # Add ./bin to the PATH so vault binary can be found.
+#           export PATH=\"${PWD}\"/bin:${PATH}
+#           make test-ui-browserstack
+#         name: Run Browserstack Tests
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
@@ -568,6 +611,10 @@ workflows:
 #         requires:
 #         - go-mod-download
 #     - test-ui:
+#         requires:
+#         - install-ui-dependencies
+#         - build-go-dev
+#     - test-ui-browserstack:
 #         requires:
 #         - install-ui-dependencies
 #         - build-go-dev
