@@ -2,19 +2,19 @@
   <Toolbar>
     {{#if model.meta.total}}
       <ToolbarFilters>
-      <NavigateInput
-        @filterFocusDidChange={{action "setFilterFocus" }}
-        @filterDidChange={{action "setFilter"}}
-        @filter={{this.filter}}
-        @filterMatchesKey={{filterMatchesKey}}
-        @firstPartialMatch={{firstPartialMatch}}
-        @placeholder="Filter scopes by name"
-        @urls={{hash
-          create="vault.cluster.secrets.backend.kmip.scopes.create"
-          list="vault.cluster.secrets.backend.kmip.scopes.index"
-          show="vault.cluster.secrets.backend.kmip.scope.roles"
-        }}
-      />
+        <NavigateInput
+          @filterFocusDidChange={{action "setFilterFocus" }}
+          @filterDidChange={{action "setFilter"}}
+          @filter={{this.filter}}
+          @filterMatchesKey={{filterMatchesKey}}
+          @firstPartialMatch={{firstPartialMatch}}
+          @placeholder="Filter scopes by name"
+          @urls={{hash
+            create="vault.cluster.secrets.backend.kmip.scopes.create"
+            list="vault.cluster.secrets.backend.kmip.scopes.index"
+            show="vault.cluster.secrets.backend.kmip.scope.roles"
+          }}
+        />
         {{#if filterFocused}}
           {{#if filterMatchesKey}}
             <p class="input-hint">
@@ -33,6 +33,7 @@
       <ToolbarLink
         @type="add"
         @params={{array "scopes.create"}}
+        data-test-scope-create
       >
         Create scope
       </ToolbarLink>

@@ -17,12 +17,12 @@
   <nav class="tabs">
     <ul>
       {{#link-to "scopes.index" tagName="li"}}
-        {{#link-to "scopes.index"}}
+        {{#link-to "scopes.index" data-test-kmip-link-scopes="true"}}
           Scopes
         {{/link-to}}
       {{/link-to}}
       {{#link-to "configuration" tagName="li"}}
-        {{#link-to "configuration"}}
+        {{#link-to "configuration" data-test-kmip-link-config="true"}}
           Configuration
         {{/link-to}}
       {{/link-to}}
