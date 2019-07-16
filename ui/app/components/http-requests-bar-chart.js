@@ -120,7 +120,7 @@ export default Component.extend({
     // scale and render the axes
     const yAxis = d3Axis
       .axisRight(yScale)
-      .ticks(3, '.0s')
+      .ticks(3, '~s')
       .tickSizeOuter(0);
     const xAxis = d3Axis
       .axisBottom(xScale)
