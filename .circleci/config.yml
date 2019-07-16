@@ -41,8 +41,6 @@ jobs:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
-          set -eux -o pipefail
-
           cd ui
           yarn install --ignore-optional
           npm rebuild node-sass
@@ -86,8 +84,6 @@ jobs:
         at: .
     - run:
         command: |
-          set -eux -o pipefail
-
           # Move dev UI assets to expected location
           rm -rf ./pkg
           mkdir ./pkg
@@ -113,7 +109,7 @@ jobs:
         at: .
     - run:
         command: |
-          set -eux -o pipefail
+          set -x
 
           # Install Chrome
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
@@ -163,8 +159,6 @@ jobs:
     - checkout
     - run:
         command: |
-          set -eux -o pipefail
-
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -172,7 +166,7 @@ jobs:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
         command: |
-          set -eux -o pipefail
+          set -x
 
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -235,8 +229,6 @@ jobs:
     - checkout
     - run:
         command: |
-          set -eux -o pipefail
-
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -244,7 +236,7 @@ jobs:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
         command: |
-          set -eux -o pipefail
+          set -x
 
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -339,7 +331,7 @@ workflows:
 #     steps:
 #     - run:
 #         command: |
-#           set -eux -o pipefail
+#           set -x
 # 
 #           # Install Go
 #           curl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"
@@ -435,8 +427,6 @@ workflows:
 #         at: .
 #     - run:
 #         command: |
-#           set -eux -o pipefail
-# 
 #           # Move dev UI assets to expected location
 #           rm -rf ./pkg
 #           mkdir ./pkg
@@ -470,8 +460,6 @@ workflows:
 #     - restore_yarn_cache
 #     - run:
 #         command: |
-#           set -eux -o pipefail
-# 
 #           cd ui
 #           yarn install --ignore-optional
 #           npm rebuild node-sass
@@ -513,8 +501,6 @@ workflows:
 #     - checkout
 #     - run:
 #         command: |
-#           set -eux -o pipefail
-# 
 #           sudo mkdir /go
 #           sudo chown -R circleci:circleci /go
 #         name: Allow circleci user to restore Go modules cache
@@ -530,8 +516,6 @@ workflows:
 #     - checkout
 #     - run:
 #         command: |
-#           set -eux -o pipefail
-# 
 #           sudo mkdir /go
 #           sudo chown -R circleci:circleci /go
 #         name: Allow circleci user to restore Go modules cache
@@ -552,7 +536,7 @@ workflows:
 #         at: .
 #     - run:
 #         command: |
-#           set -eux -o pipefail
+#           set -x
 # 
 #           # Install Chrome
 #           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \\
