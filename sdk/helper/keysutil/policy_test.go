@@ -405,7 +405,6 @@ func checkKeys(t *testing.T,
 
 	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 		ver := strconv.Itoa(i)
-		// Travis has weird time zone issues and gets super unhappy
 		if !p.Keys[ver].CreationTime.Equal(keysArchive[i].CreationTime) {
 			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[ver], keysArchive[i])
 		}

@@ -1,5 +1,3 @@
-// +build !travis
-
 package ldap
 
 import (
