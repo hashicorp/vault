@@ -140,6 +140,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 			b.pathConfigClient(),
 			b.pathConfigCertificate(),
 			b.pathConfigIdentity(),
+			b.pathConfigRotateRoot(),
 			b.pathConfigSts(),
 			b.pathListSts(),
 			b.pathConfigTidyRoletagBlacklist(),
