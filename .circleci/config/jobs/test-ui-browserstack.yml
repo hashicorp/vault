@@ -10,5 +10,3 @@ steps:
         # Add ./bin to the PATH so vault binary can be found.
         export PATH="${PWD}"/bin:${PATH}
         make test-ui-browserstack
-
-
