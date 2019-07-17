@@ -57,10 +57,10 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 		if !list {
 			data = parseQuery(queryVals)
+		}
 
-			if path == "sys/storage/raft/snapshot" {
-				responseWriter = w
-			}
+		if path == "sys/storage/raft/snapshot" {
+			responseWriter = w
 		}
 
 	case "POST", "PUT":
