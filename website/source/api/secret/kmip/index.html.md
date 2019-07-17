@@ -223,7 +223,7 @@ Delete a scope by name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://127.0.0.1:8200/v1/kmip/scope/myscope?force=true
+    https://127.0.0.1:8200/v1/kmip/scope/myscope?force=false
 ```
 
 ## Write role
