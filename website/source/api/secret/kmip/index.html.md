@@ -214,7 +214,7 @@ Delete a scope by name.
 - `scope` (`string: <required>`) - Name of scope. This is part of the request URL.
 - `force` (`bool: false`) - Force scope deletion. If KMIP managed objects have
   been created within the scope this param must be provided or the deletion will
-  fail. This value should be supplied as a query parameter, or an argument as in
+  fail. This value should be supplied as a query parameter, or as an argument in
   the CLI.
 
 ### Sample Request
