@@ -49,6 +49,10 @@ type Backend struct {
 	// and ease specifying callbacks for revocation, renewal, etc.
 	Secrets []*Secret
 
+	// InitializeFunc is the callback, which if set, will be invoked via
+	// Initialize() just after a plugin has been mounted.
+	InitializeFunc InitializeFunc
+
 	// PeriodicFunc is the callback, which if set, will be invoked when the
 	// periodic timer of RollbackManager ticks. This can be used by
 	// backends to do anything it wishes to do periodically.
@@ -107,6 +111,18 @@ type CleanupFunc func(context.Context)
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
+
+// InitializeFunc is the callback, which if set, will be invoked via
+// Initialize() just after a plugin has been mounted.
+type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// Initialize is the logical.Backend implementation.
+func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	if b.InitializeFunc != nil {
+		return b.InitializeFunc(ctx, req)
+	}
+	return nil
+}
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -539,7 +555,7 @@ type FieldSchema struct {
 func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
 		switch s.Type {
-		case TypeDurationSecond:
+		case TypeDurationSecond, TypeSignedDurationSecond:
 			resultDur, err := parseutil.ParseDurationSecond(s.Default)
 			if err != nil {
 				return s.Type.Zero()
@@ -567,7 +583,7 @@ func (t FieldType) Zero() interface{} {
 		return map[string]interface{}{}
 	case TypeKVPairs:
 		return map[string]string{}
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		return 0
 	case TypeSlice:
 		return []interface{}{}

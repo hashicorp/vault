@@ -40,7 +40,7 @@ export default EditForm.extend({
           model.set('operationAll', null);
           return resolve(model);
         }
-        model.newFields.without('role').forEach(field => {
+        model.operationFields.concat(['operationAll', 'operationNone']).forEach(field => {
           // this will set operationAll or operationNone to true
           if (field === display) {
             model.set(field, true);

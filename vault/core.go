@@ -121,7 +121,7 @@ func NewNonFatalError(err error) *NonFatalError {
 	return &NonFatalError{Err: err}
 }
 
-// IsFatalError returns true if the given error is a non-fatal error.
+// IsFatalError returns true if the given error is a fatal error.
 func IsFatalError(err error) bool {
 	return !errwrap.ContainsType(err, new(NonFatalError))
 }
@@ -173,7 +173,7 @@ type Core struct {
 	redirectAddr string
 
 	// clusterAddr is the address we use for clustering
-	clusterAddr string
+	clusterAddr *atomic.Value
 
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
@@ -451,6 +451,8 @@ type Core struct {
 	raftFollowerStates *raftFollowerStates
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
+	// Stores the pending peers we are waiting to give answers
+	pendingRaftPeers map[string][]byte
 
 	coreNumber int
 }
@@ -609,7 +611,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		physical:                     conf.Physical,
 		underlyingPhysical:           conf.Physical,
 		redirectAddr:                 conf.RedirectAddr,
-		clusterAddr:                  conf.ClusterAddr,
+		clusterAddr:                  new(atomic.Value),
 		seal:                         conf.Seal,
 		router:                       NewRouter(),
 		sealed:                       new(uint32),
@@ -648,13 +650,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	atomic.StoreUint32(c.sealed, 1)
 	c.allLoggers = append(c.allLoggers, c.logger)
 
+	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
 	c.localClusterParsedCert.Store((*x509.Certificate)(nil))
 	c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
-
+	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 
 	if conf.ClusterCipherSuites != "" {
@@ -1617,11 +1622,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
+		if err := c.setupRaftActiveNode(ctx); err != nil {
+			return err
+		}
+
 		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
 
-		c.startPeriodicRaftTLSRotate(ctx)
 	}
 
 	c.clusterParamsLock.Lock()
@@ -1704,9 +1712,9 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
-	c.stopPeriodicRaftTLSRotate()
-
 	c.stopForwarding()
+
+	c.stopRaftActiveNode()
 
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {

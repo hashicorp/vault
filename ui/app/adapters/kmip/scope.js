@@ -12,4 +12,8 @@ export default BaseAdapter.extend({
       }
     );
   },
+
+  deleteRecord(store, type, snapshot) {
+    return this.ajax(this._url(type.modelName, { backend: snapshot.record.backend }, snapshot.id), 'DELETE');
+  },
 });

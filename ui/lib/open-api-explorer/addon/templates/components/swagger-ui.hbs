@@ -1,0 +1,44 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon
+        @glyph="code"
+        @size="l"
+        class="has-text-grey-light"
+       />
+      Vault API explorer
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<Toolbar>
+	<ToolbarFilters>
+		<div class="field is-marginless">
+			<p class="control has-icons-left">
+				<input
+					oninput={{queue (action "updateFilter") (action "proxyEvent")}}
+					value={{@initialFilter}}
+					disabled={{this.swaggerLoading}}
+					class="filter input"
+					placeholder="Filter ops by path"
+				/>
+				<Icon
+          @glyph="search"
+				  @size="l"
+          class="search-icon has-text-grey-light"
+        />
+			</p>
+		</div>
+		<AlertInline
+			@type="info"
+			@message="All API paths are prefixed with /v1/"
+			class="is-marginless input-hint"
+		/>
+	</ToolbarFilters>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless">
+	<NamespaceReminder as |R|>
+		Requests use the header <code>X-Vault-Namespace: {{R.namespace.path}}</code>. You can also use <code>{{R.namespace.path}}</code> as an API prefix. See <DocLink @path="/api/overview#namespaces">docs</DocLink> for examples.
+	</NamespaceReminder>
+	<div id="{{this.elementId}}-swagger" class="swagger-ember"></div>
+</div>

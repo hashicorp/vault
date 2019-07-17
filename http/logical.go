@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -208,6 +208,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 				}
 			}
 			switch req.Path {
+			// Route the token wrapping request to its respective sys NS
 			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 				r = r.WithContext(newCtx)
 				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
@@ -453,6 +454,10 @@ WRITE_RESPONSE:
 	// Write the response
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
+	}
+
+	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
+		w.Header().Set("Cache-Control", cacheControl)
 	}
 
 	w.WriteHeader(status)

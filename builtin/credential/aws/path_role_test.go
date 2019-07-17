@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -613,11 +612,20 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
-		"ttl":                            time.Duration(600),
-		"max_ttl":                        time.Duration(1200),
+		"ttl":                            int64(600),
+		"token_ttl":                      int64(600),
+		"max_ttl":                        int64(1200),
+		"token_max_ttl":                  int64(1200),
+		"token_explicit_max_ttl":         int64(0),
 		"policies":                       []string{"testpolicy1", "testpolicy2"},
+		"token_policies":                 []string{"testpolicy1", "testpolicy2"},
 		"disallow_reauthentication":      false,
-		"period":                         time.Duration(60),
+		"period":                         int64(60),
+		"token_period":                   int64(60),
+		"token_bound_cidrs":              []string{},
+		"token_no_default_policy":        false,
+		"token_num_uses":                 0,
+		"token_type":                     "default",
 	}
 
 	if resp.Data["role_id"] == nil {
@@ -749,13 +757,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if int64(resp.Data["ttl"].(time.Duration)) != 10 {
+	if int64(resp.Data["ttl"].(int64)) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if int64(resp.Data["max_ttl"].(time.Duration)) != 20 {
+	if int64(resp.Data["max_ttl"].(int64)) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if int64(resp.Data["period"].(time.Duration)) != 30 {
+	if int64(resp.Data["period"].(int64)) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }
@@ -797,6 +805,183 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 	expected.RoleID = roleEntryToUpgrade.RoleID
 	if diff := deep.Equal(*roleEntryToUpgrade, *expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestRoleInitialize(t *testing.T) {
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	err = b.Setup(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create some role entries, some of which will need to be upgraded
+	type testData struct {
+		name  string
+		entry *awsRoleEntry
+	}
+
+	before := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     1,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     2,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+
+	// put the entries in storage
+	for _, role := range before {
+		err = b.setRole(ctx, storage, role.name, role.entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// upgrade all the entries
+	upgraded, err := b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
+	}
+
+	// read the entries from storage
+	after := make([]testData, 0)
+	names, err := storage.List(ctx, "role/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		entry, err := b.role(ctx, storage, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after = append(after, testData{name: name, entry: entry})
+	}
+
+	// make sure each entry is at the current version
+	expected := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+	if diff := deep.Equal(expected, after); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// run it again -- nothing will happen
+	upgraded, err = b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if upgraded {
+		t.Fatalf("expected no upgrade")
+	}
+
+	// make sure saved role version is correct
+	entry, err := storage.Get(ctx, "config/version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var version awsVersion
+	err = entry.DecodeJSON(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version.Version != currentAwsVersion {
+		t.Fatalf("expected version %d, got  %d", currentAwsVersion, version.Version)
+	}
+
+	// stomp on the saved version
+	version.Version = 0
+	e2, err := logical.StorageEntryJSON("config/version", version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(ctx, e2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// run it again -- now an upgrade will happen
+	upgraded, err = b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
+	}
+}
+
+func TestAwsVersion(t *testing.T) {
+
+	before := awsVersion{
+		Version: 42,
+	}
+
+	entry, err := logical.StorageEntryJSON("config/version", &before)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var after awsVersion
+	err = entry.DecodeJSON(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(before, after); diff != nil {
 		t.Fatal(diff)
 	}
 }

@@ -4,6 +4,8 @@ import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
 import d3Tip from 'd3-tip';
+import d3Transition from 'd3-transition';
+import d3Ease from 'd3-ease';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
@@ -29,6 +31,8 @@ import { task, waitForEvent } from 'ember-concurrency';
 
 const HEIGHT = 240;
 const HOVER_PADDING = 12;
+const BASE_SPEED = 150;
+const DURATION = BASE_SPEED * 2;
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-container'],
@@ -83,6 +87,10 @@ export default Component.extend({
     });
   },
 
+  didUpdateAttrs() {
+    this.renderBarChart();
+  },
+
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();
@@ -112,7 +120,7 @@ export default Component.extend({
     // scale and render the axes
     const yAxis = d3Axis
       .axisRight(yScale)
-      .ticks(3, '.0s')
+      .ticks(3, '~s')
       .tickSizeOuter(0);
     const xAxis = d3Axis
       .axisBottom(xScale)
@@ -146,11 +154,22 @@ export default Component.extend({
       .append('rect')
       .attr('class', 'bar');
 
+    const t = d3Transition
+      .transition()
+      .duration(DURATION)
+      .ease(d3Ease.easeQuad);
+
     bars
       .merge(barsEnter)
-      .attr('width', xScale.bandwidth())
-      .attr('height', counter => height - yScale(counter.total))
       .attr('x', counter => xScale(counter.start_time))
+      // set the initial y value to 0 so the bars animate upwards
+      .attr('y', () => yScale(0))
+      .attr('width', xScale.bandwidth())
+      .transition(t)
+      .delay(function(d, i) {
+        return i * BASE_SPEED;
+      })
+      .attr('height', counter => height - yScale(counter.total))
       .attr('y', counter => yScale(counter.total));
 
     bars.exit().remove();

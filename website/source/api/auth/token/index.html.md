@@ -102,6 +102,10 @@ during this call.
 - `period` `(string: "")` - If specified, the token will be periodic; it will have
   no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root/sudo token to use.
+- `entity_alias` `(string: "")` - Name of the entity alias to associate with 
+   during token creation. Only works in combination with `role_name` argument 
+   and used entity alias must be listed in `allowed_entity_aliases`. If this has 
+   been specified, the entity will not be inherited from the parent.
 
 ### Sample Payload
 
@@ -111,7 +115,7 @@ during this call.
     "web",
     "stage"
   ],
-  "metadata": {
+  "meta": {
     "user": "armon"
   },
   "ttl": "1h",
@@ -133,17 +137,37 @@ $ curl \
 
 ```json
 {
+  "request_id": "f00341c1-fad5-f6e6-13fd-235617f858a1",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": [
+    "Policy \"stage\" does not exist",
+    "Policy \"web\" does not exist"
+  ],
   "auth": {
-    "client_token": "ABCD",
+    "client_token": "s.wOrq9dO9kzOcuvB06CMviJhZ",
+    "accessor": "B6oixijqmeR4bsLOJH88Ska9",
     "policies": [
-      "web",
-      "stage"
+      "default",
+      "stage",
+      "web"
+    ],
+    "token_policies": [
+      "default",
+      "stage",
+      "web"
     ],
     "metadata": {
       "user": "armon"
     },
     "lease_duration": 3600,
-    "renewable": true
+    "renewable": true,
+    "entity_id": "",
+    "token_type": "service",
+    "orphan": false
   }
 }
 ```
@@ -573,16 +597,20 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "allowed_policies": [
-      "dev"
+    "allowed_entity_aliases": [
+      "my-entity-alias"
     ],
+    "allowed_policies": [],
     "disallowed_policies": [],
     "explicit_max_ttl": 0,
     "name": "nomad",
     "orphan": false,
     "path_suffix": "",
     "period": 0,
-    "renewable": true
+    "renewable": true,
+    "token_explicit_max_ttl": 0,
+    "token_period": 0,
+    "token_type": "default-service"
   },
   "warnings": null
 }
@@ -682,6 +710,9 @@ tokens created against a role to be revoked using the
   be returned unless the client requests a `batch` type token at token creation
   time. If `default-batch`, `batch` tokens will be returned unless the client
   requests a `service` type token at token creation time.
+- `allowed_entity_aliases` `(string: "", or list: [])` - String or JSON list 
+  of allowed entity aliases. If set, specifies the entity aliases which are 
+  allowed to be used during token generation. This field supports globbing. 
 
 ### Sample Payload
 
@@ -692,7 +723,8 @@ tokens created against a role to be revoked using the
   "name": "nomad",
   "orphan": false,
   "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"],
-  "renewable": true
+  "renewable": true,
+  "allowed_entity_aliases": ["web-entity-alias", "app-entity-*"]
 ```
 
 ### Sample Request

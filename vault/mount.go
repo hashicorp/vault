@@ -511,6 +511,17 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return err
 	}
 
+	if !nilMount {
+		// restore the original readOnlyErr, so we can write to the view in
+		// Initialize() if necessary
+		view.setReadOnlyErr(origReadOnlyErr)
+		// initialize, using the core's active context.
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
 	}
@@ -1131,6 +1142,23 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			return errLoadMountsFailed
 		}
 
+		// Initialize
+		if !nilMount {
+			// Bind locally
+			localEntry := entry
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if backend == nil {
+					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					return
+				}
+
+				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				if err != nil {
+					c.logger.Error("failed to initialize mount entry", "path", localEntry.Path, "error", err)
+				}
+			})
+		}
+
 		if c.logger.IsInfo() {
 			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
 		}
@@ -1166,7 +1194,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	}
 
 	c.mounts = nil
-	c.router = NewRouter()
+	c.router.reset()
 	c.systemBarrierView = nil
 	return nil
 }

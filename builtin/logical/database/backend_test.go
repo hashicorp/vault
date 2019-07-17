@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -102,6 +103,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
 
 	return cluster, sys
 }
@@ -123,6 +125,28 @@ func TestBackend_PluginMain_Postgres(t *testing.T) {
 	flags.Parse(args)
 
 	postgresql.Run(apiClientMeta.GetTLSConfig())
+}
+
+func TestBackend_PluginMain_Mongo(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	args := []string{"--ca-cert=" + caPEM}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {

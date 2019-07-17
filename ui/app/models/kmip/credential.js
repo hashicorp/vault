@@ -2,8 +2,10 @@ import DS from 'ember-data';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
 const { attr } = DS;
+import apiPath from 'vault/utils/api-path';
+import attachCapabilities from 'vault/lib/attach-capabilities';
 
-export default DS.Model.extend({
+const Model = DS.Model.extend({
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
   role: attr({ readOnly: true }),
@@ -27,4 +29,8 @@ export default DS.Model.extend({
 
     return fieldToAttrs(this, groups);
   }),
+});
+
+export default attachCapabilities(Model, {
+  deletePath: apiPath`${'backend'}/scope/${'scope'}/role/${'role'}/credentials/revoke`,
 });

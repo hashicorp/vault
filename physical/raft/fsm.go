@@ -43,7 +43,7 @@ var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
 var _ raft.ConfigurationStore = (*FSM)(nil)
 
-type restoreCallback func() error
+type restoreCallback func(context.Context) error
 
 // FSMApplyResponse is returned from an FSM apply. It indicates if the apply was
 // successful or not.
@@ -55,6 +55,16 @@ type FSMApplyResponse struct {
 // that lives on local disk. FSM implements raft.FSM and physical.Backend
 // interfaces.
 type FSM struct {
+	// latestIndex and latestTerm must stay at the top of this struct to be
+	// properly 64-bit aligned.
+
+	// latestIndex and latestTerm are the term and index of the last log we
+	// received
+	latestIndex *uint64
+	latestTerm  *uint64
+	// latestConfig is the latest server configuration we've seen
+	latestConfig atomic.Value
+
 	l           sync.RWMutex
 	path        string
 	logger      log.Logger
@@ -65,13 +75,6 @@ type FSM struct {
 
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
-
-	// latestIndex and latestTerm are the term and index of the last log we
-	// received
-	latestIndex *uint64
-	latestTerm  *uint64
-	// latestConfig is the latest server configuration we've seen
-	latestConfig atomic.Value
 
 	// This is just used in tests to disable to storing the latest indexes and
 	// configs so we can conform to the standard backend tests, which expect to
@@ -364,6 +367,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	command := &LogData{}
 	err := proto.Unmarshal(log.Data, command)
 	if err != nil {
+		f.logger.Error("error proto unmarshaling log data", "error", err)
 		panic("error proto unmarshaling log data")
 	}
 
@@ -380,7 +384,8 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 			Index: log.Index,
 		})
 		if err != nil {
-			panic("failed to store data")
+			f.logger.Error("unable to marshal latest index", "error", err)
+			panic("unable to marshal latest index")
 		}
 	}
 
@@ -396,7 +401,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 			case restoreCallbackOp:
 				if f.restoreCb != nil {
 					// Kick off the restore callback function in a go routine
-					go f.restoreCb()
+					go f.restoreCb(context.Background())
 				}
 			default:
 				return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
@@ -418,6 +423,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		return nil
 	})
 	if err != nil {
+		f.logger.Error("failed to store data", "error", err)
 		panic("failed to store data")
 	}
 
@@ -575,6 +581,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 		var err error
 		indexBytes, err = proto.Marshal(latestIndex)
 		if err != nil {
+			f.logger.Error("unable to marshal latest index", "error", err)
 			panic(fmt.Sprintf("unable to marshal latest index: %v", err))
 		}
 	}
@@ -582,6 +589,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
 	configBytes, err := proto.Marshal(protoConfig)
 	if err != nil {
+		f.logger.Error("unable to marshal config", "error", err)
 		panic(fmt.Sprintf("unable to marshal config: %v", err))
 	}
 
@@ -604,6 +612,7 @@ func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration)
 			return nil
 		})
 		if err != nil {
+			f.logger.Error("unable to store latest configuration", "error", err)
 			panic(fmt.Sprintf("unable to store latest configuration: %v", err))
 		}
 	}

@@ -15,11 +15,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
-
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -152,16 +150,6 @@ func (c *mongoDBConnectionProducer) Close() error {
 	c.session = nil
 
 	return nil
-}
-
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-func (c *mongoDBConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	return "", "", dbutil.Unimplemented()
 }
 
 func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {

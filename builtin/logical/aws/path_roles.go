@@ -80,7 +80,7 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Default TTL",
+					Name: "Default STS TTL",
 				},
 			},
 
@@ -88,20 +88,19 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Max TTL",
+					Name: "Max STS TTL",
 				},
 			},
 
 			"arn": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
-or IAM role to assume`,
-				Deprecated: true,
+				Type:        framework.TypeString,
+				Description: `Use role_arns or policy_arns instead.`,
+				Deprecated:  true,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Deprecated; use policy_document instead. IAM policy document",
+				Description: "Use policy_document instead.",
 				Deprecated:  true,
 			},
 
