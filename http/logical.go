@@ -35,7 +35,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	switch r.Method {
 	case "DELETE":
 		op = logical.DeleteOperation
-
+		data = parseQuery(r.URL.Query())
 	case "GET":
 		op = logical.ReadOperation
 		queryVals := r.URL.Query()
@@ -56,29 +56,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		}
 
 		if !list {
-			getData := map[string]interface{}{}
-
-			for k, v := range r.URL.Query() {
-				// Skip the help key as this is a reserved parameter
-				if k == "help" {
-					continue
-				}
-
-				switch {
-				case len(v) == 0:
-				case len(v) == 1:
-					getData[k] = v[0]
-				default:
-					getData[k] = v
-				}
-			}
-
-			if len(getData) > 0 {
-				data = getData
-			}
-		}
-		if path == "sys/storage/raft/snapshot" {
-			responseWriter = w
+			data = parseQuery(queryVals)
 		}
 
 	case "POST", "PUT":
