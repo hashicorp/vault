@@ -73,7 +73,7 @@ func (c *DeleteCommand) Run(args []string) int {
 	args = f.Args()
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected at least 1, got %d)", len(args)))
 		return 1
 	}
 
