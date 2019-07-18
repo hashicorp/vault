@@ -2841,6 +2841,7 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 
 func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
+	const maxBytes = 128 * 1024
 	var err error
 	strBytes := d.Get("urlbytes").(string)
 	if strBytes != "" {
@@ -2857,7 +2858,7 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
 	}
 
-	if bytes > 128*1024 {
+	if bytes > maxBytes {
 		return logical.ErrorResponse(`"bytes" should be less than 131072`), nil
 	}
 
