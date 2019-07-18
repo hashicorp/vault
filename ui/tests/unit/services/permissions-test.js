@@ -148,7 +148,7 @@ module('Unit | Service | permissions', function(hooks) {
       'sys/auth': {
         capabilities: ['deny'],
       },
-      'identity/entity/id/': {
+      'identity/entity/id': {
         capabilities: ['read'],
       },
     };
