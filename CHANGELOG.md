@@ -54,6 +54,8 @@ BUG FIXES:
    [GH-6541]
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
+ * auth/aws: AWS Roles are now upgraded and saved to the latest version just
+   after the AWS credential plugin is mounted. [GH-7025]
 
 ## 1.2-beta1 (June 25th, 2019)
 
