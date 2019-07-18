@@ -43,6 +43,10 @@ IMPROVEMENTS:
  * secrets/kv: Add optional `delete_version_after` parameter, which takes a
    duration and can be set on the mount and/or the metadata for a specific key
    [GH-7005]
+ * cli: Add a log-format CLI flag that can specify either "standard" or "json"
+   for the log format for the `vault server`command. [GH-6840]
+ * plugins: Change the default for `max_open_connections` for DB plugins to 4
+   [GH-7093]
 
 BUG FIXES:
 
