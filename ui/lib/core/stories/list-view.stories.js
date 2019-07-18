@@ -3,6 +3,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
 import notes from './list-view.md';
+
 import ArrayProxy from '@ember/array/proxy';
 
 let filtered = ArrayProxy.create({ content: [] });
@@ -21,7 +22,7 @@ paginated.set('meta', {
   total: 100,
 });
 
-let items = {
+let options = {
   list: [{ id: 'one' }, { id: 'two' }],
   empty: [],
   filtered,
@@ -50,7 +51,7 @@ storiesOf('ListView/', module)
 	`,
       context: {
         title: 'ListView',
-        items: select('items', items, items['list']),
+        items: select('items', options, options['list']),
       },
     }),
     { notes }
