@@ -56,6 +56,8 @@ BUG FIXES:
    [GH-7089]
  * auth/aws: AWS Roles are now upgraded and saved to the latest version just
    after the AWS credential plugin is mounted. [GH-7025]
+ * ui: Show Entities and Groups in Side Navigation [GH-7138]
+ * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
 ## 1.2-beta1 (June 25th, 2019)
 
