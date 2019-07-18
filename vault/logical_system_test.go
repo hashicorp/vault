@@ -2249,6 +2249,11 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	req.Data["bytes"] = -1
 	doRequest(req, true, "", 0)
+
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = 131076
+	doRequest(req, true, "", 0)
+
 }
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {

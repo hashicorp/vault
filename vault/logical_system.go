@@ -2857,6 +2857,10 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
 	}
 
+	if bytes > 131072 {
+		return logical.ErrorResponse(`"bytes" should be less than 131072`), nil
+	}
+
 	switch format {
 	case "hex":
 	case "base64":
