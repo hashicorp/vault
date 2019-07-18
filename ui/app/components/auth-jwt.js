@@ -125,6 +125,11 @@ export default Component.extend({
     if (!path || !state || !code) {
       return this.handleOIDCError(ERROR_MISSING_PARAMS);
     }
+    // this is a late addition of the vault server adding the namespace on to the end of the state
+    // if there is a namespace on state we want it to override the query param
+    let maybeNamespace = state.split('-')[1];
+    namespace = maybeNamespace ? maybeNamespace : namespace;
+
     let adapter = this.store.adapterFor('auth-method');
     this.onNamespace(namespace);
     let resp;
