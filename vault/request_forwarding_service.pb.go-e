@@ -33,7 +33,7 @@ type EchoRequest struct {
 	// primary from a dr secondary
 	ClusterAddrs         []string `protobuf:"bytes,3,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
 	RaftAppliedIndex     uint64   `protobuf:"varint,4,opt,name=raft_applied_index,json=raftAppliedIndex,proto3" json:"raft_applied_index,omitempty"`
-	RaftNodeID           string   `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
+	RaftNodeId           string   `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -91,9 +91,9 @@ func (m *EchoRequest) GetRaftAppliedIndex() uint64 {
 	return 0
 }
 
-func (m *EchoRequest) GetRaftNodeID() string {
+func (m *EchoRequest) GetRaftNodeId() string {
 	if m != nil {
-		return m.RaftNodeID
+		return m.RaftNodeId
 	}
 	return ""
 }
@@ -103,7 +103,7 @@ type EchoReply struct {
 	ClusterAddrs         []string `protobuf:"bytes,2,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
 	ReplicationState     uint32   `protobuf:"varint,3,opt,name=replication_state,json=replicationState,proto3" json:"replication_state,omitempty"`
 	RaftAppliedIndex     uint64   `protobuf:"varint,4,opt,name=raft_applied_index,json=raftAppliedIndex,proto3" json:"raft_applied_index,omitempty"`
-	RaftNodeID           string   `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
+	RaftNodeId           string   `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -161,9 +161,9 @@ func (m *EchoReply) GetRaftAppliedIndex() uint64 {
 	return 0
 }
 
-func (m *EchoReply) GetRaftNodeID() string {
+func (m *EchoReply) GetRaftNodeId() string {
 	if m != nil {
-		return m.RaftNodeID
+		return m.RaftNodeId
 	}
 	return ""
 }
@@ -261,8 +261,8 @@ func (m *PerfStandbyElectionInput) XXX_DiscardUnknown() {
 var xxx_messageInfo_PerfStandbyElectionInput proto.InternalMessageInfo
 
 type PerfStandbyElectionResponse struct {
-	ID                   string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ClusterID            string     `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	Id                   string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ClusterId            string     `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	PrimaryClusterAddr   string     `protobuf:"bytes,3,opt,name=primary_cluster_addr,json=primaryClusterAddr,proto3" json:"primary_cluster_addr,omitempty"`
 	CaCert               []byte     `protobuf:"bytes,4,opt,name=ca_cert,json=caCert,proto3" json:"ca_cert,omitempty"`
 	ClientCert           []byte     `protobuf:"bytes,5,opt,name=client_cert,json=clientCert,proto3" json:"client_cert,omitempty"`
@@ -296,16 +296,16 @@ func (m *PerfStandbyElectionResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PerfStandbyElectionResponse proto.InternalMessageInfo
 
-func (m *PerfStandbyElectionResponse) GetID() string {
+func (m *PerfStandbyElectionResponse) GetId() string {
 	if m != nil {
-		return m.ID
+		return m.Id
 	}
 	return ""
 }
 
-func (m *PerfStandbyElectionResponse) GetClusterID() string {
+func (m *PerfStandbyElectionResponse) GetClusterId() string {
 	if m != nil {
-		return m.ClusterID
+		return m.ClusterId
 	}
 	return ""
 }

@@ -6,6 +6,8 @@ import (
 	"math"
 	"sync/atomic"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -92,6 +94,13 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	protoReq.NamespaceID = ns.ID
+	protoReq.NamespacePath = ns.Path
 
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,

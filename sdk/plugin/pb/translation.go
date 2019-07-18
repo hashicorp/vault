@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -250,25 +252,25 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 	}, nil
 }
 
-func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
+func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, *namespace.Namespace, error) {
 	if r == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	data := map[string]interface{}{}
 	err := json.Unmarshal([]byte(r.Data), &data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	secret, err := ProtoSecretToLogicalSecret(r.Secret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	auth, err := ProtoAuthToLogicalAuth(r.Auth)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var headers map[string][]string
@@ -277,6 +279,11 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		for k, v := range r.Headers {
 			headers[k] = v.Header
 		}
+	}
+
+	ns := namespace.Namespace{
+		ID:   r.NamespaceID,
+		Path: r.NamespacePath,
 	}
 
 	return &logical.Request{
@@ -300,7 +307,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
-	}, nil
+	}, &ns, nil
 }
 
 func LogicalConnectionToProtoConnection(c *logical.Connection) *Connection {

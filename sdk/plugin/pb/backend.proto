@@ -134,6 +134,9 @@ message Request {
 	// inspect the connection information and potentially use it for
 	// authentication/protection.
 	Connection connection = 20;
+
+	string namespace_path = 21;
+	string namespace_id = 22;
 }
 
 message Auth {

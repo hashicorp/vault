@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -64,10 +66,12 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 		return &pb.HandleRequestReply{}, ErrServerInMetadataMode
 	}
 
-	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
+	logicalReq, ns, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
 	}
+
+	ctx = namespace.ContextWithNamespace(ctx, ns)
 
 	logicalReq.Storage = newGRPCStorageClient(b.brokeredClient)
 
@@ -123,10 +127,11 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 		return &pb.HandleExistenceCheckReply{}, ErrServerInMetadataMode
 	}
 
-	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
+	logicalReq, ns, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
 		return &pb.HandleExistenceCheckReply{}, err
 	}
+	ctx = namespace.ContextWithNamespace(ctx, ns)
 	logicalReq.Storage = newGRPCStorageClient(b.brokeredClient)
 
 	checkFound, exists, err := b.backend.HandleExistenceCheck(ctx, logicalReq)
