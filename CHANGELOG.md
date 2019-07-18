@@ -28,6 +28,8 @@ IMPROVEMENTS:
  * agent: Allow EC2 nonce to be passed in [GH-6953]
  * agent: Add optional `namespace` parameter, which sets the default namespace
    for the auto-auth functionality [GH-6988]
+ * api: Add support for passing data to delete operations via `DeleteWithData`
+   [GH-7139]
  * audit/file: Dramatically speed up file operations by changing
    locking/marshaling order [GH-7024]
  * auth/jwt: A new `verbose_oidc_logging` role parameter has been added to help
@@ -36,6 +38,8 @@ IMPROVEMENTS:
    via token roles [GH-6267]
  * cli: `path-help` now allows `-format=json` to be specified, which will
    output OpenAPI [GH-7006]
+ * cli: Add support for passing parameters to `vault delete` operations
+   [GH-7139]
  * secrets/kv: Add optional `delete_version_after` parameter, which takes a
    duration and can be set on the mount and/or the metadata for a specific key
    [GH-7005]
