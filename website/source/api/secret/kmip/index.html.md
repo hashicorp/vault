@@ -214,7 +214,8 @@ Delete a scope by name.
 - `scope` (`string: <required>`) - Name of scope. This is part of the request URL.
 - `force` (`bool: false`) - Force scope deletion. If KMIP managed objects have
   been created within the scope this param must be provided or the deletion will
-  fail.
+  fail. This value should be supplied as a query parameter, or as an argument in
+  the CLI.
 
 ### Sample Request
 
@@ -222,7 +223,7 @@ Delete a scope by name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://127.0.0.1:8200/v1/kmip/scope/myscope
+    https://127.0.0.1:8200/v1/kmip/scope/myscope?force=false
 ```
 
 ## Write role
