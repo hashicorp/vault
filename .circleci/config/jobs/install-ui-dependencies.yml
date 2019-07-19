@@ -6,6 +6,10 @@ steps:
       name: Install UI dependencies
       command: |
         cd ui
+        nvm install 10
+        nvm use 10
+        curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.12.1
+        export PATH="$HOME/.yarn/bin:$PATH"
         yarn install --ignore-optional
         npm rebuild node-sass
   - save_yarn_cache
