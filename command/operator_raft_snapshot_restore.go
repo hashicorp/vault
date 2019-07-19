@@ -18,7 +18,7 @@ type OperatorRaftSnapshotRestoreCommand struct {
 }
 
 func (c *OperatorRaftSnapshotRestoreCommand) Synopsis() string {
-	return "Installs the provided snapshot, returning the cluster to the state defined in it."
+	return "Installs the provided snapshot, returning the cluster to the state defined in it"
 }
 
 func (c *OperatorRaftSnapshotRestoreCommand) Help() string {

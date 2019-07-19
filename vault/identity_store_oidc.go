@@ -1018,9 +1018,10 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     data,
-			logical.HTTPContentType: "application/json",
+			logical.HTTPStatusCode:      200,
+			logical.HTTPRawBody:         data,
+			logical.HTTPContentType:     "application/json",
+			logical.HTTPRawCacheControl: "max-age=3600",
 		},
 	}
 
@@ -1059,6 +1060,25 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			logical.HTTPRawBody:     data,
 			logical.HTTPContentType: "application/json",
 		},
+	}
+
+	// set a Cache-Control header only if there are keys, if there aren't keys
+	// then nextRun should not be used to set Cache-Control header because it chooses
+	// a time in the future that isn't based on key rotation/expiration values
+	keys, err := listOIDCPublicKeys(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) > 0 {
+		if v, ok := i.oidcCache.Get(nilNamespace, "nextRun"); ok {
+			now := time.Now()
+			expireAt := v.(time.Time)
+			if expireAt.After(now) {
+				expireInSeconds := expireAt.Sub(time.Now()).Seconds()
+				expireInString := fmt.Sprintf("max-age=%.0f", expireInSeconds)
+				resp.Data[logical.HTTPRawCacheControl] = expireInString
+			}
+		}
 	}
 
 	return resp, nil
@@ -1155,7 +1175,7 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 }
 
 // namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
-// verification_ttl that was applied. verification_ttl can be overriden with an
+// verification_ttl that was applied. verification_ttl can be overridden with an
 // overrideVerificationTTL value >= 0
 func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL
