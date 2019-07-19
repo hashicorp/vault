@@ -291,19 +291,21 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
 	for _, snapshot := range snapshots {
-		_, source, err := snaps.Open(snapshot.ID)
-		if err != nil {
-			// Skip this one and try the next. We will detect if we
-			// couldn't open any snapshots.
-			continue
-		}
+		if !conf.NoSnapshotRestoreOnStart {
+			_, source, err := snaps.Open(snapshot.ID)
+			if err != nil {
+				// Skip this one and try the next. We will detect if we
+				// couldn't open any snapshots.
+				continue
+			}
 
-		err = fsm.Restore(source)
-		// Close the source after the restore has completed
-		source.Close()
-		if err != nil {
-			// Same here, skip and try the next one.
-			continue
+			err = fsm.Restore(source)
+			// Close the source after the restore has completed
+			source.Close()
+			if err != nil {
+				// Same here, skip and try the next one.
+				continue
+			}
 		}
 
 		snapshotIndex = snapshot.Index
@@ -545,23 +547,23 @@ func (r *Raft) restoreSnapshot() error {
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		_, source, err := r.snapshots.Open(snapshot.ID)
-		if err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
-			continue
+		if !r.conf.NoSnapshotRestoreOnStart {
+			_, source, err := r.snapshots.Open(snapshot.ID)
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+
+			err = r.fsm.Restore(source)
+			// Close the source after the restore has completed
+			source.Close()
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+
+			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
 		}
-
-		err = r.fsm.Restore(source)
-		// Close the source after the restore has completed
-		source.Close()
-		if err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
-			continue
-		}
-
-		// Log success
-		r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
-
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 

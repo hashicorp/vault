@@ -66,7 +66,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.1.1-0.20190703171940-f639636d18e0
+	github.com/hashicorp/raft v1.1.1-0.20190719143500-dcbf3052ba60
 	github.com/hashicorp/raft-snapshot v1.0.1
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190703042722-a8d100740e20
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190703042725-86deab7df8e2
@@ -82,8 +82,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190516000311-88f9a4f11829
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
-	github.com/hashicorp/vault/api v1.0.3-0.20190709080132-cdd1893eace3
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190709075428-f03d40b2913b
+	github.com/hashicorp/vault/api v1.0.3-0.20190719143932-2c807ec75a51
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190719143932-2c807ec75a51
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
