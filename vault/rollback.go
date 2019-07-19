@@ -260,7 +260,7 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	rs := m.startOrLookupRollback(ctx, fullPath, false)
 
 	// Since we have the statelock held, tell any inflight rollback to give up
-	// trying to aquire it. This will prevent deadlocks in the case where we
+	// trying to acquire it. This will prevent deadlocks in the case where we
 	// have the write lock. In the case where it was waiting to grab
 	// a read lock it will then simply continue with the rollback
 	// operation under the protection of our write lock.

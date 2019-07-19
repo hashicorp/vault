@@ -1175,7 +1175,7 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 }
 
 // namedKey.rotate(overrides) performs a key rotation on a namedKey and returns the
-// verification_ttl that was applied. verification_ttl can be overriden with an
+// verification_ttl that was applied. verification_ttl can be overridden with an
 // overrideVerificationTTL value >= 0
 func (k *namedKey) rotate(ctx context.Context, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL

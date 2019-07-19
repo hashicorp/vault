@@ -239,7 +239,7 @@ type RaftConfigurationResponse struct {
 	Index uint64 `json:"index"`
 }
 
-// Peer defines the ID and Adress for a given member of the raft cluster.
+// Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
