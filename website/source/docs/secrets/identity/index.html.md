@@ -250,8 +250,8 @@ The full list of template parameters is shown below:
 | :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | `identity.entity.id`                                                   | The entity's ID                                                                         |
 | `identity.entity.name`                                                 | The entity's name                                                                       |
-| `identity.entity.group_ids`                                            | The IDs of the groups the entity is a member of                                         |
-| `identity.entity.group_names`                                          | The names of the groups the entity is a member of                                       |
+| `identity.entity.groups.ids`                                           | The IDs of the groups the entity is a member of                                         |
+| `identity.entity.groups.names`                                         | The names of the groups the entity is a member of                                       |
 | `identity.entity.metadata`                                             | Metadata associated with the entity                                                     |
 | `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                                   |
 | `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                                     |

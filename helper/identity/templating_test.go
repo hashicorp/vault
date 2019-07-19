@@ -200,14 +200,14 @@ func TestPopulate_Basic(t *testing.T) {
 			err:           ErrTemplateValueNotFound,
 		},
 		{
-			name:             "group_names_disallowed",
-			input:            "{{identity.entity.group_names}}",
+			name:             "groups.names_disallowed",
+			input:            "{{identity.entity.groups.names}}",
 			groupMemberships: []string{"foo", "bar"},
 			err:              ErrTemplateValueNotFound,
 		},
 		{
-			name:             "group_ids_disallowed",
-			input:            "{{identity.entity.group_ids}}",
+			name:             "groups.ids_disallowed",
+			input:            "{{identity.entity.groups.ids}}",
 			groupMemberships: []string{"foo", "bar"},
 			err:              ErrTemplateValueNotFound,
 		},
@@ -270,15 +270,15 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			mode:             JSONTemplating,
-			name:             "group_names",
-			input:            "{{identity.entity.group_names}}",
+			name:             "groups.names",
+			input:            "{{identity.entity.groups.names}}",
 			groupMemberships: []string{"foo", "bar"},
 			output:           `["foo","bar"]`,
 		},
 		{
 			mode:             JSONTemplating,
-			name:             "group_ids",
-			input:            "{{identity.entity.group_ids}}",
+			name:             "groups.ids",
+			input:            "{{identity.entity.groups.ids}}",
 			groupMemberships: []string{"foo", "bar"},
 			output:           `["foo_0","bar_1"]`,
 		},
@@ -456,8 +456,8 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "alias not found metadata": {{identity.entity.aliases.blahblah.metadata}},
 			    "one alias metadata key": {{identity.entity.aliases.aws_123.metadata.service}},
 			    "one not found alias metadata key": {{identity.entity.aliases.blahblah.metadata.service}},
-			    "group names": {{identity.entity.group_names}},
-			    "group ids": {{identity.entity.group_ids}},
+			    "group names": {{identity.entity.groups.names}},
+			    "group ids": {{identity.entity.groups.ids}},
 			    "repeated and": {"nested element": {{identity.entity.name}}}
 			}`
 
