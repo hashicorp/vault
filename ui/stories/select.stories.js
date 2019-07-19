@@ -4,7 +4,10 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, object, text, boolean } from '@storybook/addon-knobs';
 import notes from './select.md';
 
-const OPTIONS = ['apple', 'blueberry', 'cherry'];
+const OPTIONS = [
+  { value: 'mon', label: 'Monday', spanish: 'lunes' },
+  { value: 'tues', label: 'Tuesday', spanish: 'martes' },
+];
 
 storiesOf('Select/', module)
   .addParameters({ options: { showPanel: true } })
@@ -19,6 +22,7 @@ storiesOf('Select/', module)
           @label={{label}}
           @isInline={{isInline}}
           @isFullwidth={{isFullwidth}}
+          @selectedItem={{selectedItem}}
         />
     `,
       context: {
@@ -28,6 +32,7 @@ storiesOf('Select/', module)
         isInline: boolean('isInline', false),
         valueAttribute: text('valueAttribute', 'value'),
         labelAttribute: text('labelAttribute', 'label'),
+        selectedItem: text('selectedItem', OPTIONS[1].value),
       },
     }),
     { notes }

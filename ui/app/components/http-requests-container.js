@@ -32,7 +32,7 @@ export default Component.extend({
       const years = counters
         .map(counter => {
           const year = new Date(counter.start_time);
-          return year.getUTCFullYear();
+          return year.getUTCFullYear().toString();
         })
         .uniq();
       years.sort().reverse();

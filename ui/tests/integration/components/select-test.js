@@ -40,10 +40,12 @@ module('Integration | Component | Select', function(hooks) {
 
   test('it renders when options is an array of custom objects', async function(assert) {
     const objectOptions = [{ day: 'mon', fullDay: 'Monday' }, { day: 'tues', fullDay: 'Tuesday' }];
+    const selectedItem = objectOptions[1].day;
     this.setProperties({
       options: objectOptions,
       valueAttribute: 'day',
       labelAttribute: 'fullDay',
+      selectedItem: 'tues',
     });
 
     await render(
@@ -53,11 +55,16 @@ module('Integration | Component | Select', function(hooks) {
           @label={{label}}
           @name={{name}}
           @valueAttribute={{valueAttribute}}
-          @labelAttribute={{labelAttribute}}/>`
+          @labelAttribute={{labelAttribute}}
+          @selectedItem={{selectedItem}}/>`
     );
 
-    assert.dom('[data-test-select="foo"]').hasValue('mon');
-    assert.equal(this.element.querySelector('[data-test-select="foo"]').options[1].textContent, 'Tuesday');
+    assert.dom('[data-test-select="foo"]').hasValue(selectedItem, 'sets selectedItem by default');
+    assert.equal(
+      this.element.querySelector('[data-test-select="foo"]').options[1].textContent.trim(),
+      'Tuesday',
+      'uses the labelAttribute to determine the label'
+    );
   });
 
   test('it renders the selectedItem as selected by default', async function(assert) {
