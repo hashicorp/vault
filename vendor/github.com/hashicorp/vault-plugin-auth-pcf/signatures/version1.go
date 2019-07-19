@@ -61,6 +61,7 @@ func Sign(pathToPrivateKey string, signatureData *SignatureData) (string, error)
 		return "", err
 	}
 
+	// This resolves to using a saltLength of 222.
 	signatureBytes, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, crypto.SHA256, signatureData.hash(), nil)
 	if err != nil {
 		return "", err
