@@ -166,9 +166,6 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
-	if m.logger.IsDebug() {
-		m.logger.Debug("attempting rollback", "path", fullPath)
-	}
 
 	defer func() {
 		rs.lastError = err
@@ -181,9 +178,11 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
+		m.logger.Error("rollback failed to derive namespace from context", "path", fullPath)
 		return err
 	}
 	if ns == nil {
+		m.logger.Error("rollback found no namespace", "path", fullPath)
 		return namespace.ErrNoNamespace
 	}
 
