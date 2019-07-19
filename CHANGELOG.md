@@ -1,5 +1,10 @@
 ## 1.2-beta3 (Unreleased)
 
+CHANGES:
+
+ * rollback: Rollback will no longer display log messages when it runs; it will
+   only display messages on error.
+
 FEATURES:
 
  * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
