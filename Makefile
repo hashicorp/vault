@@ -195,7 +195,6 @@ fmtcheck:
 
 fmt:
 	goimports -w $(GOFMT_FILES)
-	gofmt -w $(GOFMT_FILES)
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
