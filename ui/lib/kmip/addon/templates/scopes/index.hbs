@@ -73,7 +73,8 @@
                     (action "refresh")
                   )
                 }}
-                @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+                @confirmTitle={{concat "Delete scope " list.item.id "?"}}
+                @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
                 @cancelButtonText="Cancel"
                 data-test-scope-delete="true"
                 >
