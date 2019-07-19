@@ -19,7 +19,6 @@
       {{#each options as |op|}}
         <option
           value={{or (get op valueAttribute) op}}
-          {{debugger}}
           selected={{eq selectedValue (or (get op valueAttribute) op)}}>
           {{or (get op labelAttribute) op}}
         </option>
