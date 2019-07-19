@@ -72,7 +72,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190719145754-00bc60f1941d
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190719145800-2be3c159a796
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190719145810-4d1796fefaaa
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190719145819-aaff0314d1f0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190719214606-60efdbf2cb4a
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190719145826-689536f38712
 	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190719145832-8a3e0d60fcd8
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190719145839-141f0c4c6e51
