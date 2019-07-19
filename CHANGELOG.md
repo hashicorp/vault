@@ -31,6 +31,8 @@ BUG FIXES:
    [GH-6541]
  * auth/aws: AWS Roles are now upgraded and saved to the latest version just
    after the AWS credential plugin is mounted. [GH-7025]
+ * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
+   performance standbys [JWT-61]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
