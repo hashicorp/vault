@@ -40,12 +40,12 @@ module('Integration | Component | Select', function(hooks) {
 
   test('it renders when options is an array of custom objects', async function(assert) {
     const objectOptions = [{ day: 'mon', fullDay: 'Monday' }, { day: 'tues', fullDay: 'Tuesday' }];
-    const selectedItem = objectOptions[1].day;
+    const selectedValue = objectOptions[1].day;
     this.setProperties({
       options: objectOptions,
       valueAttribute: 'day',
       labelAttribute: 'fullDay',
-      selectedItem: 'tues',
+      selectedValue: selectedValue,
     });
 
     await render(
@@ -56,22 +56,15 @@ module('Integration | Component | Select', function(hooks) {
           @name={{name}}
           @valueAttribute={{valueAttribute}}
           @labelAttribute={{labelAttribute}}
-          @selectedItem={{selectedItem}}/>`
+          @selectedValue={{selectedValue}}/>`
     );
 
-    assert.dom('[data-test-select="foo"]').hasValue(selectedItem, 'sets selectedItem by default');
+    assert.dom('[data-test-select="foo"]').hasValue(selectedValue, 'sets selectedValue by default');
     assert.equal(
       this.element.querySelector('[data-test-select="foo"]').options[1].textContent.trim(),
       'Tuesday',
       'uses the labelAttribute to determine the label'
     );
-  });
-
-  test('it renders the selectedItem as selected by default', async function(assert) {
-    this.set('selectedItem', 'baz');
-    await render(hbs`<Select @options={{options}} @name={{name}} @selectedItem={{selectedItem}}/>`);
-
-    assert.dom('[data-test-select="foo"]').hasValue('baz');
   });
 
   test('it calls onChange when an item is selected', async function(assert) {

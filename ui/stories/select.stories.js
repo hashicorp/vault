@@ -22,7 +22,7 @@ storiesOf('Select/', module)
           @label={{label}}
           @isInline={{isInline}}
           @isFullwidth={{isFullwidth}}
-          @selectedItem={{selectedItem}}
+          @selectedValue={{selectedValue}}
         />
     `,
       context: {
@@ -32,7 +32,7 @@ storiesOf('Select/', module)
         isInline: boolean('isInline', false),
         valueAttribute: text('valueAttribute', 'value'),
         labelAttribute: text('labelAttribute', 'label'),
-        selectedItem: text('selectedItem', OPTIONS[1].value),
+        selectedValue: text('selectedValue', OPTIONS[1].value),
       },
     }),
     { notes }
