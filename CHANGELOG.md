@@ -4,6 +4,8 @@ CHANGES:
 
  * rollback: Rollback will no longer display log messages when it runs; it will
    only display messages on error.
+ * plugins: Database plugins will now default to 4 `max_open_connections`
+   rather than 2.
 
 FEATURES:
 
