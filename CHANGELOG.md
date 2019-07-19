@@ -1,3 +1,32 @@
+## 1.2-beta3 (Unreleased)
+
+FEATURES:
+
+ * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
+   manage storage directly within a Vault cluster. This new integrated storage
+   solution is based on the Raft protocol which is also used to back HashiCorp
+   Consul and HashiCorp Nomad.
+
+IMPROVEMENTS:
+
+ * api: Add support for passing data to delete operations via `DeleteWithData`
+   [GH-7139]
+ * cli: Add support for passing parameters to `vault delete` operations
+   [GH-7139]
+ * cli: Add a log-format CLI flag that can specify either "standard" or "json"
+   for the log format for the `vault server`command. [GH-6840]
+ * plugins: Change the default for `max_open_connections` for DB plugins to 4
+   [GH-7093]
+
+BUG FIXES:
+
+ * audit: Log requests and responses due to invalid wrapping token provided
+   [GH-6541]
+ * auth/aws: AWS Roles are now upgraded and saved to the latest version just
+   after the AWS credential plugin is mounted. [GH-7025]
+ * ui: Show Entities and Groups in Side Navigation [GH-7138]
+ * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
+
 ## 1.2-beta2 (July 9th, 2019)
 
 CHANGES:
@@ -13,12 +42,8 @@ CHANGES:
    `token_no_default_policy` field.
  * auth/approle: `bound_cidr_list` is no longer returned when reading a role
  
- FEATURES:
- 
- * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
-   manage storage directly within a Vault cluster. This new integrated storage
-   solution is based on the Raft protocol which is also used to back HashiCorp
-   Consul and HashiCorp Nomad.
+FEATURES:
+
  * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
    where you can browse the endpoints avaliable to you and make requests. To try
    it out, open the Web CLI and type `api`.
@@ -28,8 +53,6 @@ IMPROVEMENTS:
  * agent: Allow EC2 nonce to be passed in [GH-6953]
  * agent: Add optional `namespace` parameter, which sets the default namespace
    for the auto-auth functionality [GH-6988]
- * api: Add support for passing data to delete operations via `DeleteWithData`
-   [GH-7139]
  * audit/file: Dramatically speed up file operations by changing
    locking/marshaling order [GH-7024]
  * auth/jwt: A new `verbose_oidc_logging` role parameter has been added to help
@@ -38,26 +61,14 @@ IMPROVEMENTS:
    via token roles [GH-6267]
  * cli: `path-help` now allows `-format=json` to be specified, which will
    output OpenAPI [GH-7006]
- * cli: Add support for passing parameters to `vault delete` operations
-   [GH-7139]
  * secrets/kv: Add optional `delete_version_after` parameter, which takes a
    duration and can be set on the mount and/or the metadata for a specific key
    [GH-7005]
- * cli: Add a log-format CLI flag that can specify either "standard" or "json"
-   for the log format for the `vault server`command. [GH-6840]
- * plugins: Change the default for `max_open_connections` for DB plugins to 4
-   [GH-7093]
 
 BUG FIXES:
 
- * audit: Log requests and responses due to invalid wrapping token provided
-   [GH-6541]
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
- * auth/aws: AWS Roles are now upgraded and saved to the latest version just
-   after the AWS credential plugin is mounted. [GH-7025]
- * ui: Show Entities and Groups in Side Navigation [GH-7138]
- * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
 ## 1.2-beta1 (June 25th, 2019)
 
