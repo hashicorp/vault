@@ -1,4 +1,4 @@
-// Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright © 2019, Oracle and/or its affiliates.
 package ociauth
 
 import "github.com/oracle/oci-go-sdk/common"
