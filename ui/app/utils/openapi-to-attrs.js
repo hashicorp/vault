@@ -8,7 +8,10 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (const propName in props) {
     const prop = props[propName];
-    let { description, items, type, format, isId, label } = prop;
+    let { description, items, type, format, isId, label, deprecated } = prop;
+    if (deprecated === true) {
+      continue;
+    }
     let { name, value, group, sensitive } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
