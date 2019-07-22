@@ -44,7 +44,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
+	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
@@ -59,6 +59,7 @@ require (
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -66,7 +67,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.1.1-0.20190719143500-dcbf3052ba60
+	github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
 	github.com/hashicorp/raft-snapshot v1.0.1
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190719145746-998f93644e9d
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190719145754-00bc60f1941d
