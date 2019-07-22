@@ -971,6 +971,36 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 	}
 }
 
+func TestOIDC_nskeyContainsnsID(t *testing.T) {
+	tests := []struct {
+		nsid     string
+		nskey    string
+		expected bool
+	}{
+		{"nsid", "v0:nsid:key", true},
+		{"nsid", "v0:nsid:", true},
+		{"nsid", "v0:nsid", false},
+		{"nsid", "v0:", false},
+		{"nsid", "v0", false},
+		{"nsid", "", false},
+		{"nsid1", "v0:nsid2:key", false},
+		{"nsid1", "nsid1:nsid2:nsid1", false},
+		{"nsid1", "nsid1:nsid1:nsid1", true},
+		{"nsid", "nsid:nsid:nsid:nsid:nsid:nsid", true},
+		{"nsid", ":::", false},
+		{"", ":::", true}, // "" is a valid key for cache.Set/Get
+		{"nsid1", "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", true},
+		{"nsid0", "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", false},
+	}
+
+	for _, test := range tests {
+		actual := nskeyContainsnsID(test.nskey, test.nsid)
+		if test.expected != actual {
+			t.Fatalf("expected %t but got %t for nsid: %q and nskey: %q", test.expected, actual, test.nsid, test.nskey)
+		}
+	}
+}
+
 // some helpers
 func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 	t.Helper()

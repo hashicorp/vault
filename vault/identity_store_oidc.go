@@ -1564,8 +1564,14 @@ func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interfac
 
 func (c *oidcCache) Flush(ns *namespace.Namespace) {
 	for itemKey := range c.c.Items() {
-		if strings.SplitN(itemKey, ":", 3)[1] == ns.ID {
+		if nskeyContainsnsID(itemKey, ns.ID) {
 			c.c.Delete(itemKey)
 		}
 	}
+}
+
+// returns true for a properly constructed nskey (<version>:<nsID>:<key>) where <nsID> is nsID
+func nskeyContainsnsID(nskey string, nsID string) bool {
+	split := strings.SplitN(nskey, ":", -1)
+	return len(split) >= 3 && split[1] == nsID
 }
