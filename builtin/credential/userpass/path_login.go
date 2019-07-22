@@ -64,6 +64,16 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Get the user and validate auth
 	user, userError := b.user(ctx, req.Storage, username)
 
+	if user == nil {
+		b.Logger().Warn("user not found for login request", "username", username)
+		return nil, logical.ErrPermissionDenied
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
+	}
+
 	var userPassword []byte
 	var legacyPassword bool
 	// If there was an error or it's nil, we fake a password for the bcrypt
@@ -81,11 +91,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		// This is still acceptable as bcrypt will still make sure it takes
 		// a long time, it's just nicer to be random if possible
 		userPassword = []byte("dummy")
-	}
-
-	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
