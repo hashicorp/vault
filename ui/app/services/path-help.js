@@ -148,10 +148,8 @@ export default Service.extend({
       //include url params
       if (params) {
         const { name, schema, description } = params[0];
-        let label = capitalize(name);
-        if (label.toLowerCase() !== 'name') {
-          label += ' name';
-        }
+        let label = capitalize(name.split('_').join(' '));
+
         paramProp[name] = {
           'x-vault-displayAttrs': {
             name: name,
