@@ -14,6 +14,15 @@ import (
 	"github.com/armon/go-metrics"
 )
 
+const (
+	// This is the current suggested max size of the data in a raft log entry.
+	// This is based on current architecture, default timing, etc. Clients can
+	// ignore this value if they want as there is no actual hard checking
+	// within the library. As the library is enhanced this value may change
+	// over time to reflect current suggested maximums.
+	SuggestedMaxDataSize = 512 * 1024
+)
+
 var (
 	// ErrLeader is returned when an operation can't be completed on a
 	// leader node.
@@ -291,19 +300,21 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
 	for _, snapshot := range snapshots {
-		_, source, err := snaps.Open(snapshot.ID)
-		if err != nil {
-			// Skip this one and try the next. We will detect if we
-			// couldn't open any snapshots.
-			continue
-		}
+		if !conf.NoSnapshotRestoreOnStart {
+			_, source, err := snaps.Open(snapshot.ID)
+			if err != nil {
+				// Skip this one and try the next. We will detect if we
+				// couldn't open any snapshots.
+				continue
+			}
 
-		err = fsm.Restore(source)
-		// Close the source after the restore has completed
-		source.Close()
-		if err != nil {
-			// Same here, skip and try the next one.
-			continue
+			err = fsm.Restore(source)
+			// Close the source after the restore has completed
+			source.Close()
+			if err != nil {
+				// Same here, skip and try the next one.
+				continue
+			}
 		}
 
 		snapshotIndex = snapshot.Index
@@ -545,23 +556,23 @@ func (r *Raft) restoreSnapshot() error {
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		_, source, err := r.snapshots.Open(snapshot.ID)
-		if err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
-			continue
+		if !r.conf.NoSnapshotRestoreOnStart {
+			_, source, err := r.snapshots.Open(snapshot.ID)
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+
+			err = r.fsm.Restore(source)
+			// Close the source after the restore has completed
+			source.Close()
+			if err != nil {
+				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
+				continue
+			}
+
+			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
 		}
-
-		err = r.fsm.Restore(source)
-		// Close the source after the restore has completed
-		source.Close()
-		if err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
-			continue
-		}
-
-		// Log success
-		r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
-
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 
@@ -635,6 +646,15 @@ func (r *Raft) Leader() ServerAddress {
 // will fail.
 func (r *Raft) Apply(cmd []byte, timeout time.Duration) ApplyFuture {
 	metrics.IncrCounter([]string{"raft", "apply"}, 1)
+
+	return r.ApplyLog(Log{Data: cmd}, timeout)
+}
+
+// ApplyLog performs Apply but takes in a Log directly. The only values
+// currently taken from the submitted Log are Data and Extensions.
+func (r *Raft) ApplyLog(log Log, timeout time.Duration) ApplyFuture {
+	metrics.IncrCounter([]string{"raft", "apply_with_log"}, 1)
+
 	var timer <-chan time.Time
 	if timeout > 0 {
 		timer = time.After(timeout)
@@ -643,8 +663,9 @@ func (r *Raft) Apply(cmd []byte, timeout time.Duration) ApplyFuture {
 	// Create a log future, no index or term yet
 	logFuture := &logFuture{
 		log: Log{
-			Type: LogCommand,
-			Data: cmd,
+			Type:       LogCommand,
+			Data:       log.Data,
+			Extensions: log.Extensions,
 		},
 	}
 	logFuture.init()

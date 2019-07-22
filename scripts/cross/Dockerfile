@@ -1,4 +1,4 @@
-FROM debian:testing
+FROM debian:buster
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \
@@ -21,7 +21,7 @@ RUN apt-get update -y && apt-get install -y -q nodejs yarn=1.12.1-1
 RUN rm -rf /var/lib/apt/lists/*
 
 
-ENV GOVERSION 1.12.6
+ENV GOVERSION 1.12.7
 RUN mkdir /goroot && mkdir /gopath
 RUN curl https://storage.googleapis.com/golang/go${GOVERSION}.linux-amd64.tar.gz \
            | tar xvzf - -C /goroot --strip-components=1
@@ -36,6 +36,6 @@ RUN go get github.com/hashicorp/go-bindata/go-bindata
 RUN go get github.com/elazarl/go-bindata-assetfs
 RUN go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 
-RUN mkdir /vault
-WORKDIR /vault
+RUN mkdir -p /gopath/src/github.com/hashicorp/vault
+WORKDIR /gopath/src/github.com/hashicorp/vault
 CMD make static-dist bin

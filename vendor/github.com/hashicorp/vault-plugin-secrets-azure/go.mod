@@ -8,12 +8,11 @@ require (
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dimchansky/utfbom v1.1.0 // indirect
-	github.com/go-test/deep v1.0.1
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/vault/api v1.0.1
-	github.com/hashicorp/vault/sdk v0.1.8
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/hashicorp/vault/api v1.0.3-0.20190719145648-41d3939b1ff9
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190719011625-af0b660abb36
 )
