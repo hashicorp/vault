@@ -15,6 +15,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-raftchunking"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
@@ -38,13 +39,6 @@ var (
 	raftState         = "raft/"
 	peersFileName     = "peers.json"
 	snapshotsRetained = 2
-
-	// Set a max size of 512kb
-	maxCommandSizeBytes = 512 * 1024
-
-	// ErrCommandTooLarge is returned when the backend tries to apply a log
-	// greater than the max allowed size.
-	ErrCommandTooLarge = fmt.Errorf("%s: exceeds %d byte limit", physical.ErrValueTooLarge, maxCommandSizeBytes)
 
 	restoreOpDelayDuration = 5 * time.Second
 )
@@ -239,7 +233,7 @@ type RaftConfigurationResponse struct {
 	Index uint64 `json:"index"`
 }
 
-// Peer defines the ID and Adress for a given member of the raft cluster.
+// Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
@@ -460,7 +454,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		b.logger.Info("raft recovery deleted peers.json")
 	}
 
-	raftObj, err := raft.NewRaft(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	raftObj, err := raft.NewRaft(raftConfig, raftchunking.NewChunkingFSM(b.fsm), b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
 		return err
@@ -783,12 +777,13 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
-	// Restrict the value to maxCommandSizeBytes in length
-	if len(commandBytes) > maxCommandSizeBytes {
-		return ErrCommandTooLarge
+	var applyFuture raft.ApplyFuture
+	switch {
+	case len(commandBytes) <= raft.SuggestedMaxDataSize:
+		applyFuture = b.raft.Apply(commandBytes, 0)
+	default:
+		applyFuture = raftchunking.ChunkingApply(commandBytes, nil, 0, b.raft.ApplyLog)
 	}
-
-	applyFuture := b.raft.Apply(commandBytes, 0)
 	err = applyFuture.Error()
 	if err != nil {
 		return err

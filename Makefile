@@ -12,7 +12,7 @@ EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
 	github.com/kardianos/govendor \
 	github.com/client9/misspell/cmd/misspell
-GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 GO_VERSION_MIN=1.11
 CGO_ENABLED?=0
@@ -194,7 +194,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	gofmt -w $(GOFMT_FILES)
+	goimports -w $(GOFMT_FILES)
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."

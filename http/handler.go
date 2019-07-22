@@ -455,6 +455,29 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
+func parseQuery(values url.Values) map[string]interface{} {
+	data := map[string]interface{}{}
+	for k, v := range values {
+		// Skip the help key as this is a reserved parameter
+		if k == "help" {
+			continue
+		}
+
+		switch {
+		case len(v) == 0:
+		case len(v) == 1:
+			data[k] = v[0]
+		default:
+			data[k] = v
+		}
+	}
+
+	if len(data) > 0 {
+		return data
+	}
+	return nil
+}
+
 func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
