@@ -62,6 +62,7 @@ export default Component.extend({
     *
     */
   inputList: computed(function() {
+    /* eslint-disable ember/no-side-effects */
     return ArrayProxy.create({
       content: [],
       // trim the `value` when accessing objects

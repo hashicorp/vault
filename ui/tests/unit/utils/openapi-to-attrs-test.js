@@ -41,12 +41,10 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     ttl: {
       helpText: 'this is a TTL!',
       editType: 'ttl',
-      type: 'string',
       label: 'TTL',
     },
     awesomePeople: {
       editType: 'stringArray',
-      type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
     },
     favoriteIceCream: {
@@ -105,7 +103,6 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     }),
     ttl: attr('string', {
       editType: 'ttl',
-      type: 'string',
       label: 'TTL',
       helpText: 'this is a TTL!',
     }),

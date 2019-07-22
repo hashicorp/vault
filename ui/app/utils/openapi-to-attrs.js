@@ -23,7 +23,6 @@ export const expandOpenApiProps = function(props) {
     }
     let attrDefn = {
       editType: editType,
-      type: details.type,
       helpText: details.description,
       sensitive: details['x-vault-displaySensitive'],
       label: details['x-vault-displayName'],
@@ -31,6 +30,10 @@ export const expandOpenApiProps = function(props) {
       defaultValue:
         details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
     };
+
+    if (editType !== 'ttl' && details.type !== 'array') {
+      attrDefn.type = details.type;
+    }
     // loop to remove empty vals
     for (let attrProp in attrDefn) {
       if (attrDefn[attrProp] == null) {
