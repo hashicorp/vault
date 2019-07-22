@@ -59,7 +59,7 @@ module('Integration | Component | Select', function(hooks) {
           @selectedValue={{selectedValue}}/>`
     );
 
-    assert.dom('[data-test-select="foo"]').hasValue(selectedValue, 'sets selectedValue by default');
+    assert.dom('[data-test-select="foo"]').hasValue('tues', 'sets selectedValue by default');
     assert.equal(
       this.element.querySelector('[data-test-select="foo"]').options[1].textContent.trim(),
       'Tuesday',
