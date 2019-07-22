@@ -56,12 +56,14 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
+var addExternalPlugins = addExtPluginsImpl
+
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
 
 func newRegistry() *registry {
-	return &registry{
+	reg := &registry{
 		credentialBackends: map[string]logical.Factory{
 			"alicloud":   credAliCloud.Factory,
 			"app-id":     credAppId.Factory,
@@ -119,7 +121,13 @@ func newRegistry() *registry {
 			"transit":    logicalTransit.Factory,
 		},
 	}
+
+	addExternalPlugins(reg)
+
+	return reg
 }
+
+func addExtPluginsImpl(r *registry) {}
 
 type registry struct {
 	credentialBackends map[string]logical.Factory
