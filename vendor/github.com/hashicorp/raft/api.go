@@ -14,6 +14,15 @@ import (
 	"github.com/armon/go-metrics"
 )
 
+const (
+	// This is the current suggested max size of the data in a raft log entry.
+	// This is based on current architecture, default timing, etc. Clients can
+	// ignore this value if they want as there is no actual hard checking
+	// within the library. As the library is enhanced this value may change
+	// over time to reflect current suggested maximums.
+	SuggestedMaxDataSize = 512 * 1024
+)
+
 var (
 	// ErrLeader is returned when an operation can't be completed on a
 	// leader node.
@@ -637,6 +646,15 @@ func (r *Raft) Leader() ServerAddress {
 // will fail.
 func (r *Raft) Apply(cmd []byte, timeout time.Duration) ApplyFuture {
 	metrics.IncrCounter([]string{"raft", "apply"}, 1)
+
+	return r.ApplyLog(Log{Data: cmd}, timeout)
+}
+
+// ApplyLog performs Apply but takes in a Log directly. The only values
+// currently taken from the submitted Log are Data and Extensions.
+func (r *Raft) ApplyLog(log Log, timeout time.Duration) ApplyFuture {
+	metrics.IncrCounter([]string{"raft", "apply_with_log"}, 1)
+
 	var timer <-chan time.Time
 	if timeout > 0 {
 		timer = time.After(timeout)
@@ -645,8 +663,9 @@ func (r *Raft) Apply(cmd []byte, timeout time.Duration) ApplyFuture {
 	// Create a log future, no index or term yet
 	logFuture := &logFuture{
 		log: Log{
-			Type: LogCommand,
-			Data: cmd,
+			Type:       LogCommand,
+			Data:       log.Data,
+			Extensions: log.Extensions,
 		},
 	}
 	logFuture.init()

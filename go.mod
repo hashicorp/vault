@@ -69,13 +69,13 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190719145746-998f93644e9d
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190719145754-00bc60f1941d
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190719145800-2be3c159a796
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190719145810-4d1796fefaaa
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190719214606-60efdbf2cb4a
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190719145826-689536f38712
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190719145832-8a3e0d60fcd8
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190722164529-3bdfad02a66f
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190722164620-5255fa1e475b
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190722164653-e6c0f193acb8
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190722164802-5650a5772ea9
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190722165048-f821ecc201e6
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190722165124-0e53029fd4ac
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190722165205-4a6b73beb8d7
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190719145839-141f0c4c6e51
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190719145845-20f6dd24c49b
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190719145853-d1dae0d343e9

@@ -219,7 +219,7 @@ github.com/go-errors/errors
 github.com/go-ldap/ldap
 # github.com/go-sql-driver/mysql v1.4.1
 github.com/go-sql-driver/mysql
-# github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
+# github.com/go-test/deep v1.0.2
 github.com/go-test/deep
 # github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 github.com/gocql/gocql
@@ -287,6 +287,9 @@ github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
+# github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e
+github.com/hashicorp/go-raftchunking
+github.com/hashicorp/go-raftchunking/types
 # github.com/hashicorp/go-retryablehttp v0.5.4
 github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-rootcerts v1.0.1
@@ -316,27 +319,27 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.1-0.20190719143500-dcbf3052ba60
+# github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.1
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190719145746-998f93644e9d
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190722164529-3bdfad02a66f
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190719145754-00bc60f1941d
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190722164620-5255fa1e475b
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190719145800-2be3c159a796
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190722164653-e6c0f193acb8
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190719145810-4d1796fefaaa
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190722164802-5650a5772ea9
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190719145819-aaff0314d1f0
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190722165048-f821ecc201e6
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190719145826-689536f38712
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190722165124-0e53029fd4ac
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190719145832-8a3e0d60fcd8
+# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190722165205-4a6b73beb8d7
 github.com/hashicorp/vault-plugin-auth-pcf
 github.com/hashicorp/vault-plugin-auth-pcf/signatures
 github.com/hashicorp/vault-plugin-auth-pcf/models
