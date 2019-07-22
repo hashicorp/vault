@@ -24,11 +24,12 @@ export const expandOpenApiProps = function(props) {
     } else if (items) {
       editType = items.type + capitalize(type);
     }
+
     let attrDefn = {
       editType,
       helpText: description,
       sensitive: sensitive,
-      label: name || label,
+      label: label ? label : name ? capitalize(name) : capitalize(propName),
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
