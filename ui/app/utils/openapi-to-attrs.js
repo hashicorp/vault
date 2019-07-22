@@ -29,13 +29,16 @@ export const expandOpenApiProps = function(props) {
       editType,
       helpText: description,
       sensitive: sensitive,
-      label: label ? label : name ? capitalize(name) : capitalize(propName),
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || null,
     };
+
+    if (label || name) {
+      attrDefn.label = label || capitalize(name) || capitalize(propName);
+    }
 
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
