@@ -15,8 +15,12 @@ export const COMPUTEDS = {
     return this.operationFields.slice().removeObjects(['operationAll', 'operationNone']);
   }),
 
-  nonOperationFields: computed('operationFields', function() {
-    let excludeFields = ['role'].concat(this.operationFields);
+  tlsFields: computed(function() {
+    return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
+  }),
+
+  nonOperationFields: computed('tlsFields', 'newFields', 'operationFields', function() {
+    let excludeFields = ['role'].concat(this.operationFields).concat(this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
 };
@@ -29,14 +33,20 @@ const Model = DS.Model.extend(COMPUTEDS, {
   getHelpUrl(path) {
     return `/v1/${path}/scope/example/role/example?help=1`;
   },
-  fieldGroups: computed('fields', 'nonOperationFields', function() {
-    const groups = [{ default: this.nonOperationFields }, { 'Allowed Operations': this.operationFields }];
+  fieldGroups: computed('fields', 'tlsFields', 'nonOperationFields', function() {
+    const groups = [{ TLS: this.tlsFields }, { 'Allowed Operations': this.operationFields }];
+    if (this.nonOperationFields.length) {
+      groups.unshift({ default: this.nonOperationFields });
+    }
     let ret = fieldToAttrs(this, groups);
     return ret;
   }),
 
   operationFormFields: computed('operationFieldsWithoutSpecial', function() {
     return expandAttributeMeta(this, this.operationFieldsWithoutSpecial);
+  }),
+  tlsFormFields: computed('tlsFields', function() {
+    return expandAttributeMeta(this, this.tlsFields);
   }),
   fields: computed('nonOperationFields', function() {
     return expandAttributeMeta(this, this.nonOperationFields);

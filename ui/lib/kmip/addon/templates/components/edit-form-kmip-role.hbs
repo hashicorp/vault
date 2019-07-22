@@ -1,4 +1,4 @@
-<form {{action (queue (action "preSave" model) (perform save model)) on="submit"}}>
+<form {{action (perform save model) on="submit"}}>
   <MessageError @model={{model}} data-test-edit-form-error />
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
@@ -9,48 +9,63 @@
         @model={{model}}
       />
     {{/if}}
-    <h3 class="title is-5">
-      Allowed Operations
-    </h3>
-    {{#each (array
-      (hash label="Allow all" value="operationAll")
-      (hash label="Allow none" value="operationNone")
-      (hash label="Let me choose" value="choose")
-      ) as |displayType|}}
-        <RadioButton
-          @value={{displayType.value}}
-          @groupValue={{this.display}}
-          @changed={{queue
-            (action (mut this.display))
-            (action "updateModel")
-          }}
-          @name="role-display"
-          @radioId={{displayType.value}}
-          @classNames="vlt-radio is-block"
-        >
-          <label for={{displayType.value}} />
-          {{displayType.label}}
-        </RadioButton>
-    {{/each}}
-    {{#if (eq this.display "choose")}}
-      <div class="box is-sideless is-shadowless is-marginless">
+
+    <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
+      <input
+        data-test-text-toggle
+        id="operationNone"
+        type="checkbox"
+        class="switch is-rounded is-success is-small"
+        checked={{not this.model.operationNone}}
+        onchange={{action "switchUpdated" value="target.checked"}}
+      />
+      <label for="operationNone">
+        Allow this role to perform KMIP operations
+      </label>
+    </div>
+    {{#if (not this.model.operationNone) }}
+
+    <Toolbar>
+      <h3 class="title is-6">
+        Allowed Operations
+      </h3>
+    </Toolbar>
+      <div class="box">
+        <FormField
+          @attr={{hash name="operationAll" type="boolean" options=(hash label="Allow this role to perform all operations")}}
+          @model={{this.model}}
+        />
+        <hr />
         {{#each this.model.operationFormFields as |attr|}}
           <FormField
             data-test-field
+            @disabled={{or this.model.operationNone this.model.operationAll}}
             @attr={{attr}}
             @model={{model}}
+            @showHelpText={{false}}
           />
         {{/each}}
       </div>
     {{/if}}
-
-        {{#each this.model.fields as |attr|}}
-          <FormField
-            data-test-field
-            @attr={{attr}}
-            @model={{model}}
-          />
-        {{/each}}
+    <div class="box is-fullwidth is-shadowless">
+      <h3 class="title is-3">
+        TLS
+      </h3>
+      {{#each this.model.tlsFormFields as |attr|}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+        />
+      {{/each}}
+    </div>
+    {{#each this.model.fields as |attr|}}
+      <FormField
+        data-test-field
+        @attr={{attr}}
+        @model={{model}}
+      />
+    {{/each}}
   </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
