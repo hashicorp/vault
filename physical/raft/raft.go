@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -533,10 +534,21 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 	}
 
 	for _, server := range future.Configuration().Servers {
+		host, port, err := net.SplitHostPort(string(server.Address))
+		if err != nil {
+			return nil, err
+		}
+		addr, err := net.ResolveIPAddr("ip", host)
+		if err != nil {
+			return nil, err
+		}
+		if addr == nil {
+			return nil, errors.New("nil addr after resolving raft server address")
+		}
 		entry := &RaftServer{
 			NodeID:          string(server.ID),
 			Address:         string(server.Address),
-			Leader:          server.Address == b.raft.Leader(),
+			Leader:          net.JoinHostPort(addr.String(), port) == string(b.raft.Leader()),
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
