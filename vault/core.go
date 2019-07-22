@@ -1772,7 +1772,14 @@ func stopReplicationImpl(c *Core) error {
 // emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
+	// slowEmitTimer is for periodically exposing metrics that are computationally intensive to calculate
+	slowEmitTimer := time.Tick(5 * time.Minute)
 	writeTimer := time.Tick(c.counters.syncInterval)
+
+	// Instead of waiting 5 minutes, emit on boot
+	if c.tokenStore != nil {
+		c.tokenStore.emitMetrics()
+	}
 
 	for {
 		select {
@@ -1782,6 +1789,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 				c.expiration.emitMetrics()
 			}
 			c.metricsMutex.Unlock()
+
+		case <-slowEmitTimer:
+			if c.tokenStore != nil {
+				c.tokenStore.emitMetrics()
+			}
 
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {

@@ -670,6 +670,7 @@ func (ts *TokenStore) rootToken(ctx context.Context) (*logical.TokenEntry, error
 	if err := ts.create(ctx, te); err != nil {
 		return nil, err
 	}
+
 	return te, nil
 }
 
@@ -960,6 +961,10 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry
 	if err := ts.idView(tokenNS).Put(ctx, le); err != nil {
 		return errwrap.Wrapf("failed to persist entry: {{err}}", err)
 	}
+
+	// update the token count gauge
+	go ts.emitMetrics()
+
 	return nil
 }
 
@@ -2715,6 +2720,9 @@ func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
+	// update the token count gauge
+	go ts.emitMetrics()
+
 	return nil, nil
 }
 
@@ -3291,6 +3299,36 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	}
 
 	return resp, nil
+}
+
+// emitMetrics is invoked periodically to emit statistics
+func (ts *TokenStore) emitMetrics() {
+	ctx := namespace.ContextWithNamespace(ts.activeContext, namespace.RootNamespace)
+
+	ids, err := ts.idView(namespace.RootNamespace).List(ctx, "")
+	if err != nil {
+		ts.logger.Error("failed to list tokens in root namespace")
+		return
+	}
+
+	var rootCount int
+	for _, id := range ids {
+		entry, err := ts.lookupInternal(ctx, id, true, false)
+		if err != nil {
+			ts.logger.Error("failed to read token in root namespace, skipping")
+			continue
+		}
+
+		if entry == nil {
+			continue
+		}
+
+		if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+			rootCount++
+		}
+	}
+	metrics.SetGauge([]string{"token", "num_root_tokens"}, float32(rootCount))
+	metrics.SetGauge([]string{"token", "num_tokens"}, float32(len(ids)))
 }
 
 const (
