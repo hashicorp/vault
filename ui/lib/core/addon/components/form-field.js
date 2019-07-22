@@ -20,7 +20,7 @@ import layout from '../templates/components/form-field';
  * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
  * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
  * @param [disabled=false] {Boolean} - whether the field is disabled
- * @param [showHelpText=false] {Boolean} - whether to show the tooltip with help text from OpenAPI
+ * @param [showHelpText=true] {Boolean} - whether to show the tooltip with help text from OpenAPI
  *
  *
  */
