@@ -153,7 +153,7 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
-	// Make the same request again and ensure that the same reponse is returned
+	// Make the same request again and ensure that the same response is returned
 	// again.
 	sendReq = &SendRequest{
 		Token:   "autoauthtoken",

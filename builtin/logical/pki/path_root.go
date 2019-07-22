@@ -7,10 +7,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"

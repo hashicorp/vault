@@ -89,8 +89,14 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return nil, errors.New("no matching role")
 	}
 
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	signature := data.Get("signature").(string)

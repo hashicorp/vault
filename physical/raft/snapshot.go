@@ -237,7 +237,7 @@ func (s *BoltSnapshotSink) Write(b []byte) (int, error) {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	// If someone is writting to this sink then we need to create a file sink to
+	// If someone is writing to this sink then we need to create a file sink to
 	// capture the data. This currently only happens when a follower is being
 	// sent a snapshot.
 	if s.fileSink == nil {
