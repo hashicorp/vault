@@ -1563,6 +1563,9 @@ func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interfac
 }
 
 func (c *oidcCache) Flush(ns *namespace.Namespace) {
-	// TODO iterate and delete by ns
-	c.c.Flush()
+	for itemKey := range c.c.Items() {
+		if strings.SplitN(itemKey, ":", 3)[1] == ns.ID {
+			c.c.Delete(itemKey)
+		}
+	}
 }
