@@ -1,7 +1,5 @@
 import EditForm from 'core/components/edit-form';
 import layout from '../templates/components/edit-form-kmip-role';
-import { Promise } from 'rsvp';
-import { computed } from '@ember/object';
 
 export default EditForm.extend({
   layout,
@@ -19,6 +17,14 @@ export default EditForm.extend({
     switchUpdated(checked) {
       this.model.set('operationNone', !checked);
       this.model.set('operationAll', checked);
+    },
+
+    preSave(model) {
+      // if we have operationAll or operationNone, we want to clear
+      // out the others so that display shows the right data
+      if (model.operationAll || model.operationNone) {
+        model.operationFieldsWithoutSpecial.forEach(field => model.set(field, null));
+      }
     },
   },
 });

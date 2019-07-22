@@ -1,6 +1,5 @@
-<form {{action (perform save model) on="submit"}}>
-  <MessageError @model={{model}} data-test-edit-form-error />
-  <div class="box is-sideless is-fullwidth is-marginless">
+<form {{action (queue (action "preSave" model) (perform save model)) on="submit"}}>
+  <MessageError @model={{model}} data-test-edit-form-error /> <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
     {{#if (eq @mode "create")}}
       <FormField
@@ -9,7 +8,6 @@
         @model={{model}}
       />
     {{/if}}
-
     <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
       <input
         data-test-text-toggle
@@ -24,27 +22,51 @@
       </label>
     </div>
     {{#if (not this.model.operationNone) }}
-
-    <Toolbar>
-      <h3 class="title is-6">
-        Allowed Operations
-      </h3>
-    </Toolbar>
+      <Toolbar>
+        <h3 class="title is-6">
+          Allowed Operations
+        </h3>
+      </Toolbar>
       <div class="box">
         <FormField
           @attr={{hash name="operationAll" type="boolean" options=(hash label="Allow this role to perform all operations")}}
           @model={{this.model}}
         />
         <hr />
-        {{#each this.model.operationFormFields as |attr|}}
-          <FormField
-            data-test-field
-            @disabled={{or this.model.operationNone this.model.operationAll}}
-            @attr={{attr}}
-            @model={{model}}
-            @showHelpText={{false}}
-          />
-        {{/each}}
+        <div class="is-flex">
+          <div class="kmip-role-allowed-operations">
+            {{#each-in this.model.operationFormFields.firstObject as |groupName fieldsInGroup|}}
+              <h4 class="title is-7">{{groupName}}</h4>
+              {{#each fieldsInGroup as |attr|}}
+                <FormField
+                  data-test-field
+                  @disabled={{or this.model.operationNone this.model.operationAll}}
+                  @attr={{attr}}
+                  @model={{model}}
+                  @showHelpText={{false}}
+                />
+              {{/each}}
+            {{/each-in}}
+          </div>
+          <div class="kmip-role-allowed-operations">
+            {{#each (drop 1 this.model.operationFormFields) as |group index|}}
+              <div class="kmip-role-allowed-operations">
+                {{#each-in group as |groupName fieldsInGroup|}}
+                  <h4 class="title is-7">{{groupName}}</h4>
+                  {{#each fieldsInGroup as |attr|}}
+                    <FormField
+                      data-test-field
+                      @disabled={{or this.model.operationNone this.model.operationAll}}
+                      @attr={{attr}}
+                      @model={{model}}
+                      @showHelpText={{false}}
+                    />
+                  {{/each}}
+                {{/each-in}}
+              </div>
+            {{/each}}
+          </div>
+        </div>
       </div>
     {{/if}}
     <div class="box is-fullwidth is-shadowless">
