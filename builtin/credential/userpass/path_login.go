@@ -64,16 +64,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Get the user and validate auth
 	user, userError := b.user(ctx, req.Storage, username)
 
-	if user == nil {
-		b.Logger().Warn("user not found for login request", "username", username)
-		return nil, logical.ErrPermissionDenied
-	}
-
-	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
-	}
-
 	var userPassword []byte
 	var legacyPassword bool
 	// If there was an error or it's nil, we fake a password for the bcrypt
@@ -111,6 +101,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 	if user == nil {
 		return logical.ErrorResponse("invalid username or password"), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	auth := &logical.Auth{
