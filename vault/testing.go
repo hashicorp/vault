@@ -797,6 +797,8 @@ type TestCluster struct {
 	TempDir            string
 	ClientAuthRequired bool
 	Logger             log.Logger
+	CleanupFunc        func()
+	SetupFunc          func()
 }
 
 func (c *TestCluster) Start() {
@@ -806,6 +808,9 @@ func (c *TestCluster) Start() {
 				go core.Server.Serve(ln)
 			}
 		}
+	}
+	if c.SetupFunc != nil {
+		c.SetupFunc()
 	}
 }
 
@@ -947,6 +952,9 @@ func (c *TestCluster) Cleanup() {
 
 	// Give time to actually shut down/clean up before the next test
 	time.Sleep(time.Second)
+	if c.CleanupFunc != nil {
+		c.CleanupFunc()
+	}
 }
 
 func (c *TestCluster) ensureCoresSealed() error {
@@ -1032,6 +1040,10 @@ type TestClusterOptions struct {
 	PhysicalFactory    func(hclog.Logger) (physical.Backend, error)
 	FirstCoreNumber    int
 	RequireClientAuth  bool
+	// SetupFunc is called after the cluster is started.
+	SetupFunc func(t testing.T, c *TestCluster)
+	// CleanupFunc is called after the cluster is cleaned up.
+	CleanupFunc func()
 }
 
 var DefaultNumCores = 3
@@ -1697,6 +1709,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.Cores = ret
 
 	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
+
+	if opts != nil {
+		testCluster.CleanupFunc = opts.CleanupFunc
+		if opts.SetupFunc != nil {
+			testCluster.SetupFunc = func() {
+				opts.SetupFunc(t, &testCluster)
+			}
+		}
+	}
 
 	return &testCluster
 }

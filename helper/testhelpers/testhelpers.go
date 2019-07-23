@@ -3,9 +3,12 @@ package testhelpers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -15,26 +18,27 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	realtesting "testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/cluster"
-
-	log "github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
+	physConsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/mitchellh/go-testing-interface"
 )
 
 type ReplicatedTestClusters struct {
@@ -175,9 +179,15 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 		EnsureCoreUnsealed(t, c, core)
 	}
 }
+
 func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
 	if !core.Sealed() {
 		return
+	}
+
+	core.SealAccess().ClearCaches(context.Background())
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 
 	client := core.Client
@@ -206,7 +216,7 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 
 func EnsureCoreIsPerfStandby(t testing.T, client *api.Client) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Info).Named(t.Name())
+	logger := logging.NewVaultLogger(hclog.Info).Named(t.Name())
 	start := time.Now()
 	for {
 		health, err := client.Sys().Health()
@@ -261,215 +271,273 @@ func PassthroughWithLocalPathsFactory(ctx context.Context, c *logical.BackendCon
 }
 
 func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) (*vault.TestCluster, *vault.TestClusterCore) {
-	if conf.Physical != nil || conf.HAPhysical != nil {
-		t.Fatalf("conf.Physical and conf.HAPhysical cannot be specified")
-	}
-	if opts.Logger == nil {
-		t.Fatalf("opts.Logger must be specified")
-	}
-
-	inm, err := inmem.NewTransactionalInmem(nil, opts.Logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inmha, err := inmem.NewInmemHA(nil, opts.Logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coreConfig := *conf
-	coreConfig.Physical = inm
-	coreConfig.HAPhysical = inmha.(physical.HABackend)
-	coreConfig.CredentialBackends = map[string]logical.Factory{
-		"approle":  credAppRole.Factory,
-		"userpass": credUserpass.Factory,
-	}
-	vault.AddNoopAudit(&coreConfig)
-	cluster := vault.NewTestCluster(t, &coreConfig, opts)
-	cluster.Start()
-
-	cores := cluster.Cores
-	core := cores[0]
-
-	vault.TestWaitActive(t, core.Core)
-
-	return cluster, core
+	cluster := MakeClusterAndStorage(t, InmemBackendSetup, conf, opts)
+	return cluster, cluster.Cores[0]
 }
 
-func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
-	ret := &ReplicatedTestClusters{}
+func MakeClusterAndStorage(t testing.T, setup *BackendSetup, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *vault.TestCluster {
+	{
+		var coreConfig vault.CoreConfig
+		if conf != nil {
+			if conf.Physical != nil || conf.HAPhysical != nil {
+				t.Fatalf("conf.Physical and conf.HAPhysical cannot be specified")
+			}
+			coreConfig = *conf
+		}
+		conf = &coreConfig
+	}
+	if setup == nil {
+		setup = InmemBackendSetup
+	}
 
-	var logger hclog.Logger
-	if opts != nil {
-		logger = opts.Logger
+	if setup.DisablePerformanceStandby {
+		conf.DisablePerformanceStandby = true
 	}
-	if logger == nil {
-		logger = log.New(&log.LoggerOptions{
-			Mutex: &sync.Mutex{},
-			Level: log.Trace,
-		})
+	conf.CredentialBackends = map[string]logical.Factory{
+		"approle":  credAppRole.Factory,
+		"userpass": credUserpass.Factory,
+		"ldap":     ldap.Factory,
 	}
+
+	opts = getClusterDefaultsOpts(t, opts, "")
+	if setup.KeepStandbysSealed {
+		opts.KeepStandbysSealed = true
+	}
+	opts.SetupFunc = setup.Setup
+	opts.CleanupFunc = setup.Cleanup
+
+	switch {
+	case setup.PhysicalFactory != nil && setup.CorePhysicalFactory == nil:
+		conf.Physical, conf.HAPhysical, opts.CleanupFunc = setup.PhysicalFactory(t.(*realtesting.T), opts.Logger)
+	case setup.PhysicalFactory == nil && setup.CorePhysicalFactory != nil:
+		opts.PhysicalFactory = setup.CorePhysicalFactory
+	default:
+		t.Fatal("setup must provide exactly one of PhysicalFactory or CorePhysicalFactory")
+	}
+
+	vault.AddNoopAudit(conf)
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	return cluster
+}
+
+// GetPerfReplicatedClusters returns a ReplicatedTestClusters containing both
+// a perf primary and a pref secondary cluster, with replication enabled.
+func GetPerfReplicatedClusters(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
+	rc := PrepPerfReplicatedClusters(t, setup, conf, opts)
+	rc.SetupTwoClusterPerfReplication(t, false)
+	return rc
+}
+
+// getClusterDefaultsOpts returns a non-nil TestClusterOptions, based on opts
+// if it is non-nil.  The Logger option will be populated.  If name is given,
+// the logger will be created using the Named logger method, such that the string
+// will appear as part of every log entry.
+func getClusterDefaultsOpts(t testing.T, opts *vault.TestClusterOptions, name string) *vault.TestClusterOptions {
+	if opts == nil {
+		opts = &vault.TestClusterOptions{}
+	}
+
+	localOpts := *opts
+	opts = &localOpts
+
+	if opts.Logger == nil {
+		opts.Logger = logging.NewVaultLogger(hclog.Trace).Named(t.Name())
+	}
+	if name != "" {
+		opts.Logger = opts.Logger.Named(name)
+	}
+
+	return opts
+}
+
+// GetPerfPrimaryCluster returns a ReplicatedTestClusters containing only a
+// single cluster.  Normally you would use NewTestCluster directly, but this
+// helper may make sense if you want to test cluster replication but first do
+// something with a standalone cluster.
+func GetPerfPrimaryCluster(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
+	if setup == nil {
+		setup = InmemBackendSetup
+	}
+	opts = getClusterDefaultsOpts(t, opts, "")
+	ret := &ReplicatedTestClusters{}
 
 	// Set this lower so that state populates quickly to standby nodes
 	cluster.HeartbeatInterval = 2 * time.Second
 
-	numCores := opts.NumCores
-	if numCores == 0 {
-		numCores = vault.DefaultNumCores
-	}
-
-	localopts := *opts
-	localopts.Logger = logger.Named("perf-pri")
-	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
-
-	localopts.Logger = logger.Named("perf-sec")
-	localopts.FirstCoreNumber += numCores
-	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
-
-	SetupTwoClusterPerfReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster)
-
+	ret.PerfPrimaryCluster = MakeClusterAndStorage(t, setup.Get(), conf, getClusterDefaultsOpts(t, opts, "perf-pri"))
 	return ret
 }
 
+// AddPerfSecondaryCluster spins up a Perf Secondary cluster and adds it to
+// the receiver.  Replication is not enabled.
+func (r *ReplicatedTestClusters) AddPerfSecondaryCluster(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
+	if r.PerfSecondaryCluster != nil {
+		t.Fatal("adding a perf secondary cluster when one is already present")
+	}
+	if setup == nil {
+		setup = InmemBackendSetup
+	}
+	opts = getClusterDefaultsOpts(t, opts, "perf-sec")
+	opts.FirstCoreNumber += len(r.PerfPrimaryCluster.Cores)
+	r.PerfSecondaryCluster = MakeClusterAndStorage(t, setup.Get(), conf, opts)
+}
+
+// PrepPerfReplicatedClusters returns a ReplicatedTestClusters containing both
+// a perf primary and a pref secondary cluster.  Replication is not enabled.
+func PrepPerfReplicatedClusters(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
+	ret := GetPerfPrimaryCluster(t, setup, conf, opts)
+	ret.AddPerfSecondaryCluster(t, setup, conf, opts)
+	return ret
+}
+
+// GetFourReplicatedClusters returns an inmem ReplicatedTestClusters with all
+// clusters populated and replication enabled.
 func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
 	return GetFourReplicatedClustersWithConf(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: handlerFunc,
 	})
 }
 
+// GetFourReplicatedClustersWithConf returns a ReplicatedTestClusters with all
+// clusters populated and replication enabled.
 func GetFourReplicatedClustersWithConf(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: log.Trace,
-	})
+	opts = getClusterDefaultsOpts(t, opts, "")
 	// Set this lower so that state populates quickly to standby nodes
 	cluster.HeartbeatInterval = 2 * time.Second
 
-	numCores := opts.NumCores
-	if numCores == 0 {
-		numCores = vault.DefaultNumCores
-	}
-
 	localopts := *opts
-	localopts.Logger = logger.Named("perf-pri")
-	ret.PerfPrimaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
+	localopts.Logger = opts.Logger.Named("perf-pri")
+	ret.PerfPrimaryCluster = MakeClusterAndStorage(t, InmemBackendSetup, conf, &localopts)
 
-	localopts.Logger = logger.Named("perf-sec")
-	localopts.FirstCoreNumber += numCores
-	ret.PerfSecondaryCluster, _ = ConfClusterAndCore(t, conf, &localopts)
+	localopts.Logger = opts.Logger.Named("perf-sec")
+	localopts.FirstCoreNumber += len(ret.PerfPrimaryCluster.Cores)
+	ret.PerfSecondaryCluster = MakeClusterAndStorage(t, InmemBackendSetup, conf, &localopts)
 
-	localopts.Logger = logger.Named("perf-pri-dr")
-	localopts.FirstCoreNumber += numCores
-	ret.PerfPrimaryDRCluster, _ = ConfClusterAndCore(t, conf, &localopts)
+	localopts.Logger = opts.Logger.Named("perf-pri-dr")
+	localopts.FirstCoreNumber += len(ret.PerfSecondaryCluster.Cores)
+	ret.PerfPrimaryDRCluster = MakeClusterAndStorage(t, InmemBackendSetup, conf, &localopts)
 
-	localopts.Logger = logger.Named("perf-sec-dr")
-	localopts.FirstCoreNumber += numCores
-	ret.PerfSecondaryDRCluster, _ = ConfClusterAndCore(t, conf, &localopts)
+	localopts.Logger = opts.Logger.Named("perf-sec-dr")
+	localopts.FirstCoreNumber += len(ret.PerfPrimaryDRCluster.Cores)
+	ret.PerfSecondaryDRCluster = MakeClusterAndStorage(t, InmemBackendSetup, conf, &localopts)
 
-	builder := &ReplicatedTestClustersBuilder{clusters: ret}
-	builder.setupFourClusterReplication(t)
-
-	// Wait until poison pills have been read
-	time.Sleep(45 * time.Second)
-	EnsureCoresUnsealed(t, ret.PerfPrimaryCluster)
-	EnsureCoresUnsealed(t, ret.PerfSecondaryCluster)
-	EnsureCoresUnsealed(t, ret.PerfPrimaryDRCluster)
-	EnsureCoresUnsealed(t, ret.PerfSecondaryDRCluster)
+	SetupFourClusterReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster, ret.PerfPrimaryDRCluster, ret.PerfSecondaryDRCluster)
 
 	return ret
 }
 
-type ReplicatedTestClustersBuilder struct {
-	clusters               *ReplicatedTestClusters
-	perfToken              string
-	drToken                string
-	perfSecondaryRootToken string
-	perfSecondaryDRToken   string
+func (r *ReplicatedTestClusters) SetupTwoClusterPerfReplication(t testing.T, maskSecondaryToken bool) {
+	SetupTwoClusterPerfReplication(t, r.PerfPrimaryCluster, r.PerfSecondaryCluster, maskSecondaryToken)
 }
 
-func SetupTwoClusterPerfReplication(t testing.T, pri, sec *vault.TestCluster) {
-	clusters := &ReplicatedTestClusters{
-		PerfPrimaryCluster:   pri,
-		PerfSecondaryCluster: sec,
+func SetupTwoClusterPerfReplication(t testing.T, pri, sec *vault.TestCluster, maskSecondaryToken bool) {
+	EnablePerfPrimary(t, pri)
+
+	var publicKey string
+	if maskSecondaryToken {
+		publicKey = generatePublicKey(t, sec)
 	}
-	builder := &ReplicatedTestClustersBuilder{clusters: clusters}
-	builder.setupTwoClusterReplication(t)
+	perfToken := GetPerformanceToken(t, pri, sec.ID, publicKey)
+
+	EnablePerformanceSecondary(t, perfToken, pri, sec, false, false)
 }
 
-func (r *ReplicatedTestClustersBuilder) setupTwoClusterReplication(t testing.T) {
-	t.Log("enabling perf primary")
-	r.enablePerfPrimary(t)
-	WaitForActiveNode(t, r.clusters.PerfPrimaryCluster)
-	r.getPerformanceToken(t)
-	t.Log("enabling perf secondary")
-	r.enablePerformanceSecondary(t)
+func GetDRReplicatedClusters(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
+	clusters := PrepDRReplicatedClusters(t, setup, conf, opts)
+	SetupTwoClusterDRReplication(t, clusters.PerfPrimaryCluster, clusters.PerfPrimaryDRCluster, false)
+	return clusters
+}
+
+func (r *ReplicatedTestClusters) AddDRSecondaryCluster(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
+	if setup == nil {
+		setup = InmemBackendSetup
+	}
+	opts = getClusterDefaultsOpts(t, opts, "perf-dr-pri")
+	opts.FirstCoreNumber += len(r.PerfPrimaryCluster.Cores)
+	r.PerfPrimaryDRCluster = MakeClusterAndStorage(t, setup.Get(), conf, opts)
+}
+
+func PrepDRReplicatedClusters(t testing.T, setup SetupGetter, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
+	ret := GetPerfPrimaryCluster(t, setup, conf, opts)
+	ret.AddDRSecondaryCluster(t, setup, conf, opts)
+	return ret
+}
+
+func SetupTwoClusterDRReplication(t testing.T, pri, sec *vault.TestCluster, maskSecondaryToken bool) {
+	EnableDrPrimary(t, pri)
+	setupDRReplication(t, pri, sec, maskSecondaryToken)
+}
+
+func setupDRReplication(t testing.T, pri, sec *vault.TestCluster, maskSecondaryToken bool) {
+	var publicKey string
+	if maskSecondaryToken {
+		publicKey = generatePublicKey(t, sec)
+	}
+	drToken := getDrToken(t, pri, sec.ID, publicKey)
+
+	EnableDrSecondary(t, pri, sec, drToken)
+	for _, core := range sec.Cores {
+		core.Client.SetToken(pri.Cores[0].Client.Token())
+	}
+	WaitForActiveNodeAndPerfStandbys(t, sec)
+	WaitForMatchingMerkleRoots(t, "sys/replication/dr/", pri.Cores[0].Client, sec.Cores[0].Client)
+	WaitForDRReplicationWorking(t, pri, sec)
 }
 
 func SetupFourClusterReplication(t testing.T, pri, sec, pridr, secdr *vault.TestCluster) {
-	clusters := &ReplicatedTestClusters{
-		PerfPrimaryCluster:     pri,
-		PerfSecondaryCluster:   sec,
-		PerfPrimaryDRCluster:   pridr,
-		PerfSecondaryDRCluster: secdr,
-	}
-	builder := &ReplicatedTestClustersBuilder{clusters: clusters}
-	builder.setupFourClusterReplication(t)
+	SetupTwoClusterPerfReplication(t, pri, sec, false)
+	SetupTwoClusterDRReplication(t, pri, pridr, false)
+	SetupTwoClusterDRReplication(t, sec, secdr, false)
 }
 
-func (r *ReplicatedTestClustersBuilder) setupFourClusterReplication(t testing.T) {
-	t.Log("enabling perf primary")
-	r.enablePerfPrimary(t)
-	r.getPerformanceToken(t)
-
-	t.Log("enabling dr primary")
-	enableDrPrimary(t, r.clusters.PerfPrimaryCluster)
-	r.drToken = getDrToken(t, r.clusters.PerfPrimaryCluster, "primary-dr-secondary")
-	WaitForActiveNode(t, r.clusters.PerfPrimaryCluster)
-	time.Sleep(1 * time.Second)
-
-	t.Log("enabling perf secondary")
-	r.enablePerformanceSecondary(t)
-	enableDrPrimary(t, r.clusters.PerfSecondaryCluster)
-	r.perfSecondaryDRToken = getDrToken(t, r.clusters.PerfSecondaryCluster, "secondary-dr-secondary")
-
-	t.Log("enabling dr secondary on primary dr cluster")
-	r.enableDrSecondary(t, r.clusters.PerfPrimaryDRCluster, r.drToken, r.clusters.PerfPrimaryCluster.CACertPEMFile)
-	r.clusters.PerfPrimaryDRCluster.Cores[0].Client.SetToken(r.clusters.PerfPrimaryCluster.Cores[0].Client.Token())
-	WaitForActiveNode(t, r.clusters.PerfPrimaryDRCluster)
-	time.Sleep(1 * time.Second)
-
-	t.Log("enabling dr secondary on secondary dr cluster")
-	r.enableDrSecondary(t, r.clusters.PerfSecondaryDRCluster, r.perfSecondaryDRToken, r.clusters.PerfSecondaryCluster.CACertPEMFile)
-	r.clusters.PerfSecondaryDRCluster.Cores[0].Client.SetToken(r.perfSecondaryRootToken)
-	WaitForActiveNode(t, r.clusters.PerfSecondaryDRCluster)
-}
-
-func (r *ReplicatedTestClustersBuilder) enablePerfPrimary(t testing.T) {
-	c := r.clusters.PerfPrimaryCluster.Cores[0]
+func EnablePerfPrimary(t testing.T, cluster *vault.TestCluster) {
+	cluster.Logger.Info("enabling performance primary")
+	c := cluster.Cores[0]
 	_, err := c.Client.Logical().Write("sys/replication/performance/primary/enable", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	WaitForReplicationState(t, c.Core, consts.ReplicationPerformancePrimary)
-	WaitForActiveNodeAndPerfStandbys(t, r.clusters.PerfPrimaryCluster)
+	WaitForActiveNodeAndPerfStandbys(t, cluster)
+	cluster.Logger.Info("enabled performance primary")
 }
 
-func (r *ReplicatedTestClustersBuilder) getPerformanceToken(t testing.T) {
-	client := r.clusters.PerfPrimaryCluster.Cores[0].Client
+func generatePublicKey(t testing.T, cluster *vault.TestCluster) string {
+	generateKeyPath := "sys/replication/performance/secondary/generate-public-key"
+	secret, err := cluster.Cores[0].Client.Logical().Write(generateKeyPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Data == nil {
+		t.Fatal("secret or secret data is nil")
+	}
+
+	return secret.Data["secondary_public_key"].(string)
+}
+
+func GetPerformanceToken(t testing.T, pri *vault.TestCluster, id, secondaryPublicKey string) string {
+	client := pri.Cores[0].Client
 	req := map[string]interface{}{
-		"id": "perf-secondary",
+		"id": id,
+	}
+	if secondaryPublicKey != "" {
+		req["secondary_public_key"] = secondaryPublicKey
 	}
 	secret, err := client.Logical().Write("sys/replication/performance/primary/secondary-token", req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.perfToken = secret.WrapInfo.Token
+	return secret.WrapInfo.Token
 }
 
-func enableDrPrimary(t testing.T, tc *vault.TestCluster) {
+func EnableDrPrimary(t testing.T, tc *vault.TestCluster) {
+	tc.Logger.Info("enabling dr primary")
 	c := tc.Cores[0]
 	_, err := c.Client.Logical().Write("sys/replication/dr/primary/enable", nil)
 	if err != nil {
@@ -479,11 +547,15 @@ func enableDrPrimary(t testing.T, tc *vault.TestCluster) {
 	WaitForReplicationStatus(t, c.Client, true, func(secret map[string]interface{}) bool {
 		return secret["mode"] != nil && secret["mode"] == "primary"
 	})
+	tc.Logger.Info("enabled dr primary")
 }
 
-func getDrToken(t testing.T, tc *vault.TestCluster, id string) string {
+func getDrToken(t testing.T, tc *vault.TestCluster, id, secondaryPublicKey string) string {
 	req := map[string]interface{}{
 		"id": id,
+	}
+	if secondaryPublicKey != "" {
+		req["secondary_public_key"] = secondaryPublicKey
 	}
 	secret, err := tc.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", req)
 	if err != nil {
@@ -492,57 +564,88 @@ func getDrToken(t testing.T, tc *vault.TestCluster, id string) string {
 	return secret.WrapInfo.Token
 }
 
-func (r *ReplicatedTestClustersBuilder) enablePerformanceSecondary(t testing.T) {
-	c := r.clusters.PerfSecondaryCluster.Cores[0]
+func EnablePerformanceSecondary(t testing.T, perfToken string, pri, sec *vault.TestCluster, updatePrimary, skipPoisonPill bool) string {
 	postData := map[string]interface{}{
-		"token":   r.perfToken,
-		"ca_file": r.clusters.PerfPrimaryCluster.CACertPEMFile,
+		"token":   perfToken,
+		"ca_file": pri.CACertPEMFile,
 	}
-	if r.clusters.PerfPrimaryCluster.ClientAuthRequired {
-		p := r.clusters.PerfPrimaryCluster.Cores[0]
+	if pri.ClientAuthRequired {
+		p := pri.Cores[0]
 		postData["client_cert_pem"] = string(p.ServerCertPEM)
 		postData["client_key_pem"] = string(p.ServerKeyPEM)
 	}
-	_, err := c.Client.Logical().Write("sys/replication/performance/secondary/enable", postData)
+	path := "sys/replication/performance/secondary/enable"
+	if updatePrimary {
+		path = "sys/replication/performance/secondary/update-primary"
+	}
+	_, err := sec.Cores[0].Client.Logical().Write(path, postData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	WaitForReplicationState(t, c.Core, consts.ReplicationPerformanceSecondary)
+	sec.Logger.Info("enabled perf secondary, waiting for its replication state")
+	WaitForReplicationState(t, sec.Cores[0].Core, consts.ReplicationPerformanceSecondary)
 
-	r.clusters.PerfSecondaryCluster.BarrierKeys = r.clusters.PerfPrimaryCluster.BarrierKeys
+	var perfSecondaryRootToken string
+	if !updatePrimary {
+		sec.BarrierKeys = pri.BarrierKeys
+		if !pri.Cores[0].SealAccess().RecoveryKeySupported() {
+			sec.RecoveryKeys = pri.BarrierKeys
+		} else {
+			sec.RecoveryKeys = pri.RecoveryKeys
+		}
 
-	// We want to make sure we unseal all the nodes so we first need to wait
-	// until two of the nodes seal due to the poison pill being written
-	WaitForNCoresSealed(t, r.clusters.PerfSecondaryCluster, 2)
-	EnsureCoresUnsealed(t, r.clusters.PerfSecondaryCluster)
-	WaitForActiveNode(t, r.clusters.PerfSecondaryCluster)
+		if len(sec.Cores) > 1 {
+			if skipPoisonPill {
+				// As part of prepareSecondary on the active node the keyring is
+				// deleted from storage.  Its absence can cause standbys to seal
+				// themselves. But it's not reliable, so we'll seal them
+				// ourselves to force the issue.
+				for _, core := range sec.Cores[1:] {
+					EnsureCoreSealed(t, core)
+				}
+			} else {
+				sec.Logger.Info("waiting for perf secondary standbys to seal")
+				// We want to make sure we unseal all the nodes so we first need to wait
+				// until two of the nodes seal due to the poison pill being written
+				WaitForNCoresSealed(t, sec, len(sec.Cores)-1)
+			}
+		}
+		sec.Logger.Info("waiting for perf secondary standbys to be unsealed")
+		EnsureCoresUnsealed(t, sec)
+		sec.Logger.Info("waiting for perf secondary active node")
+		WaitForActiveNode(t, sec)
+		sec.Logger.Info("generating new perf secondary root")
 
-	r.perfSecondaryRootToken = GenerateRoot(t, r.clusters.PerfSecondaryCluster, false)
-	for _, core := range r.clusters.PerfSecondaryCluster.Cores {
-		core.Client.SetToken(r.perfSecondaryRootToken)
+		perfSecondaryRootToken = GenerateRoot(t, sec, false)
+		for _, core := range sec.Cores {
+			core.Client.SetToken(perfSecondaryRootToken)
+		}
+		WaitForActiveNodeAndPerfStandbys(t, sec)
 	}
 
-	WaitForPerfReplicationWorking(t, r.clusters.PerfPrimaryCluster, r.clusters.PerfSecondaryCluster)
+	WaitForPerfReplicationWorking(t, pri, sec)
+	return perfSecondaryRootToken
 }
 
-func (r *ReplicatedTestClustersBuilder) enableDrSecondary(t testing.T, tc *vault.TestCluster, token, ca_file string) {
-	_, err := tc.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
+func EnableDrSecondary(t testing.T, pri, sec *vault.TestCluster, token string) {
+	sec.Logger.Info("enabling dr secondary")
+	_, err := sec.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
 		"token":   token,
-		"ca_file": ca_file,
+		"ca_file": pri.CACertPEMFile,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	WaitForReplicationState(t, tc.Cores[0].Core, consts.ReplicationDRSecondary)
-	tc.BarrierKeys = r.clusters.PerfPrimaryCluster.BarrierKeys
+	WaitForReplicationState(t, sec.Cores[0].Core, consts.ReplicationDRSecondary)
+	sec.BarrierKeys = pri.BarrierKeys
 
 	// We want to make sure we unseal all the nodes so we first need to wait
 	// until two of the nodes seal due to the poison pill being written
-	WaitForNCoresSealed(t, tc, len(tc.Cores)-1)
-	EnsureCoresUnsealed(t, tc)
-	WaitForReplicationStatus(t, tc.Cores[0].Client, true, func(secret map[string]interface{}) bool {
+	WaitForNCoresSealed(t, sec, len(sec.Cores)-1)
+	EnsureCoresUnsealed(t, sec)
+	WaitForReplicationStatus(t, sec.Cores[0].Client, true, func(secret map[string]interface{}) bool {
 		return secret["mode"] != nil && secret["mode"] == "secondary"
 	})
 }
@@ -934,4 +1037,156 @@ func WaitForPerfReplicationWorking(t testing.T, pri, sec *vault.TestCluster) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatal("unable to read replicated KV on secondary", "path", path, "err", err)
+}
+
+func WaitForDRReplicationWorking(t testing.T, pri, sec *vault.TestCluster) {
+	priClient, secClient := pri.Cores[0].Client, sec.Cores[0].Client
+	mountPoint, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = priClient.Sys().Mount(mountPoint, &api.MountInput{
+		Type:  "kv",
+		Local: false,
+	})
+	if err != nil {
+		t.Fatal("unable to mount KV engine on primary")
+	}
+
+	path := mountPoint + "/foo"
+	_, err = priClient.Logical().Write(path, map[string]interface{}{
+		"bar": 1,
+	})
+	if err != nil {
+		t.Fatal("unable to write KV on primary", "path", path)
+	}
+
+	WaitForReplicationStatus(t, secClient, true, func(secret map[string]interface{}) bool {
+		if secret["last_remote_wal"] != nil {
+			lastRemoteWal, _ := secret["last_remote_wal"].(json.Number).Int64()
+			return lastRemoteWal > 0
+		}
+
+		return false
+	})
+
+	err = priClient.Sys().Unmount(mountPoint)
+	if err != nil {
+		t.Fatal("unable to unmount KV engine on primary")
+	}
+}
+
+func MakeInmemBackend(t *realtesting.T, logger hclog.Logger) (physical.Backend, physical.HABackend, CleanupFunc) {
+	inm, err := inmem.NewTransactionalInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return inm, inmha.(physical.HABackend), func() {}
+}
+
+func MakeInmemNonTransactionalBackend(t *realtesting.T, logger hclog.Logger) (physical.Backend, physical.HABackend, CleanupFunc) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return inm, inmha.(physical.HABackend), func() {}
+}
+
+func MakeFileBackend(t *realtesting.T, logger hclog.Logger) (physical.Backend, physical.HABackend, CleanupFunc) {
+	path, err := ioutil.TempDir("", "vault-integ-file-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileConf := map[string]string{
+		"path": path,
+	}
+	fileBackend, err := physFile.NewTransactionalFileBackend(fileConf, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return fileBackend, nil, func() {
+		err := os.RemoveAll(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func MakeConsulBackend(t *realtesting.T, logger hclog.Logger) (physical.Backend, physical.HABackend, CleanupFunc) {
+	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	consulConf := map[string]string{
+		"address":      consulAddress,
+		"token":        consulToken,
+		"max_parallel": "32",
+	}
+	consulBackend, err := physConsul.NewConsulBackend(consulConf, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return consulBackend, nil, cleanup
+}
+
+type CleanupFunc func()
+
+type SetupFunc func(t testing.T, c *vault.TestCluster)
+
+type SetupGetter interface {
+	Get() *BackendSetup
+}
+
+func (b *BackendSetup) Get() *BackendSetup {
+	return b
+}
+
+type BackendSetup struct {
+	KeepStandbysSealed        bool
+	DisablePerformanceStandby bool
+	Cleanup                   CleanupFunc
+	Setup                     SetupFunc
+	PhysicalFactory           func(*realtesting.T, hclog.Logger) (physical.Backend, physical.HABackend, CleanupFunc)
+	CorePhysicalFactory       func(hclog.Logger) (physical.Backend, error)
+}
+
+var InmemBackendSetup = &BackendSetup{PhysicalFactory: MakeInmemBackend}
+var InmemNonTransactionalBackendSetup = &BackendSetup{PhysicalFactory: MakeInmemNonTransactionalBackend}
+var FileBackendSetup = &BackendSetup{PhysicalFactory: MakeFileBackend}
+var ConsulBackendSetup = &BackendSetup{PhysicalFactory: MakeConsulBackend}
+
+type RaftSetupGetter struct {
+	T testing.T
+}
+
+func (r *RaftSetupGetter) Get() *BackendSetup {
+	var cleanupFuncs []func()
+	var i int
+	return &BackendSetup{
+		KeepStandbysSealed:        true,
+		DisablePerformanceStandby: true, // TODO: remove this later
+		CorePhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := CreateRaftBackend(r.T, logger.Named("raft"), fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Cleanup: func() {
+			for _, c := range cleanupFuncs {
+				c()
+			}
+		},
+		Setup: func(t testing.T, c *vault.TestCluster) {
+			RaftClusterJoinNodes(t, c)
+			time.Sleep(15 * time.Second)
+		},
+	}
 }
