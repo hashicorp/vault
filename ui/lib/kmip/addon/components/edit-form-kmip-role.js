@@ -14,7 +14,7 @@ export default EditForm.extend({
   },
 
   actions: {
-    switchUpdated(checked) {
+    toggleOperationSpecial(checked) {
       this.model.set('operationNone', !checked);
       this.model.set('operationAll', checked);
     },

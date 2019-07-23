@@ -15,7 +15,7 @@
         type="checkbox"
         class="switch is-rounded is-success is-small"
         checked={{not this.model.operationNone}}
-        onchange={{action "switchUpdated" value="target.checked"}}
+        onchange={{action "toggleOperationSpecial" value="target.checked"}}
       />
       <label for="operationNone">
         Allow this role to perform KMIP operations
