@@ -6,6 +6,6 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/golang/protobuf v1.3.1
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
+	github.com/hashicorp/raft v1.1.1
 	github.com/kr/pretty v0.1.0
 )
