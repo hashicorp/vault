@@ -33,6 +33,8 @@ BUG FIXES:
    after the AWS credential plugin is mounted. [GH-7025]
  * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
    performance standbys [JWT-61]
+ * secrets/pki: Forward revocation requests to active node when on a
+   performance standby [GH-7173]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
