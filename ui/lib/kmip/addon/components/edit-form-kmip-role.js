@@ -1,55 +1,38 @@
 import EditForm from 'core/components/edit-form';
 import layout from '../templates/components/edit-form-kmip-role';
-import { Promise } from 'rsvp';
 
 export default EditForm.extend({
   layout,
-  display: null,
+  model: null,
+
   init() {
     this._super(...arguments);
-    let display = 'operationAll';
-    if (this.model.operationNone) {
-      display = 'operationNone';
+
+    if (this.model.isNew) {
+      this.model.set('operationAll', true);
     }
-    if (!this.model.isNew && !this.model.operationNone && !this.model.operationAll) {
-      display = 'choose';
-    }
-    this.set('display', display);
   },
 
   actions: {
-    updateModel(val) {
-      // here we only want to toggle operation(None|All) because we don't want to clear the other options in
-      // the case where the user clicks back to "choose" before saving
-      if (val === 'operationAll') {
-        this.model.set('operationNone', false);
-        this.model.set('operationAll', true);
-      }
-      if (val === 'operationNone') {
-        this.model.set('operationNone', true);
-        this.model.set('operationAll', false);
-      }
+    toggleOperationSpecial(checked) {
+      this.model.set('operationNone', !checked);
+      this.model.set('operationAll', checked);
+    },
+
+    // when operationAll is true, we want all of the items
+    // to appear checked, but we don't want to override what items
+    // a user has selected - so this action creates an object that we
+    // pass to the FormField component as the model instead of the real model
+    placeholderOrModel(isOperationAll, attr) {
+      return isOperationAll ? { [attr.name]: true } : this.model;
     },
 
     preSave(model) {
-      let { display } = this;
-
-      return new Promise(function(resolve) {
-        if (display === 'choose') {
-          model.set('operationNone', null);
-          model.set('operationAll', null);
-          return resolve(model);
-        }
-        model.operationFields.concat(['operationAll', 'operationNone']).forEach(field => {
-          // this will set operationAll or operationNone to true
-          if (field === display) {
-            model.set(field, true);
-          } else {
-            model.set(field, null);
-          }
-        });
-        return resolve(model);
-      });
+      // if we have operationAll or operationNone, we want to clear
+      // out the others so that display shows the right data
+      if (model.operationAll || model.operationNone) {
+        model.operationFieldsWithoutSpecial.forEach(field => model.set(field, null));
+      }
     },
   },
 });
