@@ -796,6 +796,7 @@ type TestCluster struct {
 	RootCAs            *x509.CertPool
 	TempDir            string
 	ClientAuthRequired bool
+	Logger             log.Logger
 }
 
 func (c *TestCluster) Start() {
@@ -897,6 +898,11 @@ func CleanupClusters(clusters []*TestCluster) {
 }
 
 func (c *TestCluster) Cleanup() {
+	c.Logger.Info("cleaning up vault cluster")
+	for _, core := range c.Cores {
+		core.CoreConfig.Logger.SetLevel(log.Error)
+	}
+
 	// Close listeners
 	wg := &sync.WaitGroup{}
 	for _, core := range c.Cores {
@@ -1046,6 +1052,11 @@ type certInfo struct {
 // can be provided to generate a seal for each one. Otherwise, the provided base.Seal will be
 // shared among cores. NewCore's default behavior is to generate a new DefaultSeal if the
 // provided Seal in coreConfig (i.e. base.Seal) is nil.
+//
+// If opts.Logger is provided, it takes precedence and will be used as the cluster
+// logger and will be the basis for each core's logger.  If no opts.Logger is
+// given, one will be generated based on t.Name() for the cluster logger, and if
+// no base.Logger is given will also be used as the basis for each core's logger.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	var err error
 
@@ -1075,6 +1086,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var testCluster TestCluster
+
+	if opts != nil && opts.Logger != nil {
+		testCluster.Logger = opts.Logger
+	} else {
+		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
+	}
+
 	if opts != nil && opts.TempDir != "" {
 		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
@@ -1214,7 +1232,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	logger := logging.NewVaultLogger(log.Trace)
 	ports := make([]int, numCores)
 	if baseAddr != nil {
 		for i := 0; i < numCores; i++ {
@@ -1278,7 +1295,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		handlers = append(handlers, handler)
 		server := &http.Server{
 			Handler:  handler,
-			ErrorLog: logger.StandardLogger(nil),
+			ErrorLog: testCluster.Logger.StandardLogger(nil),
 		}
 		servers = append(servers, server)
 	}
@@ -1379,13 +1396,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
-		coreConfig.Physical, err = physInmem.NewInmem(nil, logger)
+		coreConfig.Physical, err = physInmem.NewInmem(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	if coreConfig.HAPhysical == nil && (opts == nil || opts.PhysicalFactory == nil) {
-		haPhys, err := physInmem.NewInmemHA(nil, logger)
+		haPhys, err := physInmem.NewInmemHA(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1408,8 +1425,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			localConfig.Seal = opts.SealFunc()
 		}
 
-		if opts != nil && opts.Logger != nil {
-			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+		if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
+			localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
 		if opts != nil && opts.PhysicalFactory != nil {
