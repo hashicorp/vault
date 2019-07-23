@@ -287,7 +287,7 @@ github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
-# github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e
+# github.com/hashicorp/go-raftchunking v0.5.1
 github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
 # github.com/hashicorp/go-retryablehttp v0.5.4
@@ -319,7 +319,7 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
+# github.com/hashicorp/raft v1.1.1
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.1
 github.com/hashicorp/raft-snapshot

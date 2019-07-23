@@ -264,8 +264,8 @@ github.com/hashicorp/go-multierror v1.0.0 h1:iVjPR7a6H0tWELX5NxNe7bYopibicUzc7uP
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
 github.com/hashicorp/go-plugin v1.0.1 h1:4OtAfUGbnKC6yS48p0CtMX2oFYtzFZVv6rok3cRWgnE=
 github.com/hashicorp/go-plugin v1.0.1/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn3cQptSMzBuY=
-github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e h1:cwjgfF2tRzfpGXS+sIdGSq8tQo8Zjwakvq6kMcEifpI=
-github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e/go.mod h1:gjvnPBjZ7yydFYq3AaKGlrwW8p7BEIeV1OljPYpJzto=
+github.com/hashicorp/go-raftchunking v0.5.1 h1:IgWlAZiks8JaJ9NHkdBaml2ECubzvugrz0ANgbrk8nk=
+github.com/hashicorp/go-raftchunking v0.5.1/go.mod h1:R5Nlfvg9MLL6ArwsSh9AVFsRpCtPaPCKYstXfU5GKeY=
 github.com/hashicorp/go-retryablehttp v0.5.3 h1:QlWt0KvWT0lq8MFppF9tsJGF+ynG7ztc2KIPhzRGk7s=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
 github.com/hashicorp/go-retryablehttp v0.5.4 h1:1BZvpawXoJCWX6pNtow9+rpEj+3itIlutiqnntI6jOE=
@@ -299,8 +299,8 @@ github.com/hashicorp/memberlist v0.1.3/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2p
 github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf h1:U/40PQvWkaXCDdK9QHKf1pVDVcA+NIDVbzzonFGkgIA=
 github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf/go.mod h1:BDngVi1f4UA6aJq9WYTgxhfWSE1+42xshvstLU2fRGk=
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
-github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3 h1:/VZgMcVsZOKyA5SeKHjARffb/5qd6ZX5TEB0i+FuL3M=
-github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
+github.com/hashicorp/raft v1.1.1 h1:HJr7UE1x/JrJSc9Oy6aDBHtNHUUBHjcQjTgvUVihoZs=
+github.com/hashicorp/raft v1.1.1/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
 github.com/hashicorp/raft-snapshot v1.0.1 h1:cx002JsTEAfAP0pIuANlDtTXg/pi2Db6YbRRmLQTQKw=
 github.com/hashicorp/raft-snapshot v1.0.1/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=

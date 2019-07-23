@@ -28,15 +28,33 @@ type chunkInfo struct {
 	data   []byte
 }
 
+var _ raft.FSM = (*ChunkingFSM)(nil)
+var _ raft.ConfigurationStore = (*ChunkingConfigurationStore)(nil)
+
 type ChunkingFSM struct {
 	underlying raft.FSM
 	opMap      map[uint64][]chunkInfo
 }
 
-func NewChunkingFSM(underlying raft.FSM) *ChunkingFSM {
+type ChunkingConfigurationStore struct {
+	*ChunkingFSM
+	underlyingConfigurationStore raft.ConfigurationStore
+}
+
+func NewChunkingFSM(underlying raft.FSM) raft.FSM {
 	return &ChunkingFSM{
 		underlying: underlying,
 		opMap:      make(map[uint64][]chunkInfo),
+	}
+}
+
+func NewChunkingConfigurationStore(underlying raft.ConfigurationStore) raft.ConfigurationStore {
+	return &ChunkingConfigurationStore{
+		ChunkingFSM: &ChunkingFSM{
+			underlying: underlying,
+			opMap:      make(map[uint64][]chunkInfo),
+		},
+		underlyingConfigurationStore: underlying,
 	}
 }
 
@@ -130,4 +148,8 @@ func (c *ChunkingFSM) Restore(rc io.ReadCloser) error {
 // if it's not used in client code
 func (c *ChunkingFSM) Underlying() raft.FSM {
 	return c.underlying
+}
+
+func (c *ChunkingConfigurationStore) StoreConfiguration(index uint64, configuration raft.Configuration) {
+	c.underlyingConfigurationStore.StoreConfiguration(index, configuration)
 }
