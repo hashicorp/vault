@@ -1570,8 +1570,8 @@ func (c *oidcCache) Flush(ns *namespace.Namespace) {
 	}
 }
 
-// returns true for a properly constructed nskey (<version>:<nsID>:<key>) where <nsID> is nsID
-func nskeyContainsnsID(nskey string, nsID string) bool {
-	split := strings.SplitN(nskey, ":", -1)
+// nskeyContainsnsID returns true for a properly constructed namespaced key (<version>:<nsID>:<key>) where <nsID> is nsID
+func nskeyContainsnsID(nskey, nsID string) bool {
+	split := strings.Split(nskey, ":")
 	return len(split) >= 3 && split[1] == nsID
 }
