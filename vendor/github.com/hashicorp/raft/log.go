@@ -47,6 +47,21 @@ type Log struct {
 
 	// Data holds the log entry's type-specific data.
 	Data []byte
+
+	// Extensions holds an opaque byte slice of information for middleware. It
+	// is up to the client of the library to properly modify this as it adds
+	// layers and remove those layers when appropriate. This value is a part of
+	// the log, so very large values could cause timing issues.
+	//
+	// N.B. It is _up to the client_ to handle upgrade paths. For instance if
+	// using this with go-raftchunking, the client should ensure that all Raft
+	// peers are using a version that can handle that extension before ever
+	// actually triggering chunking behavior. It is sometimes sufficient to
+	// ensure that non-leaders are upgraded first, then the current leader is
+	// upgraded, but a leader changeover during this process could lead to
+	// trouble, so gating extension behavior via some flag in the client
+	// program is also a good idea.
+	Extensions []byte
 }
 
 // LogStore is used to provide an interface for storing

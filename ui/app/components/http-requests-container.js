@@ -43,8 +43,8 @@ export default Component.extend({
     }
 
     filteredCounters = counters.filter(counter => {
-      const year = counter.start_time.substr(0, 4);
-      return year === timeWindow;
+      const year = new Date(counter.start_time).getUTCFullYear();
+      return year.toString() === timeWindow;
     });
     return filteredCounters;
   }),

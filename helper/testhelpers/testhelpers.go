@@ -657,6 +657,26 @@ func WaitForMatchingMerkleRoots(t testing.T, endpoint string, primary, secondary
 	t.Fatalf("roots did not become equal")
 }
 
+func WaitForMatchingMerkleRootsCore(t testing.T, pri, sec *vault.TestClusterCore, dr bool) {
+	rootFunc := vault.PerformanceMerkleRoot
+	if dr {
+		rootFunc = vault.DRMerkleRoot
+	}
+
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		secRoot := rootFunc(pri.Core)
+		priRoot := rootFunc(pri.Core)
+
+		if reflect.DeepEqual(priRoot, secRoot) {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("roots did not become equal")
+}
+
 func WaitForWAL(t testing.T, c *vault.TestClusterCore, wal uint64) {
 	timeout := time.Now().Add(3 * time.Second)
 	for {

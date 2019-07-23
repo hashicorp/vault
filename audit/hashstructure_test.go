@@ -5,10 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/go-test/deep"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
