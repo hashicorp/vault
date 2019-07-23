@@ -5,18 +5,21 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-uuid"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 
@@ -41,14 +44,22 @@ type ReplicatedTestClusters struct {
 	PerfSecondaryDRCluster *vault.TestCluster
 }
 
-func (r *ReplicatedTestClusters) Cleanup() {
-	r.PerfPrimaryCluster.Cleanup()
-	r.PerfSecondaryCluster.Cleanup()
-	if r.PerfPrimaryDRCluster != nil {
-		r.PerfPrimaryDRCluster.Cleanup()
+func (r *ReplicatedTestClusters) nonNilClusters() []*vault.TestCluster {
+	all := []*vault.TestCluster{r.PerfPrimaryCluster, r.PerfSecondaryCluster,
+		r.PerfPrimaryDRCluster, r.PerfSecondaryDRCluster}
+
+	var ret []*vault.TestCluster
+	for _, cluster := range all {
+		if cluster != nil {
+			ret = append(ret, cluster)
+		}
 	}
-	if r.PerfSecondaryDRCluster != nil {
-		r.PerfSecondaryDRCluster.Cleanup()
+	return ret
+}
+
+func (r *ReplicatedTestClusters) Cleanup() {
+	for _, cluster := range r.nonNilClusters() {
+		cluster.Cleanup()
 	}
 }
 
@@ -143,19 +154,19 @@ func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
-func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) error {
+func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
 	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
-			return fmt.Errorf("timeout waiting for core to seal")
+			t.Fatal("timeout waiting for core to seal")
 		}
 		if core.Core.Sealed() {
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return nil
 }
 
 func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
@@ -195,6 +206,7 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 
 func EnsureCoreIsPerfStandby(t testing.T, client *api.Client) {
 	t.Helper()
+	logger := logging.NewVaultLogger(log.Info).Named(t.Name())
 	start := time.Now()
 	for {
 		health, err := client.Sys().Health()
@@ -205,7 +217,7 @@ func EnsureCoreIsPerfStandby(t testing.T, client *api.Client) {
 			break
 		}
 
-		t.Log("waiting for performance standby", fmt.Sprintf("%+v", health))
+		logger.Info("waiting for performance standby", "health", health)
 		time.Sleep(time.Millisecond * 500)
 		if time.Now().After(start.Add(time.Second * 60)) {
 			t.Fatal("did not become a perf standby")
@@ -442,6 +454,7 @@ func (r *ReplicatedTestClustersBuilder) enablePerfPrimary(t testing.T) {
 	}
 
 	WaitForReplicationState(t, c.Core, consts.ReplicationPerformancePrimary)
+	WaitForActiveNodeAndPerfStandbys(t, r.clusters.PerfPrimaryCluster)
 }
 
 func (r *ReplicatedTestClustersBuilder) getPerformanceToken(t testing.T) {
@@ -463,7 +476,9 @@ func enableDrPrimary(t testing.T, tc *vault.TestCluster) {
 		t.Fatal(err)
 	}
 
-	WaitForReplicationState(t, c.Core, consts.ReplicationDRPrimary)
+	WaitForReplicationStatus(t, c.Client, true, func(secret map[string]interface{}) bool {
+		return secret["mode"] != nil && secret["mode"] == "primary"
+	})
 }
 
 func getDrToken(t testing.T, tc *vault.TestCluster, id string) string {
@@ -507,6 +522,8 @@ func (r *ReplicatedTestClustersBuilder) enablePerformanceSecondary(t testing.T) 
 	for _, core := range r.clusters.PerfSecondaryCluster.Cores {
 		core.Client.SetToken(r.perfSecondaryRootToken)
 	}
+
+	WaitForPerfReplicationWorking(t, r.clusters.PerfPrimaryCluster, r.clusters.PerfSecondaryCluster)
 }
 
 func (r *ReplicatedTestClustersBuilder) enableDrSecondary(t testing.T, tc *vault.TestCluster, token, ca_file string) {
@@ -523,8 +540,11 @@ func (r *ReplicatedTestClustersBuilder) enableDrSecondary(t testing.T, tc *vault
 
 	// We want to make sure we unseal all the nodes so we first need to wait
 	// until two of the nodes seal due to the poison pill being written
-	WaitForNCoresSealed(t, tc, 2)
+	WaitForNCoresSealed(t, tc, len(tc.Cores)-1)
 	EnsureCoresUnsealed(t, tc)
+	WaitForReplicationStatus(t, tc.Cores[0].Client, true, func(secret map[string]interface{}) bool {
+		return secret["mode"] != nil && secret["mode"] == "secondary"
+	})
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
@@ -612,6 +632,38 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not sealed", n)
 }
 
+func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
+	t.Helper()
+	var standbys, actives int64
+	var wg sync.WaitGroup
+	deadline := time.Now().Add(15 * time.Second)
+	for _, c := range cluster.Cores {
+		wg.Add(1)
+		go func(client *api.Client) {
+			defer wg.Done()
+			for time.Now().Before(deadline) {
+				time.Sleep(250 * time.Millisecond)
+				leader, err := client.Sys().Leader()
+				if err != nil {
+					if strings.Contains(err.Error(), "Vault is sealed") {
+						continue
+					}
+					t.Fatal(err)
+				}
+				if leader.IsSelf {
+					atomic.AddInt64(&actives, 1)
+					return
+				}
+				if leader.PerfStandby && leader.PerfStandbyLastRemoteWAL > 0 {
+					atomic.AddInt64(&standbys, 1)
+					return
+				}
+			}
+		}(c.Client)
+	}
+	wg.Wait()
+}
+
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	for i := 0; i < 30; i++ {
@@ -677,11 +729,33 @@ func WaitForMatchingMerkleRootsCore(t testing.T, pri, sec *vault.TestClusterCore
 	t.Fatalf("roots did not become equal")
 }
 
+func WaitForReplicationStatus(t testing.T, client *api.Client, dr bool, accept func(map[string]interface{}) bool) {
+	t.Helper()
+	url := "sys/replication/performance/status"
+	if dr {
+		url = "sys/replication/dr/status"
+	}
+
+	var err error
+	var secret *api.Secret
+	for i := 0; i < 30; i++ {
+		secret, err = client.Logical().Read(url)
+		if err == nil && secret != nil && secret.Data != nil {
+			if accept(secret.Data) {
+				return
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	t.Fatalf("unable to get acceptable replication status: error=%v secret=%#v", err, secret)
+}
+
 func WaitForWAL(t testing.T, c *vault.TestClusterCore, wal uint64) {
+	t.Helper()
 	timeout := time.Now().Add(3 * time.Second)
 	for {
 		if time.Now().After(timeout) {
-			t.Fatal("timeout waiting for WAL")
+			t.Fatal("timeout waiting for WAL", "segment", wal, "lastrmtwal", vault.LastRemoteWAL(c.Core))
 		}
 		if vault.LastRemoteWAL(c.Core) >= wal {
 			break
@@ -816,4 +890,48 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	WaitForNCoresUnsealed(t, cluster, 3)
+}
+
+// WaitForPerfReplicationWorking mounts a KV non-locally, writes to it on pri, and waits for the value to be readable on sec.
+func WaitForPerfReplicationWorking(t testing.T, pri, sec *vault.TestCluster) {
+	priClient, secClient := pri.Cores[0].Client, sec.Cores[0].Client
+	mountPoint, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = priClient.Sys().Mount(mountPoint, &api.MountInput{
+		Type:  "kv",
+		Local: false,
+	})
+	if err != nil {
+		t.Fatal("unable to mount KV engine on primary")
+	}
+
+	path := mountPoint + "/foo"
+	_, err = priClient.Logical().Write(path, map[string]interface{}{
+		"bar": 1,
+	})
+	if err != nil {
+		t.Fatal("unable to write KV on primary", "path", path)
+	}
+
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		var secret *api.Secret
+		secret, err = secClient.Logical().Read(path)
+		if err == nil && secret != nil {
+			err = priClient.Sys().Unmount(mountPoint)
+			if err != nil {
+				t.Fatal("unable to unmount KV engine on primary")
+			}
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal("unable to read replicated KV on secondary", "path", path, "err", err)
+
+	err = priClient.Sys().Unmount(mountPoint)
+	if err != nil {
+		t.Fatal("unable to unmount KV engine on primary")
+	}
 }
