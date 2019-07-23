@@ -662,6 +662,10 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 		}(c.Client)
 	}
 	wg.Wait()
+	if actives != 1 || int(standbys) != len(cluster.Cores)-1 {
+		t.Fatalf("expected 1 active core and %d standbys, got %d active and %d standbys",
+			len(cluster.Cores)-1, actives, standbys)
+	}
 }
 
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
@@ -894,6 +898,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 // WaitForPerfReplicationWorking mounts a KV non-locally, writes to it on pri, and waits for the value to be readable on sec.
 func WaitForPerfReplicationWorking(t testing.T, pri, sec *vault.TestCluster) {
+	t.Helper()
 	priClient, secClient := pri.Cores[0].Client, sec.Cores[0].Client
 	mountPoint, err := uuid.GenerateUUID()
 	if err != nil {
@@ -929,9 +934,4 @@ func WaitForPerfReplicationWorking(t testing.T, pri, sec *vault.TestCluster) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatal("unable to read replicated KV on secondary", "path", path, "err", err)
-
-	err = priClient.Sys().Unmount(mountPoint)
-	if err != nil {
-		t.Fatal("unable to unmount KV engine on primary")
-	}
 }
