@@ -99,6 +99,10 @@ type Path struct {
 	// be reflected in help and documentation.
 	Deprecated bool
 
+	// ForwardPerformanceStandby indicates that this path should not be processed
+	// on a performance standby node, and should be forwarded to the active node instead.
+	ForwardPerformanceStandby bool
+
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically
 	// generate a parameter listing and URL structure based on the

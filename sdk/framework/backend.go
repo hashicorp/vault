@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -204,6 +206,10 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		if !hasFeature {
 			return nil, logical.CodedError(401, "Feature Not Enabled")
 		}
+	}
+
+	if path.ForwardPerformanceStandby && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
 	}
 
 	// Build up the data for the route, with the URL taking priority
