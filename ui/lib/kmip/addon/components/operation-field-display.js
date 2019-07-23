@@ -18,14 +18,14 @@ export default Component.extend({
   tagName: '',
   model: null,
 
-  trueOrFalseString(model, field, returnTrue, returnFalse) {
+  trueOrFalseString(model, field, trueString, falseString) {
     if (model.operationAll) {
-      return returnTrue;
+      return trueString;
     }
     if (model.operationNone) {
-      return returnFalse;
+      return falseString;
     }
-    return model.get(field.name) ? returnTrue : returnFalse;
+    return model.get(field.name) ? trueString : falseString;
   },
 
   actions: {
