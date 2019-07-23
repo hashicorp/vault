@@ -19,7 +19,7 @@ export const COMPUTEDS = {
     return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
   }),
 
-  nonOperationFields: computed('tlsFields', 'newFields', 'operationFields', function() {
+  nonOperationFields: computed('tlsFields', 'operationFields', function() {
     let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),

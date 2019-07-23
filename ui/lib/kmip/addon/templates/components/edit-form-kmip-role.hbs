@@ -10,7 +10,7 @@
     {{/if}}
     <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
       <input
-        data-test-text-toggle
+        data-test-input="operationNone"
         id="operationNone"
         type="checkbox"
         class="switch is-rounded is-success is-small"
@@ -49,7 +49,7 @@
             {{/each-in}}
           </div>
           <div class="kmip-role-allowed-operations">
-            {{#each (drop 1 this.model.operationFormFields) as |group index|}}
+            {{#each (drop 1 (or this.model.operationFormFields (array))) as |group|}}
               <div class="kmip-role-allowed-operations">
                 {{#each-in group as |groupName fieldsInGroup|}}
                   <h4 class="title is-7">{{groupName}}</h4>

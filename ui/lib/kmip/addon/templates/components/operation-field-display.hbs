@@ -1,7 +1,7 @@
 {{#if model.operationAll}}
   <AlertInline @type="info" @message="This role allows all KMIP operations" class="is-marginless" />
 {{/if}}
-{{#each @model.operationFormFields as |group index|}}
+{{#each @model.operationFormFields as |group|}}
   {{#each-in group as |groupName fieldsInGroup|}}
     <InfoTableRow @alwaysRender={{true}}
       @label={{groupName}}
