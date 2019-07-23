@@ -13,7 +13,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -222,6 +223,16 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	if path.Operations != nil {
 		if op, ok := path.Operations[req.Operation]; ok {
+
+			// Check whether this operation should be forwarded
+			replState := b.System().ReplicationState()
+			props := op.Properties()
+
+			if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) ||
+				props.ForwardPerformanceSecondary && replState.HasState(consts.ReplicationPerformanceSecondary) {
+				return nil, logical.ErrReadOnly
+			}
+
 			callback = op.Handler()
 		}
 	} else {

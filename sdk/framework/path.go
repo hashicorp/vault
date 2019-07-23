@@ -153,6 +153,14 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
+	// ForwardPerformanceStandby indicates that this path should not be processed
+	// on a performance standby node, and should be forwarded to the active node instead.
+	ForwardPerformanceStandby bool
+
+	// ForwardPerformanceSecondary indicates that this path should not be processed
+	// on a performance secondary node, and should be forwarded to the active node instead.
+	ForwardPerformanceSecondary bool
+
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
