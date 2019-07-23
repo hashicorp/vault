@@ -42,7 +42,7 @@
                   data-test-field
                   @disabled={{or this.model.operationNone this.model.operationAll}}
                   @attr={{attr}}
-                  @model={{model}}
+                  @model={{compute (action "placeholderOrModel") this.model.operationAll attr}}
                   @showHelpText={{false}}
                 />
               {{/each}}
@@ -58,7 +58,7 @@
                       data-test-field
                       @disabled={{or this.model.operationNone this.model.operationAll}}
                       @attr={{attr}}
-                      @model={{model}}
+                      @model={{compute (action "placeholderOrModel") this.model.operationAll attr}}
                       @showHelpText={{false}}
                     />
                   {{/each}}

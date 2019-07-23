@@ -19,6 +19,14 @@ export default EditForm.extend({
       this.model.set('operationAll', checked);
     },
 
+    // when operationAll is true, we want all of the items
+    // to appear checked, but we don't want to override what items
+    // a user has selected - so this action creates an object that we
+    // pass to the FormField component as the model instead of the real model
+    placeholderOrModel(isOperationAll, attr) {
+      return isOperationAll ? { [attr.name]: true } : this.model;
+    },
+
     preSave(model) {
       // if we have operationAll or operationNone, we want to clear
       // out the others so that display shows the right data
