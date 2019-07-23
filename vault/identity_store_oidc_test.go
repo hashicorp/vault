@@ -971,7 +971,7 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 	}
 }
 
-func TestOIDC_nskeyContainsnsID(t *testing.T) {
+func TestOIDC_isNamespacedKey(t *testing.T) {
 	tests := []struct {
 		nsid     string
 		nskey    string
@@ -994,7 +994,7 @@ func TestOIDC_nskeyContainsnsID(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := nskeyContainsnsID(test.nskey, test.nsid)
+		actual := isNamespacedKey(test.nskey, test.nsid)
 		if test.expected != actual {
 			t.Fatalf("expected %t but got %t for nsid: %q and nskey: %q", test.expected, actual, test.nsid, test.nskey)
 		}

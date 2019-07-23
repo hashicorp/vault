@@ -1564,14 +1564,14 @@ func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interfac
 
 func (c *oidcCache) Flush(ns *namespace.Namespace) {
 	for itemKey := range c.c.Items() {
-		if nskeyContainsnsID(itemKey, ns.ID) {
+		if isNamespacedKey(itemKey, ns.ID) {
 			c.c.Delete(itemKey)
 		}
 	}
 }
 
-// nskeyContainsnsID returns true for a properly constructed namespaced key (<version>:<nsID>:<key>) where <nsID> is nsID
-func nskeyContainsnsID(nskey, nsID string) bool {
+// isNamespacedKey returns true for a properly constructed namespaced key (<version>:<nsID>:<key>) where <nsID> is nsID
+func isNamespacedKey(nskey, nsID string) bool {
 	split := strings.Split(nskey, ":")
 	return len(split) >= 3 && split[1] == nsID
 }
