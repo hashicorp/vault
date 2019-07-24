@@ -22,6 +22,8 @@ IMPROVEMENTS:
    [GH-7139]
  * cli: Add a log-format CLI flag that can specify either "standard" or "json"
    for the log format for the `vault server`command. [GH-6840]
+ * cli: Add `-dev-no-store-token` to allow dev servers to not store the
+   generated token at the tokenhelper location [GH-7104]
  * plugins: Change the default for `max_open_connections` for DB plugins to 4
    [GH-7093]
 
