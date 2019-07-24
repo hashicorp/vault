@@ -64,7 +64,7 @@ func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than 131072`), nil
+		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
 	}
 
 	switch format {
