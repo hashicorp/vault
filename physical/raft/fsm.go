@@ -87,6 +87,8 @@ type FSM struct {
 	// configs so we can conform to the standard backend tests, which expect to
 	// additional state in the backend.
 	storeLatestState bool
+
+	chunker *raftchunking.ChunkingFSM
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -103,6 +105,10 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		return nil, err
 	}
 
+	return newFSM(conf, logger, boltDB)
+}
+
+func newFSM(conf map[string]string, logger log.Logger, boltDB *bolt.DB) (*FSM, error) {
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -111,7 +117,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	atomic.StoreUint64(latestIndex, 0)
 	latestConfig.Store((*ConfigurationValue)(nil))
 
-	err = boltDB.Update(func(tx *bolt.Tx) error {
+	err := boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
 		_, err := tx.CreateBucketIfNotExists(dataBucketName)
 		if err != nil {
@@ -156,8 +162,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		storeLatestState = false
 	}
 
-	return &FSM{
-		path:       path,
+	f := &FSM{
+		path:       conf["path"],
 		logger:     logger,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 
@@ -166,7 +172,14 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		latestIndex:      latestIndex,
 		latestConfig:     latestConfig,
 		storeLatestState: storeLatestState,
-	}, nil
+	}
+
+	f.chunker = raftchunking.NewChunkingFSM(f, &FSMChunkStorage{
+		f:   f,
+		ctx: context.Background(),
+	})
+
+	return f, nil
 }
 
 // LatestState returns the latest index and configuration values we have seen on

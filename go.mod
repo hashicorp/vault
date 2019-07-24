@@ -121,6 +121,7 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
+	github.com/stretchr/testify v1.3.0
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f

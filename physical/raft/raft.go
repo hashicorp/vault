@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	bolt "go.etcd.io/bbolt"
 
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -105,9 +106,18 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	return newRaftBackend(conf, logger, nil)
+}
+
+func newRaftBackend(conf map[string]string, logger log.Logger, boltDB *bolt.DB) (physical.Backend, error) {
 	// Create the FSM.
 	var err error
-	fsm, err := NewFSM(conf, logger.Named("fsm"))
+	var fsm *FSM
+	if boltDB != nil {
+		fsm, err = newFSM(conf, logger.Named("fsm"), boltDB)
+	} else {
+		fsm, err = NewFSM(conf, logger.Named("fsm"))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
@@ -454,11 +464,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		b.logger.Info("raft recovery deleted peers.json")
 	}
 
-	chunkStorage := &FSMChunkStorage{
-		f:   b.fsm,
-		ctx: context.Background(),
-	}
-	raftObj, err := raft.NewRaft(raftConfig, raftchunking.NewChunkingConfigurationStore(b.fsm, chunkStorage), b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
 		return err
