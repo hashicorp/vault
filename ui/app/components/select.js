@@ -17,7 +17,7 @@ import Component from '@ember/component';
  * @param [labelAttribute=label] {String} - When `options` is an array objects, the key to check for when assigning the option elements' inner text.
  * @param [isInline=false] {Bool} - Whether or not the select should be displayed as inline-block or block.
  * @param [isFullwidth=false] {Bool} - Whether or not the select should take up the full width of the parent element.
- * @param onChange=null {Func} - The action to take once the user has selected an item.
+ * @param onChange=null {Func} - The action to take once the user has selected an item. This method will be passed the `value` of the select.
  */
 
 export default Component.extend({

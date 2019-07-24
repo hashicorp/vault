@@ -14,7 +14,7 @@ Select components are used to render a dropdown.
 | [labelAttribute] | <code>String</code> | <code>label</code> | When `options` is an array objects, the key to check for when assigning the option elements' inner text. |
 | [isInline] | <code>Bool</code> | <code>false</code> | Whether or not the select should be displayed as inline-block or block. |
 | [isFullwidth] | <code>Bool</code> | <code>false</code> | Whether or not the select should take up the full width of the parent element. |
-| onChange | <code>Func</code> | <code></code> | The action to take once the user has selected an item. |
+| onChange | <code>Func</code> | <code></code> | The action to take once the user has selected an item.  This method will be passed the `value` of the select. |
 
 **Example**
   
