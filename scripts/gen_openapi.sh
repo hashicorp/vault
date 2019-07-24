@@ -63,6 +63,15 @@ vault secrets enable ssh
 vault secrets enable totp
 vault secrets enable transit
 
+# Enterprise backends
+VERSION=$(vault status -format=json | jq -r .version)
+
+if [[ $VERSION =~ prem|ent ]]
+then
+  vault secrets enable kmip
+fi
+
+# Output OpenAPI, optionally formatted
 if [ "$1" == "-p" ]; then
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
 else
