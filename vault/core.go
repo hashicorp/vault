@@ -93,13 +93,16 @@ var (
 	manualStepDownSleepPeriod = 10 * time.Second
 
 	// Functions only in the Enterprise version
-	enterprisePostUnseal = enterprisePostUnsealImpl
-	enterprisePreSeal    = enterprisePreSealImpl
-	startReplication     = startReplicationImpl
-	stopReplication      = stopReplicationImpl
-	LastWAL              = lastWALImpl
-	LastRemoteWAL        = lastRemoteWALImpl
-	WaitUntilWALShipped  = waitUntilWALShippedImpl
+	enterprisePostUnseal  = enterprisePostUnsealImpl
+	enterprisePreSeal     = enterprisePreSealImpl
+	startReplication      = startReplicationImpl
+	stopReplication       = stopReplicationImpl
+	LastWAL               = lastWALImpl
+	LastPerformanceWAL    = lastPerformanceWALImpl
+	PerformanceMerkleRoot = merkleRootImpl
+	DRMerkleRoot          = merkleRootImpl
+	LastRemoteWAL         = lastRemoteWALImpl
+	WaitUntilWALShipped   = waitUntilWALShippedImpl
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -1832,7 +1835,15 @@ func waitUntilWALShippedImpl(ctx context.Context, c *Core, index uint64) bool {
 	return true
 }
 
+func merkleRootImpl(c *Core) string {
+	return ""
+}
+
 func lastWALImpl(c *Core) uint64 {
+	return 0
+}
+
+func lastPerformanceWALImpl(c *Core) uint64 {
 	return 0
 }
 

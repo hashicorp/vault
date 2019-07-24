@@ -173,7 +173,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
-	// Serialize and re-read the reponse
+	// Serialize and re-read the response
 	var respBytes bytes.Buffer
 	err = resp.Response.Write(&respBytes)
 	if err != nil {

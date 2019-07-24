@@ -33,6 +33,10 @@ const (
 	// that it has already been unmarshaled. That way we don't need to simply
 	// ignore errors.
 	HTTPRawBodyAlreadyJSONDecoded = "http_raw_body_already_json_decoded"
+
+	// If set, HTTPRawCacheControl will replace the default Cache-Control=no-store header
+	// set by the generic wrapping handler. The value must be a string.
+	HTTPRawCacheControl = "http_raw_cache_control"
 )
 
 // Response is a struct that stores the response of a request.

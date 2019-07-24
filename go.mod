@@ -44,7 +44,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
+	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
@@ -59,6 +59,7 @@ require (
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-raftchunking v0.5.1
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -66,24 +67,24 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.1.1-0.20190703171940-f639636d18e0
+	github.com/hashicorp/raft v1.1.1
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190703042722-a8d100740e20
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190703042725-86deab7df8e2
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190703042729-bdd19ebba78a
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190703042733-7a9fc78f2664
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190703042737-804281c53c5f
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190703042741-1a51335bffd3
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190703042745-a8a201a8e0ec
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190619214355-1541bbf73c6d
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.2-0.20190701201353-a0bef50be687
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190621033057-9c576c32b635
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190509203638-8a60a8656fb0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190620162751-272efd334652
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190516000311-88f9a4f11829
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190626201950-a6e92ff82578
-	github.com/hashicorp/vault/api v1.0.3-0.20190709080132-cdd1893eace3
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190709075428-f03d40b2913b
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190722164529-3bdfad02a66f
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190722164620-5255fa1e475b
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190722164653-e6c0f193acb8
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190722164802-5650a5772ea9
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190722165048-f821ecc201e6
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190722165124-0e53029fd4ac
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190722165205-4a6b73beb8d7
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190719145839-141f0c4c6e51
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190719145845-20f6dd24c49b
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190719145853-d1dae0d343e9
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190719145901-e7f82e48889a
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190719145913-aabfd80b820f
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190719145923-57b1f6ad133c
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190719145932-9f91890bf2db
+	github.com/hashicorp/vault/api v1.0.3-0.20190719145648-41d3939b1ff9
+	github.com/hashicorp/vault/sdk v0.1.12-0.20190724154558-f57ccdd48b70
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -127,7 +128,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	google.golang.org/api v0.5.0
 	google.golang.org/genproto v0.0.0-20190513181449-d00d292a067c
-	google.golang.org/grpc v1.20.1
+	google.golang.org/grpc v1.22.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.3.1

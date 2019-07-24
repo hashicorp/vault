@@ -295,34 +295,6 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft3.fsm)
 }
 
-func TestRaft_Backend_MaxSize(t *testing.T) {
-	// Set the max size a little lower for the test
-	maxCommandSizeBytes = 10 * 1024
-
-	b, dir := getRaft(t, true, true)
-	defer os.RemoveAll(dir)
-
-	// Test a value slightly below the max size
-	value := make([]byte, maxCommandSizeBytes-100)
-	err := b.Put(context.Background(), &physical.Entry{
-		Key:   "key",
-		Value: value,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Test value at max size, should error
-	value = make([]byte, maxCommandSizeBytes)
-	err = b.Put(context.Background(), &physical.Entry{
-		Key:   "key",
-		Value: value,
-	})
-	if err != ErrCommandTooLarge {
-		t.Fatal(err)
-	}
-}
-
 func TestRaft_Backend_Performance(t *testing.T) {
 	b, dir := getRaft(t, true, false)
 	defer os.RemoveAll(dir)

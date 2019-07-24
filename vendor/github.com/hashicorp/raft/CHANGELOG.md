@@ -1,6 +1,23 @@
 # UNRELEASED
 
-# 1.1.0 (Mai 23rd, 2019)
+# 1.1.1 (July 23rd, 2019)
+
+FEATURES
+
+* Add support for extensions to be sent on log entries [[GH-353](https://github.com/hashicorp/raft/pull/353)]
+* Add config option to skip snapshot restore on startup [[GH-340](https://github.com/hashicorp/raft/pull/340)]
+* Add optional configuration store interface [[GH-339](https://github.com/hashicorp/raft/pull/339)]
+
+IMPROVEMENTS
+
+* Break out of group commit early when no logs are present [[GH-341](https://github.com/hashicorp/raft/pull/341)]
+
+BUGFIXES
+
+* Fix 64-bit counters on 32-bit platforms [[GH-344](https://github.com/hashicorp/raft/pull/344)]
+* Don't defer closing source in recover/restore operations since it's in a loop [[GH-337](https://github.com/hashicorp/raft/pull/337)]
+
+# 1.1.0 (May 23rd, 2019)
 
 FEATURES
 

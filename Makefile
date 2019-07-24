@@ -3,18 +3,20 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
-TEST_TIMEOUT?=30m
-EXTENDED_TEST_TIMEOUT=45m
+TEST_TIMEOUT?=45m
+EXTENDED_TEST_TIMEOUT=60m
+INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
 	github.com/kardianos/govendor \
-	github.com/client9/misspell/cmd/misspell
-GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+	github.com/client9/misspell/cmd/misspell \
+	github.com/golangci/golangci-lint/cmd/golangci-lint
+GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
-GO_VERSION_MIN=1.11
+GO_VERSION_MIN=1.12.4
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -97,6 +99,18 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
+# lint runs vet plus a number of other checkers, it is more comprehensive, but louder
+lint:
+	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
+			echo ""; \
+			echo "Lint found suspicious constructs. Please check the reported constructs"; \
+			echo "and fix them if necessary before submitting the code for reviewal."; \
+		fi
+# for ci jobs, runs lint against the changed packages in the commit
+ci-lint:
+	@golangci-lint run --deadline 10m --new-from-rev=HEAD~
+
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep: fmtcheck
@@ -117,7 +131,7 @@ ci-verify:
 bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
 		echo "Installing/Updating $$tool" ; \
-		go get -u $$tool; \
+		GO111MODULE=off go get -u $$tool; \
 	done
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
@@ -194,7 +208,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	gofmt -w $(GOFMT_FILES)
+	goimports -w $(GOFMT_FILES)
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."

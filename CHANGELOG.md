@@ -1,4 +1,44 @@
-## 1.2-beta2 (July 9th, 2019)
+## 1.2.0-beta3 (Unreleased)
+
+CHANGES:
+
+ * rollback: Rollback will no longer display log messages when it runs; it will
+   only display messages on error.
+ * plugins: Database plugins will now default to 4 `max_open_connections`
+   rather than 2.
+
+FEATURES:
+
+ * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
+   manage storage directly within a Vault cluster. This new integrated storage
+   solution is based on the Raft protocol which is also used to back HashiCorp
+   Consul and HashiCorp Nomad.
+
+IMPROVEMENTS:
+
+ * api: Add support for passing data to delete operations via `DeleteWithData`
+   [GH-7139]
+ * cli: Add support for passing parameters to `vault delete` operations
+   [GH-7139]
+ * cli: Add a log-format CLI flag that can specify either "standard" or "json"
+   for the log format for the `vault server`command. [GH-6840]
+ * plugins: Change the default for `max_open_connections` for DB plugins to 4
+   [GH-7093]
+
+BUG FIXES:
+
+ * audit: Log requests and responses due to invalid wrapping token provided
+   [GH-6541]
+ * auth/aws: AWS Roles are now upgraded and saved to the latest version just
+   after the AWS credential plugin is mounted. [GH-7025]
+ * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
+   performance standbys [JWT-61]
+ * secrets/pki: Forward revocation requests to active node when on a
+   performance standby [GH-7173]
+ * ui: Show Entities and Groups in Side Navigation [GH-7138]
+ * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
+
+## 1.2.0-beta2 (July 9th, 2019)
 
 CHANGES:
 
@@ -13,12 +53,8 @@ CHANGES:
    `token_no_default_policy` field.
  * auth/approle: `bound_cidr_list` is no longer returned when reading a role
  
- FEATURES:
- 
- * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
-   manage storage directly within a Vault cluster. This new integrated storage
-   solution is based on the Raft protocol which is also used to back HashiCorp
-   Consul and HashiCorp Nomad.
+FEATURES:
+
  * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
    where you can browse the endpoints avaliable to you and make requests. To try
    it out, open the Web CLI and type `api`.
@@ -42,12 +78,10 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * audit: Log requests and responses due to invalid wrapping token provided
-   [GH-6541]
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
 
-## 1.2-beta1 (June 25th, 2019)
+## 1.2.0-beta1 (June 25th, 2019)
 
 CHANGES:
 

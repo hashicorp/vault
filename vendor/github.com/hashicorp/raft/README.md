@@ -52,10 +52,10 @@ to port Consul to these new interfaces.
 
 ## Protocol
 
-raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://raft.github.io/raft.pdf)
 
 A high level overview of the Raft protocol is described below, but for details please read the full
-[Raft paper](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+[Raft paper](https://raft.github.io/raft.pdf)
 followed by the raft source. Any questions about the raft protocol should be sent to the
 [raft-dev mailing list](https://groups.google.com/forum/#!forum/raft-dev).
 
