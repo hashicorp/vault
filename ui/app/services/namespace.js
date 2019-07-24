@@ -51,4 +51,8 @@ export default Service.extend({
       //do nothing here
     }
   }).drop(),
+
+  reset() {
+    this.set('accessibleNamespaces', null);
+  },
 });
