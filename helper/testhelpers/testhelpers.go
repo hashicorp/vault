@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-uuid"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical/raft"

@@ -87,13 +87,13 @@ type ServerCommand struct {
 	reloadedCh      chan (struct{}) // for tests
 
 	// new stuff
-	flagConfigs         []string
-	flagLogLevel        string
-  flagLogFormat       string
-	flagDev             bool
-	flagDevRootTokenID  string
-	flagDevListenAddr   string
-	flagDevNoStoreToken bool
+	flagConfigs          []string
+	flagLogLevel         string
+	flagLogFormat        string
+	flagDev              bool
+	flagDevRootTokenID   string
+	flagDevListenAddr    string
+	flagDevNoStoreToken  bool
 	flagDevPluginDir     string
 	flagDevPluginInit    bool
 	flagDevHA            bool
