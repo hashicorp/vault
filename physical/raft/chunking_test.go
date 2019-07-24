@@ -45,27 +45,33 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 
 	var logs []*raft.Log
 	for i, b := range cmdBytes {
-		chunkInfo := &raftchunkingtypes.ChunkInfo{
-			OpNum:       uint64(32),
-			SequenceNum: uint32(i),
-			NumChunks:   uint32(len(cmdBytes)),
-		}
-		chunkBytes, err := proto.Marshal(chunkInfo)
-		require.NoError(err)
+		// Stage multiple operations so we can test restoring across multiple opnums
+		for j := 0; j < 10; j++ {
+			chunkInfo := &raftchunkingtypes.ChunkInfo{
+				OpNum:       uint64(32 + j),
+				SequenceNum: uint32(i),
+				NumChunks:   uint32(len(cmdBytes)),
+			}
+			chunkBytes, err := proto.Marshal(chunkInfo)
+			require.NoError(err)
 
-		logs = append(logs, &raft.Log{
-			Data:       []byte{b},
-			Extensions: chunkBytes,
-		})
+			logs = append(logs, &raft.Log{
+				Data:       []byte{b},
+				Extensions: chunkBytes,
+			})
+		}
 	}
 
 	t.Log("applying half of the logs")
 
 	// The reason for the skipping is to test out-of-order applies which are
-	// theoretically possible
+	// theoretically possible. Some of these will actually finish though!
 	for i := 0; i < len(logs); i += 2 {
 		resp := b.fsm.chunker.Apply(logs[i])
-		assert.Nil(resp)
+		if resp != nil {
+			_, ok := resp.(raftchunking.ChunkingSuccess)
+			assert.True(ok)
+		}
 	}
 
 	t.Log("tearing down cluster")
