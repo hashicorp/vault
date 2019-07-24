@@ -737,6 +737,13 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	t.Helper()
+
+	expectedStandbys := 0
+	for _, core := range cluster.Cores[1:] {
+		if !core.CoreConfig.DisablePerformanceStandby {
+			expectedStandbys++
+		}
+	}
 	mountPoint, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
@@ -754,7 +761,7 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	deadline := time.Now().Add(30 * time.Second)
 	for _, c := range cluster.Cores {
 		wg.Add(1)
-		go func(client *api.Client) {
+		go func(core *vault.TestClusterCore) {
 			defer wg.Done()
 			val := 1
 			for time.Now().Before(deadline) {
@@ -766,28 +773,30 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 				}
 				val++
 				time.Sleep(250 * time.Millisecond)
-				leader, err := client.Sys().Leader()
+				leader, err := core.Client.Sys().Leader()
 				if err != nil {
 					if strings.Contains(err.Error(), "Vault is sealed") {
 						continue
 					}
 					t.Fatal(err)
 				}
-				if leader.IsSelf {
+				switch {
+				case leader.IsSelf:
 					atomic.AddInt64(&actives, 1)
 					return
-				}
-				if leader.PerfStandby && leader.PerfStandbyLastRemoteWAL > 0 {
+				case leader.LeaderAddress != "" && core.CoreConfig.DisablePerformanceStandby:
+					return
+				case leader.PerfStandby && leader.PerfStandbyLastRemoteWAL > 0:
 					atomic.AddInt64(&standbys, 1)
 					return
 				}
 			}
-		}(c.Client)
+		}(c)
 	}
 	wg.Wait()
-	if actives != 1 || int(standbys) != len(cluster.Cores)-1 {
+	if actives != 1 || int(standbys) != expectedStandbys {
 		t.Fatalf("expected 1 active core and %d standbys, got %d active and %d standbys",
-			len(cluster.Cores)-1, actives, standbys)
+			expectedStandbys, actives, standbys)
 	}
 	err = cluster.Cores[0].Client.Sys().Unmount(mountPoint)
 	if err != nil {
