@@ -8,7 +8,7 @@
           </span>
           {{#link-to
             "vault.cluster.access.method.item.list"
-            (pluralize itemType)
+            itemType
           }}
             {{pluralize itemType}}
           {{/link-to}}
@@ -41,9 +41,9 @@
         Delete
         {{itemType}}
       </ConfirmAction>
-      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" (pluralize itemType) model.id}}
+      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" itemType model.id}}
         @data-test-configure-link="true">
-        Edit {{itemType}}
+        Edit {{singularize itemType}}
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>

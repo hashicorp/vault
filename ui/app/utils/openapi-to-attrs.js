@@ -8,7 +8,10 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (const propName in props) {
     const prop = props[propName];
-    let { description, items, type, format, isId, label } = prop;
+    let { description, items, type, format, isId, deprecated } = prop;
+    if (deprecated === true) {
+      continue;
+    }
     let { name, value, group, sensitive } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
@@ -21,17 +24,19 @@ export const expandOpenApiProps = function(props) {
     } else if (items) {
       editType = items.type + capitalize(type);
     }
+
     let attrDefn = {
       editType,
       helpText: description,
       sensitive: sensitive,
-      label: name || label,
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || null,
     };
+
+    attrDefn.label = capitalize(name || propName);
 
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform

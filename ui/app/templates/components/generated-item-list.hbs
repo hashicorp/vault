@@ -22,10 +22,10 @@
   <ToolbarActions>
     <ToolbarLink @params={{array
         "vault.cluster.access.method.item.create"
-        (pluralize itemType)
+        itemType
       }}>
       Create
-      {{itemType}}
+      {{singularize itemType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
@@ -35,27 +35,27 @@
       @message="A list of {{pluralize itemType}} will be listed here. Create your first {{itemType}} to get started.">
       {{#link-to
         "vault.cluster.access.method.item.create"
-        (pluralize itemType)
+        itemType
         class="link"
       }}
-        Create {{itemType}}
+        Create {{singularize itemType}}
       {{/link-to}}
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show"
-      (pluralize itemType) list.item.id}} as |Item|>
+      itemType list.item.id}} as |Item|>
       <Item.content>
         <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
       </Item.content>
       <Item.menu>
         <li class="action">
           {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
-            View {{itemType}}
+            View {{singularize itemType}}
           {{/link-to}}
         </li>
         <li class="action">
           {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
-            Edit {{itemType}}
+            Edit {{singularize itemType}}
           {{/link-to}}
         </li>
         <li>
@@ -64,14 +64,14 @@
                   Item.callMethod
                   "destroyRecord"
                   list.item
-                  (concat "Successfully deleted " itemType " " list.item.id)
-                  (concat "There was an error deleting this " itemType)
+                  (concat "Successfully deleted " (singularize itemType) " " list.item.id)
+                  (concat "There was an error deleting this " (singularize itemType))
                   (action "refreshItemList")
                 )
               }} @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
             @cancelButtonText="Cancel" data-test-secret-delete="true">
             Delete
-            {{itemType}}
+            {{singularize itemType}}
           </ConfirmAction>
         </li>
       </Item.menu>

@@ -63,8 +63,14 @@ func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, loginInfo.Role.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(loginInfo.Role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, loginInfo.Role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	roleType := loginInfo.Role.RoleType

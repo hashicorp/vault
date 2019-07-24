@@ -87,13 +87,13 @@ type ServerCommand struct {
 	reloadedCh      chan (struct{}) // for tests
 
 	// new stuff
-	flagConfigs        []string
-	flagLogLevel       string
-	flagLogFormat      string
-	flagDev            bool
-	flagDevRootTokenID string
-	flagDevListenAddr  string
-
+	flagConfigs          []string
+	flagLogLevel         string
+	flagLogFormat        string
+	flagDev              bool
+	flagDevRootTokenID   string
+	flagDevListenAddr    string
+	flagDevNoStoreToken  bool
 	flagDevPluginDir     string
 	flagDevPluginInit    bool
 	flagDevHA            bool
@@ -212,6 +212,14 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "127.0.0.1:8200",
 		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
 		Usage:   "Address to bind to in \"dev\" mode.",
+	})
+	f.BoolVar(&BoolVar{
+		Name:    "dev-no-store-token",
+		Target:  &c.flagDevNoStoreToken,
+		Default: false,
+		Usage: "Do not persist the dev root token to the token helper " +
+			"(usually the local filesystem) for use in future requests. " +
+			"The token will only be displayed in the command output.",
 	})
 
 	// Internal-only flags to follow.
@@ -413,7 +421,7 @@ func (c *ServerCommand) Run(args []string) int {
 	if config == nil {
 		c.UI.Output(wrapAtLength(
 			"No configuration files found. Please provide configurations with the " +
-				"-config flag. If you are supply the path to a directory, please " +
+				"-config flag. If you are supplying the path to a directory, please " +
 				"ensure the directory contains files with the .hcl or .json " +
 				"extension."))
 		return 1
@@ -1515,12 +1523,14 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Set the token
-	tokenHelper, err := c.TokenHelper()
-	if err != nil {
-		return nil, err
-	}
-	if err := tokenHelper.Store(init.RootToken); err != nil {
-		return nil, err
+	if !c.flagDevNoStoreToken {
+		tokenHelper, err := c.TokenHelper()
+		if err != nil {
+			return nil, err
+		}
+		if err := tokenHelper.Store(init.RootToken); err != nil {
+			return nil, err
+		}
 	}
 
 	kvVer := "2"
