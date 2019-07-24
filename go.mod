@@ -128,7 +128,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	google.golang.org/api v0.5.0
 	google.golang.org/genproto v0.0.0-20190513181449-d00d292a067c
-	google.golang.org/grpc v1.20.1
+	google.golang.org/grpc v1.22.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.3.1
