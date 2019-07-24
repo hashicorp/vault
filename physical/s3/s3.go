@@ -53,10 +53,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		}
 	}
 
-	path, ok := conf["path"]
-	if !ok {
-		path = ""
-	}
+	path := conf["path"]
 
 	accessKey, ok := conf["access_key"]
 	if !ok {
