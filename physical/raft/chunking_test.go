@@ -171,6 +171,8 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 		}
 		if i == 1 {
 			assert.NotNil(resp)
+			_, ok := resp.(raftchunking.ChunkingSuccess)
+			assert.True(ok)
 		}
 	}
 }

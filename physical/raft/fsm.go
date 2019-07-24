@@ -806,7 +806,7 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 		return nil, nil
 	}
 
-	ret := make(raftchunking.ChunkMap)
+	ret := make(raftchunking.ChunkMap, len(opNums))
 	for _, opNumStr := range opNums {
 		opNum, err := strconv.ParseInt(opNumStr, 10, 64)
 		if err != nil {
