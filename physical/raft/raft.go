@@ -454,7 +454,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		b.logger.Info("raft recovery deleted peers.json")
 	}
 
-	raftObj, err := raft.NewRaft(raftConfig, raftchunking.NewChunkingConfigurationStore(b.fsm, &FSMChunkStorage{f: b.fsm}), b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	chunkStorage := &FSMChunkStorage{
+		f:   b.fsm,
+		ctx: context.Background(),
+	}
+	raftObj, err := raft.NewRaft(raftConfig, raftchunking.NewChunkingConfigurationStore(b.fsm, chunkStorage), b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
 		return err

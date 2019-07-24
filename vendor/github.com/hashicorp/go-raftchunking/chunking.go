@@ -20,9 +20,6 @@ type ChunkStorage interface {
 
 	// RestoreChunks restores the current FSM state from a map
 	RestoreChunks(ChunkMap) error
-
-	// ClearAll clears all currently tracked ops
-	ClearAll() error
 }
 
 type State struct {
@@ -102,10 +99,5 @@ func (i *InmemChunkStorage) RestoreChunks(chunks ChunkMap) error {
 		return err
 	}
 	i.chunks = chunksCopy.(ChunkMap)
-	return nil
-}
-
-func (i *InmemChunkStorage) ClearAll() error {
-	i.chunks = make(ChunkMap)
 	return nil
 }

@@ -72,7 +72,7 @@ func (c *ChunkingFSM) Apply(l *raft.Log) interface{} {
 		// then any client of (Consul, Vault, etc.) should then retry the full
 		// chunking operation automatically, which will be under a different
 		// opnum. So it should be safe in this case to clear the map.
-		if err := c.store.ClearAll(); err != nil {
+		if err := c.store.RestoreChunks(nil); err != nil {
 			return err
 		}
 		c.lastTerm = l.Term
