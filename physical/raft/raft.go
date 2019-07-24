@@ -777,16 +777,42 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
 	case len(commandBytes) <= raft.SuggestedMaxDataSize:
 		applyFuture = b.raft.Apply(commandBytes, 0)
 	default:
+		chunked = true
 		applyFuture = raftchunking.ChunkingApply(commandBytes, nil, 0, b.raft.ApplyLog)
 	}
-	err = applyFuture.Error()
-	if err != nil {
+
+	if err := applyFuture.Error(); err != nil {
 		return err
+	}
+
+	resp := applyFuture.Response()
+
+	if chunked {
+		// In this case we didn't apply all chunks successfully, possibly due
+		// to a term change
+		if resp == nil {
+			// This returns the error in the interface because the raft library
+			// returns errors from the FSM via the future, not via err from the
+			// apply function. Downstream client code expects to see any error
+			// from the FSM (as opposed to the apply itself) and decide whether
+			// it can retry in the future's response.
+			return errors.New("applying chunking failed, please retry")
+		}
+
+		// We expect that this conversion should always work
+		chunkedSuccess, ok := resp.(raftchunking.ChunkingSuccess)
+		if !ok {
+			return errors.New("unknown type of response back from chunking FSM")
+		}
+
+		// Replace the reply with the inner wrapped version
+		resp = chunkedSuccess.Response
 	}
 
 	if resp, ok := applyFuture.Response().(*FSMApplyResponse); !ok || !resp.Success {
