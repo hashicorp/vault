@@ -1,4 +1,4 @@
-## 1.2-beta3 (Unreleased)
+## 1.2.0-beta3 (Unreleased)
 
 CHANGES:
 
@@ -22,6 +22,8 @@ IMPROVEMENTS:
    [GH-7139]
  * cli: Add a log-format CLI flag that can specify either "standard" or "json"
    for the log format for the `vault server`command. [GH-6840]
+ * cli: Add `-dev-no-store-token` to allow dev servers to not store the
+   generated token at the tokenhelper location [GH-7104]
  * plugins: Change the default for `max_open_connections` for DB plugins to 4
    [GH-7093]
 
@@ -38,7 +40,7 @@ BUG FIXES:
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
-## 1.2-beta2 (July 9th, 2019)
+## 1.2.0-beta2 (July 9th, 2019)
 
 CHANGES:
 
@@ -81,7 +83,7 @@ BUG FIXES:
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
 
-## 1.2-beta1 (June 25th, 2019)
+## 1.2.0-beta1 (June 25th, 2019)
 
 CHANGES:
 

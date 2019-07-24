@@ -13,6 +13,10 @@ jobs:
       requires:
         - install-ui-dependencies
         - build-go-dev
+  - test-ui-browserstack:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
   - test-go:
       requires:
         - build-go-dev
