@@ -59,7 +59,7 @@ require (
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-raftchunking v0.5.1
+	github.com/hashicorp/go-raftchunking v0.6.0
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0

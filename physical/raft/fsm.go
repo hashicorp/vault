@@ -16,6 +16,7 @@ import (
 	protoio "github.com/gogo/protobuf/io"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -31,10 +32,11 @@ const (
 
 var (
 	// dataBucketName is the value we use for the bucket
-	dataBucketName   = []byte("data")
-	configBucketName = []byte("config")
-	latestIndexKey   = []byte("latest_indexes")
-	latestConfigKey  = []byte("latest_config")
+	dataBucketName     = []byte("data")
+	chunkingBucketName = []byte("chunking")
+	configBucketName   = []byte("config")
+	latestIndexKey     = []byte("latest_indexes")
+	latestConfigKey    = []byte("latest_config")
 )
 
 // Verify FSM satisfies the correct interfaces
@@ -111,6 +113,10 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 			return fmt.Errorf("failed to create bucket: %v", err)
 		}
 		b, err := tx.CreateBucketIfNotExists(configBucketName)
+		if err != nil {
+			return fmt.Errorf("failed to create bucket: %v", err)
+		}
+		b, err = tx.CreateBucketIfNotExists(chunkingBucketName)
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %v", err)
 		}
@@ -652,4 +658,28 @@ func protoConfigurationToRaftConfiguration(configuration *ConfigurationValue) (u
 	return configuration.Index, raft.Configuration{
 		Servers: servers,
 	}
+}
+
+type FSMChunkStorage struct {
+	f *FSM
+}
+
+func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error) {
+	return false, nil
+}
+
+func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
+	return nil, nil
+}
+
+func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
+	return nil, nil
+}
+
+func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
+	return nil
+}
+
+func (f *FSMChunkStorage) ClearAll() error {
+	return nil
 }
