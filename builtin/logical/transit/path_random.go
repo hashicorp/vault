@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const maxBytes = 128 * 1024
+
 func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
 		Pattern: "random" + framework.OptionalParamRegex("urlbytes"),
@@ -45,7 +47,6 @@ func (b *backend) pathRandom() *framework.Path {
 
 func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
-	const maxBytes = 128 * 1024
 	var err error
 	strBytes := d.Get("urlbytes").(string)
 	if strBytes != "" {

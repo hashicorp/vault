@@ -2251,7 +2251,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	doRequest(req, true, "", 0)
 
 	req.Data["format"] = "hex"
-	req.Data["bytes"] = 131076
+	req.Data["bytes"] = maxBytes + 1
 	doRequest(req, true, "", 0)
 
 }

@@ -48,6 +48,8 @@ var (
 	}
 )
 
+const maxBytes = 128 * 1024
+
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
 		Tables: make(map[string]*memdb.TableSchema),
@@ -2841,7 +2843,6 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 
 func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
-	const maxBytes = 128 * 1024
 	var err error
 	strBytes := d.Get("urlbytes").(string)
 	if strBytes != "" {
