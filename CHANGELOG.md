@@ -26,6 +26,8 @@ IMPROVEMENTS:
    generated token at the tokenhelper location [GH-7104]
  * plugins: Change the default for `max_open_connections` for DB plugins to 4
    [GH-7093]
+ * storage/s3: A new `path` parameter allows selecting the path within a bucket
+   for Vault data [GH-7157]
 
 BUG FIXES:
 
