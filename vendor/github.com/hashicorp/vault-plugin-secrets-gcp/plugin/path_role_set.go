@@ -338,7 +338,9 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("bindings are required for new role set"), nil
 	}
 
-	if !newBindings {
+	// If no new bindings or new bindings are exactly same as old bindings,
+	// just update the role set without rotating service account.
+	if !newBindings || rs.bindingHash() == getStringHash(bRaw.(string)) {
 		// Just save role with updated metadata:
 		if err := rs.save(ctx, req.Storage); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -356,6 +358,7 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("unable to parse any bindings from given bindings HCL"), nil
 	}
 	rs.RawBindings = bRaw.(string)
+
 	updateWarns, err := b.saveRoleSetWithNewAccount(ctx, req.Storage, rs, project, bindings, scopes)
 	if updateWarns != nil {
 		warnings = append(warnings, updateWarns...)

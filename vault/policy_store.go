@@ -518,7 +518,7 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 		}
 	}
 
-	// Nil-check on the view before proceeding to retrive from storage
+	// Nil-check on the view before proceeding to retrieve from storage
 	if view == nil {
 		return nil, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
 	}

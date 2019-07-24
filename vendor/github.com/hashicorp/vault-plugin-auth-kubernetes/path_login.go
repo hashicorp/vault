@@ -80,8 +80,14 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 		}
 
 		// Check for a CIDR match.
-		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
-			return nil, logical.ErrPermissionDenied
+		if len(role.TokenBoundCIDRs) > 0 {
+			if req.Connection == nil {
+				b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+				return nil, logical.ErrPermissionDenied
+			}
+			if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+				return nil, logical.ErrPermissionDenied
+			}
 		}
 
 		config, err := b.config(ctx, req.Storage)

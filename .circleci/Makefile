@@ -1,5 +1,5 @@
-SHELL       := /usr/bin/env bash
-.SHELLFLAGS := -euo pipefail -c
+# SHELL includes all flags for maximum compatibility, see https://fieldnotes.tech/how-to-shell-for-compatible-makefiles/
+SHELL := /usr/bin/env bash -euo pipefail -c
 
 # CONFIG is the name of the make target someone
 # would invoke to update the main config file (config.yml).

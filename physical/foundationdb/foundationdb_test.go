@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"

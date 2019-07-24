@@ -63,7 +63,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	})
 
 	if c.MaxOpenConnections == 0 {
-		c.MaxOpenConnections = 2
+		c.MaxOpenConnections = 4
 	}
 
 	if c.MaxIdleConnections == 0 {

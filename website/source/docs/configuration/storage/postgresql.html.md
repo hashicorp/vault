@@ -27,6 +27,11 @@ storage "postgresql" {
 }
 ```
 
+~> **Note:** The PostgreSQL storage backend plugin will attempt to use SSL 
+when connecting to the database.  If SSL is not enabled the `connection_url` 
+will need to be configured to disable SSL.  See the documentation below 
+to disable SSL.
+
 The PostgreSQL storage backend does not automatically create the table. Here is
 some sample SQL to create the schema and indexes.
 

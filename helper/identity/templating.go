@@ -199,10 +199,10 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			split := strings.SplitN(trimmed, ".", 2)
 			return p.templateHandler(p.Entity.Metadata, split[1])
 
-		case trimmed == "group_names":
+		case trimmed == "groups.names":
 			return p.templateHandler(p.groupNames)
 
-		case trimmed == "group_ids":
+		case trimmed == "groups.ids":
 			return p.templateHandler(p.groupIDs)
 
 		case strings.HasPrefix(trimmed, "aliases."):
