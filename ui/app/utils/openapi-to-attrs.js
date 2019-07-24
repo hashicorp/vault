@@ -8,7 +8,7 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (const propName in props) {
     const prop = props[propName];
-    let { description, items, type, format, isId, label, deprecated } = prop;
+    let { description, items, type, format, isId, deprecated } = prop;
     if (deprecated === true) {
       continue;
     }
@@ -29,13 +29,14 @@ export const expandOpenApiProps = function(props) {
       editType,
       helpText: description,
       sensitive: sensitive,
-      label: label ? label : name ? capitalize(name) : capitalize(propName),
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || null,
     };
+
+    attrDefn.label = capitalize(name || propName);
 
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform

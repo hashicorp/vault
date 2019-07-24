@@ -1,4 +1,4 @@
-## 1.2-beta3 (Unreleased)
+## 1.2.0-beta3 (Unreleased)
 
 CHANGES:
 
@@ -33,10 +33,12 @@ BUG FIXES:
    after the AWS credential plugin is mounted. [GH-7025]
  * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
    performance standbys [JWT-61]
+ * secrets/pki: Forward revocation requests to active node when on a
+   performance standby [GH-7173]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
 
-## 1.2-beta2 (July 9th, 2019)
+## 1.2.0-beta2 (July 9th, 2019)
 
 CHANGES:
 
@@ -79,7 +81,7 @@ BUG FIXES:
  * secret/database: Escape username/password before using in connection URL
    [GH-7089]
 
-## 1.2-beta1 (June 25th, 2019)
+## 1.2.0-beta1 (June 25th, 2019)
 
 CHANGES:
 

@@ -148,14 +148,13 @@ export default Service.extend({
       //include url params
       if (params) {
         const { name, schema, description } = params[0];
-        let label = capitalize(name.split('_').join(' '));
+        let label = name.split('_').join(' ');
 
         paramProp[name] = {
           'x-vault-displayAttrs': {
-            name: name,
+            name: label,
             group: 'default',
           },
-          label: label,
           type: schema.type,
           description: description,
           isId: true,
