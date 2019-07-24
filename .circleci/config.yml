@@ -33,7 +33,6 @@ jobs:
   install-ui-dependencies:
     docker:
     - image: node:10-stretch
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - checkout
@@ -41,6 +40,8 @@ jobs:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
+          set -eux -o pipefail
+
           cd ui
           yarn install --ignore-optional
           npm rebuild node-sass
@@ -52,7 +53,6 @@ jobs:
   go-mod-download:
     docker:
     - image: golang:1.12.4-stretch
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - add_ssh_keys:
@@ -74,7 +74,6 @@ jobs:
   build-go-dev:
     docker:
     - image: golang:1.12.4-stretch
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
     - checkout
@@ -84,6 +83,8 @@ jobs:
         at: .
     - run:
         command: |
+          set -eux -o pipefail
+
           # Move dev UI assets to expected location
           rm -rf ./pkg
           mkdir ./pkg
@@ -98,7 +99,6 @@ jobs:
   test-ui:
     docker:
     - image: node:10-stretch
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
     steps:
@@ -109,7 +109,7 @@ jobs:
         at: .
     - run:
         command: |
-          set -x
+          set -eux -o pipefail
 
           # Install Chrome
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
@@ -133,32 +133,16 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
-  test-ui-browserstack:
-    docker:
-    - image: node:10-stretch
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
   test-go:
     machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: ~/src
     parallelism: 2
     steps:
     - checkout
     - run:
         command: |
+          set -eux -o pipefail
+
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -166,7 +150,7 @@ jobs:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
         command: |
-          set -x
+          set -eux -o pipefail
 
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -223,12 +207,13 @@ jobs:
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
     working_directory: ~/src
     steps:
     - checkout
     - run:
         command: |
+          set -eux -o pipefail
+
           sudo mkdir /go
           sudo chown -R circleci:circleci /go
         name: Allow circleci user to restore Go modules cache
@@ -236,7 +221,7 @@ jobs:
         key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
         command: |
-          set -x
+          set -eux -o pipefail
 
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -308,10 +293,6 @@ workflows:
         requires:
         - install-ui-dependencies
         - build-go-dev
-    - test-ui-browserstack:
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
     - test-go:
         requires:
         - build-go-dev
@@ -331,7 +312,7 @@ workflows:
 #     steps:
 #     - run:
 #         command: |
-#           set -x
+#           set -eux -o pipefail
 # 
 #           # Install Go
 #           curl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"
@@ -401,7 +382,6 @@ workflows:
 #   go:
 #     docker:
 #     - image: golang:1.12.4-stretch
-#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
 #     environment:
@@ -410,12 +390,10 @@ workflows:
 #       GO_VERSION: 1.12.4
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
-#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: ~/src
 #   node:
 #     docker:
 #     - image: node:10-stretch
-#     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 # jobs:
 #   build-go-dev:
@@ -427,6 +405,8 @@ workflows:
 #         at: .
 #     - run:
 #         command: |
+#           set -eux -o pipefail
+# 
 #           # Move dev UI assets to expected location
 #           rm -rf ./pkg
 #           mkdir ./pkg
@@ -460,6 +440,8 @@ workflows:
 #     - restore_yarn_cache
 #     - run:
 #         command: |
+#           set -eux -o pipefail
+# 
 #           cd ui
 #           yarn install --ignore-optional
 #           npm rebuild node-sass
@@ -501,6 +483,8 @@ workflows:
 #     - checkout
 #     - run:
 #         command: |
+#           set -eux -o pipefail
+# 
 #           sudo mkdir /go
 #           sudo chown -R circleci:circleci /go
 #         name: Allow circleci user to restore Go modules cache
@@ -516,6 +500,8 @@ workflows:
 #     - checkout
 #     - run:
 #         command: |
+#           set -eux -o pipefail
+# 
 #           sudo mkdir /go
 #           sudo chown -R circleci:circleci /go
 #         name: Allow circleci user to restore Go modules cache
@@ -536,7 +522,7 @@ workflows:
 #         at: .
 #     - run:
 #         command: |
-#           set -x
+#           set -eux -o pipefail
 # 
 #           # Install Chrome
 #           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \\
@@ -560,19 +546,6 @@ workflows:
 #         path: ui/test-results
 #     - store_test_results:
 #         path: ui/test-results
-#   test-ui-browserstack:
-#     executor: node
-#     steps:
-#     - checkout
-#     - restore_yarn_cache
-#     - attach_workspace:
-#         at: .
-#     - run:
-#         command: |
-#           # Add ./bin to the PATH so vault binary can be found.
-#           export PATH=\"${PWD}\"/bin:${PATH}
-#           make test-ui-browserstack
-#         name: Run Browserstack Tests
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
@@ -595,10 +568,6 @@ workflows:
 #         requires:
 #         - go-mod-download
 #     - test-ui:
-#         requires:
-#         - install-ui-dependencies
-#         - build-go-dev
-#     - test-ui-browserstack:
 #         requires:
 #         - install-ui-dependencies
 #         - build-go-dev

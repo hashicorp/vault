@@ -155,8 +155,7 @@
     "handlebars": "^4.1.2"
   },
   "engines": {
-    "node": " >= 10.*",
-    "yarn": "~1.16.0"
+    "node": " >= 10.*"
   },
   "private": true,
   "ember-addon": {
