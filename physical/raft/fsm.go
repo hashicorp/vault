@@ -105,10 +105,6 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		return nil, err
 	}
 
-	return newFSM(conf, logger, boltDB)
-}
-
-func newFSM(conf map[string]string, logger log.Logger, boltDB *bolt.DB) (*FSM, error) {
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -117,7 +113,7 @@ func newFSM(conf map[string]string, logger log.Logger, boltDB *bolt.DB) (*FSM, e
 	atomic.StoreUint64(latestIndex, 0)
 	latestConfig.Store((*ConfigurationValue)(nil))
 
-	err := boltDB.Update(func(tx *bolt.Tx) error {
+	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
 		_, err := tx.CreateBucketIfNotExists(dataBucketName)
 		if err != nil {
