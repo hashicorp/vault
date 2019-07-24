@@ -18,8 +18,6 @@ import (
 	realtesting "testing"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	raftlib "github.com/hashicorp/raft"
@@ -486,7 +484,7 @@ func setupDRReplication(t testing.T, pri, sec *vault.TestCluster, maskSecondaryT
 	for _, core := range sec.Cores {
 		core.Client.SetToken(pri.Cores[0].Client.Token())
 	}
-	WaitForActiveNodeAndPerfStandbys(t, sec)
+	WaitForActiveNode(t, sec)
 	WaitForMatchingMerkleRoots(t, "sys/replication/dr/", pri.Cores[0].Client, sec.Cores[0].Client)
 	WaitForDRReplicationWorking(t, pri, sec)
 }
@@ -745,7 +743,7 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	}
 	err = cluster.Cores[0].Client.Sys().Mount(mountPoint, &api.MountInput{
 		Type:  "kv",
-		Local: false,
+		Local: true,
 	})
 	if err != nil {
 		t.Fatal("unable to mount KV engine")
