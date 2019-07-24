@@ -679,7 +679,3 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 	return nil
 }
-
-func (f *FSMChunkStorage) ClearAll() error {
-	return nil
-}
