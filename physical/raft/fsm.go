@@ -266,19 +266,21 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	keys, err := f.listInternal(ctx, prefix, true)
-	if err != nil {
-		return err
-	}
+	err := f.db.Update(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		c := tx.Bucket(dataBucketName).Cursor()
 
-	return f.db.Update(func(tx *bolt.Tx) error {
-		for _, k := range keys {
-			if err := tx.Bucket(dataBucketName).Delete([]byte(k)); err != nil {
+		prefixBytes := []byte(prefix)
+		for k, _ := c.Seek(prefixBytes); k != nil && bytes.HasPrefix(k, prefixBytes); k, _ = c.Next() {
+			if err := c.Delete(); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
+
+	return err
 }
 
 // Get retrieves the value at the given path from the bolt file.
@@ -344,10 +346,6 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	return f.listInternal(ctx, prefix, false)
-}
-
-func (f *FSM) listInternal(ctx context.Context, prefix string, recursive bool) ([]string, error) {
 	var keys []string
 
 	err := f.db.View(func(tx *bolt.Tx) error {
@@ -358,16 +356,12 @@ func (f *FSM) listInternal(ctx context.Context, prefix string, recursive bool) (
 		for k, _ := c.Seek(prefixBytes); k != nil && bytes.HasPrefix(k, prefixBytes); k, _ = c.Next() {
 			key := string(k)
 			key = strings.TrimPrefix(key, prefix)
-			if recursive {
+			if i := strings.Index(key, "/"); i == -1 {
+				// Add objects only from the current 'folder'
 				keys = append(keys, key)
 			} else {
-				if i := strings.Index(key, "/"); i == -1 {
-					// Add objects only from the current 'folder'
-					keys = append(keys, key)
-				} else {
-					// Add truncated 'folder' paths
-					keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
-				}
+				// Add truncated 'folder' paths
+				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 			}
 		}
 
