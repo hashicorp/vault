@@ -634,14 +634,34 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	t.Helper()
+	mountPoint, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cluster.Cores[0].Client.Sys().Mount(mountPoint, &api.MountInput{
+		Type:  "kv",
+		Local: false,
+	})
+	if err != nil {
+		t.Fatal("unable to mount KV engine")
+	}
+	path := mountPoint + "/foo"
 	var standbys, actives int64
 	var wg sync.WaitGroup
-	deadline := time.Now().Add(15 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	for _, c := range cluster.Cores {
 		wg.Add(1)
 		go func(client *api.Client) {
 			defer wg.Done()
+			val := 1
 			for time.Now().Before(deadline) {
+				_, err = cluster.Cores[0].Client.Logical().Write(path, map[string]interface{}{
+					"bar": val,
+				})
+				if err != nil {
+					t.Fatal("unable to write KV", "path", path)
+				}
+				val++
 				time.Sleep(250 * time.Millisecond)
 				leader, err := client.Sys().Leader()
 				if err != nil {
@@ -665,6 +685,10 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	if actives != 1 || int(standbys) != len(cluster.Cores)-1 {
 		t.Fatalf("expected 1 active core and %d standbys, got %d active and %d standbys",
 			len(cluster.Cores)-1, actives, standbys)
+	}
+	err = cluster.Cores[0].Client.Sys().Unmount(mountPoint)
+	if err != nil {
+		t.Fatal("unable to unmount KV engine on primary")
 	}
 }
 
