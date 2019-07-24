@@ -705,7 +705,7 @@ type FSMChunkStorage struct {
 // chunkPaths returns a disk prefix and key given chunkinfo
 func (f *FSMChunkStorage) chunkPaths(chunk *raftchunking.ChunkInfo) (string, string) {
 	prefix := fmt.Sprintf("%s%d/", chunkingPrefix, chunk.OpNum)
-	key := fmt.Sprintf("%s%d-%d", prefix, chunk.NumChunks, chunk.SequenceNum)
+	key := fmt.Sprintf("%s%d", prefix, chunk.SequenceNum)
 	return prefix, key
 }
 
@@ -760,16 +760,10 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 		return nil, nil
 	}
 
-	// Get the total number from the first key
-	totalNum, err := strconv.ParseInt(strings.Split(opChunkKeys[0], "-")[0], 10, 64)
-	if err != nil {
-		return nil, errwrap.Wrapf("error detecting total number of chunks: {{err}}", err)
-	}
-
-	ret := make([]*raftchunking.ChunkInfo, totalNum)
+	var ret []*raftchunking.ChunkInfo
 
 	for _, v := range opChunkKeys {
-		seqNum, err := strconv.ParseInt(strings.Split(v, "-")[1], 10, 64)
+		seqNum, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return nil, errwrap.Wrapf("error converting seqnum to integer: {{err}}", err)
 		}
@@ -782,6 +776,10 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 		var ci raftchunking.ChunkInfo
 		if err := jsonutil.DecodeJSON(entry.Value, &ci); err != nil {
 			return nil, errwrap.Wrapf("error decoding chunkinfo json: {{err}}", err)
+		}
+
+		if ret == nil {
+			ret = make([]*raftchunking.ChunkInfo, ci.NumChunks)
 		}
 
 		ret[seqNum] = &ci
