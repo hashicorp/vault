@@ -364,7 +364,7 @@ func (f *FSM) listInternal(ctx context.Context, prefix string, recursive bool) (
 				if i := strings.Index(key, "/"); i == -1 {
 					// Add objects only from the current 'folder'
 					keys = append(keys, key)
-				} else if i != -1 {
+				} else {
 					// Add truncated 'folder' paths
 					keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 				}
