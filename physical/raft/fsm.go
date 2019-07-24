@@ -828,7 +828,7 @@ func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 	if err := f.f.DeletePrefix(f.ctx, chunkingPrefix); err != nil {
 		return errwrap.Wrapf("error deleting prefix for chunk restoration: {{err}}", err)
 	}
-	if chunks == nil || len(chunks) == 0 {
+	if len(chunks) == 0 {
 		return nil
 	}
 
