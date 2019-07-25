@@ -533,9 +533,11 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 	for _, server := range future.Configuration().Servers {
 		entry := &RaftServer{
-			NodeID:          string(server.ID),
-			Address:         string(server.Address),
-			Leader:          server.Address == b.raft.Leader(),
+			NodeID:  string(server.ID),
+			Address: string(server.Address),
+			// Since we only service this request on the active node our node ID
+			// denotes the raft leader.
+			Leader:          string(server.ID) == b.NodeID(),
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
@@ -814,7 +816,7 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		resp = chunkedSuccess.Response
 	}
 
-	if resp, ok := applyFuture.Response().(*FSMApplyResponse); !ok || !resp.Success {
+	if resp, ok := resp.(*FSMApplyResponse); !ok || !resp.Success {
 		return errors.New("could not apply data")
 	}
 

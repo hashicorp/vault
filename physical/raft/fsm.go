@@ -88,7 +88,7 @@ type FSM struct {
 	// additional state in the backend.
 	storeLatestState bool
 
-	chunker *raftchunking.ChunkingFSM
+	chunker *raftchunking.ChunkingConfigurationStore
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -170,7 +170,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		storeLatestState: storeLatestState,
 	}
 
-	f.chunker = raftchunking.NewChunkingFSM(f, &FSMChunkStorage{
+	f.chunker = raftchunking.NewChunkingConfigurationStore(f, &FSMChunkStorage{
 		f:   f,
 		ctx: context.Background(),
 	})
