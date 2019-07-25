@@ -69,20 +69,20 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.1.1
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190725163626-bf5562af3daf
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190725163633-78bb5221e0bd
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190725163639-4ee66111cdea
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190725163646-7240e4ced4cc
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190725163654-bff73904a05c
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190725163700-18672a1b5c9e
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190725163710-84167807edd3
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190725163716-8c7983fad7df
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190725163722-60e4dff2a34d
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190725163729-619674c4dfbd
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190725163735-cb1e2f70f8ba
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190725163742-0a283717a4fd
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190725163751-d9501f92b653
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190725163757-20048344f9aa
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190725165955-db428c1b0976
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190725170003-0fc4bd518aa2
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190725170023-9d8d5e0b03e6
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190725170032-0aa7d1c92039
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190725170041-1cfee03e8d3a
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190725170047-354505be0ecf
+	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190725170053-826a135618c1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190725170059-5c0d558eb59d
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190725170108-e1b17ad0c772
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190725170114-7d66a3fa0600
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190725170121-541440395211
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190725170127-aa49df112140
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190725170135-aaf270943731
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190725170141-1c4dac87f383
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/hashicorp/vault/sdk v0.1.13
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
