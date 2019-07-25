@@ -62,7 +62,7 @@ func (b *backend) pathConfig() *framework.Path {
 				},
 				Description: "The password for PCF’s API.",
 			},
-			"login_max_seconds_old": {
+			"login_max_seconds_not_before": {
 				Type: framework.TypeDurationSecond,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Login Max Seconds Old",
@@ -72,7 +72,7 @@ func (b *backend) pathConfig() *framework.Path {
 Set low to reduce the opportunity for replay attacks.`,
 				Default: 300,
 			},
-			"login_max_seconds_ahead": {
+			"login_max_seconds_not_after": {
 				Type: framework.TypeInt,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Login Max Seconds Ahead",
@@ -128,15 +128,15 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		pcfApiCertificates := data.Get("pcf_api_trusted_certificates").([]string)
 
 		// Default this to 5 minutes.
-		loginMaxSecOld := 300 * time.Second
-		if raw, ok := data.GetOk("login_max_seconds_old"); ok {
-			loginMaxSecOld = time.Duration(raw.(int)) * time.Second
+		loginMaxSecNotBefore := 300 * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_not_before"); ok {
+			loginMaxSecNotBefore = time.Duration(raw.(int)) * time.Second
 		}
 
 		// Default this to 1 minute.
-		loginMaxSecAhead := 60 * time.Second
-		if raw, ok := data.GetOk("login_max_seconds_ahead"); ok {
-			loginMaxSecAhead = time.Duration(raw.(int)) * time.Second
+		loginMaxSecNotAfter := 60 * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_not_after"); ok {
+			loginMaxSecNotAfter = time.Duration(raw.(int)) * time.Second
 		}
 		config = &models.Configuration{
 			IdentityCACertificates: identityCACerts,
@@ -144,8 +144,8 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 			PCFAPIAddr:             pcfApiAddr,
 			PCFUsername:            pcfUsername,
 			PCFPassword:            pcfPassword,
-			LoginMaxSecOld:         loginMaxSecOld,
-			LoginMaxSecAhead:       loginMaxSecAhead,
+			LoginMaxSecNotBefore:   loginMaxSecNotBefore,
+			LoginMaxSecNotAfter:    loginMaxSecNotAfter,
 		}
 	} else {
 		// They're updating a config. Only update the fields that have been sent in the call.
@@ -164,11 +164,11 @@ func (b *backend) operationConfigCreateUpdate(ctx context.Context, req *logical.
 		if raw, ok := data.GetOk("pcf_password"); ok {
 			config.PCFPassword = raw.(string)
 		}
-		if raw, ok := data.GetOk("login_max_seconds_old"); ok {
-			config.LoginMaxSecOld = time.Duration(raw.(int)) * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_not_before"); ok {
+			config.LoginMaxSecNotBefore = time.Duration(raw.(int)) * time.Second
 		}
-		if raw, ok := data.GetOk("login_max_seconds_ahead"); ok {
-			config.LoginMaxSecAhead = time.Duration(raw.(int)) * time.Second
+		if raw, ok := data.GetOk("login_max_seconds_not_after"); ok {
+			config.LoginMaxSecNotAfter = time.Duration(raw.(int)) * time.Second
 		}
 	}
 
@@ -212,8 +212,8 @@ func (b *backend) operationConfigRead(ctx context.Context, req *logical.Request,
 			"pcf_api_trusted_certificates": config.PCFAPICertificates,
 			"pcf_api_addr":                 config.PCFAPIAddr,
 			"pcf_username":                 config.PCFUsername,
-			"login_max_seconds_old":        config.LoginMaxSecOld / time.Second,
-			"login_max_seconds_ahead":      config.LoginMaxSecAhead / time.Second,
+			"login_max_seconds_not_before": config.LoginMaxSecNotBefore / time.Second,
+			"login_max_seconds_not_after":  config.LoginMaxSecNotAfter / time.Second,
 		},
 	}, nil
 }

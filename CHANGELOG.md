@@ -1,4 +1,4 @@
-## 1.2.0-beta3 (Unreleased)
+## 1.2.0-rc1 (July 25th, 2019)
 
 CHANGES:
 
@@ -6,13 +6,6 @@ CHANGES:
    only display messages on error.
  * plugins: Database plugins will now default to 4 `max_open_connections`
    rather than 2.
-
-FEATURES:
-
- * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
-   manage storage directly within a Vault cluster. This new integrated storage
-   solution is based on the Raft protocol which is also used to back HashiCorp
-   Consul and HashiCorp Nomad.
 
 IMPROVEMENTS:
 
@@ -59,6 +52,10 @@ CHANGES:
  
 FEATURES:
 
+ * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
+   manage storage directly within a Vault cluster. This new integrated storage
+   solution is based on the Raft protocol which is also used to back HashiCorp
+   Consul and HashiCorp Nomad.
  * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
    where you can browse the endpoints avaliable to you and make requests. To try
    it out, open the Web CLI and type `api`.

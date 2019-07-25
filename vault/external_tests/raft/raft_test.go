@@ -175,7 +175,20 @@ func TestRaft_Configuration(t *testing.T) {
 	}
 	for _, s := range servers {
 		server := s.(map[string]interface{})
-		delete(expected, server["node_id"].(string))
+		nodeID := server["node_id"].(string)
+		leader := server["leader"].(bool)
+		switch nodeID {
+		case "core-0":
+			if !leader {
+				t.Fatalf("expected server to be leader: %#v", server)
+			}
+		default:
+			if leader {
+				t.Fatalf("expected server to not be leader: %#v", server)
+			}
+		}
+
+		delete(expected, nodeID)
 	}
 	if len(expected) != 0 {
 		t.Fatalf("failed to read configuration successfully")

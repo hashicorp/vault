@@ -127,13 +127,13 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 	}
 
 	// Ensure the time it was signed isn't too far in the past or future.
-	oldestAllowableSigningTime := timeReceived.Add(-1 * config.LoginMaxSecOld)
-	furthestFutureAllowableSigningTime := timeReceived.Add(config.LoginMaxSecAhead)
+	oldestAllowableSigningTime := timeReceived.Add(-1 * config.LoginMaxSecNotBefore)
+	furthestFutureAllowableSigningTime := timeReceived.Add(config.LoginMaxSecNotAfter)
 	if signingTime.Before(oldestAllowableSigningTime) {
-		return logical.ErrorResponse(fmt.Sprintf("request is too old; signed at %s but received request at %s; allowable seconds old is %d", signingTime, timeReceived, config.LoginMaxSecOld/time.Second)), nil
+		return logical.ErrorResponse(fmt.Sprintf("request is too old; signed at %s but received request at %s; allowable seconds old is %d", signingTime, timeReceived, config.LoginMaxSecNotBefore/time.Second)), nil
 	}
 	if signingTime.After(furthestFutureAllowableSigningTime) {
-		return logical.ErrorResponse(fmt.Sprintf("request is too far in the future; signed at %s but received request at %s; allowable seconds in the future is %d", signingTime, timeReceived, config.LoginMaxSecAhead/time.Second)), nil
+		return logical.ErrorResponse(fmt.Sprintf("request is too far in the future; signed at %s but received request at %s; allowable seconds in the future is %d", signingTime, timeReceived, config.LoginMaxSecNotAfter/time.Second)), nil
 	}
 
 	intermediateCert, identityCert, err := util.ExtractCertificates(cfInstanceCertContents)
@@ -179,7 +179,7 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		InternalData: map[string]interface{}{
 			"role":        roleName,
 			"instance_id": pcfCert.InstanceID,
-			"ip_address":  pcfCert.IPAddress.String(),
+			"ip_address":  pcfCert.IPAddress,
 		},
 		DisplayName: pcfCert.InstanceID,
 		Alias: &logical.Alias{
@@ -261,7 +261,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 
 func (b *backend) validate(config *models.Configuration, role *models.RoleEntry, pcfCert *models.PCFCertificate, reqConnRemoteAddr string) error {
 	if !role.DisableIPMatching {
-		if !matchesIPAddress(reqConnRemoteAddr, pcfCert.IPAddress) {
+		if !matchesIPAddress(reqConnRemoteAddr, net.ParseIP(pcfCert.IPAddress)) {
 			return errors.New("no matching IP address")
 		}
 	}
