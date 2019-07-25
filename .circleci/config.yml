@@ -51,7 +51,7 @@ jobs:
         - ui/node_modules
   go-mod-download:
     docker:
-    - image: golang:1.12.4-stretch
+    - image: golang:1.12.7-stretch
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -73,7 +73,7 @@ jobs:
         - /go/pkg/mod
   build-go-dev:
     docker:
-    - image: golang:1.12.4-stretch
+    - image: golang:1.12.7-stretch
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -219,7 +219,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.4
+    - GO_VERSION: 1.12.7
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
@@ -289,7 +289,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.4
+    - GO_VERSION: 1.12.7
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
   ci:
@@ -400,14 +400,14 @@ workflows:
 # executors:
 #   go:
 #     docker:
-#     - image: golang:1.12.4-stretch
+#     - image: golang:1.12.7-stretch
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: null
-#       GO_VERSION: 1.12.4
+#       GO_VERSION: 1.12.7
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
@@ -578,7 +578,7 @@ workflows:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
 #     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
 #   images:
-#     go: golang:1.12.4-stretch
+#     go: golang:1.12.7-stretch
 #     node: node:10-stretch
 # version: 2.1
 # workflows:
