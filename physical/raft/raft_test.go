@@ -29,6 +29,10 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
+	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+}
+
+func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:  "raft",
 		Level: hclog.Trace,

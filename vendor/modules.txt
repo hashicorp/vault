@@ -185,6 +185,8 @@ github.com/coreos/go-semver/semver
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf
 github.com/coreos/pkg/capnslog
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
@@ -287,7 +289,7 @@ github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
-# github.com/hashicorp/go-raftchunking v0.5.1
+# github.com/hashicorp/go-raftchunking v0.6.1
 github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
 # github.com/hashicorp/go-retryablehttp v0.5.4
@@ -533,6 +535,8 @@ github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/posener/complete v1.2.1
 github.com/posener/complete
 github.com/posener/complete/cmd/install
@@ -569,6 +573,9 @@ github.com/samuel/go-zookeeper/zk
 github.com/satori/go.uuid
 # github.com/sirupsen/logrus v1.2.0
 github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.3.0
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43

@@ -3,10 +3,12 @@ package raft
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,8 +17,11 @@ import (
 	metrics "github.com/armon/go-metrics"
 	protoio "github.com/gogo/protobuf/io"
 	proto "github.com/golang/protobuf/proto"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -27,6 +32,8 @@ const (
 	deleteOp uint32 = 1 << iota
 	putOp
 	restoreCallbackOp
+
+	chunkingPrefix = "raftchunking/"
 )
 
 var (
@@ -80,6 +87,8 @@ type FSM struct {
 	// configs so we can conform to the standard backend tests, which expect to
 	// additional state in the backend.
 	storeLatestState bool
+
+	chunker *raftchunking.ChunkingFSM
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -149,8 +158,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		storeLatestState = false
 	}
 
-	return &FSM{
-		path:       path,
+	f := &FSM{
+		path:       conf["path"],
 		logger:     logger,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 
@@ -159,7 +168,14 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		latestIndex:      latestIndex,
 		latestConfig:     latestConfig,
 		storeLatestState: storeLatestState,
-	}, nil
+	}
+
+	f.chunker = raftchunking.NewChunkingFSM(f, &FSMChunkStorage{
+		f:   f,
+		ctx: context.Background(),
+	})
+
+	return f, nil
 }
 
 // LatestState returns the latest index and configuration values we have seen on
@@ -240,6 +256,33 @@ func (f *FSM) Delete(ctx context.Context, path string) error {
 	})
 }
 
+// Delete deletes the given key from the bolt file.
+func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
+	defer metrics.MeasureSince([]string{"raft", "delete_prefix"}, time.Now())
+
+	f.permitPool.Acquire()
+	defer f.permitPool.Release()
+
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	err := f.db.Update(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		c := tx.Bucket(dataBucketName).Cursor()
+
+		prefixBytes := []byte(prefix)
+		for k, _ := c.Seek(prefixBytes); k != nil && bytes.HasPrefix(k, prefixBytes); k, _ = c.Next() {
+			if err := c.Delete(); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
@@ -316,7 +359,7 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 			if i := strings.Index(key, "/"); i == -1 {
 				// Add objects only from the current 'folder'
 				keys = append(keys, key)
-			} else if i != -1 {
+			} else {
 				// Add truncated 'folder' paths
 				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 			}
@@ -652,4 +695,176 @@ func protoConfigurationToRaftConfiguration(configuration *ConfigurationValue) (u
 	return configuration.Index, raft.Configuration{
 		Servers: servers,
 	}
+}
+
+type FSMChunkStorage struct {
+	f   *FSM
+	ctx context.Context
+}
+
+// chunkPaths returns a disk prefix and key given chunkinfo
+func (f *FSMChunkStorage) chunkPaths(chunk *raftchunking.ChunkInfo) (string, string) {
+	prefix := fmt.Sprintf("%s%d/", chunkingPrefix, chunk.OpNum)
+	key := fmt.Sprintf("%s%d", prefix, chunk.SequenceNum)
+	return prefix, key
+}
+
+func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error) {
+	b, err := jsonutil.EncodeJSON(chunk)
+	if err != nil {
+		return false, errwrap.Wrapf("error encoding chunk info: {{err}}", err)
+	}
+
+	prefix, key := f.chunkPaths(chunk)
+
+	entry := &physical.Entry{
+		Key:   key,
+		Value: b,
+	}
+
+	f.f.permitPool.Acquire()
+	defer f.f.permitPool.Release()
+
+	f.f.l.RLock()
+	defer f.f.l.RUnlock()
+
+	// Start a write transaction.
+	done := new(bool)
+	if err := f.f.db.Update(func(tx *bolt.Tx) error {
+		if err := tx.Bucket(dataBucketName).Put([]byte(entry.Key), entry.Value); err != nil {
+			return errwrap.Wrapf("error storing chunk info: {{err}}", err)
+		}
+
+		// Assume bucket exists and has keys
+		c := tx.Bucket(dataBucketName).Cursor()
+
+		var keys []string
+		prefixBytes := []byte(prefix)
+		for k, _ := c.Seek(prefixBytes); k != nil && bytes.HasPrefix(k, prefixBytes); k, _ = c.Next() {
+			key := string(k)
+			key = strings.TrimPrefix(key, prefix)
+			if i := strings.Index(key, "/"); i == -1 {
+				// Add objects only from the current 'folder'
+				keys = append(keys, key)
+			} else {
+				// Add truncated 'folder' paths
+				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+			}
+		}
+
+		*done = uint32(len(keys)) == chunk.NumChunks
+
+		return nil
+	}); err != nil {
+		return false, err
+	}
+
+	return *done, nil
+}
+
+func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
+	ret, err := f.chunksForOpNum(opNum)
+	if err != nil {
+		return nil, errwrap.Wrapf("error getting chunks for op keys: {{err}}", err)
+	}
+
+	prefix, _ := f.chunkPaths(&raftchunking.ChunkInfo{OpNum: opNum})
+	if err := f.f.DeletePrefix(f.ctx, prefix); err != nil {
+		return nil, errwrap.Wrapf("error deleting prefix after op finalization: {{err}}", err)
+	}
+
+	return ret, nil
+}
+
+func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
+	prefix, _ := f.chunkPaths(&raftchunking.ChunkInfo{OpNum: opNum})
+
+	opChunkKeys, err := f.f.List(f.ctx, prefix)
+	if err != nil {
+		return nil, errwrap.Wrapf("error fetching op chunk keys: {{err}}", err)
+	}
+
+	if len(opChunkKeys) == 0 {
+		return nil, nil
+	}
+
+	var ret []*raftchunking.ChunkInfo
+
+	for _, v := range opChunkKeys {
+		seqNum, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return nil, errwrap.Wrapf("error converting seqnum to integer: {{err}}", err)
+		}
+
+		entry, err := f.f.Get(f.ctx, prefix+v)
+		if err != nil {
+			return nil, errwrap.Wrapf("error fetching chunkinfo: {{err}}", err)
+		}
+
+		var ci raftchunking.ChunkInfo
+		if err := jsonutil.DecodeJSON(entry.Value, &ci); err != nil {
+			return nil, errwrap.Wrapf("error decoding chunkinfo json: {{err}}", err)
+		}
+
+		if ret == nil {
+			ret = make([]*raftchunking.ChunkInfo, ci.NumChunks)
+		}
+
+		ret[seqNum] = &ci
+	}
+
+	return ret, nil
+}
+
+func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
+	opNums, err := f.f.List(f.ctx, chunkingPrefix)
+	if err != nil {
+		return nil, errwrap.Wrapf("error doing recursive list for chunk saving: {{err}}", err)
+	}
+
+	if len(opNums) == 0 {
+		return nil, nil
+	}
+
+	ret := make(raftchunking.ChunkMap, len(opNums))
+	for _, opNumStr := range opNums {
+		opNum, err := strconv.ParseInt(opNumStr, 10, 64)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing op num during chunk saving: {{err}}", err)
+		}
+
+		opChunks, err := f.chunksForOpNum(uint64(opNum))
+		if err != nil {
+			return nil, errwrap.Wrapf("error getting chunks for op keys during chunk saving: {{err}}", err)
+		}
+
+		ret[uint64(opNum)] = opChunks
+	}
+
+	return ret, nil
+}
+
+func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
+	if err := f.f.DeletePrefix(f.ctx, chunkingPrefix); err != nil {
+		return errwrap.Wrapf("error deleting prefix for chunk restoration: {{err}}", err)
+	}
+	if len(chunks) == 0 {
+		return nil
+	}
+
+	for opNum, opChunks := range chunks {
+		for _, chunk := range opChunks {
+			if chunk == nil {
+				continue
+			}
+			if chunk.OpNum != opNum {
+				return errors.New("unexpected op number in chunk")
+			}
+			if _, err := f.StoreChunk(chunk); err != nil {
+				return errwrap.Wrapf("error storing chunk during restoration: {{err}}", err)
+			}
+		}
+	}
+
+	return nil
 }
