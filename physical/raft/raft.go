@@ -781,7 +781,7 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
-	case len(commandBytes) <= raft.SuggestedMaxDataSize:
+	case len(commandBytes) <= raftchunking.ChunkSize:
 		applyFuture = b.raft.Apply(commandBytes, 0)
 	default:
 		chunked = true
