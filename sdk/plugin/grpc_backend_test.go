@@ -8,10 +8,13 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	gplugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
 )
+
+var testNamespace = namespace.Namespace{ID: "testid", Path: "testpath"}
 
 func TestGRPCBackendPlugin_impl(t *testing.T) {
 	var _ gplugin.Plugin = new(GRPCBackendPlugin)
@@ -22,7 +25,9 @@ func TestGRPCBackendPlugin_HandleRequest(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data: map[string]interface{}{
@@ -78,7 +83,9 @@ func TestGRPCBackendPlugin_HandleExistenceCheck(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
+
+	checkFound, exists, err := b.HandleExistenceCheck(ctx, &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data:      map[string]interface{}{"value": "bar"},
@@ -98,14 +105,16 @@ func TestGRPCBackendPlugin_Cleanup(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	b.Cleanup(context.Background())
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
+
+	b.Cleanup(ctx)
 }
 
 func TestGRPCBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	ctx := context.Background()
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
 
 	resp, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
@@ -141,7 +150,9 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	err := b.Initialize(context.Background(), &logical.InitializationRequest{})
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
+
+	err := b.Initialize(ctx, &logical.InitializationRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,13 +182,19 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	}
 	b := raw.(logical.Backend)
 
-	err = b.Setup(context.Background(), &logical.BackendConfig{
+	ctx := namespace.ContextWithNamespace(context.Background(), &testNamespace)
+
+	err = b.Setup(ctx, &logical.BackendConfig{
 		Logger: logging.NewVaultLogger(log.Debug),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
 		StorageView: &logical.InmemStorage{},
+		Config: map[string]string{
+			"nsID":   testNamespace.ID,
+			"nsPath": testNamespace.Path,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

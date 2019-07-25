@@ -2,7 +2,9 @@ package mock
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -17,6 +19,14 @@ func New() (interface{}, error) {
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	b.testNamespace = namespace.Namespace{
+		ID:   conf.Config["nsID"],
+		Path: conf.Config["nsPath"],
+	}
+
+	if err := b.validateCtxNamespace(ctx); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -54,9 +64,11 @@ func Backend() *backend {
 				"special",
 			},
 		},
-		Secrets:     []*framework.Secret{},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Secrets:        []*framework.Secret{},
+		Invalidate:     b.invalidate,
+		InitializeFunc: b.initialize,
+		Clean:          b.clean,
+		BackendType:    logical.TypeLogical,
 	}
 	b.internal = "bar"
 	return &b
@@ -65,13 +77,45 @@ func Backend() *backend {
 type backend struct {
 	*framework.Backend
 
+	testNamespace namespace.Namespace
+
 	// internal is used to test invalidate
 	internal string
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {
+	if err := b.validateCtxNamespace(ctx); err != nil {
+		panic(err)
+	}
+
 	switch key {
 	case "internal":
 		b.internal = ""
 	}
+}
+
+func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	if err := b.validateCtxNamespace(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *backend) clean(ctx context.Context) {
+	if err := b.validateCtxNamespace(ctx); err != nil {
+		panic(err)
+	}
+}
+
+func (b *backend) validateCtxNamespace(ctx context.Context) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if *ns != b.testNamespace {
+		return fmt.Errorf("expected namespace: %+v, got: %+v", b.testNamespace, ns)
+	}
+
+	return nil
 }

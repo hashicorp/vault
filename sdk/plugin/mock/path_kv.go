@@ -37,6 +37,10 @@ func kvPaths(b *backend) []*framework.Path {
 }
 
 func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	if err := b.validateCtxNamespace(ctx); err != nil {
+		return false, err
+	}
+
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, errwrap.Wrapf("existence check failed: {{err}}", err)
@@ -74,6 +78,10 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 }
 
 func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := b.validateCtxNamespace(ctx); err != nil {
+		return nil, err
+	}
+
 	value := data.Get("value").(string)
 
 	b.Logger().Info("storing value", "key", req.Path, "value", value)

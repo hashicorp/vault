@@ -6,10 +6,12 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 var ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
@@ -29,6 +31,8 @@ type backendGRPCPluginServer struct {
 // system view of the backend. This method also instantiates the underlying
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
+	ctx = decodeNamespace(ctx)
+
 	// Dial for storage
 	brokeredClient, err := b.broker.Dial(args.BrokerID)
 	if err != nil {
@@ -64,6 +68,8 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 		return &pb.HandleRequestReply{}, ErrServerInMetadataMode
 	}
 
+	ctx = decodeNamespace(ctx)
+
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
@@ -88,6 +94,8 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 	if pluginutil.InMetadataMode() {
 		return &pb.InitializeReply{}, ErrServerInMetadataMode
 	}
+
+	ctx = decodeNamespace(ctx)
 
 	req := &logical.InitializationRequest{
 		Storage: newGRPCStorageClient(b.brokeredClient),
@@ -123,6 +131,8 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 		return &pb.HandleExistenceCheckReply{}, ErrServerInMetadataMode
 	}
 
+	ctx = decodeNamespace(ctx)
+
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
 		return &pb.HandleExistenceCheckReply{}, err
@@ -138,6 +148,8 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 }
 
 func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
+	ctx = decodeNamespace(ctx)
+
 	b.backend.Cleanup(ctx)
 
 	// Close rpc clients
@@ -146,6 +158,8 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
+	ctx = decodeNamespace(ctx)
+
 	if pluginutil.InMetadataMode() {
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
@@ -158,4 +172,29 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 	return &pb.TypeReply{
 		Type: uint32(b.backend.Type()),
 	}, nil
+}
+
+// decodeNamespace decodes namespace data in the GRPC metadata and embeds it
+// into the context.
+func decodeNamespace(ctx context.Context) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ctx
+	}
+
+	nsIDRaw := md.Get(metadataNSID)
+	nsPathRaw := md.Get(metadataNSPath)
+
+	if len(nsIDRaw) != 1 || len(nsPathRaw) != 1 {
+		return ctx
+	}
+
+	ns := namespace.Namespace{
+		ID:   nsIDRaw[0],
+		Path: nsPathRaw[0],
+	}
+
+	ctx = namespace.ContextWithNamespace(ctx, &ns)
+
+	return ctx
 }

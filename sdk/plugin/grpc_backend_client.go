@@ -8,14 +8,19 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
+
+const metadataNSID = "namespace_id"
+const metadataNSPath = "namespace_path"
 
 var ErrPluginShutdown = errors.New("plugin is shut down")
 var ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
@@ -56,6 +61,11 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.Ini
 	defer close(quitCh)
 	defer cancel()
 
+	ctx, err := encodeNamespace(ctx)
+	if err != nil {
+		return err
+	}
+
 	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
@@ -89,6 +99,11 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 	defer cancel()
 
 	protoReq, err := pb.LogicalRequestToProtoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, err = encodeNamespace(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +173,12 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
 	defer close(quitCh)
 	defer cancel()
+
+	ctx, err = encodeNamespace(ctx)
+	if err != nil {
+		return false, false, err
+	}
+
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
 	}, largeMsgGRPCCallOpts...)
@@ -179,6 +200,11 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
 	defer close(quitCh)
 	defer cancel()
+
+	ctx, err := encodeNamespace(ctx)
+	if err != nil {
+		b.Logger().Error("error adding namespace to context metadata", "error", err)
+	}
 
 	b.client.Cleanup(ctx, &pb.Empty{})
 
@@ -204,6 +230,11 @@ func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
 	defer close(quitCh)
 	defer cancel()
+
+	ctx, err := encodeNamespace(ctx)
+	if err != nil {
+		b.Logger().Error("error adding context metadata", "error", err)
+	}
 
 	b.client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
 		Key: key,
@@ -255,6 +286,11 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	defer close(quitCh)
 	defer cancel()
 
+	ctx, err := encodeNamespace(ctx)
+	if err != nil {
+		return err
+	}
+
 	reply, err := b.client.Setup(ctx, args)
 	if err != nil {
 		return err
@@ -277,4 +313,23 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
+}
+
+// encodeNamespace embeds namespace data from the provided context into GRPC metadata.
+func encodeNamespace(ctx context.Context) (context.Context, error) {
+	if ctx == nil {
+		return ctx, nil
+	}
+
+	// Add namespace information, if present.
+	ns, err := namespace.FromContext(ctx)
+	if err == namespace.ErrNoNamespace {
+		return ctx, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	ctx = metadata.AppendToOutgoingContext(ctx, metadataNSID, ns.ID, metadataNSPath, ns.Path)
+
+	return ctx, nil
 }
