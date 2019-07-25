@@ -309,6 +309,9 @@ workflows:
         - install-ui-dependencies
         - build-go-dev
     - test-ui-browserstack:
+        filters:
+          branches:
+            ignore: /pull\/[0-9]+/
         requires:
         - install-ui-dependencies
         - build-go-dev
@@ -599,6 +602,9 @@ workflows:
 #         - install-ui-dependencies
 #         - build-go-dev
 #     - test-ui-browserstack:
+#         filters:
+#           branches:
+#             ignore: /pull\\/[0-9]+/
 #         requires:
 #         - install-ui-dependencies
 #         - build-go-dev
