@@ -48,12 +48,6 @@ dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
 
-testtravis: BUILD_TAGS+=travis
-testtravis: test
-
-testracetravis: BUILD_TAGS+=travis
-testracetravis: testrace
-
 # test runs the unit tests and vets the code
 test: prep
 	@CGO_ENABLED=$(CGO_ENABLED) \
