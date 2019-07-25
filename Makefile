@@ -9,7 +9,7 @@ TEST_TIMEOUT?=30m
 EXTENDED_TEST_TIMEOUT=45m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
-	golang.org/dl/${GOBIN}
+	golang.org/dl/${GOBIN} \
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
