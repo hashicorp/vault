@@ -97,4 +97,9 @@ func TestTransit_Random(t *testing.T) {
 	req.Data["format"] = "hex"
 	req.Data["bytes"] = -1
 	doRequest(req, true, "", 0)
+
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = maxBytes + 1
+	doRequest(req, true, "", 0)
+
 }

@@ -48,6 +48,8 @@ var (
 	}
 )
 
+const maxBytes = 128 * 1024
+
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
 		Tables: make(map[string]*memdb.TableSchema),
@@ -2855,6 +2857,10 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 
 	if bytes < 1 {
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
+	}
+
+	if bytes > maxBytes {
+		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
 	}
 
 	switch format {

@@ -5,8 +5,6 @@ steps:
   - run:
       name: Install UI dependencies
       command: |
-        set -eux -o pipefail
-
         cd ui
         yarn install --ignore-optional
         npm rebuild node-sass

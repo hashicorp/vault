@@ -214,6 +214,7 @@ func (c *Core) stopForwarding() {
 		c.clusterListener.StopHandler(consts.RequestForwardingALPN)
 		c.clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
+	c.removeAllPerfStandbySecondaries()
 }
 
 // refreshRequestForwardingConnection ensures that the client/transport are
