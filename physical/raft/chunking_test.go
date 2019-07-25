@@ -211,7 +211,7 @@ func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 
 	// Each put should generate 4 chunks
 	if newIndex-currentIndex != 10*4 {
-		t.Fatalf("Did not apply chunks as expected, appliend index = %d - %d = %d", newIndex, currentIndex, newIndex-currentIndex)
+		t.Fatalf("Did not apply chunks as expected, applied index = %d - %d = %d", newIndex, currentIndex, newIndex-currentIndex)
 	}
 
 	for i := 0; i < 10; i++ {
