@@ -912,6 +912,8 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		})
 		coreConfig := &vault.CoreConfig{
 			Logger: logger,
+			// TODO: remove this later
+			DisablePerformanceStandby: true,
 		}
 		i := 0
 		cluster2 := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
