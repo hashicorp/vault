@@ -722,16 +722,44 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 		Value: b,
 	}
 
-	if err = f.f.Put(f.ctx, entry); err != nil {
-		return false, errwrap.Wrapf("error storing chunk info: {{err}}", err)
+	f.f.permitPool.Acquire()
+	defer f.f.permitPool.Release()
+
+	f.f.l.RLock()
+	defer f.f.l.RUnlock()
+
+	// Start a write transaction.
+	done := new(bool)
+	if err := f.f.db.Update(func(tx *bolt.Tx) error {
+		if err := tx.Bucket(dataBucketName).Put([]byte(entry.Key), entry.Value); err != nil {
+			return errwrap.Wrapf("error storing chunk info: {{err}}", err)
+		}
+
+		// Assume bucket exists and has keys
+		c := tx.Bucket(dataBucketName).Cursor()
+
+		var keys []string
+		prefixBytes := []byte(prefix)
+		for k, _ := c.Seek(prefixBytes); k != nil && bytes.HasPrefix(k, prefixBytes); k, _ = c.Next() {
+			key := string(k)
+			key = strings.TrimPrefix(key, prefix)
+			if i := strings.Index(key, "/"); i == -1 {
+				// Add objects only from the current 'folder'
+				keys = append(keys, key)
+			} else {
+				// Add truncated 'folder' paths
+				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+			}
+		}
+
+		*done = uint32(len(keys)) == chunk.NumChunks
+
+		return nil
+	}); err != nil {
+		return false, err
 	}
 
-	opChunks, err := f.f.List(f.ctx, prefix)
-	if err != nil {
-		return false, errwrap.Wrapf("error listing all chunks for op: {{err}}", err)
-	}
-
-	return uint32(len(opChunks)) == chunk.NumChunks, nil
+	return *done, nil
 }
 
 func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
