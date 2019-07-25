@@ -2,11 +2,14 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
+GOBIN=go1.11.5
+
+TEST?=$$(${GOBIN} list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=30m
 EXTENDED_TEST_TIMEOUT=45m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	golang.org/dl/${GOBIN}
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
@@ -14,7 +17,6 @@ EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.11
 CGO_ENABLED=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -37,7 +39,7 @@ dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
-# to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
+# to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ ${GOBIN} tool pprof <profile_file>`.
 # Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
 dev-mem: BUILD_TAGS+=memprofiler
 dev-mem: dev
@@ -59,11 +61,11 @@ test: prep
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
 	VAULT_ACC= \
-	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
+	${GOBIN} test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
 
 testcompile: prep
 	@for pkg in $(TEST) ; do \
-		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
+		${GOBIN} test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
@@ -72,7 +74,7 @@ testacc: prep
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT)
+	VAULT_ACC=1 ${GOBIN} test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT)
 
 # testrace runs the race checker
 testrace: prep
@@ -81,7 +83,7 @@ testrace: prep
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
 	VAULT_ACC= \
-	go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT) -parallel=20
+	${GOBIN} test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT) -parallel=20
 
 cover:
 	./scripts/coverage.sh --html
@@ -89,26 +91,25 @@ cover:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+	@${GOBIN} list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
-		| xargs go vet ; if [ $$? -eq 1 ]; then \
+		| xargs ${GOBIN} vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Vet found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# prep runs `go generate` to build the dynamically generated
+# prep runs `${GOBIN} generate` to build the dynamically generated
 # source files.
 prep: fmtcheck
-	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@go generate $(go list ./... | grep -v /vendor/)
+	@${GOBIN} generate $(${GOBIN} list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools
 bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
 		echo "Installing/Updating $$tool" ; \
-		go get -u $$tool; \
+		${GOBIN} get -u $$tool; \
 	done
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
@@ -175,28 +176,28 @@ spellcheck:
 	@misspell -error -source=text website/source
 
 mysql-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
 
 mysql-legacy-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/mysql-legacy-database-plugin ./plugins/database/mysql/mysql-legacy-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/mysql-legacy-database-plugin ./plugins/database/mysql/mysql-legacy-database-plugin
 
 cassandra-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/cassandra-database-plugin ./plugins/database/cassandra/cassandra-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/cassandra-database-plugin ./plugins/database/cassandra/cassandra-database-plugin
 
 influxdb-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/influxdb-database-plugin ./plugins/database/influxdb/influxdb-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/influxdb-database-plugin ./plugins/database/influxdb/influxdb-database-plugin
 
 postgresql-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
 
 mssql-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/mssql-database-plugin ./plugins/database/mssql/mssql-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/mssql-database-plugin ./plugins/database/mssql/mssql-database-plugin
 
 hana-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/hana-database-plugin ./plugins/database/hana/hana-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/hana-database-plugin ./plugins/database/hana/hana-database-plugin
 
 mongodb-database-plugin:
-	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
+	@CGO_ENABLED=0 ${GOBIN} build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
 .PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck
 
