@@ -1,4 +1,4 @@
-## 1.2.0-beta3 (Unreleased)
+## 1.2.0-rc1 (July 25th, 2019)
 
 CHANGES:
 
