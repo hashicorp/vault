@@ -461,7 +461,7 @@ func (r *ReplicatedTestClustersBuilder) enablePerfPrimary(t testing.T) {
 func (r *ReplicatedTestClustersBuilder) getPerformanceToken(t testing.T) {
 	client := r.clusters.PerfPrimaryCluster.Cores[0].Client
 	req := map[string]interface{}{
-		"id": "perf-secondary",
+		"id": r.clusters.PerfSecondaryCluster.ID,
 	}
 	secret, err := client.Logical().Write("sys/replication/performance/primary/secondary-token", req)
 	if err != nil {
