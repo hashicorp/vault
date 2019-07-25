@@ -548,6 +548,7 @@ func EnablePerformanceSecondary(t testing.T, perfToken string, pri, sec *vault.T
 
 	sec.Logger.Info("enabled perf secondary, waiting for its replication state")
 	WaitForReplicationState(t, sec.Cores[0].Core, consts.ReplicationPerformanceSecondary)
+	WaitForMatchingMerkleRootsCore(t, pri.Cores[0], sec.Cores[0], false)
 
 	var perfSecondaryRootToken string
 	if !updatePrimary {
