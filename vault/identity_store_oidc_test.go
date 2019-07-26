@@ -1001,6 +1001,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 		{[]string{nilNamespace.ID}, "v0:" + nilNamespace.ID + ":key", true},
 		{[]string{"nsid0", nilNamespace.ID}, "v0:nsid0:key", true},
 		{[]string{"nsid0", nilNamespace.ID}, "v0:" + nilNamespace.ID + ":key", true},
+		{[]string{"nsid0", nilNamespace.ID}, "v0:" + "nsid1" + ":key", false},
 	}
 
 	for _, test := range tests {
