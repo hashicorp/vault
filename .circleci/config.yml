@@ -138,6 +138,7 @@ jobs:
     - image: node:10-stretch
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
+    resource_class: medium+
     steps:
     - checkout
     - restore_cache:
@@ -565,6 +566,7 @@ workflows:
 #         path: ui/test-results
 #   test-ui-browserstack:
 #     executor: node
+#     resource_class: medium+
 #     steps:
 #     - checkout
 #     - restore_yarn_cache
