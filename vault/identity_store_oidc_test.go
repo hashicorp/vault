@@ -971,32 +971,38 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 	}
 }
 
-func TestOIDC_isNamespacedKey(t *testing.T) {
+func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 	tests := []struct {
-		nsid     string
-		nskey    string
-		expected bool
+		nsTargets []string
+		nskey     string
+		expected  bool
 	}{
-		{"nsid", "v0:nsid:key", true},
-		{"nsid", "v0:nsid:", true},
-		{"nsid", "v0:nsid", false},
-		{"nsid", "v0:", false},
-		{"nsid", "v0", false},
-		{"nsid", "", false},
-		{"nsid1", "v0:nsid2:key", false},
-		{"nsid1", "nsid1:nsid2:nsid1", false},
-		{"nsid1", "nsid1:nsid1:nsid1", true},
-		{"nsid", "nsid:nsid:nsid:nsid:nsid:nsid", true},
-		{"nsid", ":::", false},
-		{"", ":::", true}, // "" is a valid key for cache.Set/Get
-		{"nsid1", "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", true},
-		{"nsid0", "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", false},
+		{[]string{"nsid"}, "v0:nsid:key", true},
+		{[]string{"nsid"}, "v0:nsid:", true},
+		{[]string{"nsid"}, "v0:nsid", false},
+		{[]string{"nsid"}, "v0:", false},
+		{[]string{"nsid"}, "v0", false},
+		{[]string{"nsid"}, "", false},
+		{[]string{"nsid1"}, "v0:nsid2:key", false},
+		{[]string{"nsid1"}, "nsid1:nsid2:nsid1", false},
+		{[]string{"nsid1"}, "nsid1:nsid1:nsid1", true},
+		{[]string{"nsid"}, "nsid:nsid:nsid:nsid:nsid:nsid", true},
+		{[]string{"nsid"}, ":::", false},
+		{[]string{""}, ":::", true}, // "" is a valid key for cache.Set/Get
+		{[]string{"nsid1"}, "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", true},
+		{[]string{"nsid0"}, "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", false},
+		{[]string{"nsid0", "nsid1"}, "v0:nsid2:key", false},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "v0:nsid3:key", true},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "nsid0:nsid1:nsid2:nsid3:nsid4:nsid5", true},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "nsid4:nsid5:nsid6:nsid7:nsid8:nsid9", false},
+		{[]string{"nsid0", "nsid0", "nsid0", "nsid0", "nsid0"}, "nsid0:nsid0:nsid0:nsid0:nsid0:nsid0", true},
+		{[]string{"nsid1", "nsid1", "nsid2", "nsid2"}, "nsid0:nsid0:nsid0:nsid0:nsid0:nsid0", false},
 	}
 
 	for _, test := range tests {
-		actual := isNamespacedKey(test.nskey, test.nsid)
+		actual := isTargetNamespacedKey(test.nskey, test.nsTargets)
 		if test.expected != actual {
-			t.Fatalf("expected %t but got %t for nsid: %q and nskey: %q", test.expected, actual, test.nsid, test.nskey)
+			t.Fatalf("expected %t but got %t for nstargets: %q and nskey: %q", test.expected, actual, test.nsTargets, test.nskey)
 		}
 	}
 }
