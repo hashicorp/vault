@@ -1462,8 +1462,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				testCluster.Logger.Info("created physical backend", "instance", i)
 				coreConfig.Physical = physBundle.Backend
 				localConfig.Physical = physBundle.Backend
-				coreConfig.HAPhysical = physBundle.HABackend
-				localConfig.HAPhysical = physBundle.HABackend
+				base.Physical = physBundle.Backend
+				haBackend := physBundle.HABackend
+				if haBackend == nil {
+					if ha, ok := physBundle.Backend.(physical.HABackend); ok {
+						haBackend = ha
+					}
+				}
+				coreConfig.HAPhysical = haBackend
+				localConfig.HAPhysical = haBackend
 				if physBundle.Cleanup != nil {
 					cleanupFuncs = append(cleanupFuncs, physBundle.Cleanup)
 				}

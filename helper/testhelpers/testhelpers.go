@@ -447,7 +447,7 @@ func setupDRReplication(t testing.T, pri, sec *vault.TestCluster, maskSecondaryT
 	for _, core := range sec.Cores {
 		core.Client.SetToken(pri.Cores[0].Client.Token())
 	}
-	WaitForActiveNodeAndPerfStandbys(t, sec)
+	WaitForActiveNode(t, sec)
 	WaitForMatchingMerkleRoots(t, "sys/replication/dr/", pri.Cores[0].Client, sec.Cores[0].Client)
 	WaitForDRReplicationWorking(t, pri, sec)
 }
@@ -729,14 +729,20 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 			defer wg.Done()
 			val := 1
 			for time.Now().Before(deadline) {
-				_, err = cluster.Cores[0].Client.Logical().Write(path, map[string]interface{}{
+				_, err := cluster.Cores[0].Client.Logical().Write(path, map[string]interface{}{
 					"bar": val,
 				})
-				if err != nil {
-					t.Fatal("unable to write KV", "path", path)
-				}
 				val++
 				time.Sleep(250 * time.Millisecond)
+				if err != nil {
+					if strings.Contains(err.Error(), "Vault is sealed") {
+						continue
+					}
+					if strings.Contains(err.Error(), "still catching up to primary") {
+						continue
+					}
+					t.Fatal(err)
+				}
 				leader, err := core.Client.Sys().Leader()
 				if err != nil {
 					if strings.Contains(err.Error(), "Vault is sealed") {
@@ -1119,6 +1125,11 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 		"path": path,
 	}
 	fileBackend, err := physFile.NewTransactionalFileBackend(fileConf, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
