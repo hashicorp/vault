@@ -321,6 +321,9 @@ func getClusterDefaultsOpts(t testing.T, opts *vault.TestClusterOptions, name st
 	if name != "" {
 		opts.Logger = opts.Logger.Named(name)
 	}
+	if opts.PhysicalFactory == nil {
+		opts.PhysicalFactory = sharedPhysicalFactory(MakeInmemBackend)
+	}
 
 	return opts
 }
