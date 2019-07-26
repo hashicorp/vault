@@ -167,12 +167,17 @@ verify the signature. Key are regularly rotated, whereby a new key pair is
 generated and the previous _public_ key is retained for a limited time for
 verification purposes.
 
-A named key's configuration specifies a rotation period, a verification ttl, and
-signing algorithm. Rotation period specifies the frequency at which a new
-signing key is generated and the private portion of the previous signing key is
-deleted. Verification ttl is the time a public key is retained for verification,
-after being rotated. By default, keys are rotated every 24 hours, and continue
-to be available for verification for 24 hours after their rotation.
+A named key's configuration specifies a rotation period, a verification ttl,
+signing algorithm and allowed client IDs. Rotation period specifies the
+frequency at which a new signing key is generated and the private portion of the
+previous signing key is deleted. Verification ttl is the time a public key is
+retained for verification, after being rotated. By default, keys are rotated
+every 24 hours, and continue to be available for verification for 24 hours after
+their rotation.
+
+A key's list of allowed client IDs limits which roles may reference the key. The
+parameter may be set to `*` to allow all roles. The validity evaluation is made
+when a token is requested, not during configuration.
 
 
 ### Token Contents and Templates
