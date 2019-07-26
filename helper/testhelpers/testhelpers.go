@@ -1135,7 +1135,8 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 
 	return &vault.PhysicalBackendBundle{
-		Backend: fileBackend,
+		Backend:   fileBackend,
+		HABackend: inmha.(physical.HABackend),
 		Cleanup: func() {
 			err := os.RemoveAll(path)
 			if err != nil {
