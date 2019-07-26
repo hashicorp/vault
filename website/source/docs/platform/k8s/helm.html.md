@@ -22,7 +22,10 @@ properly installed and configured with your Kubernetes cluster.
 may still change significantly over time. Please always run Helm with
 `--dry-run` before any install or upgrade to verify changes.
 
-~> **Security Warning:** TODO
+~> **Security Warning:** By default, the chart will install an insecure configuration
+of Vault. This provides a less complicated out-of-box experience for new users,
+but is not appropriate for a production setup. It is highly recommended to use
+a properly secured Kubernetes cluster.
 
 ## Using the Helm Chart
 
