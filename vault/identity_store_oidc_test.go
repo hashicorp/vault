@@ -1044,7 +1044,7 @@ func TestOIDC_Flush(t *testing.T) {
 		for _, doNotExpectNs := range doNotExpect {
 			for i := range items {
 				if isTargetNamespacedKey(i, []string{doNotExpectNs.ID}) {
-					t.Fatalf("Did not expect cache to contain an entry with a namespaced key for namespace: %q but did found the key: %q", doNotExpectNs.ID, i)
+					t.Fatalf("Did not expect cache to contain an entry with a namespaced key for namespace: %q but found the key: %q", doNotExpectNs.ID, i)
 				}
 			}
 		}
