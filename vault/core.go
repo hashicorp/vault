@@ -1594,13 +1594,13 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
+	c.stopForwarding()
+
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping replication: {{err}}", err))
 	}
 	c.clusterParamsLock.Unlock()
-
-	c.stopForwarding()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
