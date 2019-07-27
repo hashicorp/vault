@@ -2,7 +2,7 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-GOBIN=go
+GOBIN=go1.11.5
 
 TEST?=$$(${GOBIN} list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=30m

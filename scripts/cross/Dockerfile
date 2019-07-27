@@ -30,6 +30,7 @@ ENV GOPATH /gopath
 ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 
+RUN go get golang.org/dl/go1.11.5
 RUN go get github.com/mitchellh/gox
 RUN go get github.com/hashicorp/go-bindata
 RUN go get github.com/hashicorp/go-bindata/go-bindata
