@@ -578,8 +578,6 @@ func EnablePerformanceSecondary(t testing.T, perfToken string, pri, sec *vault.T
 				WaitForNCoresSealed(t, sec, len(sec.Cores)-1)
 			}
 		}
-		sec.Logger.Info("waiting for perf secondary standbys to be unsealed")
-		EnsureCoresUnsealed(t, sec)
 		sec.Logger.Info("waiting for perf secondary active node")
 		WaitForActiveNode(t, sec)
 		sec.Logger.Info("generating new perf secondary root")
@@ -588,6 +586,9 @@ func EnablePerformanceSecondary(t testing.T, perfToken string, pri, sec *vault.T
 		for _, core := range sec.Cores {
 			core.Client.SetToken(perfSecondaryRootToken)
 		}
+		sec.Logger.Info("waiting for perf secondary standbys to be unsealed")
+		EnsureCoresUnsealed(t, sec)
+		sec.Logger.Info("waiting for cluster to be fully online")
 		WaitForActiveNodeAndPerfStandbys(t, sec)
 	}
 
