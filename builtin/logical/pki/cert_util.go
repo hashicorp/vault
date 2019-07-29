@@ -182,6 +182,9 @@ func applyIdentityTemplating(b *backend, data *inputBundle, input string) string
 	if err != nil {
 		return input
 	}
+	if info == nil {
+		return input
+	}
 
 	entity := &identity.Entity{
 		ID:       data.req.EntityID,
