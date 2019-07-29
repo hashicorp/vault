@@ -50,6 +50,9 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		result.CaseSensitiveNames = new(bool)
 		*result.CaseSensitiveNames = false
 
+		result.UsePre111GroupCNBehavior = new(bool)
+		*result.UsePre111GroupCNBehavior = false
+
 		return result, nil
 	}
 
@@ -64,6 +67,12 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		// Upgrade from before switching to case-insensitive
 		result.CaseSensitiveNames = new(bool)
 		*result.CaseSensitiveNames = true
+		persistNeeded = true
+	}
+
+	if result.UsePre111GroupCNBehavior == nil {
+		result.UsePre111GroupCNBehavior = new(bool)
+		*result.UsePre111GroupCNBehavior = true
 		persistNeeded = true
 	}
 
@@ -107,6 +116,11 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if cfg.CaseSensitiveNames == nil {
 		cfg.CaseSensitiveNames = new(bool)
 		*cfg.CaseSensitiveNames = false
+	}
+
+	if cfg.UsePre111GroupCNBehavior == nil {
+		cfg.UsePre111GroupCNBehavior = new(bool)
+		*cfg.UsePre111GroupCNBehavior = false
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)

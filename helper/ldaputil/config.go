@@ -136,6 +136,11 @@ Default: cn`,
 			Default:     false,
 			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
 		},
+
+		"use_pre111_group_cn_behavior": {
+			Type:        framework.TypeBool,
+			Description: "In Vault 1.1.1 a fix for handling group CN values of different cases unfortunately introduced a regression that could cause previously defined groups to not be found due to a change in the resulting name. If set true, the pre-1.1.1 behavior for matching group CNs will be used. This is only needed in some upgrade scenarios for backwards compatibility. It is enabled by default if the config is upgraded but disabled by default on new configurations.",
+		},
 	}
 }
 
@@ -252,6 +257,12 @@ func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		*cfg.CaseSensitiveNames = caseSensitiveNames.(bool)
 	}
 
+	usePre111GroupCNBehavior, ok := d.GetOk("use_pre111_group_cn_behavior")
+	if ok {
+		cfg.UsePre111GroupCNBehavior = new(bool)
+		*cfg.UsePre111GroupCNBehavior = usePre111GroupCNBehavior.(bool)
+	}
+
 	useTokenGroups := d.Get("use_token_groups").(bool)
 	if useTokenGroups {
 		cfg.UseTokenGroups = useTokenGroups
@@ -261,23 +272,24 @@ func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 }
 
 type ConfigEntry struct {
-	Url            string `json:"url"`
-	UserDN         string `json:"userdn"`
-	GroupDN        string `json:"groupdn"`
-	GroupFilter    string `json:"groupfilter"`
-	GroupAttr      string `json:"groupattr"`
-	UPNDomain      string `json:"upndomain"`
-	UserAttr       string `json:"userattr"`
-	Certificate    string `json:"certificate"`
-	InsecureTLS    bool   `json:"insecure_tls"`
-	StartTLS       bool   `json:"starttls"`
-	BindDN         string `json:"binddn"`
-	BindPassword   string `json:"bindpass"`
-	DenyNullBind   bool   `json:"deny_null_bind"`
-	DiscoverDN     bool   `json:"discoverdn"`
-	TLSMinVersion  string `json:"tls_min_version"`
-	TLSMaxVersion  string `json:"tls_max_version"`
-	UseTokenGroups bool   `json:"use_token_groups"`
+	Url                      string `json:"url"`
+	UserDN                   string `json:"userdn"`
+	GroupDN                  string `json:"groupdn"`
+	GroupFilter              string `json:"groupfilter"`
+	GroupAttr                string `json:"groupattr"`
+	UPNDomain                string `json:"upndomain"`
+	UserAttr                 string `json:"userattr"`
+	Certificate              string `json:"certificate"`
+	InsecureTLS              bool   `json:"insecure_tls"`
+	StartTLS                 bool   `json:"starttls"`
+	BindDN                   string `json:"binddn"`
+	BindPassword             string `json:"bindpass"`
+	DenyNullBind             bool   `json:"deny_null_bind"`
+	DiscoverDN               bool   `json:"discoverdn"`
+	TLSMinVersion            string `json:"tls_min_version"`
+	TLSMaxVersion            string `json:"tls_max_version"`
+	UseTokenGroups           bool   `json:"use_token_groups"`
+	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 
 	// This json tag deviates from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
@@ -313,6 +325,9 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
+	}
+	if c.UsePre111GroupCNBehavior != nil {
+		m["use_pre111_group_cn_behavior"] = *c.UsePre111GroupCNBehavior
 	}
 	return m
 }
