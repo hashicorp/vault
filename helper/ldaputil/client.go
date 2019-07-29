@@ -428,7 +428,7 @@ func getCN(cfg *ConfigEntry, dn string) string {
 
 	for _, rdn := range parsedDN.RDNs {
 		for _, rdnAttr := range rdn.Attributes {
-			if cfg.UseDeprecatedGroupCNBehavior == nil || *cfg.UseDeprecatedGroupCNBehavior {
+			if cfg.UsePre111GroupCNBehavior == nil || *cfg.UsePre111GroupCNBehavior {
 				if rdnAttr.Type == "CN" {
 					return rdnAttr.Value
 				}

@@ -50,8 +50,8 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		result.CaseSensitiveNames = new(bool)
 		*result.CaseSensitiveNames = false
 
-		result.UseDeprecatedGroupCNBehavior = new(bool)
-		*result.UseDeprecatedGroupCNBehavior = false
+		result.UsePre111GroupCNBehavior = new(bool)
+		*result.UsePre111GroupCNBehavior = false
 
 		return result, nil
 	}
@@ -70,9 +70,9 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		persistNeeded = true
 	}
 
-	if result.UseDeprecatedGroupCNBehavior == nil {
-		result.UseDeprecatedGroupCNBehavior = new(bool)
-		*result.UseDeprecatedGroupCNBehavior = true
+	if result.UsePre111GroupCNBehavior == nil {
+		result.UsePre111GroupCNBehavior = new(bool)
+		*result.UsePre111GroupCNBehavior = true
 		persistNeeded = true
 	}
 
@@ -118,9 +118,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		*cfg.CaseSensitiveNames = false
 	}
 
-	if cfg.UseDeprecatedGroupCNBehavior == nil {
-		cfg.UseDeprecatedGroupCNBehavior = new(bool)
-		*cfg.UseDeprecatedGroupCNBehavior = false
+	if cfg.UsePre111GroupCNBehavior == nil {
+		cfg.UsePre111GroupCNBehavior = new(bool)
+		*cfg.UsePre111GroupCNBehavior = false
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
