@@ -90,6 +90,14 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
+	if pre111Val, ok := fieldData.GetOk("use_pre111_group_cn_behavior"); ok {
+		activeDirectoryConf.UsePre111GroupCNBehavior = new(bool)
+		*activeDirectoryConf.UsePre111GroupCNBehavior = pre111Val.(bool)
+	} else {
+		// Default to false
+		activeDirectoryConf.UsePre111GroupCNBehavior = new(bool)
+	}
+
 	// Build the password conf.
 	ttl := fieldData.Get("ttl").(int)
 	maxTTL := fieldData.Get("max_ttl").(int)
@@ -163,6 +171,9 @@ func (b *backend) configReadOperation(ctx context.Context, req *logical.Request,
 	}
 	if !config.ADConf.LastBindPasswordRotation.Equal(time.Time{}) {
 		configMap["last_bind_password_rotation"] = config.ADConf.LastBindPasswordRotation
+	}
+	if config.ADConf.UsePre111GroupCNBehavior != nil {
+		configMap["use_pre111_group_cn_behavior"] = *config.ADConf.UsePre111GroupCNBehavior
 	}
 	for k, v := range config.PasswordConf.Map() {
 		configMap[k] = v
