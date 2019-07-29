@@ -1,4 +1,10 @@
-## 1.1.4 (July 25th, 2019)
+## 1.1.4/1.1.5 (July 25th/29th, 2019)
+
+NOTE:
+
+Although 1.1.4 was tagged, we realized very soon after the tag was publicly
+pushed that an intended fix was accidentally left out. As a result, 1.1.4 was
+not officially announced and 1.1.5 should be used as the release after 1.1.3.
 
 IMPROVEMENTS:
 
@@ -21,8 +27,12 @@ BUG FIXES:
  * identity: Fix reading entity and groups that have spaces in their names 
    [GH-7055]
  * identity: Ensure entity alias operations properly verify namespace [GH-6886]
+ * mfa: Fix a nil pointer panic that could occur if invalid Duo credentials
+   were supplied
  * replication: Forward step-down on perf standbys to match HA behavior
  * replication: Fix various read only storage errors on performance standbys
+ * replication: Stop forwarding before stopping replication to eliminate some
+   possible bad states
  * secrets/database: Allow cassandra queries to be cancled [GH-6954]
  * storage/consul: Fix a regression causing vault to not connect to consul over
    unix sockets [GH-6859]
