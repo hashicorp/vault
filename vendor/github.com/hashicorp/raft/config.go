@@ -199,6 +199,13 @@ type Config struct {
 	// Logger is a user-provided hc-log logger. If nil, a logger writing to
 	// LogOutput with LogLevel is used.
 	Logger hclog.Logger
+
+	// NoSnapshotRestoreOnStart controls if raft will restore a snapshot to the
+	// FSM on start. This is useful if your FSM recovers from other mechanisms
+	// than raft snapshotting. Snapshot metadata will still be used to initalize
+	// raft's configuration and index values. This is used in NewRaft and
+	// RestoreCluster.
+	NoSnapshotRestoreOnStart bool
 }
 
 // DefaultConfig returns a Config with usable defaults.

@@ -21,9 +21,9 @@ type Configuration struct {
 
 	// The maximum seconds old a login request's signing time can be.
 	// This is configurable because in some test environments we found as much as 2 hours of clock drift.
-	LoginMaxSecOld time.Duration `json:"login_max_seconds_old"`
+	LoginMaxSecNotBefore time.Duration `json:"login_max_seconds_not_before"`
 
 	// The maximum seconds ahead a login request's signing time can be.
 	// This is configurable because in some test environments we found as much as 2 hours of clock drift.
-	LoginMaxSecAhead time.Duration `json:"login_max_seconds_ahead"`
+	LoginMaxSecNotAfter time.Duration `json:"login_max_seconds_not_after"`
 }

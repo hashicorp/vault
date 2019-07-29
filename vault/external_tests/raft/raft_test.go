@@ -6,50 +6,35 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 )
 
+func raftCluster(t *testing.T) *vault.TestCluster {
+	var conf vault.CoreConfig
+	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	testhelpers.RaftBackendSetup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	return cluster
+}
+
 func TestRaft_Join(t *testing.T) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
+	var conf vault.CoreConfig
+	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	testhelpers.RaftBackendSetup(&conf, &opts)
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
 
@@ -107,37 +92,8 @@ func TestRaft_Join(t *testing.T) {
 }
 
 func TestRaft_RemovePeer(t *testing.T) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(t)
 	defer cluster.Cleanup()
-
-	testhelpers.RaftClusterJoinNodes(t, cluster)
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -194,37 +150,8 @@ func TestRaft_RemovePeer(t *testing.T) {
 }
 
 func TestRaft_Configuration(t *testing.T) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(t)
 	defer cluster.Cleanup()
-
-	testhelpers.RaftClusterJoinNodes(t, cluster)
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -248,7 +175,20 @@ func TestRaft_Configuration(t *testing.T) {
 	}
 	for _, s := range servers {
 		server := s.(map[string]interface{})
-		delete(expected, server["node_id"].(string))
+		nodeID := server["node_id"].(string)
+		leader := server["leader"].(bool)
+		switch nodeID {
+		case "core-0":
+			if !leader {
+				t.Fatalf("expected server to be leader: %#v", server)
+			}
+		default:
+			if leader {
+				t.Fatalf("expected server to not be leader: %#v", server)
+			}
+		}
+
+		delete(expected, nodeID)
 	}
 	if len(expected) != 0 {
 		t.Fatalf("failed to read configuration successfully")
@@ -256,37 +196,8 @@ func TestRaft_Configuration(t *testing.T) {
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(t)
 	defer cluster.Cleanup()
-
-	testhelpers.RaftClusterJoinNodes(t, cluster)
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -296,37 +207,8 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI(t *testing.T) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(t)
 	defer cluster.Cleanup()
-
-	testhelpers.RaftClusterJoinNodes(t, cluster)
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -430,38 +312,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			// bind locally
 			tCaseLocal := tCase
 			t.Parallel()
-			var cleanupFuncs []func()
-			logger := hclog.New(&hclog.LoggerOptions{
-				Level: hclog.Trace,
-				Mutex: &sync.Mutex{},
-				Name:  tCaseLocal.Name,
-			})
-			coreConfig := &vault.CoreConfig{
-				Logger: logger,
-				// TODO: remove this later
-				DisablePerformanceStandby: true,
-			}
-			i := 0
-			cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-				PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-					backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-					i++
-					cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-					return backend, err
-				},
-				Logger:             logger,
-				KeepStandbysSealed: true,
-				HandlerFunc:        vaulthttp.Handler,
-			})
-			defer func() {
-				for _, c := range cleanupFuncs {
-					c()
-				}
-			}()
-			cluster.Start()
-			defer cluster.Cleanup()
 
-			testhelpers.RaftClusterJoinNodes(t, cluster)
+			cluster := raftCluster(t)
+			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
 
@@ -617,38 +470,9 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			// bind locally
 			tCaseLocal := tCase
 			t.Parallel()
-			var cleanupFuncs []func()
-			logger := hclog.New(&hclog.LoggerOptions{
-				Level: hclog.Trace,
-				Mutex: &sync.Mutex{},
-				Name:  tCaseLocal.Name,
-			})
-			coreConfig := &vault.CoreConfig{
-				Logger: logger,
-				// TODO: remove this later
-				DisablePerformanceStandby: true,
-			}
-			i := 0
-			cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-				PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-					backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-					i++
-					cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-					return backend, err
-				},
-				Logger:             logger,
-				KeepStandbysSealed: true,
-				HandlerFunc:        vaulthttp.Handler,
-			})
-			defer func() {
-				for _, c := range cleanupFuncs {
-					c()
-				}
-			}()
-			cluster.Start()
-			defer cluster.Cleanup()
 
-			testhelpers.RaftClusterJoinNodes(t, cluster)
+			cluster := raftCluster(t)
+			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
 
@@ -815,39 +639,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
-
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-		Name:  "cluster1",
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(t)
 	defer cluster.Cleanup()
-
-	testhelpers.RaftClusterJoinNodes(t, cluster)
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -892,30 +685,8 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		logger := hclog.New(&hclog.LoggerOptions{
-			Level: hclog.Trace,
-			Mutex: &sync.Mutex{},
-			Name:  "cluster2",
-		})
-		coreConfig := &vault.CoreConfig{
-			Logger: logger,
-		}
-		i := 0
-		cluster2 := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-			PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-				backend, cleanupFunc, err := testhelpers.CreateRaftBackend(t, logger, fmt.Sprintf("core-%d", i))
-				i++
-				cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-				return backend, err
-			},
-			Logger:             logger,
-			KeepStandbysSealed: true,
-			HandlerFunc:        vaulthttp.Handler,
-		})
-		cluster2.Start()
+		cluster2 := raftCluster(t)
 		defer cluster2.Cleanup()
-
-		testhelpers.RaftClusterJoinNodes(t, cluster2)
 
 		leaderClient := cluster2.Cores[0].Client
 

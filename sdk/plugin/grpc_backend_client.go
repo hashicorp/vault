@@ -63,7 +63,7 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.Ini
 		}
 
 		// If the plugin doesn't have Initialize implemented we should not fail
-		// the initalize call; otherwise this could halt startup of vault.
+		// the initialize call; otherwise this could halt startup of vault.
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			return nil

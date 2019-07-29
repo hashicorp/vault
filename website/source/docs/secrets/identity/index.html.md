@@ -167,12 +167,17 @@ verify the signature. Key are regularly rotated, whereby a new key pair is
 generated and the previous _public_ key is retained for a limited time for
 verification purposes.
 
-A named key's configuration specifies a rotation period, a verification ttl, and
-signing algorithm. Rotation period specifies the frequency at which a new
-signing key is generated and the private portion of the previous signing key is
-deleted. Verification ttl is the time a public key is retained for verification,
-after being rotated. By default, keys are rotated every 24 hours, and continue
-to be available for verification for 24 hours after their rotation.
+A named key's configuration specifies a rotation period, a verification ttl,
+signing algorithm and allowed client IDs. Rotation period specifies the
+frequency at which a new signing key is generated and the private portion of the
+previous signing key is deleted. Verification ttl is the time a public key is
+retained for verification, after being rotated. By default, keys are rotated
+every 24 hours, and continue to be available for verification for 24 hours after
+their rotation.
+
+A key's list of allowed client IDs limits which roles may reference the key. The
+parameter may be set to `*` to allow all roles. The validity evaluation is made
+when a token is requested, not during configuration.
 
 
 ### Token Contents and Templates
@@ -250,8 +255,8 @@ The full list of template parameters is shown below:
 | :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | `identity.entity.id`                                                   | The entity's ID                                                                         |
 | `identity.entity.name`                                                 | The entity's name                                                                       |
-| `identity.entity.group_ids`                                            | The IDs of the groups the entity is a member of                                         |
-| `identity.entity.group_names`                                          | The names of the groups the entity is a member of                                       |
+| `identity.entity.groups.ids`                                           | The IDs of the groups the entity is a member of                                         |
+| `identity.entity.groups.names`                                         | The names of the groups the entity is a member of                                       |
 | `identity.entity.metadata`                                             | Metadata associated with the entity                                                     |
 | `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                                   |
 | `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                                     |

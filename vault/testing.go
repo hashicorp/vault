@@ -796,6 +796,9 @@ type TestCluster struct {
 	RootCAs            *x509.CertPool
 	TempDir            string
 	ClientAuthRequired bool
+	Logger             log.Logger
+	CleanupFunc        func()
+	SetupFunc          func()
 }
 
 func (c *TestCluster) Start() {
@@ -805,6 +808,9 @@ func (c *TestCluster) Start() {
 				go core.Server.Serve(ln)
 			}
 		}
+	}
+	if c.SetupFunc != nil {
+		c.SetupFunc()
 	}
 }
 
@@ -897,6 +903,11 @@ func CleanupClusters(clusters []*TestCluster) {
 }
 
 func (c *TestCluster) Cleanup() {
+	c.Logger.Info("cleaning up vault cluster")
+	for _, core := range c.Cores {
+		core.CoreConfig.Logger.SetLevel(log.Error)
+	}
+
 	// Close listeners
 	wg := &sync.WaitGroup{}
 	for _, core := range c.Cores {
@@ -941,6 +952,9 @@ func (c *TestCluster) Cleanup() {
 
 	// Give time to actually shut down/clean up before the next test
 	time.Sleep(time.Second)
+	if c.CleanupFunc != nil {
+		c.CleanupFunc()
+	}
 }
 
 func (c *TestCluster) ensureCoresSealed() error {
@@ -1012,6 +1026,12 @@ type TestClusterCore struct {
 	NodeID               string
 }
 
+type PhysicalBackendBundle struct {
+	Backend   physical.Backend
+	HABackend physical.HABackend
+	Cleanup   func()
+}
+
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
 	SkipInit           bool
@@ -1023,9 +1043,18 @@ type TestClusterOptions struct {
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
-	PhysicalFactory    func(hclog.Logger) (physical.Backend, error)
-	FirstCoreNumber    int
-	RequireClientAuth  bool
+	// PhysicalFactory is used to create backends.
+	// The int argument is the index of the core within the cluster, i.e. first
+	// core in cluster will have 0, second 1, etc.
+	// If the backend is shared across the cluster (i.e. is not Raft) then it
+	// should return nil when coreIdx != 0.
+	PhysicalFactory func(t testing.T, coreIdx int, logger hclog.Logger) *PhysicalBackendBundle
+	// FirstCoreNumber is used to assign a unique number to each core within
+	// a multi-cluster setup.
+	FirstCoreNumber   int
+	RequireClientAuth bool
+	// SetupFunc is called after the cluster is started.
+	SetupFunc func(t testing.T, c *TestCluster)
 }
 
 var DefaultNumCores = 3
@@ -1046,6 +1075,11 @@ type certInfo struct {
 // can be provided to generate a seal for each one. Otherwise, the provided base.Seal will be
 // shared among cores. NewCore's default behavior is to generate a new DefaultSeal if the
 // provided Seal in coreConfig (i.e. base.Seal) is nil.
+//
+// If opts.Logger is provided, it takes precedence and will be used as the cluster
+// logger and will be the basis for each core's logger.  If no opts.Logger is
+// given, one will be generated based on t.Name() for the cluster logger, and if
+// no base.Logger is given will also be used as the basis for each core's logger.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	var err error
 
@@ -1075,6 +1109,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var testCluster TestCluster
+
+	if opts != nil && opts.Logger != nil {
+		testCluster.Logger = opts.Logger
+	} else {
+		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
+	}
+
 	if opts != nil && opts.TempDir != "" {
 		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
@@ -1214,7 +1255,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	logger := logging.NewVaultLogger(log.Trace)
 	ports := make([]int, numCores)
 	if baseAddr != nil {
 		for i := 0; i < numCores; i++ {
@@ -1278,7 +1318,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		handlers = append(handlers, handler)
 		server := &http.Server{
 			Handler:  handler,
-			ErrorLog: logger.StandardLogger(nil),
+			ErrorLog: testCluster.Logger.StandardLogger(nil),
 		}
 		servers = append(servers, server)
 	}
@@ -1379,13 +1419,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
-		coreConfig.Physical, err = physInmem.NewInmem(nil, logger)
+		coreConfig.Physical, err = physInmem.NewInmem(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	if coreConfig.HAPhysical == nil && (opts == nil || opts.PhysicalFactory == nil) {
-		haPhys, err := physInmem.NewInmemHA(nil, logger)
+		haPhys, err := physInmem.NewInmemHA(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1397,6 +1437,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		t.Fatalf("err: %v", err)
 	}
 
+	cleanupFuncs := []func(){}
 	cores := []*Core{}
 	coreConfigs := []*CoreConfig{}
 	for i := 0; i < numCores; i++ {
@@ -1408,18 +1449,31 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			localConfig.Seal = opts.SealFunc()
 		}
 
-		if opts != nil && opts.Logger != nil {
-			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+		if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
+			localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", i))
 		}
-
 		if opts != nil && opts.PhysicalFactory != nil {
-			localConfig.Physical, err = opts.PhysicalFactory(localConfig.Logger)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
-
-			if haPhysical, ok := localConfig.Physical.(physical.HABackend); ok {
-				localConfig.HAPhysical = haPhysical
+			physBundle := opts.PhysicalFactory(t, i, localConfig.Logger)
+			switch {
+			case physBundle == nil && coreConfig.Physical != nil:
+			case physBundle == nil && coreConfig.Physical == nil:
+				t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
+			case physBundle != nil:
+				testCluster.Logger.Info("created physical backend", "instance", i)
+				coreConfig.Physical = physBundle.Backend
+				localConfig.Physical = physBundle.Backend
+				base.Physical = physBundle.Backend
+				haBackend := physBundle.HABackend
+				if haBackend == nil {
+					if ha, ok := physBundle.Backend.(physical.HABackend); ok {
+						haBackend = ha
+					}
+				}
+				coreConfig.HAPhysical = haBackend
+				localConfig.HAPhysical = haBackend
+				if physBundle.Cleanup != nil {
+					cleanupFuncs = append(cleanupFuncs, physBundle.Cleanup)
+				}
 			}
 		}
 
@@ -1680,6 +1734,19 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.Cores = ret
 
 	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
+
+	testCluster.CleanupFunc = func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}
+	if opts != nil {
+		if opts.SetupFunc != nil {
+			testCluster.SetupFunc = func() {
+				opts.SetupFunc(t, &testCluster)
+			}
+		}
+	}
 
 	return &testCluster
 }

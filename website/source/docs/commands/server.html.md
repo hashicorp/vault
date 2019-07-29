@@ -57,6 +57,10 @@ flags](/docs/commands/index.html) included on all commands.
 - `-log-level` `(string: "info")` - Log verbosity level. Supported values (in
   order of detail) are "trace", "debug", "info", "warn", and "err". This can
   also be specified via the VAULT_LOG_LEVEL environment variable.
+  
+- `-log-format` `(string: "standard")` - Log format. Supported values
+  are "standard" and "json". This can also be specified via the 
+  VAULT_LOG_FORMAT environment variable.
 
 ### Dev Options
 
@@ -71,5 +75,9 @@ flags](/docs/commands/index.html) included on all commands.
 - `-dev-root-token-id` `(string: "")` - Initial root token. This only applies
   when running in "dev" mode. This can also be specified via the
   `VAULT_DEV_ROOT_TOKEN_ID` environment variable.
+
+- `-dev-no-store-token` `(string: "")` - Do not persist the dev root token to
+  the token helper (usually the local filesystem) for use in future requests.
+  The token will only be displayed in the command output.
 
 - `-dev-plugin-dir` `(string: "")` - Directory from which plugins are allowed to be loaded. Only applies in "dev" mode, it will automatically register all the plugins in the provided directory.

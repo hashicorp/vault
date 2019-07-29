@@ -416,16 +416,129 @@ Simply hit CTRL+C to stop the test server.
 
 ### Implementing the Signature Algorithm in Other Languages
 
-The signing algorithm used by this plugin is viewable in `signatures/version1.go`. There is also a test
-called `TestSignature` in the same package that outputs a viewable signing string, hash of it, and
-resulting signature. The signature will be different every time the test is run because some
-of the input to the final signature includes cryptographically random material. This means that no matter
-what you do, your final signature won't match any signatures shown; the important thing, however, is that 
-it can be verified as having been signed by the private key that's associated with the given client
-certificate.
+Format the present date and time: `2019-05-20T22:08:40Z`. Append the 
+full file contents at `CF_INSTANCE_CERT`. Append the name of the role
+to be used for logging in. Here is an example resulting string:
+```
+2019-05-20T22:08:40Z-----BEGIN CERTIFICATE-----
+MIIEmTCCAwGgAwIBAgIRAJR+VJQ+UUY2dy+z+BATTh4wDQYJKoZIhvcNAQELBQAw
+QzEMMAoGA1UEBhMDVVNBMRYwFAYDVQQKEw1DbG91ZCBGb3VuZHJ5MRswGQYDVQQD
+ExJpbnN0YW5jZUlkZW50aXR5Q0EwHhcNMTkwNDI3MDQzMDAwWhcNMTkwNDI4MDQz
+MDAwWjCByDGBnjA4BgNVBAsTMW9yZ2FuaXphdGlvbjozNGE4NzhkMC1jMmY5LTQ1
+MjEtYmE3My1hOWY2NjRlODJjN2IwMQYDVQQLEypzcGFjZTozZDJlYmE2Yi1lZjE5
+LTQ0ZDUtOTFkZC0xOTc1YjBkYjVjYzkwLwYDVQQLEyhhcHA6MmQzZTgzNGEtM2Ey
+NS00NTkxLTk3NGMtZmE1NjI2ZDVkMGExMSUwIwYDVQQDExxmOWM3Y2Q3ZC0xNjEy
+LTRmNTctNjNhOC1mOTk1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
+3NS+NfsDtZPzjwHFhO1UN/1WvAy4ZHG71kTrHCdYx+5ASQjK9doPTI+PxXL8K+km
+VIUcQOhdM4ntT5N70LJ9psIBnjfX0f/hGjS2U7aaVjKwTI7+Aif0xU5OJQ9jjHNR
+eJj9YLz+o6O0DfMvHY4gRRla3bgs6hRkzj6wVGEYzkYQkud7l6pJaX2OCiUz2cWb
+h2D26G5uswE+PnMnpnlVzCt8d3E01wMPi2n2cPKUa9OngFJAkxsX0pBKPX+4uwVK
+V41LlTR8FemHJ+zm9UjASzRc3R775938VvzXIvOQv0QWWcXbW8Aqh31uo6dRdYpX
+bFeFgX6e7/ZI3TEi+7MnSwIDAQABo4GBMH8wDgYDVR0PAQH/BAQDAgOoMB0GA1Ud
+JQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDATAfBgNVHSMEGDAWgBS73zxqk4TS9Wxu
+WgqHyuIrKgPEUTAtBgNVHREEJjAkghxmOWM3Y2Q3ZC0xNjEyLTRmNTctNjNhOC1m
+OTk1hwQK/7VpMA0GCSqGSIb3DQEBCwUAA4IBgQBDAV6E4MIT2IlNSGahsS7hh2tw
+ryXPR0gXca4/aNd/gyPqpb94Yh//tuvV0xKDLi02qp0BRbeligK7L7ukzfy3Cc+h
+AHAoxV7rw2SG6sSLofjHrSwpcAKNQZNe3G0fuKSKsULFBDk3NoWVgLxCN9fs7Ulf
+4ZLCYAGWgXhlbvtMwtUGgkxQ7H2j9spS+q85SSRHox5qVVPguepMP4UojVbSSajh
+yPF5USrhcj/iVPtYaUEhN94Cl00aiqSjoAp5KBZOPIbiOlLxieT5k84k1gQJHFF1
+ESen0LV0y6wvvyoP+H/5/vXdukVLo+0+qrtV9/r3r+/Uc0dZuLnmISRWfsJvKfbe
+hvOaXatlywyFk4FNXAAt8/0Q7glTGAc+AQ3KxtfuKaeOy9UUCXQhwEgrlnX7kAgJ
+tMuhjqJC/PIrrWUUrbvgdJUo0TjVo4u718aCpQMomXPNvpqZrpY13RFJd73Q18Fr
+NZULuOlMvTdfDsJJwGWw5STRmh3IySTzUG7le64=
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIEajCCAtKgAwIBAgIQbzLtXF5teYv/QE87TifiOzANBgkqhkiG9w0BAQsFADA6
+MQwwCgYDVQQGEwNVU0ExFjAUBgNVBAoTDUNsb3VkIEZvdW5kcnkxEjAQBgNVBAMT
+CWFwcFJvb3RDQTAeFw0xOTA0MDQxNDM5NTRaFw0yMDA0MDMxNDM5NTRaMEMxDDAK
+BgNVBAYTA1VTQTEWMBQGA1UEChMNQ2xvdWQgRm91bmRyeTEbMBkGA1UEAxMSaW5z
+dGFuY2VJZGVudGl0eUNBMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA
+1mQEgT//h+fApBPNRV/9vBkjGF52d4d1XTfL86bw6q2OqTMgVzsXL0/Tcv/vNYFr
+G8NX+jqRcjdlMjaTJR9mD2e2QlRsF/r8ry6jtX5EHdvcFsS76s0+jyQqQfZ4NYcW
+lPiL7ytIbQOgIFGRNdjo91SB+JQM2AkgntCoOxwnrk3WpcRM2y8EfrebzaH4sreg
+PWPcy23egCChelIJCTKnCxlwvTQE8KqoHscqgrkL+rEEg5IoQAsZRYQUCZ+8xLxF
+MqHdEDcNXzpK6oKJvCBeOitrNH8+8WSqUaAGU+nJTeLQ3+wD5bLNFV3GyNUXeWJX
+AMHNICE5oY128S3Elm+Bj431fhueDp+w9/Ls/NlyTUiS9KwpO+Gu450Zirk3IHLx
+XfTfj2oO7JuIDLRPGozoBED2kLuZ/q72EFLEl8P+VO2hBwQw72mtdTGt2nnPFxcs
+F1rGgMGSGzPsNfH9DDwii1fPNwE/0KeZbQFcRn2NpxUYVadek3cMWmkMDfeGunlp
+AgMBAAGjYzBhMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
+DgQWBBS73zxqk4TS9WxuWgqHyuIrKgPEUTAfBgNVHSMEGDAWgBQV7P/UtcZ2DzD/
+TKx4RaKWVOjGbTANBgkqhkiG9w0BAQsFAAOCAYEAm8P5p9UoCKzKgVm0OxFcuZzT
+1dF8JxAoG5tXj6Wxiv4/38xXexjQsud4w6KvYxbYeyw4RoIrXUQm6BIInPeMuK8e
+o1S4EdQJUYL70ellfanr1vz2jWrimBFKka4ZFpsMYjWMKBhxCrI3Y9q40vNpEGsB
+ETJlZQUc/8RU6bxSzoDK4oU4v0CuCaRkURmw/T5T5D0Nz02nvlj5H6lK1s7u7KL0
+aH/KM84wokk52k4t61+W9k5CcIY+ZdUD3AXNrY5APKYtpDabxP5lCsEtjTGOW463
+U9L/VkQpMHTj8e0oOEnv2w8uJFV1+tPIPtXU22jueRbsjBxayBwp1WdL6tsRptqF
+HCxMqz8dBT+H0WdHtURncppotInkOSZIJ5qzObkk6FFlY5HEkEy/KKFM+EnaIkWt
+rcaZiVmLKd9bemXy/eT7HNDB89GeagjUUs3/74GNKpncjBUwb6N9M5hLV4Ob06jN
+1X8juzFLD1jJrcBnTF9YJizMmPlCIos9lnqRd4yI
+-----END CERTIFICATE-----sample-role
+```
 
-To develop your own version of the signing algorithm in a different language, we recommend you duplicate
-the inputs to `TestSignature`, duplicate its signing string and hash, and duplicate the signing algorithm used.
+Create a sha256sum hash of this string. For the above string, it's
+`1c58baf199de690c5fd07193b995b984417bb06a1b451aa30ee8de225041e526`,
+which can be verified by entering the same string into 
+[this tool](https://emn178.github.io/online-tools/sha256.html).
+
+Use the private key at `CF_INSTANCE_KEY` to sign the resulting sha
+using the [RSASSA-PSS](https://tools.ietf.org/html/rfc4056) algorithm 
+with a SHA256 hash and a salt length of 222. Random material is injected 
+into this algorithm so the resulting string will be different each time, 
+but here is one example result so you can compare yours to its format:
+```
+GVg5_uez-Z0544pgkVSd6vQztHO_j6X3LZ2PqhUv_Uh0iMfoT-U2MKgdjOSrkpVpINsFqxKk4_-p2nHlQOmJPSPFlAso7i6Y6j9SnSIuXfAS_Y3vk85cYh1zPDM9R6fBVniADMCIXJEXWIC1IMmOccZcDXoBKJJKLp1iffLQBzDfSiUT6in1GBOMLavFpL6RO9jq6UHQXYrYBKy11ZdcDa4zLRaxiHv-GbSG_-THOs3VgVtTY_XqrMAwJIDOoL4_2H43b1BHEXWgt5W3wpyqvV8TvmlMRq8begwjm5NG8_Qtvv6QGLNozmRkNEGiV1di1wb1Qrt_6f_1tWrEbTvvwQ==
+```
+
+This signature should be placed in the `signature` field of login requests.
+
+If you implement the algorithm above and still encounter errors logging in,
+it may help to generate test certificates using the `make-test-certs` tool.
+These certificates are accurate enough mocks of real PCF certificates, and 
+are used for testing. Using this tool to generate your test certificates will
+rule out any error with the certificates you may have created yourself.
+
+To use this tool, if you have run `make tools`:
+```
+$ make-test-certs
+path to CA cert to configure in Vault: /tmp/81701307-8293-71dc-4ffe-d5391d24b1f7741766180
+path to cert to use as CF_INSTANCE_CERT: /tmp/baf26e25-896e-3e5e-f38d-30e5ef1e97d5065686323
+path to key to use as CF_INSTANCE_KEY: /tmp/5c08f79d-b2a5-c211-2862-00fe0a3b647d601276662
+```
+
+### Example Signature Implementations
+
+- [Java](https://github.com/tyrannosaurus-becks/vault-tools-auth-pcf)
+- Python:
+```
+## PCF signature creation example in Python using the [Cryptography](https://cryptography.io) library
+import base64
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
+# Build message by concatenating signing time, cert and role
+message = bytes("2019-07-23T18:15:30Z", 'utf-8')
+with open("instance.crt", mode='rb') as file:
+    message += file.read()
+message += bytes("test-role", 'utf-8')
+
+# Load private key
+with open("instance.key", "rb") as key_file:
+    private_key = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None,
+        backend=default_backend()
+    )
+
+# Sign the message and convert to base64
+signature = private_key.sign(
+    message,
+    padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=20),
+    hashes.SHA256(),
+)
+
+print(base64.urlsafe_b64encode(signature))
+```
 
 ### Quick Start
 
