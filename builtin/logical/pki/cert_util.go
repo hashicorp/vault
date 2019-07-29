@@ -177,7 +177,6 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // the role, instead when applying the role. Unfortunately, the templating library does
 // not support parsing validations yet. So, returning the input is best choice.
 func applyIdentityTemplating(b *backend, data *inputBundle, input string) string {
-
 	info, err := b.System().EntityInfo(data.req.EntityID)
 	if err != nil {
 		return input
@@ -848,6 +847,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				for _, uri := range csr.URIs {
 					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
+						allowed = applyIdentityTemplating(b, data, allowed)
 						validURI := glob.Glob(allowed, uri.String())
 						if validURI {
 							valid = true
@@ -876,6 +876,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				for _, uri := range uriAlt {
 					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
+						allowed = applyIdentityTemplating(b, data, allowed)
 						validURI := glob.Glob(allowed, uri)
 						if validURI {
 							valid = true
