@@ -79,6 +79,7 @@ module('Unit | Lib | console helpers', function() {
     },
     {
       name: 'write with shell characters',
+      /* eslint-disable no-useless-escape */
       command: `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" default_ttl=1h max_ttl=24h
       `,
       expected: [

@@ -255,7 +255,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let paths = [
       '(',
       ')',
-      '"',
+      //'"',
       "'",
       '!',
       '#',
