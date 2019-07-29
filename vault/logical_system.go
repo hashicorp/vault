@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -45,6 +47,8 @@ var (
 		coreLocalClusterInfoPath,
 	}
 )
+
+const maxBytes = 128 * 1024
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -121,6 +125,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"storage/raft/bootstrap/challenge",
+				"storage/raft/bootstrap/answer",
 				"init",
 				"seal-status",
 				"unseal",
@@ -196,6 +202,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
+	}
+
+	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -2380,8 +2390,9 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
+		time.AfterFunc(KeyRotateGracePeriod, func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", KeyRotateGracePeriod)
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
@@ -2848,6 +2859,10 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
 	}
 
+	if bytes > maxBytes {
+		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
+	}
+
 	switch format {
 	case "hex":
 	case "base64":
@@ -3241,6 +3256,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
+				Storage:   req.Storage,
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)

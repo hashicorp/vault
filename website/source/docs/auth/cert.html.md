@@ -91,7 +91,7 @@ $ curl \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \
-    http://127.0.0.1:8200/v1/auth/cert/login
+    https://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ## Configuration

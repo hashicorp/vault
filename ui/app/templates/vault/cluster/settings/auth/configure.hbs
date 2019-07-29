@@ -12,22 +12,19 @@
       Configure {{get (find-by "type" model.type (mountable-auth-methods)) "displayName"}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      <div class="control">
-        {{#link-to
-          "vault.cluster.access.method"
-          model.id
-          class="button is-ghost has-icon-right is-compact"
-          data-test-backend-view-link=true
-        }}
-          View method
-          {{i-con glyph="chevron-right" size=11}}
-        {{/link-to}}
-      </div>
-    </div>
-  </p.levelRight>
 </PageHeader>
 
 {{section-tabs model}}
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @params={{array "vault.cluster.access.method" model.id}}
+      @data-test-backend-view-link=true
+    >
+      View method
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
 {{outlet}}

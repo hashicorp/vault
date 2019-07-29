@@ -15,13 +15,21 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"net"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+)
+
+const (
+	PrivateKeyTypeP521 = "p521"
 )
 
 // This can be one of a few key types so the different params may or may not be filled
@@ -597,4 +605,159 @@ type IssueData struct {
 	AltNames   string `json:"alt_names" structs:"alt_names" mapstructure:"alt_names"`
 	IPSANs     string `json:"ip_sans" structs:"ip_sans" mapstructure:"ip_sans"`
 	CSR        string `json:"csr" structs:"csr" mapstructure:"csr"`
+}
+
+type URLEntries struct {
+	IssuingCertificates   []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
+	CRLDistributionPoints []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
+	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
+}
+
+type CAInfoBundle struct {
+	ParsedCertBundle
+	URLs *URLEntries
+}
+
+func (b *CAInfoBundle) GetCAChain() []*CertBlock {
+	chain := []*CertBlock{}
+
+	// Include issuing CA in Chain, not including Root Authority
+	if (len(b.Certificate.AuthorityKeyId) > 0 &&
+		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)) ||
+		(len(b.Certificate.AuthorityKeyId) == 0 &&
+			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
+
+		chain = append(chain, &CertBlock{
+			Certificate: b.Certificate,
+			Bytes:       b.CertificateBytes,
+		})
+		if b.CAChain != nil && len(b.CAChain) > 0 {
+			chain = append(chain, b.CAChain...)
+		}
+	}
+
+	return chain
+}
+
+type CertExtKeyUsage int
+
+const (
+	AnyExtKeyUsage CertExtKeyUsage = 1 << iota
+	ServerAuthExtKeyUsage
+	ClientAuthExtKeyUsage
+	CodeSigningExtKeyUsage
+	EmailProtectionExtKeyUsage
+	IpsecEndSystemExtKeyUsage
+	IpsecTunnelExtKeyUsage
+	IpsecUserExtKeyUsage
+	TimeStampingExtKeyUsage
+	OcspSigningExtKeyUsage
+	MicrosoftServerGatedCryptoExtKeyUsage
+	NetscapeServerGatedCryptoExtKeyUsage
+	MicrosoftCommercialCodeSigningExtKeyUsage
+	MicrosoftKernelCodeSigningExtKeyUsage
+)
+
+type CreationParameters struct {
+	Subject                       pkix.Name
+	DNSNames                      []string
+	EmailAddresses                []string
+	IPAddresses                   []net.IP
+	URIs                          []*url.URL
+	OtherSANs                     map[string][]string
+	IsCA                          bool
+	KeyType                       string
+	KeyBits                       int
+	NotAfter                      time.Time
+	KeyUsage                      x509.KeyUsage
+	ExtKeyUsage                   CertExtKeyUsage
+	ExtKeyUsageOIDs               []string
+	PolicyIdentifiers             []string
+	BasicConstraintsValidForNonCA bool
+
+	// Only used when signing a CA cert
+	UseCSRValues        bool
+	PermittedDNSDomains []string
+
+	// URLs to encode into the certificate
+	URLs *URLEntries
+
+	// The maximum path length to encode
+	MaxPathLength int
+
+	// The duration the certificate will use NotBefore
+	NotBeforeDuration time.Duration
+}
+
+type CreationBundle struct {
+	Params        *CreationParameters
+	SigningBundle *CAInfoBundle
+	CSR           *x509.CertificateRequest
+}
+
+// addKeyUsages adds appropriate key usages to the template given the creation
+// information
+func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
+	if data.Params.IsCA {
+		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		return
+	}
+
+	certTemplate.KeyUsage = data.Params.KeyUsage
+
+	if data.Params.ExtKeyUsage&AnyExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageAny)
+	}
+
+	if data.Params.ExtKeyUsage&ServerAuthExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	}
+
+	if data.Params.ExtKeyUsage&ClientAuthExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	}
+
+	if data.Params.ExtKeyUsage&CodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+	}
+
+	if data.Params.ExtKeyUsage&EmailProtectionExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	}
+
+	if data.Params.ExtKeyUsage&IpsecEndSystemExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
+	}
+
+	if data.Params.ExtKeyUsage&IpsecTunnelExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
+	}
+
+	if data.Params.ExtKeyUsage&IpsecUserExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECUser)
+	}
+
+	if data.Params.ExtKeyUsage&TimeStampingExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+	}
+
+	if data.Params.ExtKeyUsage&OcspSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+	}
+
+	if data.Params.ExtKeyUsage&MicrosoftServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+	}
+
+	if data.Params.ExtKeyUsage&NetscapeServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+	}
+
+	if data.Params.ExtKeyUsage&MicrosoftCommercialCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+	}
+
+	if data.Params.ExtKeyUsage&MicrosoftKernelCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
+	}
 }

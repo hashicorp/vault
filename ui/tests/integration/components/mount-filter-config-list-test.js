@@ -2,9 +2,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, findAll, fillIn, blur } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+const resolver = engineResolverFor('replication');
 
 module('Integration | Component | mount filter config list', function(hooks) {
-  setupRenderingTest(hooks);
+  setupRenderingTest(hooks, { resolver });
 
   test('it renders', async function(assert) {
     this.set('config', { mode: 'whitelist', paths: [] });

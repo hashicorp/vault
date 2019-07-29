@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 
+	log "github.com/hashicorp/go-hclog"
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
@@ -15,6 +16,7 @@ type TestSealOpts struct {
 	StoredKeysDisabled   bool
 	RecoveryKeysDisabled bool
 	Secret               []byte
+	Logger               log.Logger
 }
 
 func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {

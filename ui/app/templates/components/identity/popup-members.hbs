@@ -2,19 +2,14 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        {{#confirm-action
-          confirmButtonClasses="button is-primary"
-          confirmButtonText="Remove"
-          buttonClasses="link is-destroy"
-          onConfirmAction=(action "performTransaction" model groupArray memberId)
-          confirmMessage=(concat "Are you sure you want to remove " memberId "?")
-          showConfirm=(get this (concat "shouldDelete-" (dot-to-dash memberId)))
-          class=(if (get this (concat "shouldDelete-" (dot-to-dash memberId))) "message is-block is-warning is-outline")
-          containerClasses="message-body is-block"
-          messageClasses="is-block"
-        }}
+        <ConfirmAction
+          @buttonClasses="link is-destroy"
+          @confirmButtonText="Remove this group?"
+          @confirmMessage="This may affect permissions for this group."
+          @onConfirmAction={{action "performTransaction" model groupArray memberId}}
+        >
           Remove
-        {{/confirm-action}}
+        </ConfirmAction>
       </li>
     </ul>
   </nav>

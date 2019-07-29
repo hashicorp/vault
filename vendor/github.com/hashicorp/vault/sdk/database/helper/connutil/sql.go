@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -53,13 +55,15 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
+	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
+	// then maybe we won't be able to use it to do URL substitution any more.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
-		"username": c.Username,
-		"password": c.Password,
+		"username": url.PathEscape(c.Username),
+		"password": url.PathEscape(c.Password),
 	})
 
 	if c.MaxOpenConnections == 0 {
-		c.MaxOpenConnections = 2
+		c.MaxOpenConnections = 4
 	}
 
 	if c.MaxIdleConnections == 0 {
@@ -161,4 +165,14 @@ func (c *SQLConnectionProducer) Close() error {
 	c.db = nil
 
 	return nil
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	return "", "", dbutil.Unimplemented()
 }

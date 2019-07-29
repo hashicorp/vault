@@ -6,27 +6,30 @@
   </Page.header>
   {{#if (has-feature "Namespaces")}}
     <Page.sub-header>
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="is-label" for="namespace">Namespace</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <input
-                value={{namespaceQueryParam}}
-                placeholder="/ (Root)"
-                oninput={{perform updateNamespace value="target.value"}}
-                autocomplete="off"
-                name="namespace"
-                id="namespace"
-                class="input"
-                type="text"
-              />
+      <Toolbar class="toolbar-namespace-picker">
+        <div class="field is-horizontal">
+          <div class="field-label is-normal">
+            <label class="is-label" for="namespace">Namespace</label>
+          </div>
+          <div class="field-body">
+            <div class="field">
+              <div class="control">
+                <input
+                  value={{namespaceQueryParam}}
+                  placeholder="/ (Root)"
+                  oninput={{perform updateNamespace value="target.value"}}
+                  autocomplete="off"
+                  spellcheck="false"
+                  name="namespace"
+                  id="namespace"
+                  class="input"
+                  type="text"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Toolbar>
     </Page.sub-header>
   {{/if}}
   <Page.content>

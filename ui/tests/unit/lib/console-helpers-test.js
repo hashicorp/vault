@@ -27,6 +27,57 @@ module('Unit | Lib | console helpers', function() {
       ],
     },
     {
+      name: 'write with space in a value',
+      command: `vault write \
+      auth/ldap/config \
+      url=ldap://ldap.example.com:3268 \
+      binddn="CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com" \
+      bindpass="xxxxxxxxxxxxxxxxxxxxxxxxxx" \
+      userdn="DC=example,DC=com" \
+      groupdn="DC=example,DC=com" \
+      insecure_tls=true \
+      starttls=false
+      `,
+      expected: [
+        'write',
+        [],
+        'auth/ldap/config',
+        [
+          'url=ldap://ldap.example.com:3268',
+          'binddn=CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com',
+          'bindpass=xxxxxxxxxxxxxxxxxxxxxxxxxx',
+          'userdn=DC=example,DC=com',
+          'groupdn=DC=example,DC=com',
+          'insecure_tls=true',
+          'starttls=false',
+        ],
+      ],
+    },
+    {
+      name: 'write with double quotes',
+      command: `vault write \
+      auth/token/create \
+      policies="foo"
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with single quotes',
+      command: `vault write \
+      auth/token/create \
+      policies='foo'
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with unmatched quotes',
+      command: `vault write \
+      auth/token/create \
+      policies='foo
+      `,
+      expected: ['write', [], 'auth/token/create', ["policies='foo"]],
+    },
+    {
       name: 'read with field',
       command: `vault read -field=access_key aws/creds/my-role`,
       expected: ['read', ['-field=access_key'], 'aws/creds/my-role', []],

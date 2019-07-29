@@ -12,8 +12,5 @@ export default create({
     scope: '[data-test-item-delete]',
     testContainer: '#ember-testing',
   }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
-    scope: '[data-test-item-delete]',
-    testContainer: '#ember-testing',
-  }),
+  confirmDelete: clickable('[data-test-confirm-button]'),
 });

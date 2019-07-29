@@ -361,8 +361,10 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 ```
 $ curl \
     --request POST \
+    --cert cert.pem \
+    --key key.pem \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/cert/login
+    https://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ### Sample Response

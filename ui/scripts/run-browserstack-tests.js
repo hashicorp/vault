@@ -16,15 +16,15 @@ function run(command, args = []) {
 }
 
 (async function() {
-  await run('ember', ['browserstack:connect']);
   try {
+    await run('ember', ['browserstack:connect']);
     try {
       await run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
 
       console.log('success');
       process.exit(0);
     } finally {
-      if (process.env.TRAVIS_JOB_NUMBER) {
+      if (process.env.CI === 'true') {
         await run('ember', ['browserstack:results']);
       }
       await run('ember', ['browserstack:disconnect']);

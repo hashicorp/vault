@@ -89,6 +89,9 @@ func (client RoleDefinitionsClient) CreateOrUpdatePreparer(ctx context.Context, 
 		"api-version": APIVersion,
 	}
 
+	roleDefinition.ID = nil
+	roleDefinition.Name = nil
+	roleDefinition.Type = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),

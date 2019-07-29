@@ -52,8 +52,10 @@ func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 }
 
 func Test_KeyUpgrade(t *testing.T) {
-	testKeyUpgradeCommon(t, NewLockManager(false))
-	testKeyUpgradeCommon(t, NewLockManager(true))
+	lockManagerWithCache, _ := NewLockManager(true, 0)
+	lockManagerWithoutCache, _ := NewLockManager(false, 0)
+	testKeyUpgradeCommon(t, lockManagerWithCache)
+	testKeyUpgradeCommon(t, lockManagerWithoutCache)
 }
 
 func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
@@ -97,8 +99,10 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
-	testArchivingUpgradeCommon(t, NewLockManager(false))
-	testArchivingUpgradeCommon(t, NewLockManager(true))
+	lockManagerWithCache, _ := NewLockManager(true, 0)
+	lockManagerWithoutCache, _ := NewLockManager(false, 0)
+	testArchivingUpgradeCommon(t, lockManagerWithCache)
+	testArchivingUpgradeCommon(t, lockManagerWithoutCache)
 }
 
 func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
@@ -255,8 +259,10 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 }
 
 func Test_Archiving(t *testing.T) {
-	testArchivingCommon(t, NewLockManager(false))
-	testArchivingCommon(t, NewLockManager(true))
+	lockManagerWithCache, _ := NewLockManager(true, 0)
+	lockManagerWithoutCache, _ := NewLockManager(false, 0)
+	testArchivingUpgradeCommon(t, lockManagerWithCache)
+	testArchivingUpgradeCommon(t, lockManagerWithoutCache)
 }
 
 func testArchivingCommon(t *testing.T, lm *LockManager) {
@@ -399,7 +405,6 @@ func checkKeys(t *testing.T,
 
 	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 		ver := strconv.Itoa(i)
-		// Travis has weird time zone issues and gets super unhappy
 		if !p.Keys[ver].CreationTime.Equal(keysArchive[i].CreationTime) {
 			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[ver], keysArchive[i])
 		}
@@ -420,7 +425,7 @@ func checkKeys(t *testing.T,
 
 func Test_StorageErrorSafety(t *testing.T) {
 	ctx := context.Background()
-	lm := NewLockManager(false)
+	lm, _ := NewLockManager(true, 0)
 
 	storage := &logical.InmemStorage{}
 	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
@@ -468,7 +473,7 @@ func Test_StorageErrorSafety(t *testing.T) {
 
 func Test_BadUpgrade(t *testing.T) {
 	ctx := context.Background()
-	lm := NewLockManager(false)
+	lm, _ := NewLockManager(true, 0)
 	storage := &logical.InmemStorage{}
 	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
 		Upsert:  true,
@@ -533,7 +538,7 @@ func Test_BadUpgrade(t *testing.T) {
 
 func Test_BadArchive(t *testing.T) {
 	ctx := context.Background()
-	lm := NewLockManager(false)
+	lm, _ := NewLockManager(true, 0)
 	storage := &logical.InmemStorage{}
 	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
 		Upsert:  true,

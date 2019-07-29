@@ -1,0 +1,48 @@
+{{#if label}}
+  <label class="title is-5" data-test-string-list-label="true">
+    {{label}}
+    {{#if helpText}}
+      {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
+    {{/if}}
+  </label>
+{{/if}}
+{{#if warning}}
+  <AlertBanner @type="warning" @message={{warning}} />
+{{/if}}
+{{#each inputList as |data index|}}
+  <div class="field is-grouped" data-test-string-list-row="{{index}}">
+    <div class="control is-expanded">
+      {{input
+        data-test-string-list-input=index
+        type="text"
+        class="input"
+        value=data.value
+        name=(concat elementId "-" index)
+        id=(concat elementId "-" index)
+        key-up=(action "inputChanged" index)
+        change=(action (action "inputChanged" index) value="target.value")
+      }}
+    </div>
+    <div class="control">
+      {{#if (eq (inc index) inputList.length)}}
+        <button
+          type="button"
+          class="button is-outlined is-primary"
+          data-test-string-list-button="add"
+          {{action "addInput"}}
+        >
+          Add
+        </button>
+      {{else}}
+        <button
+          type="button"
+          class="button is-expanded is-icon"
+          data-test-string-list-button="delete"
+          {{action "removeInput" index}}
+        >
+          <Icon @glyph="trash" @size="l" />
+        </button>
+      {{/if}}
+    </div>
+  </div>
+{{/each}}

@@ -9,7 +9,7 @@
   &.thead {
     box-shadow: 0 1px 0 $grey-light, 0 -1px 0 $grey-light;
     margin: 0;
-    padding: 0 $size-6;
+    padding: 0 $size-6 0 0;
 
     .column {
       padding: 0.5rem 0.75rem;
@@ -27,8 +27,14 @@
     }
   }
 
-  .icon {
+  .hs-icon {
     margin-right: 0.25rem;
+  }
+  .icon-true {
+    color: $green-500;
+  }
+  .icon-false {
+    color: $ui-gray-300;
   }
 }
 

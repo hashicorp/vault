@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ type backend struct {
 	configMutex sync.RWMutex
 
 	// Lock to make changes to role entries
-	roleMutex sync.RWMutex
+	roleMutex sync.Mutex
 
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex
@@ -76,7 +77,14 @@ type backend struct {
 	// accounts using their IAM instance profile to get their credentials.
 	defaultAWSAccountID string
 
+	// roleCache caches role entries to avoid locking headaches
+	roleCache *cache.Cache
+
 	resolveArnToUniqueIDFunc func(context.Context, logical.Storage, string) (string, error)
+
+	// upgradeCancelFunc is used to cancel the context used in the upgrade
+	// function
+	upgradeCancelFunc context.CancelFunc
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -89,6 +97,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
 		tidyBlacklistCASGuard: new(uint32),
 		tidyWhitelistCASGuard: new(uint32),
+		roleCache:             cache.New(cache.NoExpiration, cache.NoExpiration),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -129,8 +138,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		InitializeFunc: b.initialize,
+		BackendType:    logical.TypeCredential,
+		Clean:          b.cleanup,
 	}
 
 	return b, nil
@@ -200,14 +211,23 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	return nil
 }
 
+func (b *backend) cleanup(ctx context.Context) {
+	if b.upgradeCancelFunc != nil {
+		b.upgradeCancelFunc()
+	}
+}
+
 func (b *backend) invalidate(ctx context.Context, key string) {
-	switch key {
-	case "config/client":
+	switch {
+	case key == "config/client":
 		b.configMutex.Lock()
 		defer b.configMutex.Unlock()
 		b.flushCachedEC2Clients()
 		b.flushCachedIAMClients()
 		b.defaultAWSAccountID = ""
+	case strings.HasPrefix(key, "role"):
+		// TODO: We could make this better
+		b.roleCache.Flush()
 	}
 }
 

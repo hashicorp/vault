@@ -68,7 +68,6 @@ func defaultKeyManagementCallOptions() *KeyManagementCallOptions {
 		{"default", "idempotent"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
-					codes.DeadlineExceeded,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -90,14 +89,14 @@ func defaultKeyManagementCallOptions() *KeyManagementCallOptions {
 		CreateCryptoKeyVersion:        retry[[2]string{"default", "non_idempotent"}],
 		UpdateCryptoKey:               retry[[2]string{"default", "non_idempotent"}],
 		UpdateCryptoKeyVersion:        retry[[2]string{"default", "non_idempotent"}],
-		Encrypt:                       retry[[2]string{"default", "non_idempotent"}],
-		Decrypt:                       retry[[2]string{"default", "non_idempotent"}],
+		Encrypt:                       retry[[2]string{"default", "idempotent"}],
+		Decrypt:                       retry[[2]string{"default", "idempotent"}],
 		UpdateCryptoKeyPrimaryVersion: retry[[2]string{"default", "non_idempotent"}],
 		DestroyCryptoKeyVersion:       retry[[2]string{"default", "non_idempotent"}],
 		RestoreCryptoKeyVersion:       retry[[2]string{"default", "non_idempotent"}],
 		GetPublicKey:                  retry[[2]string{"default", "idempotent"}],
-		AsymmetricDecrypt:             retry[[2]string{"default", "non_idempotent"}],
-		AsymmetricSign:                retry[[2]string{"default", "non_idempotent"}],
+		AsymmetricDecrypt:             retry[[2]string{"default", "idempotent"}],
+		AsymmetricSign:                retry[[2]string{"default", "idempotent"}],
 	}
 }
 
@@ -203,6 +202,7 @@ func (c *KeyManagementClient) ListKeyRings(ctx context.Context, req *kmspb.ListK
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
 	it.pageInfo.MaxSize = int(req.PageSize)
+	it.pageInfo.Token = req.PageToken
 	return it
 }
 
@@ -241,6 +241,7 @@ func (c *KeyManagementClient) ListCryptoKeys(ctx context.Context, req *kmspb.Lis
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
 	it.pageInfo.MaxSize = int(req.PageSize)
+	it.pageInfo.Token = req.PageToken
 	return it
 }
 
@@ -279,6 +280,7 @@ func (c *KeyManagementClient) ListCryptoKeyVersions(ctx context.Context, req *km
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
 	it.pageInfo.MaxSize = int(req.PageSize)
+	it.pageInfo.Token = req.PageToken
 	return it
 }
 

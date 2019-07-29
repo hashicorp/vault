@@ -1,0 +1,55 @@
+description: run go tests
+parameters:
+  extra_flags:
+    type: string
+    default: ""
+steps:
+  - run:
+      name: Run Go tests
+      no_output_timeout: 20m
+      command: |
+        set -x
+
+        # Install Go
+        curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+        rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+        export GOPATH=/go
+        export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+
+        # Install CircleCI CLI
+        curl -sSL \
+            "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+          | sudo tar --overwrite -xz \
+            -C /usr/local/bin \
+            "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+        # Split Go tests by prior test times
+        package_names=$(go list \
+            -tags "${GO_TAGS}" \
+            ./... \
+          | grep -v /integ \
+          | grep -v /vendor/ \
+          | sort \
+          | circleci tests split --split-by=timings --timings-type=classname)
+
+        # Install gotestsum
+        curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
+          | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+        # Run tests
+        make prep
+        mkdir -p test-results/go-test
+        CGO_ENABLED= \
+          VAULT_ADDR= \
+          VAULT_TOKEN= \
+          VAULT_DEV_ROOT_TOKEN_ID= \
+          VAULT_ACC= \
+          gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+            -tags "${GO_TAGS}" \
+            -timeout=40m \
+            -parallel=20 \
+            << parameters.extra_flags >> \
+            ${package_names}
+

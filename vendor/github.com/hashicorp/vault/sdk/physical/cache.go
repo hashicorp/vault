@@ -23,6 +23,7 @@ var cacheExceptionsPaths = []string{
 	"index-dr/pages/",
 	"sys/expire/",
 	"core/poison-pill",
+	"core/raft/tls",
 }
 
 // Cache is used to wrap an underlying physical backend

@@ -498,7 +498,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	// Insert it into memdb
@@ -521,7 +521,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid2", "testparentgroupid3"},
 		MemberEntityIDs: []string{"testentityid2", "testentityid3"},
 		Policies:        []string{"testpolicy2", "testpolicy3"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid2"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid2"),
 	}
 
 	// Insert it into memdb
@@ -678,6 +678,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -800,6 +801,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)

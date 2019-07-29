@@ -16,31 +16,32 @@ func pathConfig(b *azureAuthBackend) *framework.Path {
 				Description: `The tenant id for the Azure Active Directory.  This is sometimes
 				referred to as Directory ID in AD.  This value can also be provided with the 
 				AZURE_TENANT_ID environment variable.`,
-				DisplayName: "Tenant ID",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Tenant ID",
+				},
 			},
 			"resource": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The resource URL for the vault application in Azure Active Directory.
 				This value can also be provided with the AZURE_AD_RESOURCE environment variable.`,
-				DisplayName: "Resource",
 			},
 			"environment": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The Azure environment name. If not provided, AzurePublicCloud is used.
 				This value can also be provided with the AZURE_ENVIRONMENT environment variable.`,
-				DisplayName: "Environment",
 			},
 			"client_id": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The OAuth2 client id to connection to Azure.
 				This value can also be provided with the AZURE_CLIENT_ID environment variable.`,
-				DisplayName: "Client ID",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Client ID",
+				},
 			},
 			"client_secret": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The OAuth2 client secret to connection to Azure.
 				This value can also be provided with the AZURE_CLIENT_SECRET environment variable.`,
-				DisplayName: "Client Secret",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

@@ -1,0 +1,29 @@
+jobs:
+  - pre-flight-checks
+  - install-ui-dependencies:
+      requires:
+        - pre-flight-checks
+  - go-mod-download:
+      requires:
+        - pre-flight-checks
+  - build-go-dev:
+      requires:
+        - go-mod-download
+  - test-ui:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+  - test-ui-browserstack:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+      filters:
+          branches:
+            # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+            ignore: /pull\/[0-9]+/
+  - test-go:
+      requires:
+        - build-go-dev
+  - test-go-race:
+      requires:
+        - build-go-dev

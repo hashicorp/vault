@@ -5,28 +5,29 @@
 
 **Properties**
 
-| Name | Type | Default | Description |
+| Param | Type | Default | Description |
 | --- | --- | --- | --- |
+| buttonClasses | <code>String</code> | <code></code> | The CSS classes to add to the trigger button. |
+| confirmTitle | <code>String</code> | <code>Delete this?</code> | The title to display upon confirming. |
+| confirmMessage | <code>String</code> | <code>You will not be able to recover it later.</code> | The message to display upon confirming. |
+| confirmButtonText | <code>String</code> | <code>Delete</code> | The confirm button text. |
+| cancelButtonText | <code>String</code> | <code>Cancel</code> | The cancel button text. |
 | onConfirmAction | <code>Func</code> | <code></code> | The action to take upon confirming. |
-| [confirmMessage] | <code>String</code> | <code>Are you sure you want to do this?</code> | The message to display upon confirming. |
-| [confirmButtonText] | <code>String</code> | <code>Delete</code> | The confirm button text. |
-| [cancelButtonText] | <code>String</code> | <code>Cancel</code> | The cancel button text. |
-| [disabledMessage] | <code>String</code> | <code>Complete the form to complete this action</code> | The message to display when the button is disabled. |
 
 **Example**
-  
+
 ```js
 <ConfirmAction
+  @buttonClasses="button is-primary"
   @onConfirmAction={{ () => { console.log('Action!') } }}
-  @confirmMessage="Are you sure you want to delete this config?">
   Delete
 </ConfirmAction>
  ```
-   
+
 
 **See**
 
 - [Uses of ConfirmAction](https://github.com/hashicorp/vault/search?l=Handlebars&q=ConfirmAction)
-- [ConfirmAction Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/confirm-action.js)
+- [ConfirmAction Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/confirm-action.js)
 
 ---

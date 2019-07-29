@@ -1,0 +1,34 @@
+<HeaderScope/>
+<Toolbar>
+  <ToolbarActions>
+  {{#if model}}
+    <ToolbarDownloadButton
+      @actionText="Download CA cert"
+      @extension="pem"
+      @filename={{concat model.ca.id "-ca"}}
+      @data={{model.ca.caPem}}
+    />
+  {{/if}}
+    <ToolbarLink
+      @params={{array "configure"}}
+    >
+     Configure
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+{{#if model}}
+  <FieldGroupShow @model={{model}} />
+  <InfoTableRow
+    @label="CA PEM"
+    @value={{model.ca.caPem}}
+  />
+{{else}}
+  <EmptyState
+    @title="No configuration for this secrets engine yet"
+    @message="We'll need to configure a few things before getting started."
+  >
+    {{#link-to "configure"}}
+      Configure
+    {{/link-to}}
+  </EmptyState>
+{{/if}}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,9 +22,11 @@ import (
 // Tests the regression in
 // https://github.com/hashicorp/vault-plugin-secrets-kv/pull/31
 func TestKVv2_UpgradePaths(t *testing.T) {
+	m := new(sync.Mutex)
 	logOut := new(bytes.Buffer)
 	logger := hclog.New(&hclog.LoggerOptions{
 		Output: logOut,
+		Mutex:  m,
 	})
 
 	coreConfig := &vault.CoreConfig{
@@ -93,6 +96,8 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 	// Need to give it time to actually set up
 	time.Sleep(10 * time.Second)
 
+	m.Lock()
+	defer m.Unlock()
 	if strings.Contains(logOut.String(), "cannot write to storage during setup") {
 		t.Fatal("got a cannot write to storage during setup error")
 	}

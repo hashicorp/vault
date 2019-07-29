@@ -1,0 +1,294 @@
+---
+layout: "docs"
+page_title: "PCF - Auth Methods"
+sidebar_title: "PCF"
+sidebar_current: "docs-auth-pcf"
+description: |-
+The pcf auth method allows automated authentication of PCF instances.
+---
+
+# Pivotal Cloud Foundry (PCF) Auth Method
+
+The `pcf` auth method provides an automated mechanism to retrieve a Vault token
+for PCF instances. It leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation).
+At a high level, this works as follows:
+
+1. You construct a request to Vault including your `CF_INSTANCE_CERT`, signed by your `CF_INSTANCE_KEY`.
+2. Vault validates that the signature is no more than 300 seconds old, or 60 seconds in the future.
+3. Vault validates that the cert was issued by the CA certificate you've pre-configured.
+4. Vault validates that the request was signed by the private key for the `CF_INSTANCE_CERT`.
+5. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.
+6. If all checks pass, Vault issues an appropriately-scoped token.
+
+## Known Risks
+
+This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because 
+PCF makes its CA certificate and private key available to certain users at any time, it's possible for 
+someone with access to them to self-issue identity certificates that meet the criteria for a Vault role, 
+allowing them to gain unintended access to Vault.
+
+For this reason, we recommend that if you enable this auth method, you carefully guard access to the 
+private key for your instance identity CA certificate. In CredHub, it can be obtained through the 
+following call: `$ credhub get -n /cf/diego-instance-identity-root-ca`.
+
+Take extra steps to limit access to that path in CredHub, whether it be through use of CredHub's ACL 
+system, or through carefully limiting the users who can access CredHub.
+
+## Usage
+
+### Preparing to Configure the Plugin
+
+To configure this plugin, you'll need to gather the CA certificate that PCF uses to issue each `CF_INSTANCE_CERT`,
+and you'll need to configure it to access the PCF API. 
+
+To gain your instance identity CA certificate, in the [cf dev](https://github.com/cloudfoundry-incubator/cfdev)
+environment it can be found using:
+
+```
+$ bosh int --path /diego_instance_identity_ca ~/.cfdev/state/bosh/creds.yml
+```
+
+In environments containing Ops Manager, it can be found in CredHub. To gain access to CredHub, first install
+[the PCF command-line utility](https://docs.pivotal.io/tiledev/2-2/pcf-command.html) and authenticate to it
+using the `metadata` file it describes. These instructions also use [jq](https://stedolan.github.io/jq/) for
+ease of drilling into the particular part of the response you'll need.
+
+Once those steps are complete, get the credentials you'll use for CredHub:
+
+```
+$ pcf settings | jq '.products[0].director_credhub_client_credentials'
+```
+
+SSH into your Ops Manager VM:
+
+```
+$ ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
+```
+
+Please note that the above OPS_MGR_URL shouldn't be prepended with `https://`.
+
+Log into CredHub with the credentials you obtained earlier:
+
+```
+$ credhub login --client-name=director_to_credhub --client-secret=some-secret
+```
+
+And view the root certificate PCF uses to issue instance identity certificates:
+
+```
+$ credhub get -n /cf/diego-instance-identity-root-ca
+```
+
+The output to that call will include two certificates and one RSA key. You will need to copy the certificate
+under `ca: |` and place it into a file on your local machine that's properly formatted. Here's an example of
+a properly formatted CA certificate:
+
+```
+$ cat ca.crt
+-----BEGIN CERTIFICATE-----
+MIIDNDCCAhygAwIBAgITPqTy1qvfHNEVuxsl9l1glY85OTANBgkqhkiG9w0BAQsF
+ADAqMSgwJgYDVQQDEx9EaWVnbyBJbnN0YW5jZSBJZGVudGl0eSBSb290IENBMB4X
+DTE5MDYwNjA5MTIwMVoXDTIyMDYwNTA5MTIwMVowKjEoMCYGA1UEAxMfRGllZ28g
+SW5zdGFuY2UgSWRlbnRpdHkgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEP
+ADCCAQoCggEBALa8xGDYT/q3UzEKAsLDajhuHxPpIPFlCXwp6u8U5Qrf427Xof7n
+rXRKzRu3g7E20U/OwzgBi3VZs8T29JGNWeA2k0HtX8oQ+Wc8Qngz9M8t1h9SZlx5
+fGfxPt3x7xozaIGJ8p4HKQH1ZlirL7dzun7Y+7m6Ey8cMVsepqUs64r8+KpCbxKJ
+rV04qtTNlr0LG3yOxSHlip+DDvUVL3jSFz/JDWxwCymiFBAh0QjG1LKp2FisURoX
+GY+HJbf2StpK3i4dYnxQXQlMDpipozK7WFxv3gH4Q6YMZvlmIPidAF8FxfDIsYcq
+TgQ5q0pr9mbu8oKbZ74vyZMqiy+r9vLhbu0CAwEAAaNTMFEwHQYDVR0OBBYEFAHf
+pwqBhZ8/A6ZAvU+p5JPz/omjMB8GA1UdIwQYMBaAFAHfpwqBhZ8/A6ZAvU+p5JPz
+/omjMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBADuDJev+6bOC
+v7t9SS4Nd/zeREuF9IKsHDHrYUZBIO1aBQbOO1iDtL4VA3LBEx6fOgN5fbxroUsz
+X9/6PtxLe+5U8i5MOztK+OxxPrtDfnblXVb6IW4EKhTnWesS7R2WnOWtzqRQXKFU
+voBn3QckLV1o9eqzYIE/aob4z0GaVanA9PSzzbVPsX79RCD1B7NmV0cKEQ7IrCrh
+L7ElDV/GlNrtVdHjY0mwz9iu+0YJvxvcHDTERi106b28KXzJz+P5/hyg2wqRXzdI
+faXAjW0kuq5nxyJUALwxD/8pz77uNt4w6WfJoSDM6XrAIhh15K3tZg9EzBmAZ/5D
+jK0RcmCyaXw=
+-----END CERTIFICATE-----
+```
+
+An easy way to verify that your CA certificate is properly formatted is using OpenSSL like so:
+
+```
+$ openssl x509 -in ca.crt -text -noout
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            3e:a4:f2:d6:ab:df:1c:d1:15:bb:1b:25:f6:5d:60:95:8f:39:39
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=Diego Instance Identity Root CA
+        Validity
+            Not Before: Jun  6 09:12:01 2019 GMT
+            Not After : Jun  5 09:12:01 2022 GMT
+        Subject: CN=Diego Instance Identity Root CA
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:b6:bc:c4:60:d8:4f:fa:b7:53:31:0a:02:c2:c3:
+                    6a:38:6e:1f:13:e9:20:f1:65:09:7c:29:ea:ef:14:
+                    e5:0a:df:e3:6e:d7:a1:fe:e7:ad:74:4a:cd:1b:b7:
+                    83:b1:36:d1:4f:ce:c3:38:01:8b:75:59:b3:c4:f6:
+                    f4:91:8d:59:e0:36:93:41:ed:5f:ca:10:f9:67:3c:
+                    42:78:33:f4:cf:2d:d6:1f:52:66:5c:79:7c:67:f1:
+                    3e:dd:f1:ef:1a:33:68:81:89:f2:9e:07:29:01:f5:
+                    66:58:ab:2f:b7:73:ba:7e:d8:fb:b9:ba:13:2f:1c:
+                    31:5b:1e:a6:a5:2c:eb:8a:fc:f8:aa:42:6f:12:89:
+                    ad:5d:38:aa:d4:cd:96:bd:0b:1b:7c:8e:c5:21:e5:
+                    8a:9f:83:0e:f5:15:2f:78:d2:17:3f:c9:0d:6c:70:
+                    0b:29:a2:14:10:21:d1:08:c6:d4:b2:a9:d8:58:ac:
+                    51:1a:17:19:8f:87:25:b7:f6:4a:da:4a:de:2e:1d:
+                    62:7c:50:5d:09:4c:0e:98:a9:a3:32:bb:58:5c:6f:
+                    de:01:f8:43:a6:0c:66:f9:66:20:f8:9d:00:5f:05:
+                    c5:f0:c8:b1:87:2a:4e:04:39:ab:4a:6b:f6:66:ee:
+                    f2:82:9b:67:be:2f:c9:93:2a:8b:2f:ab:f6:f2:e1:
+                    6e:ed
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                01:DF:A7:0A:81:85:9F:3F:03:A6:40:BD:4F:A9:E4:93:F3:FE:89:A3
+            X509v3 Authority Key Identifier: 
+                keyid:01:DF:A7:0A:81:85:9F:3F:03:A6:40:BD:4F:A9:E4:93:F3:FE:89:A3
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+    Signature Algorithm: sha256WithRSAEncryption
+         3b:83:25:eb:fe:e9:b3:82:bf:bb:7d:49:2e:0d:77:fc:de:44:
+         4b:85:f4:82:ac:1c:31:eb:61:46:41:20:ed:5a:05:06:ce:3b:
+         58:83:b4:be:15:03:72:c1:13:1e:9f:3a:03:79:7d:bc:6b:a1:
+         4b:33:5f:df:fa:3e:dc:4b:7b:ee:54:f2:2e:4c:3b:3b:4a:f8:
+         ec:71:3e:bb:43:7e:76:e5:5d:56:fa:21:6e:04:2a:14:e7:59:
+         eb:12:ed:1d:96:9c:e5:ad:ce:a4:50:5c:a1:54:be:80:67:dd:
+         07:24:2d:5d:68:f5:ea:b3:60:81:3f:6a:86:f8:cf:41:9a:55:
+         a9:c0:f4:f4:b3:cd:b5:4f:b1:7e:fd:44:20:f5:07:b3:66:57:
+         47:0a:11:0e:c8:ac:2a:e1:2f:b1:25:0d:5f:c6:94:da:ed:55:
+         d1:e3:63:49:b0:cf:d8:ae:fb:46:09:bf:1b:dc:1c:34:c4:46:
+         2d:74:e9:bd:bc:29:7c:c9:cf:e3:f9:fe:1c:a0:db:0a:91:5f:
+         37:48:7d:a5:c0:8d:6d:24:ba:ae:67:c7:22:54:00:bc:31:0f:
+         ff:29:cf:be:ee:36:de:30:e9:67:c9:a1:20:cc:e9:7a:c0:22:
+         18:75:e4:ad:ed:66:0f:44:cc:19:80:67:fe:43:8c:ad:11:72:
+         60:b2:69:7c
+```
+
+You will also need to configure access to the PCF API. To prepare for this, we will now
+use the [cf](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html) command-line tool.
+
+First, while in the directory containing the `metadata` file you used earlier to authenticate
+to PCF, run `$ pcf target`. This points the `cf` tool at the same place as the `pcf` tool. Next,
+run `$ cf api` to view the API endpoint that Vault will use.
+
+Next, configure a user for Vault to use. This plugin was tested with Org Manager level 
+permissions, but lower level permissions _may_ be usable.
+
+```
+$ cf create-user vault pa55w0rd
+$ cf orgs
+$ cf org-users my-example-org
+$ cf set-org-role vault my-example-org OrgManager
+```
+
+Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first 
+with an error like:
+
+```
+x509: certificate signed by unknown authority
+```
+
+If you encounter this error, you will need to first gain a copy of the certificate that PCF
+is using for the API via:
+
+```
+$ openssl s_client -showcerts -servername domain.com -connect domain.com:443
+```
+
+Here is an example of a real call:
+
+```
+$ openssl s_client -showcerts -servername api.sys.somewhere.cf-app.com -connect api.sys.somewhere.cf-app.com:443
+```
+
+Part of the response will contain a certificate, which you'll need to copy and paste to
+a well-formatted local file. Please see `ca.crt` above for an example of how the certificate
+should look, and how to verify it can be parsed using `openssl`. The walkthrough below presumes
+you name this file `pcfapi.crt`.
+
+### Walkthrough
+
+After obtaining the information described above, a Vault operator will configure the PCF auth method
+like so:
+
+```
+$ vault auth enable pcf
+
+$ vault write auth/pcf/config \
+      identity_ca_certificates=@ca.crt \
+      pcf_api_addr=https://api.dev.cfdev.sh \
+      pcf_username=vault \
+      pcf_password=pa55w0rd \
+      pcf_api_trusted_certificates=@pcfapi.crt
+      
+$ vault write auth/pcf/roles/my-role \
+    bound_application_ids=2d3e834a-3a25-4591-974c-fa5626d5d0a1 \
+    bound_space_ids=3d2eba6b-ef19-44d5-91dd-1975b0db5cc9 \
+    bound_organization_ids=34a878d0-c2f9-4521-ba73-a9f664e82c7bf \
+    policies=my-policy
+```
+
+Once configured, from a PCF instance containing real values for the `CF_INSTANCE_CERT` and 
+`CF_INSTANCE_KEY`, login can be performed using:
+
+```
+$ vault login -method=pcf role=test-role
+```
+
+For PCF, we do also offer an agent that, once configured, can be used to obtain a Vault token on
+your behalf.
+
+### Maintenance
+
+In testing we found that PCF instance identity CA certificates were set to expire in 3 years. Some
+PCF docs indicate they expire every 4 years. However long they last, at some point you may need 
+to add another CA certificate - one that's soon to expire, and one that is currently or soon-to-be
+valid. 
+
+```
+$ CURRENT=$(cat /path/to/current-ca.crt)
+$ FUTURE=$(cat /path/to/future-ca.crt)
+$ vault write auth/vault-plugin-auth-pcf/config identity_ca_certificates="$CURRENT,$FUTURE"
+```
+
+If Vault receives a `CF_INSTANCE_CERT` matching _any_ of the `identity_ca_certificates`,
+the instance cert will be considered valid.
+
+A similar approach can be taken to update the `pcf_api_trusted_certificates`.
+
+### Troubleshooting At-A-Glance
+
+If you receive an error containing `x509: certificate signed by unknown authority`, set 
+`pcf_api_trusted_certificates` as described above.
+
+If you're unable to authenticate using the `CF_INSTANCE_CERT`, first obtain a current copy
+of your `CF_INSTANCE_CERT` and copy it to your local environment. Then divide it into two 
+files, each being a distinct certificate. The first certificate tends to be the actual 
+`identity.crt`, and the second one tends to be the `intermediate.crt`. Verify each are 
+properly named and formatted using a command like:
+
+```
+$ openssl x509 -in ca.crt -text -noout
+```
+
+Then, verify that the certificates are properly chained to the `ca.crt` you've configured:
+
+```
+$ openssl verify -CAfile ca.crt -untrusted intermediate.crt identity.crt
+```
+
+This should show a success response. If it doesn't, try to identify the root cause, be it
+an expired certificate, an incorrect `ca.crt`, or a Vault configuration that doesn't 
+match the certificates you're checking.
+
+## API
+
+The PCF auth method has a full HTTP API. Please see the [PCF Auth API](/api/auth/pcf/index.html) 
+for more details.

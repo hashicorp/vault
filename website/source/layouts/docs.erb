@@ -70,6 +70,7 @@
                   'mssql',
                   'mysql',
                   'postgresql',
+                  'raft',
                   's3',
                   'swift',
                   'zookeeper'
@@ -100,6 +101,21 @@
               ]
             },
             'delete',
+            {
+              category: 'kv',
+              content: [
+                'delete',
+                'destroy',
+                'enable-versioning',
+                'get',
+                'list',
+                'metadata',
+                'patch',
+                'put',
+                'rollback',
+                'undelete'
+              ]
+            },
             {
               category: 'lease',
               content: ['renew', 'revoke']
@@ -184,7 +200,8 @@
                       'azure',
                       'gcp',
                       'jwt',
-                      'kubernetes'
+                      'kubernetes',
+                      'pcf'
                     ]
                   }, {
                     category: 'sinks',
@@ -209,6 +226,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'elasticdb',
                   'influxdb',
                   'hanadb',
                   'mongodb',
@@ -263,6 +281,7 @@
               'cert',
               'token',
               'userpass',
+              'pcf',
               '---------',
               'app-id',
               'mfa'

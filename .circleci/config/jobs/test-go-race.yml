@@ -1,0 +1,15 @@
+executor: go-machine
+steps:
+  - checkout
+  - run:
+      name: Allow circleci user to restore Go modules cache
+      command: |
+        sudo mkdir /go
+        sudo chown -R circleci:circleci /go
+  - restore_go_cache
+  - go_test:
+      extra_flags: "-race"
+  - store_artifacts:
+      path: test-results
+  - store_test_results:
+      path: test-results

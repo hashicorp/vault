@@ -30,11 +30,13 @@ set.
 
 ### Parameters
 
-- `oidc_discovery_url` `(string: <optional>)` - The OIDC Discovery URL, without any .well-known component (base path). Cannot be used with `jwt_validation_pubkeys`.
+- `oidc_discovery_url` `(string: <optional>)` - The OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwks_url" or "jwt_validation_pubkeys".
 - `oidc_discovery_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.
 - `oidc_client_id` `(string: <optional>)` - The OAuth Client ID from the provider for OIDC roles.
 - `oidc_client_secret` `(string: <optional>)` - The OAuth Client Secret from the provider for OIDC roles.
-- `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with `oidc_discovery_url`.
+- `jwks_url` `(string: <optional>)` - JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".
+- `jwks_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
+- `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "jwks_url" or "oidc_discovery_url".
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7))
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
@@ -116,6 +118,15 @@ entities attempting to login. At least one of the bound values must be set.
 - `period` `(int: <optional>)` - If set, indicates that the token generated
   using this role should never expire, but instead always use the value set
   here as the TTL for every renewal.
+- `clock_skew_leeway` `(int: <optional>)` - The amount of leeway to add to all claims to 
+  account for clock skew, in seconds.  Defaults to `60` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles.
+- `expiration_leeway` `(int: <optional>)` - The amount of leeway to add to expiration (`exp`) claims to 
+  account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles. 
+- `not_before_leeway` `(int: <optional>)` - The amount of leeway to add to not before (`nbf`) claims to 
+  account for clock skew, in seconds. Defaults to `150` seconds if set to `0` and can be disabled
+  if set to `-1`. Only applicable with "jwt" roles. 
 - `num_uses` `(int: <optional>)` - If set, puts a use-count limitation on the
   issued token.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
@@ -289,7 +300,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 ```json
 {
     "role": "dev-role",
-    "redirect_uri": "https://vault.myco.com:8200/vault/ui/auth/jwt/oidc/callback"
+    "redirect_uri": "https://vault.myco.com:8200/ui/vault/auth/jwt/oidc/callback"
 }
 ```
 
@@ -299,7 +310,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://127.0.0.1:8200/v1/auth/oidc/auth_url
+    https://127.0.0.1:8200/v1/auth/jwt/oidc/auth_url
 ```
 
 ### Sample Response
@@ -308,7 +319,7 @@ $ curl \
 {
   "request_id": "c701169c-64f8-26cc-0315-078e8c3ce897",
   "data": {
-    "auth_url": "https://myco.auth0.com/authorize?client_id=r3qXcK2bezU3Sbmh0K16fatW6&nonce=851b69a9bfa5a6a5668111314414e3687891a599&redirect_uri=http%3A%2F%2Flocalhost%3A8300%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=1011e726d24960e09cfca2e04b36b38593cb6a22"
+    "auth_url": "https://myco.auth0.com/authorize?client_id=r3qXcK2bezU3Sbmh0K16fatW6&nonce=851b69a9bfa5a6a5668111314414e3687891a599&redirect_uri=https%3A%2F%2Fvault.myco.com3A8200%2Fui%2Fvault%2Fauth%2Fjwt%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=1011e726d24960e09cfca2e04b36b38593cb6a22"
   },
   ...
 }

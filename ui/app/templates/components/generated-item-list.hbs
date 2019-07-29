@@ -1,0 +1,80 @@
+<PageHeader as |p|>
+  <p.top>
+    {{#key-value-header path="vault.cluster.access.methods"}}
+      <li>
+        <span class="sep">
+          /
+        </span>
+        {{#link-to "vault.cluster.access.methods"}}
+          methods
+        {{/link-to}}
+      </li>
+    {{/key-value-header}}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{method}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+{{section-tabs model "authShow" paths}}
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @params={{array
+        "vault.cluster.access.method.item.create"
+        itemType
+      }}>
+      Create
+      {{singularize itemType}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+<ListView @items={{model}} @itemNoun={{itemType}} as |list|>
+  {{#if list.empty}}
+    <list.empty @title="No {{pluralize itemType}} yet"
+      @message="A list of {{pluralize itemType}} will be listed here. Create your first {{itemType}} to get started.">
+      {{#link-to
+        "vault.cluster.access.method.item.create"
+        itemType
+        class="link"
+      }}
+        Create {{singularize itemType}}
+      {{/link-to}}
+    </list.empty>
+  {{else if list.item}}
+    <ListItem @linkParams={{array "vault.cluster.access.method.item.show"
+      itemType list.item.id}} as |Item|>
+      <Item.content>
+        <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
+      </Item.content>
+      <Item.menu>
+        <li class="action">
+          {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
+            View {{singularize itemType}}
+          {{/link-to}}
+        </li>
+        <li class="action">
+          {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
+            Edit {{singularize itemType}}
+          {{/link-to}}
+        </li>
+        <li>
+          <ConfirmAction @buttonClasses="link is-destroy" @onConfirmAction={{action
+                (perform
+                  Item.callMethod
+                  "destroyRecord"
+                  list.item
+                  (concat "Successfully deleted " (singularize itemType) " " list.item.id)
+                  (concat "There was an error deleting this " (singularize itemType))
+                  (action "refreshItemList")
+                )
+              }} @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+            @cancelButtonText="Cancel" data-test-secret-delete="true">
+            Delete
+            {{singularize itemType}}
+          </ConfirmAction>
+        </li>
+      </Item.menu>
+    </ListItem>
+  {{/if}}
+</ListView>

@@ -93,7 +93,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 
 	_, err = client.Logical().Write("auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
-		"token_ttl":      "3s",
+		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
 	}))
 
@@ -123,7 +123,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 
 	_, err = client.Logical().Write("auth/approle/role/test2", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
-		"token_ttl":      "3s",
+		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
 	}))
 	if err != nil {
@@ -333,7 +333,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ttl > 3 {
+		if ttl > 6 {
 			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
 		}
 	}
@@ -373,7 +373,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ttl > 3 {
+		if ttl > 6 {
 			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
 		}
 	}
@@ -437,7 +437,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 
 	_, err = client.Logical().Write("auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
-		"token_ttl":      "3s",
+		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
 	}))
 	if err != nil {
@@ -660,7 +660,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ttl > 3 {
+		if ttl > 6 {
 			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
 		}
 	}
@@ -702,7 +702,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ttl > 3 {
+		if ttl > 6 {
 			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
 		}
 	}
