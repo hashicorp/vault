@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -737,5 +738,66 @@ func TestPki_CertsLease(t *testing.T) {
 
 	if resp.Secret == nil {
 		t.Fatalf("expected a response that contains a secret")
+	}
+}
+
+func TestPki_RoleTemplate(t *testing.T) {
+	entityID := "tmplTest"
+	req := logical.Request{ID: entityID}
+	entity := logical.Entity{
+		ID:   entityID,
+		Name: "NameFoo",
+		Metadata: map[string]string{
+			"MetadataFoo": "MetadataBar",
+		},
+		Aliases: []*logical.Alias{
+			&logical.Alias{
+				Name:          "Alias1Name",
+				MountAccessor: "a1assor",
+				Metadata: map[string]string{
+					"Alias1MetadataFoo": "Alias1MetadataBar",
+				},
+			},
+		},
+	}
+	sysView := &logical.StaticSystemView{EntityVal: &entity}
+
+	tests := []struct {
+		name        string
+		role        roleEntry
+		expect      roleEntry
+		expectError bool
+	}{
+		{name: "allowed domain",
+			role:   roleEntry{AllowedDomains: []string{"{{identity.entity.name}}"}},
+			expect: roleEntry{AllowedDomains: []string{entity.Name}},
+		},
+		{name: "allowed domain : aliases",
+			role:   roleEntry{AllowedDomains: []string{"{{identity.entity.aliases.a1assor.name}}"}},
+			expect: roleEntry{AllowedDomains: []string{entity.Aliases[0].Name}},
+		},
+		{name: "allowed uri sans",
+			role:   roleEntry{AllowedURISANs: []string{"{{identity.entity.metadata.MetadataFoo}}"}},
+			expect: roleEntry{AllowedURISANs: []string{entity.Metadata["MetadataFoo"]}},
+		},
+		{name: "continues on error",
+			role:        roleEntry{AllowedDomains: []string{"{{identity.entity.foo}}", "{{identity.entity.name}}"}},
+			expect:      roleEntry{AllowedDomains: []string{"{{identity.entity.foo}}", entity.Name}},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		err := test.role.ApplyIdentityTemplating(sysView, &req)
+		if test.expectError && err == nil {
+			t.Errorf("%s bad: expected an error", test.name)
+		} else if !test.expectError && err != nil {
+			t.Errorf("%s bad: err: %v", test.name, err)
+		}
+
+		if !reflect.DeepEqual(test.role, test.expect) {
+			t.Errorf("%s bad: %+v", test.name, test.role)
+		}
+
 	}
 }

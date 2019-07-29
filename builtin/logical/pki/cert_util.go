@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -171,52 +170,6 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	return certEntry, nil
 }
 
-// Instead of returning an error when applying identity templating, it's better
-// to just return the input, which most likely returns a "badName" to the caller.
-// Ideally, parse errors of identity templating should be handled when configuring
-// the role, instead when applying the role. Unfortunately, the templating library does
-// not support parsing validations yet. So, returning the input is best choice.
-func applyIdentityTemplating(b *backend, data *inputBundle, input string) string {
-	info, err := b.System().EntityInfo(data.req.EntityID)
-	if err != nil {
-		return input
-	}
-	if info == nil {
-		return input
-	}
-
-	entity := &identity.Entity{
-		ID:       data.req.EntityID,
-		Name:     info.Name,
-		Metadata: info.Metadata,
-		Aliases:  make([]*identity.Alias, 0, len(info.Aliases)),
-	}
-
-	for i, a := range info.Aliases {
-		entity.Aliases = append(entity.Aliases, &identity.Alias{
-			MountAccessor: a.MountAccessor,
-			ID:            fmt.Sprintf("alias-%d", i),
-			Name:          a.Name,
-			Metadata:      a.Metadata,
-		})
-	}
-
-	_, out, err := identity.PopulateString(identity.PopulateStringInput{
-		Mode:              identity.ACLTemplating,
-		ValidityCheckOnly: false,
-		String:            input,
-		Entity:            entity,
-		Groups:            nil,
-		Namespace:         nil,
-	})
-
-	if err != nil {
-		return input
-	}
-
-	return out
-}
-
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -355,8 +308,6 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				if currDomain == "" {
 					continue
 				}
-
-				currDomain = applyIdentityTemplating(b, data, currDomain)
 
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
@@ -847,7 +798,6 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				for _, uri := range csr.URIs {
 					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
-						allowed = applyIdentityTemplating(b, data, allowed)
 						validURI := glob.Glob(allowed, uri.String())
 						if validURI {
 							valid = true
@@ -876,7 +826,6 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				for _, uri := range uriAlt {
 					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
-						allowed = applyIdentityTemplating(b, data, allowed)
 						validURI := glob.Glob(allowed, uri)
 						if validURI {
 							valid = true

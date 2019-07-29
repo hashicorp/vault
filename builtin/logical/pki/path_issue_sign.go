@@ -205,6 +205,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			"error fetching CA certificate: %s", caErr)}
 	}
 
+	// Ignore any error returned when applying identity templating for now;
+	// we'll handle it later on when we validate the request against the role
+	role.ApplyIdentityTemplating(b.System(), req)
+
 	input := &inputBundle{
 		req:     req,
 		apiData: data,

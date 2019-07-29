@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -816,6 +817,70 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		responseData["generate_lease"] = r.GenerateLease
 	}
 	return responseData
+}
+
+// ApplyIdentityTemplating updates the role by evaluating any templated field.
+// Fields are only modified if a template was successfully applied to them.  An
+// error applying the template for one field does not prevent subsequent fields
+// from being updated.  Ideally, parse errors of identity templating should be
+// handled when configuring the role, instead when applying the role. Unfortunately,
+// the templating library does not support parsing validations yet. So, returning
+// the input is best choice.
+func (r *roleEntry) ApplyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
+	info, err := sys.EntityInfo(req.EntityID)
+	if err != nil {
+		return err
+	}
+	if info == nil {
+		return nil
+	}
+
+	entity := &identity.Entity{
+		ID:       req.EntityID,
+		Name:     info.Name,
+		Metadata: info.Metadata,
+		Aliases:  make([]*identity.Alias, 0, len(info.Aliases)),
+	}
+
+	for i, a := range info.Aliases {
+		entity.Aliases = append(entity.Aliases, &identity.Alias{
+			MountAccessor: a.MountAccessor,
+			ID:            fmt.Sprintf("alias-%d", i),
+			Name:          a.Name,
+			Metadata:      a.Metadata,
+		})
+	}
+
+	input := identity.PopulateStringInput{
+		Mode:              identity.ACLTemplating,
+		ValidityCheckOnly: false,
+		Entity:            entity,
+		Groups:            nil,
+		Namespace:         nil,
+	}
+
+	var templateErr error
+	for i := range r.AllowedDomains {
+		input.String = r.AllowedDomains[i]
+		modified, out, err := identity.PopulateString(input)
+		if err != nil {
+			templateErr = err
+		} else if modified {
+			r.AllowedDomains[i] = out
+		}
+	}
+
+	for i := range r.AllowedURISANs {
+		input.String = r.AllowedURISANs[i]
+		modified, out, err := identity.PopulateString(input)
+		if err != nil {
+			templateErr = err
+		} else if modified {
+			r.AllowedURISANs[i] = out
+		}
+	}
+
+	return templateErr
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
