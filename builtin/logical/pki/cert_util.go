@@ -176,7 +176,7 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // Ideally, parse errors of identity templating should be handled when configuring
 // the role, instead when applying the role. Unfortunately, the templating library does
 // not support parsing validations yet. So, returning the input is best choice.
-func applyIdentityTemplating(b *backend, data *dataBundle, input string) string {
+func applyIdentityTemplating(b *backend, data *inputBundle, input string) string {
 
 	info, err := b.System().EntityInfo(data.req.EntityID)
 	if err != nil {
@@ -199,7 +199,8 @@ func applyIdentityTemplating(b *backend, data *dataBundle, input string) string 
 		})
 	}
 
-	_, out, err := identity.PopulateString(&identity.PopulateStringInput{
+	_, out, err := identity.PopulateString(identity.PopulateStringInput{
+		Mode:              identity.ACLTemplating,
 		ValidityCheckOnly: false,
 		String:            input,
 		Entity:            entity,
@@ -217,7 +218,7 @@ func applyIdentityTemplating(b *backend, data *dataBundle, input string) string 
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateNames(b *backend, data *dataBundle, names []string) string {
+func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
 		sanitizedName := name
 		emailDomain := name
