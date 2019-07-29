@@ -346,10 +346,18 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	return nil
 }
 
+// SetupOpts are used to pass options to the raft setup function.
 type SetupOpts struct {
-	TLSKeyring      *TLSKeyring
+	// TLSKeyring is the keyring to use for the cluster traffic.
+	TLSKeyring *TLSKeyring
+
+	// ClusterListener is the cluster hook used to register the raft handler and
+	// client with core's cluster listeners.
 	ClusterListener cluster.ClusterHook
-	StartAsLeader   bool
+
+	// StartAsLeader is used to specify this node should start as leader and
+	// bypass the leader election. This should be used with caution.
+	StartAsLeader bool
 }
 
 // SetupCluster starts the raft cluster and enables the networking needed for
