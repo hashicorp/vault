@@ -139,7 +139,7 @@ Default: cn`,
 
 		"use_deprecated_group_cn_behavior": {
 			Type:        framework.TypeBool,
-			Description: "If true, will revert to Vault <= 1.1.0 behavior for matching group CNs, which would only match if the attribute was uppercase 'CN', not lowrecase 'cn'. This is only needed in some upgrade scenarios for backwards compatibility. It is enabled by default if the config is upgraded but disabled by default on new configurations.",
+			Description: "If true, will revert to Vault <= 1.1.0 behavior for matching group CNs, which would only match if the attribute was uppercase 'CN', not lowercase 'cn'. This is only needed in some upgrade scenarios for backwards compatibility. It is enabled by default if the config is upgraded but disabled by default on new configurations.",
 		},
 	}
 }
