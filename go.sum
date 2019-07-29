@@ -262,8 +262,6 @@ github.com/hashicorp/go-multierror v1.0.0 h1:iVjPR7a6H0tWELX5NxNe7bYopibicUzc7uP
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
 github.com/hashicorp/go-plugin v1.0.1 h1:4OtAfUGbnKC6yS48p0CtMX2oFYtzFZVv6rok3cRWgnE=
 github.com/hashicorp/go-plugin v1.0.1/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn3cQptSMzBuY=
-github.com/hashicorp/go-raftchunking v0.6.1 h1:moEnaG3gcwsWNyIBJoD5PCByE+Ewkqxh6N05CT+MbwA=
-github.com/hashicorp/go-raftchunking v0.6.1/go.mod h1:cGlg3JtDy7qy6c/3Bu660Mic1JF+7lWqIwCFSb08fX0=
 github.com/hashicorp/go-raftchunking v0.6.2 h1:imj6CVkwXj6VzgXZQvzS+fSrkbFCzlJ2t00F3PacnuU=
 github.com/hashicorp/go-raftchunking v0.6.2/go.mod h1:cGlg3JtDy7qy6c/3Bu660Mic1JF+7lWqIwCFSb08fX0=
 github.com/hashicorp/go-retryablehttp v0.5.3 h1:QlWt0KvWT0lq8MFppF9tsJGF+ynG7ztc2KIPhzRGk7s=
@@ -324,8 +322,8 @@ github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190725170053-826a135618c1 h1
 github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190725170053-826a135618c1/go.mod h1:+Zk2sV+Ga2KPH5QTmDU3v7qBJDD9GljESoNdU/Ea/0A=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190725170059-5c0d558eb59d h1:VUD1T3aI5GL8uoSSDhHncHP8ksgepZsvSLhsRG8MJ3s=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190725170059-5c0d558eb59d/go.mod h1:KD56g+aeTNH2AM1l8iOBf5KxX+DSNKleEswJxXE8nI8=
-github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190725170108-e1b17ad0c772 h1:N219G3MUxPRhtOBMFVdsSQWU47MrvivSHLmTAPpHcs4=
-github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190725170108-e1b17ad0c772/go.mod h1:Cjw2YZt7x4arOBPReUAiYwVLVcN+Grre/XZxDjhhNEk=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190729220915-99bfa96d00ca h1:uXdvmZHL0FKXNfzy9PL4u8tfJOOceeRe31gzt7o8oWg=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190729220915-99bfa96d00ca/go.mod h1:bOd6HVuGZgcKR+QUUhGvQ+BU8d8KqRNAXvQ8ihBmtfo=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190725170114-7d66a3fa0600 h1:kyHR0JOKFDAaC4sjQ3iD1lTH6uaIfmTk4rQ+JOGW5Zo=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190725170114-7d66a3fa0600/go.mod h1:ndDvbwS9SkZrxzlnjsNtmYc2Qz1WNFtQEvlYuljE+NM=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190725170121-541440395211 h1:hZ21h0DWWKkoeMW7zkYaPVLxGZtKfYyIcE9G8xug4YQ=
