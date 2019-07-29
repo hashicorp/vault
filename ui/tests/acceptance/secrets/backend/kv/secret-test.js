@@ -255,8 +255,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let paths = [
       '(',
       ')',
-      //'"',
-      //"'",
+      '"',
+      "'",
       '!',
       '#',
       '$',
@@ -276,7 +276,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     ].map(char => `${char}some`);
     assert.expect(paths.length * 2);
     let secretName = '2';
-    let commands = paths.map(path => `write ${backend}/${path}/${secretName} 3=4`);
+    let commands = paths.map(path => `write '${backend}/${path}/${secretName}' 3=4`);
     await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
     for (let path of paths) {
       await listPage.visit({ backend, id: path });
