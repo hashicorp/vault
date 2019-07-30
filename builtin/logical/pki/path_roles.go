@@ -78,7 +78,8 @@ name in a request`,
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
 information. This parameter accepts a comma-separated 
-string or list of domains.`,
+string or list of domains.  This parameter supports
+templating.`,
 			},
 
 			"allow_bare_domains": &framework.FieldSchema{
@@ -135,7 +136,7 @@ Any valid IP is accepted.`,
 			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
-Any valid URI is accepted, these values support globbing.`,
+Any valid URI is accepted, these values support globbing.  This parameter supports templating.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed URI Subject Alternative Names",
 				},
@@ -819,13 +820,13 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 	return responseData
 }
 
-// ApplyIdentityTemplating updates the role by evaluating any templated field.
+// applyIdentityTemplating updates the role by evaluating any templated field.
 // Fields are only modified if a template was successfully applied to them.  An
 // error applying the template for one field does not prevent subsequent fields
 // from being updated.  Ideally, parse errors of identity templating should be
 // handled when configuring the role, instead when applying the role. Unfortunately,
 // the templating library does not support parsing validations yet.
-func (r *roleEntry) ApplyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
+func (r *roleEntry) applyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
 	info, err := sys.EntityInfo(req.EntityID)
 	if err != nil {
 		return err

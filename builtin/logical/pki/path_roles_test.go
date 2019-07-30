@@ -768,19 +768,23 @@ func TestPki_RoleTemplate(t *testing.T) {
 		expect      roleEntry
 		expectError bool
 	}{
-		{name: "allowed domain",
+		{
+			name:   "allowed domain",
 			role:   roleEntry{AllowedDomains: []string{"{{identity.entity.name}}"}},
 			expect: roleEntry{AllowedDomains: []string{entity.Name}},
 		},
-		{name: "allowed domain : aliases",
+		{
+			name:   "allowed domain : aliases",
 			role:   roleEntry{AllowedDomains: []string{"{{identity.entity.aliases.a1assor.name}}"}},
 			expect: roleEntry{AllowedDomains: []string{entity.Aliases[0].Name}},
 		},
-		{name: "allowed uri sans",
+		{
+			name:   "allowed uri sans",
 			role:   roleEntry{AllowedURISANs: []string{"{{identity.entity.metadata.MetadataFoo}}"}},
 			expect: roleEntry{AllowedURISANs: []string{entity.Metadata["MetadataFoo"]}},
 		},
-		{name: "continues on error",
+		{
+			name:        "continues on error",
 			role:        roleEntry{AllowedDomains: []string{"{{identity.entity.foo}}", "{{identity.entity.name}}"}},
 			expect:      roleEntry{AllowedDomains: []string{"{{identity.entity.foo}}", entity.Name}},
 			expectError: true,
@@ -788,7 +792,7 @@ func TestPki_RoleTemplate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := test.role.ApplyIdentityTemplating(sysView, &req)
+		err := test.role.applyIdentityTemplating(sysView, &req)
 		if test.expectError && err == nil {
 			t.Errorf("%s bad: expected an error", test.name)
 		} else if !test.expectError && err != nil {
