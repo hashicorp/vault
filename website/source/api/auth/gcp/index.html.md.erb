@@ -111,23 +111,6 @@ entities attempting to login.
   correspond to specific roles and will be rejected otherwise. Please see below
   for more information.
 
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role. This
-  can be specified as an integer number of seconds or as a duration value like
-  "5m".
-
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued in
-  seconds using this role. This can be specified as an integer number of seconds
-  or as a duration value like "5m".
-
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter. This can be specified as an integer number of seconds
-  or as a duration value like "5m".
-
-- `policies` `(array: [default])` - The list of policies to be set on tokens
-  issued using this role.
-
 - `bound_service_accounts` `(array: <required for iam>)` - An array of 
    service account emails or IDs that login is restricted to,
    either directly or through an associated instance. If set to
@@ -142,6 +125,8 @@ entities attempting to login.
    `project-$PROJECT_ID`, `folder-$PROJECT_ID`, and `organization-$ORG_ID`
    for the entities project and all its folder or organization ancestors. This
    requires Vault to have IAM permission `resourcemanager.projects.get`.
+
+<%= partial "partials/tokenfields" %>
     
 #### `iam`-only Parameters
 
