@@ -30,18 +30,8 @@ will be able to perform the login operation.
 
 - `role` `(string: <required>)` - Name of the role. Must correspond with the name of the role reflected in the arn.
 - `arn` `(string: <required>)` - The role's arn.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this
-  role.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
-  provided as "1h", where hour is the largest suffix.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
-  this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
-- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
-  roles to client IPs falling within the range of the specified CIDR(s).
+
+<%=partial("partials/tokenfields")%>
 
 ### Sample Payload
 
