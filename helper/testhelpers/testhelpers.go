@@ -5,20 +5,16 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/url"
-	"os"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -124,6 +120,11 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 		return
 	}
 
+	core.SealAccess().ClearCaches(context.Background())
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
 	client := core.Client
 	client.Sys().ResetUnsealProcess()
 	for j := 0; j < len(c.BarrierKeys); j++ {
@@ -216,7 +217,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Helper()
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		sealed := 0
 		for _, core := range cluster.Cores {
 			if core.Core.Sealed() {
@@ -287,33 +288,6 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	cluster.BarrierKeys = newBarrierKeys
-}
-
-func CreateRaftBackend(t testing.T, logger hclog.Logger, nodeID string) (physical.Backend, func(), error) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("raft dir: %s", raftDir)
-	cleanupFunc := func() {
-		os.RemoveAll(raftDir)
-	}
-
-	logger.Info("raft dir", "dir", raftDir)
-
-	conf := map[string]string{
-		"path":                   raftDir,
-		"node_id":                nodeID,
-		"performance_multiplier": "8",
-	}
-
-	backend, err := raft.NewRaftBackend(conf, logger)
-	if err != nil {
-		cleanupFunc()
-		t.Fatal(err)
-	}
-
-	return backend, cleanupFunc, nil
 }
 
 type TestRaftServerAddressProvider struct {
