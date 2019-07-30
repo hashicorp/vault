@@ -18,6 +18,8 @@ BUG FIXES:
  * api: Add backwards compat support for API env vars [GH-7135]
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role
    ARN when parsing this value [GH-6917]
+ * auth/ldap: Add `use_pre111_group_cn_behavior` flag to allow recovering from
+   a regression caused by a bug fix starting in 1.1.1 [GH-7208]
  * auth/aws: Use a role cache to avoid separate locking paths [GH-6926]
  * core: Fix a deadlock if a panic happens during request handling [GH-6920]
  * core: Fix an issue that may cause key upgrades to not be cleaned up properly
