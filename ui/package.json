@@ -68,7 +68,7 @@
     "ember-auto-import": "^1.2.3",
     "ember-basic-dropdown": "^1.0.0",
     "ember-basic-dropdown-hover": "^0.5.0",
-    "ember-cli": "~3.5.1",
+    "ember-cli": "~3.8.3",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^6.16.0",
     "ember-cli-browserstack": "^0.0.7",
@@ -93,8 +93,8 @@
     "ember-concurrency": "^0.10.0",
     "ember-concurrency-test-waiter": "^0.3.1",
     "ember-copy": "^1.0.0",
-    "ember-data": "~3.4.0",
-    "ember-data-model-fragments": "^3.3.0",
+    "ember-data": "~3.8.0",
+    "ember-data-model-fragments": "^4.0.0",
     "ember-engines": "^0.8.0",
     "ember-export-application-global": "^2.0.0",
     "ember-fetch": "^6.5.1",
@@ -105,12 +105,12 @@
     "ember-maybe-in-element": "^0.1.3",
     "ember-power-select-with-create": "cibernox/ember-power-select-with-create#6203918f247c1c5d692db4f9185ab8321d2125e1",
     "ember-qunit": "^4.4.1",
-    "ember-radio-button": "^1.1.1",
+    "ember-radio-button": "^2.0.1",
     "ember-resolver": "^5.0.1",
     "ember-responsive": "^3.0.0-beta.3",
     "ember-router-helpers": "^0.2.0",
     "ember-sinon": "^1.0.1",
-    "ember-source": "~3.4.0",
+    "ember-source": "~3.8.0",
     "ember-svg-jar": "^1.2.2",
     "ember-test-selectors": "^2.1.0",
     "ember-truth-helpers": "^2.1.0",
@@ -157,7 +157,7 @@
   },
   "engines": {
     "node": " >= 10.* <11",
-    "yarn": "1.7.3"
+    "yarn": "1.17.3"
   },
   "private": true,
   "ember-addon": {
