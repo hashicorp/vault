@@ -307,12 +307,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let model = this.modelForData;
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && isBlank(model.get('path') || model.id)) {
+      if (type === 'create' && isBlank(model.path || model.id)) {
         return;
       }
 
       this.persistKey(() => {
-        this.transitionToRoute(SHOW_ROUTE, this.model.id);
+        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
 
