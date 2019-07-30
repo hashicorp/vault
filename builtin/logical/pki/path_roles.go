@@ -824,8 +824,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 // error applying the template for one field does not prevent subsequent fields
 // from being updated.  Ideally, parse errors of identity templating should be
 // handled when configuring the role, instead when applying the role. Unfortunately,
-// the templating library does not support parsing validations yet. So, returning
-// the input is best choice.
+// the templating library does not support parsing validations yet.
 func (r *roleEntry) ApplyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
 	info, err := sys.EntityInfo(req.EntityID)
 	if err != nil {
@@ -864,7 +863,7 @@ func (r *roleEntry) ApplyIdentityTemplating(sys logical.SystemView, req *logical
 		input.String = r.AllowedDomains[i]
 		modified, out, err := identity.PopulateString(input)
 		if err != nil {
-			templateErr = err
+			templateErr = errwrap.Wrapf("error populating allowed_domains: {{err}}", err)
 		} else if modified {
 			r.AllowedDomains[i] = out
 		}
@@ -874,7 +873,7 @@ func (r *roleEntry) ApplyIdentityTemplating(sys logical.SystemView, req *logical
 		input.String = r.AllowedURISANs[i]
 		modified, out, err := identity.PopulateString(input)
 		if err != nil {
-			templateErr = err
+			templateErr = errwrap.Wrapf("error populating allowed_uri_sans: {{err}}", err)
 		} else if modified {
 			r.AllowedURISANs[i] = out
 		}
