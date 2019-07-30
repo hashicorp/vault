@@ -820,18 +820,21 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 	return responseData
 }
 
-// applyIdentityTemplating updates the role by evaluating any templated field.
-// Fields are only modified if a template was successfully applied to them.  An
-// error applying the template for one field does not prevent subsequent fields
-// from being updated.  Ideally, parse errors of identity templating should be
-// handled when configuring the role, instead when applying the role. Unfortunately,
-// the templating library does not support parsing validations yet.
+// applyIdentityTemplating updates the role by evaluating any templated field;
+// currently just AllowedDomains and AllowedURISANs.  Fields are only modified
+// if a template was successfully applied to them.  An error applying the
+// template for one field does not prevent subsequent fields from being updated.
+// Ideally, parse errors of identity templating should be handled when
+// configuring the role, instead when applying the role. Unfortunately, the
+// templating library does not support parsing validations yet.
 func (r *roleEntry) applyIdentityTemplating(sys logical.SystemView, req *logical.Request) error {
 	info, err := sys.EntityInfo(req.EntityID)
 	if err != nil {
 		return err
 	}
 	if info == nil {
+		// we may hit this case if token auth is being used.  Carry on
+		// without applying templating
 		return nil
 	}
 
