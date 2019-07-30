@@ -33,7 +33,8 @@ export default EditBase.extend({
       }
       return this.store.createRecord(modelType);
     }
-    return secretModel(this.store, backend, transition.queryParams.initialKey);
+
+    return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 
   model(params, transition) {
