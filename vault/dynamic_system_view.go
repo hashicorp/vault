@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -87,6 +88,9 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 		d.core.logger.Error("failed to lookup token namespace", "error", namespace.ErrNoNamespace)
 		return false
 	}
+
+	// AllowOperation path should be namespace scoped
+	path = strings.TrimPrefix(path, tokenNS.Path)
 
 	// Add identity policies from all the namespaces
 	entity, identityPolicies, err := d.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
