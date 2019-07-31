@@ -23,79 +23,66 @@
     </div>
     <div class="column has-text-right">
       <PopupMenu name="secret-menu">
-        <nav class="menu">
-          <ul class="menu-list">
-            {{#if item.isFolder}}
-              <SecretLink
-                @mode="list"
-                @secret={{item.id}}
-                @class="has-text-black has-text-weight-semibold"
-              >
-                Contents
-              </SecretLink>
-            {{else}}
-              {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
-                <li class="action">
-                  <button disabled type="button" class="link button is-loading is-transparent">
-                    loading
-                  </button>
-                </li>
-              {{else}}
-                {{#if item.canRead}}
-                  <li class="action">
-                    <SecretLink
-                      @mode="show"
-                      @secret={{item.id}}
-                      @class="has-text-black has-text-weight-semibold"
-                    >
-                      Details
-                    </SecretLink>
-                  </li>
-                  {{#if backendModel.isV2KV}}
+        <Confirm as |c|>
+          <c.Content >
+            <nav class="menu">
+              <ul class="menu-list">
+                {{#if item.isFolder}}
+                  <SecretLink @mode="list" @secret={{item.id}} @class="has-text-black has-text-weight-semibold">
+                    Contents
+                  </SecretLink>
+                {{else}}
+                  {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
                     <li class="action">
-                      <SecretLink
-                        @mode="versions"
-                        @secret={{item.id}}
-                        @class="has-text-black has-text-weight-semibold"
-                      >
-                        View version history
-                      </SecretLink>
+                      <button disabled type="button" class="link button is-loading is-transparent">
+                        loading
+                      </button>
                     </li>
+                  {{else}}
+                    {{#if item.canRead}}
+                      <li class="action">
+                        <SecretLink @mode="show" @secret={{item.id}} @class="has-text-black has-text-weight-semibold">
+                          Details
+                        </SecretLink>
+                      </li>
+                      {{#if backendModel.isV2KV}}
+                        <li class="action">
+                          <SecretLink @mode="versions" @secret={{item.id}} @class="has-text-black has-text-weight-semibold">
+                            View version history
+                          </SecretLink>
+                        </li>
+                      {{/if}}
+                    {{/if}}
+                    {{#if item.canEdit}}
+                      <li class="action">
+                        <SecretLink @mode="edit" @secret={{item.id}} @class="has-text-black has-text-weight-semibold">
+                          {{if backendModel.isV2KV
+                                      "Create new version"
+                                      "Edit"
+                                    }}
+                        </SecretLink>
+                      </li>
+                    {{/if}}
+                    {{#if item.canDelete}}
+                      <li class="action">
+                        <c.Trigger class="link is-destroy" @id={{item.id}}>
+                          <button type="button"
+                            onclick={{action c.onTrigger item.id}}>{{if backendModel.isV2KV "Permanently delete" "Delete"}}</button>
+                        </c.Trigger>
+                        {{!-- data-test-v2-kv-delete={{item.id}} --}}
+                      </li>
+                    {{/if}}
                   {{/if}}
                 {{/if}}
-                {{#if item.canEdit}}
-                  <li class="action">
-                    <SecretLink
-                      @mode="edit"
-                      @secret={{item.id}}
-                      @class="has-text-black has-text-weight-semibold"
-                    >
-                      {{if backendModel.isV2KV
-                        "Create new version"
-                        "Edit"
-                      }}
-                    </SecretLink>
-                  </li>
-                {{/if}}
-                {{#if item.canDelete}}
-                  <li class="action">
-                    <ConfirmAction
-                      @buttonClasses="link is-destroy"
-                      @confirmMessage="This will permanently delete this secret and all its versions."
-                      @onConfirmAction={{action "delete" item "secret"}}
-                      data-test-v2-kv-delete={{item.id}}
-                    >
-                      {{if backendModel.isV2KV
-                        "Permanently delete"
-                        "Delete"
-                      }}
-                    </ConfirmAction>
-                  </li>
-                {{/if}}
-              {{/if}}
-            {{/if}}
-          </ul>
-        </nav>
+              </ul>
+            </nav>
+          </c.Content>
+          <c.Message class="link is-destroy" @id={{item.id}}>
+            This will permanently delete this secret and all its vesions.
+            <button type="button" onclick={{action c.onCancel}}>Cancel</button>
+            <button type="button" onclick={{action "delete" item "secret"}}>Delete</button>
+          </c.Message>
+        </Confirm>
       </PopupMenu>
     </div>
   </div>

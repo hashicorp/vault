@@ -1,0 +1,18 @@
+  <div class="confirm" ...attributes>
+    {{yield (hash Content=(component "confirm/content") Trigger=(component "confirm/trigger") Message=(component
+    "confirm/message"
+    renderedTrigger=(readonly this.openTrigger)
+    ) onTrigger=(action (mut this.openTrigger)))}}
+  </div>
+  <div class="confirm-overlay">
+    {{yield (hash
+      onCancel=(action (mut this.openTrigger) '')
+      Message=(component
+      "confirm/message"
+      renderedTrigger=(readonly this.openTrigger)
+      ))
+    }}
+  </div>
+
+{{!-- the openTrigger property is on the parent component. Clicking the trigger mutates the state of the parent (Confirm) component. --}}
+{{!-- rederedTrigger gets a read only copy of the openTrigger, which corresponds to the ID of the currently opened trigger --}}
