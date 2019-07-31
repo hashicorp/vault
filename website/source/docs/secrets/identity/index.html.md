@@ -215,7 +215,7 @@ When a token is requested, the resulting template might be populated as:
   "color": "green",
   "userinfo": {
      "username": "bob",
-     "groups": ["web", "engr", "default]
+     "groups": ["web", "engr", "default"]
   
   "nbf": 1561411915,
 }
@@ -233,7 +233,7 @@ which would be merged with the base OIDC claims into the final token:
   "color": "green",
   "userinfo": {
      "username": "bob",
-     "groups": ["web", "engr", "default]
+     "groups": ["web", "engr", "default"]
   },
   "nbf": 1561411915,
 }
