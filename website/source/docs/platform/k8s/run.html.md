@@ -35,7 +35,8 @@ it is highly recommended that you
 ~> **Security Warning:** By default, the chart will install an insecure configuration
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
-a properly secured Kubernetes cluster.
+a properly secured Kubernetes cluster.  See the [architecture reference](/docs/platform/k8s/run.html#architecture) 
+for a production deployment checklist.
 
 ## How-To
 
@@ -169,3 +170,62 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 
 After a few moments the Vault cluster should elect a new active primary.  The Vault 
 cluster is now upgraded!
+
+
+## Architecture
+
+We recommend running Vault on Kubernetes with the same
+[general architecture](/docs/internals/architecture.html)
+as running it anywhere else. There are some benefits Kubernetes can provide
+that eases operating a Vault cluster and we document those below. The standard
+[production deployment guide](https://learn.hashicorp.com/vault/day-one/production-hardening) is still an 
+important read even if running Vault within Kubernetes.
+
+### Production Deployment Checklist
+
+*End-to-End TLS.* Vault should always be used with TLS in production. If 
+intermediate load balancers or reverse proxies are used to front Vault, 
+they should not terminate TLS. This way traffic is always encrypted in transit 
+to Vault and minimizes risks introduced by intermediate layers.
+
+See the [official documentation](/docs/platform/k8s/helm.html#standalone-server-with-tls) 
+for example on configuring Vault Helm to use TLS.
+
+*Single Tenancy.* Vault should be the only main process running on a machine. 
+This reduces the risk that another process running on the same machine is 
+compromised and can interact with Vault. This can be accomplished by using Vault 
+Helm's `affinity` configurable. 
+
+See the [official documentation](/docs/platform/k8s/helm.html#highly-available-vault-cluster-with-consul) 
+for example on configuring Vault Helm to use affinity rules.
+
+*Enable Auditing.* Vault supports several auditing backends. Enabling auditing 
+provides a history of all operations performed by Vault and provides a forensics 
+trail in the case of misuse or compromise. Audit logs securely hash any sensitive 
+data, but access should still be restricted to prevent any unintended disclosures.  
+Vault Helm includes a configurable `auditStorage` option that will provision a persistent 
+volume to store audit logs.
+
+See the [official documentation](/docs/platform/k8s/helm.html#standalone-server-with-audit-storage) 
+for an example on configuring Vault Helm to use auditing.
+
+*Immutable Upgrades.* Vault relies on an external storage backend for persistence,
+and this decoupling allows the servers running Vault to be managed immutably.
+When upgrading to new versions, new servers with the upgraded version of Vault
+are brought online. They are attached to the same shared storage backend and
+unsealed. Then the old servers are destroyed. This reduces the need for remote
+access and upgrade orchestration which may introduce security gaps.
+
+See the [upgrade section](/docs/platform/k8s/run.html#how-to) for instructions
+on upgrading Vault on Kubernetes.
+
+*Upgrade Frequently.* Vault is actively developed, and updating frequently is 
+important to incorporate security fixes and any changes in default settings such 
+as key lengths or cipher suites. Subscribe to the Vault mailing list and 
+GitHub CHANGELOG for updates.
+
+*Restrict Storage Access.* Vault encrypts all data at rest, regardless of which 
+storage backend is used. Although the data is encrypted, an attacker with arbitrary 
+control can cause data corruption or loss by modifying or deleting keys. Access 
+to the storage backend should be restricted to only Vault to avoid unauthorized 
+access or operations.

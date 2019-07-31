@@ -25,7 +25,9 @@ may still change significantly over time. Please always run Helm with
 ~> **Security Warning:** By default, the chart will install an insecure configuration
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
-a properly secured Kubernetes cluster.
+a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/). 
+See the [architecture reference](/docs/platform/k8s/run.html#architecture) 
+for a Vault Helm production deployment checklist.
 
 ## Using the Helm Chart
 
@@ -314,6 +316,11 @@ $ curl \
 
 ## Helm Chart Examples
 
+The following are different configuration examples to support a variety of 
+deployment models.
+
+### Standalone Server with Load Balanced UI
+
 The below `values.yaml` can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
 
 ```
@@ -348,6 +355,8 @@ ui:
   enabled: true
   serviceType: LoadBalancer
 ```
+
+### Standalone Server with TLS
 
 The below `values.yaml` can be used to set up a single server Vault cluster using TLS.  
 This assumes that a Kubernetes `secret` exists with the server certificate, key and 
@@ -389,18 +398,64 @@ server:
     size: 10Gi
     storageClass: null
     accessMode: ReadWriteOnce
-
-ui:
-  enabled: true
-  serviceType: LoadBalancer
 ```
 
-The below `values.yaml` can be used to set up a five server Vault Enterprise cluster using Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal and exposes the Vault UI via a Load Balancer.
+### Standalone Server with Audit Storage
+
+The below `values.yaml` can be used to set up a single server Vault cluster with 
+auditing enabled.
 
 ```
 global:
   enabled: true
-  image: "vault-enterprise:1.2.0-beta2-ent"
+  image: "vault:1.2.0-beta2"
+
+server:
+  standalone:
+    enabled: true
+    config: |
+      api_addr = "http://POD_IP:8200"
+      listener "tcp" {
+        tls_disable = true
+        address     = "0.0.0.0:8200"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  service:
+    enabled: true
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+
+  auditStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+```
+
+After Vault has been deployed, initialized and unsealed, auditing can be enabled 
+by running the following command against the Vault pod:
+
+```bash
+$ kubectl exec -ti <POD NAME> --  vault audit enable file file_path=/vault/audit/vault_audit.log
+```
+
+### Highly Available Vault Cluster with Consul
+
+The below `values.yaml` can be used to set up a five server Vault cluster using 
+Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
+
+```
+global:
+  enabled: true
+  image: "vault:1.2.0-beta2"
 
 server:
   extraEnvironmentVars: {}
@@ -448,8 +503,4 @@ server:
          key_ring    = "vault-unseal-kr"
          crypto_key  = "vault-unseal-key"
       }
-
-ui:
-  enabled: true
-  serviceType: "LoadBalancer"
 ```
