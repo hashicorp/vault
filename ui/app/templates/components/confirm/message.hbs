@@ -1,5 +1,5 @@
 {{#if shouldYield}}
-  {{#ember-wormhole to="confirm-overlay"}}
+  {{#maybe-in-element wormholeReference false}}
     {{yield}}
-  {{/ember-wormhole}}
+  {{/maybe-in-element}}
 {{/if}}

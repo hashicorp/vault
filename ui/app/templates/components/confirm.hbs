@@ -3,13 +3,14 @@
       Trigger=(component "confirm/trigger")
       Message=(component "confirm/message"
         renderedTrigger=(readonly this.openTrigger)
+        wormholeReference=this.wormholeReference
       )
       onTrigger=(action (mut this.openTrigger))
       onCancel=(action (mut this.openTrigger) '')
       )
     }}
   </div>
-  <div id="confirm-overlay">
+  <div id={{this.wormholeId}}>
   </div>
 
 {{!-- the openTrigger property is on the parent component. Clicking the trigger mutates the state of the parent (Confirm) component. --}}

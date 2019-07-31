@@ -64,8 +64,10 @@
                     {{/if}}
                     {{#if item.canDelete}}
                       <li class="action">
-                        <c.Trigger class="link is-destroy" @id={{item.id}}>
-                          <button type="button"
+                        <c.Trigger>
+                          <button
+                            type="button"
+                            class="link is-destroy"
                             onclick={{action c.onTrigger item.id}}>{{if backendModel.isV2KV "Permanently delete" "Delete"}}</button>
                         </c.Trigger>
                         {{!-- data-test-v2-kv-delete={{item.id}} --}}
@@ -75,7 +77,7 @@
                 {{/if}}
               </ul>
             </nav>
-          <c.Message class="link is-destroy" @id={{item.id}}>
+          <c.Message @id={{item.id}}>
             This will permanently delete this secret and all its vesions.
             <button type="button" onclick={{action c.onCancel}}>Cancel</button>
             <button type="button" onclick={{action "delete" item "secret"}}>Delete</button>
