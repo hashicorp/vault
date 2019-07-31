@@ -157,7 +157,7 @@ There are no parameters to this operation.
 ```$ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    http://127.0.0.1:8211/v1/auth/aws/config/rotate-root
+    http://127.0.0.1:8200/v1/auth/aws/config/rotate-root
 ```
 
 ### Sample Response
