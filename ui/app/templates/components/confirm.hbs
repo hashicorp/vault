@@ -5,10 +5,10 @@
         renderedTrigger=(readonly this.openTrigger)
         wormholeReference=this.wormholeReference
       )
-      onTrigger=(action (mut this.openTrigger))
-      onCancel=(action (mut this.openTrigger) '')
+      onTrigger=(action 'onTrigger')
+      onCancel=(action 'onCancel')
       )
     }}
   </div>
-  <div id={{this.wormholeId}} class="confirm-overlay">
+  <div id={{this.wormholeId}} class="confirm-overlay {{transitionDirection}}">
   </div>

@@ -11,8 +11,14 @@
   right: 0;
   transform: translate(100%);
 
-  &.move-left {
+  &.left {
     transform: translate(0%);
+    transition: 1s ease-out;
+  }
+
+  &.right {
+    transform: translate(100%);
+    transition: 1s ease-out;
   }
 }
 
