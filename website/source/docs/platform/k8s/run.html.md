@@ -35,7 +35,8 @@ it is highly recommended that you
 ~> **Security Warning:** By default, the chart will install an insecure configuration
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
-a properly secured Kubernetes cluster.  See the [architecture reference](/docs/platform/k8s/run.html#architecture) 
+a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
+See the [architecture reference](/docs/platform/k8s/run.html#architecture) 
 for a production deployment checklist.
 
 ## How-To
