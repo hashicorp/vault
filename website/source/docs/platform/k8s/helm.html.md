@@ -314,7 +314,7 @@ $ curl \
 
 ## Helm Chart Examples
 
-The below values.yaml can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
+The below `values.yaml` can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
 
 ```
 global:
@@ -324,7 +324,72 @@ global:
 server:
   standalone:
     enabled: true
+    config: |
+      api_addr = "http://POD_IP:8200"
+      listener "tcp" {
+        tls_disable = true
+        address     = "0.0.0.0:8200"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  service:
+    enabled: true
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
     
+ui:
+  enabled: true
+  serviceType: LoadBalancer
+```
+
+The below `values.yaml` can be used to set up a single server Vault cluster using TLS.  
+This assumes that a Kubernetes `secret` exists with the server certificate, key and 
+certificate authority:
+
+```
+global:
+  enabled: true
+  image: "vault:1.2.0-beta2"
+
+server:
+  extraVolumes:
+  - type: secret
+    name: vault-server-tls
+
+  extraEnvironmentVars:
+    VAULT_ADDR: "https://localhost:8200"
+
+  standalone:
+    enabled: true
+    config: |
+      api_addr = "https://POD_IP:8200"
+      listener "tcp" {
+        tls_cert_file = "/vault/userconfig/vault-server-tls/vault.crt"
+        tls_key_file  = "/vault/userconfig/vault-server-tls/vault.key"
+        tls_client_ca_file = "/vault/userconfig/vault-server-tls/vault.ca"
+        address     = "0.0.0.0:8200"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  service:
+    enabled: true
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+
 ui:
   enabled: true
   serviceType: LoadBalancer
