@@ -1,3 +1,21 @@
+.confirm-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.confirm-overlay {
+  position: absolute;
+  background-color: white;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  transform: translate(100%);
+
+  &.move-left {
+    transform: translate(0%);
+  }
+}
+
 .confirm-action > span {
   @include from($tablet) {
     align-items: center;

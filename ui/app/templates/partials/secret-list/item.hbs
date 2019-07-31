@@ -77,10 +77,11 @@
                 {{/if}}
               </ul>
             </nav>
-          <c.Message @id={{item.id}}>
-            This will permanently delete this secret and all its vesions.
-            <button type="button" onclick={{action c.onCancel}}>Cancel</button>
-            <button type="button" onclick={{action "delete" item "secret"}}>Delete</button>
+          <c.Message
+            @id={{item.id}}
+            @onCancel={{action c.onCancel}}
+            @onConfirm={{action "delete" item "secret"}}
+            @message="This will permanently delete this secret and all its vesions.">
           </c.Message>
         </Confirm>
       </PopupMenu>
