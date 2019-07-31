@@ -24,7 +24,6 @@
     <div class="column has-text-right">
       <PopupMenu name="secret-menu">
         <Confirm as |c|>
-          <c.Content >
             <nav class="menu">
               <ul class="menu-list">
                 {{#if item.isFolder}}
@@ -76,7 +75,6 @@
                 {{/if}}
               </ul>
             </nav>
-          </c.Content>
           <c.Message class="link is-destroy" @id={{item.id}}>
             This will permanently delete this secret and all its vesions.
             <button type="button" onclick={{action c.onCancel}}>Cancel</button>
