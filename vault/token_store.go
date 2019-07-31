@@ -2094,8 +2094,18 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
+	// Get the context namespace
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
+	mountPath := req.MountPoint+req.Path
+	if ns != namespace.RootNamespace {
+		mountPath = strings.TrimPrefix(mountPath, ns.Path)
+	}
+	isSudo := ts.System().SudoPrivilege(ctx, mountPath, req.ClientToken)
 
 	// Read and parse the fields
 	var data struct {
@@ -2122,10 +2132,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// If the context's namespace is different from the parent and this is an
 	// orphan token creation request, then this is an admin token generation for
 	// the namespace
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if ns.ID != parent.NamespaceID {
 		parentNS, err := NamespaceByID(ctx, parent.NamespaceID, ts.core)
 		if err != nil {
