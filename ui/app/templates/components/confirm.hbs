@@ -1,4 +1,4 @@
-  <div class="confirm" ...attributes>
+  <div class="confirm {{if openTrigger "show-confirm"}}" style="height: {{if height height ""}}px" ...attributes>
     {{yield (hash
       Trigger=(component "confirm/trigger")
       Message=(component "confirm/message"
@@ -10,5 +10,5 @@
       )
     }}
   </div>
-  <div id={{this.wormholeId}} class="confirm-overlay {{transitionDirection}}">
+  <div id={{this.wormholeId}} class="confirm-overlay {{if openTrigger "left"}}">
   </div>

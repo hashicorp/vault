@@ -1,24 +1,22 @@
 .confirm-wrapper {
   position: relative;
   overflow: hidden;
+  transition: height 150ms, transform 150ms;
+}
+
+.confirm.show-confirm {
+  transform: translateX(-100%);
 }
 
 .confirm-overlay {
   position: absolute;
   background-color: white;
   top: 0;
-  bottom: 0;
-  right: 0;
-  transform: translate(100%);
+  transform: translateX(100%);
 
   &.left {
-    transform: translate(0%);
-    transition: 1s ease-out;
-  }
-
-  &.right {
-    transform: translate(100%);
-    transition: 1s ease-out;
+    transform: translateX(0%);
+    transition: height 150ms, transform 150ms;
   }
 }
 

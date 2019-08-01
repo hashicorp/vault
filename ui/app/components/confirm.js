@@ -4,7 +4,7 @@ import { computed } from '@ember/object';
 export default Component.extend({
   classNames: ['confirm-wrapper'],
   itemId: null,
-  transitionDirection: '',
+  height: 0,
   wormholeReference: null,
   wormholeId: computed(function() {
     return `confirm-${this.elementId}`;
@@ -12,14 +12,19 @@ export default Component.extend({
   didInsertElement() {
     this.set('wormholeReference', this.element.querySelector(`#${this.wormholeId}`));
   },
+  updateHeight: function() {
+    let height;
+    height = this.openTrigger ? this.element.querySelector('.confirm-overlay').clientHeight : 0;
+    this.set('height', height);
+  },
   actions: {
     onTrigger: function(itemId) {
       this.set('openTrigger', itemId);
-      this.set('transitionDirection', 'left');
+      this.updateHeight();
     },
     onCancel: function() {
-      this.set('transitionDirection', 'right');
-      // this.set('openTrigger', '');
+      this.set('openTrigger', '');
+      this.updateHeight();
     },
   },
 });
