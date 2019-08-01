@@ -130,6 +130,7 @@
     "qunit-dom": "^0.7.1",
     "route-recognizer": "^0.3.4",
     "sass-svg-uri": "^1.0.0",
+    "shell-quote": "^1.6.1",
     "string.prototype.endswith": "^0.2.0",
     "string.prototype.startswith": "^0.2.0",
     "swagger-ui-dist": "^3.22.3",
