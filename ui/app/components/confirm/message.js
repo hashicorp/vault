@@ -11,7 +11,4 @@ export default Component.extend({
   message: 'You will not be able to recover it later.',
   confirmButtonText: 'Delete',
   cancelButtonText: 'Cancel',
-  shouldYield: computed('id', 'renderedTrigger', function() {
-    return this.id === this.renderedTrigger;
-  }),
 });
