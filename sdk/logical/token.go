@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"fmt"
 	"time"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
@@ -27,6 +28,27 @@ const (
 	// TokenTypeDefault is sent back by the mount, create Batch tokens
 	TokenTypeDefaultBatch
 )
+
+func (t *TokenType) UnmarshalJSON(b []byte) error {
+	if len(b) == 1 {
+		*t = TokenType(b[0])
+		return nil
+	}
+
+	// Handle upgrade from pre-1.2 where we were serialized as string:
+	s := string(b)
+	switch s {
+	case `"default"`:
+		*t = TokenTypeDefault
+	case `"service"`:
+		*t = TokenTypeService
+	case `"batch"`:
+		*t = TokenTypeBatch
+	default:
+		return fmt.Errorf("Unknown token type %q", s)
+	}
+	return nil
+}
 
 func (t TokenType) String() string {
 	switch t {
