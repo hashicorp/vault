@@ -2,7 +2,6 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 
 export default Component.extend({
-  classNames: ['confirm-wrapper'],
   itemId: null,
   height: 0,
   wormholeReference: null,

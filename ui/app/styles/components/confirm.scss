@@ -1,23 +1,22 @@
 .confirm-wrapper {
   position: relative;
   overflow: hidden;
+}
+.confirm {
   transition: height 150ms, transform 150ms;
 }
 
-.confirm.show-confirm {
+.show-confirm {
   transform: translateX(-100%);
+  transition: height 150ms, transform 150ms;
 }
 
 .confirm-overlay {
   position: absolute;
   background-color: white;
   top: 0;
-  transform: translateX(100%);
-
-  &.left {
-    transform: translateX(0%);
-    transition: height 150ms, transform 150ms;
-  }
+  left: 100%;
+  width: 100%;
 }
 
 .confirm-action > span {
