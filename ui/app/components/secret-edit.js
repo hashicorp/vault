@@ -158,22 +158,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
-  isWriteWithoutRead: computed(
-    'model.{failedServerRead,selectedVersion.failedServerRead}',
-    'isV2',
-    function() {
-      if (!this.model) return;
-      // if the version couldn't be read from the server
-      if (this.isV2 && this.model.selectedVersion.failedServerRead) {
-        return true;
-      }
-      // if the model couldn't be read from the server
-      if (!this.isV2 && this.model.failedServerRead) {
-        return true;
-      }
-      return false;
+  isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
+    if (!this.model) return;
+    // if the version couldn't be read from the server
+    if (this.isV2 && this.modelForData.failedServerRead) {
+      return true;
     }
-  ),
+    // if the model couldn't be read from the server
+    if (!this.isV2 && this.model.failedServerRead) {
+      return true;
+    }
+    return false;
+  }),
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);

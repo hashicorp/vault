@@ -25,7 +25,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   hooks.beforeEach(async function() {
     this.server = apiStub({ usePassthrough: true });
-    await logout.visit();
     return authPage.login();
   });
 

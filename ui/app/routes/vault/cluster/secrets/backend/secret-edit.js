@@ -127,6 +127,7 @@ export default Route.extend(UnloadModelRoute, {
     try {
       if (secretModel.failedServerRead) {
         // we couldn't read metadata, so we want to directly fetch the version
+
         versionModel =
           this.store.peekRecord('secret-v2-version', JSON.stringify(versionId)) ||
           (await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
@@ -145,6 +146,7 @@ export default Route.extend(UnloadModelRoute, {
         // versionModel is then a partial model from the metadata (if we have read there), or
         // we need to create one on the client
         if (version) {
+          version.set('failedServerRead', true);
           versionModel = version;
         } else {
           this.store.push({
