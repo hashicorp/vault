@@ -8,8 +8,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.5.4
 	github.com/hashicorp/go-rootcerts v1.0.1
-	github.com/hashicorp/vault/api v1.0.3-0.20190719145648-41d3939b1ff9
-	github.com/hashicorp/vault/sdk v0.1.12-0.20190719011625-af0b660abb36
+	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/sdk v0.1.13
 	golang.org/x/sys v0.0.0-20190410170021-cc4d4f50624c // indirect
-	google.golang.org/grpc v1.20.0 // indirect
 )

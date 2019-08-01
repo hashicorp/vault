@@ -106,7 +106,6 @@ func EnsurePath(path string, dir bool) error {
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Create the FSM.
-	var err error
 	fsm, err := NewFSM(conf, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
@@ -255,7 +254,7 @@ func (b *RaftBackend) Initialized() bool {
 // SetTLSKeyring is used to install a new keyring. If the active key has changed
 // it will also close any network connections or streams forcing a reconnect
 // with the new key.
-func (b *RaftBackend) SetTLSKeyring(keyring *RaftTLSKeyring) error {
+func (b *RaftBackend) SetTLSKeyring(keyring *TLSKeyring) error {
 	b.l.RLock()
 	err := b.streamLayer.setTLSKeyring(keyring)
 	b.l.RUnlock()
@@ -347,9 +346,23 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	return nil
 }
 
+// SetupOpts are used to pass options to the raft setup function.
+type SetupOpts struct {
+	// TLSKeyring is the keyring to use for the cluster traffic.
+	TLSKeyring *TLSKeyring
+
+	// ClusterListener is the cluster hook used to register the raft handler and
+	// client with core's cluster listeners.
+	ClusterListener cluster.ClusterHook
+
+	// StartAsLeader is used to specify this node should start as leader and
+	// bypass the leader election. This should be used with caution.
+	StartAsLeader bool
+}
+
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
-func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener cluster.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
 
 	b.l.Lock()
@@ -372,24 +385,24 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 	}
 
 	switch {
-	case raftTLSKeyring == nil && clusterListener == nil:
+	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
-	case raftTLSKeyring == nil:
+	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case clusterListener == nil:
+	case opts.ClusterListener == nil:
 		return errors.New("no cluster listener provided")
 	default:
 		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := clusterListener.TLSConfig(ctx)
+		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
 		if err != nil {
 			return err
 		}
 
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), raftTLSKeyring, clusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
 		if err != nil {
 			return err
 		}
@@ -423,10 +436,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		}
 		// If we are the only node we should start as the leader.
 		if len(bootstrapConfig.Servers) == 1 {
-			raftConfig.StartAsLeader = true
+			opts.StartAsLeader = true
 		}
 	}
 
+	raftConfig.StartAsLeader = opts.StartAsLeader
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
 
@@ -454,7 +468,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		b.logger.Info("raft recovery deleted peers.json")
 	}
 
-	raftObj, err := raft.NewRaft(raftConfig, raftchunking.NewChunkingConfigurationStore(b.fsm), b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
 		return err
@@ -464,10 +478,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
-		clusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
+		opts.ClusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
 
 		// Add Client to the cluster.
-		clusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
+		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
 	return nil
@@ -534,9 +548,11 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 	for _, server := range future.Configuration().Servers {
 		entry := &RaftServer{
-			NodeID:          string(server.ID),
-			Address:         string(server.Address),
-			Leader:          server.Address == b.raft.Leader(),
+			NodeID:  string(server.ID),
+			Address: string(server.Address),
+			// Since we only service this request on the active node our node ID
+			// denotes the raft leader.
+			Leader:          string(server.ID) == b.NodeID(),
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
@@ -777,19 +793,45 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
-	case len(commandBytes) <= raft.SuggestedMaxDataSize:
+	case len(commandBytes) <= raftchunking.ChunkSize:
 		applyFuture = b.raft.Apply(commandBytes, 0)
 	default:
+		chunked = true
 		applyFuture = raftchunking.ChunkingApply(commandBytes, nil, 0, b.raft.ApplyLog)
 	}
-	err = applyFuture.Error()
-	if err != nil {
+
+	if err := applyFuture.Error(); err != nil {
 		return err
 	}
 
-	if resp, ok := applyFuture.Response().(*FSMApplyResponse); !ok || !resp.Success {
+	resp := applyFuture.Response()
+
+	if chunked {
+		// In this case we didn't apply all chunks successfully, possibly due
+		// to a term change
+		if resp == nil {
+			// This returns the error in the interface because the raft library
+			// returns errors from the FSM via the future, not via err from the
+			// apply function. Downstream client code expects to see any error
+			// from the FSM (as opposed to the apply itself) and decide whether
+			// it can retry in the future's response.
+			return errors.New("applying chunking failed, please retry")
+		}
+
+		// We expect that this conversion should always work
+		chunkedSuccess, ok := resp.(raftchunking.ChunkingSuccess)
+		if !ok {
+			return errors.New("unknown type of response back from chunking FSM")
+		}
+
+		// Replace the reply with the inner wrapped version
+		resp = chunkedSuccess.Response
+	}
+
+	if resp, ok := resp.(*FSMApplyResponse); !ok || !resp.Success {
 		return errors.New("could not apply data")
 	}
 
@@ -824,8 +866,10 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 	leaderLost := make(chan struct{})
 	go func() {
 		select {
-		case <-leaderNotifyCh:
-			close(leaderLost)
+		case isLeader := <-leaderNotifyCh:
+			if !isLeader {
+				close(leaderLost)
+			}
 		case <-stopCh:
 		}
 	}()

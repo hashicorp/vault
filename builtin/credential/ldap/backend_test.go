@@ -1,5 +1,3 @@
-// +build !travis
-
 package ldap
 
 import (
@@ -896,17 +894,18 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			TokenExplicitMaxTTL: 24 * time.Hour,
 		},
 		ConfigEntry: &ldaputil.ConfigEntry{
-			Url:                "ldap://ldap.forumsys.com",
-			UserAttr:           "uid",
-			UserDN:             "dc=example,dc=com",
-			GroupDN:            "dc=example,dc=com",
-			BindDN:             "cn=read-only-admin,dc=example,dc=com",
-			GroupFilter:        defParams.GroupFilter,
-			DenyNullBind:       defParams.DenyNullBind,
-			GroupAttr:          defParams.GroupAttr,
-			TLSMinVersion:      defParams.TLSMinVersion,
-			TLSMaxVersion:      defParams.TLSMaxVersion,
-			CaseSensitiveNames: falseBool,
+			Url:                      "ldap://ldap.forumsys.com",
+			UserAttr:                 "uid",
+			UserDN:                   "dc=example,dc=com",
+			GroupDN:                  "dc=example,dc=com",
+			BindDN:                   "cn=read-only-admin,dc=example,dc=com",
+			GroupFilter:              defParams.GroupFilter,
+			DenyNullBind:             defParams.DenyNullBind,
+			GroupAttr:                defParams.GroupAttr,
+			TLSMinVersion:            defParams.TLSMinVersion,
+			TLSMaxVersion:            defParams.TLSMaxVersion,
+			CaseSensitiveNames:       falseBool,
+			UsePre111GroupCNBehavior: new(bool),
 		},
 	}
 
