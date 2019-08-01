@@ -339,7 +339,7 @@ Use the `transit/decrypt` endpoint to decrypt the ciphertext resulted in [Step
 # Pass the ciphertext in the request payload to decode
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"ciphertext": "Yvault:v1:/9hdQutaWpZR72s3+VSCLK1JNhV1wKM49hYVjh7RjmuxIy/OvshtgV4L4uVB+aQ="}' \
+       --data '{"ciphertext": "vault:v1:/9hdQutaWpZR72s3+VSCLK1JNhV1wKM49hYVjh7RjmuxIy/OvshtgV4L4uVB+aQ="}' \
        https://127.0.0.1:8200/v1/transit/decrypt/orders | jq
 {
    "request_id": "062d7998-8932-76f2-f96c-5938a55ff005",
