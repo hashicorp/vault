@@ -1,3 +1,10 @@
+## 1.2.1 (Unreleased)
+
+BUG FIXES:
+
+ * agent: Fix a panic on creds pulling in some error conditions in `aws` and
+   `alicloud` auth methods [GH-7238]
+
 ## 1.2.0 (July 30th, 2019)
 
 CHANGES:
