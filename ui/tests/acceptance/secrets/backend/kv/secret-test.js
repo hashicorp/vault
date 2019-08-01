@@ -215,7 +215,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    await logout.visit();
   });
 
   test('version 2 with restricted policy still allows edit', async function(assert) {
@@ -247,7 +246,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    await logout.visit();
   });
 
   test('paths are properly encoded', async function(assert) {
@@ -389,7 +387,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    await logout.visit();
   });
 
   test('write without read: version 2 with metadata read', async function(assert) {
@@ -409,7 +406,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    await logout.visit();
   });
 
   test('write without read: version 1', async function(assert) {
@@ -428,6 +424,5 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    await logout.visit();
   });
 });
