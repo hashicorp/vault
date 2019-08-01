@@ -118,7 +118,7 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	authResults := acl.AllowOperation(ctx, req, true)
+	authResults := acl.AllowOperation(tokenCtx, req, true)
 	return authResults.RootPrivs
 }
 
