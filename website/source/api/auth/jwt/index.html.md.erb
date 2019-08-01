@@ -132,6 +132,9 @@ entities attempting to login. At least one of the bound values must be set.
   The standard scope "openid" is automatically included and need not be specified.
 - `allowed_redirect_uris` `(list: <required>)` - The list of allowed values for redirect_uri
   during OIDC logins.
+- `verbose_oidc_logging` `(bool: false)` - Log received OIDC tokens and claims when debug-level
+  logging is active. Not recommended in production since sensitive information may be present
+  in OIDC responses.
 
 <%= partial "partials/tokenfields" %>
 
