@@ -24,6 +24,11 @@
   .select {
     min-width: 190px;
   }
+
+  label {
+    padding: $spacing-xs;
+    color: $grey;
+  }
 }
 
 .toolbar-scroller {
@@ -93,11 +98,6 @@
     height: 2.5rem;
     padding: $size-10 $size-8;
   }
-}
-
-.toolbar-label {
-  padding: $spacing-xs;
-  color: $grey;
 }
 
 .toolbar-separator {
