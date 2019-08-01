@@ -31,7 +31,7 @@ const (
 
 func (t *TokenType) UnmarshalJSON(b []byte) error {
 	if len(b) == 1 {
-		*t = TokenType(b[0])
+		*t = TokenType(b[0] - '0')
 		return nil
 	}
 
@@ -44,8 +44,12 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 		*t = TokenTypeService
 	case `"batch"`:
 		*t = TokenTypeBatch
+	case `"default-service"`:
+		*t = TokenTypeDefaultService
+	case `"default-batch"`:
+		*t = TokenTypeDefaultBatch
 	default:
-		return fmt.Errorf("Unknown token type %q", s)
+		return fmt.Errorf("unknown token type %q", s)
 	}
 	return nil
 }
