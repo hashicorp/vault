@@ -47,7 +47,8 @@ To install Vault, clone the vault-helm repository, checkout the latest release, 
 Vault. You can run `helm install` with the `--dry-run` flag to see the
 resources it would configure. In a production environment, you should always
 use the `--dry-run` flag prior to making any changes to the Vault cluster
-via Helm.
+via Helm.  See the [chart configuration values](/docs/platform/k8s/helm.html#configuration-values-) 
+for additional configuration options.
 
 ```sh
 # Clone the chart repo
@@ -64,8 +65,6 @@ $ helm install --name vault ./
 
 _That's it._ The Helm chart does everything to setup a recommended
 Vault-on-Kubernetes deployment.
-
-[chart configuration values](/docs/platform/k8s/helm.html#configuration-values-).
 
 ### Viewing the Vault UI
 
