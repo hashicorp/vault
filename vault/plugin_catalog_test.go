@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 func TestPluginCatalog_CRUD(t *testing.T) {

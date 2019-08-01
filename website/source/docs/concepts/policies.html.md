@@ -95,7 +95,7 @@ path "secret/foo" {
 ```
 
 When this policy is assigned to a token, the token can read from `"secret/foo"`.
-However, the token could not update or delete `"secret/foo"`, since the
+However, the token cannot update or delete `"secret/foo"`, since the
 capabilities do not allow it. Because policies are **deny by default**, the
 token would have no other access in Vault.
 
@@ -146,6 +146,21 @@ path "secret/bar/*" {
 # Permit reading everything prefixed with "zip-". An attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
+  capabilities = ["read"]
+}
+```
+
+In addition, a `+` can be used to denote any number of characters bounded
+within a single path segment (this appeared in Vault 1.1):
+
+```ruby
+# Permit reading the "teamb" path under any top-level path under secret/
+path "secret/+/teamb" {
+  capabilities = ["read"]
+}
+
+# Permit reading secret/foo/bar/teamb, secret/bar/foo/teamb, etc.
+path "secret/+/+/teamb" {
   capabilities = ["read"]
 }
 ```

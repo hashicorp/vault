@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/posener/complete"
 )
 
@@ -333,12 +334,14 @@ func TestPredict_Plugins(t *testing.T) {
 				"centrify",
 				"cert",
 				"consul",
+				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
 				"github",
 				"hana-database-plugin",
 				"influxdb-database-plugin",
 				"jwt",
+				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
@@ -352,7 +355,9 @@ func TestPredict_Plugins(t *testing.T) {
 				"mysql-legacy-database-plugin",
 				"mysql-rds-database-plugin",
 				"nomad",
+				"oidc",
 				"okta",
+				"pcf",
 				"pki",
 				"postgresql",
 				"postgresql-database-plugin",
@@ -376,6 +381,15 @@ func TestPredict_Plugins(t *testing.T) {
 				p.client = tc.client
 
 				act := p.plugins()
+
+				if !strutil.StrListContains(act, "kmip") {
+					for i, v := range tc.exp {
+						if v == "kmip" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}

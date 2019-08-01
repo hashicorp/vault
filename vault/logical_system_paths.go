@@ -3,8 +3,8 @@ package vault
 import (
 	"strings"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *SystemBackend) configPaths() []*framework.Path {
@@ -824,6 +824,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
+		{
+			Pattern: "internal/counters/requests",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersRequests,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
+		},
 	}
 }
 
@@ -839,7 +850,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{
@@ -866,7 +877,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{
@@ -893,7 +904,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 				"path": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					Description: "Use 'paths' instead.",
 					Deprecated:  true,
 				},
 				"paths": &framework.FieldSchema{
@@ -1098,6 +1109,25 @@ func (b *SystemBackend) remountPath() *framework.Path {
 		HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 	}
+}
+
+func (b *SystemBackend) metricsPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "metrics",
+		Fields: map[string]*framework.FieldSchema{
+			"format": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Format to export metrics into. Currently accepts only \"prometheus\".",
+				Query:       true,
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.handleMetrics,
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["metrics"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["metrics"][1]),
+	}
+
 }
 
 func (b *SystemBackend) authPaths() []*framework.Path {

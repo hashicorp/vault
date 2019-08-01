@@ -5,54 +5,67 @@
         Namespaces
       </h1>
     </p.levelLeft>
-    <p.levelRight>
-      {{#link-to 'vault.cluster.access.namespaces.create' class="button has-icon-right is-ghost is-compact"}}
-        Create namespace
-        <ICon @glyph="chevron-right" @size=11 />
-      {{/link-to}}
-    </p.levelRight>
   </PageHeader>
-  <ListView @items={{model}} @itemNoun="namespace" @emptyActions="empty-action-namespaces" as |list|>
-    <ListItem as |Item|>
-      <Item.content>
-        {{list.item.id}}
-      </Item.content>
-      <Item.menu>
-        {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
-          {{#if (contains targetNamespace accessibleNamespaces)}}
-            <li class="action">
-              {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
-                Switch to namespace
-              {{/link-to}}
-            </li>
-          {{/if}}
-        {{/with}}
-        <li class="action">
-          <ConfirmAction
-            @confirmButtonClasses="button is-primary"
-            @confirmButtonText="Remove"
-            @buttonClasses="link is-destroy"
-            @onConfirmAction={{action
-              (perform
-                Item.callMethod
-                "destroyRecord"
-                list.item
-                (concat "Successfully deleted namespace: " list.item.id)
-                "There was an error deleting this namespace: "
-                (action "refreshNamespaceList")
-              )
-            }}
-            @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
-            @showConfirm={{get this (concat "shouldDelete-" (dot-to-dash list.item.id))}}
-            @class={{if (get this (concat "shouldDelete-" (dot-to-dash list.item.id))) "message is-block is-warning is-outline"}}
-            @containerClasses="message-body is-block"
-            @messageClasses="is-block"
-          >
-            Delete
-          </ConfirmAction>
-        </li>
-      </Item.menu>
-    </ListItem>
+
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink
+        @type="add"
+        @params={{array 'vault.cluster.access.namespaces.create'}}
+      >
+        Create namespace
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
+  <ListView @items={{model}} @itemNoun="namespace" as |list|>
+    {{#if list.empty}}
+      <list.empty>
+        {{#link-to "vault.cluster.access.namespaces.create"}}
+          Create Namespace
+        {{/link-to}}
+
+        <LearnLink @path="/vault/security/namespaces">
+          Learn more
+        </LearnLink>
+      </list.empty>
+    {{else}}
+      <ListItem as |Item|>
+        <Item.content>
+          {{list.item.id}}
+        </Item.content>
+        <Item.menu>
+          {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
+            {{#if (contains targetNamespace accessibleNamespaces)}}
+              <li class="action">
+                {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
+                  Switch to Namespace
+                {{/link-to}}
+              </li>
+            {{/if}}
+          {{/with}}
+          <li class="action">
+            <ConfirmAction
+              @buttonClasses="link is-destroy"
+              @confirmButtonText="Remove"
+              @confirmMessage="Any engines or mounts in this namespace will also be removed."
+              @onConfirmAction={{action
+                (perform
+                  Item.callMethod
+                  "destroyRecord"
+                  list.item
+                  (concat "Successfully deleted namespace: " list.item.id)
+                  "There was an error deleting this namespace: "
+                  (action "refreshNamespaceList")
+                )
+              }}
+            >
+              Delete
+            </ConfirmAction>
+          </li>
+        </Item.menu>
+      </ListItem>
+    {{/if}}
   </ListView>
 {{else}}
   <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />

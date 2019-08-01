@@ -16,11 +16,10 @@
             "details"
             class="is-block has-text-black has-text-weight-semibold"
             data-test-identity-link=true
-          }}{{i-con
-              glyph="role"
-              size=14
+          }}<Icon
+              @glyph="user-square-outline"
               class="has-text-grey-light"
-              }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
+            /><span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
           <div class="has-text-grey is-size-8">
             {{item.id}}
           </div>
@@ -46,6 +45,13 @@
                     </button>
                   </li>
                 {{else}}
+                  {{#if item.canAddAlias}}
+                    <li class="action">
+                      {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
+                        Create alias
+                      {{/link-to}}
+                    </li>
+                  {{/if}}
                   {{#if item.canEdit}}
                     <li class="action">
                       {{#link-to "vault.cluster.access.identity.edit" item.id}}
@@ -58,44 +64,27 @@
                           Enable
                         </button>
                       {{else if (eq identityType 'entity')}}
-                        {{#confirm-action
-                          confirmButtonClasses="button is-primary"
-                          confirmButtonText="Disable"
-                          buttonClasses="link"
-                          onConfirmAction=(action "toggleDisabled" item)
-                          confirmMessage=(concat "Are you sure you want to disable " item.id "?")
-                          showConfirm=(get this (concat "shouldDisable-" (dot-to-dash item.id)))
-                          class=(if (get this (concat "shouldDisable-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-                          containerClasses="message-body is-block"
-                          messageClasses="is-block"
-                        }}
+                        <ConfirmAction
+                          @buttonClasses="link is-destroy"
+                          @confirmTitle="Disable this?"
+                          @confirmMessage="Associated tokens will not be revoked, but cannot be used"
+                          @confirmButtonText="Disable"
+                          @onConfirmAction={{action "toggleDisabled" item}}
+                        >
                           Disable
-                        {{/confirm-action}}
+                        </ConfirmAction>
                       {{/if}}
-                    </li>
-                  {{/if}}
-                  {{#if item.canAddAlias}}
-                    <li class="action">
-                      {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
-                        Create alias
-                      {{/link-to}}
                     </li>
                   {{/if}}
                   {{#if item.canDelete}}
                     <li class="action">
-                      {{#confirm-action
-                        data-test-item-delete=true
-                        confirmButtonClasses="button is-primary"
-                        buttonClasses="link"
-                        onConfirmAction=(action "delete" item)
-                        confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-                        showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-                        class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-                        containerClasses="message-body is-block"
-                        messageClasses="is-block"
-                      }}
+                      <ConfirmAction
+                        @buttonClasses="link is-destroy"
+                        @onConfirmAction={{action "delete" item}}
+                        data-test-item-delete="true"
+                      >
                         Delete
-                      {{/confirm-action}}
+                      </ConfirmAction>
                     </li>
                   {{/if}}
                 {{/if}}
@@ -122,7 +111,7 @@
       Create {{identityType}}
     {{/link-to}}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
-      Learn More
+      Learn more
     </LearnLink>
   </EmptyState>
 {{/if}}

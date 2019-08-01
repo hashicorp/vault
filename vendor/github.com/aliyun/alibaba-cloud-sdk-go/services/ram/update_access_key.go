@@ -76,8 +76,8 @@ func (client *Client) UpdateAccessKeyWithCallback(request *UpdateAccessKeyReques
 // UpdateAccessKeyRequest is the request struct for api UpdateAccessKey
 type UpdateAccessKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserAccessKeyId string `position:"Query" name:"UserAccessKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 	Status          string `position:"Query" name:"Status"`
 }
 

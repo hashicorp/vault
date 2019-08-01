@@ -3,7 +3,7 @@
     as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
-        {{partial 'svg/vault-logo'}}
+        <Icon @glyph="vault-logo" @size="l" />
       </HomeLink>
     </Nav.home>
     <Nav.main>
@@ -17,18 +17,16 @@
             </NamespacePicker>
           </li>
         {{/if}}
-        {{#if (has-permission 'secrets')}}
-          <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-            {{#link-to
-              "vault.cluster.secrets"
-              current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-              invokeAction=(action Nav.closeDrawer)
-              data-test-navbar-item='secrets'
-            }}
-              Secrets
-            {{/link-to}}
-          </li>
-        {{/if}}
+        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+          {{#link-to
+            "vault.cluster.secrets"
+            current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+            invokeAction=(action Nav.closeDrawer)
+            data-test-navbar-item='secrets'
+          }}
+            Secrets
+          {{/link-to}}
+        </li>
         {{#if (has-permission 'access')}}
           <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
             {{#link-to
@@ -78,11 +76,11 @@
       <div class="navbar-item">
         <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"
           {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
-          <ICon @glyph="console" @size=24 />
+          <Icon @glyph="console" @size="l" />
           <div class="status-menu-label">
             Console
           </div>
-          <ICon @glyph="chevron-down" @aria-hidden="true" @size=8 @class="has-text-white is-status-chevron" />
+          <Chevron @direction="down" class="has-text-white is-status-chevron" />
         </button>
       </div>
       <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
@@ -97,26 +95,7 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <div class="message {{get (message-types flash.type) "class"}}">
-          <div class="columns is-mobile is-variable is-1">
-            <div class="column is-narrow message-icon">
-              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass={{true}} />
-            </div>
-            <div class="column">
-              <button type="button" class="close-button" {{action close}}>
-                {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
-              </button>
-              <div class="message-title">
-                {{get (message-types flash.type) "text"}}
-              </div>
-              {{#if flash.message}}
-                <p class="message-body" data-test-flash-message-body="true">
-                  {{flash.message}}
-                </p>
-              {{/if}}
-            </div>
-          </div>
-        </div>
+        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}} @isPreformatted={{flash.preformatted}} />
       {{/if}}
     {{/flash-message}}
   {{/each}}

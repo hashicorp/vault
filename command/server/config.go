@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,12 +12,15 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+)
+
+const (
+	prometheusDefaultRetentionTime = 24 * time.Hour
 )
 
 // Config is the configuration for the vault server.
@@ -25,7 +29,7 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	Seal *Seal `hcl:"-"`
+	Seals []*Seal `hcl:"-"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -55,6 +59,10 @@ type Config struct {
 
 	LogLevel string `hcl:"log_level"`
 
+	// LogFormat specifies the log format.  Valid values are "standard" and "json".  The values are case-insenstive.
+	// If no log format is specified, then standard format will be used.
+	LogFormat string `hcl:"log_format"`
+
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
@@ -75,13 +83,13 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(ha, transactional bool) *Config {
+func DevConfig(storageType string) *Config {
 	ret := &Config{
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
 		Storage: &Storage{
-			Type: "inmem",
+			Type: storageType,
 		},
 
 		Listeners: []*Listener{
@@ -98,16 +106,10 @@ func DevConfig(ha, transactional bool) *Config {
 
 		EnableUI: true,
 
-		Telemetry: &Telemetry{},
-	}
-
-	switch {
-	case ha && transactional:
-		ret.Storage.Type = "inmem_transactional_ha"
-	case !ha && transactional:
-		ret.Storage.Type = "inmem_transactional"
-	case ha && !transactional:
-		ret.Storage.Type = "inmem_ha"
+		Telemetry: &Telemetry{
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
+			DisableHostname:         true,
+		},
 	}
 
 	return ret
@@ -233,6 +235,12 @@ type Telemetry struct {
 	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
 	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
 	DogStatsDTags []string `hcl:"dogstatsd_tags"`
+
+	// Prometheus:
+	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
+	// Default: 24h
+	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -263,9 +271,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.Seal = c.Seal
-	if c2.Seal != nil {
-		result.Seal = c2.Seal
+	for _, s := range c.Seals {
+		result.Seals = append(result.Seals, s)
+	}
+	for _, s := range c2.Seals {
+		result.Seals = append(result.Seals, s)
 	}
 
 	result.Telemetry = c.Telemetry
@@ -313,6 +323,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LogLevel = c.LogLevel
 	if c2.LogLevel != "" {
 		result.LogLevel = c2.LogLevel
+	}
+
+	result.LogFormat = c.LogFormat
+	if c2.LogFormat != "" {
+		result.LogFormat = c2.LogFormat
 	}
 
 	result.ClusterName = c.ClusterName
@@ -408,29 +423,29 @@ func (c *Config) Merge(c2 *Config) *Config {
 
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
-func LoadConfig(path string, logger log.Logger) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path, logger)
+		return LoadConfigDir(path)
 	}
-	return LoadConfigFile(path, logger)
+	return LoadConfigFile(path)
 }
 
 // LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string, logger log.Logger) (*Config, error) {
+func LoadConfigFile(path string) (*Config, error) {
 	// Read the file
 	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfig(string(d), logger)
+	return ParseConfig(string(d))
 }
 
-func ParseConfig(d string, logger log.Logger) (*Config, error) {
+func ParseConfig(d string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -545,13 +560,13 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "hsm"); err != nil {
+		if err := parseSeals(&result, o, "hsm"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "seal"); err != nil {
+		if err := parseSeals(&result, o, "seal"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
@@ -573,7 +588,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
-func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
+func LoadConfigDir(dir string) (*Config, error) {
 	f, err := os.Open(dir)
 	if err != nil {
 		return nil, err
@@ -622,7 +637,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 
 	var result *Config
 	for _, f := range files {
-		config, err := LoadConfigFile(f, logger)
+		config, err := LoadConfigFile(f)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
 		}
@@ -782,39 +797,45 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
-	if len(list.Items) > 1 {
-		return fmt.Errorf("only one %q block is permitted", blockName)
+func parseSeals(result *Config, list *ast.ObjectList, blockName string) error {
+	if len(list.Items) > 2 {
+		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
 	}
 
-	// Get our item
-	item := list.Items[0]
-
-	key := blockName
-	if len(item.Keys) > 0 {
-		key = item.Keys[0].Token.Value().(string)
-	}
-
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-	}
-
-	var disabled bool
-	var err error
-	if v, ok := m["disabled"]; ok {
-		disabled, err = strconv.ParseBool(v)
-		if err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+	seals := make([]*Seal, 0, len(list.Items))
+	for _, item := range list.Items {
+		key := "seal"
+		if len(item.Keys) > 0 {
+			key = item.Keys[0].Token.Value().(string)
 		}
-		delete(m, "disabled")
+
+		var m map[string]string
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("seal.%s:", key))
+		}
+
+		var disabled bool
+		var err error
+		if v, ok := m["disabled"]; ok {
+			disabled, err = strconv.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "disabled")
+		}
+		seals = append(seals, &Seal{
+			Type:     strings.ToLower(key),
+			Disabled: disabled,
+			Config:   m,
+		})
 	}
 
-	result.Seal = &Seal{
-		Type:     strings.ToLower(key),
-		Disabled: disabled,
-		Config:   m,
+	if len(seals) == 2 &&
+		(seals[0].Disabled && seals[1].Disabled || !seals[0].Disabled && !seals[1].Disabled) {
+		return errors.New("seals: two seals provided but both are disabled or neither are disabled")
 	}
+
+	result.Seals = seals
 
 	return nil
 }
@@ -864,5 +885,15 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
+
+	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
+		var err error
+		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
+			return err
+		}
+	} else {
+		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
+	}
+
 	return nil
 }

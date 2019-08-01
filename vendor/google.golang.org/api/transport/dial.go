@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package transport supports network connections to HTTP and GRPC servers.
-// This package is not intended for use by end developers. Use the
-// google.golang.org/api/option package to configure API clients.
 package transport
 
 import (
+	"context"
 	"net/http"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"google.golang.org/api/option"

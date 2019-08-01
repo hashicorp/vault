@@ -76,8 +76,8 @@ func (client *Client) DeletePublicKeyWithCallback(request *DeletePublicKeyReques
 // DeletePublicKeyRequest is the request struct for api DeletePublicKey
 type DeletePublicKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserPublicKeyId string `position:"Query" name:"UserPublicKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 }
 
 // DeletePublicKeyResponse is the response struct for api DeletePublicKey

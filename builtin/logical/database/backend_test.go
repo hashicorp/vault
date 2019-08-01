@@ -13,15 +13,18 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
@@ -49,15 +52,12 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
 
-	// exponential backoff-retry
+	// Exponential backoff-retry
 	if err = pool.Retry(func() error {
 		// This will cause a validation to run
 		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
@@ -102,12 +102,13 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain(t *testing.T) {
+func TestBackend_PluginMain_Postgres(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -119,11 +120,33 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
 	postgresql.Run(apiClientMeta.GetTLSConfig())
+}
+
+func TestBackend_PluginMain_Mongo(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	args := []string{"--ca-cert=" + caPEM}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -851,17 +874,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if exists {
-			t.Fatal("expected not exists")
-		}
-
 		// Read the role
 		data = map[string]interface{}{}
 		req = &logical.Request{
@@ -919,17 +931,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
 		}
 
 		// Read the role
@@ -993,17 +994,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		resp, err = b.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
 		}
 
 		// Read the role

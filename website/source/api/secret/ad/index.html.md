@@ -46,16 +46,25 @@ text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once a
 * `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 * `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
 
+### Other parameters
+
+* `last_rotation_tolerance` (string, optional) - Tolerance duration to use when checking the last rotation time. 
+Active Directory often shows a "pwdLastSet" time after Vault's because it takes
+a while for password updates to be propagated across a large cluster. By default, if Active Directory's last rotation time is
+within 5 seconds of Vault's, Vault considers itself to have been the last entity that rotated the password. However, if it's been 
+more than 5 seconds, Vault thinks that something rotated the password out-of-band, and re-rotates it so it will "know" it and be
+able to continue returning it. This may be too low for larger Active Directory clusters, and too high for smaller ones.
+
 ## Config management
 
 At present, this endpoint does not confirm that the provided AD credentials are
 valid AD credentials with proper permissions.
 
-| Method   | Path                   | Produces               |
-| :------- | :--------------------- | :--------------------- |
-| `POST`   | `/ad/config`           | `204 (empty body)`     |
-| `GET`    | `/ad/config`           | `200 application/json` |
-| `DELETE` | `/ad/config`           | `204 (empty body)`     |
+| Method   | Path                   |
+| :--------------------- | :--------------------- |
+| `POST`   | `/ad/config`           |
+| `GET`    | `/ad/config`           |
+| `DELETE` | `/ad/config`           |
 
 ### Sample Post Request
 
@@ -109,12 +118,12 @@ The `roles` endpoint configures how Vault will manage the passwords for individu
 
 When adding a role, Vault verifies its associated service account exists.
 
-| Method   | Path                   | Produces               |
-| :------- | :--------------------- | :--------------------- |
-| `GET`    | `/ad/roles`            | `200 application/json` |
-| `POST`   | `/ad/roles/:role_name` | `204 (empty body)`     |
-| `GET`    | `/ad/roles/:role_name` | `200 application/json` |
-| `DELETE` | `/ad/roles/:role_name` | `204 (empty body)`     |
+| Method   | Path                   |
+| :--------------------- | :--------------------- |
+| `GET`    | `/ad/roles`            |
+| `POST`   | `/ad/roles/:role_name` |
+| `GET`    | `/ad/roles/:role_name` |
+| `DELETE` | `/ad/roles/:role_name` |
 
 ### Sample Post Request
 
@@ -160,9 +169,9 @@ Performing a `LIST` on the `/ad/roles` endpoint will list the names of all the r
 
 The `creds` endpoint offers the credential information for a given role.
 
-| Method   | Path                   | Produces               |
-| :------- | :--------------------- | :--------------------- |
-| `GET`    | `/ad/creds/:role_name` | `200 application/json` |
+| Method   | Path                   |
+| :--------------------- | :--------------------- |
+| `GET`    | `/ad/creds/:role_name` |
 
 ### Sample Get Request
 
@@ -198,8 +207,8 @@ Rotate the `bindpass` to a new one known only to Vault.
 
 ### Endpoints
 
-| Method   | Path                   | Produces                                   |
-| :------- | :--------------------- | :----------------------------------------- |
+| Method   | Path                   |
+| :--------------------- | :----------------------------------------- |
 | `GET`    | `/ad/rotate-root`      | `204 (empty body) or 200 with warning`     |
 
 Generally, `rotate-root` returns a 204. However, if `rotate-root` is already in progress, it may return a 200 with a warning that root credential rotation is already in progress.

@@ -10,50 +10,53 @@
         {{/unless}}
       </h1>
     </p.levelLeft>
-    <p.levelRight>
-      {{#link-to "vault.cluster.policies.create" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true}}
-        Create {{uppercase policyType}} policy
-        {{i-con glyph="chevron-right" size=11}}
-      {{/link-to}}
-    </p.levelRight>
   </PageHeader>
-  {{#if model.meta.total}}
-    <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-      <div class="level">
-        <div class="level-left">
-          {{navigate-input
-            filterFocusDidChange=(action "setFilterFocus")
-            filterDidChange=(action "setFilter")
-            filter=filter
-            filterMatchesKey=filterMatchesKey
-            firstPartialMatch=firstPartialMatch
-            extraNavParams=policyType
-            placeholder="Filter policies"
-            mode="policy"
-          }}
-          {{#if filterFocused}}
-            {{#if filterMatchesKey}}
-              <p class="input-hint">
-                <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
-              </p>
-            {{/if}}
-            {{#if firstPartialMatch}}
-              <p class="input-hint">
-                <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
-              </p>
-            {{/if}}
+  <Toolbar>
+    {{#if model.meta.total}}
+      <ToolbarFilters>
+        {{navigate-input
+          filterFocusDidChange=(action "setFilterFocus")
+          filterDidChange=(action "setFilter")
+          filter=filter
+          filterMatchesKey=filterMatchesKey
+          firstPartialMatch=firstPartialMatch
+          extraNavParams=policyType
+          placeholder="Filter policies"
+          mode="policy"
+        }}
+        {{#if filterFocused}}
+          {{#if filterMatchesKey}}
+            <p class="input-hint">
+              <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
+            </p>
           {{/if}}
-        </div>
-      </div>
-    </div>
+          {{#if firstPartialMatch}}
+            <p class="input-hint">
+              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+            </p>
+          {{/if}}
+        {{/if}}
+      </ToolbarFilters>
+    {{/if}}
+    <ToolbarActions>
+      <ToolbarLink
+        @type="add"
+        @params={{array 'vault.cluster.policies.create'}}
+        @data-test-policy-create-link=true
+      >
+        Create {{uppercase policyType}} policy
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+  {{#if model.meta.total}}
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>
-          {{i-con
-            glyph='file'
-            size=14
+          <Icon
+            aria-hidden="true"
             class="has-text-grey-light"
-          }}
+            @glyph="file-outline"
+          />
           <div>
             <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
               {{item.id}}
@@ -77,11 +80,11 @@
               {{#link-to "vault.cluster.policy.show" policyType item.id
                 class="has-text-black has-text-weight-semibold"
                 data-test-policy-item=true
-              }}{{i-con
-                  glyph='file'
-                  size=14
+              }}<Icon
+                  aria-hidden="true"
                   class="has-text-grey-light"
-                }}<span class="is-underline" data-test-policy-name>{{item.id}}</span>
+                  @glyph="file-outline"
+                /><span class="is-underline" data-test-policy-name>{{item.id}}</span>
               {{/link-to}}
             </div>
             <div class="column has-text-right">
@@ -116,19 +119,14 @@
                       {{/if}}
                       {{#if item.canDelete}}
                         <li class="action">
-                          {{#confirm-action
-                            confirmButtonClasses="button is-primary"
-                            buttonClasses="link is-destroy"
-                            onConfirmAction=(action "deletePolicy" item)
-                            confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-                            showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-                            class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-                            containerClasses="message-body is-block"
-                            messageClasses="is-block"
-                            data-test-policy-delete=item.id
-                          }}
+                          <ConfirmAction
+                            @buttonClasses="link is-destroy"
+                            @confirmMessage="This will permanently delete this policy and may affect access to some data"
+                            @onConfirmAction={{action "deletePolicy" item}}
+                            data-test-policy-delete={{item.id}}
+                          >
                             Delete
-                          {{/confirm-action}}
+                          </ConfirmAction>
                         </li>
                       {{/if}}
                     {{/if}}
@@ -158,9 +156,11 @@
     >
       {{#link-to "vault.cluster.policies.create" class="link"}}
         Create {{uppercase policyType}} policy
+        <Chevron />
       {{/link-to}}
       <LearnLink @path="/vault/getting-started/policies">
-        Learn More
+        Learn more
+        <Chevron />
       </LearnLink>
     </EmptyState>
   {{/if}}

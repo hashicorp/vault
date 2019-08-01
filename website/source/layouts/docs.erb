@@ -48,7 +48,8 @@
                   'awskms',
                   'azurekeyvault',
                   'gcpckms',
-                  'pkcs11'
+                  'pkcs11',
+                  'transit'
                 ]
               }, {
                 category: 'storage',
@@ -69,6 +70,7 @@
                   'mssql',
                   'mysql',
                   'postgresql',
+                  'raft',
                   's3',
                   'swift',
                   'zookeeper'
@@ -99,6 +101,21 @@
               ]
             },
             'delete',
+            {
+              category: 'kv',
+              content: [
+                'delete',
+                'destroy',
+                'enable-versioning',
+                'get',
+                'list',
+                'metadata',
+                'patch',
+                'put',
+                'rollback',
+                'undelete'
+              ]
+            },
             {
               category: 'lease',
               content: ['renew', 'revoke']
@@ -183,14 +200,16 @@
                       'azure',
                       'gcp',
                       'jwt',
-                      'kubernetes'
+                      'kubernetes',
+                      'pcf'
                     ]
                   }, {
                     category: 'sinks',
                     content: ['file']
                   }
                 ]
-              }
+              },
+              { category: 'caching' }
             ]
           },
           '----------------',
@@ -207,6 +226,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'elasticdb',
                   'influxdb',
                   'hanadb',
                   'mongodb',
@@ -219,6 +239,7 @@
               },
               { category: 'gcp' },
               { category: 'gcpkms' },
+              { category: 'kmip' },
               {
                 category: 'kv',
                 content: ['kv-v1','kv-v2']
@@ -257,6 +278,7 @@
               'github',
               'ldap',
               'okta',
+              'pcf',
               'radius',
               'cert',
               'token',
@@ -321,7 +343,10 @@
               'upgrade-to-0.11.0',
               'upgrade-to-0.11.2',
               'upgrade-to-0.11.6',
-              'upgrade-to-1.0.0'
+              'upgrade-to-1.0.0',
+              'upgrade-to-1.1.0',
+              'upgrade-to-1.1.1',
+              'upgrade-to-1.2.0'
             ]
           },
           '----------------',

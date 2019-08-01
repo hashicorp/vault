@@ -3,13 +3,14 @@ import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   _url(backend, id, infix = 'data') {
-    let url = `${this.buildURL()}/${backend}/${infix}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
     return url;
   },
@@ -73,7 +74,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
       () => {
         let model = store.peekRecord('secret-v2-version', id);
-        return model && model.reload();
+        return model && model.rollbackAttributes() && model.reload();
       }
     );
   },

@@ -1,6 +1,7 @@
 import { assign } from '@ember/polyfills';
 import { resolve, allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -34,9 +35,9 @@ export default ApplicationAdapter.extend({
   },
 
   urlForRole(backend, id) {
-    let url = `${this.buildURL()}/${backend}/roles`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/roles`;
     if (id) {
-      url = url + '/' + id;
+      url = url + '/' + encodePath(id);
     }
     return url;
   },
@@ -84,7 +85,7 @@ export default ApplicationAdapter.extend({
 
   findAllZeroAddress(store, query) {
     const { backend } = query;
-    const url = `/v1/${backend}/config/zeroaddress`;
+    const url = `/v1/${encodePath(backend)}/config/zeroaddress`;
     return this.ajax(url, 'GET');
   },
 

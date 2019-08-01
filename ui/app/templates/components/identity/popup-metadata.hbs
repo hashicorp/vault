@@ -1,0 +1,17 @@
+<PopupMenu @name="metadata-edit-menu">
+  <nav class="menu">
+    <ul class="menu-list">
+      <li class="action">
+        <ConfirmAction
+          @buttonClasses="link is-destroy"
+          @confirmTitle="Remove metadata?"
+          @confirmMessage="This data may be used outside of Vault."
+          @confirmButtonText="Remove"
+          @onConfirmAction={{action "performTransaction" model key}}
+        >
+          Remove
+        </ConfirmAction>
+      </li>
+    </ul>
+  </nav>
+</PopupMenu>

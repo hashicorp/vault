@@ -12,6 +12,7 @@
     - api/auth/kubernetes/index.html
     - api/auth/ldap/index.html
     - api/auth/okta/index.html
+    - api/auth/pcf/index.html
     - api/auth/radius/index.html
     - api/auth/cert/index.html
     - api/auth/token/index.html
@@ -29,6 +30,7 @@
     - api/secret/databases/index.html
     - api/secret/gcp/index.html
     - api/secret/gcpkms/index.html
+    - api/secret/kmip/index.html
     - api/secret/kv/index.html
     - api/secret/identity/index.html
     - api/secret/nomad/index.html

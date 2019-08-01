@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -26,13 +26,13 @@ func Backend() *backend {
 				"login",
 			},
 		},
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
 			pathListCerts(&b),
 			pathCerts(&b),
 			pathCRLs(&b),
-		}),
+		},
 		AuthRenew:   b.pathLoginRenew,
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeCredential,

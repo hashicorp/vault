@@ -12,12 +12,7 @@ module('Integration | Component | config pki', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   const config = function(saveFn) {
@@ -67,7 +62,7 @@ module('Integration | Component | config pki', function(hooks) {
   test('it renders crl section', async function(assert) {
     await setupAndRender(this, 'crl');
     assert.ok(component.hasTitle, 'renders the title');
-    assert.equal(component.title, 'Certificate Revocation List (CRL) Config');
+    assert.equal(component.title, 'Certificate Revocation List (CRL) config');
     assert.ok(component.text.startsWith('Set the duration for which the generated CRL'));
     assert.equal(component.fields.length, 1);
     assert.ok(component.fields.objectAt(0).labelText, 'Crl');

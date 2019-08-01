@@ -63,6 +63,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
     const sshPath = `ssh-${now}`;
 
     await enablePage.enable('ssh', sshPath);
+    await click('[data-test-configuration-tab]');
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');
@@ -79,7 +80,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       // create a role
       await click('[ data-test-secret-create]');
       assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH Role'),
+        find('[data-test-secret-header]').textContent.includes('SSH role'),
         `${role.type}: renders the create page`
       );
 

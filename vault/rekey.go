@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,12 +12,14 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 const (
@@ -528,6 +531,14 @@ func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) log
 	}
 
 	c.barrierRekeyConfig.RekeyProgress = nil
+	if c.seal.BarrierType() == seal.Shamir {
+		_, err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
+			"key": base64.StdEncoding.EncodeToString(newMasterKey),
+		})
+		if err != nil {
+			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to update seal access: {{err}}", err).Error())
+		}
+	}
 
 	return nil
 }
@@ -908,8 +919,6 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 // RekeyRetrieveBackup is used to retrieve any backed-up PGP-encrypted unseal
 // keys
 func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBackup, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -945,8 +954,6 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 
 // RekeyDeleteBackup is used to delete any backed-up PGP-encrypted unseal keys
 func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTTPCodedError {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}

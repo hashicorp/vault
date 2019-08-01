@@ -6,16 +6,12 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/logging"
 )
 
 func TestLoadConfigFile(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config.hcl", logger)
+	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -48,11 +44,12 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsdAddr:      "bar",
-			StatsiteAddr:    "foo",
-			DisableHostname: false,
-			DogStatsDAddr:   "127.0.0.1:7254",
-			DogStatsDTags:   []string{"tag_1:val_1", "tag_2:val_2"},
+			StatsdAddr:              "bar",
+			StatsiteAddr:            "foo",
+			DisableHostname:         false,
+			DogStatsDAddr:           "127.0.0.1:7254",
+			DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
 		},
 
 		DisableCache:             true,
@@ -84,9 +81,7 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_topLevel(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl", logger)
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -121,11 +116,13 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsdAddr:      "bar",
-			StatsiteAddr:    "foo",
-			DisableHostname: false,
-			DogStatsDAddr:   "127.0.0.1:7254",
-			DogStatsDTags:   []string{"tag_1:val_1", "tag_2:val_2"},
+			StatsdAddr:                 "bar",
+			StatsiteAddr:               "foo",
+			DisableHostname:            false,
+			DogStatsDAddr:              "127.0.0.1:7254",
+			DogStatsDTags:              []string{"tag_1:val_1", "tag_2:val_2"},
+			PrometheusRetentionTime:    30 * time.Second,
+			PrometheusRetentionTimeRaw: "30s",
 		},
 
 		DisableCache:    true,
@@ -158,9 +155,7 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 }
 
 func TestLoadConfigFile_json(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config.hcl.json", logger)
+	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -202,6 +197,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 			CirconusCheckTags:                  "",
 			CirconusBrokerID:                   "",
 			CirconusBrokerSelectTag:            "",
+			PrometheusRetentionTime:            prometheusDefaultRetentionTime,
 		},
 
 		MaxLeaseTTL:          10 * time.Hour,
@@ -225,9 +221,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 }
 
 func TestLoadConfigFile_json2(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json", logger)
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -288,6 +282,8 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			CirconusCheckTags:                  "cat1:tag1,cat2:tag2",
 			CirconusBrokerID:                   "0",
 			CirconusBrokerSelectTag:            "dc:sfo",
+			PrometheusRetentionTime:            30 * time.Second,
+			PrometheusRetentionTimeRaw:         "30s",
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
@@ -295,9 +291,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 }
 
 func TestLoadConfigDir(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigDir("./test-fixtures/config-dir", logger)
+	config, err := LoadConfigDir("./test-fixtures/config-dir")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -336,9 +330,10 @@ func TestLoadConfigDir(t *testing.T) {
 		EnableRawEndpoint: true,
 
 		Telemetry: &Telemetry{
-			StatsiteAddr:    "qux",
-			StatsdAddr:      "baz",
-			DisableHostname: true,
+			StatsiteAddr:            "qux",
+			StatsdAddr:              "baz",
+			DisableHostname:         true,
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
 		},
 
 		MaxLeaseTTL:     10 * time.Hour,

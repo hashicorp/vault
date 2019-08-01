@@ -23,6 +23,7 @@ module.exports = function(environment) {
       POLLING_URLS: ['sys/health', 'sys/replication/status', 'sys/seal-status'],
       // endpoints that UI uses to determine the cluster state
       // calls to these endpoints will always go to the root namespace
+      // these also need to be updated in the open-api-explorer engine
       NAMESPACE_ROOT_URLS: ['sys/health', 'sys/seal-status', 'sys/license/features'],
       // number of records to show on a single page by default - this is used by the client-side pagination
       DEFAULT_PAGE_SIZE: 100,
@@ -30,7 +31,6 @@ module.exports = function(environment) {
     flashMessageDefaults: {
       timeout: 7000,
       sticky: false,
-      preventDuplicates: true,
     },
   };
   if (environment === 'development') {
@@ -39,26 +39,16 @@ module.exports = function(environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
-    //ENV['ember-cli-mirage'] = {
-    //enabled: true
-    //};
   }
 
   if (environment === 'test') {
     // Testem prefers this...
     ENV.locationType = 'none';
-
     // keep test console output quieter
     ENV.APP.LOG_ACTIVE_GENERATION = false;
     ENV.APP.LOG_VIEW_LOOKUPS = false;
-
     ENV.APP.rootElement = '#ember-testing';
-
-    ENV['ember-cli-mirage'] = {
-      enabled: false,
-    };
     ENV.APP.autoboot = false;
-
     ENV.flashMessageDefaults.timeout = 50;
   }
   if (environment !== 'production') {

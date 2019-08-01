@@ -1,5 +1,4 @@
-/* eslint-env node */
-module.exports = {
+const config = {
   framework: 'qunit',
   test_page: 'tests/index.html?hidepassed',
   tap_quiet_logs: true,
@@ -12,7 +11,6 @@ module.exports = {
         process.env.CI ? '--no-sandbox' : null,
         '--headless',
         '--disable-gpu',
-        '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--mute-audio',
         '--remote-debugging-port=0',
@@ -29,3 +27,11 @@ module.exports = {
     },
   },
 };
+
+if (process.env.CI) {
+  config.reporter = 'xunit';
+  config.report_file = 'test-results/qunit/results.xml';
+  config.xunit_intermediate_output = true;
+}
+
+module.exports = config;

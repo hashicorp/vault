@@ -16,14 +16,8 @@
       {{model.name}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#link-to "vault.cluster.access.identity.aliases.edit" model.id class="button has-icon-right is-ghost is-compact" data-test-alias-edit-link=true}}
-      Edit {{lowercase (humanize model.identityType)}}
-      {{i-con glyph="chevron-right" size=11}}
-    {{/link-to}}
-  </p.levelRight>
 </PageHeader>
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show model.identityType) as |tab|}}
@@ -36,4 +30,14 @@
     </ul>
   </nav>
 </div>
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @params={{array "vault.cluster.access.identity.aliases.edit" model.id}}
+      @data-test-alias-edit-link=true
+    >
+      Edit {{lowercase (humanize model.identityType)}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
 {{component (concat 'identity/item-alias/alias-' section) model=model}}

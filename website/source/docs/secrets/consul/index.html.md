@@ -48,7 +48,7 @@ token:
       "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
     }
     ```
-For Consul 1.4 and above, use the command line to generate a token with the appropiate policy:
+For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
 
    ```sh
    $ CONSUL_HTTP_TOKEN=d54fe46a-1f57-a589-3583-6b78e334b03b consul acl token create -policy-name=global-management
@@ -80,7 +80,7 @@ When users generate credentials, they are generated against this role. For Consu
     ```
 The policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/internals/acl.html).
 
-For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and procede to link it 
+For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and proceed to link it 
 to the role:
     ```text
     $ vault write consul/roles/my-role policies=readonly

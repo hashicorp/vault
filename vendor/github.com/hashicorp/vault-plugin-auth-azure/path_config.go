@@ -3,8 +3,8 @@ package azureauth
 import (
 	"context"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *azureAuthBackend) *framework.Path {
@@ -16,6 +16,9 @@ func pathConfig(b *azureAuthBackend) *framework.Path {
 				Description: `The tenant id for the Azure Active Directory.  This is sometimes
 				referred to as Directory ID in AD.  This value can also be provided with the 
 				AZURE_TENANT_ID environment variable.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Tenant ID",
+				},
 			},
 			"resource": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -31,6 +34,9 @@ func pathConfig(b *azureAuthBackend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `The OAuth2 client id to connection to Azure.
 				This value can also be provided with the AZURE_CLIENT_ID environment variable.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Client ID",
+				},
 			},
 			"client_secret": &framework.FieldSchema{
 				Type: framework.TypeString,

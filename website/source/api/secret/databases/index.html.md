@@ -28,9 +28,9 @@ list of additional parameters.
 
 ~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `name` `(string: <required>)` – Specifies the name for this database
@@ -75,9 +75,9 @@ $ curl \
 
 This endpoint returns the configuration settings for a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/config/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/config/:name`     |
 
 ### Parameters
 
@@ -115,9 +115,9 @@ $ curl \
 This endpoint returns a list of available connections. Only the connection names
 are returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/database/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/config`           |
 
 ### Sample Request
 
@@ -142,9 +142,9 @@ $ curl \
 
 This endpoint deletes a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/database/config/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/config/:name`     |
 
 ### Parameters
 
@@ -165,9 +165,9 @@ $ curl \
 This endpoint closes a connection and it's underlying plugin and restarts it
 with the configuration stored in the barrier.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/reset/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/reset/:name`      |
 
 ### Parameters
 
@@ -189,9 +189,9 @@ This endpoint is used to rotate the root superuser credentials stored for
 the database connection.  This user must have permissions to update its own
 password.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `POST`   | `/database/rotate-root/:name` | `204 (empty body)`     |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `POST`   | `/database/rotate-root/:name` |
 
 ### Parameters
 
@@ -213,9 +213,9 @@ This endpoint creates or updates a role definition.
 
 ~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/roles/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/roles/:name`      |
 
 ### Parameters
 
@@ -278,9 +278,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/roles/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/roles/:name`    |
 
 ### Parameters
 
@@ -316,9 +316,9 @@ $ curl \
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/database/roles`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/roles`          |
 
 ### Sample Request
 
@@ -347,9 +347,9 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/database/roles/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/roles/:name`    |
 
 ### Parameters
 
@@ -370,9 +370,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/creds/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/creds/:name`    |
 
 ### Parameters
 
@@ -396,4 +396,204 @@ $ curl \
     "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
   }
 }
+```
+
+## Create Static Role
+
+This endpoint creates or updates a static role definition. Static Roles are a
+1-to-1 mapping of a Vault Role to a user in a database which are automatically
+rotated based on the configured `rotation_period`. Not all databases support
+Static Roles, please see the database-specific documentation.
+
+~> This endpoint distinguishes between `create` and `update` ACL capabilities.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/static-roles/:name`      |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the role to create. This
+  is specified as part of the URL.
+
+- `username` `(string: <required>)` – Specifies the database username that this
+  Vault role corresponds to. 
+
+- `rotation_period` `(string/int: <required>)` – Specifies the amount of time
+  Vault should wait before rotating the password. The minimum is 5 seconds.
+
+- `db_name` `(string: <required>)` - The name of the database connection to use
+  for this role.
+
+- `rotation_statements` `(list: [])` – Specifies the database statements to be
+  executed to rotate the password for the configured database user. Not every
+  plugin type will support this functionality. See the plugin's API page for
+  more information on support and formatting for this parameter.
+
+
+
+### Sample Payload
+
+```json
+{
+    "db_name": "mysql",
+    "username": "static-database-user",
+    "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
+    "rotation_period": "1h"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/database/static-roles/my-static-role
+```
+
+## Read Static Role
+
+This endpoint queries the static role definition.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/static-roles/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to read.
+  This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/database/static-roles/my-static-role
+```
+
+### Sample Response
+
+```json
+{
+    "data": {
+		"db_name": "mysql",
+    "username":"static-user",
+    "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
+    "rotation_period":"1h",
+	},
+}
+```
+
+## List Static Roles
+
+This endpoint returns a list of available static roles. Only the role names are
+returned, not any values.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/static-roles`          |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/database/static-roles
+```
+
+### Sample Response
+
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["dev-static", "prod-static"]
+  }
+}
+```
+
+## Delete Static Role
+
+This endpoint deletes the static role definition and revokes the database user.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/static-roles/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to
+  delete. This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/database/static-roles/my-role
+```
+
+## Get Static Credentials
+
+This endpoint returns the current credentials based on the named static role.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/static-creds/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to get
+  credentials for. This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/database/static-creds/my-static-role
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "username": "static-user",
+    "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+    "last_vault_rotation": "2019-05-06T15:26:42.525302-05:00",
+    "rotation_period": 30,
+    "ttl": 28,
+  }
+}
+```
+
+## Rotate Static Role Credentials
+
+This endpoint is used to rotate the Static Role credentials stored for a given
+role name. While Static Roles are rotated automatically by Vault at configured
+rotation periods, users can use this endpoint to manually trigger a rotation to
+change the stored password and reset the TTL of the Static Role's password.
+
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `POST`   | `/database/rotate-role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the Static Role to
+  trigger the password rotation for. The name is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/database/rotate-role/my-static-role
 ```

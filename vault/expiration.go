@@ -16,13 +16,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -827,11 +827,11 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}
 
-	reqNS, err := namespace.FromContext(ctx)
+	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if reqNS.ID != le.namespace.ID {
+	if ns.ID != le.namespace.ID {
 		return nil, errors.New("cannot renew a lease across namespaces")
 	}
 
@@ -1001,7 +1001,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if resp.Auth.EntityID != "" &&
 		resp.Auth.GroupAliases != nil &&
 		m.core.identityStore != nil {
-		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
 			return nil, err
 		}

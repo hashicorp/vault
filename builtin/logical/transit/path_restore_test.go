@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Restore(t *testing.T) {
@@ -90,7 +90,7 @@ func TestTransit_Restore(t *testing.T) {
 		// Seed dermines if we start the test by restoring the initial backup we
 		// took, to test a restore operation based on the key existing or not
 		Seed bool
-		// Force is a pointer to differenciate between default false and given false
+		// Force is a pointer to differentiate between default false and given false
 		Force *bool
 		// The error we expect, if any
 		ExpectedErr error

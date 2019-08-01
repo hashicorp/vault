@@ -19,9 +19,9 @@ In addition to the parameters defined by the [Database
 Backend](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the PostgreSQL DSN. This field
@@ -105,4 +105,10 @@ list the plugin does not support that statement type.
   functionality. Must be a semicolon-separated string, a base64-encoded
   semicolon-separated string, a serialized JSON string array, or a
   base64-encoded serialized JSON string array. The '{{name}}' and
-  '{{expiration}}` values will be substituted.
+  '{{expiration}}' values will be substituted.
+
+- `rotation_statements` `(list: [])` – Specifies the database statements to be
+  executed to rotate the password for a given username. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The '{{name}}' and '{{password}}' values will be substituted.

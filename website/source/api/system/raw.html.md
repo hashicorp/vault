@@ -21,9 +21,9 @@ This endpoint reads the value of the key at the given path. This is the raw path
 in the storage backend and not the logical path that is exposed via the mount
 system.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/raw/:path`             | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/raw/:path`             |
 
 ### Parameters
 
@@ -52,9 +52,9 @@ This endpoint updates the value of the key at the given path. This is the raw
 path in the storage backend and not the logical path that is exposed via the
 mount system.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/raw/:path`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/raw/:path`             |
 
 ### Parameters
 
@@ -87,10 +87,10 @@ This endpoint returns a list keys for a given path prefix.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/raw/:prefix` | `200 application/json` |
-| `GET`   | `/sys/raw/:prefix?list=true` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/raw/:prefix` |
+| `GET`   | `/sys/raw/:prefix?list=true` |
 
 
 ### Sample Request
@@ -121,9 +121,9 @@ $ curl \
 This endpoint deletes the key with given path. This is the raw path in the
 storage backend and not the logical path that is exposed via the mount system.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/raw/:path`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/raw/:path`             |
 
 ### Parameters
 

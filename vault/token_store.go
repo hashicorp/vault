@@ -7,33 +7,32 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
-	"sync/atomic"
-
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/armon/go-metrics"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-
-	metrics "github.com/armon/go-metrics"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/logical/plugin/pb"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -47,7 +46,7 @@ const (
 	accessorPrefix = "accessor/"
 
 	// parentPrefix is the prefix used to store tokens for their
-	// secondar parent based index
+	// secondary parent based index
 	parentPrefix = "parent/"
 
 	// tokenSubPath is the sub-path used for the token store
@@ -103,7 +102,7 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
-	return []*framework.Path{
+	p := []*framework.Path{
 		{
 			Pattern: "roles/?$",
 
@@ -124,76 +123,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    tokenListAccessorsHelp,
 			HelpDescription: tokenListAccessorsHelp,
-		},
-
-		{
-			Pattern: "roles/" + framework.GenericNameRegex("role_name"),
-			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Name of the role",
-				},
-
-				"allowed_policies": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: tokenAllowedPoliciesHelp,
-				},
-
-				"disallowed_policies": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: tokenDisallowedPoliciesHelp,
-				},
-
-				"orphan": &framework.FieldSchema{
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: tokenOrphanHelp,
-				},
-
-				"period": &framework.FieldSchema{
-					Type:        framework.TypeDurationSecond,
-					Default:     0,
-					Description: tokenPeriodHelp,
-				},
-
-				"path_suffix": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Default:     "",
-					Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
-				},
-
-				"explicit_max_ttl": &framework.FieldSchema{
-					Type:        framework.TypeDurationSecond,
-					Default:     0,
-					Description: tokenExplicitMaxTTLHelp,
-				},
-
-				"renewable": &framework.FieldSchema{
-					Type:        framework.TypeBool,
-					Default:     true,
-					Description: tokenRenewableHelp,
-				},
-
-				"bound_cidrs": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
-				},
-
-				"token_type": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Default:     "service",
-					Description: "The type of token to generate, service or batch",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   ts.tokenStoreRoleRead,
-				logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
-				logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
-				logical.DeleteOperation: ts.tokenStoreRoleDelete,
-			},
-
-			ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 		},
 
 		{
@@ -414,6 +343,79 @@ func (ts *TokenStore) paths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(tokenTidyDesc),
 		},
 	}
+
+	rolesPath := &framework.Path{
+		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+		Fields: map[string]*framework.FieldSchema{
+			"role_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the role",
+			},
+
+			"allowed_policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenAllowedPoliciesHelp,
+			},
+
+			"disallowed_policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenDisallowedPoliciesHelp,
+			},
+
+			"orphan": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: tokenOrphanHelp,
+			},
+
+			"period": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Use 'token_period' instead.",
+				Deprecated:  true,
+			},
+
+			"path_suffix": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
+			},
+
+			"explicit_max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Use 'token_explicit_max_ttl' instead.",
+				Deprecated:  true,
+			},
+
+			"renewable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: tokenRenewableHelp,
+			},
+
+			"bound_cidrs": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Use 'token_bound_cidrs' instead.",
+				Deprecated:  true,
+			},
+
+			"allowed_entity_aliases": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   ts.tokenStoreRoleRead,
+			logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
+			logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
+			logical.DeleteOperation: ts.tokenStoreRoleDelete,
+		},
+
+		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
+	}
+
+	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
+	p = append(p, rolesPath)
+
+	return p
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -540,7 +542,6 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-	//ts.logger.Debug("invalidating key", "key", key)
 
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
@@ -581,6 +582,8 @@ func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
+	tokenutil.TokenParams
+
 	// The name of the role. Embedded so it can be used for pathing
 	Name string `json:"name" mapstructure:"name" structs:"name"`
 
@@ -612,8 +615,8 @@ type tsRoleEntry struct {
 	// The set of CIDRs that tokens generated using this role will be bound to
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 
-	// The type of token this role should issue
-	TokenType logical.TokenType `json:"token_type" mapstructure:"token_type"`
+	// The set of allowed entity aliases used during token creation
+	AllowedEntityAliases []string `json:"allowed_entity_aliases" mapstructure:"allowed_entity_aliases" structs:"allowed_entity_aliases"`
 }
 
 type accessorEntry struct {
@@ -2109,6 +2112,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
 		Type            string `mapstructure:"type"`
+		EntityAlias     string `mapstructure:"entity_alias"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -2134,7 +2138,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required generate a namespace admin token"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("root or sudo privileges required to directly generate a token in a child namespace"), logical.ErrInvalidRequest
 		}
 
 		if strutil.StrListContains(data.Policies, "root") {
@@ -2205,6 +2209,51 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
+	// Verify the entity alias
+	var explicitEntityID string
+	if data.EntityAlias != "" {
+		// Parameter is only allowed in combination with token role
+		if role == nil {
+			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
+		}
+
+		// Check if there is a concrete match
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+		}
+
+		// Get mount accessor which is required to lookup entity alias
+		mountValidationResp := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
+		if mountValidationResp == nil {
+			return logical.ErrorResponse("auth token mount accessor not found"), nil
+		}
+
+		// Create alias for later processing
+		alias := &logical.Alias{
+			Name:          data.EntityAlias,
+			MountAccessor: mountValidationResp.Accessor,
+			MountType:     mountValidationResp.Type,
+		}
+
+		// Create or fetch entity from entity alias
+		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+		if entity == nil {
+			return nil, errors.New("failed to create or fetch entity from given entity alias")
+		}
+
+		// Validate that the entity is not disabled
+		if entity.Disabled {
+			return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
+		}
+
+		// Set new entity id
+		explicitEntityID = entity.ID
+	}
+
 	// Setup the token entry
 	te := logical.TokenEntry{
 		Parent: req.ClientToken,
@@ -2234,6 +2283,16 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// renewability disabled, set renewable false
 		if renewable && !role.Renewable {
 			renewable = false
+		}
+
+		// Update te.NumUses which is equal to req.Data["num_uses"] at this point
+		// 0 means unlimited so 1 is actually less than 0
+		switch {
+		case role.TokenNumUses == 0:
+		case te.NumUses == 0:
+			te.NumUses = role.TokenNumUses
+		case role.TokenNumUses < te.NumUses:
+			te.NumUses = role.TokenNumUses
 		}
 
 		if role.PathSuffix != "" {
@@ -2284,7 +2343,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// isn't in the disallowed list, add it. This is in line with the idea
 		// that roles, when allowed/disallowed ar set, allow a subset of
 		// policies to be set disjoint from the parent token's policies.
-		if !data.NoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
+		if !data.NoDefaultPolicy && !role.TokenNoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
 			localAddDefault = true
 		}
 
@@ -2406,8 +2465,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			te.Parent = ""
 		}
 
-		if len(role.BoundCIDRs) > 0 {
-			te.BoundCIDRs = role.BoundCIDRs
+		if len(role.TokenBoundCIDRs) > 0 {
+			te.BoundCIDRs = role.TokenBoundCIDRs
 		}
 
 	case data.NoParent:
@@ -2427,9 +2486,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// At this point, it is clear whether the token is going to be an orphan or
-	// not. If the token is not going to be an orphan, inherit the parent's
+	// not. If setEntityID is set, the entity identifier will be overwritten.
+	// Otherwise, if the token is not going to be an orphan, inherit the parent's
 	// entity identifier into the child token.
-	if te.Parent != "" {
+	switch {
+	case explicitEntityID != "":
+		// Overwrite the entity identifier
+		te.EntityID = explicitEntityID
+	case te.Parent != "":
 		te.EntityID = parent.EntityID
 
 		// If the parent has bound CIDRs, copy those into the child. We don't
@@ -2501,24 +2565,24 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// in role. Batch tokens will error out if not set via role, but here we
 	// need to explicitly check
 	if role != nil && te.Type != logical.TokenTypeBatch {
-		if role.ExplicitMaxTTL != 0 {
+		if role.TokenExplicitMaxTTL != 0 {
 			switch {
 			case explicitMaxTTLToUse == 0:
-				explicitMaxTTLToUse = role.ExplicitMaxTTL
+				explicitMaxTTLToUse = role.TokenExplicitMaxTTL
 			default:
-				if role.ExplicitMaxTTL < explicitMaxTTLToUse {
-					explicitMaxTTLToUse = role.ExplicitMaxTTL
+				if role.TokenExplicitMaxTTL < explicitMaxTTLToUse {
+					explicitMaxTTLToUse = role.TokenExplicitMaxTTL
 				}
 				resp.AddWarning(fmt.Sprintf("Explicit max TTL specified both during creation call and in role; using the lesser value of %d seconds", int64(explicitMaxTTLToUse.Seconds())))
 			}
 		}
-		if role.Period != 0 {
+		if role.TokenPeriod != 0 {
 			switch {
 			case periodToUse == 0:
-				periodToUse = role.Period
+				periodToUse = role.TokenPeriod
 			default:
-				if role.Period < periodToUse {
-					periodToUse = role.Period
+				if role.TokenPeriod < periodToUse {
+					periodToUse = role.TokenPeriod
 				}
 				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(periodToUse.Seconds())))
 			}
@@ -2580,6 +2644,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		ExplicitMaxTTL: explicitMaxTTLToUse,
 		CreationPath:   te.Path,
 		TokenType:      te.Type,
+		Orphan:         te.Parent == "",
 	}
 
 	for _, p := range te.Policies {
@@ -2871,8 +2936,8 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("original token role %q could not be found, not renewing", te.Role)
 	}
 
-	req.Auth.Period = role.Period
-	req.Auth.ExplicitMaxTTL = role.ExplicitMaxTTL
+	req.Auth.Period = role.TokenPeriod
+	req.Auth.ExplicitMaxTTL = role.TokenExplicitMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 
@@ -2897,6 +2962,18 @@ func (ts *TokenStore) tokenStoreRole(ctx context.Context, name string) (*tsRoleE
 
 	if result.TokenType == logical.TokenTypeDefault {
 		result.TokenType = logical.TokenTypeDefaultService
+	}
+
+	// Token field upgrades. We preserve the original value for read
+	// compatibility.
+	if result.Period > 0 && result.TokenPeriod == 0 {
+		result.TokenPeriod = result.Period
+	}
+	if result.ExplicitMaxTTL > 0 && result.TokenExplicitMaxTTL == 0 {
+		result.TokenExplicitMaxTTL = result.ExplicitMaxTTL
+	}
+	if len(result.BoundCIDRs) > 0 && len(result.TokenBoundCIDRs) == 0 {
+		result.TokenBoundCIDRs = result.BoundCIDRs
 	}
 
 	return &result, nil
@@ -2944,22 +3021,32 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 		return nil, nil
 	}
 
+	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"period":              int64(role.Period.Seconds()),
-			"explicit_max_ttl":    int64(role.ExplicitMaxTTL.Seconds()),
-			"disallowed_policies": role.DisallowedPolicies,
-			"allowed_policies":    role.AllowedPolicies,
-			"name":                role.Name,
-			"orphan":              role.Orphan,
-			"path_suffix":         role.PathSuffix,
-			"renewable":           role.Renewable,
-			"token_type":          role.TokenType.String(),
+			"period":                 int64(role.Period.Seconds()),
+			"token_period":           int64(role.TokenPeriod.Seconds()),
+			"explicit_max_ttl":       int64(role.ExplicitMaxTTL.Seconds()),
+			"token_explicit_max_ttl": int64(role.TokenExplicitMaxTTL.Seconds()),
+			"disallowed_policies":    role.DisallowedPolicies,
+			"allowed_policies":       role.AllowedPolicies,
+			"name":                   role.Name,
+			"orphan":                 role.Orphan,
+			"path_suffix":            role.PathSuffix,
+			"renewable":              role.Renewable,
+			"token_type":             role.TokenType.String(),
+			"allowed_entity_aliases": role.AllowedEntityAliases,
 		},
 	}
 
+	if len(role.TokenBoundCIDRs) > 0 {
+		resp.Data["token_bound_cidrs"] = role.TokenBoundCIDRs
+	}
 	if len(role.BoundCIDRs) > 0 {
 		resp.Data["bound_cidrs"] = role.BoundCIDRs
+	}
+	if role.TokenNumUses > 0 {
+		resp.Data["token_num_uses"] = role.TokenNumUses
 	}
 
 	return resp, nil
@@ -2996,139 +3083,197 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		}
 	}
 
-	// In this series of blocks, if we do not find a user-provided value and
-	// it's a creation operation, we call data.Get to get the appropriate
-	// default
+	// First parse fields not duplicated by the token helper
+	{
+		orphanInt, ok := data.GetOk("orphan")
+		if ok {
+			entry.Orphan = orphanInt.(bool)
+		} else if req.Operation == logical.CreateOperation {
+			entry.Orphan = data.Get("orphan").(bool)
+		}
 
-	orphanInt, ok := data.GetOk("orphan")
-	if ok {
-		entry.Orphan = orphanInt.(bool)
-	} else if req.Operation == logical.CreateOperation {
-		entry.Orphan = data.Get("orphan").(bool)
-	}
+		renewableInt, ok := data.GetOk("renewable")
+		if ok {
+			entry.Renewable = renewableInt.(bool)
+		} else if req.Operation == logical.CreateOperation {
+			entry.Renewable = data.Get("renewable").(bool)
+		}
 
-	periodInt, ok := data.GetOk("period")
-	if ok {
-		entry.Period = time.Second * time.Duration(periodInt.(int))
-	} else if req.Operation == logical.CreateOperation {
-		entry.Period = time.Second * time.Duration(data.Get("period").(int))
-	}
-
-	renewableInt, ok := data.GetOk("renewable")
-	if ok {
-		entry.Renewable = renewableInt.(bool)
-	} else if req.Operation == logical.CreateOperation {
-		entry.Renewable = data.Get("renewable").(bool)
-	}
-
-	boundCIDRsRaw, ok := data.GetOk("bound_cidrs")
-	if ok {
-		boundCIDRs := boundCIDRsRaw.([]string)
-		if len(boundCIDRs) > 0 {
-			var parsedCIDRs []*sockaddr.SockAddrMarshaler
-			for _, v := range boundCIDRs {
-				parsedCIDR, err := sockaddr.NewSockAddr(v)
-				if err != nil {
-					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("invalid value %q when parsing bound cidrs: {{err}}", v), err).Error()), nil
+		pathSuffixInt, ok := data.GetOk("path_suffix")
+		if ok {
+			pathSuffix := pathSuffixInt.(string)
+			switch {
+			case pathSuffix != "":
+				matched := pathSuffixSanitize.MatchString(pathSuffix)
+				if !matched {
+					return logical.ErrorResponse(fmt.Sprintf(
+						"given role path suffix contains invalid characters; must match %s",
+						pathSuffixSanitize.String())), nil
 				}
-				parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
 			}
-			entry.BoundCIDRs = parsedCIDRs
+			entry.PathSuffix = pathSuffix
+		} else if req.Operation == logical.CreateOperation {
+			entry.PathSuffix = data.Get("path_suffix").(string)
+		}
+
+		if strings.Contains(entry.PathSuffix, "..") {
+			return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
+		}
+
+		allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
+		if ok {
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+		} else if req.Operation == logical.CreateOperation {
+			entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
+		}
+
+		disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
+		if ok {
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+		}
+	}
+
+	// We handle token type a bit differently than tokenutil does so we need to
+	// cache and handle it after
+	var tokenTypeStr *string
+	oldEntryTokenType := entry.TokenType
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		tokenTypeStr = new(string)
+		*tokenTypeStr = tokenTypeRaw.(string)
+		delete(data.Raw, "token_type")
+		entry.TokenType = logical.TokenTypeDefault
+	}
+
+	// Next parse token fields from the helper
+	if err := entry.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
+	}
+
+	entry.TokenType = oldEntryTokenType
+	if entry.TokenType == logical.TokenTypeDefault {
+		entry.TokenType = logical.TokenTypeDefaultService
+	}
+	if tokenTypeStr != nil {
+		switch *tokenTypeStr {
+		case "service":
+			entry.TokenType = logical.TokenTypeService
+		case "batch":
+			entry.TokenType = logical.TokenTypeBatch
+		case "default-service":
+			entry.TokenType = logical.TokenTypeDefaultService
+		case "default-batch":
+			entry.TokenType = logical.TokenTypeDefaultBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", *tokenTypeStr)), nil
 		}
 	}
 
 	var resp *logical.Response
 
-	explicitMaxTTLInt, ok := data.GetOk("explicit_max_ttl")
-	if ok {
-		entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLInt.(int))
-	} else if req.Operation == logical.CreateOperation {
-		entry.ExplicitMaxTTL = time.Second * time.Duration(data.Get("explicit_max_ttl").(int))
+	// Now handle backwards compat. Prefer token_ fields over others if both
+	// are set. We set the original fields here so that on read of token role
+	// we can return the same values that were set. We clear out the Token*
+	// values because otherwise when we read the role back we'll read stale
+	// data since if they're not emptied they'll take precedence.
+	periodRaw, ok := data.GetOk("token_period")
+	if !ok {
+		periodRaw, ok = data.GetOk("period")
+		if ok {
+			entry.Period = time.Second * time.Duration(periodRaw.(int))
+			entry.TokenPeriod = entry.Period
+		}
+	} else {
+		_, ok = data.GetOk("period")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_period' and deprecated 'period' value supplied, ignoring the deprecated value")
+		}
+		entry.Period = 0
 	}
-	if entry.ExplicitMaxTTL != 0 {
+
+	boundCIDRsRaw, ok := data.GetOk("token_bound_cidrs")
+	if !ok {
+		boundCIDRsRaw, ok = data.GetOk("bound_cidrs")
+		if ok {
+			boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw.([]string))
+			if err != nil {
+				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
+			}
+			entry.BoundCIDRs = boundCIDRs
+			entry.TokenBoundCIDRs = entry.BoundCIDRs
+		}
+	} else {
+		_, ok = data.GetOk("bound_cidrs")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_bound_cidrs' and deprecated 'bound_cidrs' value supplied, ignoring the deprecated value")
+		}
+		entry.BoundCIDRs = nil
+	}
+
+	finalExplicitMaxTTL := entry.TokenExplicitMaxTTL
+	explicitMaxTTLRaw, ok := data.GetOk("token_explicit_max_ttl")
+	if !ok {
+		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
+		if ok {
+			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
+			entry.TokenExplicitMaxTTL = entry.ExplicitMaxTTL
+		}
+		finalExplicitMaxTTL = entry.ExplicitMaxTTL
+	} else {
+		_, ok = data.GetOk("explicit_max_ttl")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_explicit_max_ttl' and deprecated 'explicit_max_ttl' value supplied, ignoring the deprecated value")
+		}
+		entry.ExplicitMaxTTL = 0
+	}
+	if finalExplicitMaxTTL != 0 {
 		sysView := ts.System()
 
-		if sysView.MaxLeaseTTL() != time.Duration(0) && entry.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
+		if sysView.MaxLeaseTTL() != time.Duration(0) && finalExplicitMaxTTL > sysView.MaxLeaseTTL() {
 			if resp == nil {
 				resp = &logical.Response{}
 			}
 			resp.AddWarning(fmt.Sprintf(
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
-				int64(entry.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
 	}
 
-	pathSuffixInt, ok := data.GetOk("path_suffix")
+	// no legacy version without the token_ prefix to check for
+	tokenNumUses, ok := data.GetOk("token_num_uses")
 	if ok {
-		pathSuffix := pathSuffixInt.(string)
-		if pathSuffix != "" {
-			matched := pathSuffixSanitize.MatchString(pathSuffix)
-			if !matched {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"given role path suffix contains invalid characters; must match %s",
-					pathSuffixSanitize.String())), nil
-			}
-			entry.PathSuffix = pathSuffix
-		}
-	} else if req.Operation == logical.CreateOperation {
-		entry.PathSuffix = data.Get("path_suffix").(string)
+		entry.TokenNumUses = tokenNumUses.(int)
 	}
 
-	if strings.Contains(entry.PathSuffix, "..") {
-		return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
-	}
-
-	allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
-	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
-	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
-	}
-
-	disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
-	if ok {
-		entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
-	}
-
-	tokenType := entry.TokenType
-	if tokenType == logical.TokenTypeDefault {
-		tokenType = logical.TokenTypeDefaultService
-	}
-	tokenTypeRaw, ok := data.GetOk("token_type")
-	if ok {
-		tokenTypeStr := tokenTypeRaw.(string)
-		switch tokenTypeStr {
-		case "service":
-			tokenType = logical.TokenTypeService
-		case "batch":
-			tokenType = logical.TokenTypeBatch
-		case "default-service":
-			tokenType = logical.TokenTypeDefaultService
-		case "default-batch":
-			tokenType = logical.TokenTypeDefaultBatch
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenTypeStr)), nil
-		}
-	} else if req.Operation == logical.CreateOperation {
-		tokenType = logical.TokenTypeDefaultService
-	}
-	entry.TokenType = tokenType
-
+	// Run validity checks on token type
 	if entry.TokenType == logical.TokenTypeBatch {
 		if !entry.Orphan {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate non-orphan tokens"), nil
 		}
-		if entry.Period != 0 {
+		if entry.Period != 0 || entry.TokenPeriod != 0 {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
 		}
 		if entry.Renewable {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate renewable tokens"), nil
 		}
-		if entry.ExplicitMaxTTL != 0 {
+		if entry.ExplicitMaxTTL != 0 || entry.TokenExplicitMaxTTL != 0 {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with an explicit max TTL"), nil
 		}
+	}
+
+	allowedEntityAliasesRaw, ok := data.GetOk("allowed_entity_aliases")
+	if ok {
+		entry.AllowedEntityAliases = strutil.RemoveDuplicates(allowedEntityAliasesRaw.([]string), true)
 	}
 
 	ns, err := namespace.FromContext(ctx)

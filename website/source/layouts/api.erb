@@ -25,6 +25,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'elasticdb',
                   'influxdb',
                   'hanadb',
                   'mongodb',
@@ -36,6 +37,7 @@
               },
               { category: 'gcp' },
               { category: 'gcpkms' },
+              { category: 'kmip' },
               {
                 category: 'kv',
                 content: ['kv-v1', 'kv-v2']
@@ -46,6 +48,7 @@
                   'entity-alias',
                   'group',
                   'group-alias',
+                  'tokens',
                   'lookup'
                 ]
               },
@@ -75,6 +78,7 @@
             { category: 'kubernetes' },
             { category: 'ldap' },
             { category: 'okta' },
+            { category: 'pcf' },
             { category: 'radius' },
             { category: 'cert' },
             { category: 'token' },
@@ -104,7 +108,7 @@
               'leader',
               'leases',
               'license',
-              'namespaces',
+              'metrics',
               {
                 category: 'mfa',
                 content: [
@@ -115,6 +119,7 @@
                 ]
               },
               'mounts',
+              'namespaces',
               'plugins-reload-backend',
               'plugins-catalog',
               'policy',
@@ -134,6 +139,12 @@
               'seal',
               'seal-status',
               'step-down',
+              {
+                category: 'storage',
+                content: [
+                  'raft'
+                ]
+              },
               'tools',
               'unseal',
               'wrapping-lookup',

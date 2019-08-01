@@ -5,8 +5,8 @@ sidebar_current: "guides-operations-deployment-guide"
 description: |-
   This deployment guide covers the steps required to install and
   configure a single HashiCorp Vault cluster as defined in the
-  Vault Reference Architecture
-product_version: 1.0
+  Vault Reference Architecture.
+ea_version: 1.0
 ---
 
 # Vault Deployment Guide
@@ -262,7 +262,7 @@ The following parameters are set for the `consul` storage stanza:
 
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
-If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
+If you decide to configure Vault to publish telemetry data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
 
 ### High Availability Parameters
 

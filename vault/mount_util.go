@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func addPathCheckers(*Core, *MountEntry, logical.Backend, string)             {}
@@ -17,6 +17,7 @@ func removeAuditPathChecker(*Core, *MountEntry)                               {}
 func addFilterablePath(*Core, string)                                         {}
 func preprocessMount(*Core, *MountEntry, *BarrierView) (bool, error)          { return false, nil }
 func clearIgnoredPaths(context.Context, *Core, logical.Backend, string) error { return nil }
+func addLicenseCallback(*Core, logical.Backend)                               {}
 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {

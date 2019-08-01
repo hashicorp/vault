@@ -1,0 +1,42 @@
+<HeaderCredentials @role={{this.role}} @scope={{this.scope}} />
+<Toolbar>
+  <ToolbarActions>
+    {{#if model.updatePath.canUpdate}}
+      <ModelWrap as |m|>
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action
+            (perform
+              m.callMethod
+              "destroyRecord"
+              model
+              (concat "Successfully deleted role " model.id)
+              (concat "There was an error deleting the role " model.id)
+              (transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope)
+            )
+          }}
+          @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
+          @cancelButtonText="Cancel"
+          >
+            Delete role
+        </ConfirmAction>
+      </ModelWrap>
+    {{/if}}
+    {{#if model.updatePath.canUpdate}}
+      <ToolbarLink
+        @params={{array "role.edit" this.scope this.role}}
+      >
+        Edit role
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+<div class="box is-fullwidth is-sideless is-shadowless">
+  <FieldGroupShow @model={{model}} @showAllFields={{false}} />
+  <div class="box is-fullwidth is-shadowless">
+    <h2 class="title is-5">
+      Allowed Operations
+    </h2>
+    <OperationFieldDisplay @model={{this.model}} />
+  </div>
+</div>

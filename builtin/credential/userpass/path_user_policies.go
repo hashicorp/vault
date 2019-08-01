@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUserPolicies(b *backend) *framework.Path {
@@ -18,6 +19,11 @@ func pathUserPolicies(b *backend) *framework.Path {
 				Description: "Username for this user.",
 			},
 			"policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
+			},
+			"token_policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
@@ -43,7 +49,22 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies"))
+	policiesRaw, ok := d.GetOk("token_policies")
+	if !ok {
+		policiesRaw, ok = d.GetOk("policies")
+		if ok {
+			userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
+			userEntry.TokenPolicies = userEntry.Policies
+		}
+	} else {
+		userEntry.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
+		_, ok = d.GetOk("policies")
+		if ok {
+			userEntry.Policies = userEntry.TokenPolicies
+		} else {
+			userEntry.Policies = nil
+		}
+	}
 
 	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }

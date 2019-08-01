@@ -7,6 +7,7 @@
   item.id
   class="list-item-row"
   data-test-secret-link=item.id
+  encode=true
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
@@ -14,10 +15,8 @@
         @mode={{if item.isFolder "list" "show" }}
         @secret={{item.id}}
         @class="has-text-black has-text-weight-semibold"
-      >
-        <ICon
-          @glyph={{if item.isFolder 'folder' 'file' }}
-          @size="14"
+      ><Icon
+          @glyph={{if item.isFolder 'folder-outline' 'file-outline' }}
           @class="has-text-grey-light"
         />{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
       </SecretLink>
@@ -72,7 +71,7 @@
                       @class="has-text-black has-text-weight-semibold"
                     >
                       {{if backendModel.isV2KV
-                        "Create New Version"
+                        "Create new version"
                         "Edit"
                       }}
                     </SecretLink>
@@ -80,22 +79,17 @@
                 {{/if}}
                 {{#if item.canDelete}}
                   <li class="action">
-                    {{#confirm-action
-                      confirmButtonClasses="button is-primary"
-                      buttonClasses="link is-destroy"
-                      onConfirmAction=(action "delete" item "secret")
-                      confirmMessage=(concat "Are you sure you want to permanently delete " item.id " and all its versions?")
-                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-                      class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-                      containerClasses="message-body is-block"
-                      messageClasses="is-block"
-                      data-test-v2-kv-delete=item.id
-                    }}
+                    <ConfirmAction
+                      @buttonClasses="link is-destroy"
+                      @confirmMessage="This will permanently delete this secret and all its versions."
+                      @onConfirmAction={{action "delete" item "secret"}}
+                      data-test-v2-kv-delete={{item.id}}
+                    >
                       {{if backendModel.isV2KV
-                        "Permanently Delete"
+                        "Permanently delete"
                         "Delete"
                       }}
-                    {{/confirm-action}}
+                    </ConfirmAction>
                   </li>
                 {{/if}}
               {{/if}}

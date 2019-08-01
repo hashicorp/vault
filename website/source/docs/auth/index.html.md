@@ -13,7 +13,7 @@ Auth methods are the components in Vault that perform authentication and are
 responsible for assigning identity and a set of policies to a user.
 
 Having multiple auth methods enables you to use an auth method that makes the
-sense for your use case of Vault and your organization.
+most sense for your use case of Vault and your organization.
 
 For example, on developer machines, the [GitHub auth method](/docs/auth/github.html)
 is easiest to use. But for servers the [AppRole](/docs/auth/approle.html)

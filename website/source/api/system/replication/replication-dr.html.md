@@ -18,9 +18,9 @@ sync progress, etc).
 
 This is an authenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/dr/status`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/dr/status`    |
 
 ### Sample Request
 
@@ -73,9 +73,9 @@ This endpoint enables DR replication in primary mode. This is used when DR repli
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/primary/enable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/primary/enable` |
 
 ### Parameters
 
@@ -107,9 +107,9 @@ will not attempt to connect to a primary (see the update-primary call), but will
 maintain knowledge of its cluster ID and can be reconnected to the same
 DR replication set without wiping local storage.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/primary/demote` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/primary/demote` |
 
 ### Sample Request
 
@@ -129,9 +129,9 @@ the underlying storage when connected to a primary, and in the primary case,
 secondaries connecting back to the cluster (even if they have connected before)
 will require a wipe of the underlying storage.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/primary/disable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/primary/disable` |
 
 ### Sample Request
 
@@ -150,9 +150,9 @@ identifier can later be used to revoke a DR secondary's access.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/sys/replication/dr/primary/secondary-token` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/sys/replication/dr/primary/secondary-token` |
 
 ### Parameters
 
@@ -204,9 +204,9 @@ This endpoint revokes a DR secondary's ability to connect to the DR primary clus
 the DR secondary will immediately be disconnected and will not be allowed to
 connect again unless given a new activation token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/primary/revoke-secondary` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/primary/revoke-secondary` |
 
 ### Parameters
 
@@ -237,9 +237,9 @@ token.
 
 !> This will immediately clear all data in the secondary cluster!
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/secondary/enable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/secondary/enable` |
 
 ### Parameters
 
@@ -299,9 +299,9 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/secondary/promote` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/secondary/promote` |
 
 ### Parameters
 
@@ -363,9 +363,9 @@ This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
 docs](#generate-disaster-recovery-operation-token) for more information.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/secondary/update-primary` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/secondary/update-primary` |
 
 ### Parameters
 
@@ -420,9 +420,9 @@ being generated when needed and deleted soon after.
 This endpoint reads the configuration and process of the current generation
 attempt.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/dr/secondary/generate-operation-token/attempt` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Sample Request
 
@@ -457,9 +457,9 @@ encode the final token, it will never be returned.
 This endpoint initializes a new generation attempt. Only a single
 generation attempt can take place at a time.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/replication/dr/secondary/generate-operation-token/attempt` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Parameters
 
@@ -495,9 +495,9 @@ $ curl \
 This endpoint cancels any in-progress generation attempt. This clears any
 progress made. This must be called to change the OTP or PGP key being used.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/replication/dr/secondary/generate-operation-token/attempt` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Sample Request
 
@@ -515,9 +515,9 @@ Vault will complete the generation and issue the new token.  Otherwise,
 this API must be called multiple times until that threshold is met. The attempt
 nonce must be provided with each call.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/replication/dr/secondary/generate-operation-token/update`  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/replication/dr/secondary/generate-operation-token/update`  |
 
 ### Parameters
 
@@ -566,9 +566,9 @@ This endpoint revokes the DR Operation Token. This token does not have a TTL
 and therefore should be deleted when it is no longer needed.
 
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/secondary/operation-token/delete` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/secondary/operation-token/delete` |
 
 ### Parameters
 

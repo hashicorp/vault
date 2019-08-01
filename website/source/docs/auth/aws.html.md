@@ -570,8 +570,8 @@ and EC2 instances in the target account.
 
 The account in which Vault is running (i.e. the master account) must be listed as
 a trusted entity in the IAM Role being assumed on the remote account. The Role itself
-should allow the permissions specified in the (Recommended Vault IAM
-Policy)(#recommended-vault-iam-policy) except it doesn't need any further
+should allow the permissions specified in the [Recommended Vault IAM
+Policy](#recommended-vault-iam-policy) except it doesn't need any further
 `sts:AssumeRole` permissions.
 
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
@@ -644,6 +644,13 @@ $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_secret_access_key=<secret_key> \
         aws_security_token=<security_token>
 ```
+
+The region used defaults to `us-east-1`, but you can specify a custom region like so:
+```
+$ vault login -method=aws region=us-west-2 role=dev-role-iam
+```
+When using a custom region, be sure the designated region corresponds to that of the 
+STS endpoint you're using.
 
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli

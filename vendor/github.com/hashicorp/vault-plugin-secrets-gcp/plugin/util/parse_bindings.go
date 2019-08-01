@@ -69,33 +69,9 @@ func parseBindingObjList(topList *ast.ObjectList) (map[string]StringSet, error) 
 	bindings := make(map[string]StringSet)
 
 	for _, item := range topList.Items {
-		if len(item.Keys) != 2 {
-			merr = multierror.Append(merr, fmt.Errorf("invalid resource item does not have ID on line %d", item.Assign.Line))
-			continue
-		}
-
-		key := item.Keys[0].Token.Value().(string)
-		if key != "resource" {
-			merr = multierror.Append(merr, fmt.Errorf("invalid key '%s' (line %d)", key, item.Assign.Line))
-			continue
-		}
-
-		resourceName := item.Keys[1].Token.Value().(string)
-		_, ok := bindings[resourceName]
-		if !ok {
-			bindings[resourceName] = make(StringSet)
-		}
-
-		resourceList := item.Val.(*ast.ObjectType).List
-		for _, rolesItem := range resourceList.Items {
-			key := rolesItem.Keys[0].Token.Text
-			switch key {
-			case "roles":
-				parseRoles(rolesItem, bindings[resourceName], merr)
-			default:
-				merr = multierror.Append(merr, fmt.Errorf("invalid key '%s' in resource '%s' (line %d)", key, resourceName, item.Assign.Line))
-				continue
-			}
+		err := parseResourceObject(item, bindings)
+		if err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("(line %d) %v", item.Assign.Line, err))
 		}
 	}
 	err := merr.ErrorOrNil()
@@ -105,32 +81,114 @@ func parseBindingObjList(topList *ast.ObjectList) (map[string]StringSet, error) 
 	return bindings, nil
 }
 
-func parseRoles(item *ast.ObjectItem, roleSet StringSet, merr *multierror.Error) {
-	lst, ok := item.Val.(*ast.ListType)
+func parseResourceObject(item *ast.ObjectItem, bindings map[string]StringSet) error {
+	if len(item.Keys) != 2 || item.Keys[0] == nil || item.Keys[1] == nil {
+		return fmt.Errorf(`top-level items must have format "resource" "$resource_name"`)
+	}
+
+	k, err := parseStringFromObjectKey(item, item.Keys[0])
+	if err != nil {
+		return err
+	}
+	if k != "resource" {
+		return fmt.Errorf(`invalid item %q, expected "resource"`, k)
+	}
+
+	resourceName, err := parseStringFromObjectKey(item, item.Keys[1])
+	if err != nil {
+		return err
+	}
+
+	_, ok := bindings[resourceName]
 	if !ok {
-		merr = multierror.Append(merr, fmt.Errorf("roles must be a list (line %d)", item.Assign.Line))
-		return
+		bindings[resourceName] = make(StringSet)
+	}
+	boundRoles := bindings[resourceName]
+
+	resourceItemList := item.Val.(*ast.ObjectType).List
+	if resourceItemList == nil {
+		return fmt.Errorf("invalid empty roles list for item (line %d)", item.Assign.Line)
 	}
 
-	for _, roleItem := range lst.List {
-		role := roleItem.(*ast.LiteralType).Token.Value().(string)
-
-		tkns := strings.Split(role, "/")
-		switch len(tkns) {
-		case 2:
-			// "roles/X"
-			if tkns[0] == "roles" {
-				roleSet.Add(role)
-				continue
-			}
-		case 4:
-			// "projects/X/roles/Y" or "organizations/X/roles/Y"
-			if (tkns[0] == "projects" || tkns[0] == "organizations") && tkns[2] == "roles" {
-				roleSet.Add(role)
-				continue
-			}
+	var merr *multierror.Error
+	for _, rolesObj := range resourceItemList.Items {
+		err := parseRolesObject(rolesObj, boundRoles)
+		if err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("role list (line %d): %v", rolesObj.Assign.Line, err))
 		}
-
-		merr = multierror.Append(merr, fmt.Errorf("invalid role: %s (line %d): must be project-level, organization-level, or global role", role, roleItem.Pos().Line))
 	}
+	return merr.ErrorOrNil()
+}
+
+func parseRolesObject(rolesObj *ast.ObjectItem, parsedRoles StringSet) error {
+	if rolesObj == nil || len(rolesObj.Keys) != 1 || rolesObj.Keys[0] == nil {
+		return fmt.Errorf(`expected "roles" list, got nil object item`)
+	}
+	k, err := parseStringFromObjectKey(rolesObj, rolesObj.Keys[0])
+	if err != nil {
+		return err
+	}
+	if k != "roles" {
+		return fmt.Errorf(`invalid key %q in resource, expected "roles"`, k)
+	}
+
+	if rolesObj.Val == nil {
+		return fmt.Errorf(`expected "roles" list, got nil value`)
+	}
+	roleList, ok := rolesObj.Val.(*ast.ListType)
+	if !ok {
+		return fmt.Errorf("parsing error, expected list of roles for key 'roles'")
+	}
+	var merr *multierror.Error
+	for _, singleRoleObj := range roleList.List {
+		role, err := parseRole(rolesObj, singleRoleObj)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		} else {
+			parsedRoles.Add(role)
+		}
+	}
+	return merr.ErrorOrNil()
+}
+
+func parseRole(parent *ast.ObjectItem, roleNode ast.Node) (string, error) {
+	if roleNode == nil {
+		return "", fmt.Errorf(`unexpected empty role item (line %d)`, parent.Assign.Line)
+	}
+
+	roleLitType, ok := roleNode.(*ast.LiteralType)
+	if !ok || roleLitType == nil {
+		return "", fmt.Errorf(`unexpected nil item in roles list (line %d)`, parent.Assign.Line)
+	}
+
+	roleRaw := roleLitType.Token.Value()
+	role, ok := roleRaw.(string)
+	if !ok {
+		return "", fmt.Errorf(`unexpected item %v in roles list is not a string (line %d)`, roleRaw, parent.Assign.Line)
+	}
+
+	tkns := strings.Split(role, "/")
+	if len(tkns) == 2 && tkns[0] == "roles" {
+		return role, nil
+	}
+	if len(tkns) == 4 && tkns[2] == "roles" {
+		// "projects/X/roles/Y" or "organizations/X/roles/Y"
+		if tkns[0] == "projects" || tkns[0] == "organizations" {
+			return role, nil
+		}
+	}
+	return "", fmt.Errorf(`invalid role %q (line %d) must be one of following formats: "projects/X/roles/Y", "organizations/X/roles/Y", "roles/X"`, role, parent.Assign.Line)
+}
+
+func parseStringFromObjectKey(parent *ast.ObjectItem, k *ast.ObjectKey) (string, error) {
+	if k == nil || k.Token.Value() == nil {
+		return "", fmt.Errorf("expected string, got nil value (Llne %d)", parent.Assign.Line)
+	}
+	vRaw := k.Token.Value()
+	v, ok := vRaw.(string)
+	if !ok {
+		return "", fmt.Errorf("expected string, got %v (Llne %d)", parent.Assign.Line, vRaw)
+	}
+
+	return v, nil
 }

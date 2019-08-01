@@ -4,15 +4,16 @@
 package kms
 
 import (
+	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/golang/protobuf/ptypes/wrappers"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,17 +25,21 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// Request message for [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
+// Request message for
+// [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
 type ListKeyRingsRequest struct {
 	// Required. The resource name of the location associated with the
-	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format `projects/*/locations/*`.
+	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format
+	// `projects/*/locations/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of [KeyRings][google.cloud.kms.v1.KeyRing] to include in the
-	// response.  Further [KeyRings][google.cloud.kms.v1.KeyRing] can subsequently be obtained by
-	// including the [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token] in a subsequent
-	// request.  If unspecified, the server will pick an appropriate default.
+	// Optional limit on the number of [KeyRings][google.cloud.kms.v1.KeyRing] to
+	// include in the response.  Further [KeyRings][google.cloud.kms.v1.KeyRing]
+	// can subsequently be obtained by including the
+	// [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token]
+	// in a subsequent request.  If unspecified, the server will pick an
+	// appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token].
@@ -90,15 +95,19 @@ func (m *ListKeyRingsRequest) GetPageToken() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
+// Request message for
+// [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
 type ListCryptoKeysRequest struct {
-	// Required. The resource name of the [KeyRing][google.cloud.kms.v1.KeyRing] to list, in the format
-	// `projects/*/locations/*/keyRings/*`.
+	// Required. The resource name of the [KeyRing][google.cloud.kms.v1.KeyRing]
+	// to list, in the format `projects/*/locations/*/keyRings/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] to include in the
-	// response.  Further [CryptoKeys][google.cloud.kms.v1.CryptoKey] can subsequently be obtained by
-	// including the [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token] in a subsequent
-	// request.  If unspecified, the server will pick an appropriate default.
+	// Optional limit on the number of [CryptoKeys][google.cloud.kms.v1.CryptoKey]
+	// to include in the response.  Further
+	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] can subsequently be obtained by
+	// including the
+	// [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token]
+	// in a subsequent request.  If unspecified, the server will pick an
+	// appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token].
@@ -163,16 +172,20 @@ func (m *ListCryptoKeysRequest) GetVersionView() CryptoKeyVersion_CryptoKeyVersi
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_VIEW_UNSPECIFIED
 }
 
-// Request message for [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
+// Request message for
+// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
 type ListCryptoKeyVersionsRequest struct {
-	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to list, in the format
+	// Required. The resource name of the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to list, in the format
 	// `projects/*/locations/*/keyRings/*/cryptoKeys/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] to
-	// include in the response. Further [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] can
-	// subsequently be obtained by including the
-	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token] in a subsequent request.
-	// If unspecified, the server will pick an appropriate default.
+	// Optional limit on the number of
+	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] to include in the
+	// response. Further [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion]
+	// can subsequently be obtained by including the
+	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token]
+	// in a subsequent request. If unspecified, the server will pick an
+	// appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token].
@@ -237,14 +250,17 @@ func (m *ListCryptoKeyVersionsRequest) GetView() CryptoKeyVersion_CryptoKeyVersi
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_VIEW_UNSPECIFIED
 }
 
-// Response message for [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
+// Response message for
+// [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
 type ListKeyRingsResponse struct {
 	// The list of [KeyRings][google.cloud.kms.v1.KeyRing].
 	KeyRings []*KeyRing `protobuf:"bytes,1,rep,name=key_rings,json=keyRings,proto3" json:"key_rings,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListKeyRingsRequest.page_token][google.cloud.kms.v1.ListKeyRingsRequest.page_token] to retrieve the next page of results.
+	// [ListKeyRingsRequest.page_token][google.cloud.kms.v1.ListKeyRingsRequest.page_token]
+	// to retrieve the next page of results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of [KeyRings][google.cloud.kms.v1.KeyRing] that matched the query.
+	// The total number of [KeyRings][google.cloud.kms.v1.KeyRing] that matched
+	// the query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -297,14 +313,17 @@ func (m *ListKeyRingsResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Response message for [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
+// Response message for
+// [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
 type ListCryptoKeysResponse struct {
 	// The list of [CryptoKeys][google.cloud.kms.v1.CryptoKey].
 	CryptoKeys []*CryptoKey `protobuf:"bytes,1,rep,name=crypto_keys,json=cryptoKeys,proto3" json:"crypto_keys,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListCryptoKeysRequest.page_token][google.cloud.kms.v1.ListCryptoKeysRequest.page_token] to retrieve the next page of results.
+	// [ListCryptoKeysRequest.page_token][google.cloud.kms.v1.ListCryptoKeysRequest.page_token]
+	// to retrieve the next page of results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] that matched the query.
+	// The total number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] that
+	// matched the query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -357,15 +376,17 @@ func (m *ListCryptoKeysResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Response message for [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
+// Response message for
+// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
 type ListCryptoKeyVersionsResponse struct {
 	// The list of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	CryptoKeyVersions []*CryptoKeyVersion `protobuf:"bytes,1,rep,name=crypto_key_versions,json=cryptoKeyVersions,proto3" json:"crypto_key_versions,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListCryptoKeyVersionsRequest.page_token][google.cloud.kms.v1.ListCryptoKeyVersionsRequest.page_token] to retrieve the next page of
-	// results.
+	// [ListCryptoKeyVersionsRequest.page_token][google.cloud.kms.v1.ListCryptoKeyVersionsRequest.page_token]
+	// to retrieve the next page of results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] that matched the
+	// The total number of
+	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] that matched the
 	// query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -419,9 +440,11 @@ func (m *ListCryptoKeyVersionsResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Request message for [KeyManagementService.GetKeyRing][google.cloud.kms.v1.KeyManagementService.GetKeyRing].
+// Request message for
+// [KeyManagementService.GetKeyRing][google.cloud.kms.v1.KeyManagementService.GetKeyRing].
 type GetKeyRingRequest struct {
-	// The [name][google.cloud.kms.v1.KeyRing.name] of the [KeyRing][google.cloud.kms.v1.KeyRing] to get.
+	// The [name][google.cloud.kms.v1.KeyRing.name] of the
+	// [KeyRing][google.cloud.kms.v1.KeyRing] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -460,9 +483,11 @@ func (m *GetKeyRingRequest) GetName() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.GetCryptoKey][google.cloud.kms.v1.KeyManagementService.GetCryptoKey].
+// Request message for
+// [KeyManagementService.GetCryptoKey][google.cloud.kms.v1.KeyManagementService.GetCryptoKey].
 type GetCryptoKeyRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKey.name] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to get.
+	// The [name][google.cloud.kms.v1.CryptoKey.name] of the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -501,9 +526,11 @@ func (m *GetCryptoKeyRequest) GetName() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.GetCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.GetCryptoKeyVersion].
+// Request message for
+// [KeyManagementService.GetCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.GetCryptoKeyVersion].
 type GetCryptoKeyVersionRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to get.
+	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -542,10 +569,11 @@ func (m *GetCryptoKeyVersionRequest) GetName() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+// Request message for
+// [KeyManagementService.GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 type GetPublicKeyRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] public key to
-	// get.
+	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] public key to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -584,10 +612,12 @@ func (m *GetPublicKeyRequest) GetName() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.CreateKeyRing][google.cloud.kms.v1.KeyManagementService.CreateKeyRing].
+// Request message for
+// [KeyManagementService.CreateKeyRing][google.cloud.kms.v1.KeyManagementService.CreateKeyRing].
 type CreateKeyRingRequest struct {
 	// Required. The resource name of the location associated with the
-	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format `projects/*/locations/*`.
+	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format
+	// `projects/*/locations/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Required. It must be unique within a location and match the regular
 	// expression `[a-zA-Z0-9_-]{1,63}`
@@ -645,10 +675,11 @@ func (m *CreateKeyRingRequest) GetKeyRing() *KeyRing {
 	return nil
 }
 
-// Request message for [KeyManagementService.CreateCryptoKey][google.cloud.kms.v1.KeyManagementService.CreateCryptoKey].
+// Request message for
+// [KeyManagementService.CreateCryptoKey][google.cloud.kms.v1.KeyManagementService.CreateCryptoKey].
 type CreateCryptoKeyRequest struct {
-	// Required. The [name][google.cloud.kms.v1.KeyRing.name] of the KeyRing associated with the
-	// [CryptoKeys][google.cloud.kms.v1.CryptoKey].
+	// Required. The [name][google.cloud.kms.v1.KeyRing.name] of the KeyRing
+	// associated with the [CryptoKeys][google.cloud.kms.v1.CryptoKey].
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Required. It must be unique within a KeyRing and match the regular
 	// expression `[a-zA-Z0-9_-]{1,63}`
@@ -706,12 +737,15 @@ func (m *CreateCryptoKeyRequest) GetCryptoKey() *CryptoKey {
 	return nil
 }
 
-// Request message for [KeyManagementService.CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion].
+// Request message for
+// [KeyManagementService.CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion].
 type CreateCryptoKeyVersionRequest struct {
-	// Required. The [name][google.cloud.kms.v1.CryptoKey.name] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] associated with
-	// the [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
+	// Required. The [name][google.cloud.kms.v1.CryptoKey.name] of the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey] associated with the
+	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with initial field values.
+	// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with initial
+	// field values.
 	CryptoKeyVersion     *CryptoKeyVersion `protobuf:"bytes,2,opt,name=crypto_key_version,json=cryptoKeyVersion,proto3" json:"crypto_key_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
@@ -757,7 +791,8 @@ func (m *CreateCryptoKeyVersionRequest) GetCryptoKeyVersion() *CryptoKeyVersion 
 	return nil
 }
 
-// Request message for [KeyManagementService.UpdateCryptoKey][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKey].
+// Request message for
+// [KeyManagementService.UpdateCryptoKey][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKey].
 type UpdateCryptoKeyRequest struct {
 	// [CryptoKey][google.cloud.kms.v1.CryptoKey] with updated values.
 	CryptoKey *CryptoKey `protobuf:"bytes,1,opt,name=crypto_key,json=cryptoKey,proto3" json:"crypto_key,omitempty"`
@@ -807,9 +842,11 @@ func (m *UpdateCryptoKeyRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
-// Request message for [KeyManagementService.UpdateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyVersion].
+// Request message for
+// [KeyManagementService.UpdateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyVersion].
 type UpdateCryptoKeyVersionRequest struct {
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with updated values.
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with updated
+	// values.
 	CryptoKeyVersion *CryptoKeyVersion `protobuf:"bytes,1,opt,name=crypto_key_version,json=cryptoKeyVersion,proto3" json:"crypto_key_version,omitempty"`
 	// Required list of fields to be updated in this request.
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
@@ -857,32 +894,38 @@ func (m *UpdateCryptoKeyVersionRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
-// Request message for [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+// Request message for
+// [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 type EncryptRequest struct {
-	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] or [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// to use for encryption.
+	// Required. The resource name of the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey] or
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
+	// encryption.
 	//
-	// If a [CryptoKey][google.cloud.kms.v1.CryptoKey] is specified, the server will use its
-	// [primary version][google.cloud.kms.v1.CryptoKey.primary].
+	// If a [CryptoKey][google.cloud.kms.v1.CryptoKey] is specified, the server
+	// will use its [primary version][google.cloud.kms.v1.CryptoKey.primary].
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The data to encrypt. Must be no larger than 64KiB.
 	//
 	// The maximum size depends on the key version's
-	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]. For
-	// [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the plaintext must be no larger
-	// than 64KiB. For [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of the
-	// plaintext and additional_authenticated_data fields must be no larger than
-	// 8KiB.
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level].
+	// For [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the
+	// plaintext must be no larger than 64KiB. For
+	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of
+	// the plaintext and additional_authenticated_data fields must be no larger
+	// than 8KiB.
 	Plaintext []byte `protobuf:"bytes,2,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
 	// Optional data that, if specified, must also be provided during decryption
-	// through [DecryptRequest.additional_authenticated_data][google.cloud.kms.v1.DecryptRequest.additional_authenticated_data].
+	// through
+	// [DecryptRequest.additional_authenticated_data][google.cloud.kms.v1.DecryptRequest.additional_authenticated_data].
 	//
 	// The maximum size depends on the key version's
-	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]. For
-	// [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the AAD must be no larger than
-	// 64KiB. For [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of the
-	// plaintext and additional_authenticated_data fields must be no larger than
-	// 8KiB.
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level].
+	// For [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the AAD
+	// must be no larger than 64KiB. For
+	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of
+	// the plaintext and additional_authenticated_data fields must be no larger
+	// than 8KiB.
 	AdditionalAuthenticatedData []byte   `protobuf:"bytes,3,opt,name=additional_authenticated_data,json=additionalAuthenticatedData,proto3" json:"additional_authenticated_data,omitempty"`
 	XXX_NoUnkeyedLiteral        struct{} `json:"-"`
 	XXX_unrecognized            []byte   `json:"-"`
@@ -935,10 +978,12 @@ func (m *EncryptRequest) GetAdditionalAuthenticatedData() []byte {
 	return nil
 }
 
-// Request message for [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+// Request message for
+// [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
 type DecryptRequest struct {
-	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to use for decryption.
-	// The server will choose the appropriate version.
+	// Required. The resource name of the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to use for decryption. The
+	// server will choose the appropriate version.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The encrypted data originally returned in
 	// [EncryptResponse.ciphertext][google.cloud.kms.v1.EncryptResponse.ciphertext].
@@ -997,9 +1042,12 @@ func (m *DecryptRequest) GetAdditionalAuthenticatedData() []byte {
 	return nil
 }
 
-// Request message for [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
+// Request message for
+// [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
 type AsymmetricSignRequest struct {
-	// Required. The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for signing.
+	// Required. The resource name of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
+	// signing.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The digest of the data to sign. The digest must be produced with
 	// the same digest algorithm as specified by the key version's
@@ -1049,13 +1097,16 @@ func (m *AsymmetricSignRequest) GetDigest() *Digest {
 	return nil
 }
 
-// Request message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+// Request message for
+// [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
 type AsymmetricDecryptRequest struct {
-	// Required. The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
+	// Required. The resource name of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
 	// decryption.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Required. The data encrypted with the named [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s public
-	// key using OAEP.
+	// Required. The data encrypted with the named
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s public key using
+	// OAEP.
 	Ciphertext           []byte   `protobuf:"bytes,3,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1101,9 +1152,11 @@ func (m *AsymmetricDecryptRequest) GetCiphertext() []byte {
 	return nil
 }
 
-// Response message for [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+// Response message for
+// [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
 type DecryptResponse struct {
-	// The decrypted data originally supplied in [EncryptRequest.plaintext][google.cloud.kms.v1.EncryptRequest.plaintext].
+	// The decrypted data originally supplied in
+	// [EncryptRequest.plaintext][google.cloud.kms.v1.EncryptRequest.plaintext].
 	Plaintext            []byte   `protobuf:"bytes,1,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1142,9 +1195,12 @@ func (m *DecryptResponse) GetPlaintext() []byte {
 	return nil
 }
 
-// Response message for [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+// Response message for
+// [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 type EncryptResponse struct {
-	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] used in encryption.
+	// The resource name of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] used in
+	// encryption.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// The encrypted data.
 	Ciphertext           []byte   `protobuf:"bytes,2,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
@@ -1192,7 +1248,8 @@ func (m *EncryptResponse) GetCiphertext() []byte {
 	return nil
 }
 
-// Response message for [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
+// Response message for
+// [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
 type AsymmetricSignResponse struct {
 	// The created signature.
 	Signature            []byte   `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -1233,7 +1290,8 @@ func (m *AsymmetricSignResponse) GetSignature() []byte {
 	return nil
 }
 
-// Response message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+// Response message for
+// [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
 type AsymmetricDecryptResponse struct {
 	// The decrypted data originally encrypted with the matching public key.
 	Plaintext            []byte   `protobuf:"bytes,1,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
@@ -1274,11 +1332,14 @@ func (m *AsymmetricDecryptResponse) GetPlaintext() []byte {
 	return nil
 }
 
-// Request message for [KeyManagementService.UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].
+// Request message for
+// [KeyManagementService.UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].
 type UpdateCryptoKeyPrimaryVersionRequest struct {
-	// The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to update.
+	// The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to
+	// update.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// The id of the child [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use as primary.
+	// The id of the child
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use as primary.
 	CryptoKeyVersionId   string   `protobuf:"bytes,2,opt,name=crypto_key_version_id,json=cryptoKeyVersionId,proto3" json:"crypto_key_version_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1324,9 +1385,11 @@ func (m *UpdateCryptoKeyPrimaryVersionRequest) GetCryptoKeyVersionId() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion].
+// Request message for
+// [KeyManagementService.DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion].
 type DestroyCryptoKeyVersionRequest struct {
-	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to destroy.
+	// The resource name of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to destroy.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1365,9 +1428,11 @@ func (m *DestroyCryptoKeyVersionRequest) GetName() string {
 	return ""
 }
 
-// Request message for [KeyManagementService.RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion].
+// Request message for
+// [KeyManagementService.RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion].
 type RestoreCryptoKeyVersionRequest struct {
-	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to restore.
+	// The resource name of the
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to restore.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1495,92 +1560,22 @@ func (m *Digest) GetSha512() []byte {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Digest) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Digest_OneofMarshaler, _Digest_OneofUnmarshaler, _Digest_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*Digest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*Digest_Sha256)(nil),
 		(*Digest_Sha384)(nil),
 		(*Digest_Sha512)(nil),
 	}
 }
 
-func _Digest_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Digest)
-	// digest
-	switch x := m.Digest.(type) {
-	case *Digest_Sha256:
-		b.EncodeVarint(1<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.Sha256)
-	case *Digest_Sha384:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.Sha384)
-	case *Digest_Sha512:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.Sha512)
-	case nil:
-	default:
-		return fmt.Errorf("Digest.Digest has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Digest_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Digest)
-	switch tag {
-	case 1: // digest.sha256
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Digest = &Digest_Sha256{x}
-		return true, err
-	case 2: // digest.sha384
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Digest = &Digest_Sha384{x}
-		return true, err
-	case 3: // digest.sha512
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Digest = &Digest_Sha512{x}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Digest_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Digest)
-	// digest
-	switch x := m.Digest.(type) {
-	case *Digest_Sha256:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Sha256)))
-		n += len(x.Sha256)
-	case *Digest_Sha384:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Sha384)))
-		n += len(x.Sha384)
-	case *Digest_Sha512:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Sha512)))
-		n += len(x.Sha512)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-// Cloud KMS metadata for the given [google.cloud.location.Location][google.cloud.location.Location].
+// Cloud KMS metadata for the given
+// [google.cloud.location.Location][google.cloud.location.Location].
 type LocationMetadata struct {
 	// Indicates whether [CryptoKeys][google.cloud.kms.v1.CryptoKey] with
 	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]
-	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] can be created in this location.
+	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] can be created in this
+	// location.
 	HsmAvailable         bool     `protobuf:"varint,1,opt,name=hsm_available,json=hsmAvailable,proto3" json:"hsm_available,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1781,25 +1776,32 @@ type KeyManagementServiceClient interface {
 	ListCryptoKeyVersions(ctx context.Context, in *ListCryptoKeyVersionsRequest, opts ...grpc.CallOption) (*ListCryptoKeyVersionsResponse, error)
 	// Returns metadata for a given [KeyRing][google.cloud.kms.v1.KeyRing].
 	GetKeyRing(ctx context.Context, in *GetKeyRingRequest, opts ...grpc.CallOption) (*KeyRing, error)
-	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as well as its
-	// [primary][google.cloud.kms.v1.CryptoKey.primary] [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as
+	// well as its [primary][google.cloud.kms.v1.CryptoKey.primary]
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKey(ctx context.Context, in *GetCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Returns metadata for a given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKeyVersion(ctx context.Context, in *GetCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
-	// Returns the public key for the given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
+	// Returns the public key for the given
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN] or
+	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN]
+	// or
 	// [ASYMMETRIC_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_DECRYPT].
 	GetPublicKey(ctx context.Context, in *GetPublicKeyRequest, opts ...grpc.CallOption) (*PublicKey, error)
-	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and Location.
+	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and
+	// Location.
 	CreateKeyRing(ctx context.Context, in *CreateKeyRingRequest, opts ...grpc.CallOption) (*KeyRing, error)
-	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a [KeyRing][google.cloud.kms.v1.KeyRing].
+	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a
+	// [KeyRing][google.cloud.kms.v1.KeyRing].
 	//
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] and
 	// [CryptoKey.version_template.algorithm][google.cloud.kms.v1.CryptoKeyVersionTemplate.algorithm]
 	// are required.
 	CreateCryptoKey(ctx context.Context, in *CreateCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	//
 	// The server will assign the next sequential id. If unset,
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
@@ -1807,53 +1809,75 @@ type KeyManagementServiceClient interface {
 	CreateCryptoKeyVersion(ctx context.Context, in *CreateCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
 	// Update a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	UpdateCryptoKey(ctx context.Context, in *UpdateCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s metadata.
+	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s
+	// metadata.
 	//
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] may be changed between
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] and
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED] using this
-	// method. See [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion] and [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] to
-	// move between other states.
+	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
+	// and
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED]
+	// using this method. See
+	// [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion]
+	// and
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
+	// to move between other states.
 	UpdateCryptoKeyVersion(ctx context.Context, in *UpdateCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
-	// Encrypts data, so that it can only be recovered by a call to [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
-	// The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// Encrypts data, so that it can only be recovered by a call to
+	// [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt]. The
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
 	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
-	// Decrypts data that was protected by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// must be [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
+	// Decrypts data that was protected by
+	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Decrypt(ctx context.Context, in *DecryptRequest, opts ...grpc.CallOption) (*DecryptResponse, error)
-	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
+	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 	// ASYMMETRIC_SIGN, producing a signature that can be verified with the public
-	// key retrieved from [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+	// key retrieved from
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	AsymmetricSign(ctx context.Context, in *AsymmetricSignRequest, opts ...grpc.CallOption) (*AsymmetricSignResponse, error)
 	// Decrypts data that was encrypted with a public key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey] corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] ASYMMETRIC_DECRYPT.
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey]
+	// corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
+	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// ASYMMETRIC_DECRYPT.
 	AsymmetricDecrypt(ctx context.Context, in *AsymmetricDecryptRequest, opts ...grpc.CallOption) (*AsymmetricDecryptResponse, error)
-	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that will be used in [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that
+	// will be used in
+	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 	//
 	// Returns an error if called on an asymmetric key.
 	UpdateCryptoKeyPrimaryVersion(ctx context.Context, in *UpdateCryptoKeyPrimaryVersionRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for destruction.
+	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for
+	// destruction.
 	//
-	// Upon calling this method, [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
+	// Upon calling this method,
+	// [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will
+	// be set to
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be set to a time 24
-	// hours in the future, at which point the [state][google.cloud.kms.v1.CryptoKeyVersion.state]
-	// will be changed to
-	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED], and the key
-	// material will be irrevocably destroyed.
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
+	// be set to a time 24 hours in the future, at which point the
+	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be changed to
+	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED],
+	// and the key material will be irrevocably destroyed.
 	//
-	// Before the [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is reached,
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] may be called to reverse the process.
+	// Before the
+	// [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is
+	// reached,
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
+	// may be called to reverse the process.
 	DestroyCryptoKeyVersion(ctx context.Context, in *DestroyCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
 	// Restore a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
 	// state.
 	//
-	// Upon restoration of the CryptoKeyVersion, [state][google.cloud.kms.v1.CryptoKeyVersion.state]
-	// will be set to [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be cleared.
+	// Upon restoration of the CryptoKeyVersion,
+	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
+	// be cleared.
 	RestoreCryptoKeyVersion(ctx context.Context, in *RestoreCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
 }
 
@@ -2046,25 +2070,32 @@ type KeyManagementServiceServer interface {
 	ListCryptoKeyVersions(context.Context, *ListCryptoKeyVersionsRequest) (*ListCryptoKeyVersionsResponse, error)
 	// Returns metadata for a given [KeyRing][google.cloud.kms.v1.KeyRing].
 	GetKeyRing(context.Context, *GetKeyRingRequest) (*KeyRing, error)
-	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as well as its
-	// [primary][google.cloud.kms.v1.CryptoKey.primary] [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as
+	// well as its [primary][google.cloud.kms.v1.CryptoKey.primary]
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKey(context.Context, *GetCryptoKeyRequest) (*CryptoKey, error)
-	// Returns metadata for a given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKeyVersion(context.Context, *GetCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
-	// Returns the public key for the given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
+	// Returns the public key for the given
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN] or
+	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN]
+	// or
 	// [ASYMMETRIC_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_DECRYPT].
 	GetPublicKey(context.Context, *GetPublicKeyRequest) (*PublicKey, error)
-	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and Location.
+	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and
+	// Location.
 	CreateKeyRing(context.Context, *CreateKeyRingRequest) (*KeyRing, error)
-	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a [KeyRing][google.cloud.kms.v1.KeyRing].
+	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a
+	// [KeyRing][google.cloud.kms.v1.KeyRing].
 	//
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] and
 	// [CryptoKey.version_template.algorithm][google.cloud.kms.v1.CryptoKeyVersionTemplate.algorithm]
 	// are required.
 	CreateCryptoKey(context.Context, *CreateCryptoKeyRequest) (*CryptoKey, error)
-	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	//
 	// The server will assign the next sequential id. If unset,
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
@@ -2072,53 +2103,75 @@ type KeyManagementServiceServer interface {
 	CreateCryptoKeyVersion(context.Context, *CreateCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
 	// Update a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	UpdateCryptoKey(context.Context, *UpdateCryptoKeyRequest) (*CryptoKey, error)
-	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s metadata.
+	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s
+	// metadata.
 	//
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] may be changed between
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] and
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED] using this
-	// method. See [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion] and [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] to
-	// move between other states.
+	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
+	// and
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED]
+	// using this method. See
+	// [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion]
+	// and
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
+	// to move between other states.
 	UpdateCryptoKeyVersion(context.Context, *UpdateCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
-	// Encrypts data, so that it can only be recovered by a call to [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
-	// The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// Encrypts data, so that it can only be recovered by a call to
+	// [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt]. The
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
 	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
-	// Decrypts data that was protected by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// must be [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
+	// Decrypts data that was protected by
+	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Decrypt(context.Context, *DecryptRequest) (*DecryptResponse, error)
-	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
+	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 	// ASYMMETRIC_SIGN, producing a signature that can be verified with the public
-	// key retrieved from [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+	// key retrieved from
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	AsymmetricSign(context.Context, *AsymmetricSignRequest) (*AsymmetricSignResponse, error)
 	// Decrypts data that was encrypted with a public key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey] corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] ASYMMETRIC_DECRYPT.
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey]
+	// corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
+	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// ASYMMETRIC_DECRYPT.
 	AsymmetricDecrypt(context.Context, *AsymmetricDecryptRequest) (*AsymmetricDecryptResponse, error)
-	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that will be used in [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that
+	// will be used in
+	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 	//
 	// Returns an error if called on an asymmetric key.
 	UpdateCryptoKeyPrimaryVersion(context.Context, *UpdateCryptoKeyPrimaryVersionRequest) (*CryptoKey, error)
-	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for destruction.
+	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for
+	// destruction.
 	//
-	// Upon calling this method, [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
+	// Upon calling this method,
+	// [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will
+	// be set to
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be set to a time 24
-	// hours in the future, at which point the [state][google.cloud.kms.v1.CryptoKeyVersion.state]
-	// will be changed to
-	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED], and the key
-	// material will be irrevocably destroyed.
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
+	// be set to a time 24 hours in the future, at which point the
+	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be changed to
+	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED],
+	// and the key material will be irrevocably destroyed.
 	//
-	// Before the [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is reached,
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] may be called to reverse the process.
+	// Before the
+	// [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is
+	// reached,
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
+	// may be called to reverse the process.
 	DestroyCryptoKeyVersion(context.Context, *DestroyCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
 	// Restore a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
 	// state.
 	//
-	// Upon restoration of the CryptoKeyVersion, [state][google.cloud.kms.v1.CryptoKeyVersion.state]
-	// will be set to [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be cleared.
+	// Upon restoration of the CryptoKeyVersion,
+	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
+	// be cleared.
 	RestoreCryptoKeyVersion(context.Context, *RestoreCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
 }
 

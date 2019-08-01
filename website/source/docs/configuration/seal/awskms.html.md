@@ -40,13 +40,16 @@ seal "awskms" {
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `region` `(string: "us-east-1")`: The AWS region where the encryption key
-  lives. May also be specified by the `AWS_REGION` or `AWS_DEFAULT_REGION`
-  environment variable or as part of the AWS profile from the AWS CLI or
-  instance profile.
+  lives. If not provided, may be populated from the `AWS_REGION` or 
+  `AWS_DEFAULT_REGION` environment variables, from your `~/.aws/config` file,
+   or from instance metadata.
 
 - `access_key` `(string: <required>)`: The AWS access key ID to use. May also be
   specified by the `AWS_ACCESS_KEY_ID` environment variable or as part of the
   AWS profile from the AWS CLI or instance profile.
+
+- `session_token` `(string: "")`: Specifies the AWS session token. This can
+  also be provided via the environment variable `AWS_SESSION_TOKEN`.
 
 - `secret_key` `(string: <required>)`: The AWS secret access key to use. May
   also be specified by the `AWS_SECRET_ACCESS_KEY` environment variable or as

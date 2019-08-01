@@ -15,12 +15,14 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const (
@@ -42,19 +44,6 @@ type ClusterLeaderParams struct {
 	LeaderUUID         string
 	LeaderRedirectAddr string
 	LeaderClusterAddr  string
-}
-
-type ReplicatedClusters struct {
-	DR          *ReplicatedCluster
-	Performance *ReplicatedCluster
-}
-
-// This can be one of a few key types so the different params may or may not be filled
-type clusterKeyParams struct {
-	Type string   `json:"type" structs:"type" mapstructure:"type"`
-	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
-	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
-	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
 }
 
 // Structure representing the storage entry that holds cluster information
@@ -290,13 +279,18 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	return nil
 }
 
-// startClusterListener starts cluster request listeners during postunseal. It
+// startClusterListener starts cluster request listeners during unseal. It
 // is assumed that the state lock is held while this is run. Right now this
-// only starts forwarding listeners; it's TBD whether other request types will
-// be built in the same mechanism or started independently.
+// only starts cluster listeners. Once the listener is started handlers/clients
+// can start being registered to it.
 func (c *Core) startClusterListener(ctx context.Context) error {
-	if c.clusterAddr == "" {
+	if c.ClusterAddr() == "" {
 		c.logger.Info("clustering disabled, not starting listeners")
+		return nil
+	}
+
+	if c.clusterListener != nil {
+		c.logger.Warn("cluster listener is already started")
 		return nil
 	}
 
@@ -307,83 +301,79 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	err := c.startForwarding(ctx)
+	c.clusterListener = cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener"))
+
+	err := c.clusterListener.Run(ctx)
 	if err != nil {
 		return err
 	}
-
+	if strings.HasSuffix(c.ClusterAddr(), ":0") {
+		// If we listened on port 0, record the port the OS gave us.
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0]))
+	}
 	return nil
 }
 
-// stopClusterListener stops any existing listeners during preseal. It is
+func (c *Core) ClusterAddr() string {
+	return c.clusterAddr.Load().(string)
+}
+
+// stopClusterListener stops any existing listeners during seal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
-	if c.clusterAddr == "" {
-
+	if c.clusterListener == nil {
 		c.logger.Debug("clustering disabled, not stopping listeners")
 		return
 	}
 
-	if !c.clusterListenersRunning {
-		c.logger.Info("cluster listeners not running")
-		return
-	}
 	c.logger.Info("stopping cluster listeners")
 
-	// Tell the goroutine managing the listeners to perform the shutdown
-	// process
-	c.clusterListenerShutdownCh <- struct{}{}
-
-	// The reason for this loop-de-loop is that we may be unsealing again
-	// quickly, and if the listeners are not yet closed, we will get socket
-	// bind errors. This ensures proper ordering.
-
-	c.logger.Debug("waiting for success notification while stopping cluster listeners")
-	<-c.clusterListenerShutdownSuccessCh
-	c.clusterListenersRunning = false
+	c.clusterListener.Stop()
+	c.clusterListener = nil
 
 	c.logger.Info("cluster listeners successfully shut down")
 }
 
-// ClusterTLSConfig generates a TLS configuration based on the local/replicated
-// cluster key and cert.
-func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClusters, perfStandbyCluster *ReplicatedCluster) (*tls.Config, error) {
-	// Using lookup functions allows just-in-time lookup of the current state
-	// of clustering as connections come and go
-
-	tlsConfig := &tls.Config{
-		ClientAuth:           tls.RequireAndVerifyClientCert,
-		GetCertificate:       clusterTLSServerLookup(ctx, c, repClusters, perfStandbyCluster),
-		GetClientCertificate: clusterTLSClientLookup(ctx, c, repClusters, perfStandbyCluster),
-		GetConfigForClient:   clusterTLSServerConfigLookup(ctx, c, repClusters, perfStandbyCluster),
-		MinVersion:           tls.VersionTLS12,
-		CipherSuites:         c.clusterCipherSuites,
-	}
-
-	parsedCert := c.localClusterParsedCert.Load().(*x509.Certificate)
-	currCert := c.localClusterCert.Load().([]byte)
-	localCert := make([]byte, len(currCert))
-	copy(localCert, currCert)
-
-	if parsedCert != nil {
-		tlsConfig.ServerName = parsedCert.Subject.CommonName
-
-		pool := x509.NewCertPool()
-		pool.AddCert(parsedCert)
-		tlsConfig.RootCAs = pool
-		tlsConfig.ClientCAs = pool
-	}
-
-	return tlsConfig, nil
-}
-
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	c.clusterListenerAddrs = addrs
-	if c.clusterAddr == "" && len(addrs) == 1 {
-		c.clusterAddr = fmt.Sprintf("https://%s", addrs[0].String())
+	if c.ClusterAddr() == "" && len(addrs) == 1 {
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
 	}
 }
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
+}
+
+// getGRPCDialer is used to return a dialer that has the correct TLS
+// configuration. Otherwise gRPC tries to be helpful and stomps all over our
+// NextProtos.
+func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
+	return func(addr string, timeout time.Duration) (net.Conn, error) {
+		if c.clusterListener == nil {
+			return nil, errors.New("clustering disabled")
+		}
+
+		tlsConfig, err := c.clusterListener.TLSConfig(ctx)
+		if err != nil {
+			c.logger.Error("failed to get tls configuration", "error", err)
+			return nil, err
+		}
+		if serverName != "" {
+			tlsConfig.ServerName = serverName
+		}
+		if caCert != nil {
+			pool := x509.NewCertPool()
+			pool.AddCert(caCert)
+			tlsConfig.RootCAs = pool
+			tlsConfig.ClientCAs = pool
+		}
+		c.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
+
+		tlsConfig.NextProtos = []string{alpnProto}
+		dialer := &net.Dialer{
+			Timeout: timeout,
+		}
+		return tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+	}
 }

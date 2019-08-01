@@ -1,0 +1,33 @@
+executor: node
+resource_class: medium+
+steps:
+  - checkout
+  - restore_yarn_cache
+  - attach_workspace:
+      at: .
+  - run:
+      name: Test UI
+      command: |
+        set -x
+
+        # Install Chrome
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
+          | apt-key add -
+        echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
+          | tee /etc/apt/sources.list.d/google-chrome.list
+        apt-get update
+        apt-get -y install google-chrome-stable
+        rm /etc/apt/sources.list.d/google-chrome.list
+        rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+        # Add ./bin to the PATH so vault binary can be run by Ember tests
+        export PATH="${PWD}/bin:${PATH}"
+
+        # Run Ember tests
+        cd ui
+        mkdir -p test-results/qunit
+        yarn run test-oss
+  - store_artifacts:
+      path: ui/test-results
+  - store_test_results:
+      path: ui/test-results

@@ -1,6 +1,8 @@
 package storagepacker
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -8,7 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func BenchmarkStoragePacker(b *testing.B) {
@@ -16,6 +18,8 @@ func BenchmarkStoragePacker(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	ctx := context.Background()
 
 	for i := 0; i < b.N; i++ {
 		itemID, err := uuid.GenerateUUID()
@@ -27,7 +31,7 @@ func BenchmarkStoragePacker(b *testing.B) {
 			ID: itemID,
 		}
 
-		err = storagePacker.PutItem(item)
+		err = storagePacker.PutItem(ctx, item)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -45,7 +49,7 @@ func BenchmarkStoragePacker(b *testing.B) {
 			b.Fatalf("bad: item ID; expected: %q\n actual: %q", item.ID, fetchedItem.ID)
 		}
 
-		err = storagePacker.DeleteItem(item.ID)
+		err = storagePacker.DeleteItem(ctx, item.ID)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -66,12 +70,14 @@ func TestStoragePacker(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
 	// Persist a storage entry
 	item1 := &Item{
 		ID: "item1",
 	}
 
-	err = storagePacker.PutItem(item1)
+	err = storagePacker.PutItem(ctx, item1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +96,7 @@ func TestStoragePacker(t *testing.T) {
 	}
 
 	// Delete item1
-	err = storagePacker.DeleteItem(item1.ID)
+	err = storagePacker.DeleteItem(ctx, item1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +117,8 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := context.Background()
 
 	timeNow := ptypes.TimestampNow()
 
@@ -138,7 +146,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 		},
 		CreationTime:    timeNow,
 		LastUpdateTime:  timeNow,
-		BucketKeyHash:   "entity_hash",
+		BucketKey:       "entity_hash",
 		MergedEntityIDs: []string{"merged_entity_id1", "merged_entity_id2"},
 		Policies:        []string{"policy1", "policy2"},
 	}
@@ -147,7 +155,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = storagePacker.PutItem(&Item{
+	err = storagePacker.PutItem(ctx, &Item{
 		ID:      entity.ID,
 		Message: marshaledEntity,
 	})
@@ -168,5 +176,64 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 
 	if !proto.Equal(&itemDecoded, entity) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, itemDecoded)
+	}
+}
+
+func TestStoragePacker_DeleteMultiple(t *testing.T) {
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	// Persist a storage entry
+	for i := 0; i < 100; i++ {
+		item := &Item{
+			ID: fmt.Sprintf("item%d", i),
+		}
+
+		err = storagePacker.PutItem(ctx, item)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify that it can be read
+		fetchedItem, err := storagePacker.GetItem(item.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fetchedItem == nil {
+			t.Fatalf("failed to read the stored item")
+		}
+
+		if item.ID != fetchedItem.ID {
+			t.Fatalf("bad: item ID; expected: %q\n actual: %q\n", item.ID, fetchedItem.ID)
+		}
+	}
+
+	itemsToDelete := make([]string, 0, 50)
+	for i := 1; i < 100; i += 2 {
+		itemsToDelete = append(itemsToDelete, fmt.Sprintf("item%d", i))
+	}
+
+	err = storagePacker.DeleteMultipleItems(ctx, nil, itemsToDelete...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the deletion was successful
+	for i := 0; i < 100; i++ {
+		fetchedItem, err := storagePacker.GetItem(fmt.Sprintf("item%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if i%2 == 0 && fetchedItem == nil {
+			t.Fatal("expected item not found")
+		}
+		if i%2 == 1 && fetchedItem != nil {
+			t.Fatalf("failed to delete item")
+		}
 	}
 }

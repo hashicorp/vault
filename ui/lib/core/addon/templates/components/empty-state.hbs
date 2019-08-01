@@ -1,0 +1,21 @@
+<div class="empty-state" ...attributes>
+  <div class="empty-state-content">
+    <h3 class="empty-state-title" data-test-empty-state-title>
+      {{title}}
+    </h3>
+    {{#if message}}
+    <p class="empty-state-message" data-test-empty-state-message>
+      {{message}}
+    </p>
+    {{/if}}
+    {{#if (has-block)}}
+      <div class="empty-state-actions">
+        {{yield}}
+      </div>
+    {{else if emptyActions}}
+      <div class="empty-state-actions">
+        {{component emptyActions}}
+      </div>
+    {{/if}}
+  </div>
+</div>

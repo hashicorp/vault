@@ -12,11 +12,12 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
@@ -33,6 +34,7 @@ type cassandraConnectionProducer struct {
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
 	TLSMinVersion      string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency        string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
+	LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
 	PemBundle          string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
 	PemJSON            string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
@@ -135,7 +137,7 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	return conf, nil
 }
 
-func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
@@ -145,7 +147,7 @@ func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}
 		return c.session, nil
 	}
 
-	session, err := c.createSession()
+	session, err := c.createSession(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +172,7 @@ func (c *cassandraConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
+func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql.Session, error) {
 	hosts := strings.Split(c.Hosts, ",")
 	clusterConfig := gocql.NewCluster(hosts...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
@@ -234,6 +236,10 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 		}
 	}
 
+	if c.LocalDatacenter != "" {
+		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(c.LocalDatacenter)
+	}
+
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
 		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
@@ -250,7 +256,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	}
 
 	// Verify the info
-	err = session.Query(`LIST ALL`).Exec()
+	err = session.Query(`LIST ALL`).WithContext(ctx).Exec()
 	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
 		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
 			"username": c.Username,
@@ -272,4 +278,14 @@ func (c *cassandraConnectionProducer) secretValues() map[string]interface{} {
 		c.PemBundle: "[pem_bundle]",
 		c.PemJSON:   "[pem_json]",
 	}
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	return "", "", dbutil.Unimplemented()
 }

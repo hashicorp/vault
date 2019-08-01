@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type noopFormatWriter struct {
@@ -41,11 +41,11 @@ func TestFormatRequestErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatRequest(context.Background(), ioutil.Discard, config, &LogInput{}); err == nil {
+	if err := formatter.FormatRequest(context.Background(), ioutil.Discard, config, &logical.LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
 
-	in := &LogInput{
+	in := &logical.LogInput{
 		Request: &logical.Request{},
 	}
 	if err := formatter.FormatRequest(context.Background(), nil, config, in); err == nil {
@@ -59,11 +59,11 @@ func TestFormatResponseErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatResponse(context.Background(), ioutil.Discard, config, &LogInput{}); err == nil {
+	if err := formatter.FormatResponse(context.Background(), ioutil.Discard, config, &logical.LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
 
-	in := &LogInput{
+	in := &logical.LogInput{
 		Request: &logical.Request{},
 	}
 	if err := formatter.FormatResponse(context.Background(), nil, config, in); err == nil {

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/sdk/logical";
+
+package logical;
+
+message Entity {
+	// ID is the unique identifier for the entity
+	string ID = 1;
+
+	// Name is the human-friendly unique identifier for the entity
+	string name = 2;
+
+	// Aliases contains thhe alias mappings for the given entity
+	repeated Alias aliases = 3;
+
+	// Metadata represents the custom data tied to this entity
+	map<string, string> metadata = 4;
+    
+    // Disabled is true if the entity is disabled.
+    bool disabled = 5;
+}
+
+message Alias {
+	// MountType is the backend mount's type to which this identity belongs
+	string mount_type = 1;
+
+	// MountAccessor is the identifier of the mount entry to which this
+	// identity belongs
+	string mount_accessor = 2;
+
+	// Name is the identifier of this identity in its authentication source
+	string name = 3;
+
+	// Metadata represents the custom data tied to this alias
+	map<string, string> metadata = 4;
+}

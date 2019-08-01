@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
@@ -208,7 +208,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 		//Parse url
 		urlObject, err := url.Parse(inputURL)
 		if err != nil {
-			return logical.ErrorResponse("an error occured while parsing url string"), err
+			return logical.ErrorResponse("an error occurred while parsing url string"), err
 		}
 
 		//Set up query object
@@ -241,7 +241,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 		if periodQuery != "" {
 			periodInt, err := strconv.Atoi(periodQuery)
 			if err != nil {
-				return logical.ErrorResponse("an error occured while parsing period value in url"), err
+				return logical.ErrorResponse("an error occurred while parsing period value in url"), err
 			}
 			period = periodInt
 		}
@@ -251,7 +251,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 		if digitsQuery != "" {
 			digitsInt, err := strconv.Atoi(digitsQuery)
 			if err != nil {
-				return logical.ErrorResponse("an error occured while parsing digits value in url"), err
+				return logical.ErrorResponse("an error occurred while parsing digits value in url"), err
 			}
 			digits = digitsInt
 		}
@@ -335,7 +335,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			SecretSize:  uintKeySize,
 		})
 		if err != nil {
-			return logical.ErrorResponse("an error occured while generating a key"), err
+			return logical.ErrorResponse("an error occurred while generating a key"), err
 		}
 
 		// Get key string value
@@ -375,7 +375,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			return logical.ErrorResponse("the key value is required"), nil
 		}
 
-		_, err := base32.StdEncoding.DecodeString(keyString)
+		_, err := base32.StdEncoding.DecodeString(strings.ToUpper(keyString))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid key value: %s", err)), nil

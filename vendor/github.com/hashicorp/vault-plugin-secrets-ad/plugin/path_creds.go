@@ -8,25 +8,13 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	credPrefix = "creds/"
 	storageKey = "creds"
-
-	// Since Active Directory offers eventual consistency, in testing we found that sometimes
-	// Active Directory returned "password last set" times that were _later_ than our own,
-	// even though ours were captured after synchronously completing a password update operation.
-	//
-	// An example we captured was:
-	// 		last_vault_rotation     2018-04-18T22:29:57.385454779Z
-	// 		password_last_set       2018-04-18T22:29:57.3902786Z
-	//
-	// Thus we add a short time buffer when checking whether anyone _else_ updated the AD password
-	// since Vault last rotated it.
-	passwordLastSetBuffer = time.Second
 
 	// Since password TTL can be set to as low as 1 second,
 	// we can't cache passwords for an entire second.
@@ -71,6 +59,14 @@ func (b *backend) pathCreds() *framework.Path {
 func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 	cred := make(map[string]interface{})
 
+	engineConf, err := b.readConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if engineConf == nil {
+		return nil, errors.New("the config is currently unset")
+	}
+
 	roleName := fieldData.Get("name").(string)
 
 	// We act upon quite a few things below that could be racy if not locked:
@@ -89,6 +85,7 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 	if role == nil {
 		return nil, nil
 	}
+	b.Logger().Debug(fmt.Sprintf("role is: %+v", role))
 
 	var resp *logical.Response
 	var respErr error
@@ -97,21 +94,24 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 	switch {
 
 	case role.LastVaultRotation == unset:
-		// We've never managed this cred before.
-		// We need to rotate the password so Vault will know it.
-		resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
+		b.Logger().Info("rotating password for the first time so Vault will know it")
+		resp, respErr = b.generateAndReturnCreds(ctx, engineConf, req.Storage, roleName, role, cred)
 
-	case role.PasswordLastSet.After(role.LastVaultRotation.Add(passwordLastSetBuffer)):
-		// Someone has manually rotated the password in Active Directory since we last rolled it.
-		// We need to rotate it now so Vault will know it and be able to return it.
-		resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
+	case role.PasswordLastSet.After(role.LastVaultRotation.Add(time.Second * time.Duration(engineConf.LastRotationTolerance))):
+		b.Logger().Warn(fmt.Sprintf(
+			"Vault rotated the password at %s, but it was rotated in AD later at %s, so rotating it again so Vault will know it",
+			role.LastVaultRotation.String(), role.PasswordLastSet.String()),
+		)
+		resp, respErr = b.generateAndReturnCreds(ctx, engineConf, req.Storage, roleName, role, cred)
 
 	default:
-		// Since we should know the last password, let's retrieve it now so we can return it with the new one.
+		b.Logger().Debug("determining whether to rotate credential")
 		credIfc, found := b.credCache.Get(roleName)
 		if found {
+			b.Logger().Debug("checking cached credential")
 			cred = credIfc.(map[string]interface{})
 		} else {
+			b.Logger().Debug("checking stored credential")
 			entry, err := req.Storage.Get(ctx, storageKey+"/"+roleName)
 			if err != nil {
 				return nil, err
@@ -128,13 +128,16 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 			b.credCache.SetDefault(roleName, cred)
 		}
 
-		// Is the password too old?
-		// If so, time for a new one!
 		now := time.Now().UTC()
 		shouldBeRolled := role.LastVaultRotation.Add(time.Duration(role.TTL) * time.Second) // already in UTC
 		if now.After(shouldBeRolled) {
-			resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
+			b.Logger().Info(fmt.Sprintf(
+				"last Vault rotation was at %s, and since the TTL is %d and it's now %s, it's time to rotate it",
+				role.LastVaultRotation.String(), role.TTL, now.String()),
+			)
+			resp, respErr = b.generateAndReturnCreds(ctx, engineConf, req.Storage, roleName, role, cred)
 		} else {
+			b.Logger().Debug("returning previous credential")
 			resp = &logical.Response{
 				Data: cred,
 			}
@@ -146,15 +149,7 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 	return resp, nil
 }
 
-func (b *backend) generateAndReturnCreds(ctx context.Context, storage logical.Storage, roleName string, role *backendRole, previousCred map[string]interface{}) (*logical.Response, error) {
-	engineConf, err := b.readConfig(ctx, storage)
-	if err != nil {
-		return nil, err
-	}
-	if engineConf == nil {
-		return nil, errors.New("the config is currently unset")
-	}
-
+func (b *backend) generateAndReturnCreds(ctx context.Context, engineConf *configuration, storage logical.Storage, roleName string, role *backendRole, previousCred map[string]interface{}) (*logical.Response, error) {
 	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Formatter, engineConf.PasswordConf.Length)
 	if err != nil {
 		return nil, err
@@ -166,9 +161,11 @@ func (b *backend) generateAndReturnCreds(ctx context.Context, storage logical.St
 
 	// Time recorded is in UTC for easier user comparison to AD's last rotated time, which is set to UTC by Microsoft.
 	role.LastVaultRotation = time.Now().UTC()
-	if err := b.writeRole(ctx, storage, roleName, role); err != nil {
+	if err := b.writeRoleToStorage(ctx, storage, roleName, role); err != nil {
 		return nil, err
 	}
+	// Cache the full role to minimize Vault storage calls.
+	b.roleCache.SetDefault(roleName, role)
 
 	// Although a service account name is typically my_app@example.com,
 	// the username it uses is just my_app, or everything before the @.

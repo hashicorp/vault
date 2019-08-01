@@ -9,14 +9,14 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 var (
@@ -904,7 +904,6 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	}
 }
 
-// Ensure we get a client token
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
 	noop := &NoopAudit{}
@@ -1633,6 +1632,8 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 
 	// Wait for core to become active
 	TestWaitActive(t, core)
+
+	testCoreAddSecretMount(t, core, root)
 
 	// Put a secret
 	req := &logical.Request{

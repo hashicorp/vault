@@ -478,8 +478,8 @@ attached.
     -> Make a note of the generated entity ID (**`id`**).
 
 1. Now, add the user `bob` to the `bob-smith` entity by creating an entity alias.
-In the request body, you need to pass the userpass accessor value as
-`mount_accessor`, and the entity id as `canonical_id`.
+In the request body, you need to pass the userpass name as `name`, the userpass 
+accessor value as `mount_accessor`, and the entity id as `canonical_id`.
 
     **Example:**
 

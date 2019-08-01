@@ -3,15 +3,18 @@ package audit
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
+	"github.com/go-test/deep"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -111,73 +114,16 @@ func TestHashString(t *testing.T) {
 	}
 }
 
-func TestHash(t *testing.T) {
-	now := time.Now()
-
+func TestHashAuth(t *testing.T) {
 	cases := []struct {
-		Input           interface{}
-		Output          interface{}
-		NonHMACDataKeys []string
+		Input        *logical.Auth
+		Output       *logical.Auth
+		HMACAccessor bool
 	}{
 		{
 			&logical.Auth{ClientToken: "foo"},
 			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
-			nil,
-		},
-		{
-			&logical.Request{
-				Data: map[string]interface{}{
-					"foo":              "bar",
-					"baz":              "foobar",
-					"private_key_type": certutil.PrivateKeyType("rsa"),
-				},
-			},
-			&logical.Request{
-				Data: map[string]interface{}{
-					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					"baz":              "foobar",
-					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
-				},
-			},
-			[]string{"baz"},
-		},
-		{
-			&logical.Response{
-				Data: map[string]interface{}{
-					"foo": "bar",
-					"baz": "foobar",
-					// Responses can contain time values, so test that with
-					// a known fixed value.
-					"bar": now,
-				},
-				WrapInfo: &wrapping.ResponseWrapInfo{
-					TTL:             60,
-					Token:           "bar",
-					Accessor:        "flimflam",
-					CreationTime:    now,
-					WrappedAccessor: "bar",
-				},
-			},
-			&logical.Response{
-				Data: map[string]interface{}{
-					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					"baz": "foobar",
-					"bar": now.Format(time.RFC3339Nano),
-				},
-				WrapInfo: &wrapping.ResponseWrapInfo{
-					TTL:             60,
-					Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					Accessor:        "hmac-sha256:7c9c6fe666d0af73b3ebcfbfabe6885015558213208e6635ba104047b22f6390",
-					CreationTime:    now,
-					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-				},
-			},
-			[]string{"baz"},
-		},
-		{
-			"foo",
-			"foo",
-			nil,
+			false,
 		},
 		{
 			&logical.Auth{
@@ -194,7 +140,7 @@ func TestHash(t *testing.T) {
 
 				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
-			nil,
+			false,
 		},
 	}
 
@@ -212,16 +158,147 @@ func TestHash(t *testing.T) {
 	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		if err := Hash(localSalt, tc.Input, tc.NonHMACDataKeys); err != nil {
+		out, err := HashAuth(localSalt, tc.Input, tc.HMACAccessor)
+		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if _, ok := tc.Input.(*logical.Response); ok {
-			if !reflect.DeepEqual(tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo) {
-				t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo)
-			}
+		if !reflect.DeepEqual(out, tc.Output) {
+			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, out, tc.Output)
 		}
-		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input, tc.Output)
+	}
+}
+
+type testOptMarshaler struct {
+	S string
+	I int
+}
+
+func (o *testOptMarshaler) MarshalJSONWithOptions(options *logical.MarshalOptions) ([]byte, error) {
+	return json.Marshal(&testOptMarshaler{S: options.ValueHasher(o.S), I: o.I})
+}
+
+var _ logical.OptMarshaler = &testOptMarshaler{}
+
+func TestHashRequest(t *testing.T) {
+	cases := []struct {
+		Input           *logical.Request
+		Output          *logical.Request
+		NonHMACDataKeys []string
+		HMACAccessor    bool
+	}{
+		{
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo":              "bar",
+					"baz":              "foobar",
+					"private_key_type": certutil.PrivateKeyType("rsa"),
+					"om":               &testOptMarshaler{S: "bar", I: 1},
+				},
+			},
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"baz":              "foobar",
+					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
+					"om":               json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+				},
+			},
+			[]string{"baz"},
+			false,
+		},
+	}
+
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	for _, tc := range cases {
+		input := fmt.Sprintf("%#v", tc.Input)
+		out, err := HashRequest(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		if err != nil {
+			t.Fatalf("err: %s\n\n%s", err, input)
+		}
+		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
+		}
+	}
+}
+
+func TestHashResponse(t *testing.T) {
+	now := time.Now()
+
+	cases := []struct {
+		Input           *logical.Response
+		Output          *logical.Response
+		NonHMACDataKeys []string
+		HMACAccessor    bool
+	}{
+		{
+			&logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+					"baz": "foobar",
+					// Responses can contain time values, so test that with
+					// a known fixed value.
+					"bar": now,
+					"om":  &testOptMarshaler{S: "bar", I: 1},
+				},
+				WrapInfo: &wrapping.ResponseWrapInfo{
+					TTL:             60,
+					Token:           "bar",
+					Accessor:        "flimflam",
+					CreationTime:    now,
+					WrappedAccessor: "bar",
+				},
+			},
+			&logical.Response{
+				Data: map[string]interface{}{
+					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"baz": "foobar",
+					"bar": now.Format(time.RFC3339Nano),
+					"om":  json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+				},
+				WrapInfo: &wrapping.ResponseWrapInfo{
+					TTL:             60,
+					Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					Accessor:        "hmac-sha256:7c9c6fe666d0af73b3ebcfbfabe6885015558213208e6635ba104047b22f6390",
+					CreationTime:    now,
+					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+				},
+			},
+			[]string{"baz"},
+			true,
+		},
+	}
+
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	for _, tc := range cases {
+		input := fmt.Sprintf("%#v", tc.Input)
+		out, err := HashResponse(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		if err != nil {
+			t.Fatalf("err: %s\n\n%s", err, input)
+		}
+		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
 		}
 	}
 }
@@ -230,8 +307,8 @@ func TestHashWalker(t *testing.T) {
 	replaceText := "foo"
 
 	cases := []struct {
-		Input  interface{}
-		Output interface{}
+		Input  map[string]interface{}
+		Output map[string]interface{}
 	}{
 		{
 			map[string]interface{}{
@@ -253,14 +330,68 @@ func TestHashWalker(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := HashStructure(tc.Input, func(string) string {
+		err := HashStructure(tc.Input, func(string) string {
 			return replaceText
-		}, []string{})
+		}, nil)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
 		}
-		if !reflect.DeepEqual(output, tc.Output) {
-			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
+		}
+	}
+}
+
+func TestHashWalker_TimeStructs(t *testing.T) {
+	replaceText := "bar"
+
+	now := time.Now()
+	cases := []struct {
+		Input  map[string]interface{}
+		Output map[string]interface{}
+	}{
+		// Should not touch map keys of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": map[time.Time]struct{}{
+					now: {},
+				},
+			},
+			map[string]interface{}{
+				"hello": map[time.Time]struct{}{
+					now: {},
+				},
+			},
+		},
+		// Should handle map values of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": now,
+			},
+			map[string]interface{}{
+				"hello": now.Format(time.RFC3339Nano),
+			},
+		},
+		// Should handle slice values of type time.Time.
+		{
+			map[string]interface{}{
+				"hello": []interface{}{"foo", now, "foo2"},
+			},
+			map[string]interface{}{
+				"hello": []interface{}{"foobar", now.Format(time.RFC3339Nano), "foo2bar"},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		err := HashStructure(tc.Input, func(s string) string {
+			return s + replaceText
+		}, nil)
+		if err != nil {
+			t.Fatalf("err: %v\n\n%#v", err, tc.Input)
+		}
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, tc.Output)
 		}
 	}
 }

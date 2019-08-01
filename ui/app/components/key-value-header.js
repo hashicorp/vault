@@ -1,6 +1,7 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default Component.extend({
   tagName: 'nav',
@@ -31,7 +32,7 @@ export default Component.extend({
     let crumbs = [];
     const root = this.get('root');
     const baseKey = this.get('baseKey.display') || this.get('baseKey.id');
-    const baseKeyModel = this.get('baseKey.id');
+    const baseKeyModel = encodePath(this.get('baseKey.id'));
 
     if (root) {
       crumbs.push(root);

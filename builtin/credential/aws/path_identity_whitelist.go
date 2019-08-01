@@ -4,24 +4,28 @@ import (
 	"context"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
-			"instance_id": &framework.FieldSchema{
+			"instance_id": {
 				Type: framework.TypeString,
 				Description: `EC2 instance ID. A successful login operation from an EC2 instance
 gets cached in this whitelist, keyed off of instance ID.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathIdentityWhitelistRead,
-			logical.DeleteOperation: b.pathIdentityWhitelistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathIdentityWhitelistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathIdentityWhitelistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathIdentityWhitelistSyn,
@@ -29,12 +33,14 @@ gets cached in this whitelist, keyed off of instance ID.`,
 	}
 }
 
-func pathListIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathListIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathWhitelistIdentitiesList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathWhitelistIdentitiesList,
+			},
 		},
 
 		HelpSynopsis:    pathListIdentityWhitelistHelpSyn,

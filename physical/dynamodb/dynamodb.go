@@ -25,8 +25,8 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -174,7 +174,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 	}
-	var dynamodbMaxRetry int = aws.UseServiceDefaultRetries
+	var dynamodbMaxRetry = aws.UseServiceDefaultRetries
 	if dynamodbMaxRetryString != "" {
 		var err error
 		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
@@ -571,10 +571,31 @@ func (l *DynamoDBLock) Unlock() error {
 	}
 
 	l.held = false
-	if err := l.backend.Delete(context.Background(), l.key); err != nil {
-		return err
+
+	// Conditionally delete after check that the key is actually this Vault's and
+	// not been already claimed by another leader
+	condition := "#identity = :identity"
+	deleteMyLock := &dynamodb.DeleteItemInput{
+		TableName:           &l.backend.table,
+		ConditionExpression: &condition,
+		Key: map[string]*dynamodb.AttributeValue{
+			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
+			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
+		},
+		ExpressionAttributeNames: map[string]*string{
+			"#identity": aws.String("Identity"),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":identity": {B: []byte(l.identity)},
+		},
 	}
-	return nil
+
+	_, err := l.backend.client.DeleteItem(deleteMyLock)
+	if isConditionCheckFailed(err) {
+		err = nil
+	}
+
+	return err
 }
 
 // Value checks whether or not the lock is held by any instance of DynamoDBLock,
@@ -600,18 +621,19 @@ func (l *DynamoDBLock) Value() (bool, string, error) {
 // channel is closed.
 func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error) {
 	ticker := time.NewTicker(DynamoDBLockRetryInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-stop:
-			ticker.Stop()
+			return
 		case <-ticker.C:
-			err := l.writeItem()
+			err := l.updateItem(true)
 			if err != nil {
 				if err, ok := err.(awserr.Error); ok {
 					// Don't report a condition check failure, this means that the lock
 					// is already being held.
-					if err.Code() != dynamodb.ErrCodeConditionalCheckFailedException {
+					if !isConditionCheckFailed(err) {
 						errors <- err
 					}
 				} else {
@@ -620,7 +642,6 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 					return
 				}
 			} else {
-				ticker.Stop()
 				close(success)
 				return
 			}
@@ -633,7 +654,13 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			l.writeItem()
+			// This should not renew the lock if the lock was deleted from under you.
+			err := l.updateItem(false)
+			if err != nil {
+				if !isConditionCheckFailed(err) {
+					l.backend.logger.Error("error renewing leadership lock", "error", err)
+				}
+			}
 		case <-done:
 			ticker.Stop()
 			return
@@ -643,29 +670,36 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 
 // Attempts to put/update the dynamodb item using condition expressions to
 // evaluate the TTL.
-func (l *DynamoDBLock) writeItem() error {
+func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 	now := time.Now()
+
+	conditionExpression := ""
+	if createIfMissing {
+		conditionExpression += "attribute_not_exists(#path) or " +
+			"attribute_not_exists(#key) or "
+	} else {
+		conditionExpression += "attribute_exists(#path) and " +
+			"attribute_exists(#key) and "
+	}
+
+	// To work when upgrading from older versions that did not include the
+	// Identity attribute, we first check if the attr doesn't exist, and if
+	// it does, then we check if the identity is equal to our own.
+	// We also write if the lock expired.
+	conditionExpression += "(attribute_not_exists(#identity) or #identity = :identity or #expires <= :now)"
 
 	_, err := l.backend.client.UpdateItem(&dynamodb.UpdateItemInput{
 		TableName: aws.String(l.backend.table),
 		Key: map[string]*dynamodb.AttributeValue{
-			"Path": &dynamodb.AttributeValue{S: aws.String(recordPathForVaultKey(l.key))},
-			"Key":  &dynamodb.AttributeValue{S: aws.String(recordKeyForVaultKey(l.key))},
+			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
+			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
 		},
 		UpdateExpression: aws.String("SET #value=:value, #identity=:identity, #expires=:expires"),
 		// If both key and path already exist, we can only write if
 		// A. identity is equal to our identity (or the identity doesn't exist)
 		// or
 		// B. The ttl on the item is <= to the current time
-		ConditionExpression: aws.String(
-			"attribute_not_exists(#path) or " +
-				"attribute_not_exists(#key) or " +
-				// To work when upgrading from older versions that did not include the
-				// Identity attribute, we first check if the attr doesn't exist, and if
-				// it does, then we check if the identity is equal to our own.
-				"(attribute_not_exists(#identity) or #identity = :identity) or " +
-				"#expires <= :now",
-		),
+		ConditionExpression: aws.String(conditionExpression),
 		ExpressionAttributeNames: map[string]*string{
 			"#path":     aws.String("Path"),
 			"#key":      aws.String("Key"),
@@ -674,12 +708,13 @@ func (l *DynamoDBLock) writeItem() error {
 			"#value":    aws.String("Value"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":identity": &dynamodb.AttributeValue{B: []byte(l.identity)},
-			":value":    &dynamodb.AttributeValue{B: []byte(l.value)},
-			":now":      &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(now.UnixNano(), 10))},
-			":expires":  &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
+			":identity": {B: []byte(l.identity)},
+			":value":    {B: []byte(l.value)},
+			":now":      {N: aws.String(strconv.FormatInt(now.UnixNano(), 10))},
+			":expires":  {N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
 		},
 	})
+
 	return err
 }
 
@@ -722,6 +757,7 @@ WatchLoop:
 				break WatchLoop
 			}
 		}
+		retries = DynamoDBWatchRetryMax
 	}
 
 	close(lost)
@@ -821,4 +857,16 @@ func unescapeEmptyPath(s string) string {
 		return ""
 	}
 	return s
+}
+
+// isConditionCheckFailed tests whether err is an ErrCodeConditionalCheckFailedException
+// from the AWS SDK.
+func isConditionCheckFailed(err error) bool {
+	if err != nil {
+		if err, ok := err.(awserr.Error); ok {
+			return err.Code() == dynamodb.ErrCodeConditionalCheckFailedException
+		}
+	}
+
+	return false
 }

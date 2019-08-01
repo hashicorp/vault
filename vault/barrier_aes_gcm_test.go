@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 var (
@@ -515,4 +515,83 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 	if string(plain) != "quick brown fox" {
 		t.Fatalf("bad: %s", plain)
 	}
+}
+
+func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
+
+	keyringRaw, err := inm.Get(context.Background(), keyringPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Encrypt something to test cache invalidation
+	_, err = b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	{
+		// Create a second barrier and rotate the keyring
+		b2, err := NewAESGCMBarrier(inm)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		b2.Unseal(context.Background(), key)
+		_, err = b2.Rotate(context.Background())
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Reload the keyring on the first
+	err = b.ReloadKeyring(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if b.keyring.ActiveTerm() != 2 {
+		t.Fatal("failed to reload keyring")
+	}
+	if len(b.cache) != 0 {
+		t.Fatal("failed to clear cache")
+	}
+
+	// Encrypt something to test cache invalidation
+	_, err = b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Restore old keyring to test rolling back
+	err = inm.Put(context.Background(), keyringRaw)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reload the keyring on the first
+	err = b.ReloadKeyring(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if b.keyring.ActiveTerm() != 1 {
+		t.Fatal("failed to reload keyring")
+	}
+	if len(b.cache) != 0 {
+		t.Fatal("failed to clear cache")
+	}
+
 }

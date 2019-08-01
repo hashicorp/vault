@@ -1,13 +1,14 @@
 /* eslint-disable */
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   _url(backend, id) {
-    let url = `${this.buildURL()}/${backend}/metadata/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/metadata/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
     return url;
   },

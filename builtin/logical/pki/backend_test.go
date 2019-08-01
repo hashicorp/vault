@@ -28,11 +28,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/strutil"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
@@ -432,7 +432,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 }
 
 func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	expected := urlEntries{
+	expected := certutil.URLEntries{
 		IssuingCertificates: []string{
 			"http://example.com/ca1",
 			"http://example.com/ca2",
@@ -499,7 +499,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if resp.Data == nil {
 					return fmt.Errorf("no data returned")
 				}
-				var entries urlEntries
+				var entries certutil.URLEntries
 				err := mapstructure.Decode(resp.Data, &entries)
 				if err != nil {
 					return err
@@ -855,7 +855,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.OU, true)
+			expected := strutil.RemoveDuplicatesStable(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("error: returned certificate has OU of %s but %s was specified in the role", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -2112,7 +2112,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // top-level sequence; see
 // https://lapo.it/asn1js/#3046A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374A022060A2B060104018237140204A0140C12322D6465766F7073406C6F63616C686F7374 for an openssl-generated example.
 //
-// The good news is that it's valid to simply copy and paste the PEM ouput from
+// The good news is that it's valid to simply copy and paste the PEM output from
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {

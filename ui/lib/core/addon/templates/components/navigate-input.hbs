@@ -1,0 +1,18 @@
+<div class="field">
+  <p class="control has-icons-left">
+  <input
+    class="filter input"
+    disabled={{disabled}}
+    value={{@filter}}
+    placeholder={{ or @placeholder "Filter keys" }}
+    type="text"
+
+    oninput={{action "handleInput" value="target.value"}}
+    onkeyup={{action "handleKeyUp" }}
+    onkeydown={{action "handleKeyPress"}}
+    onfocus={{action "setFilterFocused" true}}
+    onblur={{action "setFilterFocused" false}}
+   />
+    <Icon @glyph="search" @size="l" class="search-icon has-text-grey-light" />
+  </p>
+</div>

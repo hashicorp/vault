@@ -9,10 +9,10 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -134,6 +134,11 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
+	}
+
+	// Ensure there is a name
+	if path == "/" {
+		return false, fmt.Errorf("backend path must be specified")
 	}
 
 	// Remove the entry from the mount table
@@ -499,4 +504,24 @@ func defaultAuditTable() *MountTable {
 		Type: auditTableType,
 	}
 	return table
+}
+
+type genericAuditor struct {
+	c         *Core
+	mountType string
+	namespace *namespace.Namespace
+}
+
+func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
+	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
+	logInput := *input
+	logInput.Type = g.mountType + "-request"
+	return g.c.auditBroker.LogRequest(ctx, &logInput, g.c.auditedHeaders)
+}
+
+func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
+	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
+	logInput := *input
+	logInput.Type = g.mountType + "-response"
+	return g.c.auditBroker.LogResponse(ctx, &logInput, g.c.auditedHeaders)
 }

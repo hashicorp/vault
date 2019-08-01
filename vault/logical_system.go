@@ -18,20 +18,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -44,6 +47,8 @@ var (
 		coreLocalClusterInfoPath,
 	}
 )
+
+const maxBytes = 128 * 1024
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -120,6 +125,21 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"storage/raft/bootstrap/challenge",
+				"storage/raft/bootstrap/answer",
+				"init",
+				"seal-status",
+				"unseal",
+				"leader",
+				"health",
+				"generate-root/attempt",
+				"generate-root/update",
+				"rekey/init",
+				"rekey/update",
+				"rekey/verify",
+				"rekey-recovery-key/init",
+				"rekey-recovery-key/update",
+				"rekey-recovery-key/verify",
 			},
 
 			LocalStorage: []string{
@@ -145,6 +165,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
@@ -181,6 +202,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
+	}
+
+	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -659,6 +684,7 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"local":       entry.Local,
 		"seal_wrap":   entry.SealWrap,
 		"options":     entry.Options,
+		"uuid":        entry.UUID,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -732,8 +758,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -928,8 +957,12 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 
 	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// We return success when the mount does not exists to not expose if the
@@ -974,8 +1007,11 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Attempt remount
@@ -1111,7 +1147,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	var lock *sync.RWMutex
@@ -1132,7 +1168,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Timing configuration parameters
@@ -1195,7 +1231,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of description successful", "path", path)
+			b.Core.logger.Info("mount tuning of description successful", "path", path, "description", description)
 		}
 	}
 
@@ -1655,8 +1691,12 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -1810,8 +1850,12 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 
 	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(ctx, fullPath)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// We return success when the mount does not exists to not expose if the
@@ -2047,8 +2091,11 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -2078,6 +2125,35 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 // handleDisableAudit is used to disable an audit backend
 func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	if path == "/" {
+		return handleError(errors.New("audit device path must be specified"))
+	}
+
+	b.Core.auditLock.RLock()
+	table := b.Core.audit.shallowClone()
+	entry, err := table.find(ctx, path)
+	b.Core.auditLock.RUnlock()
+
+	if err != nil {
+		return handleError(err)
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	repState := b.Core.ReplicationState()
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
+	if !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return nil, logical.ErrReadOnly
+	}
 
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
@@ -2169,6 +2245,12 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 		}
 	}
 
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
+	}
+
 	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleErrorNoReadOnlyForward(err)
@@ -2255,6 +2337,12 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 		}
 	}
 
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
+	}
+
 	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
 		return handleErrorNoReadOnlyForward(err)
@@ -2302,8 +2390,9 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		}
 
 		// Schedule the destroy of the upgrade path
-		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
+		time.AfterFunc(KeyRotateGracePeriod, func() {
+			b.Backend.Logger().Debug("cleaning up upgrade keys", "waited", KeyRotateGracePeriod)
+			if err := b.Core.barrier.DestroyUpgrade(b.Core.activeContext, newTerm); err != nil {
 				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
@@ -2510,6 +2599,14 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	}
 
 	return response, nil
+}
+
+func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	format := data.Get("format").(string)
+	if format == "" {
+		format = metricsutil.FormatFromRequest(req)
+	}
+	return b.Core.metricsHelper.ResponseForFormat(format)
 }
 
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2762,6 +2859,10 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
 	}
 
+	if bytes > maxBytes {
+		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
+	}
+
 	switch format {
 	case "hex":
 	case "base64":
@@ -2797,7 +2898,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 		return false
 	}
 
-	// If an earlier policy is giving us access to the mount path then we can do
+	// If a policy is giving us direct access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
 	if !strutil.StrListContains(capabilities, DenyCapability) {
@@ -2824,6 +2925,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
+
 			return true
 		}
 
@@ -2833,6 +2935,12 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
 		acl.prefixRules.WalkPrefix(path, walkFn)
+	}
+
+	if !aclCapabilitiesGiven {
+		if perms := acl.CheckAllowedFromNonExactPaths(path, true); perms != nil {
+			return true
+		}
 	}
 
 	return aclCapabilitiesGiven
@@ -2889,6 +2997,15 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
+		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		if err != nil {
+			b.Core.mountsLock.RUnlock()
+			return nil, err
+		}
+		if filtered {
+			continue
+		}
+
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
@@ -2906,6 +3023,15 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
+		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			b.Core.authLock.RUnlock()
+			return nil, err
+		}
+		if filtered {
+			continue
+		}
+
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
@@ -2945,6 +3071,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	if err != nil {
+		return nil, err
+	}
+	if filtered {
+		return errResp, logical.ErrPermissionDenied
+	}
+
 	resp := &logical.Response{
 		Data: mountInfo(me),
 	}
@@ -2969,6 +3103,21 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 
 	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
 		return errResp, logical.ErrPermissionDenied
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": counters,
+		},
 	}
 
 	return resp, nil
@@ -3107,6 +3256,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
+				Storage:   req.Storage,
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -3883,5 +4033,13 @@ This path responds to the following HTTP methods.
 	"internal-ui-resultant-acl": {
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
 		"",
+	},
+	"metrics": {
+		"Export the metrics aggregated for telemetry purpose.",
+		"",
+	},
+	"internal-counters-requests": {
+		"Count of requests seen by this Vault cluster over time.",
+		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 }

@@ -63,11 +63,11 @@ func (c *KMS) CancelKeyDeletionRequest(input *CancelKeyDeletionInput) (req *requ
 // account.
 //
 // For more information about scheduling and canceling deletion of a CMK, see
-// Deleting Customer Master Keys (http://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html)
+// Deleting Customer Master Keys (https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -83,7 +83,8 @@ func (c *KMS) CancelKeyDeletionRequest(input *CancelKeyDeletionInput) (req *requ
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -98,7 +99,7 @@ func (c *KMS) CancelKeyDeletionRequest(input *CancelKeyDeletionInput) (req *requ
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CancelKeyDeletion
@@ -118,6 +119,186 @@ func (c *KMS) CancelKeyDeletion(input *CancelKeyDeletionInput) (*CancelKeyDeleti
 // for more information on using Contexts.
 func (c *KMS) CancelKeyDeletionWithContext(ctx aws.Context, input *CancelKeyDeletionInput, opts ...request.Option) (*CancelKeyDeletionOutput, error) {
 	req, out := c.CancelKeyDeletionRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opConnectCustomKeyStore = "ConnectCustomKeyStore"
+
+// ConnectCustomKeyStoreRequest generates a "aws/request.Request" representing the
+// client's request for the ConnectCustomKeyStore operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ConnectCustomKeyStore for more information on using the ConnectCustomKeyStore
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ConnectCustomKeyStoreRequest method.
+//    req, resp := client.ConnectCustomKeyStoreRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ConnectCustomKeyStore
+func (c *KMS) ConnectCustomKeyStoreRequest(input *ConnectCustomKeyStoreInput) (req *request.Request, output *ConnectCustomKeyStoreOutput) {
+	op := &request.Operation{
+		Name:       opConnectCustomKeyStore,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ConnectCustomKeyStoreInput{}
+	}
+
+	output = &ConnectCustomKeyStoreOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// ConnectCustomKeyStore API operation for AWS Key Management Service.
+//
+// Connects or reconnects a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// to its associated AWS CloudHSM cluster.
+//
+// The custom key store must be connected before you can create customer master
+// keys (CMKs) in the key store or use the CMKs it contains. You can disconnect
+// and reconnect a custom key store at any time.
+//
+// To connect a custom key store, its associated AWS CloudHSM cluster must have
+// at least one active HSM. To get the number of active HSMs in a cluster, use
+// the DescribeClusters (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_DescribeClusters.html)
+// operation. To add HSMs to the cluster, use the CreateHsm (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_CreateHsm.html)
+// operation.
+//
+// The connection process can take an extended amount of time to complete; up
+// to 20 minutes. This operation starts the connection process, but it does
+// not wait for it to complete. When it succeeds, this operation quickly returns
+// an HTTP 200 response and a JSON object with no properties. However, this
+// response does not indicate that the custom key store is connected. To get
+// the connection state of the custom key store, use the DescribeCustomKeyStores
+// operation.
+//
+// During the connection process, AWS KMS finds the AWS CloudHSM cluster that
+// is associated with the custom key store, creates the connection infrastructure,
+// connects to the cluster, logs into the AWS CloudHSM client as the kmsuser
+// crypto user (https://docs.aws.amazon.com/kms/latest/developerguide/key-store-concepts.html#concept-kmsuser)
+// (CU), and rotates its password.
+//
+// The ConnectCustomKeyStore operation might fail for various reasons. To find
+// the reason, use the DescribeCustomKeyStores operation and see the ConnectionErrorCode
+// in the response. For help interpreting the ConnectionErrorCode, see CustomKeyStoresListEntry.
+//
+// To fix the failure, use the DisconnectCustomKeyStore operation to disconnect
+// the custom key store, correct the error, use the UpdateCustomKeyStore operation
+// if necessary, and then use ConnectCustomKeyStore again.
+//
+// If you are having trouble connecting or disconnecting a custom key store,
+// see Troubleshooting a Custom Key Store (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html)
+// in the AWS Key Management Service Developer Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation ConnectCustomKeyStore for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCloudHsmClusterNotActiveException "CloudHsmClusterNotActiveException"
+//   The request was rejected because the AWS CloudHSM cluster that is associated
+//   with the custom key store is not active. Initialize and activate the cluster
+//   and try the command again. For detailed instructions, see Getting Started
+//   (https://docs.aws.amazon.com/cloudhsm/latest/userguide/getting-started.html)
+//   in the AWS CloudHSM User Guide.
+//
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
+//
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+//   * ErrCodeCloudHsmClusterInvalidConfigurationException "CloudHsmClusterInvalidConfigurationException"
+//   The request was rejected because the associated AWS CloudHSM cluster did
+//   not meet the configuration requirements for a custom key store.
+//
+//      * The cluster must be configured with private subnets in at least two
+//      different Availability Zones in the Region.
+//
+//      * The security group for the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//      (cloudhsm-cluster-<cluster-id>-sg) must include inbound rules and outbound
+//      rules that allow TCP traffic on ports 2223-2225. The Source in the inbound
+//      rules and the Destination in the outbound rules must match the security
+//      group ID. These rules are set by default when you create the cluster.
+//      Do not delete or change them. To get information about a particular security
+//      group, use the DescribeSecurityGroups (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html)
+//      operation.
+//
+//      * The cluster must contain at least as many HSMs as the operation requires.
+//      To add HSMs, use the AWS CloudHSM CreateHsm (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_CreateHsm.html)
+//      operation. For the CreateCustomKeyStore, UpdateCustomKeyStore, and CreateKey
+//      operations, the AWS CloudHSM cluster must have at least two active HSMs,
+//      each in a different Availability Zone. For the ConnectCustomKeyStore operation,
+//      the AWS CloudHSM must contain at least one active HSM.
+//
+//   For information about the requirements for an AWS CloudHSM cluster that is
+//   associated with a custom key store, see Assemble the Prerequisites (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+//   in the AWS Key Management Service Developer Guide. For information about
+//   creating a private subnet for an AWS CloudHSM cluster, see Create a Private
+//   Subnet (https://docs.aws.amazon.com/cloudhsm/latest/userguide/create-subnets.html)
+//   in the AWS CloudHSM User Guide. For information about cluster security groups,
+//   see Configure a Default Security Group (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//   in the AWS CloudHSM User Guide .
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ConnectCustomKeyStore
+func (c *KMS) ConnectCustomKeyStore(input *ConnectCustomKeyStoreInput) (*ConnectCustomKeyStoreOutput, error) {
+	req, out := c.ConnectCustomKeyStoreRequest(input)
+	return out, req.Send()
+}
+
+// ConnectCustomKeyStoreWithContext is the same as ConnectCustomKeyStore with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ConnectCustomKeyStore for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) ConnectCustomKeyStoreWithContext(ctx aws.Context, input *ConnectCustomKeyStoreInput, opts ...request.Option) (*ConnectCustomKeyStoreOutput, error) {
+	req, out := c.ConnectCustomKeyStoreRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -162,14 +343,13 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 
 	output = &CreateAliasOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
 // CreateAlias API operation for AWS Key Management Service.
 //
-// Creates a display name for a customer-managed customer master key (CMK).
+// Creates a display name for a customer managed customer master key (CMK).
 // You can use an alias to identify a CMK in selected operations, such as Encrypt
 // and GenerateDataKey.
 //
@@ -183,9 +363,10 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 // the response from the DescribeKey operation. To get the aliases of all CMKs,
 // use the ListAliases operation.
 //
-// The alias name can contain only alphanumeric characters, forward slashes
-// (/), underscores (_), and dashes (-). Alias names cannot begin with aws/.
-// That alias name prefix is reserved for AWS managed CMKs.
+// The alias name must begin with alias/ followed by a name, such as alias/ExampleAlias.
+// It can contain only alphanumeric characters, forward slashes (/), underscores
+// (_), and dashes (-). The alias name cannot begin with alias/aws/. The alias/aws/
+// prefix is reserved for AWS managed CMKs (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-managed-cmk).
 //
 // The alias and the CMK it is mapped to must be in the same AWS account and
 // the same region. You cannot perform this operation on an alias in a different
@@ -194,7 +375,7 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 // To map an existing alias to a different CMK, call UpdateAlias.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -226,7 +407,7 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
@@ -234,7 +415,7 @@ func (c *KMS) CreateAliasRequest(input *CreateAliasInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CreateAlias
@@ -254,6 +435,175 @@ func (c *KMS) CreateAlias(input *CreateAliasInput) (*CreateAliasOutput, error) {
 // for more information on using Contexts.
 func (c *KMS) CreateAliasWithContext(ctx aws.Context, input *CreateAliasInput, opts ...request.Option) (*CreateAliasOutput, error) {
 	req, out := c.CreateAliasRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opCreateCustomKeyStore = "CreateCustomKeyStore"
+
+// CreateCustomKeyStoreRequest generates a "aws/request.Request" representing the
+// client's request for the CreateCustomKeyStore operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See CreateCustomKeyStore for more information on using the CreateCustomKeyStore
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the CreateCustomKeyStoreRequest method.
+//    req, resp := client.CreateCustomKeyStoreRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CreateCustomKeyStore
+func (c *KMS) CreateCustomKeyStoreRequest(input *CreateCustomKeyStoreInput) (req *request.Request, output *CreateCustomKeyStoreOutput) {
+	op := &request.Operation{
+		Name:       opCreateCustomKeyStore,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &CreateCustomKeyStoreInput{}
+	}
+
+	output = &CreateCustomKeyStoreOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// CreateCustomKeyStore API operation for AWS Key Management Service.
+//
+// Creates a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// that is associated with an AWS CloudHSM cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/clusters.html)
+// that you own and manage.
+//
+// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// feature in AWS KMS, which combines the convenience and extensive integration
+// of AWS KMS with the isolation and control of a single-tenant key store.
+//
+// Before you create the custom key store, you must assemble the required elements,
+// including an AWS CloudHSM cluster that fulfills the requirements for a custom
+// key store. For details about the required elements, see Assemble the Prerequisites
+// (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+// in the AWS Key Management Service Developer Guide.
+//
+// When the operation completes successfully, it returns the ID of the new custom
+// key store. Before you can use your new custom key store, you need to use
+// the ConnectCustomKeyStore operation to connect the new key store to its AWS
+// CloudHSM cluster. Even if you are not going to use your custom key store
+// immediately, you might want to connect it to verify that all settings are
+// correct and then disconnect it until you are ready to use it.
+//
+// For help with failures, see Troubleshooting a Custom Key Store (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html)
+// in the AWS Key Management Service Developer Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation CreateCustomKeyStore for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCloudHsmClusterInUseException "CloudHsmClusterInUseException"
+//   The request was rejected because the specified AWS CloudHSM cluster is already
+//   associated with a custom key store or it shares a backup history with a cluster
+//   that is associated with a custom key store. Each custom key store must be
+//   associated with a different AWS CloudHSM cluster.
+//
+//   Clusters that share a backup history have the same cluster certificate. To
+//   view the cluster certificate of a cluster, use the DescribeClusters (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_DescribeClusters.html)
+//   operation.
+//
+//   * ErrCodeCustomKeyStoreNameInUseException "CustomKeyStoreNameInUseException"
+//   The request was rejected because the specified custom key store name is already
+//   assigned to another custom key store in the account. Try again with a custom
+//   key store name that is unique in the account.
+//
+//   * ErrCodeCloudHsmClusterNotFoundException "CloudHsmClusterNotFoundException"
+//   The request was rejected because AWS KMS cannot find the AWS CloudHSM cluster
+//   with the specified cluster ID. Retry the request with a different cluster
+//   ID.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+//   * ErrCodeCloudHsmClusterNotActiveException "CloudHsmClusterNotActiveException"
+//   The request was rejected because the AWS CloudHSM cluster that is associated
+//   with the custom key store is not active. Initialize and activate the cluster
+//   and try the command again. For detailed instructions, see Getting Started
+//   (https://docs.aws.amazon.com/cloudhsm/latest/userguide/getting-started.html)
+//   in the AWS CloudHSM User Guide.
+//
+//   * ErrCodeIncorrectTrustAnchorException "IncorrectTrustAnchorException"
+//   The request was rejected because the trust anchor certificate in the request
+//   is not the trust anchor certificate for the specified AWS CloudHSM cluster.
+//
+//   When you initialize the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/initialize-cluster.html#sign-csr),
+//   you create the trust anchor certificate and save it in the customerCA.crt
+//   file.
+//
+//   * ErrCodeCloudHsmClusterInvalidConfigurationException "CloudHsmClusterInvalidConfigurationException"
+//   The request was rejected because the associated AWS CloudHSM cluster did
+//   not meet the configuration requirements for a custom key store.
+//
+//      * The cluster must be configured with private subnets in at least two
+//      different Availability Zones in the Region.
+//
+//      * The security group for the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//      (cloudhsm-cluster-<cluster-id>-sg) must include inbound rules and outbound
+//      rules that allow TCP traffic on ports 2223-2225. The Source in the inbound
+//      rules and the Destination in the outbound rules must match the security
+//      group ID. These rules are set by default when you create the cluster.
+//      Do not delete or change them. To get information about a particular security
+//      group, use the DescribeSecurityGroups (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html)
+//      operation.
+//
+//      * The cluster must contain at least as many HSMs as the operation requires.
+//      To add HSMs, use the AWS CloudHSM CreateHsm (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_CreateHsm.html)
+//      operation. For the CreateCustomKeyStore, UpdateCustomKeyStore, and CreateKey
+//      operations, the AWS CloudHSM cluster must have at least two active HSMs,
+//      each in a different Availability Zone. For the ConnectCustomKeyStore operation,
+//      the AWS CloudHSM must contain at least one active HSM.
+//
+//   For information about the requirements for an AWS CloudHSM cluster that is
+//   associated with a custom key store, see Assemble the Prerequisites (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+//   in the AWS Key Management Service Developer Guide. For information about
+//   creating a private subnet for an AWS CloudHSM cluster, see Create a Private
+//   Subnet (https://docs.aws.amazon.com/cloudhsm/latest/userguide/create-subnets.html)
+//   in the AWS CloudHSM User Guide. For information about cluster security groups,
+//   see Configure a Default Security Group (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//   in the AWS CloudHSM User Guide .
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CreateCustomKeyStore
+func (c *KMS) CreateCustomKeyStore(input *CreateCustomKeyStoreInput) (*CreateCustomKeyStoreOutput, error) {
+	req, out := c.CreateCustomKeyStoreRequest(input)
+	return out, req.Send()
+}
+
+// CreateCustomKeyStoreWithContext is the same as CreateCustomKeyStore with the addition of
+// the ability to pass a context and additional request options.
+//
+// See CreateCustomKeyStore for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) CreateCustomKeyStoreWithContext(ctx aws.Context, input *CreateCustomKeyStoreInput, opts ...request.Option) (*CreateCustomKeyStoreOutput, error) {
+	req, out := c.CreateCustomKeyStoreRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -303,17 +653,21 @@ func (c *KMS) CreateGrantRequest(input *CreateGrantInput) (req *request.Request,
 
 // CreateGrant API operation for AWS Key Management Service.
 //
-// Adds a grant to a customer master key (CMK). The grant specifies who can
-// use the CMK and under what conditions. When setting permissions, grants are
-// an alternative to key policies.
+// Adds a grant to a customer master key (CMK). The grant allows the grantee
+// principal to use the CMK when the conditions specified in the grant are met.
+// When setting permissions, grants are an alternative to key policies.
+//
+// To create a grant that allows a cryptographic operation only when the encryption
+// context in the operation request matches or includes a specified encryption
+// context, use the Constraints parameter. For details, see GrantConstraints.
 //
 // To perform this operation on a CMK in a different AWS account, specify the
 // key ARN in the value of the KeyId parameter. For more information about grants,
-// see Grants (http://docs.aws.amazon.com/kms/latest/developerguide/grants.html)
-// in the AWS Key Management Service Developer Guide.
+// see Grants (https://docs.aws.amazon.com/kms/latest/developerguide/grants.html)
+// in the AWS Key Management Service Developer Guide .
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -336,7 +690,8 @@ func (c *KMS) CreateGrantRequest(input *CreateGrantInput) (req *request.Request,
 //   be retried.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInternalException "KMSInternalException"
 //   The request was rejected because an internal exception occurred. The request
@@ -347,7 +702,7 @@ func (c *KMS) CreateGrantRequest(input *CreateGrantInput) (req *request.Request,
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
@@ -355,7 +710,7 @@ func (c *KMS) CreateGrantRequest(input *CreateGrantInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CreateGrant
@@ -424,17 +779,21 @@ func (c *KMS) CreateKeyRequest(input *CreateKeyInput) (req *request.Request, out
 
 // CreateKey API operation for AWS Key Management Service.
 //
-// Creates a customer master key (CMK) in the caller's AWS account.
+// Creates a customer managed customer master key (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
+// (CMK) in your AWS account.
 //
-// You can use a CMK to encrypt small amounts of data (4 KiB or less) directly.
-// But CMKs are more commonly used to encrypt data encryption keys (DEKs), which
-// are used to encrypt raw data. For more information about DEKs and the difference
-// between CMKs and DEKs, see the following:
+// You can use a CMK to encrypt small amounts of data (up to 4096 bytes) directly.
+// But CMKs are more commonly used to encrypt the data keys (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#data-keys)
+// that are used to encrypt data.
 //
-//    * The GenerateDataKey operation
+// To create a CMK for imported key material, use the Origin parameter with
+// a value of EXTERNAL.
 //
-//    * AWS Key Management Service Concepts (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html)
-//    in the AWS Key Management Service Developer Guide
+// To create a CMK in a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html),
+// use the CustomKeyStoreId parameter to specify the custom key store. You must
+// also use the Origin parameter with a value of AWS_CLOUDHSM. The AWS CloudHSM
+// cluster that is associated with the custom key store must have at least two
+// active HSMs in different Availability Zones in the AWS Region.
 //
 // You cannot use this operation to create a CMK in a different AWS account.
 //
@@ -455,7 +814,8 @@ func (c *KMS) CreateKeyRequest(input *CreateKeyInput) (req *request.Request, out
 //   be retried.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
 //   The request was rejected because a specified parameter is not supported or
@@ -467,11 +827,66 @@ func (c *KMS) CreateKeyRequest(input *CreateKeyInput) (req *request.Request, out
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeTagException "TagException"
 //   The request was rejected because one or more tags are not valid.
+//
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
+//
+//   * ErrCodeCloudHsmClusterInvalidConfigurationException "CloudHsmClusterInvalidConfigurationException"
+//   The request was rejected because the associated AWS CloudHSM cluster did
+//   not meet the configuration requirements for a custom key store.
+//
+//      * The cluster must be configured with private subnets in at least two
+//      different Availability Zones in the Region.
+//
+//      * The security group for the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//      (cloudhsm-cluster-<cluster-id>-sg) must include inbound rules and outbound
+//      rules that allow TCP traffic on ports 2223-2225. The Source in the inbound
+//      rules and the Destination in the outbound rules must match the security
+//      group ID. These rules are set by default when you create the cluster.
+//      Do not delete or change them. To get information about a particular security
+//      group, use the DescribeSecurityGroups (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html)
+//      operation.
+//
+//      * The cluster must contain at least as many HSMs as the operation requires.
+//      To add HSMs, use the AWS CloudHSM CreateHsm (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_CreateHsm.html)
+//      operation. For the CreateCustomKeyStore, UpdateCustomKeyStore, and CreateKey
+//      operations, the AWS CloudHSM cluster must have at least two active HSMs,
+//      each in a different Availability Zone. For the ConnectCustomKeyStore operation,
+//      the AWS CloudHSM must contain at least one active HSM.
+//
+//   For information about the requirements for an AWS CloudHSM cluster that is
+//   associated with a custom key store, see Assemble the Prerequisites (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+//   in the AWS Key Management Service Developer Guide. For information about
+//   creating a private subnet for an AWS CloudHSM cluster, see Create a Private
+//   Subnet (https://docs.aws.amazon.com/cloudhsm/latest/userguide/create-subnets.html)
+//   in the AWS CloudHSM User Guide. For information about cluster security groups,
+//   see Configure a Default Security Group (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//   in the AWS CloudHSM User Guide .
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/CreateKey
 func (c *KMS) CreateKey(input *CreateKeyInput) (*CreateKeyOutput, error) {
@@ -557,7 +972,7 @@ func (c *KMS) DecryptRequest(input *DecryptInput) (req *request.Request, output 
 // particular trusted accounts.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -600,7 +1015,7 @@ func (c *KMS) DecryptRequest(input *DecryptInput) (req *request.Request, output 
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/Decrypt
@@ -664,8 +1079,7 @@ func (c *KMS) DeleteAliasRequest(input *DeleteAliasInput) (req *request.Request,
 
 	output = &DeleteAliasOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -708,7 +1122,7 @@ func (c *KMS) DeleteAliasRequest(input *DeleteAliasInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DeleteAlias
@@ -728,6 +1142,144 @@ func (c *KMS) DeleteAlias(input *DeleteAliasInput) (*DeleteAliasOutput, error) {
 // for more information on using Contexts.
 func (c *KMS) DeleteAliasWithContext(ctx aws.Context, input *DeleteAliasInput, opts ...request.Option) (*DeleteAliasOutput, error) {
 	req, out := c.DeleteAliasRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDeleteCustomKeyStore = "DeleteCustomKeyStore"
+
+// DeleteCustomKeyStoreRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteCustomKeyStore operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeleteCustomKeyStore for more information on using the DeleteCustomKeyStore
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DeleteCustomKeyStoreRequest method.
+//    req, resp := client.DeleteCustomKeyStoreRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DeleteCustomKeyStore
+func (c *KMS) DeleteCustomKeyStoreRequest(input *DeleteCustomKeyStoreInput) (req *request.Request, output *DeleteCustomKeyStoreOutput) {
+	op := &request.Operation{
+		Name:       opDeleteCustomKeyStore,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeleteCustomKeyStoreInput{}
+	}
+
+	output = &DeleteCustomKeyStoreOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeleteCustomKeyStore API operation for AWS Key Management Service.
+//
+// Deletes a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html).
+// This operation does not delete the AWS CloudHSM cluster that is associated
+// with the custom key store, or affect any users or keys in the cluster.
+//
+// The custom key store that you delete cannot contain any AWS KMS customer
+// master keys (CMKs) (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys).
+// Before deleting the key store, verify that you will never need to use any
+// of the CMKs in the key store for any cryptographic operations. Then, use
+// ScheduleKeyDeletion to delete the AWS KMS customer master keys (CMKs) from
+// the key store. When the scheduled waiting period expires, the ScheduleKeyDeletion
+// operation deletes the CMKs. Then it makes a best effort to delete the key
+// material from the associated cluster. However, you might need to manually
+// delete the orphaned key material (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-orphaned-key)
+// from the cluster and its backups.
+//
+// After all CMKs are deleted from AWS KMS, use DisconnectCustomKeyStore to
+// disconnect the key store from AWS KMS. Then, you can delete the custom key
+// store.
+//
+// Instead of deleting the custom key store, consider using DisconnectCustomKeyStore
+// to disconnect it from AWS KMS. While the key store is disconnected, you cannot
+// create or use the CMKs in the key store. But, you do not need to delete CMKs
+// and you can reconnect a disconnected custom key store at any time.
+//
+// If the operation succeeds, it returns a JSON object with no properties.
+//
+// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// feature in AWS KMS, which combines the convenience and extensive integration
+// of AWS KMS with the isolation and control of a single-tenant key store.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation DeleteCustomKeyStore for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCustomKeyStoreHasCMKsException "CustomKeyStoreHasCMKsException"
+//   The request was rejected because the custom key store contains AWS KMS customer
+//   master keys (CMKs). After verifying that you do not need to use the CMKs,
+//   use the ScheduleKeyDeletion operation to delete the CMKs. After they are
+//   deleted, you can delete the custom key store.
+//
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
+//
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DeleteCustomKeyStore
+func (c *KMS) DeleteCustomKeyStore(input *DeleteCustomKeyStoreInput) (*DeleteCustomKeyStoreOutput, error) {
+	req, out := c.DeleteCustomKeyStoreRequest(input)
+	return out, req.Send()
+}
+
+// DeleteCustomKeyStoreWithContext is the same as DeleteCustomKeyStore with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeleteCustomKeyStore for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) DeleteCustomKeyStoreWithContext(ctx aws.Context, input *DeleteCustomKeyStoreInput, opts ...request.Option) (*DeleteCustomKeyStoreOutput, error) {
+	req, out := c.DeleteCustomKeyStoreRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -772,8 +1324,7 @@ func (c *KMS) DeleteImportedKeyMaterialRequest(input *DeleteImportedKeyMaterialI
 
 	output = &DeleteImportedKeyMaterialOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -781,7 +1332,7 @@ func (c *KMS) DeleteImportedKeyMaterialRequest(input *DeleteImportedKeyMaterialI
 //
 // Deletes key material that you previously imported. This operation makes the
 // specified customer master key (CMK) unusable. For more information about
-// importing key material into AWS KMS, see Importing Key Material (http://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
+// importing key material into AWS KMS, see Importing Key Material (https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
 // in the AWS Key Management Service Developer Guide. You cannot perform this
 // operation on a CMK in a different AWS account.
 //
@@ -792,7 +1343,7 @@ func (c *KMS) DeleteImportedKeyMaterialRequest(input *DeleteImportedKeyMaterialI
 // the same key material into the CMK.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -804,7 +1355,8 @@ func (c *KMS) DeleteImportedKeyMaterialRequest(input *DeleteImportedKeyMaterialI
 //
 // Returned Error Codes:
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
 //   The request was rejected because a specified parameter is not supported or
@@ -827,7 +1379,7 @@ func (c *KMS) DeleteImportedKeyMaterialRequest(input *DeleteImportedKeyMaterialI
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DeleteImportedKeyMaterial
@@ -847,6 +1399,116 @@ func (c *KMS) DeleteImportedKeyMaterial(input *DeleteImportedKeyMaterialInput) (
 // for more information on using Contexts.
 func (c *KMS) DeleteImportedKeyMaterialWithContext(ctx aws.Context, input *DeleteImportedKeyMaterialInput, opts ...request.Option) (*DeleteImportedKeyMaterialOutput, error) {
 	req, out := c.DeleteImportedKeyMaterialRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDescribeCustomKeyStores = "DescribeCustomKeyStores"
+
+// DescribeCustomKeyStoresRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeCustomKeyStores operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeCustomKeyStores for more information on using the DescribeCustomKeyStores
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeCustomKeyStoresRequest method.
+//    req, resp := client.DescribeCustomKeyStoresRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DescribeCustomKeyStores
+func (c *KMS) DescribeCustomKeyStoresRequest(input *DescribeCustomKeyStoresInput) (req *request.Request, output *DescribeCustomKeyStoresOutput) {
+	op := &request.Operation{
+		Name:       opDescribeCustomKeyStores,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeCustomKeyStoresInput{}
+	}
+
+	output = &DescribeCustomKeyStoresOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeCustomKeyStores API operation for AWS Key Management Service.
+//
+// Gets information about custom key stores (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// in the account and region.
+//
+// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// feature in AWS KMS, which combines the convenience and extensive integration
+// of AWS KMS with the isolation and control of a single-tenant key store.
+//
+// By default, this operation returns information about all custom key stores
+// in the account and region. To get only information about a particular custom
+// key store, use either the CustomKeyStoreName or CustomKeyStoreId parameter
+// (but not both).
+//
+// To determine whether the custom key store is connected to its AWS CloudHSM
+// cluster, use the ConnectionState element in the response. If an attempt to
+// connect the custom key store failed, the ConnectionState value is FAILED
+// and the ConnectionErrorCode element in the response indicates the cause of
+// the failure. For help interpreting the ConnectionErrorCode, see CustomKeyStoresListEntry.
+//
+// Custom key stores have a DISCONNECTED connection state if the key store has
+// never been connected or you use the DisconnectCustomKeyStore operation to
+// disconnect it. If your custom key store state is CONNECTED but you are having
+// trouble using it, make sure that its associated AWS CloudHSM cluster is active
+// and contains the minimum number of HSMs required for the operation, if any.
+//
+// For help repairing your custom key store, see the Troubleshooting Custom
+// Key Stores (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html)
+// topic in the AWS Key Management Service Developer Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation DescribeCustomKeyStores for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DescribeCustomKeyStores
+func (c *KMS) DescribeCustomKeyStores(input *DescribeCustomKeyStoresInput) (*DescribeCustomKeyStoresOutput, error) {
+	req, out := c.DescribeCustomKeyStoresRequest(input)
+	return out, req.Send()
+}
+
+// DescribeCustomKeyStoresWithContext is the same as DescribeCustomKeyStores with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeCustomKeyStores for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) DescribeCustomKeyStoresWithContext(ctx aws.Context, input *DescribeCustomKeyStoresInput, opts ...request.Option) (*DescribeCustomKeyStoresOutput, error) {
+	req, out := c.DescribeCustomKeyStoresRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -900,7 +1562,7 @@ func (c *KMS) DescribeKeyRequest(input *DescribeKeyInput) (req *request.Request,
 //
 // You can use DescribeKey on a predefined AWS alias, that is, an AWS alias
 // with no key ID. When you do, AWS KMS associates the alias with an AWS managed
-// CMK (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
+// CMK (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
 // and returns its KeyId and Arn in the response.
 //
 // To perform this operation on a CMK in a different AWS account, specify the
@@ -919,7 +1581,8 @@ func (c *KMS) DescribeKeyRequest(input *DescribeKeyInput) (req *request.Request,
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -990,8 +1653,7 @@ func (c *KMS) DisableKeyRequest(input *DisableKeyInput) (req *request.Request, o
 
 	output = &DisableKeyOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1002,11 +1664,11 @@ func (c *KMS) DisableKeyRequest(input *DisableKeyInput) (req *request.Request, o
 // a CMK in a different AWS account.
 //
 // For more information about how key state affects the use of a CMK, see How
-// Key State Affects the Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
-// in the AWS Key Management Service Developer Guide.
+// Key State Affects the Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// in the AWS Key Management Service Developer Guide .
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1022,7 +1684,8 @@ func (c *KMS) DisableKeyRequest(input *DisableKeyInput) (req *request.Request, o
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -1037,7 +1700,7 @@ func (c *KMS) DisableKeyRequest(input *DisableKeyInput) (req *request.Request, o
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DisableKey
@@ -1101,19 +1764,18 @@ func (c *KMS) DisableKeyRotationRequest(input *DisableKeyRotationInput) (req *re
 
 	output = &DisableKeyRotationOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
 // DisableKeyRotation API operation for AWS Key Management Service.
 //
-// Disables automatic rotation of the key material (http://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
+// Disables automatic rotation of the key material (https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
 // for the specified customer master key (CMK). You cannot perform this operation
 // on a CMK in a different AWS account.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1132,7 +1794,8 @@ func (c *KMS) DisableKeyRotationRequest(input *DisableKeyRotationInput) (req *re
 //   The request was rejected because the specified CMK is not enabled.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -1147,7 +1810,7 @@ func (c *KMS) DisableKeyRotationRequest(input *DisableKeyRotationInput) (req *re
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
@@ -1171,6 +1834,129 @@ func (c *KMS) DisableKeyRotation(input *DisableKeyRotationInput) (*DisableKeyRot
 // for more information on using Contexts.
 func (c *KMS) DisableKeyRotationWithContext(ctx aws.Context, input *DisableKeyRotationInput, opts ...request.Option) (*DisableKeyRotationOutput, error) {
 	req, out := c.DisableKeyRotationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDisconnectCustomKeyStore = "DisconnectCustomKeyStore"
+
+// DisconnectCustomKeyStoreRequest generates a "aws/request.Request" representing the
+// client's request for the DisconnectCustomKeyStore operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DisconnectCustomKeyStore for more information on using the DisconnectCustomKeyStore
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DisconnectCustomKeyStoreRequest method.
+//    req, resp := client.DisconnectCustomKeyStoreRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DisconnectCustomKeyStore
+func (c *KMS) DisconnectCustomKeyStoreRequest(input *DisconnectCustomKeyStoreInput) (req *request.Request, output *DisconnectCustomKeyStoreOutput) {
+	op := &request.Operation{
+		Name:       opDisconnectCustomKeyStore,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DisconnectCustomKeyStoreInput{}
+	}
+
+	output = &DisconnectCustomKeyStoreOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DisconnectCustomKeyStore API operation for AWS Key Management Service.
+//
+// Disconnects the custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// from its associated AWS CloudHSM cluster. While a custom key store is disconnected,
+// you can manage the custom key store and its customer master keys (CMKs),
+// but you cannot create or use CMKs in the custom key store. You can reconnect
+// the custom key store at any time.
+//
+// While a custom key store is disconnected, all attempts to create customer
+// master keys (CMKs) in the custom key store or to use existing CMKs in cryptographic
+// operations will fail. This action can prevent users from storing and accessing
+// sensitive data.
+//
+// To find the connection state of a custom key store, use the DescribeCustomKeyStores
+// operation. To reconnect a custom key store, use the ConnectCustomKeyStore
+// operation.
+//
+// If the operation succeeds, it returns a JSON object with no properties.
+//
+// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// feature in AWS KMS, which combines the convenience and extensive integration
+// of AWS KMS with the isolation and control of a single-tenant key store.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation DisconnectCustomKeyStore for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
+//
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/DisconnectCustomKeyStore
+func (c *KMS) DisconnectCustomKeyStore(input *DisconnectCustomKeyStoreInput) (*DisconnectCustomKeyStoreOutput, error) {
+	req, out := c.DisconnectCustomKeyStoreRequest(input)
+	return out, req.Send()
+}
+
+// DisconnectCustomKeyStoreWithContext is the same as DisconnectCustomKeyStore with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DisconnectCustomKeyStore for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) DisconnectCustomKeyStoreWithContext(ctx aws.Context, input *DisconnectCustomKeyStoreInput, opts ...request.Option) (*DisconnectCustomKeyStoreOutput, error) {
+	req, out := c.DisconnectCustomKeyStoreRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -1215,19 +2001,18 @@ func (c *KMS) EnableKeyRequest(input *EnableKeyInput) (req *request.Request, out
 
 	output = &EnableKeyOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
 // EnableKey API operation for AWS Key Management Service.
 //
-// Sets the state of a customer master key (CMK) to enabled, thereby permitting
-// its use for cryptographic operations. You cannot perform this operation on
-// a CMK in a different AWS account.
+// Sets the key state of a customer master key (CMK) to enabled. This allows
+// you to use the CMK for cryptographic operations. You cannot perform this
+// operation on a CMK in a different AWS account.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1243,7 +2028,8 @@ func (c *KMS) EnableKeyRequest(input *EnableKeyInput) (req *request.Request, out
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -1255,7 +2041,7 @@ func (c *KMS) EnableKeyRequest(input *EnableKeyInput) (req *request.Request, out
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
@@ -1263,7 +2049,7 @@ func (c *KMS) EnableKeyRequest(input *EnableKeyInput) (req *request.Request, out
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/EnableKey
@@ -1327,19 +2113,21 @@ func (c *KMS) EnableKeyRotationRequest(input *EnableKeyRotationInput) (req *requ
 
 	output = &EnableKeyRotationOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
 // EnableKeyRotation API operation for AWS Key Management Service.
 //
-// Enables automatic rotation of the key material (http://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
+// Enables automatic rotation of the key material (https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
 // for the specified customer master key (CMK). You cannot perform this operation
 // on a CMK in a different AWS account.
 //
+// You cannot enable automatic rotation of CMKs with imported key material or
+// CMKs in a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html).
+//
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1358,7 +2146,8 @@ func (c *KMS) EnableKeyRotationRequest(input *EnableKeyRotationInput) (req *requ
 //   The request was rejected because the specified CMK is not enabled.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -1373,7 +2162,7 @@ func (c *KMS) EnableKeyRotationRequest(input *EnableKeyRotationInput) (req *requ
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
@@ -1468,7 +2257,7 @@ func (c *KMS) EncryptRequest(input *EncryptInput) (req *request.Request, output 
 // operation returns.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // To perform this operation on a CMK in a different AWS account, specify the
@@ -1512,7 +2301,7 @@ func (c *KMS) EncryptRequest(input *EncryptInput) (req *request.Request, output 
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/Encrypt
@@ -1581,55 +2370,58 @@ func (c *KMS) GenerateDataKeyRequest(input *GenerateDataKeyInput) (req *request.
 
 // GenerateDataKey API operation for AWS Key Management Service.
 //
-// Returns a data encryption key that you can use in your application to encrypt
-// data locally.
+// Generates a unique data key. This operation returns a plaintext copy of the
+// data key and a copy that is encrypted under a customer master key (CMK) that
+// you specify. You can use the plaintext key to encrypt your data outside of
+// KMS and store the encrypted data key with the encrypted data.
 //
-// You must specify the customer master key (CMK) under which to generate the
-// data key. You must also specify the length of the data key using either the
-// KeySpec or NumberOfBytes field. You must specify one field or the other,
-// but not both. For common key lengths (128-bit and 256-bit symmetric keys),
-// we recommend that you use KeySpec. To perform this operation on a CMK in
-// a different AWS account, specify the key ARN or alias ARN in the value of
-// the KeyId parameter.
+// GenerateDataKey returns a unique data key for each request. The bytes in
+// the key are not related to the caller or CMK that is used to encrypt the
+// data key.
 //
-// This operation returns a plaintext copy of the data key in the Plaintext
-// field of the response, and an encrypted copy of the data key in the CiphertextBlob
-// field. The data key is encrypted under the CMK specified in the KeyId field
-// of the request.
+// To generate a data key, you need to specify the customer master key (CMK)
+// that will be used to encrypt the data key. You must also specify the length
+// of the data key using either the KeySpec or NumberOfBytes field (but not
+// both). For common key lengths (128-bit and 256-bit symmetric keys), we recommend
+// that you use KeySpec. To perform this operation on a CMK in a different AWS
+// account, specify the key ARN or alias ARN in the value of the KeyId parameter.
+//
+// You will find the plaintext copy of the data key in the Plaintext field of
+// the response, and the encrypted copy of the data key in the CiphertextBlob
+// field.
 //
 // We recommend that you use the following pattern to encrypt data locally in
 // your application:
 //
-// Use this operation (GenerateDataKey) to get a data encryption key.
+// Use the GenerateDataKey operation to get a data encryption key.
 //
-// Use the plaintext data encryption key (returned in the Plaintext field of
-// the response) to encrypt data locally, then erase the plaintext data key
-// from memory.
+// Use the plaintext data key (returned in the Plaintext field of the response)
+// to encrypt data locally, then erase the plaintext data key from memory.
 //
 // Store the encrypted data key (returned in the CiphertextBlob field of the
 // response) alongside the locally encrypted data.
 //
 // To decrypt data locally:
 //
-// Use the Decrypt operation to decrypt the encrypted data key into a plaintext
-// copy of the data key.
+// Use the Decrypt operation to decrypt the encrypted data key. The operation
+// returns a plaintext copy of the data key.
 //
 // Use the plaintext data key to decrypt data locally, then erase the plaintext
 // data key from memory.
 //
-// To return only an encrypted copy of the data key, use GenerateDataKeyWithoutPlaintext.
-// To return a random byte string that is cryptographically secure, use GenerateRandom.
+// To get only an encrypted copy of the data key, use GenerateDataKeyWithoutPlaintext.
+// To get a cryptographically secure random byte string, use GenerateRandom.
 //
-// If you use the optional EncryptionContext field, you must store at least
-// enough information to be able to reconstruct the full encryption context
-// when you later send the ciphertext to the Decrypt operation. It is a good
-// practice to choose an encryption context that you can reconstruct on the
-// fly to better secure the ciphertext. For more information, see Encryption
-// Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html)
-// in the AWS Key Management Service Developer Guide.
+// You can use the optional encryption context to add additional security to
+// your encryption operation. When you specify an EncryptionContext in the GenerateDataKey
+// operation, you must specify the same encryption context (a case-sensitive
+// exact match) in your request to Decrypt the data key. Otherwise, the request
+// to decrypt fails with an InvalidCiphertextException. For more information,
+// see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
+// in the AWS Key Management Service Developer Guide .
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1670,7 +2462,7 @@ func (c *KMS) GenerateDataKeyRequest(input *GenerateDataKeyInput) (req *request.
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GenerateDataKey
@@ -1739,28 +2531,30 @@ func (c *KMS) GenerateDataKeyWithoutPlaintextRequest(input *GenerateDataKeyWitho
 
 // GenerateDataKeyWithoutPlaintext API operation for AWS Key Management Service.
 //
-// Returns a data encryption key encrypted under a customer master key (CMK).
-// This operation is identical to GenerateDataKey but returns only the encrypted
-// copy of the data key.
+// Generates a unique data key. This operation returns a data key that is encrypted
+// under a customer master key (CMK) that you specify. GenerateDataKeyWithoutPlaintext
+// is identical to GenerateDataKey except that returns only the encrypted copy
+// of the data key.
 //
-// To perform this operation on a CMK in a different AWS account, specify the
-// key ARN or alias ARN in the value of the KeyId parameter.
+// Like GenerateDataKey, GenerateDataKeyWithoutPlaintext returns a unique data
+// key for each request. The bytes in the key are not related to the caller
+// or CMK that is used to encrypt the data key.
 //
-// This operation is useful in a system that has multiple components with different
-// degrees of trust. For example, consider a system that stores encrypted data
-// in containers. Each container stores the encrypted data and an encrypted
-// copy of the data key. One component of the system, called the control plane,
-// creates new containers. When it creates a new container, it uses this operation
-// (GenerateDataKeyWithoutPlaintext) to get an encrypted data key and then stores
-// it in the container. Later, a different component of the system, called the
-// data plane, puts encrypted data into the containers. To do this, it passes
-// the encrypted data key to the Decrypt operation. It then uses the returned
-// plaintext data key to encrypt data and finally stores the encrypted data
-// in the container. In this system, the control plane never sees the plaintext
-// data key.
+// This operation is useful for systems that need to encrypt data at some point,
+// but not immediately. When you need to encrypt the data, you call the Decrypt
+// operation on the encrypted copy of the key.
+//
+// It's also useful in distributed systems with different levels of trust. For
+// example, you might store encrypted data in containers. One component of your
+// system creates new containers and stores an encrypted data key with each
+// container. Then, a different component puts the data into the containers.
+// That component first decrypts the data key, uses the plaintext data key to
+// encrypt data, puts the encrypted data into the container, and then destroys
+// the plaintext data key. In this system, the component that creates the containers
+// never sees the plaintext data key.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1801,7 +2595,7 @@ func (c *KMS) GenerateDataKeyWithoutPlaintextRequest(input *GenerateDataKeyWitho
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GenerateDataKeyWithoutPlaintext
@@ -1872,6 +2666,11 @@ func (c *KMS) GenerateRandomRequest(input *GenerateRandomInput) (req *request.Re
 //
 // Returns a random byte string that is cryptographically secure.
 //
+// By default, the random byte string is generated in AWS KMS. To generate the
+// byte string in the AWS CloudHSM cluster that is associated with a custom
+// key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html),
+// specify the custom key store ID.
+//
 // For more information about entropy and random number generation, see the
 // AWS Key Management Service Cryptographic Details (https://d0.awsstatic.com/whitepapers/KMS-Cryptographic-Details.pdf)
 // whitepaper.
@@ -1891,6 +2690,29 @@ func (c *KMS) GenerateRandomRequest(input *GenerateRandomInput) (req *request.Re
 //   * ErrCodeInternalException "KMSInternalException"
 //   The request was rejected because an internal exception occurred. The request
 //   can be retried.
+//
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GenerateRandom
 func (c *KMS) GenerateRandom(input *GenerateRandomInput) (*GenerateRandomOutput, error) {
@@ -1974,7 +2796,8 @@ func (c *KMS) GetKeyPolicyRequest(input *GetKeyPolicyInput) (req *request.Reques
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -1989,7 +2812,7 @@ func (c *KMS) GetKeyPolicyRequest(input *GetKeyPolicyInput) (req *request.Reques
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GetKeyPolicy
@@ -2059,11 +2882,11 @@ func (c *KMS) GetKeyRotationStatusRequest(input *GetKeyRotationStatusInput) (req
 // GetKeyRotationStatus API operation for AWS Key Management Service.
 //
 // Gets a Boolean value that indicates whether automatic rotation of the key
-// material (http://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
+// material (https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
 // is enabled for the specified customer master key (CMK).
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 //    * Disabled: The key rotation status does not change when you disable a
@@ -2090,7 +2913,8 @@ func (c *KMS) GetKeyRotationStatusRequest(input *GetKeyRotationStatusInput) (req
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -2105,7 +2929,7 @@ func (c *KMS) GetKeyRotationStatusRequest(input *GetKeyRotationStatusInput) (req
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
@@ -2180,7 +3004,7 @@ func (c *KMS) GetParametersForImportRequest(input *GetParametersForImportInput) 
 //
 // Returns the items you need in order to import key material into AWS KMS from
 // your existing key management infrastructure. For more information about importing
-// key material into AWS KMS, see Importing Key Material (http://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
+// key material into AWS KMS, see Importing Key Material (https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // You must specify the key ID of the customer master key (CMK) into which you
@@ -2197,7 +3021,7 @@ func (c *KMS) GetParametersForImportRequest(input *GetParametersForImportInput) 
 // To get new ones, send another GetParametersForImport request.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2209,7 +3033,8 @@ func (c *KMS) GetParametersForImportRequest(input *GetParametersForImportInput) 
 //
 // Returned Error Codes:
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
 //   The request was rejected because a specified parameter is not supported or
@@ -2232,7 +3057,7 @@ func (c *KMS) GetParametersForImportRequest(input *GetParametersForImportInput) 
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/GetParametersForImport
@@ -2296,6 +3121,7 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 
 	output = &ImportKeyMaterialOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -2305,7 +3131,7 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 // was created without key material. You cannot perform this operation on a
 // CMK in a different AWS account. For more information about creating CMKs
 // with no key material and then importing key material, see Importing Key Material
-// (http://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
+// (https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Before using this operation, call GetParametersForImport. Its response includes
@@ -2315,10 +3141,9 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 // When calling this operation, you must specify the following values:
 //
 //    * The key ID or key ARN of a CMK with no key material. Its Origin must
-//    be EXTERNAL.
-//
-// To create a CMK with no key material, call CreateKey and set the value of
-//    its Origin parameter to EXTERNAL. To get the Origin of a CMK, call DescribeKey.)
+//    be EXTERNAL. To create a CMK with no key material, call CreateKey and
+//    set the value of its Origin parameter to EXTERNAL. To get the Origin of
+//    a CMK, call DescribeKey.)
 //
 //    * The encrypted key material. To get the public key to encrypt the key
 //    material, call GetParametersForImport.
@@ -2333,13 +3158,13 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 //    deletes the key material and the CMK becomes unusable. To use the CMK
 //    again, you must reimport the same key material.
 //
-// When this operation is successful, the CMK's key state changes from PendingImport
-// to Enabled, and you can use the CMK. After you successfully import key material
-// into a CMK, you can reimport the same key material into that CMK, but you
-// cannot import different key material.
+// When this operation is successful, the key state of the CMK changes from
+// PendingImport to Enabled, and you can use the CMK. After you successfully
+// import key material into a CMK, you can reimport the same key material into
+// that CMK, but you cannot import different key material.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -2351,7 +3176,8 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 //
 // Returned Error Codes:
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeUnsupportedOperationException "UnsupportedOperationException"
 //   The request was rejected because a specified parameter is not supported or
@@ -2374,7 +3200,7 @@ func (c *KMS) ImportKeyMaterialRequest(input *ImportKeyMaterialInput) (req *requ
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeInvalidCiphertextException "InvalidCiphertextException"
@@ -2483,7 +3309,7 @@ func (c *KMS) ListAliasesRequest(input *ListAliasesInput) (req *request.Request,
 // The response might also include aliases that have no TargetKeyId field. These
 // are predefined aliases that AWS has created but has not yet associated with
 // a CMK. Aliases that AWS creates in your account, including predefined aliases,
-// do not count against your AWS KMS aliases limit (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html#aliases-limit).
+// do not count against your AWS KMS aliases limit (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html#aliases-limit).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2504,6 +3330,14 @@ func (c *KMS) ListAliasesRequest(input *ListAliasesInput) (req *request.Request,
 //   * ErrCodeInternalException "KMSInternalException"
 //   The request was rejected because an internal exception occurred. The request
 //   can be retried.
+//
+//   * ErrCodeInvalidArnException "InvalidArnException"
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
+//
+//   * ErrCodeNotFoundException "NotFoundException"
+//   The request was rejected because the specified entity or resource could not
+//   be found.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ListAliases
 func (c *KMS) ListAliases(input *ListAliasesInput) (*ListAliasesOutput, error) {
@@ -2538,7 +3372,7 @@ func (c *KMS) ListAliasesWithContext(ctx aws.Context, input *ListAliasesInput, o
 //    // Example iterating over at most 3 pages of a ListAliases operation.
 //    pageNum := 0
 //    err := client.ListAliasesPages(params,
-//        func(page *ListAliasesOutput, lastPage bool) bool {
+//        func(page *kms.ListAliasesOutput, lastPage bool) bool {
 //            pageNum++
 //            fmt.Println(page)
 //            return pageNum <= 3
@@ -2653,7 +3487,8 @@ func (c *KMS) ListGrantsRequest(input *ListGrantsInput) (req *request.Request, o
 //   should next begin is not valid.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInternalException "KMSInternalException"
 //   The request was rejected because an internal exception occurred. The request
@@ -2664,7 +3499,7 @@ func (c *KMS) ListGrantsRequest(input *ListGrantsInput) (req *request.Request, o
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ListGrants
@@ -2700,7 +3535,7 @@ func (c *KMS) ListGrantsWithContext(ctx aws.Context, input *ListGrantsInput, opt
 //    // Example iterating over at most 3 pages of a ListGrants operation.
 //    pageNum := 0
 //    err := client.ListGrantsPages(params,
-//        func(page *ListGrantsResponse, lastPage bool) bool {
+//        func(page *kms.ListGrantsResponse, lastPage bool) bool {
 //            pageNum++
 //            fmt.Println(page)
 //            return pageNum <= 3
@@ -2807,7 +3642,8 @@ func (c *KMS) ListKeyPoliciesRequest(input *ListKeyPoliciesInput) (req *request.
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -2822,7 +3658,7 @@ func (c *KMS) ListKeyPoliciesRequest(input *ListKeyPoliciesInput) (req *request.
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ListKeyPolicies
@@ -2858,7 +3694,7 @@ func (c *KMS) ListKeyPoliciesWithContext(ctx aws.Context, input *ListKeyPolicies
 //    // Example iterating over at most 3 pages of a ListKeyPolicies operation.
 //    pageNum := 0
 //    err := client.ListKeyPoliciesPages(params,
-//        func(page *ListKeyPoliciesOutput, lastPage bool) bool {
+//        func(page *kms.ListKeyPoliciesOutput, lastPage bool) bool {
 //            pageNum++
 //            fmt.Println(page)
 //            return pageNum <= 3
@@ -3003,7 +3839,7 @@ func (c *KMS) ListKeysWithContext(ctx aws.Context, input *ListKeysInput, opts ..
 //    // Example iterating over at most 3 pages of a ListKeys operation.
 //    pageNum := 0
 //    err := client.ListKeysPages(params,
-//        func(page *ListKeysOutput, lastPage bool) bool {
+//        func(page *kms.ListKeysOutput, lastPage bool) bool {
 //            pageNum++
 //            fmt.Println(page)
 //            return pageNum <= 3
@@ -3107,7 +3943,8 @@ func (c *KMS) ListResourceTagsRequest(input *ListResourceTagsInput) (req *reques
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInvalidMarkerException "InvalidMarkerException"
 //   The request was rejected because the marker that specifies where pagination
@@ -3202,7 +4039,8 @@ func (c *KMS) ListRetirableGrantsRequest(input *ListRetirableGrantsInput) (req *
 //   should next begin is not valid.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeNotFoundException "NotFoundException"
 //   The request was rejected because the specified entity or resource could not
@@ -3273,8 +4111,7 @@ func (c *KMS) PutKeyPolicyRequest(input *PutKeyPolicyInput) (req *request.Reques
 
 	output = &PutKeyPolicyOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3283,7 +4120,7 @@ func (c *KMS) PutKeyPolicyRequest(input *PutKeyPolicyInput) (req *request.Reques
 // Attaches a key policy to the specified customer master key (CMK). You cannot
 // perform this operation on a CMK in a different AWS account.
 //
-// For more information about key policies, see Key Policies (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html)
+// For more information about key policies, see Key Policies (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -3299,7 +4136,8 @@ func (c *KMS) PutKeyPolicyRequest(input *PutKeyPolicyInput) (req *request.Reques
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeMalformedPolicyDocumentException "MalformedPolicyDocumentException"
 //   The request was rejected because the specified policy is not syntactically
@@ -3319,7 +4157,7 @@ func (c *KMS) PutKeyPolicyRequest(input *PutKeyPolicyInput) (req *request.Reques
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
@@ -3327,7 +4165,7 @@ func (c *KMS) PutKeyPolicyRequest(input *PutKeyPolicyInput) (req *request.Reques
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/PutKeyPolicy
@@ -3405,14 +4243,14 @@ func (c *KMS) ReEncryptRequest(input *ReEncryptInput) (req *request.Request, out
 //
 // Unlike other operations, ReEncrypt is authorized twice, once as ReEncryptFrom
 // on the source CMK and once as ReEncryptTo on the destination CMK. We recommend
-// that you include the "kms:ReEncrypt*" permission in your key policies (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html)
+// that you include the "kms:ReEncrypt*" permission in your key policies (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html)
 // to permit reencryption from or to the CMK. This permission is automatically
 // included in the key policy when you create a CMK through the console. But
 // you must include it manually when you create a CMK programmatically or when
 // you set a key policy with the PutKeyPolicy operation.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -3458,7 +4296,7 @@ func (c *KMS) ReEncryptRequest(input *ReEncryptInput) (req *request.Request, out
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ReEncrypt
@@ -3522,8 +4360,7 @@ func (c *KMS) RetireGrantRequest(input *RetireGrantInput) (req *request.Request,
 
 	output = &RetireGrantOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3555,7 +4392,8 @@ func (c *KMS) RetireGrantRequest(input *RetireGrantInput) (req *request.Request,
 //
 // Returned Error Codes:
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInvalidGrantTokenException "InvalidGrantTokenException"
 //   The request was rejected because the specified grant token is not valid.
@@ -3580,7 +4418,7 @@ func (c *KMS) RetireGrantRequest(input *RetireGrantInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/RetireGrant
@@ -3644,8 +4482,7 @@ func (c *KMS) RevokeGrantRequest(input *RevokeGrantInput) (req *request.Request,
 
 	output = &RevokeGrantOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3674,7 +4511,8 @@ func (c *KMS) RevokeGrantRequest(input *RevokeGrantInput) (req *request.Request,
 //   be retried.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInvalidGrantIdException "InvalidGrantIdException"
 //   The request was rejected because the specified GrantId is not valid.
@@ -3688,7 +4526,7 @@ func (c *KMS) RevokeGrantRequest(input *RevokeGrantInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/RevokeGrant
@@ -3760,24 +4598,31 @@ func (c *KMS) ScheduleKeyDeletionRequest(input *ScheduleKeyDeletionInput) (req *
 // Schedules the deletion of a customer master key (CMK). You may provide a
 // waiting period, specified in days, before deletion occurs. If you do not
 // provide a waiting period, the default period of 30 days is used. When this
-// operation is successful, the state of the CMK changes to PendingDeletion.
+// operation is successful, the key state of the CMK changes to PendingDeletion.
 // Before the waiting period ends, you can use CancelKeyDeletion to cancel the
 // deletion of the CMK. After the waiting period ends, AWS KMS deletes the CMK
 // and all AWS KMS data associated with it, including all aliases that refer
 // to it.
 //
+// Deleting a CMK is a destructive and potentially dangerous operation. When
+// a CMK is deleted, all data that was encrypted under the CMK is unrecoverable.
+// To prevent the use of a CMK without deleting it, use DisableKey.
+//
+// If you schedule deletion of a CMK from a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html),
+// when the waiting period expires, ScheduleKeyDeletion deletes the CMK from
+// AWS KMS. Then AWS KMS makes a best effort to delete the key material from
+// the associated AWS CloudHSM cluster. However, you might need to manually
+// delete the orphaned key material (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-orphaned-key)
+// from the cluster and its backups.
+//
 // You cannot perform this operation on a CMK in a different AWS account.
 //
-// Deleting a CMK is a destructive and potentially dangerous operation. When
-// a CMK is deleted, all data that was encrypted under the CMK is rendered unrecoverable.
-// To restrict the use of a CMK without deleting it, use DisableKey.
-//
 // For more information about scheduling a CMK for deletion, see Deleting Customer
-// Master Keys (http://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html)
+// Master Keys (https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -3793,7 +4638,8 @@ func (c *KMS) ScheduleKeyDeletionRequest(input *ScheduleKeyDeletionInput) (req *
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -3808,7 +4654,7 @@ func (c *KMS) ScheduleKeyDeletionRequest(input *ScheduleKeyDeletionInput) (req *
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/ScheduleKeyDeletion
@@ -3872,8 +4718,7 @@ func (c *KMS) TagResourceRequest(input *TagResourceInput) (req *request.Request,
 
 	output = &TagResourceOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3889,11 +4734,11 @@ func (c *KMS) TagResourceRequest(input *TagResourceInput) (req *request.Request,
 // AWS KMS replaces the current tag value with the specified value.
 //
 // For information about the rules that apply to tag keys and tag values, see
-// User-Defined Tag Restrictions (http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/allocation-tag-restrictions.html)
+// User-Defined Tag Restrictions (https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/allocation-tag-restrictions.html)
 // in the AWS Billing and Cost Management User Guide.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -3913,19 +4758,20 @@ func (c *KMS) TagResourceRequest(input *TagResourceInput) (req *request.Request,
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
 //   The request was rejected because the state of the specified resource is not
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The request was rejected because a limit was exceeded. For more information,
-//   see Limits (http://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
+//   see Limits (https://docs.aws.amazon.com/kms/latest/developerguide/limits.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeTagException "TagException"
@@ -3992,8 +4838,7 @@ func (c *KMS) UntagResourceRequest(input *UntagResourceInput) (req *request.Requ
 
 	output = &UntagResourceOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -4006,7 +4851,7 @@ func (c *KMS) UntagResourceRequest(input *UntagResourceInput) (req *request.Requ
 // tag key, use TagResource.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -4026,14 +4871,15 @@ func (c *KMS) UntagResourceRequest(input *UntagResourceInput) (req *request.Requ
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeInvalidStateException "KMSInvalidStateException"
 //   The request was rejected because the state of the specified resource is not
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 //   * ErrCodeTagException "TagException"
@@ -4100,8 +4946,7 @@ func (c *KMS) UpdateAliasRequest(input *UpdateAliasInput) (req *request.Request,
 
 	output = &UpdateAliasOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -4121,15 +4966,13 @@ func (c *KMS) UpdateAliasRequest(input *UpdateAliasInput) (req *request.Request,
 // appear in the response from the DescribeKey operation. To get the aliases
 // of all CMKs in the account, use the ListAliases operation.
 //
-// An alias name can contain only alphanumeric characters, forward slashes (/),
-// underscores (_), and dashes (-). An alias must start with the word alias
-// followed by a forward slash (alias/). The alias name can contain only alphanumeric
-// characters, forward slashes (/), underscores (_), and dashes (-). Alias names
-// cannot begin with aws; that alias name prefix is reserved by Amazon Web Services
-// (AWS).
+// The alias name must begin with alias/ followed by a name, such as alias/ExampleAlias.
+// It can contain only alphanumeric characters, forward slashes (/), underscores
+// (_), and dashes (-). The alias name cannot begin with alias/aws/. The alias/aws/
+// prefix is reserved for AWS managed CMKs (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-managed-cmk).
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -4157,7 +5000,7 @@ func (c *KMS) UpdateAliasRequest(input *UpdateAliasInput) (req *request.Request,
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/UpdateAlias
@@ -4177,6 +5020,201 @@ func (c *KMS) UpdateAlias(input *UpdateAliasInput) (*UpdateAliasOutput, error) {
 // for more information on using Contexts.
 func (c *KMS) UpdateAliasWithContext(ctx aws.Context, input *UpdateAliasInput, opts ...request.Option) (*UpdateAliasOutput, error) {
 	req, out := c.UpdateAliasRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opUpdateCustomKeyStore = "UpdateCustomKeyStore"
+
+// UpdateCustomKeyStoreRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateCustomKeyStore operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See UpdateCustomKeyStore for more information on using the UpdateCustomKeyStore
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the UpdateCustomKeyStoreRequest method.
+//    req, resp := client.UpdateCustomKeyStoreRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/UpdateCustomKeyStore
+func (c *KMS) UpdateCustomKeyStoreRequest(input *UpdateCustomKeyStoreInput) (req *request.Request, output *UpdateCustomKeyStoreOutput) {
+	op := &request.Operation{
+		Name:       opUpdateCustomKeyStore,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &UpdateCustomKeyStoreInput{}
+	}
+
+	output = &UpdateCustomKeyStoreOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// UpdateCustomKeyStore API operation for AWS Key Management Service.
+//
+// Changes the properties of a custom key store. Use the CustomKeyStoreId parameter
+// to identify the custom key store you want to edit. Use the remaining parameters
+// to change the properties of the custom key store.
+//
+// You can only update a custom key store that is disconnected. To disconnect
+// the custom key store, use DisconnectCustomKeyStore. To reconnect the custom
+// key store after the update completes, use ConnectCustomKeyStore. To find
+// the connection state of a custom key store, use the DescribeCustomKeyStores
+// operation.
+//
+// Use the parameters of UpdateCustomKeyStore to edit your keystore settings.
+//
+//    * Use the NewCustomKeyStoreName parameter to change the friendly name
+//    of the custom key store to the value that you specify.
+//
+//    * Use the KeyStorePassword parameter tell AWS KMS the current password
+//    of the kmsuser crypto user (CU) (https://docs.aws.amazon.com/kms/latest/developerguide/key-store-concepts.html#concept-kmsuser)
+//    in the associated AWS CloudHSM cluster. You can use this parameter to
+//    fix connection failures (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html#fix-keystore-password)
+//    that occur when AWS KMS cannot log into the associated cluster because
+//    the kmsuser password has changed. This value does not change the password
+//    in the AWS CloudHSM cluster.
+//
+//    * Use the CloudHsmClusterId parameter to associate the custom key store
+//    with a different, but related, AWS CloudHSM cluster. You can use this
+//    parameter to repair a custom key store if its AWS CloudHSM cluster becomes
+//    corrupted or is deleted, or when you need to create or restore a cluster
+//    from a backup.
+//
+// If the operation succeeds, it returns a JSON object with no properties.
+//
+// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+// feature in AWS KMS, which combines the convenience and extensive integration
+// of AWS KMS with the isolation and control of a single-tenant key store.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Key Management Service's
+// API operation UpdateCustomKeyStore for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeCustomKeyStoreNotFoundException "CustomKeyStoreNotFoundException"
+//   The request was rejected because AWS KMS cannot find a custom key store with
+//   the specified key store name or ID.
+//
+//   * ErrCodeCloudHsmClusterNotFoundException "CloudHsmClusterNotFoundException"
+//   The request was rejected because AWS KMS cannot find the AWS CloudHSM cluster
+//   with the specified cluster ID. Retry the request with a different cluster
+//   ID.
+//
+//   * ErrCodeCloudHsmClusterNotRelatedException "CloudHsmClusterNotRelatedException"
+//   The request was rejected because the specified AWS CloudHSM cluster has a
+//   different cluster certificate than the original cluster. You cannot use the
+//   operation to specify an unrelated cluster.
+//
+//   Specify a cluster that shares a backup history with the original cluster.
+//   This includes clusters that were created from a backup of the current cluster,
+//   and clusters that were created from the same backup that produced the current
+//   cluster.
+//
+//   Clusters that share a backup history have the same cluster certificate. To
+//   view the cluster certificate of a cluster, use the DescribeClusters (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_DescribeClusters.html)
+//   operation.
+//
+//   * ErrCodeCustomKeyStoreInvalidStateException "CustomKeyStoreInvalidStateException"
+//   The request was rejected because of the ConnectionState of the custom key
+//   store. To get the ConnectionState of a custom key store, use the DescribeCustomKeyStores
+//   operation.
+//
+//   This exception is thrown under the following conditions:
+//
+//      * You requested the CreateKey or GenerateRandom operation in a custom
+//      key store that is not connected. These operations are valid only when
+//      the custom key store ConnectionState is CONNECTED.
+//
+//      * You requested the UpdateCustomKeyStore or DeleteCustomKeyStore operation
+//      on a custom key store that is not disconnected. This operation is valid
+//      only when the custom key store ConnectionState is DISCONNECTED.
+//
+//      * You requested the ConnectCustomKeyStore operation on a custom key store
+//      with a ConnectionState of DISCONNECTING or FAILED. This operation is valid
+//      for all other ConnectionState values.
+//
+//   * ErrCodeInternalException "KMSInternalException"
+//   The request was rejected because an internal exception occurred. The request
+//   can be retried.
+//
+//   * ErrCodeCloudHsmClusterNotActiveException "CloudHsmClusterNotActiveException"
+//   The request was rejected because the AWS CloudHSM cluster that is associated
+//   with the custom key store is not active. Initialize and activate the cluster
+//   and try the command again. For detailed instructions, see Getting Started
+//   (https://docs.aws.amazon.com/cloudhsm/latest/userguide/getting-started.html)
+//   in the AWS CloudHSM User Guide.
+//
+//   * ErrCodeCloudHsmClusterInvalidConfigurationException "CloudHsmClusterInvalidConfigurationException"
+//   The request was rejected because the associated AWS CloudHSM cluster did
+//   not meet the configuration requirements for a custom key store.
+//
+//      * The cluster must be configured with private subnets in at least two
+//      different Availability Zones in the Region.
+//
+//      * The security group for the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//      (cloudhsm-cluster-<cluster-id>-sg) must include inbound rules and outbound
+//      rules that allow TCP traffic on ports 2223-2225. The Source in the inbound
+//      rules and the Destination in the outbound rules must match the security
+//      group ID. These rules are set by default when you create the cluster.
+//      Do not delete or change them. To get information about a particular security
+//      group, use the DescribeSecurityGroups (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html)
+//      operation.
+//
+//      * The cluster must contain at least as many HSMs as the operation requires.
+//      To add HSMs, use the AWS CloudHSM CreateHsm (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_CreateHsm.html)
+//      operation. For the CreateCustomKeyStore, UpdateCustomKeyStore, and CreateKey
+//      operations, the AWS CloudHSM cluster must have at least two active HSMs,
+//      each in a different Availability Zone. For the ConnectCustomKeyStore operation,
+//      the AWS CloudHSM must contain at least one active HSM.
+//
+//   For information about the requirements for an AWS CloudHSM cluster that is
+//   associated with a custom key store, see Assemble the Prerequisites (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+//   in the AWS Key Management Service Developer Guide. For information about
+//   creating a private subnet for an AWS CloudHSM cluster, see Create a Private
+//   Subnet (https://docs.aws.amazon.com/cloudhsm/latest/userguide/create-subnets.html)
+//   in the AWS CloudHSM User Guide. For information about cluster security groups,
+//   see Configure a Default Security Group (https://docs.aws.amazon.com/cloudhsm/latest/userguide/configure-sg.html)
+//   in the AWS CloudHSM User Guide .
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/UpdateCustomKeyStore
+func (c *KMS) UpdateCustomKeyStore(input *UpdateCustomKeyStoreInput) (*UpdateCustomKeyStoreOutput, error) {
+	req, out := c.UpdateCustomKeyStoreRequest(input)
+	return out, req.Send()
+}
+
+// UpdateCustomKeyStoreWithContext is the same as UpdateCustomKeyStore with the addition of
+// the ability to pass a context and additional request options.
+//
+// See UpdateCustomKeyStore for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *KMS) UpdateCustomKeyStoreWithContext(ctx aws.Context, input *UpdateCustomKeyStoreInput, opts ...request.Option) (*UpdateCustomKeyStoreOutput, error) {
+	req, out := c.UpdateCustomKeyStoreRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -4221,8 +5259,7 @@ func (c *KMS) UpdateKeyDescriptionRequest(input *UpdateKeyDescriptionInput) (req
 
 	output = &UpdateKeyDescriptionOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -4234,7 +5271,7 @@ func (c *KMS) UpdateKeyDescriptionRequest(input *UpdateKeyDescriptionInput) (req
 // You cannot perform this operation on a CMK in a different AWS account.
 //
 // The result of this operation varies with the key state of the CMK. For details,
-// see How Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+// see How Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 // in the AWS Key Management Service Developer Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -4250,7 +5287,8 @@ func (c *KMS) UpdateKeyDescriptionRequest(input *UpdateKeyDescriptionInput) (req
 //   be found.
 //
 //   * ErrCodeInvalidArnException "InvalidArnException"
-//   The request was rejected because a specified ARN was not valid.
+//   The request was rejected because a specified ARN, or an ARN in a key policy,
+//   is not valid.
 //
 //   * ErrCodeDependencyTimeoutException "DependencyTimeoutException"
 //   The system timed out while trying to fulfill the request. The request can
@@ -4265,7 +5303,7 @@ func (c *KMS) UpdateKeyDescriptionRequest(input *UpdateKeyDescriptionInput) (req
 //   valid for this request.
 //
 //   For more information about how key state affects the use of a CMK, see How
-//   Key State Affects Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+//   Key State Affects Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 //   in the AWS Key Management Service Developer Guide.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/kms-2014-11-01/UpdateKeyDescription
@@ -4297,7 +5335,7 @@ type AliasListEntry struct {
 	// String that contains the key ARN.
 	AliasArn *string `min:"20" type:"string"`
 
-	// String that contains the alias.
+	// String that contains the alias. This value begins with alias/.
 	AliasName *string `min:"1" type:"string"`
 
 	// String that contains the key identifier referred to by the alias.
@@ -4407,28 +5445,76 @@ func (s *CancelKeyDeletionOutput) SetKeyId(v string) *CancelKeyDeletionOutput {
 	return s
 }
 
+type ConnectCustomKeyStoreInput struct {
+	_ struct{} `type:"structure"`
+
+	// Enter the key store ID of the custom key store that you want to connect.
+	// To find the ID of a custom key store, use the DescribeCustomKeyStores operation.
+	//
+	// CustomKeyStoreId is a required field
+	CustomKeyStoreId *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ConnectCustomKeyStoreInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ConnectCustomKeyStoreInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ConnectCustomKeyStoreInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ConnectCustomKeyStoreInput"}
+	if s.CustomKeyStoreId == nil {
+		invalidParams.Add(request.NewErrParamRequired("CustomKeyStoreId"))
+	}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *ConnectCustomKeyStoreInput) SetCustomKeyStoreId(v string) *ConnectCustomKeyStoreInput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+type ConnectCustomKeyStoreOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s ConnectCustomKeyStoreOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ConnectCustomKeyStoreOutput) GoString() string {
+	return s.String()
+}
+
 type CreateAliasInput struct {
 	_ struct{} `type:"structure"`
 
-	// Specifies the alias name. This value must begin with alias/ followed by the
-	// alias name, such as alias/ExampleAlias. The alias name cannot begin with
-	// aws/. The alias/aws/ prefix is reserved for AWS managed CMKs.
+	// Specifies the alias name. This value must begin with alias/ followed by a
+	// name, such as alias/ExampleAlias. The alias name cannot begin with alias/aws/.
+	// The alias/aws/ prefix is reserved for AWS managed CMKs.
 	//
 	// AliasName is a required field
 	AliasName *string `min:"1" type:"string" required:"true"`
 
-	// Identifies the CMK for which you are creating the alias. This value cannot
-	// be an alias.
-	//
-	// Specify the key ID or the Amazon Resource Name (ARN) of the CMK.
-	//
-	// For example:
-	//
-	//    * Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
-	//
-	//    * Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
-	//
-	// To get the key ID and key ARN for a CMK, use ListKeys or DescribeKey.
+	// Identifies the CMK to which the alias refers. Specify the key ID or the Amazon
+	// Resource Name (ARN) of the CMK. You cannot specify another alias. For help
+	// finding the key ID and ARN, see Finding the Key ID and ARN (https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn)
+	// in the AWS Key Management Service Developer Guide.
 	//
 	// TargetKeyId is a required field
 	TargetKeyId *string `min:"1" type:"string" required:"true"`
@@ -4492,29 +5578,155 @@ func (s CreateAliasOutput) GoString() string {
 	return s.String()
 }
 
+type CreateCustomKeyStoreInput struct {
+	_ struct{} `type:"structure"`
+
+	// Identifies the AWS CloudHSM cluster for the custom key store. Enter the cluster
+	// ID of any active AWS CloudHSM cluster that is not already associated with
+	// a custom key store. To find the cluster ID, use the DescribeClusters (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_DescribeClusters.html)
+	// operation.
+	//
+	// CloudHsmClusterId is a required field
+	CloudHsmClusterId *string `min:"19" type:"string" required:"true"`
+
+	// Specifies a friendly name for the custom key store. The name must be unique
+	// in your AWS account.
+	//
+	// CustomKeyStoreName is a required field
+	CustomKeyStoreName *string `min:"1" type:"string" required:"true"`
+
+	// Enter the password of the kmsuser crypto user (CU) account (https://docs.aws.amazon.com/kms/latest/developerguide/key-store-concepts.html#concept-kmsuser)
+	// in the specified AWS CloudHSM cluster. AWS KMS logs into the cluster as this
+	// user to manage key material on your behalf.
+	//
+	// This parameter tells AWS KMS the kmsuser account password; it does not change
+	// the password in the AWS CloudHSM cluster.
+	//
+	// KeyStorePassword is a required field
+	KeyStorePassword *string `min:"1" type:"string" required:"true" sensitive:"true"`
+
+	// Enter the content of the trust anchor certificate for the cluster. This is
+	// the content of the customerCA.crt file that you created when you initialized
+	// the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/initialize-cluster.html).
+	//
+	// TrustAnchorCertificate is a required field
+	TrustAnchorCertificate *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s CreateCustomKeyStoreInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateCustomKeyStoreInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *CreateCustomKeyStoreInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "CreateCustomKeyStoreInput"}
+	if s.CloudHsmClusterId == nil {
+		invalidParams.Add(request.NewErrParamRequired("CloudHsmClusterId"))
+	}
+	if s.CloudHsmClusterId != nil && len(*s.CloudHsmClusterId) < 19 {
+		invalidParams.Add(request.NewErrParamMinLen("CloudHsmClusterId", 19))
+	}
+	if s.CustomKeyStoreName == nil {
+		invalidParams.Add(request.NewErrParamRequired("CustomKeyStoreName"))
+	}
+	if s.CustomKeyStoreName != nil && len(*s.CustomKeyStoreName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreName", 1))
+	}
+	if s.KeyStorePassword == nil {
+		invalidParams.Add(request.NewErrParamRequired("KeyStorePassword"))
+	}
+	if s.KeyStorePassword != nil && len(*s.KeyStorePassword) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("KeyStorePassword", 1))
+	}
+	if s.TrustAnchorCertificate == nil {
+		invalidParams.Add(request.NewErrParamRequired("TrustAnchorCertificate"))
+	}
+	if s.TrustAnchorCertificate != nil && len(*s.TrustAnchorCertificate) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TrustAnchorCertificate", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCloudHsmClusterId sets the CloudHsmClusterId field's value.
+func (s *CreateCustomKeyStoreInput) SetCloudHsmClusterId(v string) *CreateCustomKeyStoreInput {
+	s.CloudHsmClusterId = &v
+	return s
+}
+
+// SetCustomKeyStoreName sets the CustomKeyStoreName field's value.
+func (s *CreateCustomKeyStoreInput) SetCustomKeyStoreName(v string) *CreateCustomKeyStoreInput {
+	s.CustomKeyStoreName = &v
+	return s
+}
+
+// SetKeyStorePassword sets the KeyStorePassword field's value.
+func (s *CreateCustomKeyStoreInput) SetKeyStorePassword(v string) *CreateCustomKeyStoreInput {
+	s.KeyStorePassword = &v
+	return s
+}
+
+// SetTrustAnchorCertificate sets the TrustAnchorCertificate field's value.
+func (s *CreateCustomKeyStoreInput) SetTrustAnchorCertificate(v string) *CreateCustomKeyStoreInput {
+	s.TrustAnchorCertificate = &v
+	return s
+}
+
+type CreateCustomKeyStoreOutput struct {
+	_ struct{} `type:"structure"`
+
+	// A unique identifier for the new custom key store.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s CreateCustomKeyStoreOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateCustomKeyStoreOutput) GoString() string {
+	return s.String()
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *CreateCustomKeyStoreOutput) SetCustomKeyStoreId(v string) *CreateCustomKeyStoreOutput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
 type CreateGrantInput struct {
 	_ struct{} `type:"structure"`
 
-	// A structure that you can use to allow certain operations in the grant only
-	// when the desired encryption context is present. For more information about
-	// encryption context, see Encryption Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html)
-	// in the AWS Key Management Service Developer Guide.
+	// Allows a cryptographic operation only when the encryption context matches
+	// or includes the encryption context specified in this structure. For more
+	// information about encryption context, see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
+	// in the AWS Key Management Service Developer Guide .
 	Constraints *GrantConstraints `type:"structure"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
 	// The principal that is given permission to perform the operations that the
 	// grant permits.
 	//
-	// To specify the principal, use the Amazon Resource Name (ARN) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// To specify the principal, use the Amazon Resource Name (ARN) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// of an AWS principal. Valid AWS principals include AWS accounts (root), IAM
 	// users, IAM roles, federated users, and assumed role users. For examples of
 	// the ARN syntax to use for specifying a principal, see AWS Identity and Access
-	// Management (IAM) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
+	// Management (IAM) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
 	// in the Example ARNs section of the AWS General Reference.
 	//
 	// GranteePrincipal is a required field
@@ -4559,11 +5771,11 @@ type CreateGrantInput struct {
 	// The principal that is given permission to retire the grant by using RetireGrant
 	// operation.
 	//
-	// To specify the principal, use the Amazon Resource Name (ARN) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// To specify the principal, use the Amazon Resource Name (ARN) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// of an AWS principal. Valid AWS principals include AWS accounts (root), IAM
 	// users, federated users, and assumed role users. For examples of the ARN syntax
 	// to use for specifying a principal, see AWS Identity and Access Management
-	// (IAM) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
+	// (IAM) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
 	// in the Example ARNs section of the AWS General Reference.
 	RetiringPrincipal *string `min:"1" type:"string"`
 }
@@ -4661,7 +5873,7 @@ type CreateGrantOutput struct {
 
 	// The grant token.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantToken *string `min:"1" type:"string"`
 }
@@ -4696,8 +5908,8 @@ type CreateKeyInput struct {
 	// Setting this value to true increases the risk that the CMK becomes unmanageable.
 	// Do not set this value to true indiscriminately.
 	//
-	// For more information, refer to the scenario in the Default Key Policy (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
-	// section in the AWS Key Management Service Developer Guide.
+	// For more information, refer to the scenario in the Default Key Policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
+	// section in the AWS Key Management Service Developer Guide .
 	//
 	// Use this parameter only when you include a policy in the request and you
 	// intend to prevent the principal that is making the request from making a
@@ -4706,27 +5918,50 @@ type CreateKeyInput struct {
 	// The default value is false.
 	BypassPolicyLockoutSafetyCheck *bool `type:"boolean"`
 
+	// Creates the CMK in the specified custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+	// and the key material in its associated AWS CloudHSM cluster. To create a
+	// CMK in a custom key store, you must also specify the Origin parameter with
+	// a value of AWS_CLOUDHSM. The AWS CloudHSM cluster that is associated with
+	// the custom key store must have at least two active HSMs, each in a different
+	// Availability Zone in the Region.
+	//
+	// To find the ID of a custom key store, use the DescribeCustomKeyStores operation.
+	//
+	// The response includes the custom key store ID and the ID of the AWS CloudHSM
+	// cluster.
+	//
+	// This operation is part of the Custom Key Store feature (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+	// feature in AWS KMS, which combines the convenience and extensive integration
+	// of AWS KMS with the isolation and control of a single-tenant key store.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+
 	// A description of the CMK.
 	//
 	// Use a description that helps you decide whether the CMK is appropriate for
 	// a task.
 	Description *string `type:"string"`
 
-	// The intended use of the CMK.
-	//
-	// You can use CMKs only for symmetric encryption and decryption.
+	// The cryptographic operations for which you can use the CMK. The only valid
+	// value is ENCRYPT_DECRYPT, which means you can use the CMK to encrypt and
+	// decrypt data.
 	KeyUsage *string `type:"string" enum:"KeyUsageType"`
 
-	// The source of the CMK's key material.
+	// The source of the key material for the CMK. You cannot change the origin
+	// after you create the CMK.
 	//
-	// The default is AWS_KMS, which means AWS KMS creates the key material. When
-	// this parameter is set to EXTERNAL, the request creates a CMK without key
-	// material so that you can import key material from your existing key management
-	// infrastructure. For more information about importing key material into AWS
-	// KMS, see Importing Key Material (http://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
+	// The default is AWS_KMS, which means AWS KMS creates the key material in its
+	// own key store.
+	//
+	// When the parameter value is EXTERNAL, AWS KMS creates a CMK without key material
+	// so that you can import key material from your existing key management infrastructure.
+	// For more information about importing key material into AWS KMS, see Importing
+	// Key Material (https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html)
 	// in the AWS Key Management Service Developer Guide.
 	//
-	// The CMK's Origin is immutable and is set when the CMK is created.
+	// When the parameter value is AWS_CLOUDHSM, AWS KMS creates the CMK in an AWS
+	// KMS custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+	// and creates its key material in the associated AWS CloudHSM cluster. You
+	// must also use the CustomKeyStoreId parameter to identify the custom key store.
 	Origin *string `type:"string" enum:"OriginType"`
 
 	// The key policy to attach to the CMK.
@@ -4737,20 +5972,20 @@ type CreateKeyInput struct {
 	//    must allow the principal that is making the CreateKey request to make
 	//    a subsequent PutKeyPolicy request on the CMK. This reduces the risk that
 	//    the CMK becomes unmanageable. For more information, refer to the scenario
-	//    in the Default Key Policy (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
-	//    section of the AWS Key Management Service Developer Guide.
+	//    in the Default Key Policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
+	//    section of the AWS Key Management Service Developer Guide .
 	//
 	//    * Each statement in the key policy must contain one or more principals.
 	//    The principals in the key policy must exist and be visible to AWS KMS.
 	//    When you create a new AWS principal (for example, an IAM user or role),
 	//    you might need to enforce a delay before including the new principal in
-	//    a key policy. The reason for this is that the new principal might not
-	//    be immediately visible to AWS KMS. For more information, see Changes that
-	//    I make are not always immediately visible (http://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_eventual-consistency)
+	//    a key policy because the new principal might not be immediately visible
+	//    to AWS KMS. For more information, see Changes that I make are not always
+	//    immediately visible (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_eventual-consistency)
 	//    in the AWS Identity and Access Management User Guide.
 	//
 	// If you do not provide a key policy, AWS KMS attaches a default key policy
-	// to the CMK. For more information, see Default Key Policy (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default)
+	// to the CMK. For more information, see Default Key Policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default)
 	// in the AWS Key Management Service Developer Guide.
 	//
 	// The key policy size limit is 32 kilobytes (32768 bytes).
@@ -4777,6 +6012,9 @@ func (s CreateKeyInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *CreateKeyInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "CreateKeyInput"}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
 	if s.Policy != nil && len(*s.Policy) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("Policy", 1))
 	}
@@ -4800,6 +6038,12 @@ func (s *CreateKeyInput) Validate() error {
 // SetBypassPolicyLockoutSafetyCheck sets the BypassPolicyLockoutSafetyCheck field's value.
 func (s *CreateKeyInput) SetBypassPolicyLockoutSafetyCheck(v bool) *CreateKeyInput {
 	s.BypassPolicyLockoutSafetyCheck = &v
+	return s
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *CreateKeyInput) SetCustomKeyStoreId(v string) *CreateKeyInput {
+	s.CustomKeyStoreId = &v
 	return s
 }
 
@@ -4856,6 +6100,129 @@ func (s *CreateKeyOutput) SetKeyMetadata(v *KeyMetadata) *CreateKeyOutput {
 	return s
 }
 
+// Contains information about each custom key store in the custom key store
+// list.
+type CustomKeyStoresListEntry struct {
+	_ struct{} `type:"structure"`
+
+	// A unique identifier for the AWS CloudHSM cluster that is associated with
+	// the custom key store.
+	CloudHsmClusterId *string `min:"19" type:"string"`
+
+	// Describes the connection error. Valid values are:
+	//
+	//    * CLUSTER_NOT_FOUND - AWS KMS cannot find the AWS CloudHSM cluster with
+	//    the specified cluster ID.
+	//
+	//    * INSUFFICIENT_CLOUDHSM_HSMS - The associated AWS CloudHSM cluster does
+	//    not contain any active HSMs. To connect a custom key store to its AWS
+	//    CloudHSM cluster, the cluster must contain at least one active HSM.
+	//
+	//    * INTERNAL_ERROR - AWS KMS could not complete the request due to an internal
+	//    error. Retry the request. For ConnectCustomKeyStore requests, disconnect
+	//    the custom key store before trying to connect again.
+	//
+	//    * INVALID_CREDENTIALS - AWS KMS does not have the correct password for
+	//    the kmsuser crypto user in the AWS CloudHSM cluster.
+	//
+	//    * NETWORK_ERRORS - Network errors are preventing AWS KMS from connecting
+	//    to the custom key store.
+	//
+	//    * USER_LOCKED_OUT - The kmsuser CU account is locked out of the associated
+	//    AWS CloudHSM cluster due to too many failed password attempts. Before
+	//    you can connect your custom key store to its AWS CloudHSM cluster, you
+	//    must change the kmsuser account password and update the password value
+	//    for the custom key store.
+	//
+	// For help with connection failures, see Troubleshooting Custom Key Stores
+	// (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html)
+	// in the AWS Key Management Service Developer Guide.
+	ConnectionErrorCode *string `type:"string" enum:"ConnectionErrorCodeType"`
+
+	// Indicates whether the custom key store is connected to its AWS CloudHSM cluster.
+	//
+	// You can create and use CMKs in your custom key stores only when its connection
+	// state is CONNECTED.
+	//
+	// The value is DISCONNECTED if the key store has never been connected or you
+	// use the DisconnectCustomKeyStore operation to disconnect it. If the value
+	// is CONNECTED but you are having trouble using the custom key store, make
+	// sure that its associated AWS CloudHSM cluster is active and contains at least
+	// one active HSM.
+	//
+	// A value of FAILED indicates that an attempt to connect was unsuccessful.
+	// For help resolving a connection failure, see Troubleshooting a Custom Key
+	// Store (https://docs.aws.amazon.com/kms/latest/developerguide/fix-keystore.html)
+	// in the AWS Key Management Service Developer Guide.
+	ConnectionState *string `type:"string" enum:"ConnectionStateType"`
+
+	// The date and time when the custom key store was created.
+	CreationDate *time.Time `type:"timestamp"`
+
+	// A unique identifier for the custom key store.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+
+	// The user-specified friendly name for the custom key store.
+	CustomKeyStoreName *string `min:"1" type:"string"`
+
+	// The trust anchor certificate of the associated AWS CloudHSM cluster. When
+	// you initialize the cluster (https://docs.aws.amazon.com/cloudhsm/latest/userguide/initialize-cluster.html#sign-csr),
+	// you create this certificate and save it in the customerCA.crt file.
+	TrustAnchorCertificate *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s CustomKeyStoresListEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CustomKeyStoresListEntry) GoString() string {
+	return s.String()
+}
+
+// SetCloudHsmClusterId sets the CloudHsmClusterId field's value.
+func (s *CustomKeyStoresListEntry) SetCloudHsmClusterId(v string) *CustomKeyStoresListEntry {
+	s.CloudHsmClusterId = &v
+	return s
+}
+
+// SetConnectionErrorCode sets the ConnectionErrorCode field's value.
+func (s *CustomKeyStoresListEntry) SetConnectionErrorCode(v string) *CustomKeyStoresListEntry {
+	s.ConnectionErrorCode = &v
+	return s
+}
+
+// SetConnectionState sets the ConnectionState field's value.
+func (s *CustomKeyStoresListEntry) SetConnectionState(v string) *CustomKeyStoresListEntry {
+	s.ConnectionState = &v
+	return s
+}
+
+// SetCreationDate sets the CreationDate field's value.
+func (s *CustomKeyStoresListEntry) SetCreationDate(v time.Time) *CustomKeyStoresListEntry {
+	s.CreationDate = &v
+	return s
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *CustomKeyStoresListEntry) SetCustomKeyStoreId(v string) *CustomKeyStoresListEntry {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+// SetCustomKeyStoreName sets the CustomKeyStoreName field's value.
+func (s *CustomKeyStoresListEntry) SetCustomKeyStoreName(v string) *CustomKeyStoresListEntry {
+	s.CustomKeyStoreName = &v
+	return s
+}
+
+// SetTrustAnchorCertificate sets the TrustAnchorCertificate field's value.
+func (s *CustomKeyStoresListEntry) SetTrustAnchorCertificate(v string) *CustomKeyStoresListEntry {
+	s.TrustAnchorCertificate = &v
+	return s
+}
+
 type DecryptInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4868,12 +6235,12 @@ type DecryptInput struct {
 
 	// The encryption context. If this was specified in the Encrypt function, it
 	// must be specified here or the decryption operation will fail. For more information,
-	// see Encryption Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html).
+	// see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context).
 	EncryptionContext map[string]*string `type:"map"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 }
@@ -4933,7 +6300,7 @@ type DecryptOutput struct {
 	// is Base64-encoded. Otherwise, it is not encoded.
 	//
 	// Plaintext is automatically base64 encoded/decoded by the SDK.
-	Plaintext []byte `min:"1" type:"blob"`
+	Plaintext []byte `min:"1" type:"blob" sensitive:"true"`
 }
 
 // String returns the string representation
@@ -4961,8 +6328,8 @@ func (s *DecryptOutput) SetPlaintext(v []byte) *DecryptOutput {
 type DeleteAliasInput struct {
 	_ struct{} `type:"structure"`
 
-	// The alias to be deleted. The name must start with the word "alias" followed
-	// by a forward slash (alias/). Aliases that begin with "alias/aws" are reserved.
+	// The alias to be deleted. The alias name must begin with alias/ followed by
+	// the alias name, such as alias/ExampleAlias.
 	//
 	// AliasName is a required field
 	AliasName *string `min:"1" type:"string" required:"true"`
@@ -5014,11 +6381,67 @@ func (s DeleteAliasOutput) GoString() string {
 	return s.String()
 }
 
+type DeleteCustomKeyStoreInput struct {
+	_ struct{} `type:"structure"`
+
+	// Enter the ID of the custom key store you want to delete. To find the ID of
+	// a custom key store, use the DescribeCustomKeyStores operation.
+	//
+	// CustomKeyStoreId is a required field
+	CustomKeyStoreId *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DeleteCustomKeyStoreInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteCustomKeyStoreInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeleteCustomKeyStoreInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeleteCustomKeyStoreInput"}
+	if s.CustomKeyStoreId == nil {
+		invalidParams.Add(request.NewErrParamRequired("CustomKeyStoreId"))
+	}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *DeleteCustomKeyStoreInput) SetCustomKeyStoreId(v string) *DeleteCustomKeyStoreInput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+type DeleteCustomKeyStoreOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteCustomKeyStoreOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteCustomKeyStoreOutput) GoString() string {
+	return s.String()
+}
+
 type DeleteImportedKeyMaterialInput struct {
 	_ struct{} `type:"structure"`
 
-	// The identifier of the CMK whose key material to delete. The CMK's Origin
-	// must be EXTERNAL.
+	// Identifies the CMK from which you are deleting imported key material. The
+	// Origin of the CMK must be EXTERNAL.
 	//
 	// Specify the key ID or the Amazon Resource Name (ARN) of the CMK.
 	//
@@ -5080,19 +6503,152 @@ func (s DeleteImportedKeyMaterialOutput) GoString() string {
 	return s.String()
 }
 
+type DescribeCustomKeyStoresInput struct {
+	_ struct{} `type:"structure"`
+
+	// Gets only information about the specified custom key store. Enter the key
+	// store ID.
+	//
+	// By default, this operation gets information about all custom key stores in
+	// the account and region. To limit the output to a particular custom key store,
+	// you can use either the CustomKeyStoreId or CustomKeyStoreName parameter,
+	// but not both.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+
+	// Gets only information about the specified custom key store. Enter the friendly
+	// name of the custom key store.
+	//
+	// By default, this operation gets information about all custom key stores in
+	// the account and region. To limit the output to a particular custom key store,
+	// you can use either the CustomKeyStoreId or CustomKeyStoreName parameter,
+	// but not both.
+	CustomKeyStoreName *string `min:"1" type:"string"`
+
+	// Use this parameter to specify the maximum number of items to return. When
+	// this value is present, AWS KMS does not return more than the specified number
+	// of items, but it might return fewer.
+	Limit *int64 `min:"1" type:"integer"`
+
+	// Use this parameter in a subsequent request after you receive a response with
+	// truncated results. Set it to the value of NextMarker from the truncated response
+	// you just received.
+	Marker *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeCustomKeyStoresInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeCustomKeyStoresInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeCustomKeyStoresInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeCustomKeyStoresInput"}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
+	if s.CustomKeyStoreName != nil && len(*s.CustomKeyStoreName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreName", 1))
+	}
+	if s.Limit != nil && *s.Limit < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("Limit", 1))
+	}
+	if s.Marker != nil && len(*s.Marker) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Marker", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *DescribeCustomKeyStoresInput) SetCustomKeyStoreId(v string) *DescribeCustomKeyStoresInput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+// SetCustomKeyStoreName sets the CustomKeyStoreName field's value.
+func (s *DescribeCustomKeyStoresInput) SetCustomKeyStoreName(v string) *DescribeCustomKeyStoresInput {
+	s.CustomKeyStoreName = &v
+	return s
+}
+
+// SetLimit sets the Limit field's value.
+func (s *DescribeCustomKeyStoresInput) SetLimit(v int64) *DescribeCustomKeyStoresInput {
+	s.Limit = &v
+	return s
+}
+
+// SetMarker sets the Marker field's value.
+func (s *DescribeCustomKeyStoresInput) SetMarker(v string) *DescribeCustomKeyStoresInput {
+	s.Marker = &v
+	return s
+}
+
+type DescribeCustomKeyStoresOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Contains metadata about each custom key store.
+	CustomKeyStores []*CustomKeyStoresListEntry `type:"list"`
+
+	// When Truncated is true, this element is present and contains the value to
+	// use for the Marker parameter in a subsequent request.
+	NextMarker *string `min:"1" type:"string"`
+
+	// A flag that indicates whether there are more items in the list. When this
+	// value is true, the list in this response is truncated. To get more items,
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
+	// in a subsequent request.
+	Truncated *bool `type:"boolean"`
+}
+
+// String returns the string representation
+func (s DescribeCustomKeyStoresOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeCustomKeyStoresOutput) GoString() string {
+	return s.String()
+}
+
+// SetCustomKeyStores sets the CustomKeyStores field's value.
+func (s *DescribeCustomKeyStoresOutput) SetCustomKeyStores(v []*CustomKeyStoresListEntry) *DescribeCustomKeyStoresOutput {
+	s.CustomKeyStores = v
+	return s
+}
+
+// SetNextMarker sets the NextMarker field's value.
+func (s *DescribeCustomKeyStoresOutput) SetNextMarker(v string) *DescribeCustomKeyStoresOutput {
+	s.NextMarker = &v
+	return s
+}
+
+// SetTruncated sets the Truncated field's value.
+func (s *DescribeCustomKeyStoresOutput) SetTruncated(v bool) *DescribeCustomKeyStoresOutput {
+	s.Truncated = &v
+	return s
+}
+
 type DescribeKeyInput struct {
 	_ struct{} `type:"structure"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
 	// Describes the specified customer master key (CMK).
 	//
 	// If you specify a predefined AWS alias (an AWS alias with no key ID), KMS
-	// associates the alias with an AWS managed CMK (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
+	// associates the alias with an AWS managed CMK (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
 	// and returns its KeyId and Arn in the response.
 	//
 	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
@@ -5307,6 +6863,62 @@ func (s DisableKeyRotationOutput) GoString() string {
 	return s.String()
 }
 
+type DisconnectCustomKeyStoreInput struct {
+	_ struct{} `type:"structure"`
+
+	// Enter the ID of the custom key store you want to disconnect. To find the
+	// ID of a custom key store, use the DescribeCustomKeyStores operation.
+	//
+	// CustomKeyStoreId is a required field
+	CustomKeyStoreId *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DisconnectCustomKeyStoreInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DisconnectCustomKeyStoreInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DisconnectCustomKeyStoreInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DisconnectCustomKeyStoreInput"}
+	if s.CustomKeyStoreId == nil {
+		invalidParams.Add(request.NewErrParamRequired("CustomKeyStoreId"))
+	}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *DisconnectCustomKeyStoreInput) SetCustomKeyStoreId(v string) *DisconnectCustomKeyStoreInput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+type DisconnectCustomKeyStoreOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s DisconnectCustomKeyStoreOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DisconnectCustomKeyStoreOutput) GoString() string {
+	return s.String()
+}
+
 type EnableKeyInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5443,12 +7055,12 @@ type EncryptInput struct {
 	// Name-value pair that specifies the encryption context to be used for authenticated
 	// encryption. If used here, the same value must be supplied to the Decrypt
 	// API or decryption will fail. For more information, see Encryption Context
-	// (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html).
+	// (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context).
 	EncryptionContext map[string]*string `type:"map"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
@@ -5479,7 +7091,7 @@ type EncryptInput struct {
 	// Plaintext is automatically base64 encoded/decoded by the SDK.
 	//
 	// Plaintext is a required field
-	Plaintext []byte `min:"1" type:"blob" required:"true"`
+	Plaintext []byte `min:"1" type:"blob" required:"true" sensitive:"true"`
 }
 
 // String returns the string representation
@@ -5578,18 +7190,17 @@ type GenerateDataKeyInput struct {
 
 	// A set of key-value pairs that represents additional authenticated data.
 	//
-	// For more information, see Encryption Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html)
+	// For more information, see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
 	// in the AWS Key Management Service Developer Guide.
 	EncryptionContext map[string]*string `type:"map"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
-	// The identifier of the CMK under which to generate and encrypt the data encryption
-	// key.
+	// An identifier for the CMK that encrypts the data key.
 	//
 	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
 	// or alias ARN. When using an alias name, prefix it with "alias/". To specify
@@ -5611,14 +7222,14 @@ type GenerateDataKeyInput struct {
 	// KeyId is a required field
 	KeyId *string `min:"1" type:"string" required:"true"`
 
-	// The length of the data encryption key. Use AES_128 to generate a 128-bit
-	// symmetric key, or AES_256 to generate a 256-bit symmetric key.
+	// The length of the data key. Use AES_128 to generate a 128-bit symmetric key,
+	// or AES_256 to generate a 256-bit symmetric key.
 	KeySpec *string `type:"string" enum:"DataKeySpec"`
 
-	// The length of the data encryption key in bytes. For example, use the value
-	// 64 to generate a 512-bit data key (64 bytes is 512 bits). For common key
-	// lengths (128-bit and 256-bit symmetric keys), we recommend that you use the
-	// KeySpec field instead of this one.
+	// The length of the data key in bytes. For example, use the value 64 to generate
+	// a 512-bit data key (64 bytes is 512 bits). For common key lengths (128-bit
+	// and 256-bit symmetric keys), we recommend that you use the KeySpec field
+	// instead of this one.
 	NumberOfBytes *int64 `min:"1" type:"integer"`
 }
 
@@ -5684,22 +7295,21 @@ func (s *GenerateDataKeyInput) SetNumberOfBytes(v int64) *GenerateDataKeyInput {
 type GenerateDataKeyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The encrypted data encryption key. When you use the HTTP API or the AWS CLI,
-	// the value is Base64-encoded. Otherwise, it is not encoded.
+	// The encrypted copy of the data key. When you use the HTTP API or the AWS
+	// CLI, the value is Base64-encoded. Otherwise, it is not encoded.
 	//
 	// CiphertextBlob is automatically base64 encoded/decoded by the SDK.
 	CiphertextBlob []byte `min:"1" type:"blob"`
 
-	// The identifier of the CMK under which the data encryption key was generated
-	// and encrypted.
+	// The identifier of the CMK that encrypted the data key.
 	KeyId *string `min:"1" type:"string"`
 
-	// The data encryption key. When you use the HTTP API or the AWS CLI, the value
-	// is Base64-encoded. Otherwise, it is not encoded. Use this data key for local
-	// encryption and decryption, then remove it from memory as soon as possible.
+	// The plaintext data key. When you use the HTTP API or the AWS CLI, the value
+	// is Base64-encoded. Otherwise, it is not encoded. Use this data key to encrypt
+	// your data outside of KMS. Then, remove it from memory as soon as possible.
 	//
 	// Plaintext is automatically base64 encoded/decoded by the SDK.
-	Plaintext []byte `min:"1" type:"blob"`
+	Plaintext []byte `min:"1" type:"blob" sensitive:"true"`
 }
 
 // String returns the string representation
@@ -5735,18 +7345,17 @@ type GenerateDataKeyWithoutPlaintextInput struct {
 
 	// A set of key-value pairs that represents additional authenticated data.
 	//
-	// For more information, see Encryption Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html)
+	// For more information, see Encryption Context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context)
 	// in the AWS Key Management Service Developer Guide.
 	EncryptionContext map[string]*string `type:"map"`
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
-	// The identifier of the customer master key (CMK) under which to generate and
-	// encrypt the data encryption key.
+	// The identifier of the customer master key (CMK) that encrypts the data key.
 	//
 	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
 	// or alias ARN. When using an alias name, prefix it with "alias/". To specify
@@ -5768,14 +7377,14 @@ type GenerateDataKeyWithoutPlaintextInput struct {
 	// KeyId is a required field
 	KeyId *string `min:"1" type:"string" required:"true"`
 
-	// The length of the data encryption key. Use AES_128 to generate a 128-bit
-	// symmetric key, or AES_256 to generate a 256-bit symmetric key.
+	// The length of the data key. Use AES_128 to generate a 128-bit symmetric key,
+	// or AES_256 to generate a 256-bit symmetric key.
 	KeySpec *string `type:"string" enum:"DataKeySpec"`
 
-	// The length of the data encryption key in bytes. For example, use the value
-	// 64 to generate a 512-bit data key (64 bytes is 512 bits). For common key
-	// lengths (128-bit and 256-bit symmetric keys), we recommend that you use the
-	// KeySpec field instead of this one.
+	// The length of the data key in bytes. For example, use the value 64 to generate
+	// a 512-bit data key (64 bytes is 512 bits). For common key lengths (128-bit
+	// and 256-bit symmetric keys), we recommend that you use the KeySpec field
+	// instead of this one.
 	NumberOfBytes *int64 `min:"1" type:"integer"`
 }
 
@@ -5841,14 +7450,13 @@ func (s *GenerateDataKeyWithoutPlaintextInput) SetNumberOfBytes(v int64) *Genera
 type GenerateDataKeyWithoutPlaintextOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The encrypted data encryption key. When you use the HTTP API or the AWS CLI,
-	// the value is Base64-encoded. Otherwise, it is not encoded.
+	// The encrypted data key. When you use the HTTP API or the AWS CLI, the value
+	// is Base64-encoded. Otherwise, it is not encoded.
 	//
 	// CiphertextBlob is automatically base64 encoded/decoded by the SDK.
 	CiphertextBlob []byte `min:"1" type:"blob"`
 
-	// The identifier of the CMK under which the data encryption key was generated
-	// and encrypted.
+	// The identifier of the CMK that encrypted the data key.
 	KeyId *string `min:"1" type:"string"`
 }
 
@@ -5877,6 +7485,11 @@ func (s *GenerateDataKeyWithoutPlaintextOutput) SetKeyId(v string) *GenerateData
 type GenerateRandomInput struct {
 	_ struct{} `type:"structure"`
 
+	// Generates the random byte string in the AWS CloudHSM cluster that is associated
+	// with the specified custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html).
+	// To find the ID of a custom key store, use the DescribeCustomKeyStores operation.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+
 	// The length of the byte string.
 	NumberOfBytes *int64 `min:"1" type:"integer"`
 }
@@ -5894,6 +7507,9 @@ func (s GenerateRandomInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *GenerateRandomInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "GenerateRandomInput"}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
 	if s.NumberOfBytes != nil && *s.NumberOfBytes < 1 {
 		invalidParams.Add(request.NewErrParamMinValue("NumberOfBytes", 1))
 	}
@@ -5902,6 +7518,12 @@ func (s *GenerateRandomInput) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *GenerateRandomInput) SetCustomKeyStoreId(v string) *GenerateRandomInput {
+	s.CustomKeyStoreId = &v
+	return s
 }
 
 // SetNumberOfBytes sets the NumberOfBytes field's value.
@@ -5917,7 +7539,7 @@ type GenerateRandomOutput struct {
 	// is Base64-encoded. Otherwise, it is not encoded.
 	//
 	// Plaintext is automatically base64 encoded/decoded by the SDK.
-	Plaintext []byte `min:"1" type:"blob"`
+	Plaintext []byte `min:"1" type:"blob" sensitive:"true"`
 }
 
 // String returns the string representation
@@ -6122,8 +7744,9 @@ type GetParametersForImportInput struct {
 	// KeyId is a required field
 	KeyId *string `min:"1" type:"string" required:"true"`
 
-	// The algorithm you use to encrypt the key material before importing it with
-	// ImportKeyMaterial. For more information, see Encrypt the Key Material (http://docs.aws.amazon.com/kms/latest/developerguide/importing-keys-encrypt-key-material.html)
+	// The algorithm you will use to encrypt the key material before importing it
+	// with ImportKeyMaterial. For more information, see Encrypt the Key Material
+	// (https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys-encrypt-key-material.html)
 	// in the AWS Key Management Service Developer Guide.
 	//
 	// WrappingAlgorithm is a required field
@@ -6207,7 +7830,7 @@ type GetParametersForImportOutput struct {
 	// ImportKeyMaterial.
 	//
 	// PublicKey is automatically base64 encoded/decoded by the SDK.
-	PublicKey []byte `min:"1" type:"blob"`
+	PublicKey []byte `min:"1" type:"blob" sensitive:"true"`
 }
 
 // String returns the string representation
@@ -6244,33 +7867,51 @@ func (s *GetParametersForImportOutput) SetPublicKey(v []byte) *GetParametersForI
 	return s
 }
 
-// A structure that you can use to allow certain operations in the grant only
-// when the preferred encryption context is present. For more information about
-// encryption context, see Encryption Context (http://docs.aws.amazon.com/kms/latest/developerguide/encryption-context.html)
-// in the AWS Key Management Service Developer Guide.
+// Use this structure to allow cryptographic operations in the grant only when
+// the operation request includes the specified encryption context (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context).
 //
-// Grant constraints apply only to operations that accept encryption context
-// as input. For example, the DescribeKey operation does not accept encryption
-// context as input. A grant that allows the DescribeKey operation does so regardless
-// of the grant constraints. In contrast, the Encrypt operation accepts encryption
-// context as input. A grant that allows the Encrypt operation does so only
-// when the encryption context of the Encrypt operation satisfies the grant
-// constraints.
+// AWS KMS applies the grant constraints only when the grant allows a cryptographic
+// operation that accepts an encryption context as input, such as the following.
+//
+//    * Encrypt
+//
+//    * Decrypt
+//
+//    * GenerateDataKey
+//
+//    * GenerateDataKeyWithoutPlaintext
+//
+//    * ReEncrypt
+//
+// AWS KMS does not apply the grant constraints to other operations, such as
+// DescribeKey or ScheduleKeyDeletion.
+//
+// In a cryptographic operation, the encryption context in the decryption operation
+// must be an exact, case-sensitive match for the keys and values in the encryption
+// context of the encryption operation. Only the order of the pairs can vary.
+//
+// However, in a grant constraint, the key in each key-value pair is not case
+// sensitive, but the value is case sensitive.
+//
+// To avoid confusion, do not use multiple encryption context pairs that differ
+// only by case. To require a fully case-sensitive encryption context, use the
+// kms:EncryptionContext: and kms:EncryptionContextKeys conditions in an IAM
+// or key policy. For details, see kms:EncryptionContext: (https://docs.aws.amazon.com/kms/latest/developerguide/policy-conditions.html#conditions-kms-encryption-context)
+// in the AWS Key Management Service Developer Guide .
 type GrantConstraints struct {
 	_ struct{} `type:"structure"`
 
-	// A list of key-value pairs that must be present in the encryption context
-	// of certain subsequent operations that the grant allows. When certain subsequent
-	// operations allowed by the grant include encryption context that matches this
-	// list, the grant allows the operation. Otherwise, the grant does not allow
-	// the operation.
+	// A list of key-value pairs that must match the encryption context in the cryptographic
+	// operation request. The grant allows the operation only when the encryption
+	// context in the request is the same as the encryption context specified in
+	// this constraint.
 	EncryptionContextEquals map[string]*string `type:"map"`
 
-	// A list of key-value pairs, all of which must be present in the encryption
-	// context of certain subsequent operations that the grant allows. When certain
-	// subsequent operations allowed by the grant include encryption context that
-	// matches this list or is a superset of this list, the grant allows the operation.
-	// Otherwise, the grant does not allow the operation.
+	// A list of key-value pairs that must be included in the encryption context
+	// of the cryptographic operation request. The grant allows the cryptographic
+	// operation only when the encryption context in the request includes the key-value
+	// pairs specified in this constraint, although it can include additional key-value
+	// pairs.
 	EncryptionContextSubset map[string]*string `type:"map"`
 }
 
@@ -6570,15 +8211,27 @@ type KeyMetadata struct {
 	AWSAccountId *string `type:"string"`
 
 	// The Amazon Resource Name (ARN) of the CMK. For examples, see AWS Key Management
-	// Service (AWS KMS) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-kms)
+	// Service (AWS KMS) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-kms)
 	// in the Example ARNs section of the AWS General Reference.
 	Arn *string `min:"20" type:"string"`
+
+	// The cluster ID of the AWS CloudHSM cluster that contains the key material
+	// for the CMK. When you create a CMK in a custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html),
+	// AWS KMS creates the key material for the CMK in the associated AWS CloudHSM
+	// cluster. This value is present only when the CMK is created in a custom key
+	// store.
+	CloudHsmClusterId *string `min:"19" type:"string"`
 
 	// The date and time when the CMK was created.
 	CreationDate *time.Time `type:"timestamp"`
 
+	// A unique identifier for the custom key store (https://docs.aws.amazon.com/kms/latest/developerguide/custom-key-store-overview.html)
+	// that contains the CMK. This value is present only when the CMK is created
+	// in a custom key store.
+	CustomKeyStoreId *string `min:"1" type:"string"`
+
 	// The date and time after which AWS KMS deletes the CMK. This value is present
-	// only when KeyState is PendingDeletion, otherwise this value is omitted.
+	// only when KeyState is PendingDeletion.
 	DeletionDate *time.Time `type:"timestamp"`
 
 	// The description of the CMK.
@@ -6597,27 +8250,29 @@ type KeyMetadata struct {
 	// KeyId is a required field
 	KeyId *string `min:"1" type:"string" required:"true"`
 
-	// The CMK's manager. CMKs are either customer managed or AWS managed. For more
-	// information about the difference, see Customer Master Keys (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
+	// The manager of the CMK. CMKs in your AWS account are either customer managed
+	// or AWS managed. For more information about the difference, see Customer Master
+	// Keys (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#master_keys)
 	// in the AWS Key Management Service Developer Guide.
 	KeyManager *string `type:"string" enum:"KeyManagerType"`
 
 	// The state of the CMK.
 	//
 	// For more information about how key state affects the use of a CMK, see How
-	// Key State Affects the Use of a Customer Master Key (http://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
+	// Key State Affects the Use of a Customer Master Key (https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html)
 	// in the AWS Key Management Service Developer Guide.
 	KeyState *string `type:"string" enum:"KeyState"`
 
-	// The cryptographic operations for which you can use the CMK. Currently the
-	// only allowed value is ENCRYPT_DECRYPT, which means you can use the CMK for
-	// the Encrypt and Decrypt operations.
+	// The cryptographic operations for which you can use the CMK. The only valid
+	// value is ENCRYPT_DECRYPT, which means you can use the CMK to encrypt and
+	// decrypt data.
 	KeyUsage *string `type:"string" enum:"KeyUsageType"`
 
 	// The source of the CMK's key material. When this value is AWS_KMS, AWS KMS
 	// created the key material. When this value is EXTERNAL, the key material was
 	// imported from your existing key management infrastructure or the CMK lacks
-	// key material.
+	// key material. When this value is AWS_CLOUDHSM, the key material was created
+	// in the AWS CloudHSM cluster associated with a custom key store.
 	Origin *string `type:"string" enum:"OriginType"`
 
 	// The time at which the imported key material expires. When the key material
@@ -6649,9 +8304,21 @@ func (s *KeyMetadata) SetArn(v string) *KeyMetadata {
 	return s
 }
 
+// SetCloudHsmClusterId sets the CloudHsmClusterId field's value.
+func (s *KeyMetadata) SetCloudHsmClusterId(v string) *KeyMetadata {
+	s.CloudHsmClusterId = &v
+	return s
+}
+
 // SetCreationDate sets the CreationDate field's value.
 func (s *KeyMetadata) SetCreationDate(v time.Time) *KeyMetadata {
 	s.CreationDate = &v
+	return s
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *KeyMetadata) SetCustomKeyStoreId(v string) *KeyMetadata {
+	s.CustomKeyStoreId = &v
 	return s
 }
 
@@ -6799,7 +8466,7 @@ type ListAliasesOutput struct {
 
 	// A flag that indicates whether there are more items in the list. When this
 	// value is true, the list in this response is truncated. To get more items,
-	// pass the value of the NextMarker element in this response to the Marker parameter
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
 	// in a subsequent request.
 	Truncated *bool `type:"boolean"`
 }
@@ -6927,7 +8594,7 @@ type ListGrantsResponse struct {
 
 	// A flag that indicates whether there are more items in the list. When this
 	// value is true, the list in this response is truncated. To get more items,
-	// pass the value of the NextMarker element in this response to the Marker parameter
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
 	// in a subsequent request.
 	Truncated *bool `type:"boolean"`
 }
@@ -6985,7 +8652,7 @@ type ListKeyPoliciesInput struct {
 	// This value is optional. If you include a value, it must be between 1 and
 	// 1000, inclusive. If you do not include a value, it defaults to 100.
 	//
-	// Currently only 1 policy can be attached to a key.
+	// Only one policy can be attached to a key.
 	Limit *int64 `min:"1" type:"integer"`
 
 	// Use this parameter in a subsequent request after you receive a response with
@@ -7051,13 +8718,12 @@ type ListKeyPoliciesOutput struct {
 	// use for the Marker parameter in a subsequent request.
 	NextMarker *string `min:"1" type:"string"`
 
-	// A list of key policy names. Currently, there is only one key policy per CMK
-	// and it is always named default.
+	// A list of key policy names. The only valid value is default.
 	PolicyNames []*string `type:"list"`
 
 	// A flag that indicates whether there are more items in the list. When this
 	// value is true, the list in this response is truncated. To get more items,
-	// pass the value of the NextMarker element in this response to the Marker parameter
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
 	// in a subsequent request.
 	Truncated *bool `type:"boolean"`
 }
@@ -7157,7 +8823,7 @@ type ListKeysOutput struct {
 
 	// A flag that indicates whether there are more items in the list. When this
 	// value is true, the list in this response is truncated. To get more items,
-	// pass the value of the NextMarker element in this response to the Marker parameter
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
 	// in a subsequent request.
 	Truncated *bool `type:"boolean"`
 }
@@ -7289,7 +8955,7 @@ type ListResourceTagsOutput struct {
 
 	// A flag that indicates whether there are more items in the list. When this
 	// value is true, the list in this response is truncated. To get more items,
-	// pass the value of the NextMarker element in this response to the Marker parameter
+	// pass the value of the NextMarker element in thisresponse to the Marker parameter
 	// in a subsequent request.
 	Truncated *bool `type:"boolean"`
 }
@@ -7340,11 +9006,11 @@ type ListRetirableGrantsInput struct {
 
 	// The retiring principal for which to list grants.
 	//
-	// To specify the retiring principal, use the Amazon Resource Name (ARN) (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// To specify the retiring principal, use the Amazon Resource Name (ARN) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// of an AWS principal. Valid AWS principals include AWS accounts (root), IAM
 	// users, federated users, and assumed role users. For examples of the ARN syntax
 	// for specifying a principal, see AWS Identity and Access Management (IAM)
-	// (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
+	// (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam)
 	// in the Example ARNs section of the Amazon Web Services General Reference.
 	//
 	// RetiringPrincipal is a required field
@@ -7409,7 +9075,7 @@ type PutKeyPolicyInput struct {
 	// Setting this value to true increases the risk that the CMK becomes unmanageable.
 	// Do not set this value to true indiscriminately.
 	//
-	// For more information, refer to the scenario in the Default Key Policy (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
+	// For more information, refer to the scenario in the Default Key Policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
 	// section in the AWS Key Management Service Developer Guide.
 	//
 	// Use this parameter only when you intend to prevent the principal that is
@@ -7441,16 +9107,16 @@ type PutKeyPolicyInput struct {
 	//    must allow the principal that is making the PutKeyPolicy request to make
 	//    a subsequent PutKeyPolicy request on the CMK. This reduces the risk that
 	//    the CMK becomes unmanageable. For more information, refer to the scenario
-	//    in the Default Key Policy (http://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
+	//    in the Default Key Policy (https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam)
 	//    section of the AWS Key Management Service Developer Guide.
 	//
 	//    * Each statement in the key policy must contain one or more principals.
 	//    The principals in the key policy must exist and be visible to AWS KMS.
 	//    When you create a new AWS principal (for example, an IAM user or role),
 	//    you might need to enforce a delay before including the new principal in
-	//    a key policy. The reason for this is that the new principal might not
-	//    be immediately visible to AWS KMS. For more information, see Changes that
-	//    I make are not always immediately visible (http://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_eventual-consistency)
+	//    a key policy because the new principal might not be immediately visible
+	//    to AWS KMS. For more information, see Changes that I make are not always
+	//    immediately visible (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_eventual-consistency)
 	//    in the AWS Identity and Access Management User Guide.
 	//
 	// The key policy size limit is 32 kilobytes (32768 bytes).
@@ -7577,7 +9243,7 @@ type ReEncryptInput struct {
 
 	// A list of grant tokens.
 	//
-	// For more information, see Grant Tokens (http://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
+	// For more information, see Grant Tokens (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#grant_token)
 	// in the AWS Key Management Service Developer Guide.
 	GrantTokens []*string `type:"list"`
 
@@ -7958,7 +9624,7 @@ func (s *ScheduleKeyDeletionOutput) SetKeyId(v string) *ScheduleKeyDeletionOutpu
 // tag values are both required, but tag values can be empty (null) strings.
 //
 // For information about the rules that apply to tag keys and tag values, see
-// User-Defined Tag Restrictions (http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/allocation-tag-restrictions.html)
+// User-Defined Tag Restrictions (https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/allocation-tag-restrictions.html)
 // in the AWS Billing and Cost Management User Guide.
 type Tag struct {
 	_ struct{} `type:"structure"`
@@ -8186,14 +9852,14 @@ func (s UntagResourceOutput) GoString() string {
 type UpdateAliasInput struct {
 	_ struct{} `type:"structure"`
 
-	// String that contains the name of the alias to be modified. The name must
-	// start with the word "alias" followed by a forward slash (alias/). Aliases
-	// that begin with "alias/aws" are reserved.
+	// Specifies the name of the alias to change. This value must begin with alias/
+	// followed by the alias name, such as alias/ExampleAlias.
 	//
 	// AliasName is a required field
 	AliasName *string `min:"1" type:"string" required:"true"`
 
-	// Unique identifier of the customer master key to be mapped to the alias.
+	// Unique identifier of the customer master key (CMK) to be mapped to the alias.
+	// When the update operation completes, the alias will point to this CMK.
 	//
 	// Specify the key ID or the Amazon Resource Name (ARN) of the CMK.
 	//
@@ -8266,6 +9932,114 @@ func (s UpdateAliasOutput) String() string {
 
 // GoString returns the string representation
 func (s UpdateAliasOutput) GoString() string {
+	return s.String()
+}
+
+type UpdateCustomKeyStoreInput struct {
+	_ struct{} `type:"structure"`
+
+	// Associates the custom key store with a related AWS CloudHSM cluster.
+	//
+	// Enter the cluster ID of the cluster that you used to create the custom key
+	// store or a cluster that shares a backup history and has the same cluster
+	// certificate as the original cluster. You cannot use this parameter to associate
+	// a custom key store with an unrelated cluster. In addition, the replacement
+	// cluster must fulfill the requirements (https://docs.aws.amazon.com/kms/latest/developerguide/create-keystore.html#before-keystore)
+	// for a cluster associated with a custom key store. To view the cluster certificate
+	// of a cluster, use the DescribeClusters (https://docs.aws.amazon.com/cloudhsm/latest/APIReference/API_DescribeClusters.html)
+	// operation.
+	CloudHsmClusterId *string `min:"19" type:"string"`
+
+	// Identifies the custom key store that you want to update. Enter the ID of
+	// the custom key store. To find the ID of a custom key store, use the DescribeCustomKeyStores
+	// operation.
+	//
+	// CustomKeyStoreId is a required field
+	CustomKeyStoreId *string `min:"1" type:"string" required:"true"`
+
+	// Enter the current password of the kmsuser crypto user (CU) in the AWS CloudHSM
+	// cluster that is associated with the custom key store.
+	//
+	// This parameter tells AWS KMS the current password of the kmsuser crypto user
+	// (CU). It does not set or change the password of any users in the AWS CloudHSM
+	// cluster.
+	KeyStorePassword *string `min:"1" type:"string" sensitive:"true"`
+
+	// Changes the friendly name of the custom key store to the value that you specify.
+	// The custom key store name must be unique in the AWS account.
+	NewCustomKeyStoreName *string `min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s UpdateCustomKeyStoreInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UpdateCustomKeyStoreInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UpdateCustomKeyStoreInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UpdateCustomKeyStoreInput"}
+	if s.CloudHsmClusterId != nil && len(*s.CloudHsmClusterId) < 19 {
+		invalidParams.Add(request.NewErrParamMinLen("CloudHsmClusterId", 19))
+	}
+	if s.CustomKeyStoreId == nil {
+		invalidParams.Add(request.NewErrParamRequired("CustomKeyStoreId"))
+	}
+	if s.CustomKeyStoreId != nil && len(*s.CustomKeyStoreId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CustomKeyStoreId", 1))
+	}
+	if s.KeyStorePassword != nil && len(*s.KeyStorePassword) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("KeyStorePassword", 1))
+	}
+	if s.NewCustomKeyStoreName != nil && len(*s.NewCustomKeyStoreName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NewCustomKeyStoreName", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCloudHsmClusterId sets the CloudHsmClusterId field's value.
+func (s *UpdateCustomKeyStoreInput) SetCloudHsmClusterId(v string) *UpdateCustomKeyStoreInput {
+	s.CloudHsmClusterId = &v
+	return s
+}
+
+// SetCustomKeyStoreId sets the CustomKeyStoreId field's value.
+func (s *UpdateCustomKeyStoreInput) SetCustomKeyStoreId(v string) *UpdateCustomKeyStoreInput {
+	s.CustomKeyStoreId = &v
+	return s
+}
+
+// SetKeyStorePassword sets the KeyStorePassword field's value.
+func (s *UpdateCustomKeyStoreInput) SetKeyStorePassword(v string) *UpdateCustomKeyStoreInput {
+	s.KeyStorePassword = &v
+	return s
+}
+
+// SetNewCustomKeyStoreName sets the NewCustomKeyStoreName field's value.
+func (s *UpdateCustomKeyStoreInput) SetNewCustomKeyStoreName(v string) *UpdateCustomKeyStoreInput {
+	s.NewCustomKeyStoreName = &v
+	return s
+}
+
+type UpdateCustomKeyStoreOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s UpdateCustomKeyStoreOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UpdateCustomKeyStoreOutput) GoString() string {
 	return s.String()
 }
 
@@ -8360,6 +10134,43 @@ const (
 )
 
 const (
+	// ConnectionErrorCodeTypeInvalidCredentials is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeInvalidCredentials = "INVALID_CREDENTIALS"
+
+	// ConnectionErrorCodeTypeClusterNotFound is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeClusterNotFound = "CLUSTER_NOT_FOUND"
+
+	// ConnectionErrorCodeTypeNetworkErrors is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeNetworkErrors = "NETWORK_ERRORS"
+
+	// ConnectionErrorCodeTypeInternalError is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeInternalError = "INTERNAL_ERROR"
+
+	// ConnectionErrorCodeTypeInsufficientCloudhsmHsms is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeInsufficientCloudhsmHsms = "INSUFFICIENT_CLOUDHSM_HSMS"
+
+	// ConnectionErrorCodeTypeUserLockedOut is a ConnectionErrorCodeType enum value
+	ConnectionErrorCodeTypeUserLockedOut = "USER_LOCKED_OUT"
+)
+
+const (
+	// ConnectionStateTypeConnected is a ConnectionStateType enum value
+	ConnectionStateTypeConnected = "CONNECTED"
+
+	// ConnectionStateTypeConnecting is a ConnectionStateType enum value
+	ConnectionStateTypeConnecting = "CONNECTING"
+
+	// ConnectionStateTypeFailed is a ConnectionStateType enum value
+	ConnectionStateTypeFailed = "FAILED"
+
+	// ConnectionStateTypeDisconnected is a ConnectionStateType enum value
+	ConnectionStateTypeDisconnected = "DISCONNECTED"
+
+	// ConnectionStateTypeDisconnecting is a ConnectionStateType enum value
+	ConnectionStateTypeDisconnecting = "DISCONNECTING"
+)
+
+const (
 	// DataKeySpecAes256 is a DataKeySpec enum value
 	DataKeySpecAes256 = "AES_256"
 
@@ -8424,6 +10235,9 @@ const (
 
 	// KeyStatePendingImport is a KeyState enum value
 	KeyStatePendingImport = "PendingImport"
+
+	// KeyStateUnavailable is a KeyState enum value
+	KeyStateUnavailable = "Unavailable"
 )
 
 const (
@@ -8437,6 +10251,9 @@ const (
 
 	// OriginTypeExternal is a OriginType enum value
 	OriginTypeExternal = "EXTERNAL"
+
+	// OriginTypeAwsCloudhsm is a OriginType enum value
+	OriginTypeAwsCloudhsm = "AWS_CLOUDHSM"
 )
 
 const (

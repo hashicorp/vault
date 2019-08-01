@@ -2,11 +2,15 @@ package jwtauth
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"time"
 
-	oidc "github.com/coreos/go-oidc"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/coreos/go-oidc"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -16,7 +20,7 @@ const (
 
 // Factory is used by framework
 func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, error) {
-	b := backend(c)
+	b := backend()
 	if err := b.Setup(ctx, c); err != nil {
 		return nil, err
 	}
@@ -28,15 +32,18 @@ type jwtAuthBackend struct {
 
 	l            sync.RWMutex
 	provider     *oidc.Provider
+	keySet       oidc.KeySet
 	cachedConfig *jwtConfig
+	oidcStates   *cache.Cache
 
 	providerCtx       context.Context
 	providerCtxCancel context.CancelFunc
 }
 
-func backend(c *logical.BackendConfig) *jwtAuthBackend {
+func backend() *jwtAuthBackend {
 	b := new(jwtAuthBackend)
 	b.providerCtx, b.providerCtxCancel = context.WithCancel(context.Background())
+	b.oidcStates = cache.New(oidcStateTimeout, 1*time.Minute)
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
@@ -46,6 +53,11 @@ func backend(c *logical.BackendConfig) *jwtAuthBackend {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				"oidc/auth_url",
+				"oidc/callback",
+
+				// Uncomment to mount simple UI handler for local development
+				// "ui",
 			},
 			SealWrapStorage: []string{
 				"config",
@@ -57,7 +69,11 @@ func backend(c *logical.BackendConfig) *jwtAuthBackend {
 				pathRoleList(b),
 				pathRole(b),
 				pathConfig(b),
+
+				// Uncomment to mount simple UI handler for local development
+				// pathUI(b),
 			},
+			pathOIDC(b),
 		),
 		Clean: b.cleanup,
 	}
@@ -87,7 +103,7 @@ func (b *jwtAuthBackend) reset() {
 	b.l.Unlock()
 }
 
-func (b *jwtAuthBackend) getProvider(ctx context.Context, config *jwtConfig) (*oidc.Provider, error) {
+func (b *jwtAuthBackend) getProvider(config *jwtConfig) (*oidc.Provider, error) {
 	b.l.RLock()
 	unlockFunc := b.l.RUnlock
 	defer func() { unlockFunc() }()
@@ -111,6 +127,29 @@ func (b *jwtAuthBackend) getProvider(ctx context.Context, config *jwtConfig) (*o
 
 	b.provider = provider
 	return provider, nil
+}
+
+// getKeySet returns a new JWKS KeySet based on the provided config.
+func (b *jwtAuthBackend) getKeySet(config *jwtConfig) (oidc.KeySet, error) {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if b.keySet != nil {
+		return b.keySet, nil
+	}
+
+	if config.JWKSURL == "" {
+		return nil, errors.New("keyset error: jwks_url not configured")
+	}
+
+	ctx, err := b.createCAContext(b.providerCtx, config.JWKSCAPEM)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing jwks_ca_pem: {{err}}", err)
+	}
+
+	b.keySet = oidc.NewRemoteKeySet(ctx, config.JWKSURL)
+
+	return b.keySet, nil
 }
 
 const (

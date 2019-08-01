@@ -10,18 +10,40 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/parseutil"
-
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth `hcl:"auto_auth"`
-	ExitAfterAuth bool      `hcl:"exit_after_auth"`
-	PidFile       string    `hcl:"pid_file"`
+	AutoAuth      *AutoAuth   `hcl:"auto_auth"`
+	ExitAfterAuth bool        `hcl:"exit_after_auth"`
+	PidFile       string      `hcl:"pid_file"`
+	Listeners     []*Listener `hcl:"listeners"`
+	Cache         *Cache      `hcl:"cache"`
+	Vault         *Vault      `hcl:"vault"`
+}
+
+type Vault struct {
+	Address          string      `hcl:"address"`
+	CACert           string      `hcl:"ca_cert"`
+	CAPath           string      `hcl:"ca_path"`
+	TLSSkipVerify    bool        `hcl:"-"`
+	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
+	ClientCert       string      `hcl:"client_cert"`
+	ClientKey        string      `hcl:"client_key"`
+}
+
+type Cache struct {
+	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
+}
+
+type Listener struct {
+	Type   string
+	Config map[string]interface{}
 }
 
 type AutoAuth struct {
@@ -38,6 +60,7 @@ type Method struct {
 	MountPath  string        `hcl:"mount_path"`
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
+	Namespace  string        `hcl:"namespace"`
 	Config     map[string]interface{}
 }
 
@@ -91,15 +114,151 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
+	err = parseListeners(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
+	}
+
+	err = parseCache(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+	}
+
+	if result.Cache != nil {
+		if len(result.Listeners) < 1 {
+			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		}
+
+		if result.Cache.UseAutoAuthToken {
+			if result.AutoAuth == nil {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if result.AutoAuth.Method.WrapTTL > 0 {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if result.AutoAuth != nil {
+		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+		}
+	}
+
+	err = parseVault(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
+	}
+
 	return &result, nil
+}
+
+func parseVault(result *Config, list *ast.ObjectList) error {
+	name := "vault"
+
+	vaultList := list.Filter(name)
+	if len(vaultList.Items) == 0 {
+		return nil
+	}
+
+	if len(vaultList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := vaultList.Items[0]
+
+	var v Vault
+	err := hcl.DecodeObject(&v, item.Val)
+	if err != nil {
+		return err
+	}
+
+	if v.TLSSkipVerifyRaw != nil {
+		v.TLSSkipVerify, err = parseutil.ParseBool(v.TLSSkipVerifyRaw)
+		if err != nil {
+			return err
+		}
+	}
+
+	result.Vault = &v
+
+	return nil
+}
+
+func parseCache(result *Config, list *ast.ObjectList) error {
+	name := "cache"
+
+	cacheList := list.Filter(name)
+	if len(cacheList.Items) == 0 {
+		return nil
+	}
+
+	if len(cacheList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := cacheList.Items[0]
+
+	var c Cache
+	err := hcl.DecodeObject(&c, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.Cache = &c
+	return nil
+}
+
+func parseListeners(result *Config, list *ast.ObjectList) error {
+	name := "listener"
+
+	listenerList := list.Filter(name)
+
+	var listeners []*Listener
+	for _, item := range listenerList.Items {
+		var lnConfig map[string]interface{}
+		err := hcl.DecodeObject(&lnConfig, item.Val)
+		if err != nil {
+			return err
+		}
+
+		var lnType string
+		switch {
+		case lnConfig["type"] != nil:
+			lnType = lnConfig["type"].(string)
+			delete(lnConfig, "type")
+		case len(item.Keys) == 1:
+			lnType = strings.ToLower(item.Keys[0].Token.Value().(string))
+		default:
+			return errors.New("listener type must be specified")
+		}
+
+		switch lnType {
+		case "unix", "tcp":
+		default:
+			return fmt.Errorf("invalid listener type %q", lnType)
+		}
+
+		listeners = append(listeners, &Listener{
+			Type:   lnType,
+			Config: lnConfig,
+		})
+	}
+
+	result.Listeners = listeners
+
+	return nil
 }
 
 func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	name := "auto_auth"
 
 	autoAuthList := list.Filter(name)
-	if len(autoAuthList.Items) != 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
+	if len(autoAuthList.Items) == 0 {
+		return nil
+	}
+	if len(autoAuthList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
 	}
 
 	// Get our item
@@ -121,16 +280,22 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	if err := parseMethod(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'method': {{err}}", err)
 	}
+	if a.Method == nil {
+		return fmt.Errorf("no 'method' block found")
+	}
 
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
 	}
 
-	switch {
-	case a.Method == nil:
-		return fmt.Errorf("no 'method' block found")
-	case len(a.Sinks) == 0:
-		return fmt.Errorf("at least one 'sink' block must be provided")
+	if result.AutoAuth.Method.WrapTTL > 0 {
+		if len(result.AutoAuth.Sinks) != 1 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
+		}
+
+		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
+		}
 	}
 
 	return nil
@@ -176,6 +341,9 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		m.WrapTTLRaw = nil
 	}
 
+	// Canonicalize namespace path if provided
+	m.Namespace = namespace.Canonicalize(m.Namespace)
+
 	result.AutoAuth.Method = &m
 	return nil
 }
@@ -185,7 +353,7 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 
 	sinkList := list.Filter(name)
 	if len(sinkList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
+		return nil
 	}
 
 	var ts []*Sink

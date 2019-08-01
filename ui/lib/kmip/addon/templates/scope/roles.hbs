@@ -1,0 +1,115 @@
+<PageHeader as |p|>
+  <p.top>
+    <KmipBreadcrumb @showPath={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{this.scope}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<Toolbar>
+  {{#if model.meta.total}}
+    <ToolbarFilters>
+    <NavigateInput
+      @filterFocusDidChange={{action "setFilterFocus" }}
+      @filterDidChange={{action "setFilter"}}
+      @filter={{this.filter}}
+      @filterMatchesKey={{filterMatchesKey}}
+      @firstPartialMatch={{firstPartialMatch}}
+      @placeholder="Filter roles by name"
+      @extraNavParams={{this.scope}}
+      @urls={{hash
+        create="vault.cluster.secrets.backend.kmip.scope.roles.create"
+        list="vault.cluster.secrets.backend.kmip.scope.roles"
+        show="vault.cluster.secrets.backend.kmip.credentials"
+      }}
+    />
+      {{#if filterFocused}}
+        {{#if filterMatchesKey}}
+          <p class="input-hint">
+            <kbd>ENTER</kbd> to go to <code>{{this.filter}}</code> roles
+          </p>
+        {{/if}}
+        {{#if firstPartialMatch}}
+          <p class="input-hint">
+            <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+          </p>
+        {{/if}}
+      {{/if}}
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    <ToolbarLink
+      @type="add"
+      @params={{array "scope.roles.create"}}
+    >
+      Create role
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+<ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
+  {{#if list.empty}}
+    <list.empty
+      @title="No roles in this scope yet"
+      @message="Roles let you generate credentials with a specified set of KMIP operations permissions that clients are allowed to perform."
+    >
+      {{#link-to "scope.roles.create"}}
+        Create a role
+      {{/link-to}}
+    </list.empty>
+  {{else if list.item}}
+    <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>
+      <Item.content>
+        <Icon @glyph="user-plain" class="has-text-grey-light" @size="l" />{{list.item.id}}
+      </Item.content>
+      <Item.menu>
+        <li class="action">
+          {{#link-to "credentials" this.scope list.item.id class="is-block"}}
+            View credentials
+          {{/link-to}}
+        </li>
+        <li class="action">
+          {{#link-to "role" this.scope list.item.id class="is-block"}}
+            View role
+          {{/link-to}}
+        </li>
+        {{#if list.item.updatePath.canUpdate}}
+          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+            {{#link-to "role.edit" this.scope list.item.id class="is-block"}}
+              Edit role
+            {{/link-to}}
+          </MenuLoader>
+        {{/if}}
+        {{#if list.item.updatePath.canDelete}}
+          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+            <ConfirmAction
+              @buttonClasses="link is-destroy"
+              @onConfirmAction={{action
+                (perform
+                  Item.callMethod
+                  "destroyRecord"
+                  list.item
+                  (concat "Successfully deleted role " list.item.id)
+                  (concat "There was an error deleting the role " list.item.id)
+                  (action "refresh")
+                )
+              }}
+              @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+              @cancelButtonText="Cancel"
+              data-test-scope-delete="true"
+              >
+                Delete role
+            </ConfirmAction>
+          </MenuLoader>
+        {{/if}}
+      </Item.menu>
+    </ListItem>
+  {{else}}
+    <ListItem as |Item|>
+      <Item.content>
+        There are no roles that match {{this.filter}}, press <kbd>ENTER</kbd> to add one.
+      </Item.content>
+    </ListItem>
+  {{/if}}
+</ListView>

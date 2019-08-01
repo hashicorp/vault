@@ -77,14 +77,14 @@ func (r *Raft) runSnapshots() {
 
 			// Trigger a snapshot
 			if _, err := r.takeSnapshot(); err != nil {
-				r.logger.Printf("[ERR] raft: Failed to take snapshot: %v", err)
+				r.logger.Error(fmt.Sprintf("Failed to take snapshot: %v", err))
 			}
 
 		case future := <-r.userSnapshotCh:
 			// User-triggered, run immediately
 			id, err := r.takeSnapshot()
 			if err != nil {
-				r.logger.Printf("[ERR] raft: Failed to take snapshot: %v", err)
+				r.logger.Error(fmt.Sprintf("Failed to take snapshot: %v", err))
 			} else {
 				future.opener = func() (*SnapshotMeta, io.ReadCloser, error) {
 					return r.snapshots.Open(id)
@@ -107,7 +107,7 @@ func (r *Raft) shouldSnapshot() bool {
 	// Check the last log index
 	lastIdx, err := r.logs.LastIndex()
 	if err != nil {
-		r.logger.Printf("[ERR] raft: Failed to get last log index: %v", err)
+		r.logger.Error(fmt.Sprintf("Failed to get last log index: %v", err))
 		return false
 	}
 
@@ -172,7 +172,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 	}
 
 	// Create a new snapshot.
-	r.logger.Printf("[INFO] raft: Starting snapshot up to %d", snapReq.index)
+	r.logger.Info(fmt.Sprintf("Starting snapshot up to %d", snapReq.index))
 	start := time.Now()
 	version := getSnapshotVersion(r.protocolVersion)
 	sink, err := r.snapshots.Create(version, snapReq.index, snapReq.term, committed, committedIndex, r.trans)
@@ -202,7 +202,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 		return "", err
 	}
 
-	r.logger.Printf("[INFO] raft: Snapshot to %d complete", snapReq.index)
+	r.logger.Info(fmt.Sprintf("Snapshot to %d complete", snapReq.index))
 	return sink.ID(), nil
 }
 
@@ -229,7 +229,7 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
 	maxLog := min(snapIdx, lastLogIdx-r.conf.TrailingLogs)
 
 	// Log this
-	r.logger.Printf("[INFO] raft: Compacting logs from %d to %d", minLog, maxLog)
+	r.logger.Info(fmt.Sprintf("Compacting logs from %d to %d", minLog, maxLog))
 
 	// Compact the logs
 	if err := r.logs.DeleteRange(minLog, maxLog); err != nil {

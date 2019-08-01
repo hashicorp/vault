@@ -32,13 +32,14 @@ disabled to accommodate auditing requirements.
 
 ## Working Set Management
 
-This secrets engine does not currently delete keys. Keys that are out of the
-working set (earlier than a key's specified `min_decryption_version` are
-instead archived. This is a performance consideration to keep key loading fast,
-as well as a security consideration: by disallowing decryption of old versions
-of keys, found ciphertext corresponding to obsolete (but sensitive) data can
-not be decrypted by most users, but in an emergency the
-`min_decryption_version` can be moved back to allow for legitimate decryption.
+The Transit engine supports versioning of keys. Key versions that are earlier
+than a key's specified `min_decryption_version` gets archived, and the rest of
+the key versions belong to the working set. This is a performance consideration
+to keep key loading fast, as well as a security consideration: by disallowing
+decryption of old versions of keys, found ciphertext corresponding to obsolete
+(but sensitive) data can not be decrypted by most users, but in an emergency
+the `min_decryption_version` can be moved back to allow for legitimate
+decryption.
 
 Currently this archive is stored in a single storage entry. With some storage
 backends, notably those using Raft or Paxos for HA capabilities, frequent

@@ -77,8 +77,8 @@ func (client *Client) AttachPolicyToRoleWithCallback(request *AttachPolicyToRole
 type AttachPolicyToRoleRequest struct {
 	*requests.RpcRequest
 	PolicyType string `position:"Query" name:"PolicyType"`
-	PolicyName string `position:"Query" name:"PolicyName"`
 	RoleName   string `position:"Query" name:"RoleName"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // AttachPolicyToRoleResponse is the response struct for api AttachPolicyToRole

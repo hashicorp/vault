@@ -15,9 +15,9 @@ The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 
 This endpoints lists all the mounted secrets engines.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/mounts`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/mounts`                |
 
 ### Sample Request
 
@@ -28,10 +28,9 @@ $ curl \
 ```
 
 ### Sample Response
-
 ```json
 {
-  "aws": {
+  "aws/": {
     "type": "aws",
     "description": "AWS keys",
     "config": {
@@ -41,7 +40,7 @@ $ curl \
       "seal_wrap": false
     }
   },
-  "sys": {
+  "sys/": {
     "type": "system",
     "description": "system endpoint",
     "config": {
@@ -50,6 +49,28 @@ $ curl \
       "force_no_cache": false,
       "seal_wrap": false
     }
+  },
+  "data": {
+    "aws/": {
+      "type": "aws",
+      "description": "AWS keys",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
+    "sys/": {
+      "type": "system",
+      "description": "system endpoint",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
   }
 }
 ```
@@ -61,9 +82,9 @@ are used by this backend.
 
 This endpoint enables a new secrets engine at the given path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/mounts/:path`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/mounts/:path`          |
 
 ### Parameters
 
@@ -106,12 +127,12 @@ This endpoint enables a new secrets engine at the given path.
   - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
     to whitelist, allowing a plugin to include them in the response.
 
-  - `options` `(map<string|string>: nil)` - Specifies mount type specific options
-    that are passed to the backend.
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend.
 
-    *Key/Value (KV)*
-    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
-      KV v2.
+  *Key/Value (KV)*
+  - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+    KV v2.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
@@ -148,8 +169,8 @@ $ curl \
 
 This endpoint disables the mount point specified in the URL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `DELETE` | `/sys/mounts/:path`          | `204 (empty body)    ` |
 
 ### Sample Request
@@ -167,9 +188,9 @@ This endpoint reads the given mount's configuration. Unlike the `mounts`
 endpoint, this will return the current time in seconds for each TTL, which may
 be the system default or a mount-specific value.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/sys/mounts/:path/tune`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/sys/mounts/:path/tune`      |
 
 ### Sample Request
 
@@ -193,9 +214,9 @@ $ curl \
 
 This endpoint tunes configuration parameters for a given mount point.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/mounts/:path/tune`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/mounts/:path/tune`     |
 
 ### Parameters
 

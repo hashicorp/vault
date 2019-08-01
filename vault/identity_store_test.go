@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
@@ -51,7 +51,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 		},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 		},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	entity2.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity2.ID)
+	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
@@ -86,7 +86,9 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 		ID:      entity2.ID,
 		Message: entity2Any,
 	}
-	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
+
+	ctx := namespace.RootContext(nil)
+	if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
 		t.Fatal(err)
 	}
 
@@ -503,7 +505,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
 		t.Fatal(err)
@@ -526,7 +528,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 	}
 
-	entity2.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity2.ID)
+	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity2, nil, true)
 	if err != nil {

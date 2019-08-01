@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathListRoles(b *backend) *framework.Path {
@@ -31,6 +32,11 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
+			"backend": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Backend Type",
+			},
+
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role",
@@ -42,11 +48,17 @@ func pathRoles(b *backend) *framework.Path {
 requested. The lease duration controls the expiration
 of certificates issued by this backend. Defaults to
 the value of max_ttl.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "TTL",
+				},
 			},
 
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Max TTL",
+				},
 			},
 
 			"allow_localhost": &framework.FieldSchema{
@@ -54,6 +66,9 @@ the value of max_ttl.`,
 				Default: true,
 				Description: `Whether to allow "localhost" as a valid common
 name in a request`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: true,
+				},
 			},
 
 			"allowed_domains": &framework.FieldSchema{
@@ -100,6 +115,9 @@ information.`,
 				Default: true,
 				Description: `If set, only valid host names are allowed for
 CN and SANs. Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: true,
+				},
 			},
 
 			"allow_ip_sans": &framework.FieldSchema{
@@ -107,17 +125,27 @@ CN and SANs. Defaults to true.`,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Allow IP Subject Alternative Names",
+					Value: true,
+				},
 			},
 
 			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allowed URI Subject Alternative Names",
+				},
 			},
 
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allowed Other Subject Alternative Names",
+				},
 			},
 
 			"allowed_serial_numbers": &framework.FieldSchema{
@@ -130,6 +158,9 @@ Any valid URI is accepted, these values support globbing.`,
 				Default: true,
 				Description: `If set, certificates are flagged for server auth use.
 Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: true,
+				},
 			},
 
 			"client_flag": &framework.FieldSchema{
@@ -137,6 +168,9 @@ Defaults to true.`,
 				Default: true,
 				Description: `If set, certificates are flagged for client auth use.
 Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: true,
+				},
 			},
 
 			"code_signing_flag": &framework.FieldSchema{
@@ -156,6 +190,7 @@ protection use. Defaults to false.`,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec"},
 			},
 
 			"key_bits": &framework.FieldSchema{
@@ -175,6 +210,9 @@ https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: "DigitalSignature,KeyAgreement,KeyEncipherment",
+				},
 			},
 
 			"ext_key_usage": &framework.FieldSchema{
@@ -185,11 +223,17 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Extended Key Usage",
+				},
 			},
 
 			"ext_key_usage_oids": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of extended key usage oids.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Extended Key Usage OIDs",
+				},
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
@@ -199,6 +243,10 @@ this value to an empty list.`,
 the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Use CSR Common Name",
+					Value: true,
+				},
 			},
 
 			"use_csr_sans": &framework.FieldSchema{
@@ -207,12 +255,19 @@ Names. Defaults to true.`,
 				Description: `If set, when used with a signing profile,
 the SANs in the CSR will be used. This does *not*
 include the Common Name (cn). Defaults to true.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Use CSR Subject Alternative Names",
+					Value: true,
+				},
 			},
 
 			"ou": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Organizational Unit",
+				},
 			},
 
 			"organization": &framework.FieldSchema{
@@ -231,12 +286,18 @@ this value in certificates issued by this role.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Locality will be set to
 this value in certificates issued by this role.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Locality/City",
+				},
 			},
 
 			"province": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Province will be set to
 this value in certificates issued by this role.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Province/State",
+				},
 			},
 
 			"street_address": &framework.FieldSchema{
@@ -263,6 +324,7 @@ to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
 			},
+
 			"no_store": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `
@@ -273,23 +335,35 @@ or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
+
 			"require_cn": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Require Common Name",
+				},
 			},
+
 			"policy_identifiers": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy oids.`,
 			},
+
 			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Basic Constraints Valid for Non-CA",
+				},
 			},
 			"not_before_duration": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     30,
 				Description: `The duration before now the cert needs to be created / signed.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: 30,
+				},
 			},
 		},
 
@@ -527,13 +601,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
-		return errResp, nil
+	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	if len(entry.ExtKeyUsageOIDs) > 0 {
 		for _, oidstr := range entry.ExtKeyUsageOIDs {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
 			}
@@ -542,7 +616,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	if len(entry.PolicyIdentifiers) > 0 {
 		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
 			}
@@ -589,51 +663,51 @@ func parseKeyUsages(input []string) int {
 	return int(parsedKeyUsages)
 }
 
-func parseExtKeyUsages(role *roleEntry) certExtKeyUsage {
-	var parsedKeyUsages certExtKeyUsage
+func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
+	var parsedKeyUsages certutil.CertExtKeyUsage
 
 	if role.ServerFlag {
-		parsedKeyUsages |= serverAuthExtKeyUsage
+		parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
 	}
 
 	if role.ClientFlag {
-		parsedKeyUsages |= clientAuthExtKeyUsage
+		parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
 	}
 
 	if role.CodeSigningFlag {
-		parsedKeyUsages |= codeSigningExtKeyUsage
+		parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
 	}
 
 	if role.EmailProtectionFlag {
-		parsedKeyUsages |= emailProtectionExtKeyUsage
+		parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
 	}
 
 	for _, k := range role.ExtKeyUsage {
 		switch strings.ToLower(strings.TrimSpace(k)) {
 		case "any":
-			parsedKeyUsages |= anyExtKeyUsage
+			parsedKeyUsages |= certutil.AnyExtKeyUsage
 		case "serverauth":
-			parsedKeyUsages |= serverAuthExtKeyUsage
+			parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
 		case "clientauth":
-			parsedKeyUsages |= clientAuthExtKeyUsage
+			parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
 		case "codesigning":
-			parsedKeyUsages |= codeSigningExtKeyUsage
+			parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
 		case "emailprotection":
-			parsedKeyUsages |= emailProtectionExtKeyUsage
+			parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
 		case "ipsecendsystem":
-			parsedKeyUsages |= ipsecEndSystemExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecEndSystemExtKeyUsage
 		case "ipsectunnel":
-			parsedKeyUsages |= ipsecTunnelExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecTunnelExtKeyUsage
 		case "ipsecuser":
-			parsedKeyUsages |= ipsecUserExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecUserExtKeyUsage
 		case "timestamping":
-			parsedKeyUsages |= timeStampingExtKeyUsage
+			parsedKeyUsages |= certutil.TimeStampingExtKeyUsage
 		case "ocspsigning":
-			parsedKeyUsages |= ocspSigningExtKeyUsage
+			parsedKeyUsages |= certutil.OcspSigningExtKeyUsage
 		case "microsoftservergatedcrypto":
-			parsedKeyUsages |= microsoftServerGatedCryptoExtKeyUsage
+			parsedKeyUsages |= certutil.MicrosoftServerGatedCryptoExtKeyUsage
 		case "netscapeservergatedcrypto":
-			parsedKeyUsages |= netscapeServerGatedCryptoExtKeyUsage
+			parsedKeyUsages |= certutil.NetscapeServerGatedCryptoExtKeyUsage
 		}
 	}
 

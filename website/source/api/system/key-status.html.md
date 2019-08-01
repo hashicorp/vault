@@ -18,9 +18,9 @@ encryption key of Vault.
 This endpoint returns information about the current encryption key used by
 Vault.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/key-status`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/key-status`            |
 
 
 ### Sample Request

@@ -39,7 +39,7 @@ request to Vault. This helper is only available for IAM-type roles.
 ```text
 $ vault login -method=gcp \
     role="my-role" \
-    service_account="authenticating-account@my-project.iam.gserviceaccounts.com" \
+    service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
     project="my-project" \
     jwt_exp="15m" \
     credentials=@path/to/signer/credentials.json
@@ -141,23 +141,52 @@ scope:
 https://www.googleapis.com/auth/cloud-platform
 ```
 
-### Required Permissions
+### Required GCP Permissions
 
-The credentials given to Vault must have the following roles:
+#### Vault Server Permissions
+
+**For `iam`-type Vault roles**, Vault can be given the following roles:
 
 ```text
 roles/iam.serviceAccountKeyAdmin
-roles/browser
 ```
 
-Note that this is the permission **given to the Vault servers**. The IAM
-service account or GCE instance that is authenticating _against_ Vault must
-have the following role:
+**For `gce`-type Vault roles**, Vault can be given the following roles:
+
+```text
+roles/compute.viewer
+```
+
+If you instead wish to create a custom role with only the exact GCP permissions
+required, use the following list of permissions:
+
+```text
+iam.serviceAccounts.get
+iam.serviceAccountKeys.get
+compute.instances.get
+compute.instanceGroups.list
+compute.instanceGroups.listInstances
+```
+
+These allow Vault to:
+
+* verify the service account, either directly authenticating or associated with 
+  authenticating GCE instance, exists
+* get the corresponding public keys for verifying JWTs signed by service account
+  private keys.
+* verify authenticating GCE instances exist
+* compare bound fields for GCE roles (zone/region, labels, or membership
+  in given instance groups)
+
+#### Permissions For Authenticating Against Vault
+
+Note that the previously mentioned permissions are given to the _Vault servers_. 
+The IAM service account or GCE instance that is **authenticating against Vault**
+must have the following role:
 
 ```text
 roles/iam.serviceAccountTokenCreator
 ```
-
 
 ## Group Aliases
 

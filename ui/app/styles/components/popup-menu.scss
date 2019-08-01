@@ -46,7 +46,7 @@
     text-decoration: none;
     width: 100%;
   }
-  
+
   button.link,
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'],
@@ -112,10 +112,16 @@
 .popup-menu-content .level-left {
   flex-shrink: 1;
 }
-.popup-menu-trigger {
-  height: 2rem;
-  min-width: 0;
-  padding: 0 $size-10;
+
+.list-item-row,
+.info-table-row,
+.wizard-dismiss-menu {
+  .popup-menu-trigger {
+    height: 2.5rem;
+    min-width: 0;
+    padding: 0;
+    width: 2.5rem;
+  }
 }
 
 .status-menu-content {

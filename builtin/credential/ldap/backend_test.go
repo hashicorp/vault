@@ -1,5 +1,3 @@
-// +build !travis
-
 package ldap
 
 import (
@@ -10,10 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -230,8 +231,9 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 					"groups":   "EngineerS",
 					"policies": "userpolicy",
 				},
-				Path:    "users/tesla",
-				Storage: storage,
+				Path:       "users/tesla",
+				Storage:    storage,
+				Connection: &logical.Connection{},
 			}
 			resp, err = b.HandleRequest(ctx, userReq)
 			if err != nil || (resp != nil && resp.IsError()) {
@@ -245,7 +247,8 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 			Data: map[string]interface{}{
 				"password": "password",
 			},
-			Storage: storage,
+			Storage:    storage,
+			Connection: &logical.Connection{},
 		}
 		resp, err = b.HandleRequest(ctx, loginReq)
 		if err != nil || (resp != nil && resp.IsError()) {
@@ -325,8 +328,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"policies": "grouppolicy",
 		},
-		Path:    "groups/engineers",
-		Storage: storage,
+		Path:       "groups/engineers",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -339,8 +343,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 			"groups":   "engineers",
 			"policies": "userpolicy",
 		},
-		Path:    "users/tesla",
-		Storage: storage,
+		Path:       "users/tesla",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), userReq)
@@ -354,7 +359,8 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "password",
 		},
-		Storage: storage,
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), loginReq)
@@ -581,6 +587,7 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 			"userdn":               "dc=example,dc=com",
 			"groupdn":              "dc=example,dc=com",
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
 		},
 	}
 }
@@ -600,6 +607,7 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
 			"binddn":               "cn=read-only-admin,dc=example,dc=com",
 			"bindpass":             "password",
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
 		},
 	}
 }
@@ -617,6 +625,7 @@ func testAccStepConfigUrlWithDiscover(t *testing.T) logicaltest.TestStep {
 			"groupdn":              "dc=example,dc=com",
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
 		},
 	}
 }
@@ -752,7 +761,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		Unauthenticated: true,
 
 		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+		Check: logicaltest.TestCheckAuth([]string{"abc", "bar", "default", "foo", "xyz"}),
 	}
 }
 
@@ -766,7 +775,7 @@ func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) 
 		Unauthenticated: true,
 
 		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"default"}),
+		Check: logicaltest.TestCheckAuth([]string{"abc", "default", "xyz"}),
 	}
 }
 
@@ -838,4 +847,94 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 			return nil
 		},
 	}
+}
+
+func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	ctx := context.Background()
+
+	// Write in some initial config
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                    "ldap://ldap.forumsys.com",
+			"userattr":               "uid",
+			"userdn":                 "dc=example,dc=com",
+			"groupdn":                "dc=example,dc=com",
+			"binddn":                 "cn=read-only-admin,dc=example,dc=com",
+			"token_period":           "5m",
+			"token_explicit_max_ttl": "24h",
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+	resp, err = b.HandleRequest(ctx, configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	fd, err := b.getConfigFieldData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defParams, err := ldaputil.NewConfigEntry(nil, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	falseBool := new(bool)
+	*falseBool = false
+
+	exp := &ldapConfigEntry{
+		TokenParams: tokenutil.TokenParams{
+			TokenPeriod:         5 * time.Minute,
+			TokenExplicitMaxTTL: 24 * time.Hour,
+		},
+		ConfigEntry: &ldaputil.ConfigEntry{
+			Url:                      "ldap://ldap.forumsys.com",
+			UserAttr:                 "uid",
+			UserDN:                   "dc=example,dc=com",
+			GroupDN:                  "dc=example,dc=com",
+			BindDN:                   "cn=read-only-admin,dc=example,dc=com",
+			GroupFilter:              defParams.GroupFilter,
+			DenyNullBind:             defParams.DenyNullBind,
+			GroupAttr:                defParams.GroupAttr,
+			TLSMinVersion:            defParams.TLSMinVersion,
+			TLSMaxVersion:            defParams.TLSMaxVersion,
+			CaseSensitiveNames:       falseBool,
+			UsePre111GroupCNBehavior: new(bool),
+		},
+	}
+
+	configEntry, err := b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Store just the config entry portion, for upgrade testing
+	entry, err := logical.StorageEntryJSON("config", configEntry.ConfigEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = configReq.Storage.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configEntry, err = b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We won't have token params anymore so nil those out
+	exp.TokenParams = tokenutil.TokenParams{}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
+	}
+
 }

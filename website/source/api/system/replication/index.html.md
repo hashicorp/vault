@@ -16,9 +16,9 @@ description: |-
 This endpoint attempts recovery if replication is in an adverse state. For
 example: an error has caused replication to stop syncing.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/recover`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/recover`   |
 
 ### Sample Request
 
@@ -44,9 +44,9 @@ depending on the number and size of objects in the data store.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/reindex`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/reindex`   |
 
 ```
 $ curl \
@@ -70,9 +70,9 @@ sync progress, etc).
 
 This is an authenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/status`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/status`    |
 
 ### Sample Request
 

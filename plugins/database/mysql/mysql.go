@@ -9,12 +9,11 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const (
@@ -23,7 +22,7 @@ const (
 		DROP USER '{{name}}'@'%'
 	`
 
-	defaultMySQLRotateRootCredentialsSQL = `
+	defaultMySQLRotateCredentialsSQL = `
 		ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
 	`
 
@@ -37,7 +36,7 @@ var (
 	LegacyUsernameLen int = 16
 )
 
-var _ dbplugin.Database = &MySQL{}
+var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
 	*connutil.SQLConnectionProducer
@@ -94,7 +93,7 @@ func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -113,17 +112,7 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	// Grab the lock
-	m.Lock()
-	defer m.Unlock()
-
 	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	// Get the connection
-	db, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
 
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
@@ -144,57 +133,15 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 		return "", "", err
 	}
 
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
+	queryMap := map[string]string{
+		"name":       username,
+		"password":   password,
+		"expiration": expirationStr,
+	}
+
+	if err := m.executePreparedStatmentsWithMap(ctx, statements.Creation, queryMap); err != nil {
 		return "", "", err
 	}
-	defer tx.Rollback()
-
-	// Execute each query
-	for _, stmt := range statements.Creation {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
-			query = dbutil.QueryHelper(query, map[string]string{
-				"name":       username,
-				"password":   password,
-				"expiration": expirationStr,
-			})
-
-			stmt, err := tx.PrepareContext(ctx, query)
-			if err != nil {
-				// If the error code we get back is Error 1295: This command is not
-				// supported in the prepared statement protocol yet, we will execute
-				// the statement without preparing it. This allows the caller to
-				// manually prepare statements, as well as run other not yet
-				// prepare supported commands. If there is no error when running we
-				// will continue to the next statement.
-				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-					_, err = tx.ExecContext(ctx, query)
-					if err != nil {
-						return "", "", err
-					}
-					continue
-				}
-
-				return "", "", err
-			}
-			if _, err := stmt.ExecContext(ctx); err != nil {
-				stmt.Close()
-				return "", "", err
-			}
-			stmt.Close()
-		}
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return "", "", err
-	}
-
 	return username, password, nil
 }
 
@@ -263,9 +210,9 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		return nil, errors.New("username and password are required to rotate")
 	}
 
-	rotateStatents := statements
-	if len(rotateStatents) == 0 {
-		rotateStatents = []string{defaultMySQLRotateRootCredentialsSQL}
+	rotateStatements := statements
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
 	}
 
 	db, err := m.getConnection(ctx)
@@ -286,7 +233,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		return nil, err
 	}
 
-	for _, stmt := range rotateStatents {
+	for _, stmt := range rotateStatements {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -315,4 +262,98 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	m.RawConfig["password"] = password
 	return m.RawConfig, nil
+}
+
+// SetCredentials uses provided information to set the password to a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for setting
+// the password of static accounts, as well as rolling back passwords in the
+// database in the event an updated database fails to save in Vault's storage.
+func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	rotateStatements := statements.Rotation
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultMySQLRotateCredentialsSQL}
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	queryMap := map[string]string{
+		"name":     username,
+		"password": password,
+	}
+
+	if err := m.executePreparedStatmentsWithMap(ctx, statements.Rotation, queryMap); err != nil {
+		return "", "", err
+	}
+	return username, password, nil
+}
+
+// executePreparedStatmentsWithMap loops through the given templated SQL statements and
+// applies the a map to them, interpolating values into the templates,returning
+// tthe resulting username and password
+func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	// Get the connection
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return err
+	}
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// Execute each query
+	for _, stmt := range statements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			query = dbutil.QueryHelper(query, queryMap)
+
+			stmt, err := tx.PrepareContext(ctx, query)
+			if err != nil {
+				// If the error code we get back is Error 1295: This command is not
+				// supported in the prepared statement protocol yet, we will execute
+				// the statement without preparing it. This allows the caller to
+				// manually prepare statements, as well as run other not yet
+				// prepare supported commands. If there is no error when running we
+				// will continue to the next statement.
+				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+					_, err = tx.ExecContext(ctx, query)
+					if err != nil {
+						stmt.Close()
+						return err
+					}
+					continue
+				}
+
+				return err
+			}
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				stmt.Close()
+				return err
+			}
+			stmt.Close()
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }

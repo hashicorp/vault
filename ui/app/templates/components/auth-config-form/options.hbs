@@ -1,13 +1,18 @@
 <form {{action (perform saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="save" @noun="auth method" />
+    <NamespaceReminder @mode="save" @noun="Auth Method" />
     {{message-error model=model}}
     {{#each model.tuneAttrs as |attr|}}
       {{form-field data-test-field attr=attr model=model}}
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button type="submit" data-test-save-config=true class="button is-primary {{if saveModel.isRunning 'loading'}}" disabled={{saveModel.isRunning}}>
+    <button
+      type="submit"
+      data-test-save-config="true"
+      class="button is-primary {{if saveModel.isRunning "loading"}}"
+      disabled={{saveModel.isRunning}}
+    >
       Update Options
     </button>
   </div>

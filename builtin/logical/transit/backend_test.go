@@ -15,10 +15,10 @@ import (
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -30,7 +30,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend(config)
+	b, _ := Backend(context.Background(), config)
 	if b == nil {
 		t.Fatalf("failed to create backend")
 	}
@@ -50,7 +50,7 @@ func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
 		System:      sysView,
 	}
 
-	b := Backend(conf)
+	b, _ := Backend(context.Background(), conf)
 	if b == nil {
 		t.Fatal("failed to create backend")
 	}
@@ -61,6 +61,49 @@ func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
 	}
 
 	return b, storage
+}
+
+func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+	sysView := logical.TestSystemView()
+
+	conf := &logical.BackendConfig{
+		StorageView: s,
+		System:      sysView,
+	}
+
+	b, _ := Backend(context.Background(), conf)
+	if b == nil {
+		t.Fatal("failed to create backend")
+	}
+
+	err := b.Backend.Setup(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b
+}
+
+func createBackendWithForceNoCacheWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+	sysView := logical.TestSystemView()
+	sysView.CachingDisabledVal = true
+
+	conf := &logical.BackendConfig{
+		StorageView: s,
+		System:      sysView,
+	}
+
+	b, _ := Backend(context.Background(), conf)
+	if b == nil {
+		t.Fatal("failed to create backend")
+	}
+
+	err := b.Backend.Setup(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b
 }
 
 func TestTransit_RSA(t *testing.T) {
@@ -1294,16 +1337,17 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 func TestPolicyFuzzing(t *testing.T) {
 	var be *backend
 	sysView := logical.TestSystemView()
+	sysView.CachingDisabledVal = true
 	conf := &logical.BackendConfig{
 		System: sysView,
 	}
 
-	be = Backend(conf)
+	be, _ = Backend(context.Background(), conf)
 	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 
 	sysView.CachingDisabledVal = true
-	be = Backend(conf)
+	be, _ = Backend(context.Background(), conf)
 	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 }

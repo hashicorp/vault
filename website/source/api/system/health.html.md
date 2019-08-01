@@ -17,8 +17,8 @@ This endpoint returns the health status of Vault. This matches the semantics of
 a Consul HTTP health check and provides a simple way to monitor the health of a
 Vault instance.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `HEAD`   | `/sys/health`                | `000 (empty body)`     |
 | `GET`    | `/sys/health`                | `000 application/json` |
 

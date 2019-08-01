@@ -7,7 +7,6 @@ import indexPage from 'vault/tests/pages/settings/auth/configure/index';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 const cli = create(consolePanel);
 
@@ -30,13 +29,12 @@ module('Acceptance | settings/auth/configure/section', function(hooks) {
     await enablePage.enable(type, path);
     await page.visit({ path, section });
     await page.fillInTextarea('description', 'This is AppRole!');
-    await withFlash(page.save(), () => {
-      assert.equal(
-        page.flash.latestMessage,
-        `The configuration options were saved successfully.`,
-        'success flash shows'
-      );
-    });
+    await page.save();
+    assert.equal(
+      page.flash.latestMessage,
+      `The configuration was saved successfully.`,
+      'success flash shows'
+    );
     let tuneRequest = this.server.passthroughRequests.filterBy('url', `/v1/sys/mounts/auth/${path}/tune`)[0];
     let keys = Object.keys(JSON.parse(tuneRequest.requestBody));
     assert.ok(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');

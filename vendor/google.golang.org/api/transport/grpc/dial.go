@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package transport/grpc supports network connections to GRPC servers.
+// Package grpc supports network connections to GRPC servers.
 // This package is not intended for use by end developers. Use the
 // google.golang.org/api/option package to configure API clients.
 package grpc
 
 import (
+	"context"
 	"errors"
 	"log"
 
-	"golang.org/x/net/context"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -60,7 +61,7 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 		return o.GRPCConn, nil
 	}
 	grpcOpts := []grpc.DialOption{
-		grpc.WithDisableRetry(), // We don't want to have two methods of retry until we're ready for it.
+		grpc.WithWaitForHandshake(),
 	}
 	if insecure {
 		grpcOpts = []grpc.DialOption{grpc.WithInsecure()}
@@ -73,7 +74,11 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 			return nil, err
 		}
 		grpcOpts = []grpc.DialOption{
-			grpc.WithPerRPCCredentials(oauth.TokenSource{creds.TokenSource}),
+			grpc.WithPerRPCCredentials(grpcTokenSource{
+				TokenSource:   oauth.TokenSource{creds.TokenSource},
+				quotaProject:  o.QuotaProject,
+				requestReason: o.RequestReason,
+			}),
 			grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		}
 	}
@@ -90,4 +95,35 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 		grpcOpts = append(grpcOpts, grpc.WithUserAgent(o.UserAgent))
 	}
 	return grpc.DialContext(ctx, o.Endpoint, grpcOpts...)
+}
+
+func addOCStatsHandler(opts []grpc.DialOption) []grpc.DialOption {
+	return append(opts, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
+}
+
+// grpcTokenSource supplies PerRPCCredentials from an oauth.TokenSource.
+type grpcTokenSource struct {
+	oauth.TokenSource
+
+	// Additional metadata attached as headers.
+	quotaProject  string
+	requestReason string
+}
+
+// GetRequestMetadata gets the request metadata as a map from a grpcTokenSource.
+func (ts grpcTokenSource) GetRequestMetadata(ctx context.Context, uri ...string) (
+	map[string]string, error) {
+	metadata, err := ts.TokenSource.GetRequestMetadata(ctx, uri...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Attach system parameters into the metadata
+	if ts.quotaProject != "" {
+		metadata["X-goog-user-project"] = ts.quotaProject
+	}
+	if ts.requestReason != "" {
+		metadata["X-goog-request-reason"] = ts.requestReason
+	}
+	return metadata, nil
 }

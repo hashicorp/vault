@@ -3,7 +3,9 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import withFlash from 'vault/tests/helpers/with-flash';
+import { create } from 'ember-cli-page-object';
+import flashMessage from 'vault/tests/pages/components/flash-message';
+const flash = create(flashMessage);
 
 const disableReplication = async (type, assert) => {
   // disable performance replication
@@ -11,17 +13,15 @@ const disableReplication = async (type, assert) => {
   if (findAll('[data-test-replication-link="manage"]').length) {
     await click('[data-test-replication-link="manage"]');
     await click('[data-test-disable-replication] button');
-    await withFlash(click('[data-test-confirm-button]'), () => {
-      if (assert) {
-        assert.equal(currentURL(), `/vault/replication/${type}/manage`, 'redirects to the replication page');
-        assert.equal(
-          // TODO better test selectors for flash messages
-          find('[data-test-flash-message-body]').textContent.trim(),
-          'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
-          'renders info flash when disabled'
-        );
-      }
-    });
+    await click('[data-test-confirm-button]');
+    if (assert) {
+      assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
+      assert.equal(
+        flash.latestMessage,
+        'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
+        'renders info flash when disabled'
+      );
+    }
     await settled();
   }
 };
@@ -32,12 +32,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   hooks.beforeEach(async function() {
     await authPage.login();
     await disableReplication('dr');
-    return disableReplication('performance');
+    await disableReplication('performance');
   });
 
   hooks.afterEach(async function() {
     await disableReplication('dr');
-    return disableReplication('performance');
+    await disableReplication('performance');
   });
 
   test('replication', async function(assert) {
@@ -53,7 +53,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-type-select="performance"]');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
-    await withFlash(click('[data-test-replication-enable]'));
+    await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
 
     // add a secondary with a mount filter config
@@ -90,13 +90,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // delete config
     await click('[data-test-replication-link="edit-mount-config"]');
     await click('[data-test-delete-mount-config] button');
-    await withFlash(click('[data-test-confirm-button]'), () => {
-      assert.equal(
-        findAll('[data-test-flash-message-body]')[0].textContent.trim(),
-        `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
-        'renders success flash upon deletion'
-      );
-    });
+    await click('[data-test-confirm-button]');
+    assert.equal(
+      flash.latestMessage,
+      `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
+      'renders success flash upon deletion'
+    );
     assert.equal(
       currentURL(),
       `/vault/replication/performance/secondaries`,
@@ -118,7 +117,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // enable dr replication
     await visit('vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await withFlash(click('button[type="submit"]'));
+    await click('button[type="submit"]');
 
     await pollCluster(this.owner);
     assert.ok(
@@ -140,7 +139,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     assert
       .dom('[data-test-secondary-name]')
-      .hasText(secondaryName, 'it displays the secondary in the list of known secondaries');
+      .includesText(secondaryName, 'it displays the secondary in the list of known secondaries');
   });
 
   test('disabling dr primary when perf replication is enabled', async function(assert) {
@@ -148,13 +147,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // enable perf replication
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
-    await withFlash(click('[data-test-replication-enable]'));
+    await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
 
     // enable dr replication
     await visit('/vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await withFlash(click('[data-test-replication-enable]'));
+    await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');

@@ -23,16 +23,16 @@ module('Unit | Machine | auth-machine', function() {
       event: 'CONTINUE',
       params: null,
       expectedResults: {
-        value: 'list',
+        value: 'config',
         actions: [
-          { component: 'wizard/auth-list', level: 'step', type: 'render' },
-          { component: 'wizard/mounts-wizard', level: 'feature', type: 'render' },
+          { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+          { type: 'render', level: 'step', component: 'wizard/auth-config' },
         ],
       },
     },
     {
-      currentState: 'list',
-      event: 'DETAILS',
+      currentState: 'config',
+      event: 'CONTINUE',
       expectedResults: {
         value: 'details',
         actions: [

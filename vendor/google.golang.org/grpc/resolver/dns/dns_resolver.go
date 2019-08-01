@@ -21,6 +21,7 @@
 package dns
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,7 +32,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal/backoff"
 	"google.golang.org/grpc/internal/grpcrand"
@@ -43,9 +43,12 @@ func init() {
 }
 
 const (
-	defaultPort = "443"
-	defaultFreq = time.Minute * 30
-	golang      = "GO"
+	defaultPort       = "443"
+	defaultFreq       = time.Minute * 30
+	defaultDNSSvrPort = "53"
+	golang            = "GO"
+	// txtPrefix is the prefix string to be prepended to the host name for txt record lookup.
+	txtPrefix = "_grpc_config."
 	// In DNS, service config is encoded in a TXT record via the mechanism
 	// described in RFC-1464 using the attribute name grpc_config.
 	txtAttribute = "grpc_config="
@@ -60,6 +63,34 @@ var (
 	// a colon as the host and port separator
 	errEndsWithColon = errors.New("dns resolver: missing port after port-separator colon")
 )
+
+var (
+	defaultResolver netResolver = net.DefaultResolver
+	// To prevent excessive re-resolution, we enforce a rate limit on DNS
+	// resolution requests.
+	minDNSResRate = 30 * time.Second
+)
+
+var customAuthorityDialler = func(authority string) func(ctx context.Context, network, address string) (net.Conn, error) {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, network, authority)
+	}
+}
+
+var customAuthorityResolver = func(authority string) (netResolver, error) {
+	host, port, err := parseTarget(authority, defaultDNSSvrPort)
+	if err != nil {
+		return nil, err
+	}
+
+	authorityWithPort := net.JoinHostPort(host, port)
+
+	return &net.Resolver{
+		PreferGo: true,
+		Dial:     customAuthorityDialler(authorityWithPort),
+	}, nil
+}
 
 // NewBuilder creates a dnsBuilder which is used to factory DNS resolvers.
 func NewBuilder() resolver.Builder {
@@ -213,7 +244,13 @@ func (d *dnsResolver) watcher() {
 			return
 		case <-d.t.C:
 		case <-d.rn:
+			if !d.t.Stop() {
+				// Before resetting a timer, it should be stopped to prevent racing with
+				// reads on it's channel.
+				<-d.t.C
+			}
 		}
+
 		result, sc := d.lookup()
 		// Next lookup should happen within an interval defined by d.freq. It may be
 		// more often due to exponential retry on empty address list.
@@ -226,6 +263,16 @@ func (d *dnsResolver) watcher() {
 		}
 		d.cc.NewServiceConfig(sc)
 		d.cc.NewAddress(result)
+
+		// Sleep to prevent excessive re-resolutions. Incoming resolution requests
+		// will be queued in d.rn.
+		t := time.NewTimer(minDNSResRate)
+		select {
+		case <-t.C:
+		case <-d.ctx.Done():
+			t.Stop()
+			return
+		}
 	}
 }
 
@@ -256,7 +303,7 @@ func (d *dnsResolver) lookupSRV() []resolver.Address {
 }
 
 func (d *dnsResolver) lookupTXT() string {
-	ss, err := d.resolver.LookupTXT(d.ctx, d.host)
+	ss, err := d.resolver.LookupTXT(d.ctx, txtPrefix+d.host)
 	if err != nil {
 		grpclog.Infof("grpc: failed dns TXT record lookup due to %v.\n", err)
 		return ""
@@ -320,8 +367,8 @@ func formatIP(addr string) (addrIP string, ok bool) {
 
 // parseTarget takes the user input target string and default port, returns formatted host and port info.
 // If target doesn't specify a port, set the port to be the defaultPort.
-// If target is in IPv6 format and host-name is enclosed in sqarue brackets, brackets
-// are strippd when setting the host.
+// If target is in IPv6 format and host-name is enclosed in square brackets, brackets
+// are stripped when setting the host.
 // examples:
 // target: "www.google.com" defaultPort: "443" returns host: "www.google.com", port: "443"
 // target: "ipv4-host:80" defaultPort: "443" returns host: "ipv4-host", port: "80"

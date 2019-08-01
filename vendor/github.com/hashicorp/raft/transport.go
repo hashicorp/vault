@@ -58,6 +58,9 @@ type Transport interface {
 	// disk IO. If a Transport does not support this, it can simply
 	// ignore the call, and push the heartbeat onto the Consumer channel.
 	SetHeartbeatHandler(cb func(rpc RPC))
+
+	// TimeoutNow is used to start a leadership transfer to the target node.
+	TimeoutNow(id ServerID, target ServerAddress, args *TimeoutNowRequest, resp *TimeoutNowResponse) error
 }
 
 // WithClose is an interface that a transport may provide which

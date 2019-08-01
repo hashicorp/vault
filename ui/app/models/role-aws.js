@@ -29,6 +29,7 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
+  useOpenAPI: false,
   // credentialTypes are for backwards compatibility.
   // we use this to populate "credentialType" in
   // the serializer. if there is more than one, the
@@ -52,17 +53,15 @@ export default DS.Model.extend({
     editType: 'json',
   }),
   fields: computed('credentialType', function() {
-    let keys;
-    let credentialType = this.get('credentialType');
+    let credentialType = this.credentialType;
     let keysForType = {
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
     };
-    keys = keysForType[credentialType];
-    return expandAttributeMeta(this, keys);
-  }),
 
+    return expandAttributeMeta(this, keysForType[credentialType]);
+  }),
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),

@@ -76,8 +76,8 @@ func (client *Client) RemoveUserFromGroupWithCallback(request *RemoveUserFromGro
 // RemoveUserFromGroupRequest is the request struct for api RemoveUserFromGroup
 type RemoveUserFromGroupRequest struct {
 	*requests.RpcRequest
-	UserName  string `position:"Query" name:"UserName"`
 	GroupName string `position:"Query" name:"GroupName"`
+	UserName  string `position:"Query" name:"UserName"`
 }
 
 // RemoveUserFromGroupResponse is the response struct for api RemoveUserFromGroup

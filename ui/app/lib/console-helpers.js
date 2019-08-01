@@ -2,7 +2,7 @@ import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
+const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce(
@@ -32,26 +32,15 @@ export function extractDataAndFlags(data, flags) {
   );
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
-  const isUICommand = uiCommands.includes(command);
+export function executeUICommand(command, logAndOutput, commandFns) {
+  let cmd = command.startsWith('api') ? 'api' : command;
+  let isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  switch (command) {
-    case 'clearall':
-      clearLog(true);
-      break;
-    case 'clear':
-      clearLog();
-      break;
-    case 'fullscreen':
-      toggleFullscreen();
-      break;
-    case 'refresh':
-      refreshFn();
-      break;
+  if (typeof commandFns[cmd] === 'function') {
+    commandFns[cmd]();
   }
-
   return isUICommand;
 }
 
@@ -71,7 +60,17 @@ export function parseCommand(command, shouldThrow) {
       flags.push(arg);
     } else {
       if (path) {
-        data.push(arg);
+        let strippedArg = arg
+          // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
+          .split(/=(.+)/)
+          // remove matched wrapping " or ' from each item
+          .map(item => item.replace(/^("|')(.+)(\1)$/, '$2'))
+          // if there were quotes, there's an empty string as the last member in the array that we don't want,
+          // so filter it out
+          .filter(str => str !== '')
+          // glue the data back together
+          .join('=');
+        data.push(strippedArg);
       } else {
         path = arg;
       }

@@ -76,8 +76,8 @@ func (client *Client) UpdateRoleWithCallback(request *UpdateRoleRequest, callbac
 // UpdateRoleRequest is the request struct for api UpdateRole
 type UpdateRoleRequest struct {
 	*requests.RpcRequest
-	RoleName                    string `position:"Query" name:"RoleName"`
 	NewAssumeRolePolicyDocument string `position:"Query" name:"NewAssumeRolePolicyDocument"`
+	RoleName                    string `position:"Query" name:"RoleName"`
 }
 
 // UpdateRoleResponse is the response struct for api UpdateRole

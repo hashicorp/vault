@@ -35,6 +35,9 @@
     border: 0;
     margin-top: $spacing-xxs;
   }
+  .message-body.pre {
+    white-space: pre-wrap;
+  }
 
   p {
     font-size: $size-8;
@@ -99,12 +102,10 @@
 
 .message-inline {
   display: flex;
-  margin: -$spacing-xs 0 $spacing-l;
+  margin: 0 0 $spacing-l;
 
-  .icon {
-    flex: 0;
+  .hs-icon {
     margin: 0 $spacing-xxs 0 0;
-    min-width: fit-content;
   }
 
   .p {

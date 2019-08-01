@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Hash Data
+      Hash data
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -73,7 +73,7 @@
                  id="format"
                  onchange={{action (mut format) value="target.value"}}
               >
-                {{#each (reduce-to-array 'base64' 'hex') as |formatOption|}}
+                {{#each (array 'base64' 'hex') as |formatOption|}}
                   <option selected={{if format (eq format formatOption)}} value={{formatOption}}>
                     {{formatOption}}
                   </option>

@@ -65,6 +65,7 @@
   docs:
     - docs/agent/index.html
     - docs/agent/autoauth/index.html
+    - docs/agent/caching/index.html
 -
   title: "Secret Engines"
   docs:
@@ -78,6 +79,7 @@
     - docs/secrets/databases/index.html
     - docs/secrets/gcp/index.html
     - docs/secrets/gcpkms/index.html
+    - docs/secrets/kmip/index.html
     - docs/secrets/kv/index.html
     - docs/secrets/identity/index.html
     - docs/secrets/nomad/index.html
@@ -105,6 +107,7 @@
     - docs/auth/github.html
     - docs/auth/ldap.html
     - docs/auth/okta.html
+    - docs/auth/pcf.html
     - docs/auth/radius.html
     - docs/auth/cert.html
     - docs/auth/token.html

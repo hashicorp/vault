@@ -4,7 +4,7 @@
       <li>
         {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
           <span class="sep">&#x0002f;</span>
-          {{uppercase policyType}} Policies
+          {{uppercase policyType}} policies
         {{/link-to}}
       </li>
     </nav>
@@ -20,33 +20,34 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
+{{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink
+        @params={{array 'vault.cluster.policy.show' model.id}}
+        @data-test-policy-edit-toggle=true
+      >
+        Back to policy
+      </ToolbarLink>
+      <div class="toolbar-separator" />
+      {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @confirmMessage="This may affect access to Vault data."
+          @onConfirmAction={{action "deletePolicy" model}}
+          data-test-policy-delete="true"
+        >
+          Delete
+        </ConfirmAction>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
 <form {{action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     {{message-error model=model}}
     <NamespaceReminder @mode="edit" @noun="policy" />
-    <div class="level is-mobile">
-      <div class="level-left">
-        <label for="policy" class="is-label">Policy</label>
-      </div>
-      <div class="level-right">
-        <div class="field is-horizontal is-flex-end is-single-line">
-          {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
-            <div class="control is-flex">
-              {{input
-                id="edit"
-                type="checkbox"
-                name="navToEdit"
-                class="switch is-rounded is-success is-small"
-                checked=true
-                change=(action (nav-to-route 'vault.cluster.policy.show' model.id replace=true) )
-                data-test-policy-edit-toggle=true
-              }}
-              <label for="edit">Edit</label>
-            </div>
-          {{/if}}
-        </div>
-      </div>
-    </div>
+    <label for="policy" class="is-label">Policy</label>
     <div class="field">
       {{ivy-codemirror
         value=model.policy
@@ -90,16 +91,6 @@
           {{/link-to}}
         </div>
       </div>
-      {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
-        {{#confirm-action
-          buttonClasses="button is-ghost"
-          onConfirmAction=(action "deletePolicy" model)
-          confirmMessage=(concat "Are you sure you want to delete " model.id "?")
-          data-test-policy-delete=true
-        }}
-            Delete
-        {{/confirm-action}}
-      {{/if}}
     </div>
   </div>
 </form>

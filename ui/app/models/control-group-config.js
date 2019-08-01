@@ -16,6 +16,6 @@ export default DS.Model.extend({
   maxTtl: attr({
     defaultValue: 0,
     editType: 'ttl',
-    label: 'Max TTL',
+    label: 'Maximum TTL',
   }),
 });

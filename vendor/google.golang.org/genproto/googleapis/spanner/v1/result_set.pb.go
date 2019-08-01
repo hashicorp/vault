@@ -5,10 +5,11 @@ package spanner
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -20,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // Results from [Read][google.spanner.v1.Spanner.Read] or
 // [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].
@@ -28,18 +29,18 @@ type ResultSet struct {
 	// Metadata about the result set, such as row type information.
 	Metadata *ResultSetMetadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	// Each element in `rows` is a row whose format is defined by
-	// [metadata.row_type][google.spanner.v1.ResultSetMetadata.row_type]. The ith element
-	// in each row matches the ith field in
-	// [metadata.row_type][google.spanner.v1.ResultSetMetadata.row_type]. Elements are
-	// encoded based on type as described
-	// [here][google.spanner.v1.TypeCode].
+	// [metadata.row_type][google.spanner.v1.ResultSetMetadata.row_type]. The ith
+	// element in each row matches the ith field in
+	// [metadata.row_type][google.spanner.v1.ResultSetMetadata.row_type]. Elements
+	// are encoded based on type as described [here][google.spanner.v1.TypeCode].
 	Rows []*_struct.ListValue `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
 	// Query plan and execution statistics for the SQL statement that
 	// produced this result set. These can be requested by setting
 	// [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode].
 	// DML statements always produce stats containing the number of rows
 	// modified, unless executed using the
-	// [ExecuteSqlRequest.QueryMode.PLAN][google.spanner.v1.ExecuteSqlRequest.QueryMode.PLAN] [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode].
+	// [ExecuteSqlRequest.QueryMode.PLAN][google.spanner.v1.ExecuteSqlRequest.QueryMode.PLAN]
+	// [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode].
 	// Other fields may or may not be populated, based on the
 	// [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode].
 	Stats                *ResultSetStats `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats,omitempty"`
@@ -112,9 +113,10 @@ type PartialResultSet struct {
 	//
 	// It is possible that the last value in values is "chunked",
 	// meaning that the rest of the value is sent in subsequent
-	// `PartialResultSet`(s). This is denoted by the [chunked_value][google.spanner.v1.PartialResultSet.chunked_value]
-	// field. Two or more chunked values can be merged to form a
-	// complete value as follows:
+	// `PartialResultSet`(s). This is denoted by the
+	// [chunked_value][google.spanner.v1.PartialResultSet.chunked_value] field.
+	// Two or more chunked values can be merged to form a complete value as
+	// follows:
 	//
 	//   * `bool/number/null`: cannot be chunked
 	//   * `string`: concatenate the strings
@@ -175,9 +177,10 @@ type PartialResultSet struct {
 	// containing the field value `"Hello"`, and a second containing the
 	// field value `"World" = "W" + "orl" + "d"`.
 	Values []*_struct.Value `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
-	// If true, then the final value in [values][google.spanner.v1.PartialResultSet.values] is chunked, and must
-	// be combined with more values from subsequent `PartialResultSet`s
-	// to obtain a complete field value.
+	// If true, then the final value in
+	// [values][google.spanner.v1.PartialResultSet.values] is chunked, and must be
+	// combined with more values from subsequent `PartialResultSet`s to obtain a
+	// complete field value.
 	ChunkedValue bool `protobuf:"varint,3,opt,name=chunked_value,json=chunkedValue,proto3" json:"chunked_value,omitempty"`
 	// Streaming calls might be interrupted for a variety of reasons, such
 	// as TCP connection loss. If this occurs, the stream of results can
@@ -187,10 +190,9 @@ type PartialResultSet struct {
 	ResumeToken []byte `protobuf:"bytes,4,opt,name=resume_token,json=resumeToken,proto3" json:"resume_token,omitempty"`
 	// Query plan and execution statistics for the statement that produced this
 	// streaming result set. These can be requested by setting
-	// [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode] and are sent
-	// only once with the last response in the stream.
-	// This field will also be present in the last response for DML
-	// statements.
+	// [ExecuteSqlRequest.query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode]
+	// and are sent only once with the last response in the stream. This field
+	// will also be present in the last response for DML statements.
 	Stats                *ResultSetStats `protobuf:"bytes,5,opt,name=stats,proto3" json:"stats,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
 	XXX_unrecognized     []byte          `json:"-"`
@@ -257,7 +259,8 @@ func (m *PartialResultSet) GetStats() *ResultSetStats {
 	return nil
 }
 
-// Metadata about a [ResultSet][google.spanner.v1.ResultSet] or [PartialResultSet][google.spanner.v1.PartialResultSet].
+// Metadata about a [ResultSet][google.spanner.v1.ResultSet] or
+// [PartialResultSet][google.spanner.v1.PartialResultSet].
 type ResultSetMetadata struct {
 	// Indicates the field names and types for the rows in the result
 	// set.  For example, a SQL query like `"SELECT UserId, UserName FROM
@@ -315,9 +318,11 @@ func (m *ResultSetMetadata) GetTransaction() *Transaction {
 	return nil
 }
 
-// Additional statistics about a [ResultSet][google.spanner.v1.ResultSet] or [PartialResultSet][google.spanner.v1.PartialResultSet].
+// Additional statistics about a [ResultSet][google.spanner.v1.ResultSet] or
+// [PartialResultSet][google.spanner.v1.PartialResultSet].
 type ResultSetStats struct {
-	// [QueryPlan][google.spanner.v1.QueryPlan] for the query associated with this result.
+	// [QueryPlan][google.spanner.v1.QueryPlan] for the query associated with this
+	// result.
 	QueryPlan *QueryPlan `protobuf:"bytes,1,opt,name=query_plan,json=queryPlan,proto3" json:"query_plan,omitempty"`
 	// Aggregated statistics from the execution of the query. Only present when
 	// the query is profiled. For example, a query could return the statistics as
@@ -416,68 +421,12 @@ func (m *ResultSetStats) GetRowCountLowerBound() int64 {
 	return 0
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*ResultSetStats) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _ResultSetStats_OneofMarshaler, _ResultSetStats_OneofUnmarshaler, _ResultSetStats_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*ResultSetStats) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*ResultSetStats_RowCountExact)(nil),
 		(*ResultSetStats_RowCountLowerBound)(nil),
 	}
-}
-
-func _ResultSetStats_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*ResultSetStats)
-	// row_count
-	switch x := m.RowCount.(type) {
-	case *ResultSetStats_RowCountExact:
-		b.EncodeVarint(3<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.RowCountExact))
-	case *ResultSetStats_RowCountLowerBound:
-		b.EncodeVarint(4<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.RowCountLowerBound))
-	case nil:
-	default:
-		return fmt.Errorf("ResultSetStats.RowCount has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _ResultSetStats_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*ResultSetStats)
-	switch tag {
-	case 3: // row_count.row_count_exact
-		if wire != proto.WireVarint {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeVarint()
-		m.RowCount = &ResultSetStats_RowCountExact{int64(x)}
-		return true, err
-	case 4: // row_count.row_count_lower_bound
-		if wire != proto.WireVarint {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeVarint()
-		m.RowCount = &ResultSetStats_RowCountLowerBound{int64(x)}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _ResultSetStats_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*ResultSetStats)
-	// row_count
-	switch x := m.RowCount.(type) {
-	case *ResultSetStats_RowCountExact:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(x.RowCountExact))
-	case *ResultSetStats_RowCountLowerBound:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(x.RowCountLowerBound))
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 func init() {

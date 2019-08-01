@@ -11,9 +11,9 @@ description: |-
 
 This endpoint creates or updates a group alias.
 
-| Method   | Path                     | Produces               |
-| :------- | :----------------------- | :----------------------|
-| `POST`   | `/identity/group-alias`  | `200 application/json` |
+| Method   | Path                     |
+| :----------------------- | :----------------------|
+| `POST`   | `/identity/group-alias`  |
 
 ### Parameters
 
@@ -22,8 +22,8 @@ This endpoint creates or updates a group alias.
 - `id` `(string: <optional>)` - ID of the group alias. If set, updates the
   corresponding existing group alias.
 
-- `mount_accessor` `(string: "")` – Mount accessor to which this alias belongs
-  toMount accessor to which this alias belongs to.
+- `mount_accessor` `(string: "")` – Mount accessor which this alias belongs
+  to.
 
 - `canonical_id` `(string: "")` - ID of the group to which this is an alias.
 
@@ -63,9 +63,9 @@ $ curl \
 
 This endpoint is used to update an existing group alias.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `POST`    | `/identity/group-alias/id/:id`   | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `POST`    | `/identity/group-alias/id/:id`   |
 
 ### Parameters
 
@@ -73,8 +73,8 @@ This endpoint is used to update an existing group alias.
 
 - `name` `(string: entity-<UUID>)` – Name of the group alias.
 
-- `mount_accessor` `(string: "")` – Mount accessor to which this alias belongs
-  toMount accessor to which this alias belongs to.
+- `mount_accessor` `(string: "")` – Mount accessor which this alias belongs
+  to.
 
 - `canonical_id` `(string: "")` - ID of the group to which this is an alias.
 
@@ -113,9 +113,9 @@ $ curl \
 
 This endpoint queries the group alias by its identifier.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `GET`    | `/identity/group-alias/id/:id`    | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `GET`    | `/identity/group-alias/id/:id`    |
 
 ### Parameters
 
@@ -152,9 +152,9 @@ $ curl \
 
 This endpoint deletes a group alias.
 
-| Method     | Path                             | Produces               |
-| :--------- | :------------------------------- | :----------------------|
-| `DELETE`   | `/identity/group-alias/id/:id`   | `204 (empty body)`     |
+| Method     | Path                             |
+| :------------------------------- | :----------------------|
+| `DELETE`   | `/identity/group-alias/id/:id`   |
 
 ## Parameters
 
@@ -169,14 +169,14 @@ $ curl \
     http://127.0.0.1:8200/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
 ```
 
-## List Entities by ID
+## List Group Alias by ID
 
 This endpoint returns a list of available group aliases by their identifiers.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `LIST`   | `/identity/group-alias/id`                | `200 application/json` |
-| `GET`    | `/identity/group-alias/id?list=true`      | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `LIST`   | `/identity/group-alias/id`                |
+| `GET`    | `/identity/group-alias/id?list=true`      |
 
 ### Sample Request
 

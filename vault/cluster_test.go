@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"net"
 	"net/http"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 var (
@@ -101,37 +101,28 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
+	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+	addrs := cores[0].clusterListener.Addrs()
+
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
-	var lastTLSConfig *tls.Config
 	checkListenersFunc := func(expectFail bool) {
-		tlsConfig, err := cores[0].ClusterTLSConfig(context.Background(), nil, nil)
-		if err != nil {
-			if err.Error() != consts.ErrSealed.Error() {
-				t.Fatal(err)
-			}
-			tlsConfig = lastTLSConfig
-		} else {
-			tlsConfig.NextProtos = []string{"h2"}
-			lastTLSConfig = tlsConfig
-		}
+		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
+		dialer := cores[0].getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+		for i := range cores[0].Listeners {
 
-		for _, ln := range cores[0].Listeners {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				t.Fatalf("%s not a TCP port", tcpAddr.String())
-			}
-
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), tlsConfig)
+			clnAddr := addrs[i]
+			netConn, err := dialer(clnAddr.String(), 0)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+					t.Logf("testing %s unsuccessful as expected", clnAddr)
 					continue
 				}
-				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
+				t.Fatalf("error: %v\ncluster listener is %s", err, clnAddr)
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+				t.Fatalf("testing %s not unsuccessful as expected", clnAddr)
 			}
+			conn := netConn.(*tls.Conn)
 			err = conn.Handshake()
 			if err != nil {
 				t.Fatal(err)
@@ -140,10 +131,10 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			switch {
 			case connState.Version != tls.VersionTLS12:
 				t.Fatal("version mismatch")
-			case connState.NegotiatedProtocol != "h2" || !connState.NegotiatedProtocolIsMutual:
+			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+105)
+			t.Logf("testing %s successful", clnAddr)
 		}
 	}
 
@@ -165,7 +156,8 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	checkListenersFunc(true)
 
 	// After this period it should be active again
-	time.Sleep(manualStepDownSleepPeriod)
+	TestWaitActive(t, cores[0].Core)
+	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 	checkListenersFunc(false)
 
 	err = cores[0].Core.Seal(cluster.RootToken)
@@ -392,12 +384,13 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	tlsConf, err := core.Core.ClusterTLSConfig(context.Background(), nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	core.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{core.Core})
 
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), tlsConf)
+	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
+	dialer := core.getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+
+	netConn, err := dialer(core.clusterListener.Addrs()[0].String(), 0)
+	conn := netConn.(*tls.Conn)
 	if err != nil {
 		t.Fatal(err)
 	}
