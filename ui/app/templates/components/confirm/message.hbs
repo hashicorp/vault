@@ -10,11 +10,22 @@
       </p>
     </div>
     <div class="confirm-action-options">
-      <button type="button" disabled={{disabled}} class="link is-destroy" data-test-confirm-button="true"
-        {{action onConfirm}}>
+      <button
+        type="button"
+        disabled={{unless renderedTrigger true}}
+        class="link is-destroy"
+        data-test-confirm-button="true"
+        {{action onConfirm}}
+      >
         {{confirmButtonText}}
       </button>
-      <button type="button" class="link" data-test-confirm-cancel-button="true" {{action onCancel}}>
+      <button
+        type="button"
+        disabled={{unless renderedTrigger true}}
+        class="link"
+        data-test-confirm-cancel-button="true"
+        {{action onCancel}}
+      >
         {{cancelButtonText}}
       </button>
     </div>
