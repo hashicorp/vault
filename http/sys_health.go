@@ -148,6 +148,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = drSecondaryCode
 	case !perfStandbyOK && perfStandby:
 		code = perfStandbyCode
+	case perfStandbyOK && perfStandby:
+		code = activeCode
 	case !standbyOK && standby:
 		code = standbyCode
 	}
