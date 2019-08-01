@@ -111,14 +111,16 @@ The Vault UI uses Storybook to catalog all of its components. Below are details 
 ### Storybook Commands at a Glance
 
 | Command                                    | Description               |
-| ------------------------------------------ | ------------------------- |
-| `yarn storybook`                           | run storybook             |
-| `ember generate story [name-of-component]` | generate a new story      |
-| `yarn gen-story-md [name-of-component]`    | update a story notes file |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `yarn storybook`                                                         | run storybook                                              |
+| `ember generate story [name-of-component]`                               | generate a new story                                       |
+| `ember generate story [name-of-component] -ir [name-of-engine-or-addon]` | generate a new story in the specified engine or addon      |
+| `yarn gen-story-md [name-of-component]`                                  | update a story notes file                                  |
+| `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]`        | update a story notes file in the specified engine or addon |
 
 ### Writing Stories
 
-Each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`.
+Each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`. Components in the `core` addon located at `vault/ui/lib/core/addon/components` have corresponding stories and markdown files in `vault/ui/lib/core/stories`.
 
 #### Adding a new story
 
