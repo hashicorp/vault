@@ -130,7 +130,7 @@ and consider if they're appropriate for your deployment.
           topologyKey: kubernetes.io/hostname
     ```
 
-  * <a name="v-server-service" href="#v-server-service">`extraVolumes`</a> - This configures the `Service` resource create for the Vault server.
+  * <a name="v-server-service" href="#v-server-service">`extraVolumes`</a> - This configures the `Service` resource created for the Vault server.
 
       - <a name="v-server-service-enabled" href="#v-server-service-enabled">`enabled`</a> (`boolean: true`) -
       Enables a service to allow other pods running in Kubernetes to communicate with the Vault server.
