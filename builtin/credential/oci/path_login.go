@@ -92,6 +92,9 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	//Authenticate the request with Identity
+	if(b.authenticationClient == nil && b.createAuthClient() != nil) {
+		return logical.RespondWithStatusCode(nil, req, http.StatusInternalServerError)
+	}
 	authenticateClientResponse, err := b.authenticationClient.AuthenticateClient(ctx, authenticateClientRequest)
 	if err != nil {
 		return unauthorizedLogicalResponse(req, b.Logger(), err)

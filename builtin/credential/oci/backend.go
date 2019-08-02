@@ -30,24 +30,16 @@ type backend struct {
 	// Lock to make changes to config entries
 	configMutex sync.RWMutex
 
+	// Lock to make changes to authClient entries
+	authClientMutex sync.RWMutex
+
 	authenticationClient *AuthenticationClient
 }
 
 func Backend() (*backend, error) {
 	b := &backend{}
 
-	//Create the instance principal provider
-	ip, err := auth.InstancePrincipalConfigurationProvider()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to create InstancePrincipalConfigurationProvider")
-	}
-
-	//Create the authentication client
-	authenticationClient, err := NewAuthenticationClientWithConfigurationProvider(ip)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to create authenticationClient")
-	}
-	b.authenticationClient = &authenticationClient
+	b.authenticationClient = nil
 
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -67,6 +59,34 @@ func Backend() (*backend, error) {
 	}
 
 	return b, nil
+}
+
+func (b *backend) createAuthClient() (error) {
+
+	b.authClientMutex.Lock()
+	defer b.authClientMutex.Unlock()
+
+	if(b.authenticationClient != nil) {
+		return nil
+	}
+
+	//Create the instance principal provider
+	ip, err := auth.InstancePrincipalConfigurationProvider()
+	if err != nil {
+		b.Logger().Debug("Unable to create InstancePrincipalConfigurationProvider", "err", err)
+		return fmt.Errorf("Unable to create InstancePrincipalConfigurationProvider")
+	}
+
+	//Create the authentication client
+	authenticationClient, err := NewAuthenticationClientWithConfigurationProvider(ip)
+	if err != nil {
+		b.Logger().Debug("Unable to create authenticationClient", "err", err)
+		return fmt.Errorf("Unable to create authenticationClient")
+	}
+
+	b.authenticationClient = &authenticationClient
+
+	return nil
 }
 
 const backendHelp = `
