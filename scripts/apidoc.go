@@ -48,11 +48,12 @@ func main() {
 	oas, err := loadOpenAPI(*sourceFile)
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 
 	if err := processTree(*root, oas); err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
