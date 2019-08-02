@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
-
 	mgo "gopkg.in/mgo.v2"
 )
 

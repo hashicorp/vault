@@ -9,12 +9,12 @@
   </ul>
   <div class="menu-toggle">
     {{#if isActive}}
-      <button type="button" class="button is-ghost" aria-label="close menu" {{action "closeMenu"}}>
-        {{i-con glyph="close" size=16}}
+      <button type="button" class="button is-ghost" {{action "closeMenu"}}>
+        <Icon @glyph="cancel-plain" aria-label="Close menu" />
       </button>
     {{else}}
-      <button type="button" class="button is-ghost has-text-grey-light" aria-label="open menu" {{action "openMenu"}}>
-        <ICon @glyph="more-vertical" @size=16 />
+      <button type="button" class="button is-ghost has-text-grey-light" {{action "openMenu"}}>
+        <Icon @glyph="more-vertical" aria-label="Open menu" />
       </button>
     {{/if}}
   </div>

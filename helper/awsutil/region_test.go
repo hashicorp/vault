@@ -86,8 +86,11 @@ func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
-	configuredRegion := ""
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
 
+	configuredRegion := ""
 	cleanupEnv := setEnvRegion(t, "")
 	defer cleanupEnv()
 
@@ -107,6 +110,12 @@ func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
+	if !shouldTestFiles {
+		// In some test environments, like a CI environment, we may not have the
+		// permissions to write to the ~/.aws/config file. Thus, this test is off
+		// by default but can be set to on for local development.
+		t.SkipNow()
+	}
 	configuredRegion := ""
 
 	cleanupEnv := setEnvRegion(t, "")
@@ -125,6 +134,10 @@ func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *testing.T) {
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
+
 	configuredRegion := ""
 
 	cleanupEnv := setEnvRegion(t, "")

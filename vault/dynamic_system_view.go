@@ -16,9 +16,38 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 )
 
+type ctxKeyForwardedRequestMountAccessor struct{}
+
+func (c ctxKeyForwardedRequestMountAccessor) String() string {
+	return "forwarded-req-mount-accessor"
+}
+
 type dynamicSystemView struct {
 	core       *Core
 	mountEntry *MountEntry
+}
+
+type extendedSystemView struct {
+	dynamicSystemView
+}
+
+func (e extendedSystemView) Auditor() logical.Auditor {
+	return genericAuditor{
+		mountType: e.mountEntry.Type,
+		namespace: e.mountEntry.Namespace(),
+		c:         e.core,
+	}
+}
+
+func (e extendedSystemView) ForwardGenericRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	// Forward the request if allowed
+	if couldForward(e.core) {
+		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
+		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
+		return forward(ctx, e.core, req)
+	}
+
+	return nil, logical.ErrReadOnly
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
@@ -212,8 +241,9 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 
 	// Return a subset of the data
 	ret := &logical.Entity{
-		ID:   entity.ID,
-		Name: entity.Name,
+		ID:       entity.ID,
+		Name:     entity.Name,
+		Disabled: entity.Disabled,
 	}
 
 	if entity.Metadata != nil {

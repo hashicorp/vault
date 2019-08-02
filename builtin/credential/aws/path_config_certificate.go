@@ -6,18 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// dsaSignature represents the contents of the signature of a signed
-// content using digital signature algorithm.
-type dsaSignature struct {
-	R, S *big.Int
-}
 
 // This certificate is used to verify the PKCS#7 signature of the instance
 // identity document. As per AWS documentation, this public key is valid for
@@ -71,12 +64,14 @@ C1haGgSI/A1uZUKs/Zfnph0oEI0/hu1IIJ/SKBDtN5lvmZ/IzbOPIJWirlsllQIQ
 
 // pathListCertificates creates a path that enables listing of all
 // the AWS public certificates registered with Vault.
-func pathListCertificates(b *backend) *framework.Path {
+func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathCertificatesList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCertificatesList,
+			},
 		},
 
 		HelpSynopsis:    pathListCertificatesHelpSyn,
@@ -84,7 +79,7 @@ func pathListCertificates(b *backend) *framework.Path {
 	}
 }
 
-func pathConfigCertificate(b *backend) *framework.Path {
+func (b *backend) pathConfigCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -110,11 +105,19 @@ vary. Defaults to "pkcs7".`,
 
 		ExistenceCheck: b.pathConfigCertificateExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.ReadOperation:   b.pathConfigCertificateRead,
-			logical.DeleteOperation: b.pathConfigCertificateDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCertificateSyn,

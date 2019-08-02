@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -86,23 +87,38 @@ func ScanView(ctx context.Context, view ClearableView, cb func(path string)) err
 
 // CollectKeys is used to collect all the keys in a view
 func CollectKeys(ctx context.Context, view ClearableView) ([]string, error) {
-	// Accumulate the keys
-	var existing []string
+	return CollectKeysWithPrefix(ctx, view, "")
+}
+
+// CollectKeysWithPrefix is used to collect all the keys in a view with a given prefix string
+func CollectKeysWithPrefix(ctx context.Context, view ClearableView, prefix string) ([]string, error) {
+	var keys []string
+
 	cb := func(path string) {
-		existing = append(existing, path)
+		if strings.HasPrefix(path, prefix) {
+			keys = append(keys, path)
+		}
 	}
 
 	// Scan for all the keys
 	if err := ScanView(ctx, view, cb); err != nil {
 		return nil, err
 	}
-	return existing, nil
+	return keys, nil
 }
 
 // ClearView is used to delete all the keys in a view
 func ClearView(ctx context.Context, view ClearableView) error {
+	return ClearViewWithLogging(ctx, view, nil)
+}
+
+func ClearViewWithLogging(ctx context.Context, view ClearableView, logger hclog.Logger) error {
 	if view == nil {
 		return nil
+	}
+
+	if logger == nil {
+		logger = hclog.NewNullLogger()
 	}
 
 	// Collect all the keys
@@ -111,11 +127,28 @@ func ClearView(ctx context.Context, view ClearableView) error {
 		return err
 	}
 
+	logger.Debug("clearing view", "total_keys", len(keys))
+
 	// Delete all the keys
-	for _, key := range keys {
+	var pctDone int
+	for idx, key := range keys {
+		// Rather than keep trying to do stuff with a canceled context, bail;
+		// storage will fail anyways
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if err := view.Delete(ctx, key); err != nil {
 			return err
 		}
+
+		newPctDone := idx * 100.0 / len(keys)
+		if int(newPctDone) > pctDone {
+			pctDone = int(newPctDone)
+			logger.Trace("view deletion progress", "percent", pctDone, "keys_deleted", idx)
+		}
 	}
+
+	logger.Debug("view cleared")
+
 	return nil
 }

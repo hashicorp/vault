@@ -2,10 +2,14 @@ package tlsutil
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
+
+var ErrInvalidCertParams = errors.New("invalid certificate parameters")
 
 // TLSLookup maps the tls_min_version configuration to the internal value
 var TLSLookup = map[string]uint16{
@@ -64,4 +68,42 @@ func GetCipherName(cipher uint16) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("unsupported cipher %d", cipher)
+}
+
+func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var pool *x509.CertPool
+
+	switch {
+	case len(caCert) != 0:
+		// Valid
+	case len(clientCert) != 0 && len(clientKey) != 0:
+		// Valid
+	default:
+		return nil, ErrInvalidCertParams
+	}
+
+	if len(caCert) != 0 {
+		pool = x509.NewCertPool()
+		pool.AppendCertsFromPEM(caCert)
+	}
+
+	tlsConfig = &tls.Config{
+		RootCAs:    pool,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		MinVersion: tls.VersionTLS12,
+	}
+
+	var cert tls.Certificate
+	var err error
+	if len(clientCert) != 0 && len(clientKey) != 0 {
+		cert, err = tls.X509KeyPair(clientCert, clientKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	tlsConfig.BuildNameToCertificate()
+
+	return tlsConfig, nil
 }

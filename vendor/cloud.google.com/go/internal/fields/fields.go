@@ -94,7 +94,7 @@ type ParseTagFunc func(reflect.StructTag) (name string, keep bool, other interfa
 type ValidateFunc func(reflect.Type) error
 
 // LeafTypesFunc is a function that accepts a reflect.Type and returns true if the struct type a leaf, or false if not.
-// TODO(deklerk) is this description accurate?
+// TODO(deklerk): is this description accurate?
 type LeafTypesFunc func(reflect.Type) bool
 
 // A Cache records information about the fields of struct types.

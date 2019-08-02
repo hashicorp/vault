@@ -24,6 +24,23 @@ Both methods allow additional processing of the claims data in the JWT. Some of
 the concepts common to both methods will be covered first, followed by specific
 examples of OIDC and JWT usage.
 
+### JWT Verification
+
+JWT signatures will be verified against public keys from the issuer. This process can be done in
+three different ways, though only one method may be configured for a single backend:
+
+- **Static Keys**. A set of public keys is stored directly in the backend configuration.
+
+- **JWKS**. A JSON Web Key Set ([JWKS](https://tools.ietf.org/html/rfc7517)) URL (and optional
+certificate chain) is configured. Keys will be fetched from this endpoint during authentication.
+
+- **OIDC Discovery**. An OIDC Discovery URL (and optional certificate chain) is configured. Keys
+will be fetched from this URL during authentication. When OIDC Discovery is used, OIDC validation
+criteria (e.g. `iss`, `aud`, etc.) will be applied.
+
+If multiple methods are needed, another instance of the backend can be mounted and configured
+at a different path.
+
 ### Bound Claims
 
 Once a JWT has been validated as being properly signed and not expired, the
@@ -175,13 +192,20 @@ http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are pres
 known to work, you can add additional claims bindings and metadata copying.
 - `bound_audiences` is optional for OIDC roles and typically not required. OIDC providers will use
 the client_id as the audience and OIDC validation expects this.
+- Check your provider for what scopes are required in order to receive all
+of the information you need. The scopes "profile" and "groups" often need to be
+requested, and can be added by setting `oidc_scopes="profile,groups"` on the role.
 - If you're seeing claim-related errors in logs, review the provider's docs very carefully to see
 how they're naming and structuring their claims. Depending on the provider, you may be able to
 construct a simple `curl` implicit grant request to obtain a JWT that you can inspect. An example
 of how to decode the JWT (in this case located in the "access_token" field of a JSON response):
 
 `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
-
+- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt/index.html#verbose_oidc_logging) role
+option is available which will log the received OIDC token if debug-level logging is enabled. This can
+be helpful when debugging provider setup and verifying that the received claims are what you expect.
+Since claims data is logged verbatim and may contain sensitive information, this option should not be
+used in production.
 
 ## JWT Authentication
 
@@ -250,9 +274,9 @@ list of available configuration options, please see the [API documentation](/api
 
     ```text
     $ vault write auth/jwt/config \
-        oidc_discovery_url="https://myco.auth0.com/"
-        oidc_client_id="m5i8bj3iofytj",
-        oidc_client_secret="f4ubv72nfiu23hnsj",
+        oidc_discovery_url="https://myco.auth0.com/" \
+        oidc_client_id="m5i8bj3iofytj" \
+        oidc_client_secret="f4ubv72nfiu23hnsj" \
         default_role="demo"
     ```
 

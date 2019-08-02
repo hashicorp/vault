@@ -6,7 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync/atomic"
+
+	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -139,6 +142,34 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, ErrAlreadyInit
 	}
 
+	// If we have clustered storage, set it up now
+	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+		parsedClusterAddr, err := url.Parse(c.ClusterAddr())
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+		}
+		if err := raftStorage.Bootstrap(ctx, []raft.Peer{
+			{
+				ID:      raftStorage.NodeID(),
+				Address: parsedClusterAddr.Host,
+			},
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+		}
+
+		if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
+			StartAsLeader: true,
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+		}
+
+		defer func() {
+			if err := raftStorage.TeardownCluster(nil); err != nil {
+				c.logger.Error("failed to stop raft storage", "error", err)
+			}
+		}()
+	}
+
 	err = c.seal.Init(ctx)
 	if err != nil {
 		c.logger.Error("failed to initialize seal", "error", err)
@@ -266,6 +297,11 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
+	if err := c.createRaftTLSKeyring(ctx); err != nil {
+		c.logger.Error("failed to create raft TLS keyring", "error", err)
+		return nil, err
+	}
+
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {
 		c.logger.Error("pre-seal teardown failed", "error", err)
@@ -278,7 +314,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 // UnsealWithStoredKeys performs auto-unseal using stored keys. An error
 // return value of "nil" implies the Vault instance is unsealed.
 //
-// Callers should attempt to retry any NOnFatalErrors. Callers should
+// Callers should attempt to retry any NonFatalErrors. Callers should
 // not re-attempt fatal errors.
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()

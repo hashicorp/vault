@@ -1,8 +1,9 @@
 import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
+const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce(
@@ -32,38 +33,24 @@ export function extractDataAndFlags(data, flags) {
   );
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
-  const isUICommand = uiCommands.includes(command);
+export function executeUICommand(command, logAndOutput, commandFns) {
+  let cmd = command.startsWith('api') ? 'api' : command;
+  let isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  switch (command) {
-    case 'clearall':
-      clearLog(true);
-      break;
-    case 'clear':
-      clearLog();
-      break;
-    case 'fullscreen':
-      toggleFullscreen();
-      break;
-    case 'refresh':
-      refreshFn();
-      break;
+  if (typeof commandFns[cmd] === 'function') {
+    commandFns[cmd]();
   }
-
   return isUICommand;
 }
 
 export function parseCommand(command, shouldThrow) {
-  // encode everything but spaces
-  let cmd = encodeURIComponent(command).replace(/%20/g, decodeURIComponent);
-  let args = argTokenizer(cmd);
+  let args = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
   }
 
-  args = args.map(decodeURIComponent);
   let [method, ...rest] = args;
   let path;
   let flags = [];
@@ -74,7 +61,15 @@ export function parseCommand(command, shouldThrow) {
       flags.push(arg);
     } else {
       if (path) {
-        data.push(arg);
+        let strippedArg = arg
+          // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
+          .split(/=(.+)/)
+          // if there were quotes, there's an empty string as the last member in the array that we don't want,
+          // so filter it out
+          .filter(str => str !== '')
+          // glue the data back together
+          .join('=');
+        data.push(strippedArg);
       } else {
         path = arg;
       }

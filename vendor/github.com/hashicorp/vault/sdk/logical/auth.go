@@ -38,6 +38,11 @@ type Auth struct {
 	// different namespaces indexed by respective namespace identifiers
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies" mapstructure:"external_namespace_policies" structs:"external_namespace_policies"`
 
+	// Indicates that the default policy should not be added by core when
+	// creating a token. The default policy will still be added if it's
+	// explicitly defined.
+	NoDefaultPolicy bool `json:"no_default_policy" mapstructure:"no_default_policy" structs:"no_default_policy"`
+
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.

@@ -15,11 +15,26 @@ for Vault 1.1.0 compared to 1.1.1. Please read it carefully.
 
 ## Known Issues
 
+### Issue with some KVv2 mounts
+
 There is a known issue that could cause the upgrade to 1.1.1 to fail under
 certain circumstances. This issue occurs when a KV version 2 mount exists but
 contains no data. This will be fixed in 1.1.2. Addtionally a work around does
 exist: prior to upgrading ensure all KV v2 mounts have at least one key written
 to it. 
+
+### Change in LDAP Group CN handling
+
+A bug fix to allow group CNs to be found from an LDAP server in lowercase `cn`
+as well as uppercase `CN` had an unintended consequence. If prior to that a
+group used `cn`, as in `cn=foo,ou=bar` then the group that would need to be put
+into place in the LDAP plugin to match against policies is `cn=foo,ou=bar`
+since the CN would not be correctly found. After the change, the CN was
+correctly found, but this would result in the group name being parsed as `foo`
+and would not match groups using the full DN. In 1.1.5+, there is a boolean
+config setting `use_pre111_group_cn_behavior` to allow reverting to the old
+matching behavior; we also attempt to upgrade exiting configs to have that
+defaulted to true.
 
 ## JWT/OIDC Plugin
 

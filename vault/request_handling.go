@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -386,19 +385,17 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.Request, doLocking bool) (resp *logical.Response, err error) {
 	if doLocking {
 		c.stateLock.RLock()
-	}
-	unlockFunc := func() {
-		if doLocking {
-			c.stateLock.RUnlock()
-		}
+		defer c.stateLock.RUnlock()
 	}
 	if c.Sealed() {
-		unlockFunc()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
-		unlockFunc()
 		return nil, consts.ErrStandby
+	}
+
+	if c.activeContext == nil || c.activeContext.Err() != nil {
+		return nil, errors.New("active context canceled after getting state lock")
 	}
 
 	ctx, cancel := context.WithCancel(c.activeContext)
@@ -413,7 +410,6 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		unlockFunc()
 		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
@@ -422,7 +418,6 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 
 	req.SetTokenEntry(nil)
 	cancel()
-	unlockFunc()
 	return resp, err
 }
 
@@ -537,7 +532,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 
 	// Create an audit trail of the response
 	if !isControlGroupRun(req) {
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:                auth,
 			Request:             req,
 			Response:            auditResp,
@@ -561,10 +556,8 @@ func isControlGroupRun(req *logical.Request) bool {
 func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
-	if err != nil {
-		if shouldForward(c, err) {
-			return forward(ctx, c, req)
-		}
+	if shouldForward(c, resp, err) {
+		return forward(ctx, c, req)
 	}
 	atomic.AddUint64(c.counters.requests, 1)
 	return resp, err
@@ -668,7 +661,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if !isControlGroupRun(req) {
-			logInput := &audit.LogInput{
+			logInput := &logical.LogInput{
 				Auth:               auth,
 				Request:            req,
 				OuterErr:           ctErr,
@@ -690,7 +683,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Create an audit trail of the request
 	if !isControlGroupRun(req) {
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:               auth,
 			Request:            req,
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
@@ -914,9 +907,17 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	req.Unauthenticated = true
 
-	var auth *logical.Auth
+	var nonHMACReqDataKeys []string
+	entry := c.router.MatchingMountEntry(ctx, req.Path)
+	if entry != nil {
+		// Get and set ignored HMAC'd value.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			nonHMACReqDataKeys = rawVals.([]string)
+		}
+	}
 
 	// Do an unauth check. This will cause EGP policies to be checked
+	var auth *logical.Auth
 	var ctErr error
 	auth, _, ctErr = c.checkToken(ctx, req, true)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
@@ -933,16 +934,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			errType = logical.ErrInvalidRequest
 		}
 
-		var nonHMACReqDataKeys []string
-		entry := c.router.MatchingMountEntry(ctx, req.Path)
-		if entry != nil {
-			// Get and set ignored HMAC'd value.
-			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-				nonHMACReqDataKeys = rawVals.([]string)
-			}
-		}
-
-		logInput := &audit.LogInput{
+		logInput := &logical.LogInput{
 			Auth:               auth,
 			Request:            req,
 			OuterErr:           ctErr,
@@ -964,9 +956,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// Create an audit trail of the request. Attach auth if it was returned,
 	// e.g. if a token was provided.
-	logInput := &audit.LogInput{
-		Auth:    auth,
-		Request: req,
+	logInput := &logical.LogInput{
+		Auth:               auth,
+		Request:            req,
+		NonHMACReqDataKeys: nonHMACReqDataKeys,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "path", req.Path, "error", err)
@@ -1071,7 +1064,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			auth.EntityID = entity.ID
 			if auth.GroupAliases != nil {
-				validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -1110,7 +1103,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)
+		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
 		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check

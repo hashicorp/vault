@@ -5,8 +5,10 @@ import { assign } from '@ember/polyfills';
 
 function loadStories() {
   // automatically import all files ending in *.stories.js
-  const req = require.context('../stories/', true, /.stories.js$/);
-  req.keys().forEach(filename => req(filename));
+  const appStories = require.context('../stories', true, /.stories.js$/);
+  const addonAndRepoStories = require.context('../lib', true, /.stories.js$/);
+  appStories.keys().forEach(filename => appStories(filename));
+  addonAndRepoStories.keys().forEach(filename => addonAndRepoStories(filename));
 }
 
 addParameters({
@@ -29,6 +31,9 @@ addDecorator(storyFn => {
   assign(element.style, styles.style);
 
   const innerElement = document.createElement('div');
+  const wormhole = document.createElement('div');
+  wormhole.setAttribute('id', 'ember-basic-dropdown-wormhole');
+  innerElement.appendChild(wormhole);
 
   element.appendChild(innerElement);
   innerElement.appendTo = function appendTo(el) {

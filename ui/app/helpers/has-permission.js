@@ -4,6 +4,7 @@ import { observer } from '@ember/object';
 
 export default Helper.extend({
   permissions: service(),
+  /* eslint-disable-next-line ember/no-observers */
   onPermissionsChange: observer(
     'permissions.exactPaths',
     'permissions.globPaths',

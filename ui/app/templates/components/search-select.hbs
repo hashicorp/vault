@@ -4,23 +4,25 @@
     label=label
     onChange=(action "onChange")
     inputValue=inputValue
-    warning=warning
     helpText=helpText
   }}
 {{else}}
-  <label for="{{name}}" class="title is-4" data-test-field-label>
+  <label class="title is-4" data-test-field-label>
     {{label}}
     {{#if helpText}}
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
     {{/if}}
   </label>
-  {{#power-select
+  {{#power-select-with-create
     options=options
     onchange=(action "selectOption")
-    placeholderComponent="search-select-placeholder"
+    oncreate=(action "createOption")
+    placeholderComponent=(component "search-select-placeholder")
     renderInPlace=true
     searchField="searchText"
-    verticalPosition="below" as |option|
+    verticalPosition="below"
+    showCreateWhen=(action "hideCreateOptionOnSameID")
+    buildSuggestion=(action "constructSuggestion") as |option|
   }}
     {{#if shouldRenderName}}
       {{option.name}}
@@ -30,7 +32,7 @@
     {{else}}
       {{option.id}}
     {{/if}}
-  {{/power-select}}
+  {{/power-select-with-create}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
       <li class="search-select-list-item" data-test-selected-option="true">
@@ -43,13 +45,9 @@
           {{selected.id}}
         {{/if}}
         <div class="control">
-          <button
-            type="button"
-            class="button is-ghost"
-            data-test-selected-list-button="delete"
-            {{action "discardSelection" selected}}
-          >
-            {{i-con size=16 glyph="trash-a" excludeIconClass=true}}
+          <button type="button" class="button is-ghost" data-test-selected-list-button="delete"
+            {{action "discardSelection" selected}}>
+            <Icon @glyph="trash" />
           </button>
         </div>
       </li>

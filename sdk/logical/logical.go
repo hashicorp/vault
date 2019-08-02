@@ -38,6 +38,10 @@ func (b BackendType) String() string {
 // allows for a "procfs" like interaction, as internal state can be exposed by
 // acting like a logical backend and being mounted.
 type Backend interface {
+
+	// Initialize is used to initialize a plugin after it has been mounted.
+	Initialize(context.Context, *InitializationRequest) error
+
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.
 	HandleRequest(context.Context, *Request) (*Response, error)
@@ -123,4 +127,9 @@ type Paths struct {
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
 	SealWrapStorage []string
+}
+
+type Auditor interface {
+	AuditRequest(ctx context.Context, input *LogInput) error
+	AuditResponse(ctx context.Context, input *LogInput) error
 }
