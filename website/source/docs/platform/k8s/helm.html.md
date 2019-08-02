@@ -270,7 +270,7 @@ In your `values.yaml`, change the value of `global.image` to one of the enterpri
 
 ```yaml
 global:
-  image: "hashicorp/vault-enterprise:1.2.0-beta2"
+  image: "hashicorp/vault-enterprise:1.2.0"
 ```
 
 Next, to install the license, the following requirements must be satisfied:
