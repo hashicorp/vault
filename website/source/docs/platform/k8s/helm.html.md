@@ -458,7 +458,7 @@ global:
   image: "vault:1.2.0-beta2"
 
 server:
-  extraEnvironmentVars: {}
+  extraEnvironmentVars:
     GOOGLE_REGION: global,
     GOOGLE_PROJECT: myproject,
     GOOGLE_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
