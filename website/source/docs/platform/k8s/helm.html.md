@@ -236,7 +236,7 @@ and consider if they're appropriate for your deployment.
         This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
 
         ```shell
-        --set 'server.ha.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
+        --set server.ha.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
         ```
 
       - <a name="v-server-ha-disruptionbudget" href="#v-server-ha-disruptionbudget">`disruptionBudget`</a> - Values that configures the disruption budget policy:  https://kubernetes.io/docs/tasks/run-application/configure-pdb/.
