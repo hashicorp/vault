@@ -12,7 +12,8 @@ storiesOf('ConfirmAction/', module)
     })
   )
   .add(
-    `ConfirmAction`, () => ({
+    `ConfirmAction`,
+    () => ({
       template: hbs`
         <h5 class="title is-5">Confirm Action</h5>
         <ConfirmAction

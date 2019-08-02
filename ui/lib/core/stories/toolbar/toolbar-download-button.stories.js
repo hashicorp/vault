@@ -4,12 +4,13 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, text } from '@storybook/addon-knobs';
 import notes from './toolbar-download-button.md';
 
-
 storiesOf('Toolbar/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`ToolbarDownloadButton`,() => ({
-    template: hbs`
+  .add(
+    `ToolbarDownloadButton`,
+    () => ({
+      template: hbs`
       <h5 class="title is-5">ToolbarLink</h5>
       <div style="width: 400px;">
         <Toolbar>
@@ -21,9 +22,9 @@ storiesOf('Toolbar/', module)
         </Toolbar>
       </div>
     `,
-    context: {
-      label: text('Button text', 'Download policy'),
-    },
-  }),
-  {notes}
-);
+      context: {
+        label: text('Button text', 'Download policy'),
+      },
+    }),
+    { notes }
+  );

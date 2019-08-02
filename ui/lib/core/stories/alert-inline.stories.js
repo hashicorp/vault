@@ -1,19 +1,18 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import notes from './alert-banner.md';
-import { MESSAGE_TYPES } from '../lib/core/addon/helpers/message-types.js';
+import notes from './alert-inline.md';
+import { MESSAGE_TYPES } from '../addon/helpers/message-types.js';
 
-
-storiesOf('Alerts/AlertBanner/', module)
+storiesOf('Alerts/AlertInline/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
-    'AlertBanner',
+    'AlertInline',
     () => ({
       template: hbs`
       {{#each types as |type|}}
         <h5 class="title is-5">{{humanize type}}</h5>
-        <AlertBanner @type={{type}} @message={{message}}/>
+        <AlertInline @type={{type}} @message={{message}}/>
       {{/each}}
     `,
       context: {

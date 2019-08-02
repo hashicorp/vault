@@ -7,8 +7,10 @@ import notes from './toolbar-actions.md';
 storiesOf('Toolbar/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`ToolbarActions`, () => ({
-    template: hbs`
+  .add(
+    `ToolbarActions`,
+    () => ({
+      template: hbs`
         <h5 class="title is-5">ToolbarActions</h5>
         <Toolbar>
           <ToolbarActions>
@@ -21,7 +23,7 @@ storiesOf('Toolbar/', module)
           </ToolbarActions>
         </Toolbar>
     `,
-    context: {},
-  }),
-  {notes}
-);
+      context: {},
+    }),
+    { notes }
+  );

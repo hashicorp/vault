@@ -7,8 +7,10 @@ import notes from './toolbar-filters.md';
 storiesOf('Toolbar/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`ToolbarFilters`, () => ({
-    template: hbs`
+  .add(
+    `ToolbarFilters`,
+    () => ({
+      template: hbs`
         <h5 class="title is-5">ToolbarFilters</h5>
         <Toolbar>
           <ToolbarFilters>
@@ -29,7 +31,7 @@ storiesOf('Toolbar/', module)
           </ToolbarFilters>
         </Toolbar>
     `,
-    context: {},
-  }),
-  {notes}
-);
+      context: {},
+    }),
+    { notes }
+  );
