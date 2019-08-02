@@ -67,7 +67,7 @@ and consider if they're appropriate for your deployment.
 
 * <a name="v-global" href="#v-global">`global`</a> - These global values affect multiple components of the chart.
 
-  * <a name="v-global-enabled" href="#v-global-enabled">`enabled`</a> (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opt-in is required, such as by setting <a href="#v-">`server.enabled`</a> to true.
+  * <a name="v-global-enabled" href="#v-global-enabled">`enabled`</a> (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting <a href="#v-">`server.enabled`</a> to true.
 
   * <a name="v-global-image" href="#v-global-image">`image`</a> (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
 
