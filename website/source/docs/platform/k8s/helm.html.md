@@ -198,7 +198,7 @@ and consider if they're appropriate for your deployment.
         This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
 
         ```shell
-        --set 'server.standalone.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
+        --set server.standalone.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
         ```
 
   * <a name="v-server-ha" href="#v-server-ha">`ha`</a> - This configures `ha` mode for the Vault server.
