@@ -19,6 +19,10 @@ or through carefully limiting the users who can access CredHub.
 
 ## Getting Started
 
+The following guide provides instructions on how obtain the necessary credentials and certificates in order 
+to set up the PCF auth method. The sample PCF endpoints uses `*.lagunaniguel.cf-app.com` which should be
+replaced with the appropriate endpoints for your environment.
+
 ### Obtaining Your Instance Identity CA Certificate
 
 In most versions of PCF, instance identity is enabled out-of-the-box. Check by pulling your CA certificate,
@@ -43,9 +47,9 @@ $ pcf settings | jq '.products[0].director_credhub_client_credentials'
 
 SSH into your Ops Manager VM:
 ```
-ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
+ssh -i ops_mgr.pem ubuntu@pcf.lagunaniguel.cf-app.com
 ```
-Please note that the above `OPS_MGR_URL` shouldn't be prepended with `https://`.
+Please note that the above connection address is not prepended with `https://`.
 
 Log in to Credhub using the credentials you obtained earlier:
 ```
@@ -239,6 +243,9 @@ tool, run the following commands:
 ```
 $ pcf target
 $ cf api
+api endpoint:   https://sys.lagunaniguel.cf-app.com
+api version:    2.135.0
+Not logged in. Use 'cf login' to log in.
 ```
 
 The api endpoint given will be used for configuring this Vault auth method. 
@@ -246,16 +253,17 @@ The api endpoint given will be used for configuring this Vault auth method.
 This plugin was tested with Org Manager level permissions, but lower level permissions may be usable.
 ```
 $ cf create-user vault pa55word
+$ cf create-org my-example-org
 $ cf orgs
 $ cf org-users my-example-org
-$ cf set-org-role Alice my-example-org OrgManager
+$ cf set-org-role vault my-example-org OrgManager
 ```
 
 Since the PCF API tends to use a self-signed certificate, you'll also need to configure
 Vault to trust that certificate. You can obtain its API certificate via:
 
 ```
-openssl s_client -showcerts -servername domain.com -connect domain.com:443
+openssl s_client -showcerts -connect pcf.lagunaniguel.cf-app.com:443
 ```
 
 You'll see a certificate outputted as part of the response, which should be broken
@@ -280,14 +288,12 @@ $ vault auth enable pcf
 Next, configure the plugin. In the `config` call below, `certificates` is intended to be the instance
 identity CA certificate you pulled above.
 
-In the CF Dev environment the default API address is `https://api.dev.cfdev.sh`. The default username and password
-are `admin`, `admin`. In a production environment, these attributes will vary.
 ```
 $ vault write auth/pcf/config \
-      certificates=@ca.crt \
-      pcf_api_addr=https://api.dev.cfdev.sh \
-      pcf_username=admin \
-      pcf_password=admin \
+      identity_ca_certificates=@ca.crt \
+      pcf_api_addr=https://api.sys.lagunaniguel.cf-app.com \
+      pcf_username=vault \
+      pcf_password=pa55word \
       pcf_api_trusted_certificates=@pcfapi.crt
 ```
 

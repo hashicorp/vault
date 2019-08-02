@@ -146,21 +146,12 @@ an instance must be a member of to qualify as a member of this role. Please note
 every time you use `cf push` on an app, its instance ID changes. Also, instance IDs 
 are not verifiable as being presently alive using the PCF API. Thus, we recommend against
 using this setting for most use cases.
-- `bound_cidrs` `(array: [])` - Comma separated string or list of CIDR blocks. 
-If set, specifies the blocks of IP addresses which can perform the login operation.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this role.
 - `disable_ip_matching` `(bool: false)` - If set to true, disables the default behavior 
 that logging in must be performed from an acceptable IP address described by the 
 certificate presented. Should only be set to true if required, generally when a proxy
 is used to perform logins.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
-  provided as "1h", where hour is the largest suffix.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
-  this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
+
+<%= partial "partials/tokenfields" %>
 
 ### Sample Payload
 

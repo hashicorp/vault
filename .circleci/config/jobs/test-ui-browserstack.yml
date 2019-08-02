@@ -1,4 +1,5 @@
 executor: node
+resource_class: medium+
 steps:
   - checkout
   - restore_yarn_cache

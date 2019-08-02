@@ -201,7 +201,11 @@ construct a simple `curl` implicit grant request to obtain a JWT that you can in
 of how to decode the JWT (in this case located in the "access_token" field of a JSON response):
 
 `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
-
+- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt/index.html#verbose_oidc_logging) role
+option is available which will log the received OIDC token if debug-level logging is enabled. This can
+be helpful when debugging provider setup and verifying that the received claims are what you expect.
+Since claims data is logged verbatim and may contain sensitive information, this option should not be
+used in production.
 
 ## JWT Authentication
 

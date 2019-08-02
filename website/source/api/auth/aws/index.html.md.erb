@@ -737,16 +737,6 @@ list in order to satisfy that constraint.
   `resolve_aws_unique_ids` is `false`, you **must** specify a
   `bound_iam_principal_arn` of `arn:aws:iam::123456789012:role/MyRoleName` for
   authentication to work.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
-  provided as "1h", where hour is the largest suffix.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
-  this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this
-  role.
 - `allow_instance_migration` `(bool: false)` - If set, allows migration of the
   underlying instance where the client resides. This keys off of pendingTime in
   the metadata document, so essentially, this disables the client nonce check
@@ -760,6 +750,8 @@ list in order to satisfy that constraint.
   `auth/aws/identity-whitelist/<instance_id>` endpoint. Defaults to 'false'.
   This only applies to authentications via the ec2 auth method. This is mutually
   exclusive with `allow_instance_migration`.
+
+<%=partial("partials/tokenfields")%>
 
 ### Sample Payload
 

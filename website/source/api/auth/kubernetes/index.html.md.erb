@@ -107,16 +107,8 @@ entities attempting to login.
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed, both
   this and bound_service_account_names can not be set to "\*".
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role in
-  seconds.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens
-  issued in seconds using this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this
-  role.
+
+<%= partial "partials/tokenfields" %>
 
 ### Sample Payload
 
