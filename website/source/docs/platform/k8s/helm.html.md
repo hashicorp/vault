@@ -40,7 +40,7 @@ instabilities from master.
 
 Prior to this, you must have Helm installed and configured both in your
 Kubernetes cluster and locally on your machine. The steps to do this are
-out of the scope of this document, please read the
+out of the scope of this document. Please refer to the
 [Helm documentation](https://helm.sh/) for more information.
 
 Example chart usage:
