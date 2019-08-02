@@ -61,7 +61,7 @@ $ helm install --dry-run ./
 
 The chart is highly customizable using
 [Helm configuration values](https://docs.helm.sh/using_helm/#customizing-the-chart-before-installing).
-Each value has a sane default tuned for an optimal getting started experience
+Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
 
