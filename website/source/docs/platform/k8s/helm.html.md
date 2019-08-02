@@ -40,7 +40,7 @@ instabilities from master.
 
 Prior to this, you must have Helm installed and configured both in your
 Kubernetes cluster and locally on your machine. The steps to do this are
-out of the scope of this document, please read the
+out of the scope of this document. Please refer to the
 [Helm documentation](https://helm.sh/) for more information.
 
 Example chart usage:
@@ -61,13 +61,13 @@ $ helm install --dry-run ./
 
 The chart is highly customizable using
 [Helm configuration values](https://docs.helm.sh/using_helm/#customizing-the-chart-before-installing).
-Each value has a sane default tuned for an optimal getting started experience
+Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
 
 * <a name="v-global" href="#v-global">`global`</a> - These global values affect multiple components of the chart.
 
-  * <a name="v-global-enabled" href="#v-global-enabled">`enabled`</a> (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opt-in is required, such as by setting <a href="#v-">`server.enabled`</a> to true.
+  * <a name="v-global-enabled" href="#v-global-enabled">`enabled`</a> (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting <a href="#v-">`server.enabled`</a> to true.
 
   * <a name="v-global-image" href="#v-global-image">`image`</a> (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
 
@@ -130,7 +130,7 @@ and consider if they're appropriate for your deployment.
           topologyKey: kubernetes.io/hostname
     ```
 
-  * <a name="v-server-service" href="#v-server-service">`extraVolumes`</a> - This configures the `Service` resource create for the Vault server.
+  * <a name="v-server-service" href="#v-server-service">`extraVolumes`</a> - This configures the `Service` resource created for the Vault server.
 
       - <a name="v-server-service-enabled" href="#v-server-service-enabled">`enabled`</a> (`boolean: true`) -
       Enables a service to allow other pods running in Kubernetes to communicate with the Vault server.
