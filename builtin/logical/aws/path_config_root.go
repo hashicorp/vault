@@ -42,12 +42,42 @@ func pathConfigRoot(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   b.pathConfigRootRead,
 			logical.UpdateOperation: b.pathConfigRootWrite,
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,
 		HelpDescription: pathConfigRootHelpDesc,
 	}
+}
+
+func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.clientMutex.RLock()
+	defer b.clientMutex.RUnlock()
+
+	entry, err := req.Storage.Get(ctx, "config/root")
+	if err != nil {
+		return nil, err
+	}
+	var config rootConfig
+
+	if entry != nil {
+		if err := entry.DecodeJSON(&config); err != nil {
+			return nil, err
+		}
+	}
+
+	configData := map[string]interface{}{
+		"access_key":   config.AccessKey,
+		"secret_key":   "",
+		"region":       config.Region,
+		"iam_endpoint": config.IAMEndpoint,
+		"sts_endpoint": config.STSEndpoint,
+		"max_retries":  config.MaxRetries,
+	}
+	return &logical.Response{
+		Data: configData,
+	}, nil
 }
 
 func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
