@@ -65,7 +65,7 @@ Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
 
-* global` - These global values affect multiple components of the chart.
+* `global` - These global values affect multiple components of the chart.
 
   * `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
