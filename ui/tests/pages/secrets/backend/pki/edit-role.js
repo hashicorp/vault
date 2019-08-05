@@ -9,7 +9,7 @@ export default create({
   toggleOptions: clickable('[data-test-toggle-group="Options"]'),
   name: fillable('[data-test-input="name"]'),
   allowAnyName: clickable('[data-test-input="allowAnyName"]'),
-  allowedDomains: fillable('[data-test-input="allowedDomains"] input'),
+  allowedDomains: fillable('[data-test-input="allowedDomains"] .input'),
   save: clickable('[data-test-role-create]'),
 
   createRole(name, allowedDomains) {
