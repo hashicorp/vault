@@ -9,6 +9,7 @@
       <D.trigger
         @tagName="button"
         @class="button is-transparent namespace-picker-trigger has-current-color"
+        data-test-namespace-toggle
         >
         {{yield}}
         {{#if namespaceDisplay}}
@@ -44,7 +45,7 @@
         <header class="current-namespace">
           <h5 class="list-header">Current namespace</h5>
           <div class="level is-mobile namespace-link">
-            <span class="level-left">{{if namespacePath (concat namespacePath "/") "root"}}</span>
+            <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
             <span class="level-right">
               <Icon @glyph="check-circle-outline" class="has-text-success" />
             </span>
@@ -65,7 +66,7 @@
                 {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
                 {{if (and (not isAdding) (eq leaf changedLeaf)) "leaf-panel-exiting"}}
               ">{{~#each-in (get namespaceTree leaf) as |leafName|}}
-                  <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
+              <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
                 {{/each-in~}}</div>
           {{/each}}
         </div>
