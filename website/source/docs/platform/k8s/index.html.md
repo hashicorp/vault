@@ -24,20 +24,19 @@ Kubernetes, as long as they can communicate to the server via the network.
 
 **Accessing and Storing Secrets:** Applications using the Vault service running in 
 Kubernetes can access and store secrets from Vault using a number of different 
-[secret engines](https://www.vaultproject.io/docs/secrets/index.html) and 
-[authentication methods](https://www.vaultproject.io/docs/auth/index.html).
+[secret engines](/docs/secrets) and [authentication methods](/docs/auth).
 
 **Running a Highly Available Vault Service:**  By using pod affinities, highly available 
-backend storage (such as Consul) and [auto-unseal](https://www.vaultproject.io/docs/concepts/seal.html#auto-unseal), 
+backend storage (such as Consul) and [auto-unseal](/docs/concepts/seal.html#auto-unseal), 
 Vault can become a highly available service in Kubernetes.
 
 **Encryption as a Service:** Applications using the Vault service running in Kubernetes 
-can leverage the [Transit secret engine](https://www.vaultproject.io/docs/secrets/transit/index.html) 
+can leverage the [Transit secret engine](/docs/secrets/transit) 
 as "encryption as a service".  This allows applications to offload encryption needs 
 to Vault before storage data at rest.
 
 **Audit Logs for Vault:** Operators can choose to attach a persistent volume 
-to the Vault cluster which can be used to [store audit logs](https://www.vaultproject.io/docs/audit/index.html).
+to the Vault cluster which can be used to [store audit logs](/docs/audit).
 
 **And more!** Vault can run directly on Kubernetes, so in addition to the
 native integrations provided by Vault itself, any other tool built for
