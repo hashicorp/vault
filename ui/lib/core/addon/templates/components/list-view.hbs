@@ -4,8 +4,8 @@
     items.length
   )
 }}
-  <div class="box is-fullwidth is-bottomless is-sideless is-paddingless">
-    {{#each items as |item|}}
+  <div class="box is-fullwidth is-bottomless is-sideless is-paddingless" data-test-list-view-list>
+    {{#each (or items.content items) as |item|}}
       {{yield (hash item=item)}}
     {{else}}
       {{yield}}
@@ -15,6 +15,7 @@
         @page={{items.meta.currentPage}}
         @lastPage={{items.meta.lastPage}}
         @link={{@paginationRouteName}}
+        data-test-list-view-pagination
       />
     {{/if}}
   </div>

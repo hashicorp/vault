@@ -119,7 +119,7 @@ func (c *ChunkingFSM) Apply(l *raft.Log) interface{} {
 		Extensions: ci.NextExtensions,
 	}
 
-	return ChunkingSuccess{Response: c.Apply(logToApply)}
+	return ChunkingSuccess{Response: c.underlying.Apply(logToApply)}
 }
 
 func (c *ChunkingFSM) Snapshot() (raft.FSMSnapshot, error) {

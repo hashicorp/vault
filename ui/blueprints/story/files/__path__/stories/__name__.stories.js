@@ -7,8 +7,8 @@ storiesOf('<%= classifiedModuleName %>/', module)
   .addParameters({ options: { showPanel: true } })
   .add(`<%= classifiedModuleName %>`, () => ({
     template: hbs`
-        <h5 class="title is-5"><%= header %></h5>
-        <<%= classifiedModuleName %>/>
+      <h5 class="title is-5"><%= header %></h5>
+      <<%= classifiedModuleName %>/>
     `,
     context: {},
   }),

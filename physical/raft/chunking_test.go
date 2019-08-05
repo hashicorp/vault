@@ -1,14 +1,19 @@
 package raft
 
 import (
+	"bytes"
+	"context"
+	fmt "fmt"
 	"os"
 	"testing"
 
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-raftchunking"
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -175,4 +180,48 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 			assert.True(ok)
 		}
 	}
+}
+
+func TestRaft_Chunking_AppliedIndex(t *testing.T) {
+	t.Parallel()
+
+	raft, dir := getRaft(t, true, false)
+	defer os.RemoveAll(dir)
+
+	// Lower the size for tests
+	raftchunking.ChunkSize = 1024
+	val, err := uuid.GenerateRandomBytes(3 * raftchunking.ChunkSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	currentIndex := raft.AppliedIndex()
+	// Write some data
+	for i := 0; i < 10; i++ {
+		err := raft.Put(context.Background(), &physical.Entry{
+			Key:   fmt.Sprintf("key-%d", i),
+			Value: val,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	newIndex := raft.AppliedIndex()
+
+	// Each put should generate 4 chunks
+	if newIndex-currentIndex != 10*4 {
+		t.Fatalf("Did not apply chunks as expected, applied index = %d - %d = %d", newIndex, currentIndex, newIndex-currentIndex)
+	}
+
+	for i := 0; i < 10; i++ {
+		entry, err := raft.Get(context.Background(), fmt.Sprintf("key-%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(entry.Value, val) {
+			t.Fatal("value is corrupt")
+		}
+	}
+
 }

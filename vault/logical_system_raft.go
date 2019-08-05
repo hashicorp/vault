@@ -256,7 +256,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		if tlsKeyringEntry == nil {
 			return nil, errors.New("could not find raft TLS configuration")
 		}
-		var keyring raft.RaftTLSKeyring
+		var keyring raft.TLSKeyring
 		if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
