@@ -11,6 +11,7 @@ BUG FIXES:
 
  * agent: Fix a panic on creds pulling in some error conditions in `aws` and
    `alicloud` auth methods [GH-7238]
+ * auth/token: Fix sudo check in non-root namespaces on create [GH-7224]
 
 ## 1.2.0 (July 30th, 2019)
 
