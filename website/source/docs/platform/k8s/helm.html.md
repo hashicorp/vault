@@ -2,6 +2,7 @@
 layout: "docs"
 page_title: "Helm - Kubernetes"
 sidebar_current: "docs-platform-k8s-helm"
+sidebar_title: "Helm"
 description: |-
   The Vault Helm chart is the recommended way to install and configure Vault on Kubernetes.
 ---
@@ -103,16 +104,10 @@ and consider if they're appropriate for your deployment.
       Name of the configMap or secret to be mounted. This also controls the path
       that it is mounted to. The volume will be mounted to `/vault/userconfig/<name>`.
 
-      - `load` (`boolean: false`) -
-      If true, then the agent will be configured to automatically load HCL/JSON
-      configuration files from this volume with `-config-dir`. This defaults
-      to false.
-
         ```yaml
         extraVolumes:
           -  type: "secret"
-             name: "consul-certs"
-             load: false
+             name: "vault-certs"
         ```
 
   * `affinity` (`string`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
@@ -172,9 +167,9 @@ and consider if they're appropriate for your deployment.
       Name of the storage class to use when creating the data storage volume.
 
       - `accessMode` (`string: ReadWriteOnce`) -
-      Type of access mode of the storage device.  See https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes for more information.
+      Type of access mode of the storage device.  See the [official Kubernetes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) for more information.
 
-  * `auditStorage` - This configures the volume used for storing Vault's audit logs.  See https://www.vaultproject.io/docs/audit/index.html.
+  * `auditStorage` - This configures the volume used for storing Vault's audit logs.  See the [Vault documentation](/docs/audit) for more information.
 
       - `enabled` (`boolean: true`) -
       Enables a persistent volume to be created for storing Vault's audit logs.
@@ -229,16 +224,16 @@ and consider if they're appropriate for your deployment.
   * `ha` - This configures `ha` mode for the Vault server.
 
       - `enabled` (`boolean: false`) -
-      Enables `ha` mode for the Vault server.  This mode uses a highly available backend storage (such as Consul) to store Vault's data.  By default this is configured to use Consul Helm: https://github.com/hashicorp/consul-helm.  For a complete list of storage backends, see the official documentation: https://www.vaultproject.io/docs/configuration/storage/index.html.
+      Enables `ha` mode for the Vault server.  This mode uses a highly available backend storage (such as Consul) to store Vault's data.  By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm).  For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
 
       - `replicas` (`int: 5`) -
       The number of pods to deploy to create a highly available cluster of Vault servers.
 
       - `updatePartition` (`int: 0`) -
-      If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated.  If set to `0`, this disables parition updates.  For more information see the official documentation: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates
+      If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated.  If set to `0`, this disables parition updates.  For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
       - `config` (`string: "{}"`) -
-      A raw string of extra HCL or JSON [configuration](https://www.vaultproject.io/docs/configuration/index.html) for Vault servers.
+      A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
       This will be saved as-is into a ConfigMap that is read by the Vault servers.
       This can be used to add additional configuration that isn't directly exposed by the chart.
 
@@ -264,7 +259,7 @@ and consider if they're appropriate for your deployment.
         --set server.ha.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
         ```
 
-      - `disruptionBudget` - Values that configures the disruption budget policy:  https://kubernetes.io/docs/tasks/run-application/configure-pdb/.
+      - `disruptionBudget` - Values that configures the disruption budget policy.  See the [official Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for more information.
 
            - `enabled` (`boolean: true`) -
            Enables disruption budget policy to limit the number of pods that are down simultaneously from voluntary disruptions.
@@ -284,60 +279,6 @@ and consider if they're appropriate for your deployment.
   The service type to register. This defaults to `ClusterIP`.
   The available service types are documented on
   [the Kubernetes website](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
-
-## Using the Helm Chart to Deploy Vault Enterprise
-
-You can also use this Helm chart to deploy Vault Enterprise by following a few extra steps.
-
-Find the license file that you received in your welcome email. It should have the extension `.hclic`. You will use the contents of this file to install the license in Vault.
-
-In your `values.yaml`, change the value of `global.image` to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags).
-
-```yaml
-global:
-  image: "hashicorp/vault-enterprise:1.2.0-beta2"
-```
-
-Next, to install the license, the following requirements must be satisfied:
-* Vault is initialized
-* Vault is unsealed
-
--> **Important:** The Helm chart will not auto-initialize and unseal the cluster.  This must be done manually after running the Vault installation.  See the [initialization documentation](https://www.vaultproject.io/docs/commands/operator/init.html) and the [unseal documentation](https://www.vaultproject.io/docs/commands/operator/unseal.html) for more information.
-
-Once initialized and unsealed, run the following to install the license:
-
-First, setup a port-forward tunnel to the Vault cluster:
-
-```bash
-$ kubectl port-forward <NAME OF VAULT POD> 8200:8200
-```
-
-Next, in a separate terminal, create a `payload.json` file that contains the license key like this example:
-
-```json
-{
-  "text": "01ABCDEFG..."
-}
-```
-
-Finally, make an HTTP request to Vault API with the license key:
-
-```bash
-$ curl \
-    --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-    --request PUT \
-    --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/license
-
-```
-
-To verify that the license installation worked correctly, make an HTTP request to the Vault API:
-
-```bash
-$ curl \
-    --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-    http://127.0.0.1:8200/v1/sys/license
-```
 
 ## Helm Chart Examples
 

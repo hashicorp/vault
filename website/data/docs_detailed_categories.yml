@@ -135,3 +135,7 @@
     - docs/enterprise/control-groups/index.html
     - docs/enterprise/mfa/index.html
     - docs/enterprise/sentinel/index.html
+-
+  title: "Platforms"
+  docs:
+    - docs/platform/k8s/index.html

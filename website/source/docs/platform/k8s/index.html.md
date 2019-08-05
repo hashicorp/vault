@@ -2,6 +2,7 @@
 layout: "docs"
 page_title: "Kubernetes"
 sidebar_current: "docs-platform-k8s-index"
+sidebar_title: "Kubernetes"
 description: |-
   This section documents the official integration between Vault and Kubernetes.
 ---
