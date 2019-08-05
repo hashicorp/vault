@@ -68,7 +68,7 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/lint.css');
   app.import('node_modules/codemirror/addon/lint/lint.js');
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
-  app.import('node_modules/text-encoder-lite/index.js');
+  app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
 
