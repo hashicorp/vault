@@ -56,9 +56,9 @@
                       <li class="action">
                         <SecretLink @mode="edit" @secret={{item.id}} @class="has-text-black has-text-weight-semibold">
                           {{if backendModel.isV2KV
-                                      "Create new version"
-                                      "Edit"
-                                    }}
+                            "Create new version"
+                            "Edit"
+                          }}
                         </SecretLink>
                       </li>
                     {{/if}}
@@ -68,7 +68,8 @@
                           <button
                             type="button"
                             class="link is-destroy"
-                            onclick={{action c.onTrigger item.id}}>{{if backendModel.isV2KV "Permanently delete" "Delete"}}</button>
+                            onclick={{action c.onTrigger item.id}}>{{if backendModel.isV2KV "Permanently delete" "Delete"}}
+                          </button>
                         </c.Trigger>
                         {{!-- data-test-v2-kv-delete={{item.id}} --}}
                       </li>
