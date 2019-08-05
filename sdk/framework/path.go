@@ -173,6 +173,9 @@ type DisplayAttributes struct {
 	// Navigation indicates that the path should be available as a navigation tab
 	Navigation bool `json:"navigation,omitempty"`
 
+	// ItemType is the type of item this path operates on
+	ItemType string `json:"itemType,omitempty"`
+
 	// Group is the suggested UI group to place this field in.
 	Group string `json:"group,omitempty"`
 

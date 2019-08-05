@@ -196,7 +196,8 @@ can only be set during role creation and once set, it can't be reset later.`,
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Create",
+			Action:   "Create",
+			ItemType: "Role",
 		},
 	}
 
@@ -265,6 +266,9 @@ can only be set during role creation and once set, it can't be reset later.`,
 					Type: framework.TypeCommaStringSlice,
 					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name: "Bound CIDR list",
+					},
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -512,6 +516,11 @@ the role.`,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
+			DisplayAttrs: &framework.DisplayAttributes{
+				Action:     "Generate",
+				Navigation: true,
+				ItemType:   "Role:Secret ID",
+			},
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup/?$",
