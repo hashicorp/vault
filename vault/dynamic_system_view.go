@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -89,9 +88,6 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 		return false
 	}
 
-	// AllowOperation path should be namespace scoped
-	path = strings.TrimPrefix(path, tokenNS.Path)
-
 	// Add identity policies from all the namespaces
 	entity, identityPolicies, err := d.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
 	if err != nil {
@@ -114,11 +110,13 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 
 	// The operation type isn't important here as this is run from a path the
 	// user has already been given access to; we only care about whether they
-	// have sudo
+	// have sudo. Note that we use root context because the path that comes in
+	// must be fully-qualified already so we don't want AllowOperation to
+	// prepend a namespace prefix onto it.
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	authResults := acl.AllowOperation(tokenCtx, req, true)
+	authResults := acl.AllowOperation(namespace.RootContext(ctx), req, true)
 	return authResults.RootPrivs
 }
 
