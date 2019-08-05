@@ -4,7 +4,7 @@ import EmberObject, { computed } from '@ember/object';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, find, render, settled } from '@ember/test-helpers';
+import { click, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
