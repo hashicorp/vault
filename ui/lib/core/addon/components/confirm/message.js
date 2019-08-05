@@ -1,7 +1,8 @@
 import Component from '@ember/component';
-import { computed } from '@ember/object';
+import layout from '../../templates/components/confirm/message';
 
 export default Component.extend({
+  layout,
   tagName: '',
   renderedTrigger: null,
   id: null,

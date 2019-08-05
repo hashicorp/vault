@@ -1,7 +1,9 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import layout from '../templates/components/confirm';
 
 export default Component.extend({
+  layout,
   itemId: null,
   height: 0,
   wormholeReference: null,
