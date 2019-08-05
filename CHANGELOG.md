@@ -11,6 +11,9 @@ BUG FIXES:
 
  * agent: Fix a panic on creds pulling in some error conditions in `aws` and
    `alicloud` auth methods [GH-7238]
+ * auth/approle: Fix error reading role-id on an approle created pre-1.2. [GH-7231]
+ * auth/token: Fix sudo check in non-root namespaces on create [GH-7224]
+ * core: Fix buggy handling of health checks with perfstandbyok=true [GH-7240]
 
 ## 1.2.0 (July 30th, 2019)
 

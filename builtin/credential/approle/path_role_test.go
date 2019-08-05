@@ -1864,7 +1864,7 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 	// Hand craft JSON because there is overlap between fields
 	if err := s.Put(ctx, &logical.StorageEntry{
 		Key:   "role/foo",
-		Value: []byte(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"]}`),
+		Value: []byte(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"], "token_type": "service"}`),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1882,6 +1882,7 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 			TokenPolicies:   []string{"foo"},
 			TokenPeriod:     300 * time.Second,
 			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}, &sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("10.10.10.10/24")}},
+			TokenType:       logical.TokenTypeService,
 		},
 	}
 	if diff := deep.Equal(fooEntry, exp); diff != nil {
