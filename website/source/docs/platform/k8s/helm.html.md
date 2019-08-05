@@ -289,10 +289,10 @@ deployment models.
 
 The below `values.yaml` can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
 
-```
+```yaml
 global:
   enabled: true
-  image: "vault:1.2.0-beta2"
+  image: "vault:1.2.0"
  
 server:
   standalone:
@@ -328,10 +328,10 @@ The below `values.yaml` can be used to set up a single server Vault cluster usin
 This assumes that a Kubernetes `secret` exists with the server certificate, key and 
 certificate authority:
 
-```
+```yaml
 global:
   enabled: true
-  image: "vault:1.2.0-beta2"
+  image: "vault:1.2.0"
 
 server:
   extraVolumes:
@@ -371,10 +371,10 @@ server:
 The below `values.yaml` can be used to set up a single server Vault cluster with 
 auditing enabled.
 
-```
+```yaml
 global:
   enabled: true
-  image: "vault:1.2.0-beta2"
+  image: "vault:1.2.0"
 
 server:
   standalone:
@@ -418,10 +418,10 @@ $ kubectl exec -ti <POD NAME> --  vault audit enable file file_path=/vault/audit
 The below `values.yaml` can be used to set up a five server Vault cluster using 
 Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 
-```
+```yaml
 global:
   enabled: true
-  image: "vault:1.2.0-beta2"
+  image: "vault:1.2.0"
 
 server:
   extraEnvironmentVars:
