@@ -126,6 +126,10 @@
   docs:
     - docs/plugin/index.html
 -
+  title: "Platforms"
+  docs:
+    - docs/platform/k8s/index.html
+-
   title: "Vault Enterprise"
   docs:
     - docs/enterprise/replication/index.html
@@ -136,7 +140,3 @@
     - docs/enterprise/control-groups/index.html
     - docs/enterprise/mfa/index.html
     - docs/enterprise/sentinel/index.html
--
-  title: "Platforms"
-  docs:
-    - docs/platform/k8s/index.html
