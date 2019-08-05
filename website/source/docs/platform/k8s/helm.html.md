@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Helm - Kubernetes"
 sidebar_current: "docs-platform-k8s-helm"
-sidebar_title: "Helm"
+sidebar_title: "Helm Chart"
 description: |-
   The Vault Helm chart is the recommended way to install and configure Vault on Kubernetes.
 ---

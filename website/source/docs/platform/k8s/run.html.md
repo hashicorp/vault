@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Running Vault - Kubernetes"
 sidebar_current: "docs-platform-k8s-run"
-sidebar_current: "Running on Kubernetes"
+sidebar_title: "Running Vault"
 description: |-
   Vault can run directly on Kubernetes in various configurations.  For pure-Kubernetes worloads, this enables Vault to also exist purely within Kubernetes.
 ---
