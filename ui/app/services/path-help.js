@@ -7,10 +7,9 @@ import Service from '@ember/service';
 import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
-import { capitalize } from '@ember/string';
 import { assign } from '@ember/polyfills';
+import { dasherize } from '@ember/string';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
 import { debug } from '@ember/debug';
@@ -67,9 +66,9 @@ export default Service.extend({
           path = path.slice(0, path.indexOf('{') - 1) + '/example';
         } else {
           //we need the mount config
-          path = paths.configPath[0].path;
+          path = paths.configPath[0].path; //path starts with a slash
         }
-        helpUrl = `/v1/${apiPath}${path}?help=true`;
+        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
@@ -78,7 +77,10 @@ export default Service.extend({
   reducePaths(paths, currentPath) {
     const pathName = currentPath[0];
     const pathInfo = currentPath[1];
-
+    let itemType = pathName.split('/')[-1];
+    if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].itemType) {
+      itemType = dasherize(pathInfo['x-vault-displayAttrs'].itemType);
+    }
     //config is a get/post endpoint that doesn't take route params
     //and isn't also a list endpoint and has an Action of Configure
     if (
@@ -92,40 +94,67 @@ export default Service.extend({
 
     //list endpoints all have { name: "list" } in their get parameters
     if (pathInfo.get && pathInfo.get.parameters && pathInfo.get.parameters[0].name === 'list') {
-      paths.list.push({ path: pathName });
+      paths.list.push({ path: pathName, itemType: itemType });
     }
 
     if (pathInfo.delete) {
       paths.delete.push({ path: pathName });
     }
 
-    //create endpoints have path an action (e.g. "Create" or "Generate")
-    if (pathInfo.post && pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action) {
+    //create endpoints have an action (e.g. "Create" or "Generate")
+    if (
+      pathInfo.post &&
+      pathInfo['x-vault-displayAttrs'] &&
+      pathInfo['x-vault-displayAttrs'].action === 'Create'
+    ) {
       paths.create.push({
         path: pathName,
         action: pathInfo['x-vault-displayAttrs'].action,
       });
     }
 
+    //operation endpoints have an action (e.g. "Generate" or "Sign")
+    if (
+      pathInfo.post &&
+      pathInfo['x-vault-displayAttrs'] &&
+      pathInfo['x-vault-displayAttrs'].action !== 'Create' &&
+      pathInfo['x-vault-displayAttrs'].action !== 'Configure'
+    ) {
+      paths.operation.push({
+        path: pathName,
+        action: pathInfo['x-vault-displayAttrs'].action,
+        itemType: itemType,
+      });
+    }
+
     if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].navigation) {
-      paths.navPaths.push({ path: pathName });
+      paths.navPaths.push({ path: pathName, itemType: itemType });
     }
 
     return paths;
   },
 
-  getPaths(apiPath, backend) {
-    debug(`Fetching relevant paths for ${backend} from ${apiPath}`);
+  getPaths(apiPath, backend, itemType, itemID) {
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.entries(pathInfo);
-
+      if (itemType && itemID) {
+        debug(`Fetching relevant paths for ${itemID} ${itemType} from ${apiPath}`);
+        //this means it's nested under the itemType paths
+        paths = paths.filter(path => path[0].includes(`}/`));
+        apiPath = `${apiPath}${itemType}/${itemID}/`;
+      } else if (itemType) {
+        debug(`Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`);
+        //this means it's nested under the itemType paths
+        paths = paths.filter(path => !path[0].includes(`}/`));
+      }
       return paths.reduce(this.reducePaths, {
         apiPath: apiPath,
         configPath: [],
         list: [],
         create: [],
         delete: [],
+        operation: [],
         navPaths: [],
       });
     });
@@ -179,7 +208,7 @@ export default Service.extend({
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
         let { path } = listPath;
-        let url = `${this.buildURL()}/${apiPath}${path}/`;
+        let url = `${this.buildURL()}/${apiPath}${path.slice(1)}/`;
         if (id) {
           url = url + encodePath(id);
         }
@@ -192,20 +221,20 @@ export default Service.extend({
 
       urlForUpdateRecord(id) {
         let { path } = createPath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
         let { path } = createPath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
         let { path } = deletePath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });
