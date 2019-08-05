@@ -1,3 +1,17 @@
+## 1.2.1 (unreleased)
+
+IMPROVEMENTS:
+
+ * ui: The UI will now redirect to a page after authentication [GH-7088]
+
+
+BUG FIXES:
+
+ * ui: The web CLI will now parse input as a shell string, with special
+   characters escaped [GH-7206]
+ * ui (enterprise): The list of namespaces is now cleared when logging
+   out [GH-7186]
+
 ## 1.1.4/1.1.5 (July 25th/30th, 2019)
 
 NOTE:
