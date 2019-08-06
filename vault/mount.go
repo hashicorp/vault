@@ -1252,8 +1252,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 // mountEntrySysView creates a logical.SystemView from global and
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
-func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
-	return extendedSystemView{
+func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
+	return extendedSystemViewImpl{
 		dynamicSystemView{
 			core:       c,
 			mountEntry: entry,
