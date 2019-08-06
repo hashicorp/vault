@@ -1,4 +1,3 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './layout-loading.md';

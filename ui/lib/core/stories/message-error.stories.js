@@ -1,9 +1,9 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './message-error.md';
+import EmberObject from '@ember/object';
 
-let model = Ember.Object.create({
+let model = EmberObject.create({
   adapterError: {
     message: 'This is an adapterError on the model',
   },

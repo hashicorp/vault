@@ -4,12 +4,16 @@ import Service from '@ember/service';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 
+let hasOwn = (obj, prop) => {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+};
+
 export function extractRouteArgs(args) {
   args = args.slice();
   let possibleQueryParams = args[args.length - 1];
 
   let queryParams;
-  if (possibleQueryParams && possibleQueryParams.hasOwnProperty('queryParams')) {
+  if (possibleQueryParams && hasOwn(possibleQueryParams, 'queryParams')) {
     queryParams = args.pop().queryParams;
   } else {
     queryParams = {};
@@ -25,7 +29,7 @@ export function shallowEqual(a, b) {
   let aCount = 0;
   let bCount = 0;
   for (k in a) {
-    if (a.hasOwnProperty(k)) {
+    if (hasOwn(a, k)) {
       if (a[k] !== b[k]) {
         return false;
       }
@@ -34,7 +38,7 @@ export function shallowEqual(a, b) {
   }
 
   for (k in b) {
-    if (b.hasOwnProperty(k)) {
+    if (hasOwn(b, k)) {
       bCount++;
     }
   }
