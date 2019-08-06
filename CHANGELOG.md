@@ -4,24 +4,22 @@ IMPROVEMENTS:
 
  * auth/jwt: Handle groups claim values that are strings, in addition to
    list of strings [JWT-63]
- * ui: The UI will now redirect to a page after authentication [GH-7088]
 
-BUG FIXES:
-
- * ui: The web CLI will now parse input as a shell string, with special
-   characters escaped [GH-7206]
- * ui (enterprise): The list of namespaces is now cleared when logging
-   out [GH-7186]
-   
 ## 1.2.1 (Unreleased)
 
 BUG FIXES:
 
  * agent: Fix a panic on creds pulling in some error conditions in `aws` and
    `alicloud` auth methods [GH-7238]
- * auth/approle: Fix error reading role-id on an approle created pre-1.2. [GH-7231]
+ * auth/approle: Fix error reading role-id on a role created pre-1.2 [GH-7231]
  * auth/token: Fix sudo check in non-root namespaces on create [GH-7224]
- * core: Fix buggy handling of health checks with perfstandbyok=true [GH-7240]
+ * core: Fix health checks with perfstandbyok=true returning the wrong status
+   code [GH-7240]
+ * ui: The web CLI will now parse input as a shell string, with special
+   characters escaped [GH-7206]
+ * ui: The UI will now redirect to a page after authentication [GH-7088]
+ * ui (Enterprise): The list of namespaces is now cleared when logging
+   out [GH-7186]
 
 ## 1.2.0 (July 30th, 2019)
 
