@@ -137,17 +137,6 @@
     "yargs-parser": "^13.0.0"
   },
   "optionalDependencies": {
-    "@babel/core": "^7.3.4",
-    "@storybook/addon-knobs": "^5.0.5",
-    "@storybook/addon-links": "^5.0.5",
-    "@storybook/addon-notes": "^5.0.5",
-    "@storybook/addon-viewport": "^5.0.5",
-    "@storybook/addons": "^5.0.5",
-    "@storybook/ember": "^5.0.5",
-    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93",
-    "babel-loader": "^8.0.5",
-    "jsdoc-to-markdown": "^5.0.0",
-    "lint-staged": "^9.2.1"
   },
   "resolutions": {
     "handlebars": "^4.1.2"
