@@ -8,11 +8,17 @@ var readline = require('readline');
 var execa = require('execa');
 var chalk = require('chalk');
 
-function run(command, args = []) {
+function run(command, args = [], shareStd = true) {
   console.log(chalk.dim('$ ' + command + ' ' + args.join(' ')));
   // cleanup means that execa will handle stopping the vault subprocess
   // inherit all of the stdin/out/err so that testem still works as if you were running it directly
-  return execa(command, args, { cleanup: true, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+  if (shareStd) {
+    return execa(command, args, { cleanup: true, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+  }
+  let p = execa(command, args, { cleanup: true });
+  p.stdout.pipe(process.stdout);
+  p.stderr.pipe(process.stderr);
+  return p;
 }
 
 var output = '';
@@ -30,7 +36,7 @@ async function processLines(input, eachLine = () => {}) {
 
 (async function() {
   try {
-    run(
+    let vault = run(
       'vault',
       [
         'server',
@@ -43,7 +49,8 @@ async function processLines(input, eachLine = () => {}) {
       false
     );
 
-    processLines(process.stdout, function(line) {
+    console.log(vault);
+    processLines(vault.stdout, function(line) {
       if (written) {
         output = null;
         return;
@@ -57,7 +64,7 @@ async function processLines(input, eachLine = () => {}) {
       if (rootMatch && !root) {
         root = rootMatch[1];
       }
-      if (root && unseal && written !== true) {
+      if (root && unseal && !written) {
         fs.writeFile(
           path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
           `export default ${JSON.stringify({ unseal, root }, null, 2)}`,
