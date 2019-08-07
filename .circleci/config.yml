@@ -106,6 +106,8 @@ jobs:
     resource_class: medium+
     steps:
     - checkout
+    - restore_cache:
+        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -127,7 +129,6 @@ jobs:
 
           # Run Ember tests
           cd ui
-          yarn
           mkdir -p test-results/qunit
           yarn test:oss
         name: Test UI
@@ -537,6 +538,7 @@ workflows:
 #     resource_class: medium+
 #     steps:
 #     - checkout
+#     - restore_yarn_cache
 #     - attach_workspace:
 #         at: .
 #     - run:
@@ -558,7 +560,6 @@ workflows:
 # 
 #           # Run Ember tests
 #           cd ui
-#           yarn
 #           mkdir -p test-results/qunit
 #           yarn test:oss
 #         name: Test UI

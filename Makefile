@@ -142,7 +142,7 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test:oss
 
@@ -161,13 +161,13 @@ check-browserstack-creds:
 
 test-ui-browserstack: check-vault-in-path check-browserstack-creds
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests in Browserstack"
 	@cd ui && yarn run test:browserstack
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -175,7 +175,7 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev
