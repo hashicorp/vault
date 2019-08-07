@@ -1,3 +1,4 @@
+<Confirm as |c|>
 <div class="popup-menu-content">
   <div class="box">
     <div class="menu-label">
@@ -30,27 +31,22 @@
               </button>
             </li>
             <li class="action">
-              <ConfirmAction
-                @buttonClasses="button link is-destroy"
-                @confirmTitle={{concat "Revoke " (get auth 'authData.displayName') "?"}}
-                @confirmMessage={{concat "You will not be able to log in again with this token."}}
-                @confirmButtonText="Revoke"
-                @onConfirmAction={{action "revokeToken"}}
-              >
-                Revoke token
-              </ConfirmAction>
+              <c.Trigger>
+                <button
+                  type="button"
+                  class="link is-destroy"
+                  onclick={{action c.onTrigger (get auth 'authData.displayName')}}>
+                  {{concat "Revoke " (get auth 'authData.displayName')}}
+                </button>
+              </c.Trigger>
             </li>
           {{else}}
             <li class="action text-right">
-              <ConfirmAction
-                @buttonClasses="button link is-destroy"
-                @confirmTitle={{concat "Revoke " (get auth 'authData.displayName') "?"}}
-                @confirmMessage={{concat "You will not be able to log in again with this token."}}
-                @confirmButtonText="Revoke"
-                @onConfirmAction={{action "revokeToken"}}
-              >
-                Revoke token
-              </ConfirmAction>
+              <c.Trigger>
+                <button type="button" class="link is-destroy" onclick={{action c.onTrigger (get auth 'authData.displayName')}}>
+                  {{concat "Revoke " (get auth 'authData.displayName')}}
+                </button>
+              </c.Trigger>
             </li>
           {{/if}}
         {{/if}}
@@ -63,3 +59,10 @@
     </nav>
   </div>
 </div>
+<c.Message
+  @id={{get auth 'authData.displayName'}}
+  @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
+  @onCancel={{action c.onCancel}}
+  @onConfirm={{action "revokeToken"}}
+  @message="You will not be able to log in again with this token."/>
+</Confirm>
