@@ -144,7 +144,7 @@ test-ember:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests"
-	@cd ui && yarn run test-oss
+	@cd ui && yarn run test:oss
 
 ember-ci-test: # Deprecated, to be removed soon.
 	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
@@ -178,7 +178,7 @@ ember-dist-dev:
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets
