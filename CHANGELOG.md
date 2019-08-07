@@ -5,7 +5,7 @@ IMPROVEMENTS:
  * auth/jwt: Handle groups claim values that are strings, in addition to
    list of strings [JWT-63]
 
-## 1.2.1 (Unreleased)
+## 1.2.1 (August 6th, 2019)
 
 BUG FIXES:
 
