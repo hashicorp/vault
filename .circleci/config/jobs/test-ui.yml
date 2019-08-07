@@ -2,7 +2,6 @@ executor: node
 resource_class: medium+
 steps:
   - checkout
-  - restore_yarn_cache
   - attach_workspace:
       at: .
   - run:
@@ -25,8 +24,9 @@ steps:
 
         # Run Ember tests
         cd ui
+        yarn
         mkdir -p test-results/qunit
-        yarn run test-oss
+        yarn test-oss
   - store_artifacts:
       path: ui/test-results
   - store_test_results:
