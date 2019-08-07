@@ -129,7 +129,7 @@ jobs:
           cd ui
           yarn
           mkdir -p test-results/qunit
-          yarn test-oss
+          yarn test:oss
         name: Test UI
     - store_artifacts:
         path: ui/test-results
@@ -560,7 +560,7 @@ workflows:
 #           cd ui
 #           yarn
 #           mkdir -p test-results/qunit
-#           yarn test-oss
+#           yarn test:oss
 #         name: Test UI
 #     - store_artifacts:
 #         path: ui/test-results
