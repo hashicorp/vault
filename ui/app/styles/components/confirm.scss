@@ -2,8 +2,51 @@
   position: relative;
   overflow: hidden;
 }
+
 .confirm {
   transition: height 150ms, transform 150ms;
+}
+.confirm,
+.confirm-overlay {
+  button.link,
+  a {
+    background-color: $white;
+    color: $menu-item-color;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
+    }
+
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+
+    &.is-destroy {
+      color: $red;
+
+      &:hover {
+        background-color: $red;
+        color: $white;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.5;
+
+      &:hover {
+        background: transparent;
+        cursor: default;
+      }
+    }
+  }
+}
+
+.confirm-action span .button {
+  display: block;
+  margin: 0.25rem auto;
+  width: 95%;
 }
 
 .show-confirm {
@@ -43,7 +86,7 @@
   }
 }
 
-.popup-menu-content .confirm-action-message {
+.confirm-action-message {
   margin: 0;
 
   .message {
