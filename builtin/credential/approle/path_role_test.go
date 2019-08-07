@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -1843,6 +1844,23 @@ func createRole(t *testing.T, b *backend, s logical.Storage, roleName, policies 
 // TestAppRole_TokenutilUpgrade ensures that when we read values out that are
 // values with upgrade logic we see the correct struct entries populated
 func TestAppRole_TokenutilUpgrade(t *testing.T) {
+	tests := []struct {
+		name              string
+		storageVal        string
+		expectedTokenType logical.TokenType
+	}{
+		{
+			"token_type_empty",
+			"",
+			logical.TokenTypeDefault,
+		},
+		{
+			"token_type_service",
+			"service",
+			logical.TokenTypeService,
+		},
+	}
+
 	s := &logical.InmemStorage{}
 
 	config := logical.TestBackendConfig()
@@ -1861,31 +1879,39 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Hand craft JSON because there is overlap between fields
-	if err := s.Put(ctx, &logical.StorageEntry{
-		Key:   "role/foo",
-		Value: []byte(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"], "token_type": "service"}`),
-	}); err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entryVal := fmt.Sprintf(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"], "token_type": "%s"}`, tt.storageVal)
+			// Hand craft JSON because there is overlap between fields
+			if err := s.Put(ctx, &logical.StorageEntry{
+				Key:   "role/" + tt.name,
+				Value: []byte(entryVal),
+			}); err != nil {
+				t.Fatal(err)
+			}
 
-	fooEntry, err := b.roleEntry(ctx, s, "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
+			resEntry, err := b.roleEntry(ctx, s, tt.name)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	exp := &roleStorageEntry{
-		SecretIDPrefix: "secret_id/",
-		Policies:       []string{"foo"},
-		Period:         300 * time.Second,
-		TokenParams: tokenutil.TokenParams{
-			TokenPolicies:   []string{"foo"},
-			TokenPeriod:     300 * time.Second,
-			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}, &sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("10.10.10.10/24")}},
-			TokenType:       logical.TokenTypeService,
-		},
-	}
-	if diff := deep.Equal(fooEntry, exp); diff != nil {
-		t.Fatal(diff)
+			exp := &roleStorageEntry{
+				SecretIDPrefix: "secret_id/",
+				Policies:       []string{"foo"},
+				Period:         300 * time.Second,
+				TokenParams: tokenutil.TokenParams{
+					TokenPolicies: []string{"foo"},
+					TokenPeriod:   300 * time.Second,
+					TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{
+						{SockAddr: sockaddr.MustIPAddr("127.0.0.1")},
+						{SockAddr: sockaddr.MustIPAddr("10.10.10.10/24")},
+					},
+					TokenType: tt.expectedTokenType,
+				},
+			}
+			if diff := deep.Equal(resEntry, exp); diff != nil {
+				t.Fatal(diff)
+			}
+		})
 	}
 }

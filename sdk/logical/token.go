@@ -38,7 +38,7 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 	// Handle upgrade from pre-1.2 where we were serialized as string:
 	s := string(b)
 	switch s {
-	case `"default"`:
+	case `"default"`, `""`:
 		*t = TokenTypeDefault
 	case `"service"`:
 		*t = TokenTypeService
