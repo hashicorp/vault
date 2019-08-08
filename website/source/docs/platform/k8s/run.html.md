@@ -15,6 +15,9 @@ within Kubernetes.
 
 This page starts with a large how-to section for various specific tasks.
 
+!> **IMPORTANT NOTE:** Vault Enterprise is currently not supported.  We are actively 
+working a version for Vault Enterprise and it will be available in the future.
+
 ## Helm Chart
 
 The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
@@ -57,7 +60,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.1.0
+$ git checkout v0.1.1
 
 # Run Helm
 $ helm install --name vault ./

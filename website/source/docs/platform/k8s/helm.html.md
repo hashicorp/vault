@@ -52,7 +52,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.1.0
+$ git checkout v0.1.1
 
 # Run Helm
 $ helm install --dry-run ./
@@ -84,6 +84,10 @@ and consider if they're appropriate for your deployment.
       limits:
         memory: "10Gi"
     ```
+
+  * `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
+
+    * `enabled` (`boolean: false`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
 
   * `extraEnvironmentVars` (`string: null`) - The extra environment variables to be applied to the Vault server.  This should be a multi-line key/value string.
 
@@ -149,6 +153,12 @@ and consider if they're appropriate for your deployment.
           "sample/annotation1": "foo"
           "sample/annotation2": "bar"
         ```
+
+  * `service` - Values that configure the Kubernetes service created for Vault.
+
+    * `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
+
+    * `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes.  By default the Vault service will be given a Cluster IP address, set to `None` to disable.  When disabled Kubernetes will create a "headless" service.  Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
 
   * `extraVolumes` - This configures the `Service` resource created for the Vault server.
 
@@ -292,18 +302,19 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.0"
+  image: "vault:1.2.1"
  
 server:
   standalone:
     enabled: true
     config: |
-      api_addr = "http://POD_IP:8200"
-      listener "tcp" {
-        tls_disable = true
-        address     = "0.0.0.0:8200"
-      }
+      ui = true
 
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
       storage "file" {
         path = "/vault/data"
       }
@@ -331,7 +342,7 @@ certificate authority:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.0"
+  image: "vault:1.2.1"
 
 server:
   extraVolumes:
@@ -344,12 +355,12 @@ server:
   standalone:
     enabled: true
     config: |
-      api_addr = "https://POD_IP:8200"
       listener "tcp" {
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
         tls_cert_file = "/vault/userconfig/vault-server-tls/vault.crt"
         tls_key_file  = "/vault/userconfig/vault-server-tls/vault.key"
         tls_client_ca_file = "/vault/userconfig/vault-server-tls/vault.ca"
-        address     = "0.0.0.0:8200"
       }
 
       storage "file" {
@@ -374,16 +385,16 @@ auditing enabled.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.0"
+  image: "vault:1.2.1"
 
 server:
   standalone:
     enabled: true
     config: |
-      api_addr = "http://POD_IP:8200"
       listener "tcp" {
         tls_disable = true
-        address     = "0.0.0.0:8200"
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
       }
 
       storage "file" {
@@ -453,11 +464,13 @@ server:
 
     config: |
       ui = true
-      api_addr = "http://POD_IP:8200"
+
       listener "tcp" {
         tls_disable = 1
-        address     = "0.0.0.0:8200"
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
       }
+
       storage "consul" {
         path = "vault"
         address = "HOST_IP:8500"
