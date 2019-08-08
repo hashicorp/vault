@@ -1846,16 +1846,25 @@ func createRole(t *testing.T, b *backend, s logical.Storage, roleName, policies 
 func TestAppRole_TokenutilUpgrade(t *testing.T) {
 	tests := []struct {
 		name              string
+		storageValMissing bool
 		storageVal        string
 		expectedTokenType logical.TokenType
 	}{
 		{
+			"token_type_missing",
+			true,
+			"",
+			logical.TokenTypeDefault,
+		},
+		{
 			"token_type_empty",
+			false,
 			"",
 			logical.TokenTypeDefault,
 		},
 		{
 			"token_type_service",
+			false,
 			"service",
 			logical.TokenTypeService,
 		},
@@ -1881,7 +1890,14 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entryVal := fmt.Sprintf(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"], "token_type": "%s"}`, tt.storageVal)
+
+			// Construct the storage entry object based on our test case.
+			tokenTypeKV := ""
+			if !tt.storageValMissing {
+				tokenTypeKV = fmt.Sprintf(`, "token_type": "%s"`, tt.storageVal)
+			}
+			entryVal := fmt.Sprintf(`{"policies": ["foo"], "period": 300000000000, "token_bound_cidrs": ["127.0.0.1", "10.10.10.10/24"]%s}`, tokenTypeKV)
+
 			// Hand craft JSON because there is overlap between fields
 			if err := s.Put(ctx, &logical.StorageEntry{
 				Key:   "role/" + tt.name,
