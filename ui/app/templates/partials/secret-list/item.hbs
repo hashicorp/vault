@@ -64,27 +64,20 @@
                     {{/if}}
                     {{#if item.canDelete}}
                       <li class="action">
-                        <c.Trigger>
-                          <button
-                            type="button"
-                            class="link is-destroy"
-                            onclick={{action c.onTrigger item.id}}
-                            data-test-confirm-action-trigger
-                            >{{if backendModel.isV2KV "Permanently delete" "Delete"}}
-                          </button>
-                        </c.Trigger>
+                        <c.Trigger
+                        @id={{item.id}}
+                        @onTrigger={{action c.onTrigger item.id}}
+                        @triggerText={{if backendModel.isV2KV "Permanently delete" "Delete"}}
+                        @confirmMessage="This will permanently delete this secret and all its vesions."
+                        @onConfirm={{action "delete" item "secret"}}
+                        @onCancel={{action c.onCancel}}
+                        />
                       </li>
                     {{/if}}
                   {{/if}}
                 {{/if}}
               </ul>
             </nav>
-          <c.Message
-            @id={{item.id}}
-            @onCancel={{action c.onCancel}}
-            @onConfirm={{action "delete" item "secret"}}
-            @message="This will permanently delete this secret and all its vesions.">
-          </c.Message>
         </Confirm>
       </PopupMenu>
     </div>
