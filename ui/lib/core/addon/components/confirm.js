@@ -38,9 +38,14 @@ export default Component.extend({
   didInsertElement() {
     this.set('wormholeReference', this.element.querySelector(`#${this.wormholeId}`));
   },
+  didRender() {
+    this.updateHeight();
+  },
   updateHeight: function() {
     let height;
-    height = this.openTrigger ? this.element.querySelector('.confirm-overlay').clientHeight : 0;
+    height = this.openTrigger
+      ? this.element.querySelector('.confirm-overlay').clientHeight
+      : this.element.querySelector('.confirm').clientHeight;
     this.set('height', height);
   },
   actions: {
