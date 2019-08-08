@@ -68,7 +68,9 @@
                           <button
                             type="button"
                             class="link is-destroy"
-                            onclick={{action c.onTrigger item.id}}>{{if backendModel.isV2KV "Permanently delete" "Delete"}}
+                            onclick={{action c.onTrigger item.id}}
+                            data-test-confirm-action-trigger
+                            >{{if backendModel.isV2KV "Permanently delete" "Delete"}}
                           </button>
                         </c.Trigger>
                         {{!-- data-test-v2-kv-delete={{item.id}} --}}
