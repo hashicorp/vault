@@ -1,3 +1,5 @@
+{{! template-lint-disable no-inline-styles}}
+
   <div class="confirm-wrapper" style={{if height (concat "height: " height "px")}}>
     <div class="confirm {{if openTrigger "show-confirm"}}" ...attributes>
       {{yield (hash
