@@ -49,7 +49,6 @@ async function processLines(input, eachLine = () => {}) {
       false
     );
 
-    console.log(vault);
     processLines(vault.stdout, function(line) {
       if (written) {
         output = null;
