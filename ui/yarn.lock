@@ -1253,7 +1253,7 @@ Duration.js@icholy/Duration.js#golang_compatible:
     chai "~1.7.2"
     mocha "~1.13.0"
 
-"JSV@>= 4.0.x":
+JSV@^4.0.x:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/JSV/-/JSV-4.0.2.tgz#d077f6825571f82132f9dffaed587b4029feff57"
   integrity sha1-0Hf2glVx+CEy+d/67Vh7QCn+/1c=
@@ -4901,12 +4901,12 @@ ember-asset-loader@^0.6.1:
     object-assign "^4.1.0"
     walk-sync "^1.1.3"
 
-ember-assign-helper@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/ember-assign-helper/-/ember-assign-helper-0.1.2.tgz#3d1d575f3d4457b3662b214d4c6e671bd462cad0"
-  integrity sha1-PR1XXz1EV7NmKyFNTG5nG9RiytA=
+ember-assign-helper@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/ember-assign-helper/-/ember-assign-helper-0.2.0.tgz#02d1b5ee6b4f9cb68036b7d19db47f2a9d74f148"
+  integrity sha512-WO6K24m6Wk+G1PBOMaXUtOMkzCTtt9z67SPIcAFxOVqc95hUU62wDRUdDiPa/854T5rroq5CJ7Ey4LgxorCsgg==
   dependencies:
-    ember-cli-babel "^6.0.0-beta.9"
+    ember-cli-babel "^6.6.0"
 
 ember-assign-polyfill@^2.5.0, ember-assign-polyfill@^2.6.0:
   version "2.6.0"
@@ -4950,15 +4950,15 @@ ember-auto-import@^1.5.2:
     walk-sync "^0.3.3"
     webpack "~4.28"
 
-ember-basic-dropdown-hover@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/ember-basic-dropdown-hover/-/ember-basic-dropdown-hover-0.5.0.tgz#130b86d19442a8e8e855ea8009f7f991f59390f2"
-  integrity sha512-YMektYQK5QhHHmycn3oAZBC/7eHXwLpZjon5o9XLEYt0LYBU66vTdFtbS1eJS0o1vRd5gjZoa/J5GOUeKNc2JA==
+ember-basic-dropdown-hover@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/ember-basic-dropdown-hover/-/ember-basic-dropdown-hover-0.6.0.tgz#67716dfe15cbfa07f851054f51753f1bbcc24ae7"
+  integrity sha512-3RS+FV7WxedaZrkafUHseXyVzp/Rc/ZUVbIm0VYXS+Eke2ajDifAfi52BFpl2w6SdmM5KG7Bvcc3WY8oDqjGgg==
   dependencies:
-    ember-assign-helper "^0.1.2"
-    ember-basic-dropdown "^1.0.0"
-    ember-cli-babel "^6.12.0"
-    ember-cli-htmlbars "^2.0.3"
+    ember-assign-helper "^0.2.0"
+    ember-basic-dropdown "^1.1.2"
+    ember-cli-babel "^7.1.2"
+    ember-cli-htmlbars "^3.0.0"
 
 ember-basic-dropdown@^1.0.0:
   version "1.0.3"
@@ -4973,6 +4973,15 @@ ember-basic-dropdown@^1.1.0:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/ember-basic-dropdown/-/ember-basic-dropdown-1.1.2.tgz#6558eb2aa34d2feeb66e9de1feea560d46edc697"
   integrity sha512-l38MNIUOI1nAKxSUlDI1wrP52a55HxN2dikDUwJOqx7NytK0/woPyy3uVUe7gfT2gJ4HCbRlL/7y0csvP0iMPg==
+  dependencies:
+    ember-cli-babel "^7.2.0"
+    ember-cli-htmlbars "^3.0.1"
+    ember-maybe-in-element "^0.2.0"
+
+ember-basic-dropdown@^1.1.2:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/ember-basic-dropdown/-/ember-basic-dropdown-1.1.3.tgz#0506045ccc60db4972fc78b963c1324f6415818a"
+  integrity sha512-zIFk5yzu31L4E5lz3DfXF1IGGMcMAGYssh7hCoemjB7iqkL7Sf1UhUg/yEHcr5aEdfyGc1V3G2s740cRY+VLiQ==
   dependencies:
     ember-cli-babel "^7.2.0"
     ember-cli-htmlbars "^3.0.1"
@@ -5010,7 +5019,7 @@ ember-cli-babel@^6.0.0-beta.4, ember-cli-babel@^6.16.0, ember-cli-babel@^6.6.0, 
     ember-cli-version-checker "^2.1.2"
     semver "^5.5.0"
 
-ember-cli-babel@^6.0.0-beta.7, ember-cli-babel@^6.0.0-beta.9, ember-cli-babel@^6.10.0, ember-cli-babel@^6.11.0, ember-cli-babel@^6.12.0, ember-cli-babel@^6.8.0, ember-cli-babel@^6.9.0, ember-cli-babel@^6.9.2:
+ember-cli-babel@^6.0.0-beta.7, ember-cli-babel@^6.10.0, ember-cli-babel@^6.11.0, ember-cli-babel@^6.12.0, ember-cli-babel@^6.8.0, ember-cli-babel@^6.9.0, ember-cli-babel@^6.9.2:
   version "6.17.0"
   resolved "https://registry.yarnpkg.com/ember-cli-babel/-/ember-cli-babel-6.17.0.tgz#1f3e8ed9f4e2338caef6bc2c3d08d3c9928d0ddd"
   integrity sha512-esI5tQ9lxCiYmZdRY1oB6KFvRxFAZQQEnFOUVYzeGJRaZOz/LIGR69jh9y4Rm0Ejm10OxoL8Js8vCnN5tMnUug==
@@ -8423,13 +8432,13 @@ jsonify@~0.0.0:
   resolved "https://registry.yarnpkg.com/jsonify/-/jsonify-0.0.0.tgz#2c74b6ee41d93ca51b7b5aaee8f503631d252a73"
   integrity sha1-LHS27kHZPKUbe1qu6PUDYx0lKnM=
 
-jsonlint@1.6.0:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/jsonlint/-/jsonlint-1.6.0.tgz#88aa46bc289a7ac93bb46cae2d58a187a9bb494a"
-  integrity sha1-iKpGvCiaesk7tGyuLVihh6m7SUo=
+jsonlint@^1.6.3:
+  version "1.6.3"
+  resolved "https://registry.yarnpkg.com/jsonlint/-/jsonlint-1.6.3.tgz#cb5e31efc0b78291d0d862fbef05900adf212988"
+  integrity sha512-jMVTMzP+7gU/IyC6hvKyWpUU8tmTkK5b3BPNuMI9U8Sit+YAWLlZwB6Y6YrdCxfg2kNz05p3XY3Bmm4m26Nv3A==
   dependencies:
-    JSV ">= 4.0.x"
-    nomnom ">= 1.5.x"
+    JSV "^4.0.x"
+    nomnom "^1.5.x"
 
 jsprim@^1.2.2:
   version "1.4.1"
@@ -9638,7 +9647,7 @@ node-watch@0.6.0:
   resolved "https://registry.yarnpkg.com/node-watch/-/node-watch-0.6.0.tgz#ab0703b60cd270783698e57a428faa0010ed8fd0"
   integrity sha512-XAgTL05z75ptd7JSVejH1a2Dm1zmXYhuDr9l230Qk6Z7/7GPcnAs/UyJJ4ggsXSvWil8iOzwQLW0zuGUvHpG8g==
 
-"nomnom@>= 1.5.x":
+nomnom@^1.5.x:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/nomnom/-/nomnom-1.8.1.tgz#2151f722472ba79e50a76fc125bb8c8f2e4dc2a7"
   integrity sha1-IVH3Ikcrp55Qp2/BJbuMjy5Nwqc=
@@ -13273,14 +13282,6 @@ yam@^1.0.0:
   dependencies:
     fs-extra "^4.0.2"
     lodash.merge "^4.6.0"
-
-yargs-parser@^13.0.0:
-  version "13.1.0"
-  resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-13.1.0.tgz#7016b6dd03e28e1418a510e258be4bff5a31138f"
-  integrity sha512-Yq+32PrijHRri0vVKQEm+ys8mbqWjLiwQkMFNXEENutzLPP0bE4Lcd4iA3OQY5HF+GD3xXxf0MEHb8E4/SA3AA==
-  dependencies:
-    camelcase "^5.0.0"
-    decamelize "^1.2.0"
 
 yargs-parser@^13.1.1:
   version "13.1.1"

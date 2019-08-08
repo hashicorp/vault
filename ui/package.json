@@ -65,7 +65,7 @@
     "ember-api-actions": "^0.2.8",
     "ember-auto-import": "^1.5.2",
     "ember-basic-dropdown": "^1.0.0",
-    "ember-basic-dropdown-hover": "^0.5.0",
+    "ember-basic-dropdown-hover": "^0.6.0",
     "ember-cli": "~3.11.0",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^7.8.0",
@@ -118,7 +118,7 @@
     "eslint-plugin-prettier": "^3.1.0",
     "flat": "^4.1.0",
     "ivy-codemirror": "IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374",
-    "jsonlint": "1.6.0",
+    "jsonlint": "^1.6.3",
     "loader.js": "^4.7.0",
     "node-sass": "^4.10.0",
     "normalize.css": "^8.0.1",
@@ -134,7 +134,7 @@
     "text-encoder-lite": "2.0.0",
     "walk-sync": "^2.0.2",
     "xstate": "^3.3.3",
-    "yargs-parser": "^13.0.0"
+    "yargs-parser": "^13.1.1"
   },
   "optionalDependencies": {
   },
