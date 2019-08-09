@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -19,8 +20,8 @@ import (
 	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -110,6 +111,18 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
+
+	// Register debug endpoints if enabled on the listener
+	if props.DebugConfig != nil {
+		// NOTE: Other /sys/debug handlers would go in here once implemented
+		if !props.DebugConfig.PprofDisabled() {
+			mux.Handle("/v1/sys/debug/pprof", handleSysDebug(core, pprof.Index))
+			mux.Handle("/v1/sys/debug/pprof/cmdline", handleSysDebug(core, pprof.Cmdline))
+			mux.Handle("/v1/sys/debug/pprof/profile", handleSysDebug(core, handleSysDebugMaxDuration(props.DebugConfig.PprofProfileMaxDuration(), pprof.Profile)))
+			mux.Handle("/v1/sys/debug/pprof/symbol", handleSysDebug(core, pprof.Symbol))
+			mux.Handle("/v1/sys/debug/pprof/trace", handleSysDebug(core, handleSysDebugMaxDuration(props.DebugConfig.PprofTraceMaxDuration(), pprof.Trace)))
+		}
+	}
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))

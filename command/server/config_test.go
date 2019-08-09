@@ -362,7 +362,10 @@ listener "tcp" {
 	var config Config
 	list, _ := obj.Node.(*ast.ObjectList)
 	objList := list.Filter("listener")
-	parseListeners(&config, objList)
+	if err := parseListeners(&config, objList); err != nil {
+		t.Fatal(err)
+	}
+
 	listeners := config.Listeners
 	if len(listeners) == 0 {
 		t.Fatalf("expected at least one listener in the config")
@@ -386,6 +389,55 @@ listener "tcp" {
 					"tls_min_version":                    "tls12",
 					"tls_require_and_verify_client_cert": true,
 					"tls_disable_client_certs":           true,
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(config, *expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, *expected)
+	}
+
+}
+
+func TestParseListeners_Debug(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+listener "tcp" {
+	address = "127.0.0.1:443"
+	
+	debug {
+		pprof_disable = 1
+	}
+}`))
+
+	var config Config
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("listener")
+	if err := parseListeners(&config, objList); err != nil {
+		t.Fatal(err)
+	}
+
+	listeners := config.Listeners
+	if len(listeners) == 0 {
+		t.Fatalf("expected at least one listener in the config")
+	}
+	listener := listeners[0]
+	if listener.Type != "tcp" {
+		t.Fatalf("expected tcp listener in the config")
+	}
+
+	expected := &Config{
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:443",
+				},
+				Debug: &Debug{
+					PprofDisable:            true,
+					PprofDisableRaw:         1,
+					PprofTraceMaxDuration:   defaultPprofTraceMaxDuration,
+					PprofProfileMaxDuration: defaultPprofProfileMaxDuration,
 				},
 			},
 		},

@@ -43,6 +43,7 @@ type HandlerProperties struct {
 	MaxRequestSize        int64
 	MaxRequestDuration    time.Duration
 	DisablePrintableCheck bool
+	DebugConfig           *DebugConfig
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity

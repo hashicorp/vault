@@ -21,6 +21,8 @@ import (
 
 const (
 	prometheusDefaultRetentionTime = 24 * time.Hour
+	defaultPprofProfileMaxDuration = 300 * time.Second
+	defaultPprofTraceMaxDuration   = 300 * time.Second
 )
 
 // Config is the configuration for the vault server.
@@ -101,6 +103,10 @@ func DevConfig(storageType string) *Config {
 					"proxy_protocol_behavior":         "allow_authorized",
 					"proxy_protocol_authorized_addrs": "127.0.0.1:8200",
 				},
+				Debug: &Debug{
+					PprofProfileMaxDuration: defaultPprofProfileMaxDuration,
+					PprofTraceMaxDuration:   defaultPprofTraceMaxDuration,
+				},
 			},
 		},
 
@@ -119,6 +125,7 @@ func DevConfig(storageType string) *Config {
 type Listener struct {
 	Type   string
 	Config map[string]interface{}
+	Debug  *Debug `hcl:"-"`
 }
 
 func (l *Listener) GoString() string {
@@ -245,6 +252,26 @@ type Telemetry struct {
 
 func (s *Telemetry) GoString() string {
 	return fmt.Sprintf("*%#v", *s)
+}
+
+// Debug is the debug configuration for the server. The presence of this stanza
+// enables debugging endpoints on the server.
+type Debug struct {
+	// PprofDisable toggles the pprof endpoint
+	PprofDisable    bool        `hcl:"-"`
+	PprofDisableRaw interface{} `hcl:"pprof_disable"`
+
+	// PprofProfileMaxDuration sets a max query duration for pprof/profile
+	PprofProfileMaxDuration    time.Duration `hcl:"-"`
+	PprofProfileMaxDurationRaw interface{}   `hcl:"pprof_profile_max_duration"`
+
+	// PprofTraceMaxDuration set a max query duration for pprof/trace
+	PprofTraceMaxDuration    time.Duration `hcl:"-"`
+	PprofTraceMaxDurationRaw interface{}   `hcl:"pprof_profile_max_duration"`
+}
+
+func (d *Debug) GoString() string {
+	return fmt.Sprintf("*%#v", *d)
 }
 
 // Merge merges two configurations.
@@ -848,16 +875,33 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			key = item.Keys[0].Token.Value().(string)
 		}
 
+		var listVal *ast.ObjectList
+		if ot, ok := item.Val.(*ast.ObjectType); ok {
+			listVal = ot.List
+		} else {
+			return fmt.Errorf("listener.%s: should be an object", key)
+		}
+
+		var debug *Debug
+		if o := listVal.Filter("debug"); len(o.Items) > 0 {
+			debug = new(Debug)
+			if err := parseDebug(debug, o); err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("listener.%s", key))
+			}
+		}
+
 		var m map[string]interface{}
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
+		delete(m, "debug")
 
 		lnType := strings.ToLower(key)
 
 		listeners = append(listeners, &Listener{
 			Type:   lnType,
 			Config: m,
+			Debug:  debug,
 		})
 	}
 
@@ -893,6 +937,44 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		}
 	} else {
 		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
+	}
+
+	return nil
+}
+
+func parseDebug(result *Debug, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'debug' block is permitted")
+	}
+
+	// Get our one item
+	item := list.Items[0]
+
+	if err := hcl.DecodeObject(result, item.Val); err != nil {
+		return multierror.Prefix(err, "debug:")
+	}
+
+	var err error
+	if result.PprofDisableRaw != nil {
+		if result.PprofDisable, err = parseutil.ParseBool(result.PprofDisableRaw); err != nil {
+			return err
+		}
+	}
+
+	if result.PprofProfileMaxDurationRaw != nil {
+		if result.PprofProfileMaxDuration, err = parseutil.ParseDurationSecond(result.PprofProfileMaxDurationRaw); err != nil {
+			return err
+		}
+	} else {
+		result.PprofProfileMaxDuration = defaultPprofProfileMaxDuration
+	}
+
+	if result.PprofTraceMaxDurationRaw != nil {
+		if result.PprofTraceMaxDuration, err = parseutil.ParseDurationSecond(result.PprofTraceMaxDurationRaw); err != nil {
+			return err
+		}
+	} else {
+		result.PprofTraceMaxDuration = defaultPprofTraceMaxDuration
 	}
 
 	return nil

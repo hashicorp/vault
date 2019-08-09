@@ -117,6 +117,7 @@ type ServerListener struct {
 	config             map[string]interface{}
 	maxRequestSize     int64
 	maxRequestDuration time.Duration
+	debugConfig        *vault.DebugConfig
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -971,11 +972,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
 
+		// Parse out the debug config for the listener config
+		debugConfig := vault.NewDebugConfig(lnConfig.Debug)
+
 		lns = append(lns, ServerListener{
 			Listener:           ln,
 			config:             lnConfig.Config,
 			maxRequestSize:     maxRequestSize,
 			maxRequestDuration: maxRequestDuration,
+			debugConfig:        debugConfig,
 		})
 
 		// Store the listener props for output later
@@ -1216,6 +1221,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			MaxRequestSize:        ln.maxRequestSize,
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
+			DebugConfig:           ln.debugConfig,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
