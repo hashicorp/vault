@@ -68,7 +68,7 @@
                         @id={{item.id}}
                         @onTrigger={{action c.onTrigger item.id}}
                         @triggerText={{if backendModel.isV2KV "Permanently delete" "Delete"}}
-                        @confirmMessage="This will permanently delete this secret and all its vesions."
+                        @message="This will permanently delete this secret and all its vesions."
                         @onConfirm={{action "delete" item "secret"}}
                         @onCancel={{action c.onCancel}}
                         />
