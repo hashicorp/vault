@@ -41,6 +41,7 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.5.5",
     "@ember/optional-features": "^0.7.0",
     "@hashicorp/structure-icons": "^1.3.0",
+    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93",
     "Duration.js": "icholy/Duration.js#golang_compatible",
     "autosize": "^4.0.0",
     "babel-eslint": "^10.0.2",
@@ -134,8 +135,7 @@
     "text-encoder-lite": "2.0.0",
     "walk-sync": "^2.0.2",
     "xstate": "^3.3.3",
-    "yargs-parser": "^13.1.1",
-    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93"
+    "yargs-parser": "^13.1.1"
   },
   "optionalDependencies": {
     "@babel/core": "^7.5.5",
