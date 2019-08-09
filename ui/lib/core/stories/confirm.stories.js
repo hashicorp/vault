@@ -27,7 +27,6 @@ storiesOf('Confirm/', module)
             @confirmButtonText={{confirmButtonText}}
             @cancelButtonText={{cancelButtonText}}
             @onConfirm={{onConfirm}}
-            @onCancel={{action c.onCancel}}
             />
         </Confirm>
       </div>

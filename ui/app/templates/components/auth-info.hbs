@@ -34,7 +34,6 @@
               <c.Trigger
                 @id={{get auth 'authData.displayName'}}
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
-                @onCancel={{action c.onCancel}}
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
                 @onTrigger={{action c.onTrigger (get auth 'authData.displayName')}}
@@ -45,7 +44,6 @@
               <c.Trigger
                 @id={{get auth 'authData.displayName'}}
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
-                @onCancel={{action c.onCancel}}
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
                 @onTrigger={{action c.onTrigger (get auth 'authData.displayName')}}
