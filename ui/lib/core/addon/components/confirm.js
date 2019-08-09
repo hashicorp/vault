@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { htmlSafe } from '@ember/template';
 import layout from '../templates/components/confirm';
 
 /**
@@ -31,6 +32,9 @@ export default Component.extend({
   layout,
   itemId: null,
   height: 0,
+  style: computed('height', function() {
+    return htmlSafe(`height: ${this.height}px`);
+  }),
   wormholeReference: null,
   wormholeId: computed(function() {
     return `confirm-${this.elementId}`;
