@@ -122,7 +122,7 @@
     "jsonlint": "^1.6.3",
     "loader.js": "^4.7.0",
     "node-sass": "^4.10.0",
-    "normalize.css": "^8.0.1",
+    "normalize.css": "4.1.1",
     "prettier": "^1.14.3",
     "prettier-eslint-cli": "^5.0.0",
     "qunit-dom": "^0.7.1",
