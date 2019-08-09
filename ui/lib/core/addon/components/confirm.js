@@ -5,26 +5,22 @@ import layout from '../templates/components/confirm';
 
 /**
  * @module Confirm
- * `Confirm` components prevent users from performing actions they do not intend to. This component should always be rendered with a Trigger (usually a link or button) and Message.
+ * `Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Trigger` which triggers the message.
  *
  * @example
  * ```js
+ * <div class="box">
  * <Confirm as |c|>
- * <c.Trigger>
- *   <button
- *     type="button"
- *     class="link is-destroy"
- *     onclick={{action c.onTrigger item.id}}>
- *     Delete
- *   </button>
- * </c.Trigger>
- * <c.Message
- *   @id={{item.id}}
- *   @onCancel={{action c.onCancel}}
- *   @onConfirm={{action "delete" item "secret"}}
- *   @message="This will permanently delete this secret and all its vesions.">
- * </c.Message>
+ *   <c.Trigger
+ *     @id={{item.id}}
+ *     @onTrigger={{action c.onTrigger item.id}}
+ *     @triggerText="Delete"
+ *     @message="This will permanently delete this secret and all its vesions."
+ *     @onConfirm={{action "delete" item "secret"}}
+ *     @onCancel={{action c.onCancel}}
+ *     />
  * </Confirm>
+ * </div>
  * ```
  */
 

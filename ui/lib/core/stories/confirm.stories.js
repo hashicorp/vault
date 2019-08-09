@@ -17,45 +17,31 @@ storiesOf('Confirm/', module)
       template: hbs`
       <h5 class="title is-5">Confirm</h5>
       <div class="box">
-      <Confirm as |c|>
-        <nav class="menu">
-          <ul class="menu-list">
-            <li class="action">
-              <c.Trigger>
-                <button
-                  type="button"
-                  class="link is-destroy"
-                  onclick={{action c.onTrigger id}}>
-                  Delete
-                </button>
-              </c.Trigger>
-            </li>
-          </ul>
-        </nav>
-        <c.Message
-          @id={{item.id}}
-          @onCancel={{action c.onCancel}}
-          @onConfirm={{onConfirm}}
-          @title={{title}}
-          @message={{message}}
-          @confirmButtonText={{confirmButtonText}}
-          @cancelButtonText={{cancelButtonText}}>
-        </c.Message>
-      </Confirm>
+        <Confirm as |c|>
+          <c.Trigger
+            @id={{id}}
+            @title={{title}}
+            @onTrigger={{action c.onTrigger id}}
+            @triggerText={{triggerText}}
+            @message={{message}}
+            @confirmButtonText={{confirmButtonText}}
+            @cancelButtonText={{cancelButtonText}}
+            @onConfirm={{onConfirm}}
+            @onCancel={{action c.onCancel}}
+            />
+        </Confirm>
       </div>
     `,
       context: {
         id: 'foo',
-        onCancel: () => {
-          alert('Cancelled!');
-        },
         onConfirm: () => {
           alert('Confirmed!');
         },
-        title: text('title', 'Are you sure?'),
-        message: text('message', 'You will not be able to undo this action.'),
-        confirmButtonText: text('confirmButtonText', 'Confirm'),
+        title: text('title', 'Delete this?'),
+        message: text('message', 'You will not be able to recover it later.'),
+        confirmButtonText: text('confirmButtonText', 'Delete'),
         cancelButtonText: text('cancelButtonText', 'Cancel'),
+        triggerText: text('triggerText', 'Delete'),
       },
     }),
     { notes }

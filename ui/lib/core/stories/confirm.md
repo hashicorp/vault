@@ -1,36 +1,21 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/confirm.js. To make changes, first edit that file and run "yarn gen-story-md confirm" to re-generate the content.-->
 
 ## Confirm
-`Confirm` components prevent users from performing actions they do not intend to. This component should always be rendered with a Trigger (usually a link or button) and Message.
+`Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Trigger` which triggers the message.
 
 **Example**
   
 ```js
 <div class="box">
   <Confirm as |c|>
-    <nav class="menu">
-      <ul class="menu-list">
-        <li class="action">
-          <c.Trigger>
-            <button
-              type="button"
-              class="link is-destroy"
-              onclick={{action c.onTrigger id}}>
-              Delete
-            </button>
-          </c.Trigger>
-        </li>
-      </ul>
-    </nav>
-    <c.Message
+    <c.Trigger
       @id={{item.id}}
+      @onTrigger={{action c.onTrigger item.id}}
+      @triggerText="Delete"
+      @message="This will permanently delete this secret and all its vesions."
+      @onConfirm={{action "delete" item "secret"}}
       @onCancel={{action c.onCancel}}
-      @onConfirm={{onConfirm}}
-      @title={{title}}
-      @message={{message}}
-      @confirmButtonText={{confirmButtonText}}
-      @cancelButtonText={{cancelButtonText}}>
-    </c.Message>
+      />
   </Confirm>
 </div>
 ```
