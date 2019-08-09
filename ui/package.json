@@ -134,18 +134,18 @@
     "text-encoder-lite": "2.0.0",
     "walk-sync": "^2.0.2",
     "xstate": "^3.3.3",
-    "yargs-parser": "^13.1.1"
+    "yargs-parser": "^13.1.1",
+    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93"
   },
   "optionalDependencies": {
-    "@babel/core": "^7.3.4",
-    "@storybook/addon-knobs": "^5.0.5",
-    "@storybook/addon-links": "^5.0.5",
-    "@storybook/addon-notes": "^5.0.5",
-    "@storybook/addon-viewport": "^5.0.5",
-    "@storybook/addons": "^5.0.5",
-    "@storybook/ember": "^5.0.5",
-    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93",
-    "babel-loader": "^8.0.5",
+    "@babel/core": "^7.5.5",
+    "@storybook/addon-knobs": "^5.1.10",
+    "@storybook/addon-links": "^5.1.10",
+    "@storybook/addon-notes": "^5.1.10",
+    "@storybook/addon-viewport": "^5.1.10",
+    "@storybook/addons": "^5.1.10",
+    "@storybook/ember": "^5.1.10",
+    "babel-loader": "^8.0.6",
     "jsdoc-to-markdown": "^5.0.0",
     "lint-staged": "^9.2.1"
   },
