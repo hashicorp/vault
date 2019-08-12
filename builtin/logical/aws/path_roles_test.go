@@ -69,31 +69,6 @@ func TestBackend_PathListRoles(t *testing.T) {
 	}
 }
 
-func TestBackend_RefuseDangerousFederationTokenConfig(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-
-	b := Backend()
-	if err := b.Setup(context.Background(), config); err != nil {
-		t.Fatal(err)
-	}
-
-	roleData := map[string]interface{}{
-		"credential_type": federationTokenCred,
-	}
-	roleReq := &logical.Request{
-		Path:      "roles/test",
-		Operation: logical.UpdateOperation,
-		Storage:   config.StorageView,
-		Data:      roleData,
-	}
-
-	resp, err := b.HandleRequest(context.Background(), roleReq)
-	if err == nil && (resp == nil || !resp.IsError()) {
-		t.Fatalf("bad: expected creating dangerous role config to fail, but it didn't")
-	}
-}
-
 func TestUpgradeLegacyPolicyEntry(t *testing.T) {
 	var input string
 	var expected awsRoleEntry
@@ -307,6 +282,7 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{assumedRoleCred},
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 		PolicyDocument:  allowAllPolicyDocument,
 		DefaultSTSTTL:   2,
 		MaxSTSTTL:       3,
@@ -315,11 +291,6 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
 	}
 
-	roleEntry.PolicyArns = []string{"arn:aws:iam::aws:policy/AdministratorAccess"}
-	if roleEntry.validate() == nil {
-		t.Errorf("bad: invalid roleEntry with unrecognized PolicyArns %#v passed validation", roleEntry)
-	}
-	roleEntry.PolicyArns = []string{}
 	roleEntry.MaxSTSTTL = 1
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with MaxSTSTTL < DefaultSTSTTL %#v passed validation", roleEntry)
@@ -336,6 +307,7 @@ func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{federationTokenCred},
 		PolicyDocument:  allowAllPolicyDocument,
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 		DefaultSTSTTL:   2,
 		MaxSTSTTL:       3,
 	}
