@@ -59,12 +59,14 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
+	if entry == nil {
+		return nil, nil
+	}
+
 	var config rootConfig
 
-	if entry != nil {
-		if err := entry.DecodeJSON(&config); err != nil {
-			return nil, err
-		}
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
 	}
 
 	configData := map[string]interface{}{
