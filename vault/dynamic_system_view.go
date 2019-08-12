@@ -16,6 +16,12 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 )
 
+type ctxKeyForwardedRequestMountAccessor struct{}
+
+func (c ctxKeyForwardedRequestMountAccessor) String() string {
+	return "forwarded-req-mount-accessor"
+}
+
 type dynamicSystemView struct {
 	core       *Core
 	mountEntry *MountEntry
@@ -31,6 +37,17 @@ func (e extendedSystemView) Auditor() logical.Auditor {
 		namespace: e.mountEntry.Namespace(),
 		c:         e.core,
 	}
+}
+
+func (e extendedSystemView) ForwardGenericRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	// Forward the request if allowed
+	if couldForward(e.core) {
+		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
+		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
+		return forward(ctx, e.core, req)
+	}
+
+	return nil, logical.ErrReadOnly
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
@@ -93,11 +110,13 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 
 	// The operation type isn't important here as this is run from a path the
 	// user has already been given access to; we only care about whether they
-	// have sudo
+	// have sudo. Note that we use root context because the path that comes in
+	// must be fully-qualified already so we don't want AllowOperation to
+	// prepend a namespace prefix onto it.
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	authResults := acl.AllowOperation(ctx, req, true)
+	authResults := acl.AllowOperation(namespace.RootContext(ctx), req, true)
 	return authResults.RootPrivs
 }
 

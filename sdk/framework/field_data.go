@@ -38,8 +38,8 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
-			TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
+		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+			TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 			TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
@@ -131,8 +131,8 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
-		TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
+	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+		TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 		TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 		return d.getPrimitive(k, schema)
 	default:
@@ -147,7 +147,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return nil, false, nil
 	}
 
-	switch schema.Type {
+	switch t := schema.Type; t {
 	case TypeBool:
 		var result bool
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
@@ -197,43 +197,19 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		}
 		return result, true, nil
 
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		var result int
 		switch inp := raw.(type) {
 		case nil:
 			return nil, false, nil
-		case int:
-			result = inp
-		case int32:
-			result = int(inp)
-		case int64:
-			result = int(inp)
-		case uint:
-			result = int(inp)
-		case uint32:
-			result = int(inp)
-		case uint64:
-			result = int(inp)
-		case float32:
-			result = int(inp)
-		case float64:
-			result = int(inp)
-		case string:
+		default:
 			dur, err := parseutil.ParseDurationSecond(inp)
 			if err != nil {
 				return nil, false, err
 			}
 			result = int(dur.Seconds())
-		case json.Number:
-			valInt64, err := inp.Int64()
-			if err != nil {
-				return nil, false, err
-			}
-			result = int(valInt64)
-		default:
-			return nil, false, fmt.Errorf("invalid input '%v'", raw)
 		}
-		if result < 0 {
+		if t == TypeDurationSecond && result < 0 {
 			return nil, false, fmt.Errorf("cannot provide negative value '%d'", result)
 		}
 		return result, true, nil

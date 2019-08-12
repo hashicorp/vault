@@ -1,0 +1,56 @@
+---
+version: 2.1
+
+references:
+  images:
+    go: &GOLANG_IMAGE golang:1.12.7-stretch # Pin Go to patch version (ex: 1.2.3)
+    node: &NODE_IMAGE node:10-stretch       # Pin Node.js to major version (ex: 10)
+
+  cache:
+    go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
+    yarn-lock: &YARN_LOCK_CACHE_KEY yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+
+# more commands defined in commands/
+commands:
+  restore_yarn_cache:
+    steps:
+      - restore_cache:
+          key: *YARN_LOCK_CACHE_KEY
+  save_yarn_cache:
+    steps:
+      - save_cache:
+          key: *YARN_LOCK_CACHE_KEY
+          paths:
+            - ui/node_modules
+  restore_go_cache:
+    steps:
+      - restore_cache:
+          key: *GO_SUM_CACHE_KEY
+  save_go_cache:
+    steps:
+      - save_cache:
+          key: *GO_SUM_CACHE_KEY
+          paths:
+            - /go/pkg/mod
+
+executors:
+  go:
+    docker:
+      - image: *GOLANG_IMAGE
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /src
+  go-machine:
+    machine: true
+    environment:
+      CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+      GO_VERSION: 1.12.7  # Pin Go to patch version (ex: 1.2.3)
+      GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
+      GO_TAGS:
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: ~/src
+  node:
+    docker:
+      - image: *NODE_IMAGE
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /src
+

@@ -28,10 +28,9 @@ $ curl \
 ```
 
 ### Sample Response
-
 ```json
 {
-  "aws": {
+  "aws/": {
     "type": "aws",
     "description": "AWS keys",
     "config": {
@@ -41,7 +40,7 @@ $ curl \
       "seal_wrap": false
     }
   },
-  "sys": {
+  "sys/": {
     "type": "system",
     "description": "system endpoint",
     "config": {
@@ -50,6 +49,28 @@ $ curl \
       "force_no_cache": false,
       "seal_wrap": false
     }
+  },
+  "data": {
+    "aws/": {
+      "type": "aws",
+      "description": "AWS keys",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
+    "sys/": {
+      "type": "system",
+      "description": "system endpoint",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
   }
 }
 ```

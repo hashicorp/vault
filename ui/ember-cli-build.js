@@ -60,6 +60,10 @@ module.exports = function(defaults) {
     'ember-test-selectors': {
       strip: isProd,
     },
+    // https://github.com/ember-cli/ember-fetch/issues/204
+    'ember-fetch': {
+      preferNative: true,
+    },
   });
 
   app.import('vendor/string-includes.js');
@@ -76,6 +80,7 @@ module.exports = function(defaults) {
 
   app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
   app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
+
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

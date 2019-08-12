@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -27,13 +27,15 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	var data map[string]interface{}
 	var origBody io.ReadCloser
+	var requestReader io.ReadCloser
+	var responseWriter io.Writer
 
 	// Determine the operation
 	var op logical.Operation
 	switch r.Method {
 	case "DELETE":
 		op = logical.DeleteOperation
-
+		data = parseQuery(r.URL.Query())
 	case "GET":
 		op = logical.ReadOperation
 		queryVals := r.URL.Query()
@@ -54,39 +56,32 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		}
 
 		if !list {
-			getData := map[string]interface{}{}
+			data = parseQuery(queryVals)
+		}
 
-			for k, v := range r.URL.Query() {
-				// Skip the help key as this is a reserved parameter
-				if k == "help" {
-					continue
-				}
-
-				switch {
-				case len(v) == 0:
-				case len(v) == 1:
-					getData[k] = v[0]
-				default:
-					getData[k] = v
-				}
-			}
-
-			if len(getData) > 0 {
-				data = getData
-			}
+		if path == "sys/storage/raft/snapshot" {
+			responseWriter = w
 		}
 
 	case "POST", "PUT":
 		op = logical.UpdateOperation
 		// Parse the request if we can
 		if op == logical.UpdateOperation {
-			origBody, err = parseRequest(core, r, w, &data)
-			if err == io.EOF {
-				data = nil
-				err = nil
-			}
-			if err != nil {
-				return nil, nil, http.StatusBadRequest, err
+			// If we are uploading a snapshot we don't want to parse it. Instead
+			// we will simply add the request body to the logical request object
+			// for later consumption.
+			if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+				requestReader = r.Body
+				origBody = r.Body
+			} else {
+				origBody, err = parseRequest(core, r, w, &data)
+				if err == io.EOF {
+					data = nil
+					err = nil
+				}
+				if err != nil {
+					return nil, nil, http.StatusBadRequest, err
+				}
 			}
 		}
 
@@ -136,6 +131,12 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
+	if requestReader != nil {
+		req.RequestReader = requestReader
+	}
+	if responseWriter != nil {
+		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
+	}
 	return req, origBody, 0, nil
 }
 
@@ -189,6 +190,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 				}
 			}
 			switch req.Path {
+			// Route the token wrapping request to its respective sys NS
 			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 				r = r.WithContext(newCtx)
 				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
@@ -293,6 +295,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response, injectDataIntoTopLevel bool) {
 	var httpResp *logical.HTTPResponse
 	var ret interface{}
+
+	// If vault's core has already written to the response writer do not add any
+	// additional output. Headers have already been sent.
+	if req != nil && req.ResponseWriter != nil && req.ResponseWriter.Written() {
+		return
+	}
 
 	if resp != nil {
 		if resp.Redirect != "" {
@@ -428,6 +436,10 @@ WRITE_RESPONSE:
 	// Write the response
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
+	}
+
+	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
+		w.Header().Set("Cache-Control", cacheControl)
 	}
 
 	w.WriteHeader(status)

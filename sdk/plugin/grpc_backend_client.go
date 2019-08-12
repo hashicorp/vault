@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
@@ -42,6 +44,38 @@ type backendGRPCPluginClient struct {
 	// so it can be cleaned up.
 	clientConn *grpc.ClientConn
 	doneCtx    context.Context
+}
+
+func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	if b.metadataMode {
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
+	if err != nil {
+		if b.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
+
+		// If the plugin doesn't have Initialize implemented we should not fail
+		// the initialize call; otherwise this could halt startup of vault.
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			return nil
+		}
+
+		return err
+	}
+	if reply.Err != nil {
+		return pb.ProtoErrToErr(reply.Err)
+	}
+
+	return nil
 }
 
 func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {

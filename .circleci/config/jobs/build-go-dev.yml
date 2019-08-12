@@ -1,0 +1,19 @@
+executor: go
+steps:
+  - checkout
+  - restore_go_cache
+  - attach_workspace:
+      at: .
+  - run:
+      name: Build dev binary
+      command: |
+        # Move dev UI assets to expected location
+        rm -rf ./pkg
+        mkdir ./pkg
+
+        # Build dev binary
+        make bootstrap dev
+  - persist_to_workspace:
+      root: .
+      paths:
+        - bin

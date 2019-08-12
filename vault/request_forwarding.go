@@ -16,6 +16,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
@@ -59,6 +60,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 			perfStandbySlots:      perfStandbySlots,
 			perfStandbyRepCluster: perfStandbyRepCluster,
 			perfStandbyCache:      perfStandbyCache,
+			raftFollowerStates:    c.raftFollowerStates,
 		})
 	}
 
@@ -118,14 +120,14 @@ func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHell
 }
 
 // CALookup satisfies the ClusterHandler interface and returns the ha ca cert.
-func (rf *requestForwardingHandler) CALookup(ctx context.Context) (*x509.Certificate, error) {
+func (rf *requestForwardingHandler) CALookup(ctx context.Context) ([]*x509.Certificate, error) {
 	parsedCert := rf.core.localClusterParsedCert.Load().(*x509.Certificate)
 
 	if parsedCert == nil {
 		return nil, fmt.Errorf("forwarding connection client but no local cert")
 	}
 
-	return parsedCert, nil
+	return []*x509.Certificate{parsedCert}, nil
 }
 
 // Handoff serves a request forwarding connection.
@@ -212,6 +214,7 @@ func (c *Core) stopForwarding() {
 		c.clusterListener.StopHandler(consts.RequestForwardingALPN)
 		c.clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
+	c.removeAllPerfStandbySecondaries()
 }
 
 // refreshRequestForwardingConnection ensures that the client/transport are

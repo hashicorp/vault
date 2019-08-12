@@ -95,7 +95,7 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}}/>
+        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}} @isPreformatted={{flash.preformatted}} />
       {{/if}}
     {{/flash-message}}
   {{/each}}

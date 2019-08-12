@@ -21,20 +21,20 @@ const (
 	credentialTypeSP = 0
 )
 
-// Role is a Vault role construct that maps to Azure roles or Applications
-type Role struct {
+// roleEntry is a Vault role construct that maps to Azure roles or Applications
+type roleEntry struct {
 	CredentialType      int           `json:"credential_type"` // Reserved. Always SP at this time.
-	AzureRoles          []*azureRole  `json:"azure_roles"`
+	AzureRoles          []*AzureRole  `json:"azure_roles"`
 	ApplicationID       string        `json:"application_id"`
 	ApplicationObjectID string        `json:"application_object_id"`
 	TTL                 time.Duration `json:"ttl"`
 	MaxTTL              time.Duration `json:"max_ttl"`
 }
 
-// azureRole is an Azure Role (https://docs.microsoft.com/en-us/azure/role-based-access-control/overview) applied
+// AzureRole is an Azure Role (https://docs.microsoft.com/en-us/azure/role-based-access-control/overview) applied
 // to a scope. RoleName and RoleID are both traits of the role. RoleID is the unique identifier, but RoleName is
 // more useful to a human (thought it is not unique).
-type azureRole struct {
+type AzureRole struct {
 	RoleName string `json:"role_name"` // e.g. Owner
 	RoleID   string `json:"role_id"`   // e.g. /subscriptions/e0a207b2-.../providers/Microsoft.Authorization/roleDefinitions/de139f84-...
 	Scope    string `json:"scope"`     // e.g. /subscriptions/e0a207b2-...
@@ -120,7 +120,7 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 		if req.Operation == logical.UpdateOperation {
 			return nil, errors.New("role entry not found during update operation")
 		}
-		role = &Role{
+		role = &roleEntry{
 			CredentialType: credentialTypeSP,
 		}
 	}
@@ -157,7 +157,7 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 
 	// update and verify Azure roles, including looking up each role by ID or name.
 	if roles, ok := d.GetOk("azure_roles"); ok {
-		parsedRoles := make([]*azureRole, 0) // non-nil to avoid a "missing roles" error later
+		parsedRoles := make([]*AzureRole, 0) // non-nil to avoid a "missing roles" error later
 
 		err := jsonutil.DecodeJSON([]byte(roles.(string)), &parsedRoles)
 		if err != nil {
@@ -270,7 +270,7 @@ func (b *azureSecretBackend) pathRoleExistenceCheck(ctx context.Context, req *lo
 	return role != nil, nil
 }
 
-func saveRole(ctx context.Context, s logical.Storage, c *Role, name string) error {
+func saveRole(ctx context.Context, s logical.Storage, c *roleEntry, name string) error {
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("%s/%s", rolesStoragePath, name), c)
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func saveRole(ctx context.Context, s logical.Storage, c *Role, name string) erro
 	return s.Put(ctx, entry)
 }
 
-func getRole(ctx context.Context, name string, s logical.Storage) (*Role, error) {
+func getRole(ctx context.Context, name string, s logical.Storage) (*roleEntry, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("%s/%s", rolesStoragePath, name))
 	if err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func getRole(ctx context.Context, name string, s logical.Storage) (*Role, error)
 		return nil, nil
 	}
 
-	role := new(Role)
+	role := new(roleEntry)
 	if err := entry.DecodeJSON(role); err != nil {
 		return nil, err
 	}

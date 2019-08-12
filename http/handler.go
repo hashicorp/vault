@@ -69,6 +69,7 @@ var (
 	// perfStandbyAlwaysForwardPaths is used to check a requested path against
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
+	alwaysRedirectPaths           = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
 		"/v1/sys/audit",
@@ -95,6 +96,13 @@ var (
 	}
 )
 
+func init() {
+	alwaysRedirectPaths.AddPaths([]string{
+		"sys/storage/raft/snapshot",
+		"sys/storage/raft/snapshot-force",
+	})
+}
+
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func Handler(props *vault.HandlerProperties) http.Handler {
@@ -117,6 +125,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+	mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 	for _, path := range injectDataIntoTopRoutes {
 		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 	}
@@ -299,7 +308,7 @@ func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logica
 		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
 	}
 	if !valid {
-		return fmt.Errorf("wrapping token is not valid or does not exist")
+		return consts.ErrInvalidWrappingToken
 	}
 
 	return nil
@@ -446,6 +455,29 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
+func parseQuery(values url.Values) map[string]interface{} {
+	data := map[string]interface{}{}
+	for k, v := range values {
+		// Skip the help key as this is a reserved parameter
+		if k == "help" {
+			continue
+		}
+
+		switch {
+		case len(v) == 0:
+		case len(v) == 1:
+			data[k] = v[0]
+		default:
+			data[k] = v
+		}
+	}
+
+	if len(data) > 0 {
+		return data
+	}
+	return nil
+}
+
 func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
@@ -491,7 +523,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 			switch {
-			case !perfStandbyAlwaysForwardPaths.HasPath(path):
+			case !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
 				return
 			case strings.HasPrefix(path, "auth/token/create/"):
@@ -541,6 +573,17 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 		// Forwarding explicitly disabled, fall back to previous behavior
 		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
+		respondStandby(core, w, r.URL)
+		return
+	}
+
+	ns, err := namespace.FromContext(r.Context())
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+	if alwaysRedirectPaths.HasPath(path) {
 		respondStandby(core, w, r.URL)
 		return
 	}
@@ -613,6 +656,14 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 			// so nil out the response now that the headers are written out
 			resp = nil
 		}
+	}
+
+	// If vault's core has already written to the response writer do not add any
+	// additional output. Headers have already been sent. If the response writer
+	// is set but has not been written to it likely means there was some kind of
+	// error
+	if r.ResponseWriter != nil && r.ResponseWriter.Written() {
+		return nil, true, false
 	}
 
 	if respondErrorCommon(w, r, resp, err) {

@@ -3,6 +3,7 @@ pid_file = "./pidfile"
 auto_auth {
 	method "aws" {
 		mount_path = "auth/aws"
+		namespace = "my-namespace"
 		config = {
 			role = "foobar"
 		}

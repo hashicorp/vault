@@ -65,7 +65,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity"][1]),
 		},
 		{
-			Pattern: "entity/name/" + framework.GenericNameRegex("name"),
+			Pattern: "entity/name/(?P<name>.+)",
 			Fields:  entityPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleEntityUpdateCommon(),
@@ -337,6 +337,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	respData["merged_entity_ids"] = entity.MergedEntityIDs
 	respData["policies"] = entity.Policies
 	respData["disabled"] = entity.Disabled
+	respData["namespace_id"] = entity.NamespaceID
 
 	// Convert protobuf timestamp into RFC3339 format
 	respData["creation_time"] = ptypes.TimestampString(entity.CreationTime)

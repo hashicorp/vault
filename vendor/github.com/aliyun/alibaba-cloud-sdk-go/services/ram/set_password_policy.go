@@ -99,7 +99,7 @@ func CreateSetPasswordPolicyRequest() (request *SetPasswordPolicyRequest) {
 	request = &SetPasswordPolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "SetPasswordPolicy", "ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "SetPasswordPolicy", "", "")
 	return
 }
 

@@ -1,0 +1,21 @@
+<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
+  data-test-masked-input data-test-field>
+  {{#if displayOnly}}
+    <pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
+  {{else}}
+    <textarea class="input masked-value" rows=1 wrap="off" placeholder={{placeholder}}
+      onfocus={{action (mut isFocused) true}} onblur={{action (mut isFocused) false}} onkeydown={{action onKeyDown}}
+      onchange={{action "updateValue"}} value={{readonly displayValue}} data-test-textarea />
+  {{/if}}
+  {{#if allowCopy}}
+    <CopyButton @clipboardText={{value}} @success={{success}} class="copy-button button {{if displayOnly "is-compact"}}"
+      data-test-copy-button>
+      <Icon @glyph="copy-action" aria-hidden="Copy value" />
+    </CopyButton>
+  {{/if}}
+  <button {{action "toggleMask"}}
+    class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}"
+    data-test-button>
+    <Icon @glyph={{if shouldObscure "visibility-hide" "visibility-show"}} aria-hidden="true" />
+  </button>
+</div>

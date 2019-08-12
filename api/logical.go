@@ -161,7 +161,25 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
+	return c.DeleteWithData(path, nil)
+}
+
+func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("DELETE", "/v1/"+path)
+
+	var values url.Values
+	for k, v := range data {
+		if values == nil {
+			values = make(url.Values)
+		}
+		for _, val := range v {
+			values.Add(k, val)
+		}
+	}
+
+	if values != nil {
+		r.Params = values
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

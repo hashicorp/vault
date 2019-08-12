@@ -1,0 +1,182 @@
+{{#unless
+  (or
+    (eq attr.type "boolean")
+    (contains
+      attr.options.editType
+      (array
+        "boolean"
+        "searchSelect"
+        "mountAccessor"
+        "kv"
+        "file"
+        "ttl"
+        "stringArray"
+        "json"
+      )
+    )
+  )
+}}
+  <label for="{{attr.name}}" class="is-label">
+    {{labelString}}
+    {{#if attr.options.helpText}}
+      {{#info-tooltip}}
+        <span data-test-help-text>
+          {{attr.options.helpText}}
+        </span>
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+{{/unless}}
+{{#if attr.options.possibleValues}}
+  <div class="control is-expanded">
+    <div class="select is-fullwidth">
+      <select name="{{attr.name}}" id="{{attr.name}}" onchange={{action
+          (action "setAndBroadcast" valuePath)
+          value="target.value"
+        }} data-test-input={{attr.name}}>
+        {{#each (path-or-array attr.options.possibleValues model) as |val|}}
+          <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
+            {{or val.displayName val}}
+          </option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+{{else if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
+  <div class="b-checkbox">
+    <input type="checkbox" id="{{attr.name}}" class="styled" checked={{eq (get model valuePath) attr.options.trueValue}}
+      onchange={{action
+        (action
+          "setAndBroadcastBool"
+          valuePath
+          attr.options.trueValue
+          attr.options.falseValue
+        )
+        value="target.checked"
+      }} data-test-input={{attr.name}} />
+
+    <label for="{{attr.name}}" class="is-label">
+      {{labelString}}
+      {{#if attr.options.helpText}}
+        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+      {{/if}}
+    </label>
+  </div>
+{{else if (eq attr.options.editType "searchSelect")}}
+  <div class="form-section">
+    <SearchSelect @id={{attr.name}} @models={{attr.options.models}}
+      @onChange={{action (action "setAndBroadcast" valuePath)}} @inputValue={{get model valuePath}}
+      @helpText={{attr.options.helpText}} @label={{labelString}}
+      @fallbackComponent={{attr.options.fallbackComponent}} />
+  </div>
+{{else if (eq attr.options.editType "mountAccessor")}}
+  {{mount-accessor-select
+    name=attr.name
+    label=labelString
+    warning=attr.options.warning
+    helpText=attr.options.helpText
+    value=(get model valuePath)
+    onChange=(action "setAndBroadcast" valuePath)
+  }}
+{{else if (eq attr.options.editType "kv")}}
+  {{kv-object-editor
+    value=(get model valuePath)
+    onChange=(action "setAndBroadcast" valuePath)
+    label=labelString
+    warning=attr.options.warning
+    helpText=attr.options.helpText
+  }}
+{{else if (eq attr.options.editType "file")}}
+  {{text-file
+    index=""
+    file=file
+    onChange=(action "setFile")
+    warning=attr.options.warning
+    label=labelString
+  }}
+{{else if (eq attr.options.editType "ttl")}}
+  {{ttl-picker
+    data-test-input=attr.name
+    initialValue=(or (get model valuePath) attr.options.defaultValue)
+    labelText=labelString
+    warning=attr.options.warning
+    setDefaultValue=(or (get model valuePath) attr.options.setDefault false)
+    onChange=(action (action "setAndBroadcast" valuePath))
+  }}
+{{else if (eq attr.options.editType "stringArray")}}
+  {{string-list
+    data-test-input=attr.name
+    label=labelString
+    warning=attr.options.warning
+    helpText=attr.options.helpText
+    inputValue=(get model valuePath)
+    onChange=(action (action "setAndBroadcast" valuePath))
+  }}
+{{else if (eq attr.options.sensitive true)}}
+  <MaskedInput @value={{or (get model valuePath) attr.options.defaultValue}} @placeholder="" @allowCopy="true"
+    @onChange={{action (action "setAndBroadcast" valuePath)}} />
+
+{{else if (or (eq attr.type "number") (eq attr.type "string"))}}
+  <div class="control">
+    {{#if (eq attr.options.editType "textarea")}}
+      <textarea data-test-input={{attr.name}} id={{attr.name}}
+        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
+          (action "setAndBroadcast" valuePath)
+          value="target.value"
+        }} class="textarea"></textarea>
+    {{else if (eq attr.options.editType "json")}}
+      <label for="{{attr.name}}" class="is-label">
+        {{labelString}}
+        {{#if attr.options.helpText}}
+          {{#info-tooltip}}
+            <span data-test-help-text>
+              {{attr.options.helpText}}
+            </span>
+          {{/info-tooltip}}
+        {{/if}}
+      </label>
+      {{json-editor
+        value=(if
+          (get model valuePath) (stringify (jsonify (get model valuePath)))
+        )
+        valueUpdated=(action "codemirrorUpdated" attr.name "string")
+      }}
+    {{else}}
+      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
+        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
+          (action "setAndBroadcast" valuePath)
+          value="target.value"
+        }} class="input" />
+
+      {{#if attr.options.validationAttr}}
+        {{#if
+          (and
+            (get model valuePath) (not (get model attr.options.validationAttr))
+          )
+        }}
+          <AlertInline @type="danger" @message={{attr.options.invalidMessage}} />
+
+        {{/if}}
+      {{/if}}
+    {{/if}}
+  </div>
+{{else if (eq attr.type "boolean")}}
+  <div class="b-checkbox">
+    <input disabled={{this.disabled}} type="checkbox" id="{{attr.name}}" class="styled" checked={{get model attr.name}} onchange={{action
+        (action "setAndBroadcast" valuePath)
+        value="target.checked"
+      }} data-test-input={{attr.name}} />
+
+    <label for="{{attr.name}}" class="is-label">
+      {{labelString}}
+      {{#if (and this.showHelpText attr.options.helpText)}}
+        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+      {{/if}}
+    </label>
+  </div>
+{{else if (eq attr.type "object")}}
+  {{json-editor
+    value=(if (get model valuePath) (stringify (get model valuePath)) emptyData)
+    valueUpdated=(action "codemirrorUpdated" attr.name false)
+  }}
+{{/if}}

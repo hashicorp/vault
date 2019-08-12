@@ -18,8 +18,8 @@ module('Acceptance | settings/configure/secrets/pki/crl', function(hooks) {
     await page.visit({ backend: path, section: 'crl' });
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
-    await page.form.fillInField('time', 3);
-    await page.form.fillInField('unit', 'h');
+    await page.form.fillInValue(3);
+    await page.form.fillInUnit('h');
     await page.form.submit();
     assert.equal(page.lastMessage, 'The crl config for this backend has been updated.');
   });

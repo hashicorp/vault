@@ -25,15 +25,10 @@ module('Integration | Component | control group', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.register('service:auth', authService);
     this.owner.register('service:control-group', controlGroupService);
     this.controlGroup = this.owner.lookup('service:controlGroup');
     this.auth = this.owner.lookup('service:auth');
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   const setup = (modelData = {}, authData = {}) => {

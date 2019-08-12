@@ -13,7 +13,9 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
+      this.route('requests', { path: '/metrics/requests' });
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -39,6 +41,12 @@ Router.map(function() {
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
+          this.route('item', { path: '/item/:item_type' }, function() {
+            this.route('list', { path: '/' });
+            this.route('create');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/show/:item_id' });
+          });
           this.route('section', { path: '/:section_name' });
         });
         this.route('leases', function() {
@@ -76,6 +84,7 @@ Router.map(function() {
       this.route('secrets', function() {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function() {
+          this.mount('kmip');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
@@ -117,6 +126,7 @@ Router.map(function() {
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
+
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

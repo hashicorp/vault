@@ -37,12 +37,7 @@ module('Integration | Component | edit form', function(hooks) {
     run(() => {
       this.owner.unregister('service:flash-messages');
       this.owner.register('service:flash-messages', flash);
-      component.setContext(this);
     });
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it renders', async function(assert) {
@@ -51,19 +46,6 @@ module('Integration | Component | edit form', function(hooks) {
     await render(hbs`{{edit-form model=model}}`);
 
     assert.ok(component.fields.length, 2);
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, 'Delete');
-  });
-
-  test('it renders: custom deleteButton', async function(assert) {
-    let model = createModel();
-    let delText = 'Exterminate';
-    this.set('model', model);
-    this.set('deleteButtonText', delText);
-    await render(hbs`{{edit-form model=model deleteButtonText=deleteButtonText}}`);
-
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, delText);
   });
 
   test('it calls flash message fns on save', async function(assert) {

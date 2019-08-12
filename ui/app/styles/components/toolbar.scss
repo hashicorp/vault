@@ -24,6 +24,11 @@
   .select {
     min-width: 190px;
   }
+
+  label {
+    padding: $spacing-xs;
+    color: $grey;
+  }
 }
 
 .toolbar-scroller {

@@ -27,35 +27,36 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// A Key can be either a Cloud Spanner row's primary key or a secondary index key.
-// It is essentially an interface{} array, which represents a set of Cloud Spanner
-// columns. A Key can be used as:
+// A Key can be either a Cloud Spanner row's primary key or a secondary index
+// key. It is essentially an interface{} array, which represents a set of Cloud
+// Spanner columns. A Key can be used as:
 //
 //   - A primary key which uniquely identifies a Cloud Spanner row.
 //   - A secondary index key which maps to a set of Cloud Spanner rows indexed under it.
 //   - An endpoint of primary key/secondary index ranges; see the KeyRange type.
 //
-// Rows that are identified by the Key type are outputs of read operation or targets of
-// delete operation in a mutation. Note that for Insert/Update/InsertOrUpdate/Update
-// mutation types, although they don't require a primary key explicitly, the column list
-// provided must contain enough columns that can comprise a primary key.
+// Rows that are identified by the Key type are outputs of read operation or
+// targets of delete operation in a mutation. Note that for
+// Insert/Update/InsertOrUpdate/Update mutation types, although they don't
+// require a primary key explicitly, the column list provided must contain
+// enough columns that can comprise a primary key.
 //
 // Keys are easy to construct.  For example, suppose you have a table with a
 // primary key of username and product ID.  To make a key for this table:
 //
 //	key := spanner.Key{"john", 16}
 //
-// See the description of Row and Mutation types for how Go types are
-// mapped to Cloud Spanner types. For convenience, Key type supports a wide range
-// of Go types:
-//     - int, int8, int16, int32, int64, and NullInt64 are mapped to Cloud Spanner's INT64 type.
-//     - uint8, uint16 and uint32 are also mapped to Cloud Spanner's INT64 type.
-//     - float32, float64, NullFloat64 are mapped to Cloud Spanner's FLOAT64 type.
-//     - bool and NullBool are mapped to Cloud Spanner's BOOL type.
-//     - []byte is mapped to Cloud Spanner's BYTES type.
-//     - string and NullString are mapped to Cloud Spanner's STRING type.
-//     - time.Time and NullTime are mapped to Cloud Spanner's TIMESTAMP type.
-//     - civil.Date and NullDate are mapped to Cloud Spanner's DATE type.
+// See the description of Row and Mutation types for how Go types are mapped to
+// Cloud Spanner types. For convenience, Key type supports a wide range of Go
+// types:
+//   - int, int8, int16, int32, int64, and NullInt64 are mapped to Cloud Spanner's INT64 type.
+//   - uint8, uint16 and uint32 are also mapped to Cloud Spanner's INT64 type.
+//   - float32, float64, NullFloat64 are mapped to Cloud Spanner's FLOAT64 type.
+//   - bool and NullBool are mapped to Cloud Spanner's BOOL type.
+//   - []byte is mapped to Cloud Spanner's BYTES type.
+//   - string and NullString are mapped to Cloud Spanner's STRING type.
+//   - time.Time and NullTime are mapped to Cloud Spanner's TIMESTAMP type.
+//   - civil.Date and NullDate are mapped to Cloud Spanner's DATE type.
 type Key []interface{}
 
 // errInvdKeyPartType returns error for unsupported key part type.
@@ -344,17 +345,17 @@ func (r KeyRange) keySetProto() (*sppb.KeySet, error) {
 	return &sppb.KeySet{Ranges: []*sppb.KeyRange{rp}}, nil
 }
 
-// A KeySet defines a collection of Cloud Spanner keys and/or key ranges. All the
-// keys are expected to be in the same table or index. The keys need not be sorted in
-// any particular way.
+// A KeySet defines a collection of Cloud Spanner keys and/or key ranges. All
+// the keys are expected to be in the same table or index. The keys need not be
+// sorted in any particular way.
 //
-// An individual Key can act as a KeySet, as can a KeyRange. Use the KeySets function
-// to create a KeySet consisting of multiple Keys and KeyRanges. To obtain an empty
-// KeySet, call KeySets with no arguments.
+// An individual Key can act as a KeySet, as can a KeyRange. Use the KeySets
+// function to create a KeySet consisting of multiple Keys and KeyRanges. To
+// obtain an empty KeySet, call KeySets with no arguments.
 //
 // If the same key is specified multiple times in the set (for example if two
-// ranges, two keys, or a key and a range overlap), the Cloud Spanner backend behaves
-// as if the key were only specified once.
+// ranges, two keys, or a key and a range overlap), the Cloud Spanner backend
+// behaves as if the key were only specified once.
 type KeySet interface {
 	keySetProto() (*sppb.KeySet, error)
 }
@@ -370,8 +371,8 @@ func (all) keySetProto() (*sppb.KeySet, error) {
 	return &sppb.KeySet{All: true}, nil
 }
 
-// KeySets returns the union of the KeySets. If any of the KeySets is AllKeys, then
-// the resulting KeySet will be equivalent to AllKeys.
+// KeySets returns the union of the KeySets. If any of the KeySets is AllKeys,
+// then the resulting KeySet will be equivalent to AllKeys.
 func KeySets(keySets ...KeySet) KeySet {
 	u := make(union, len(keySets))
 	copy(u, keySets)

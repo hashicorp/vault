@@ -1,0 +1,67 @@
+.http-requests-bar-chart-container {
+  margin-top: $spacing-s;
+  margin-bottom: $spacing-m;
+  display: flex;
+}
+
+.http-requests-bar-chart {
+  margin: auto;
+  overflow: inherit;
+
+  .tick {
+    line {
+      stroke: $light-grey;
+    }
+
+    text {
+      fill: $grey;
+      font-size: $size-8;
+    }
+  }
+
+  .gridlines {
+    .domain {
+      stroke: unset;
+    }
+
+    line {
+      stroke-dasharray: 5 5;
+    }
+  }
+
+  .x-axis,
+  .y-axis {
+    .domain,
+    line {
+      stroke: $grey-light;
+    }
+  }
+}
+
+.d3-tooltip {
+  line-height: 1.25;
+  padding: $spacing-s;
+  background: $grey;
+  color: $ui-gray-010;
+  border-radius: 2px;
+  pointer-events: none !important;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tooltip::after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 10px;
+  width: 100%;
+  color: $grey;
+  content: '\25BC';
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tooltip.n::after {
+  margin-top: -4px;
+  top: 100%;
+  left: 0;
+}
