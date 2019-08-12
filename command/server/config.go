@@ -239,7 +239,7 @@ type Telemetry struct {
 	// Prometheus:
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
 	// Default: 24h
-	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTime    time.Duration `hcl:"-"`
 	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
 
