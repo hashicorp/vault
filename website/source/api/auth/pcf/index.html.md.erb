@@ -41,10 +41,10 @@ that presently exist.
 - `pcf_api_trusted_certificates` `(array: [])`: The certificate that's presented by the
 PCF API. This configures Vault to trust this certificate when making API calls, resolving
 `x509: certificate signed by unknown authority` errors.
-- `login_max_seconds_old` `(int: 300)`: The maximum number of seconds in the past when a 
+- `login_max_seconds_not_before` `(int: 300)`: The maximum number of seconds in the past when a
 signature could have been created. The lower the value, the lower the risk of replay
 attacks.
-- `login_max_seconds_ahead` `(int: 60)`: In case of clock drift, the maximum number of
+- `login_max_seconds_not_after` `(int: 60)`: In case of clock drift, the maximum number of
 seconds in the future when a signature could have been created. The lower the value, 
 the lower the risk of replay attacks.
 
@@ -57,8 +57,8 @@ the lower the risk of replay attacks.
   "pcf_username": "vault",
   "pcf_password": "pa55w0rd",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_seconds_old": 5,
-  "login_max_seconds_ahead": 1
+  "login_max_seconds_not_before": 5,
+  "login_max_seconds_not_after": 1
 }
 ```
 
@@ -96,8 +96,8 @@ $ curl \
   "pcf_api_addr": "https://api.sys.somewhere.cf-app.com",
   "pcf_username": "vault",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_seconds_old": 5,
-  "login_max_seconds_ahead": 1
+  "login_max_seconds_not_before": 5,
+  "login_max_seconds_not_after": 1
 }
 ```
 
