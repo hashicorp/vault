@@ -214,6 +214,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
 			DisplayAttrs: &framework.DisplayAttributes{
 				Navigation: true,
+				ItemType:   "Role",
 			},
 		},
 		&framework.Path{
@@ -558,6 +559,10 @@ the role.`,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-destroy"][1]),
+			DisplayAttrs: &framework.DisplayAttributes{
+				Action:   "Delete",
+				ItemType: "Role:Secret ID",
+			},
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/lookup/?$",
