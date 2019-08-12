@@ -214,7 +214,7 @@ updated with the new attributes.
   be attached to IAM users when they are requested. With `assumed_role` and
   `federation_token`, the policy ARNs will act as a filter on what the
   credentials can do, similar to `policy_document`.
-  When `credential_type` is `iam_user`, or `federation_token`, at
+  When `credential_type` is `iam_user` or `federation_token`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
 
