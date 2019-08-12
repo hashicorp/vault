@@ -71,7 +71,6 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 
 	configData := map[string]interface{}{
 		"access_key":   config.AccessKey,
-		"secret_key":   "",
 		"region":       config.Region,
 		"iam_endpoint": config.IAMEndpoint,
 		"sts_endpoint": config.STSEndpoint,

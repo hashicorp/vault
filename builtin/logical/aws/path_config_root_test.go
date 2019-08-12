@@ -47,7 +47,7 @@ func TestBackend_PathConfigRoot(t *testing.T) {
 		t.Fatalf("bad: config reading failed: resp:%#v\n err: %v", resp, err)
 	}
 
-	configData["secret_key"] = ""
+	delete(configData, "secret_key")
 	if !reflect.DeepEqual(resp.Data, configData) {
 		t.Errorf("bad: expected to read config root as %#v, got %#v instead", configData, resp.Data)
 	}
