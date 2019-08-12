@@ -94,6 +94,18 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 					"address": "127.0.0.1:443",
 				},
 			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:444",
+				},
+				Debug: &Debug{
+					PprofDisable:            true,
+					PprofDisableRaw:         "true",
+					PprofProfileMaxDuration: defaultPprofProfileMaxDuration,
+					PprofTraceMaxDuration:   defaultPprofTraceMaxDuration,
+				},
+			},
 		},
 
 		Storage: &Storage{
@@ -239,6 +251,12 @@ func TestLoadConfigFile_json2(t *testing.T) {
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:444",
 				},
+				Debug: &Debug{
+					PprofDisable:            true,
+					PprofDisableRaw:         "true",
+					PprofProfileMaxDuration: defaultPprofProfileMaxDuration,
+					PprofTraceMaxDuration:   defaultPprofTraceMaxDuration,
+				},
 			},
 		},
 
@@ -247,7 +265,6 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
-			DisableClustering: true,
 		},
 
 		HAStorage: &Storage{
@@ -255,15 +272,19 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+			DisableClustering: true,
 		},
 
 		CacheSize: 45678,
 
-		EnableUI: true,
+		EnableUI:    true,
+		EnableUIRaw: true,
 
-		EnableRawEndpoint: true,
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
 
-		DisableSealWrap: true,
+		DisableSealWrap:    true,
+		DisableSealWrapRaw: true,
 
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "foo",
@@ -287,6 +308,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
 

@@ -10,6 +10,13 @@ listener "tcp" {
     address = "127.0.0.1:443"
 }
 
+listener "tcp" {
+    address = "127.0.0.1:444"
+    debug {
+        pprof_disable = "true"
+    }
+}
+
 storage "consul" {
     foo = "bar"
     redirect_addr = "foo"

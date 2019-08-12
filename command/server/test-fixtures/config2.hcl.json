@@ -10,7 +10,10 @@
     },
     {
       "tcp":{
-        "address":"127.0.0.1:444"
+        "address":"127.0.0.1:444",
+        "debug": {
+          "pprof_disable": "true"
+        }
       }
     }
   ],
