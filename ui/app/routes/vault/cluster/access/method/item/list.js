@@ -11,8 +11,9 @@ export default Route.extend(ListRoute, {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
+    const itemModel = this.modelFor('vault.cluster.access.method.item');
     const { apiPath, type } = methodModel;
-    return { apiPath, type, method, itemType };
+    return { apiPath, type, method, itemType, itemModel, methodModel };
   },
 
   model() {
@@ -51,11 +52,12 @@ export default Route.extend(ListRoute, {
   },
   setupController(controller) {
     this._super(...arguments);
-    const { apiPath, method, itemType } = this.getMethodAndModelInfo();
+    const { method, itemType, itemModel, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('method', method);
-    this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
-      controller.set('paths', paths.navPaths.reduce((acc, cur) => acc.concat(cur.path), []));
-    });
+    controller.set('useSubItemNav', itemModel && itemModel.parentItem);
+    console.log(itemModel);
+    controller.set('methodModel', methodModel);
+    controller.set('model.paths', itemModel.paths);
   },
 });

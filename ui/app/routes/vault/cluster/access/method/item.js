@@ -8,8 +8,24 @@ export default Route.extend({
 
   beforeModel() {
     const { apiPath, type, method, itemType } = this.getMethodAndModelInfo();
-    let modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, method, apiPath, itemType);
+    let newModelFetches = [];
+    return this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
+      paths.itemTypes.forEach(item => {
+        let modelType = `generated-${item}-${type}`;
+        newModelFetches.push(this.pathHelp.getNewModel(modelType, method, apiPath, itemType));
+      });
+      return Promise.all(newModelFetches);
+    });
+  },
+
+  model() {
+    const { type, method, itemType } = this.getMethodAndModelInfo();
+    const modelType = `generated-${singularize(itemType)}-${type}`;
+    return this.store.createRecord(modelType, {
+      itemType,
+      method,
+      adapterOptions: { path: `${method}/${itemType}` },
+    });
   },
 
   getMethodAndModelInfo() {
@@ -26,7 +42,11 @@ export default Route.extend({
     controller.set('itemType', itemType);
     controller.set('method', method);
     this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+      let navigationPaths = paths.paths.filter(path => path.navigation);
+      controller.set(
+        'paths',
+        navigationPaths.filter(path => path.itemType.includes(itemType)).map(path => path.path)
+      );
     });
   },
 });

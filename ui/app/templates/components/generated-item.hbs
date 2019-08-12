@@ -33,6 +33,27 @@
   </p.levelLeft>
 </PageHeader>
 {{#if (eq mode "show")}}
+  {{#with (tabs-for-generated-item model paths) as |tabs|}}
+    {{#if tabs.length}}
+      <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+        <nav class="tabs">
+          <ul>
+            {{#each tabs as |tab|}}
+              {{#link-to
+                params=tab.routeParams
+                tagName="li"
+                data-test-auth-section-tab=true
+              }}
+                {{#link-to params=tab.routeParams}}
+                  {{tab.label}}
+                {{/link-to}}
+              {{/link-to}}
+            {{/each}}
+          </ul>
+        </nav>
+      </div>
+    {{/if}}
+  {{/with}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "deleteItem"}}

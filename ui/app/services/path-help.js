@@ -9,10 +9,12 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { assign } from '@ember/polyfills';
 import { dasherize } from '@ember/string';
+import { singularize } from 'ember-inflector';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
-import { resolve } from 'rsvp';
+import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
+const { belongsTo } = DS;
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -43,119 +45,116 @@ export default Service.extend({
       if (newModel.merged || modelProto.useOpenAPI !== true) {
         return resolve();
       }
-      helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      // helpUrl = modelProto.getHelpUrl(backend);
+      // return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
       newModel = DS.Model.extend({});
-      //use paths to dynamically create our openapi help url
-      //if we have a brand new model
-      return this.getPaths(apiPath, backend, itemType).then(paths => {
+    }
+
+    //use paths to dynamically create our openapi help url
+    //if we have a brand new model
+    return this.getPaths(apiPath, backend, itemType)
+      .then(pathInfo => {
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
         //if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
           debug(`Creating new adapter for ${modelType}`);
-          const adapter = this.getNewAdapter(paths, itemType);
+          const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
+        let path, paths;
         //if we have an item we want the create info for that itemType
-        let path;
         if (itemType) {
-          const createPath = paths.create.find(path => path.path.includes(itemType));
-          path = createPath.path;
-          path = path.slice(0, path.indexOf('{') - 1) + '/example';
-        } else {
-          //we need the mount config
-          path = paths.configPath[0].path; //path starts with a slash
+          paths = this.filterPathsByItemType(pathInfo, itemType);
         }
-        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
+        const createPath = paths.find(path => path.operations.includes('post') && path.action !== 'Delete');
+        path = createPath.path;
+        path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
+        if (!path) {
+          return reject();
+        }
+
+        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+        pathInfo.paths = paths;
+        newModel = newModel.extend({ paths: pathInfo });
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+      })
+      .catch(err => {
+        debugger;
       });
-    }
   },
 
-  reducePaths(paths, currentPath) {
+  reducePathsByPathName(pathInfo, currentPath) {
+    //will be passed something like { apiPath, itemType }
     const pathName = currentPath[0];
-    const pathInfo = currentPath[1];
-    let itemType = pathName.split('/')[-1];
-    if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].itemType) {
-      itemType = dasherize(pathInfo['x-vault-displayAttrs'].itemType);
-    }
-    //config is a get/post endpoint that doesn't take route params
-    //and isn't also a list endpoint and has an Action of Configure
-    if (
-      pathInfo.post &&
-      pathInfo.get &&
-      (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].action === 'Configure')
-    ) {
-      paths.configPath.push({ path: pathName });
-      return paths; //config path should only be config path
+    const pathDetails = currentPath[1];
+    const displayAttrs = pathDetails['x-vault-displayAttrs'];
+
+    if (!displayAttrs) {
+      return pathInfo;
     }
 
-    //list endpoints all have { name: "list" } in their get parameters
-    if (pathInfo.get && pathInfo.get.parameters && pathInfo.get.parameters[0].name === 'list') {
-      paths.list.push({ path: pathName, itemType: itemType });
+    let itemType, itemName;
+    if (displayAttrs.itemType) {
+      itemType = displayAttrs.itemType;
+      let items = itemType.split(':');
+      itemName = items[items.length - 1];
+      items = items.map(item => dasherize(singularize(item.toLowerCase())));
+      itemType = items.join('_');
     }
 
-    if (pathInfo.delete) {
-      paths.delete.push({ path: pathName });
+    if (itemType && !pathInfo.itemTypes.includes(itemType)) {
+      pathInfo.itemTypes.push(itemType);
     }
 
-    //create endpoints have an action (e.g. "Create" or "Generate")
-    if (
-      pathInfo.post &&
-      pathInfo['x-vault-displayAttrs'] &&
-      pathInfo['x-vault-displayAttrs'].action === 'Create'
-    ) {
-      paths.create.push({
-        path: pathName,
-        action: pathInfo['x-vault-displayAttrs'].action,
-      });
+    let operations = [];
+    if (pathDetails.get) {
+      operations.push('get');
+    }
+    if (pathDetails.post) {
+      operations.push('post');
+    }
+    if (pathDetails.delete) {
+      operations.push('delete');
+    }
+    if (pathDetails.get && pathDetails.get.parameters && pathDetails.get.parameters[0].name === 'list') {
+      operations.push('list');
     }
 
-    //operation endpoints have an action (e.g. "Generate" or "Sign")
-    if (
-      pathInfo.post &&
-      pathInfo['x-vault-displayAttrs'] &&
-      pathInfo['x-vault-displayAttrs'].action !== 'Create' &&
-      pathInfo['x-vault-displayAttrs'].action !== 'Configure'
-    ) {
-      paths.operation.push({
-        path: pathName,
-        action: pathInfo['x-vault-displayAttrs'].action,
-        itemType: itemType,
-      });
-    }
+    pathInfo.paths.push({
+      path: pathName,
+      itemType: itemType || displayAttrs.itemType,
+      itemName: itemName || pathInfo.itemType || displayAttrs.itemType,
+      operations,
+      action: displayAttrs.action,
+      navigation: displayAttrs.navigation === true,
+    });
 
-    if (pathInfo['x-vault-displayAttrs'] && pathInfo['x-vault-displayAttrs'].navigation) {
-      paths.navPaths.push({ path: pathName, itemType: itemType });
-    }
+    return pathInfo;
+  },
 
-    return paths;
+  filterPathsByItemType(pathInfo, itemType) {
+    return pathInfo.paths.filter(path => {
+      return itemType === path.itemType || path.itemType.indexOf(`${itemType}_`) === 0;
+    });
   },
 
   getPaths(apiPath, backend, itemType, itemID) {
+    let debugString =
+      itemID && itemType
+        ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
+        : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
+    debug(debugString);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.entries(pathInfo);
-      if (itemType && itemID) {
-        debug(`Fetching relevant paths for ${itemID} ${itemType} from ${apiPath}`);
-        //this means it's nested under the itemType paths
-        paths = paths.filter(path => path[0].includes(`}/`));
-        apiPath = `${apiPath}${itemType}/${itemID}/`;
-      } else if (itemType) {
-        debug(`Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`);
-        //this means it's nested under the itemType paths
-        paths = paths.filter(path => !path[0].includes(`}/`));
-      }
-      return paths.reduce(this.reducePaths, {
-        apiPath: apiPath,
-        configPath: [],
-        list: [],
-        create: [],
-        delete: [],
-        operation: [],
-        navPaths: [],
+
+      return paths.reduce(this.reducePathsByPathName, {
+        apiPath,
+        itemType,
+        itemTypes: [],
+        paths: [],
       });
     });
   },
@@ -199,16 +198,18 @@ export default Service.extend({
     });
   },
 
-  getNewAdapter(paths, itemType) {
+  getNewAdapter(pathInfo, itemType) {
     //we need list and create paths to set the correct urls for actions
-    const { list, create, apiPath } = paths;
-    const createPath = create.find(path => path.path.includes(itemType));
-    const listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
-    const deletePath = paths.delete.find(path => path.path.includes(itemType));
+
+    let paths = this.filterPathsByItemType(pathInfo, itemType);
+    const { apiPath } = pathInfo;
+    const listPath = paths.find(path => path.operations.includes('list'));
+    const createPath = paths.find(path => path.action === 'Create');
+    const deletePath = paths.find(path => path.action === 'Delete');
+
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        let { path } = listPath;
-        let url = `${this.buildURL()}/${apiPath}${path.slice(1)}/`;
+        let url = `${this.buildURL()}/${apiPath}${listPath.path.slice(1)}/`;
         if (id) {
           url = url + encodePath(id);
         }
@@ -220,21 +221,18 @@ export default Service.extend({
       },
 
       urlForUpdateRecord(id) {
-        let { path } = createPath;
-        path = path.slice(1, path.indexOf('{') - 1);
+        let path = createPath.path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let { path } = createPath;
-        path = path.slice(1, path.indexOf('{') - 1);
+        let path = createPath.path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let { path } = deletePath;
-        path = path.slice(1, path.indexOf('{') - 1);
+        let path = deletePath.path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });
