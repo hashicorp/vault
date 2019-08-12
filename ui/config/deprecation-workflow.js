@@ -5,7 +5,7 @@ self.deprecationWorkflow = self.deprecationWorkflow || {};
 //}
 self.deprecationWorkflow.config = {
   workflow: [
-    // this seems to crop up in relation to pretender things
-    { handler: 'silence', matchId: 'ember-polyfills.deprecate-merge' },
+    // after ED 3.9 this shouldn't be necessary
+    { handler: 'silence', matchId: 'deprecate-fetch-ember-data-support' },
   ],
 };
