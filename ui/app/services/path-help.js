@@ -67,7 +67,7 @@ export default Service.extend({
           //we need the mount config
           path = paths.configPath[0].path;
         }
-        helpUrl = `/v1/${apiPath}${path}?help=true`;
+        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
@@ -177,7 +177,7 @@ export default Service.extend({
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
         let { path } = listPath;
-        let url = `${this.buildURL()}/${apiPath}${path}/`;
+        let url = `${this.buildURL()}/${apiPath}${path.slice(1)}/`;
         if (id) {
           url = url + encodePath(id);
         }
@@ -190,20 +190,20 @@ export default Service.extend({
 
       urlForUpdateRecord(id) {
         let { path } = createPath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
         let { path } = createPath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
         let { path } = deletePath;
-        path = path.slice(0, path.indexOf('{') - 1);
+        path = path.slice(1, path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });
