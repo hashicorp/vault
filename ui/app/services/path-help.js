@@ -67,7 +67,7 @@ export default Service.extend({
           //we need the mount config
           path = paths.configPath[0].path;
         }
-        helpUrl = `/v1/${apiPath}${path}?help=true`;
+        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       });
     }
