@@ -3,6 +3,8 @@
 ## Confirm
 `Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Trigger` which triggers the message.
 
+See the `Trigger` component for a description of properties.
+
 **Example**
   
 ```js

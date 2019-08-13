@@ -4,7 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './confirm.md';
 import { withKnobs, text } from '@storybook/addon-knobs';
 
-storiesOf('Confirm/', module)
+storiesOf('Confirm/Confirm', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(
     withKnobs({
