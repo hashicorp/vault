@@ -9,7 +9,7 @@ description: |-
 ---
 
 # `ocikms` Seal
-The OCI KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
+The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping mechanism.
 The OCI KMS seal is activated by one of the following:
 
 * The presence of a `seal "ocikms"` block in Vault's configuration file
