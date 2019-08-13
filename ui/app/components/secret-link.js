@@ -20,6 +20,7 @@ export function linkParams({ mode, secret, queryParams }) {
 }
 
 export default Component.extend({
+  onLinkClick() {},
   tagName: '',
   // so that ember-test-selectors doesn't log a warning
   supportsDataTestProperties: true,
