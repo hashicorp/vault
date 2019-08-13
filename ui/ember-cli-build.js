@@ -58,6 +58,9 @@ module.exports = function(defaults) {
     'ember-fetch': {
       preferNative: true,
     },
+    'ember-composable-helpers': {
+      except: ['array'],
+    },
   });
 
   app.import('vendor/string-includes.js');
