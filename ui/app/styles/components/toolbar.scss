@@ -25,7 +25,7 @@
     min-width: 190px;
   }
 
-  label {
+  label[for='namespace'] {
     padding: $spacing-xs;
     color: $grey;
   }
