@@ -2,6 +2,8 @@
 
 CHANGES:
 
+ * auth/approle: Fix an error where an empty `token_type` string was not being
+   correctly handled as `TokenTypeDefault` [GH-7273]
  * auth/pcf: The signature format has been updated to use the standard Base64
    encoding instead of the URL-safe variant. Signatures created using the
    previous format will continue to be accepted [PCF-27]
