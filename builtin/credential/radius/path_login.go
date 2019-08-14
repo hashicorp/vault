@@ -123,11 +123,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 	cfg.PopulateTokenAuth(auth)
 
+	resp.Auth = auth
 	if policies != nil {
 		resp.Auth.Policies = append(resp.Auth.Policies, policies...)
 	}
 
-	resp.Auth = auth
 	return resp, nil
 }
 
