@@ -1,10 +1,13 @@
 .confirm-wrapper {
   position: relative;
   overflow: hidden;
+  border-radius: 2px;
+  box-shadow: $box-shadow, $box-shadow-middle;
 }
 
 .confirm {
   transition: transform 150ms;
+  padding-top: 2px;
 }
 
 .show-confirm {
@@ -121,6 +124,7 @@
       flex: 1;
       text-align: center;
       width: auto;
+      padding: $spacing-xs;
     }
   }
 }

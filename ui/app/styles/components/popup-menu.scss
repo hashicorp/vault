@@ -23,19 +23,9 @@
 
   .menu {
     padding: $size-11 0;
-    position: relative;
 
     small code {
       margin-left: $spacing-xs;
-    }
-
-    .confirmation {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      background: #fff;
     }
   }
 
@@ -145,6 +135,8 @@
 }
 
 .ember-basic-dropdown-content {
+  background-color: transparent;
+
   &--left.popup-menu {
     margin: 0px 0 0 -8px;
   }
