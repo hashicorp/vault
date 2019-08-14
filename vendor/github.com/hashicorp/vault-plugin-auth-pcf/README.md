@@ -508,11 +508,12 @@ which can be verified by entering the same string into
 
 Use the private key at `CF_INSTANCE_KEY` to sign the resulting sha
 using the [RSASSA-PSS](https://tools.ietf.org/html/rfc4056) algorithm 
-with a SHA256 hash and a salt length of 222. Random material is injected 
+with a SHA256 hash and a salt length of 20. The output is base64 encoded
+and prefixed with a version, currently `v1:`. Random material is injected 
 into this algorithm so the resulting string will be different each time, 
 but here is one example result so you can compare yours to its format:
 ```
-GVg5_uez-Z0544pgkVSd6vQztHO_j6X3LZ2PqhUv_Uh0iMfoT-U2MKgdjOSrkpVpINsFqxKk4_-p2nHlQOmJPSPFlAso7i6Y6j9SnSIuXfAS_Y3vk85cYh1zPDM9R6fBVniADMCIXJEXWIC1IMmOccZcDXoBKJJKLp1iffLQBzDfSiUT6in1GBOMLavFpL6RO9jq6UHQXYrYBKy11ZdcDa4zLRaxiHv-GbSG_-THOs3VgVtTY_XqrMAwJIDOoL4_2H43b1BHEXWgt5W3wpyqvV8TvmlMRq8begwjm5NG8_Qtvv6QGLNozmRkNEGiV1di1wb1Qrt_6f_1tWrEbTvvwQ==
+v1:GVg5_uez+Z0544pgkVSd6vQztHO_j6X3LZ2PqhUv/Uh0iMfoT-U2MKgdjOSrkpVpINsFqxKk4/+p2nHlQOmJPSPFlAso7i6Y6j9SnSIuXfAS/Y3vk85cYh1zPDM9R6fBVniADMCIXJEXWIC1IMmOccZcDXoBKJJKLp1iffLQBzDfSiUT6in1GBOMLavFpL6RO9jq6UHQXYrYBKy11ZdcDa4zLRaxiHv-GbSG/+THOs3VgVtTY/+XqrMAwJIDOoL4_2H43b1BHEXWgt5W3wpyqvV8TvmlMRq8begwjm5NG8/+Qtvv6QGLNozmRkNEGiV1di1wb1Qrt6f1tWrEbTvvwQ==
 ```
 
 This signature should be placed in the `signature` field of login requests.
@@ -563,7 +564,7 @@ signature = private_key.sign(
     hashes.SHA256(),
 )
 
-print(base64.urlsafe_b64encode(signature))
+print("v1:" + base64.b64encode(signature))
 ```
 
 ### Quick Start
