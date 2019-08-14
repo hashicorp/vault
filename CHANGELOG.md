@@ -7,6 +7,12 @@ CHANGES:
    previous format will continue to be accepted [PCF-27]
  * core: The http response code returned when an identity token key is not found
    has been changed from 400 to 404
+   
+BUG FIXES:
+
+ * ui: the string-list widget will now honor multiline input [GH-7254]
+ * ui: various visual bugs in the KV interface were addressed [GH-7307]
+ * ui: fixed incorrect URL to access help in LDAP auth [GH-7299]
 
 ## 1.2.1 (August 6th, 2019)
 
