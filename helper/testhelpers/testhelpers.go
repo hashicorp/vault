@@ -650,37 +650,44 @@ func WaitForActiveNodeAndPerfStandbys(t testing.T, cluster *vault.TestCluster) {
 	var standbys, actives int64
 	var wg sync.WaitGroup
 	deadline := time.Now().Add(30 * time.Second)
-	for _, c := range cluster.Cores {
+	for i, c := range cluster.Cores {
 		wg.Add(1)
-		go func(client *api.Client) {
+		go func(coreIdx int, client *api.Client) {
 			defer wg.Done()
 			val := 1
 			for time.Now().Before(deadline) {
-				_, err = cluster.Cores[0].Client.Logical().Write(path, map[string]interface{}{
-					"bar": val,
-				})
-				if err != nil {
-					t.Fatal("unable to write KV", "path", path)
+				if coreIdx == 0 {
+					_, err = cluster.Cores[0].Client.Logical().Write(path, map[string]interface{}{
+						"bar": val,
+					})
+					if err != nil {
+						t.Fatal("unable to write KV", "path", path)
+					}
 				}
 				val++
 				time.Sleep(250 * time.Millisecond)
-				leader, err := client.Sys().Leader()
-				if err != nil {
-					if strings.Contains(err.Error(), "Vault is sealed") {
-						continue
+
+				if coreIdx > 0 || atomic.LoadInt64(&actives) == 0 {
+					leader, err := client.Sys().Leader()
+					if err != nil {
+						if strings.Contains(err.Error(), "Vault is sealed") {
+							continue
+						}
+						t.Fatal(err)
 					}
-					t.Fatal(err)
+					if leader.IsSelf {
+						atomic.AddInt64(&actives, 1)
+					}
+					if leader.PerfStandby && leader.PerfStandbyLastRemoteWAL > 0 {
+						atomic.AddInt64(&standbys, 1)
+						return
+					}
 				}
-				if leader.IsSelf {
-					atomic.AddInt64(&actives, 1)
-					return
-				}
-				if leader.PerfStandby && leader.PerfStandbyLastRemoteWAL > 0 {
-					atomic.AddInt64(&standbys, 1)
+				if coreIdx == 0 && int(atomic.LoadInt64(&standbys)) == len(cluster.Cores)-1 {
 					return
 				}
 			}
-		}(c.Client)
+		}(i, c.Client)
 	}
 	wg.Wait()
 	if actives != 1 || int(standbys) != len(cluster.Cores)-1 {

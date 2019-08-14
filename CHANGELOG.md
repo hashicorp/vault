@@ -1,95 +1,40 @@
-## 1.2.0-beta3 (Unreleased)
+## Next
 
 CHANGES:
 
- * rollback: Rollback will no longer display log messages when it runs; it will
-   only display messages on error.
- * plugins: Database plugins will now default to 4 `max_open_connections`
-   rather than 2.
+ * auth/pcf: The signature format has been updated to use the standard Base64
+   encoding instead of the URL-safe variant. Signatures created using the
+   previous format will continue to be accepted [PCF-27]
+ * core: The http response code returned when an identity token key is not found
+   has been changed from 400 to 404
+   
+BUG FIXES:
 
-FEATURES:
+ * ui: the string-list widget will now honor multiline input [GH-7254]
+ * ui: various visual bugs in the KV interface were addressed [GH-7307]
+ * ui: fixed incorrect URL to access help in LDAP auth [GH-7299]
 
- * **Integrated Storage**: Vault 1.2 includes a tech preview of a new way to 
-   manage storage directly within a Vault cluster. This new integrated storage
-   solution is based on the Raft protocol which is also used to back HashiCorp
-   Consul and HashiCorp Nomad.
-
-IMPROVEMENTS:
-
- * api: Add support for passing data to delete operations via `DeleteWithData`
-   [GH-7139]
- * cli: Add support for passing parameters to `vault delete` operations
-   [GH-7139]
- * cli: Add a log-format CLI flag that can specify either "standard" or "json"
-   for the log format for the `vault server`command. [GH-6840]
- * cli: Add `-dev-no-store-token` to allow dev servers to not store the
-   generated token at the tokenhelper location [GH-7104]
- * plugins: Change the default for `max_open_connections` for DB plugins to 4
-   [GH-7093]
- * storage/s3: A new `path` parameter allows selecting the path within a bucket
-   for Vault data [GH-7157]
+## 1.2.1 (August 6th, 2019)
 
 BUG FIXES:
 
- * audit: Log requests and responses due to invalid wrapping token provided
-   [GH-6541]
- * auth/aws: AWS Roles are now upgraded and saved to the latest version just
-   after the AWS credential plugin is mounted. [GH-7025]
- * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
-   performance standbys [JWT-61]
- * secrets/pki: Forward revocation requests to active node when on a
-   performance standby [GH-7173]
- * ui: Show Entities and Groups in Side Navigation [GH-7138]
- * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
+ * agent: Fix a panic on creds pulling in some error conditions in `aws` and
+   `alicloud` auth methods [GH-7238]
+ * auth/approle: Fix error reading role-id on a role created pre-1.2 [GH-7231]
+ * auth/token: Fix sudo check in non-root namespaces on create [GH-7224]
+ * core: Fix health checks with perfstandbyok=true returning the wrong status
+   code [GH-7240]
+ * ui: The web CLI will now parse input as a shell string, with special
+   characters escaped [GH-7206]
+ * ui: The UI will now redirect to a page after authentication [GH-7088]
+ * ui (Enterprise): The list of namespaces is now cleared when logging
+   out [GH-7186]
 
-## 1.2.0-beta2 (July 9th, 2019)
-
-CHANGES:
-
- * auth/approle: AppRole uses new, common token fields for values that overlap
-   with other auth backends. `period` and `policies` will continue to work,
-   with priority being given to the `token_` prefixed versions of those
-   parameters. They will also be returned when doing a read on the role if they
-   were used to provide values initially.
- * auth/approle: `"default"` is no longer automatically added to the `policies`
-   parameter. This was a no-op since it would always be added anyways by
-   Vault's core; however, this can now be explicitly disabled with the new
-   `token_no_default_policy` field.
- * auth/approle: `bound_cidr_list` is no longer returned when reading a role
- 
-FEATURES:
-
- * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
-   where you can browse the endpoints avaliable to you and make requests. To try
-   it out, open the Web CLI and type `api`.
-
-IMPROVEMENTS:
-
- * agent: Allow EC2 nonce to be passed in [GH-6953]
- * agent: Add optional `namespace` parameter, which sets the default namespace
-   for the auto-auth functionality [GH-6988]
- * audit/file: Dramatically speed up file operations by changing
-   locking/marshaling order [GH-7024]
- * auth/jwt: A new `verbose_oidc_logging` role parameter has been added to help
-   troubleshoot OIDC configuration [JWT-57]
- * auth/token: Allow the support of the identity system for the token backend
-   via token roles [GH-6267]
- * cli: `path-help` now allows `-format=json` to be specified, which will
-   output OpenAPI [GH-7006]
- * secrets/kv: Add optional `delete_version_after` parameter, which takes a
-   duration and can be set on the mount and/or the metadata for a specific key
-   [GH-7005]
-
-BUG FIXES:
-
- * secret/database: Escape username/password before using in connection URL
-   [GH-7089]
-
-## 1.2.0-beta1 (June 25th, 2019)
+## 1.2.0 (July 30th, 2019)
 
 CHANGES:
 
- * auth/token: Token store roles use new, common token fields for the values
+ * Token store roles use new, common token fields for the values
    that overlap with other auth backends. `period`, `explicit_max_ttl`, and
    `bound_cidrs` will continue to work, with priority being given to the
    `token_` prefixed versions of those parameters. They will also be returned
@@ -121,9 +66,27 @@ CHANGES:
    couple of functions have also moved from plugin helper code to the `api/`
    submodule. If you are a plugin author, take a look at some of our official
    plugins and the paths they are importing for guidance.
+ * AppRole uses new, common token fields for values that overlap
+   with other auth backends. `period` and `policies` will continue to work,
+   with priority being given to the `token_` prefixed versions of those
+   parameters. They will also be returned when doing a read on the role if they
+   were used to provide values initially.
+ * In AppRole, `"default"` is no longer automatically added to the `policies`
+   parameter. This was a no-op since it would always be added anyways by
+   Vault's core; however, this can now be explicitly disabled with the new
+   `token_no_default_policy` field.
+ * In AppRole, `bound_cidr_list` is no longer returned when reading a role
+ * rollback: Rollback will no longer display log messages when it runs; it will
+   only display messages on error.
+ * Database plugins will now default to 4 `max_open_connections`
+   rather than 2.
 
 FEATURES:
 
+ * **Integrated Storage**: Vault 1.2 includes a _tech preview_ of a new way to 
+   manage storage directly within a Vault cluster. This new integrated storage
+   solution is based on the Raft protocol which is also used to back HashiCorp
+   Consul and HashiCorp Nomad.
  * **Combined DB credential rotation**: Alternative mode for the Combined DB
    Secret Engine to automatically rotate existing database account credentials
    and set Vault as the source of truth for credentials.
@@ -140,28 +103,60 @@ FEATURES:
    Users and Groups have been added.
  * **HA support for Postgres**: PostgreSQL versions >= 9.5 may now but used as
    and HA storage backend.
- * **KMIP secrets engine (Enterprise)**: Allows Vault to operate as a KMIP Server,
-  seamlessly brokering cryptographic operations for traditional infrastructure.
+ * **KMIP secrets engine (Enterprise)**: Allows Vault to operate as a KMIP
+   Server, seamlessly brokering cryptographic operations for traditional
+   infrastructure.
+ * Common Token Fields: Auth methods now use common fields for controlling
+   token behavior, making it easier to understand configuration across methods.
+ * **Vault API explorer**: The Vault UI now includes an embedded API explorer 
+   where you can browse the endpoints avaliable to you and make requests. To try
+   it out, open the Web CLI and type `api`.
 
 IMPROVEMENTS:
 
+ * agent: Allow EC2 nonce to be passed in [GH-6953]
+ * agent: Add optional `namespace` parameter, which sets the default namespace
+   for the auto-auth functionality [GH-6988]
+ * api: Add support for passing data to delete operations via `DeleteWithData`
+   [GH-7139]
+ * audit/file: Dramatically speed up file operations by changing
+   locking/marshaling order [GH-7024]
  * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
+ * auth/jwt: A new `verbose_oidc_logging` role parameter has been added to help
+   troubleshoot OIDC configuration [JWT-57]
  * auth/jwt: `bound_claims` will now match received claims that are lists if any element
    of the list is one of the expected values [JWT-50]
  * auth/jwt: Leeways for `nbf` and `exp` are now configurable, as is clock skew
    leeway [JWT-53]
  * auth/kubernetes: Allow service names/namespaces to be configured as globs
    [KUBEAUTH-58]
+ * auth/token: Allow the support of the identity system for the token backend
+   via token roles [GH-6267]
  * auth/token: Add a large set of token configuration options to token store
    roles [GH-6662]
+ * cli: `path-help` now allows `-format=json` to be specified, which will
+   output OpenAPI [GH-7006]
+ * cli: Add support for passing parameters to `vault delete` operations
+   [GH-7139]
+ * cli: Add a log-format CLI flag that can specify either "standard" or "json"
+   for the log format for the `vault server`command. [GH-6840]
+ * cli: Add `-dev-no-store-token` to allow dev servers to not store the
+   generated token at the tokenhelper location [GH-7104]
  * identity: Allow a group alias' canonical ID to be modified
  * namespaces: Namespaces can now be created and deleted from performance
    replication secondaries
+ * plugins: Change the default for `max_open_connections` for DB plugins to 4
+   [GH-7093]
  * replication: Client TLS authentication is now supported when enabling or
    updating a replication secondary
  * secrets/database: Cassandra operations will now cancel on client timeout
    [GH-6954]
+ * secrets/kv: Add optional `delete_version_after` parameter, which takes a
+   duration and can be set on the mount and/or the metadata for a specific key
+   [GH-7005]
  * storage/postgres: LIST now performs better on large datasets [GH-6546]
+ * storage/s3: A new `path` parameter allows selecting the path within a bucket
+   for Vault data [GH-7157]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
  * ui: Many visual improvements with the addition of Toolbars [GH-6626], the restyling
@@ -172,9 +167,13 @@ IMPROVEMENTS:
  * ui: Tabbing to auto-complete in filters will first complete a common prefix if there
    is one [GH-6759]
  * ui: Removing jQuery from the application makes the initial JS payload smaller [GH-6768]
-
+ 
 BUG FIXES:
 
+ * audit: Log requests and responses due to invalid wrapping token provided
+   [GH-6541]
+ * auth/aws: AWS Roles are now upgraded and saved to the latest version just
+   after the AWS credential plugin is mounted. [GH-7025]
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
    when parsing this value [GH-6917]
  * auth/aws: Fix an error complaining about a read-only view that could occur
@@ -184,13 +183,63 @@ BUG FIXES:
    for OIDC logins [JWT-54]
  * auth/jwt: Fix a panic during OIDC CLI logins that could occur if the Vault server
    response is empty [JWT-55]
+ * auth/jwt: Fix issue where OIDC logins might intermittently fail when using
+   performance standbys [JWT-61]
  * identity: Fix a case where modifying aliases of an entity could end up
    moving the entity into the wrong namespace
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * secrets/pki: Forward revocation requests to active node when on a
+   performance standby [GH-7173]
  * ui: Fix timestamp on some transit keys [GH-6827]
+ * ui: Show Entities and Groups in Side Navigation [GH-7138]
+ * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
+ * secret/database: Escape username/password before using in connection URL
+   [GH-7089]
 
+## 1.1.4/1.1.5 (July 25th/30th, 2019)
+
+NOTE:
+
+Although 1.1.4 was tagged, we realized very soon after the tag was publicly
+pushed that an intended fix was accidentally left out. As a result, 1.1.4 was
+not officially announced and 1.1.5 should be used as the release after 1.1.3.
+
+IMPROVEMENTS:
+
+ * identity: Allow a group alias' canonical ID to be modified
+ * namespaces: Improve namespace deletion performance [GH-6939]
+ * namespaces: Namespaces can now be created and deleted from performance 
+   replication secondaries
+
+BUG FIXES:
+
+ * api: Add backwards compat support for API env vars [GH-7135]
+ * auth/aws: Fix a case where a panic could stem from a malformed assumed-role
+   ARN when parsing this value [GH-6917]
+ * auth/ldap: Add `use_pre111_group_cn_behavior` flag to allow recovering from
+   a regression caused by a bug fix starting in 1.1.1 [GH-7208]
+ * auth/aws: Use a role cache to avoid separate locking paths [GH-6926]
+ * core: Fix a deadlock if a panic happens during request handling [GH-6920]
+ * core: Fix an issue that may cause key upgrades to not be cleaned up properly
+   [GH-6949]
+ * core: Don't shutdown if key upgrades fail due to canceled context [GH-7070]
+ * core: Fix panic caused by handling requests while vault is inactive
+ * identity: Fix reading entity and groups that have spaces in their names 
+   [GH-7055]
+ * identity: Ensure entity alias operations properly verify namespace [GH-6886]
+ * mfa: Fix a nil pointer panic that could occur if invalid Duo credentials
+   were supplied
+ * replication: Forward step-down on perf standbys to match HA behavior
+ * replication: Fix various read only storage errors on performance standbys
+ * replication: Stop forwarding before stopping replication to eliminate some
+   possible bad states
+ * secrets/database: Allow cassandra queries to be cancled [GH-6954]
+ * storage/consul: Fix a regression causing vault to not connect to consul over
+   unix sockets [GH-6859]
+ * ui: Fix saving of TTL and string array fields generated by Open API [GH-7094]
+ 
 ## 1.1.3 (June 5th, 2019)
 
 IMPROVEMENTS:

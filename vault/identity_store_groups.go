@@ -241,9 +241,6 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
 		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
-		if len(group.MemberEntityIDs) > 512 {
-			return logical.ErrorResponse("member entity IDs exceeding the limit of 512"), nil
-		}
 	}
 
 	memberGroupIDsRaw, ok := d.GetOk("member_group_ids")

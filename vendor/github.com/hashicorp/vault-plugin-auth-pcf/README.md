@@ -3,6 +3,16 @@
 This plugin leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation)
 for authenticating to Vault. 
 
+## Official Documentation
+
+This plugin's docs reside in the following places:
+
+- [Overview](https://www.vaultproject.io/docs/auth/pcf.html)
+- [API](https://www.vaultproject.io/api/auth/pcf/index.html)
+
+The documentation below is intended to further elaborate, and is targeted at those developing, using,
+troubleshooting, and maintaining this plugin.
+
 ## Known Risks
 
 This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because PCF
@@ -18,6 +28,10 @@ Take extra steps to limit access to that path in CredHub, whether it be through 
 or through carefully limiting the users who can access CredHub.
 
 ## Getting Started
+
+The following guide provides instructions on how obtain the necessary credentials and certificates in order 
+to set up the PCF auth method. The sample PCF endpoints uses `*.lagunaniguel.cf-app.com` which should be
+replaced with the appropriate endpoints for your environment.
 
 ### Obtaining Your Instance Identity CA Certificate
 
@@ -43,9 +57,9 @@ $ pcf settings | jq '.products[0].director_credhub_client_credentials'
 
 SSH into your Ops Manager VM:
 ```
-ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
+ssh -i ops_mgr.pem ubuntu@pcf.lagunaniguel.cf-app.com
 ```
-Please note that the above `OPS_MGR_URL` shouldn't be prepended with `https://`.
+Please note that the above connection address is not prepended with `https://`.
 
 Log in to Credhub using the credentials you obtained earlier:
 ```
@@ -239,6 +253,9 @@ tool, run the following commands:
 ```
 $ pcf target
 $ cf api
+api endpoint:   https://sys.lagunaniguel.cf-app.com
+api version:    2.135.0
+Not logged in. Use 'cf login' to log in.
 ```
 
 The api endpoint given will be used for configuring this Vault auth method. 
@@ -246,16 +263,17 @@ The api endpoint given will be used for configuring this Vault auth method.
 This plugin was tested with Org Manager level permissions, but lower level permissions may be usable.
 ```
 $ cf create-user vault pa55word
+$ cf create-org my-example-org
 $ cf orgs
 $ cf org-users my-example-org
-$ cf set-org-role Alice my-example-org OrgManager
+$ cf set-org-role vault my-example-org OrgManager
 ```
 
 Since the PCF API tends to use a self-signed certificate, you'll also need to configure
 Vault to trust that certificate. You can obtain its API certificate via:
 
 ```
-openssl s_client -showcerts -servername domain.com -connect domain.com:443
+openssl s_client -showcerts -connect pcf.lagunaniguel.cf-app.com:443
 ```
 
 You'll see a certificate outputted as part of the response, which should be broken
@@ -280,14 +298,12 @@ $ vault auth enable pcf
 Next, configure the plugin. In the `config` call below, `certificates` is intended to be the instance
 identity CA certificate you pulled above.
 
-In the CF Dev environment the default API address is `https://api.dev.cfdev.sh`. The default username and password
-are `admin`, `admin`. In a production environment, these attributes will vary.
 ```
 $ vault write auth/pcf/config \
-      certificates=@ca.crt \
-      pcf_api_addr=https://api.dev.cfdev.sh \
-      pcf_username=admin \
-      pcf_password=admin \
+      identity_ca_certificates=@ca.crt \
+      pcf_api_addr=https://api.sys.lagunaniguel.cf-app.com \
+      pcf_username=vault \
+      pcf_password=pa55word \
       pcf_api_trusted_certificates=@pcfapi.crt
 ```
 
@@ -295,6 +311,16 @@ Then, add a role that will be used to grant specific Vault policies to those log
 `bound_application_ids` is added, then the application ID on the cert used for logging in _must_ be one of the role's
 application IDs. However, if `bound_application_ids` is omitted, then _any_ application ID will match. We recommend
 configuring as many bound parameters as possible.
+
+The `bound_application_ids`, `bound_space_ids`, and `bound_organization_ids` that are tied to a particular application
+can be found by looking at the `instance.crt` using the following command:
+
+```
+$ openssl crl2pkcs7 -nocrl -certfile instance.crt | openssl pkcs7 -print_certs -text -noout
+...
+        Subject: OU=organization:bc3874b4-002b-4548-ab27-f9bd38450651, OU=space:dd84618a-16f2-4dee-9936-04181acb6cc0, OU=app:b7b5a288-afa9-4022-802f-173ad94ebb02, CN=a9cff876-58f9-4247-67a6-62f2
+...
+```
 
 Also, by default, the IP address on the certificate presented at login must match that of the caller. However, if
 your callers tend to be proxied, this may not work for you. If that's the case, set `disable_ip_matching` to true.

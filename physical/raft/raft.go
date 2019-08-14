@@ -254,7 +254,7 @@ func (b *RaftBackend) Initialized() bool {
 // SetTLSKeyring is used to install a new keyring. If the active key has changed
 // it will also close any network connections or streams forcing a reconnect
 // with the new key.
-func (b *RaftBackend) SetTLSKeyring(keyring *RaftTLSKeyring) error {
+func (b *RaftBackend) SetTLSKeyring(keyring *TLSKeyring) error {
 	b.l.RLock()
 	err := b.streamLayer.setTLSKeyring(keyring)
 	b.l.RUnlock()
@@ -346,9 +346,23 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	return nil
 }
 
+// SetupOpts are used to pass options to the raft setup function.
+type SetupOpts struct {
+	// TLSKeyring is the keyring to use for the cluster traffic.
+	TLSKeyring *TLSKeyring
+
+	// ClusterListener is the cluster hook used to register the raft handler and
+	// client with core's cluster listeners.
+	ClusterListener cluster.ClusterHook
+
+	// StartAsLeader is used to specify this node should start as leader and
+	// bypass the leader election. This should be used with caution.
+	StartAsLeader bool
+}
+
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
-func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSKeyring, clusterListener cluster.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
 
 	b.l.Lock()
@@ -371,24 +385,24 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 	}
 
 	switch {
-	case raftTLSKeyring == nil && clusterListener == nil:
+	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
-	case raftTLSKeyring == nil:
+	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case clusterListener == nil:
+	case opts.ClusterListener == nil:
 		return errors.New("no cluster listener provided")
 	default:
 		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := clusterListener.TLSConfig(ctx)
+		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
 		if err != nil {
 			return err
 		}
 
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), raftTLSKeyring, clusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
 		if err != nil {
 			return err
 		}
@@ -422,10 +436,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 		}
 		// If we are the only node we should start as the leader.
 		if len(bootstrapConfig.Servers) == 1 {
-			raftConfig.StartAsLeader = true
+			opts.StartAsLeader = true
 		}
 	}
 
+	raftConfig.StartAsLeader = opts.StartAsLeader
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
 
@@ -463,10 +478,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, raftTLSKeyring *RaftTLSK
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
-		clusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
+		opts.ClusterListener.AddHandler(consts.RaftStorageALPN, b.streamLayer)
 
 		// Add Client to the cluster.
-		clusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
+		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
 	return nil
@@ -781,7 +796,7 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
-	case len(commandBytes) <= raft.SuggestedMaxDataSize:
+	case len(commandBytes) <= raftchunking.ChunkSize:
 		applyFuture = b.raft.Apply(commandBytes, 0)
 	default:
 		chunked = true
@@ -851,8 +866,10 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 	leaderLost := make(chan struct{})
 	go func() {
 		select {
-		case <-leaderNotifyCh:
-			close(leaderLost)
+		case isLeader := <-leaderNotifyCh:
+			if !isLeader {
+				close(leaderLost)
+			}
 		case <-stopCh:
 		}
 	}()

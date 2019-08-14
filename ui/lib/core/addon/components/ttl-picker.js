@@ -102,18 +102,17 @@ export default Component.extend({
   },
 
   actions: {
-    changedValue(key, event) {
-      let { type, value, checked } = event.target;
-      let val = type === 'checkbox' ? checked : value;
-      if (val && key === 'time') {
-        val = parseInt(val, 10);
-        if (Number.isNaN(val)) {
+    changedValue(key, value) {
+      if (value && key === 'time') {
+        value = parseInt(value, 10);
+        if (Number.isNaN(value)) {
           this.set('errorMessage', ERROR_MESSAGE);
           return;
         }
       }
       this.set('errorMessage', null);
-      set(this, key, val);
+
+      set(this, key, value);
       this.onChange(this.TTL);
     },
   },
