@@ -459,7 +459,7 @@ server:
     enabled: true
     
   ha:
-    enabled: false
+    enabled: true
     replicas: 5
 
     config: |
