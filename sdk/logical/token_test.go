@@ -30,4 +30,14 @@ func TestJSONSerialization(t *testing.T) {
 	if tt != utt {
 		t.Fatalf("expected %v, got %v", tt, utt)
 	}
+
+	// Test on an empty value, which should unmarshal into TokenTypeDefault
+	tt = TokenTypeDefault
+	err = json.Unmarshal([]byte(`""`), &utt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tt != utt {
+		t.Fatalf("expected %v, got %v", tt, utt)
+	}
 }
