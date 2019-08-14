@@ -1,9 +1,10 @@
 ## Next
 
-IMPROVEMENTS:
+CHANGES:
 
- * auth/jwt: Handle groups claim values that are strings, in addition to
-   list of strings [JWT-63]
+ * auth/pcf: The signature format has been updated to use the standard Base64
+   encoding instead of the URL-safe variant. Signatures created using the
+   previous format will continue to be accepted [PCF-27]
 
 ## 1.2.1 (August 6th, 2019)
 
