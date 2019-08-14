@@ -3,6 +3,16 @@
 This plugin leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation)
 for authenticating to Vault. 
 
+## Official Documentation
+
+This plugin's docs reside in the following places:
+
+- [Overview](https://www.vaultproject.io/docs/auth/pcf.html)
+- [API](https://www.vaultproject.io/api/auth/pcf/index.html)
+
+The documentation below is intended to further elaborate, and is targeted at those developing, using,
+troubleshooting, and maintaining this plugin.
+
 ## Known Risks
 
 This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because PCF
@@ -301,6 +311,16 @@ Then, add a role that will be used to grant specific Vault policies to those log
 `bound_application_ids` is added, then the application ID on the cert used for logging in _must_ be one of the role's
 application IDs. However, if `bound_application_ids` is omitted, then _any_ application ID will match. We recommend
 configuring as many bound parameters as possible.
+
+The `bound_application_ids`, `bound_space_ids`, and `bound_organization_ids` that are tied to a particular application
+can be found by looking at the `instance.crt` using the following command:
+
+```
+$ openssl crl2pkcs7 -nocrl -certfile instance.crt | openssl pkcs7 -print_certs -text -noout
+...
+        Subject: OU=organization:bc3874b4-002b-4548-ab27-f9bd38450651, OU=space:dd84618a-16f2-4dee-9936-04181acb6cc0, OU=app:b7b5a288-afa9-4022-802f-173ad94ebb02, CN=a9cff876-58f9-4247-67a6-62f2
+...
+```
 
 Also, by default, the IP address on the certificate presented at login must match that of the caller. However, if
 your callers tend to be proxied, this may not work for you. If that's the case, set `disable_ip_matching` to true.
