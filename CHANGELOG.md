@@ -5,6 +5,8 @@ CHANGES:
  * auth/pcf: The signature format has been updated to use the standard Base64
    encoding instead of the URL-safe variant. Signatures created using the
    previous format will continue to be accepted [PCF-27]
+ * core: The http response code returned when an identity token key is not found
+   has been changed from 400 to 404
 
 ## 1.2.1 (August 6th, 2019)
 
