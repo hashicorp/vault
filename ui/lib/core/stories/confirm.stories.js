@@ -16,19 +16,21 @@ storiesOf('Confirm/Confirm', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Confirm</h5>
-      <div class="box">
-        <Confirm as |c|>
-          <c.Trigger
-            @id={{id}}
-            @title={{title}}
-            @onTrigger={{action c.onTrigger id}}
-            @triggerText={{triggerText}}
-            @message={{message}}
-            @confirmButtonText={{confirmButtonText}}
-            @cancelButtonText={{cancelButtonText}}
-            @onConfirm={{onConfirm}}
-            />
-        </Confirm>
+      <div class="popup-menu-content">
+        <div class="box">
+          <Confirm as |c|>
+            <c.Trigger
+              @id={{id}}
+              @title={{title}}
+              @onTrigger={{action c.onTrigger id}}
+              @triggerText={{triggerText}}
+              @message={{message}}
+              @confirmButtonText={{confirmButtonText}}
+              @cancelButtonText={{cancelButtonText}}
+              @onConfirm={{onConfirm}}
+              />
+          </Confirm>
+        </div>
       </div>
     `,
       context: {
