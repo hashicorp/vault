@@ -12,6 +12,7 @@ CHANGES:
    
 BUG FIXES:
 
+ * auth/radius: Fix panic when logging in [GH-7286]
  * ui: the string-list widget will now honor multiline input [GH-7254]
  * ui: various visual bugs in the KV interface were addressed [GH-7307]
  * ui: fixed incorrect URL to access help in LDAP auth [GH-7299]
