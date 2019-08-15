@@ -3,7 +3,7 @@ package ocikms
 
 import (
 	"context"
-	b64 "encoding/base64"
+	"encoding/base64"
 	"fmt"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -24,8 +24,6 @@ const (
 	EnvOCIKMSSealKeyID = "VAULT_OCIKMS_SEAL_KEY_ID"
 	// OCI KMS key ID to use for encryption and decryption
 	EnvOCIKMSCryptoEndpoint = "VAULT_OCIKMS_CRYPTO_ENDPOINT"
-	// Should retry for calls to KMS endpoints
-	KMSShouldRetryOperation = true
 	// Maximum number of retries
 	KMSMaximumNumberOfRetries = 5
 	// keyID config
@@ -84,7 +82,7 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		metrics.SetGauge(metricInitFailed, 1)
 		return nil, fmt.Errorf("'%s' not found for OCI KMS seal configuration", KMSConfigKeyID)
 	}
-	k.logger.Info(fmt.Sprintf("got %s: %s", KMSConfigKeyID, k.keyID))
+	k.logger.Info("OCI KMS configuration", KMSConfigKeyID, k.keyID)
 
 	// Check and set cryptoEndpoint
 	switch {
@@ -96,7 +94,7 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		metrics.SetGauge(metricInitFailed, 1)
 		return nil, fmt.Errorf("'%s' not found for OCI KMS seal configuration", KMSConfigCryptoEndpoint)
 	}
-	k.logger.Info(fmt.Sprintf("got cryptoEndpoint: %s", k.cryptoEndpoint))
+	k.logger.Info("OCI KMS configuration", KMSConfigCryptoEndpoint, k.cryptoEndpoint)
 
 	// Check and set authTypeAPIKey
 	var err error
@@ -182,16 +180,9 @@ func (k *OCIKMSSeal) getOCIKMSClient() (*keymanagement.KmsCryptoClient, error) {
 
 // Request metadata includes retry policy
 func (k *OCIKMSSeal) getRequestMetadata() common.RequestMetadata {
-	if !KMSShouldRetryOperation {
-		noRetryPolicy := common.NoRetryPolicy()
-		return common.RequestMetadata{
-			RetryPolicy: &noRetryPolicy,
-		}
-	}
-
 	// Only retry for 5xx errors
 	retryOn5xxFunc := func(r common.OCIOperationResponse) bool {
-		return !(r.Error == nil && r.Response.HTTPResponse().StatusCode < 500)
+		return r.Error != nil || r.Response.HTTPResponse().StatusCode >= 500
 	}
 	return getRequestMetadataWithCustomizedRetryPolicy(retryOn5xxFunc)
 }
@@ -235,7 +226,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 	}
 
 	// KMS required base64 encrypted plain text before sending to the service
-	b64Plaintext := b64.StdEncoding.EncodeToString(plaintext)
+	encodedPlaintext := base64.StdEncoding.EncodeToString(plaintext)
 
 	if k.cryptoClient == nil {
 		metrics.SetGauge(metricEncryptFailed, 1)
@@ -246,7 +237,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 	requestMetadata := k.getRequestMetadata()
 	encryptedDataDetails := keymanagement.EncryptDataDetails{
 		KeyId:     &k.keyID,
-		Plaintext: &b64Plaintext,
+		Plaintext: &encodedPlaintext,
 	}
 
 	input := keymanagement.EncryptRequest{
@@ -259,7 +250,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		metrics.SetGauge(metricEncryptFailed, 1)
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
-	k.logger.Info(fmt.Sprintf("successfully encrypted Vault unseal key. Storing encrypted key to storage"))
+	k.logger.Debug(fmt.Sprintf("successfully encrypted"))
 
 	ret := &physical.EncryptedBlobInfo{
 		Ciphertext: []byte(*output.Ciphertext),
@@ -294,12 +285,12 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 		metrics.SetGauge(metricDecryptFailed, 1)
 		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
 	}
-	plaintext, err := b64.StdEncoding.DecodeString(*output.Plaintext)
+	plaintext, err := base64.StdEncoding.DecodeString(*output.Plaintext)
 	if err != nil {
 		metrics.SetGauge(metricDecryptFailed, 1)
 		return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
 	}
-	k.logger.Info(fmt.Sprintf("successfully decrypted Vault unseal key"))
+	k.logger.Debug(fmt.Sprintf("successfully decrypted"))
 
 	return plaintext, nil
 }
