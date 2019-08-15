@@ -118,16 +118,6 @@ entities attempting to login.
 
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this
-  role.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role in
-  seconds.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens
-  issued in seconds using this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
 - `bound_service_principal_ids` `(array: [])` - The list of Service Principal IDs 
   that login is restricted to.
 - `bound_group_ids` `(array: [])` - The list of group ids that login is restricted 
@@ -139,6 +129,8 @@ entities attempting to login.
   login is restricted to. 
 - `bound_scale_sets` `(array: [])` - The list of scale set names that the 
   login is restricted to. 
+
+<%= partial "partials/tokenfields" %>
 
 ### Sample Payload
 

@@ -41,10 +41,10 @@ that presently exist.
 - `pcf_api_trusted_certificates` `(array: [])`: The certificate that's presented by the
 PCF API. This configures Vault to trust this certificate when making API calls, resolving
 `x509: certificate signed by unknown authority` errors.
-- `login_max_seconds_old` `(int: 300)`: The maximum number of seconds in the past when a 
+- `login_max_seconds_not_before` `(int: 300)`: The maximum number of seconds in the past when a
 signature could have been created. The lower the value, the lower the risk of replay
 attacks.
-- `login_max_seconds_ahead` `(int: 60)`: In case of clock drift, the maximum number of
+- `login_max_seconds_not_after` `(int: 60)`: In case of clock drift, the maximum number of
 seconds in the future when a signature could have been created. The lower the value, 
 the lower the risk of replay attacks.
 
@@ -57,8 +57,8 @@ the lower the risk of replay attacks.
   "pcf_username": "vault",
   "pcf_password": "pa55w0rd",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_seconds_old": 5,
-  "login_max_seconds_ahead": 1
+  "login_max_seconds_not_before": 5,
+  "login_max_seconds_not_after": 1
 }
 ```
 
@@ -96,8 +96,8 @@ $ curl \
   "pcf_api_addr": "https://api.sys.somewhere.cf-app.com",
   "pcf_username": "vault",
   "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "login_max_seconds_old": 5,
-  "login_max_seconds_ahead": 1
+  "login_max_seconds_not_before": 5,
+  "login_max_seconds_not_after": 1
 }
 ```
 
@@ -146,21 +146,12 @@ an instance must be a member of to qualify as a member of this role. Please note
 every time you use `cf push` on an app, its instance ID changes. Also, instance IDs 
 are not verifiable as being presently alive using the PCF API. Thus, we recommend against
 using this setting for most use cases.
-- `bound_cidrs` `(array: [])` - Comma separated string or list of CIDR blocks. 
-If set, specifies the blocks of IP addresses which can perform the login operation.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this role.
 - `disable_ip_matching` `(bool: false)` - If set to true, disables the default behavior 
 that logging in must be performed from an acceptable IP address described by the 
 certificate presented. Should only be set to true if required, generally when a proxy
 is used to perform logins.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
-  provided as "1h", where hour is the largest suffix.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
-  this role.
-- `period` `(string: "")` - If set, indicates that the token generated using
-  this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
+
+<%= partial "partials/tokenfields" %>
 
 ### Sample Payload
 
