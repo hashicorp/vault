@@ -1,5 +1,10 @@
 ## Next
 
+BUG FIXES:
+
+ * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
+   not being applied to tokens generated using the OIDC login flow [JWT-67]
+
 ## 1.2.2 (August 15, 2019)
 
 CHANGES:
