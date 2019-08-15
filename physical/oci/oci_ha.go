@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-// The lock implementation below prioritizes ensuring that there are no 2 primary at any given point in time
+// The lock implementation below prioritizes ensuring that there are not 2 primary at any given point in time
 // over high availability of the primary instance
 
 // Verify Backend satisfies the correct interfaces
@@ -267,7 +267,7 @@ OUTER:
 			metrics.SetGauge(metricHaWatchLockRetriable, 1)
 			continue
 		}
-		// Verify the Identity is the same and lock was renewed before its TTL
+
 		if (lockRecord == nil) || (lockRecord.Identity != l.identity) {
 			l.backend.logger.Debug("WatchLock: Lock record cache is nil or does not belong to self.")
 			break OUTER
@@ -356,7 +356,7 @@ func (l *Lock) Value() (bool, string, error) {
 	if lockRecord == nil {
 		return false, "", err
 	}
-	return true, string(lockRecord.Value), nil
+	return true, lockRecord.Value, nil
 }
 
 // get retrieves the Value for the lock.

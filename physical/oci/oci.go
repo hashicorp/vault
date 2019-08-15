@@ -295,7 +295,6 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	var start *string
 
 	for {
-
 		opcClientRequestId, err := uuid.GenerateUUID()
 		if err != nil {
 			o.logger.Error("List: error generating UUID")
