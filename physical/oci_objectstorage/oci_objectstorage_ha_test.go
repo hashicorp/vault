@@ -1,5 +1,5 @@
 // Copyright © 2019, Oracle and/or its affiliates.
-package oci_objectStorage
+package oci_objectstorage
 
 import (
 	"github.com/hashicorp/go-uuid"

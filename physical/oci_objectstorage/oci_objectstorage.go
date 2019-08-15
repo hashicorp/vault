@@ -1,9 +1,8 @@
 // Copyright © 2019, Oracle and/or its affiliates.
-package oci_objectStorage
+package oci_objectstorage
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/armon/go-metrics"
@@ -33,32 +32,32 @@ const (
 )
 
 var (
-	metricDelete     = []string{"oci_objectstorage", "delete"}
-	metricGet        = []string{"oci_objectstorage", "get"}
-	metricList       = []string{"oci_objectstorage", "list"}
-	metricPut        = []string{"oci_objectstorage", "put"}
-	metricDeleteFull = []string{"oci_objectstorage", "deleteFull"}
-	metricGetFull    = []string{"oci_objectstorage", "getFull"}
-	metricListFull   = []string{"oci_objectstorage", "listFull"}
-	metricPutFull    = []string{"oci_objectstorage", "putFull"}
+	metricDelete     = []string{"oci", "delete"}
+	metricGet        = []string{"oci", "get"}
+	metricList       = []string{"oci", "list"}
+	metricPut        = []string{"oci", "put"}
+	metricDeleteFull = []string{"oci", "deleteFull"}
+	metricGetFull    = []string{"oci", "getFull"}
+	metricListFull   = []string{"oci", "listFull"}
+	metricPutFull    = []string{"oci", "putFull"}
 
-	metricDeleteHa = []string{"oci_objectstorage", "deleteHa"}
-	metricGetHa    = []string{"oci_objectstorage", "getHa"}
-	metricPutHa    = []string{"oci_objectstorage", "putHa"}
+	metricDeleteHa = []string{"oci", "deleteHa"}
+	metricGetHa    = []string{"oci", "getHa"}
+	metricPutHa    = []string{"oci", "putHa"}
 
-	metricDeleteAcquirePool = []string{"oci_objectstorage", "deleteAcquirePool"}
-	metricGetAcquirePool    = []string{"oci_objectstorage", "getAcquirePool"}
-	metricListAcquirePool   = []string{"oci_objectstorage", "listAcquirePool"}
-	metricPutAcquirePool    = []string{"oci_objectstorage", "putAcquirePool"}
+	metricDeleteAcquirePool = []string{"oci", "deleteAcquirePool"}
+	metricGetAcquirePool    = []string{"oci", "getAcquirePool"}
+	metricListAcquirePool   = []string{"oci", "listAcquirePool"}
+	metricPutAcquirePool    = []string{"oci", "putAcquirePool"}
 
-	metricDeleteFailed         = []string{"oci_objectstorage", "deleteFailed"}
-	metricGetFailed            = []string{"oci_objectstorage", "getFailed"}
-	metricListFailed           = []string{"oci_objectstorage", "listFailed"}
-	metricPutFailed            = []string{"oci_objectstorage", "putFailed"}
-	metricHaWatchLockRetriable = []string{"oci_objectstorage", "haWatchLockRetriable"}
-	metricPermitsUsed          = []string{"oci_objectstorage", "permitsUsed"}
+	metricDeleteFailed         = []string{"oci", "deleteFailed"}
+	metricGetFailed            = []string{"oci", "getFailed"}
+	metricListFailed           = []string{"oci", "listFailed"}
+	metricPutFailed            = []string{"oci", "putFailed"}
+	metricHaWatchLockRetriable = []string{"oci", "haWatchLockRetriable"}
+	metricPermitsUsed          = []string{"oci", "permitsUsed"}
 
-	metric5xx = []string{"oci_objectstorage", "5xx"}
+	metric5xx = []string{"oci", "5xx"}
 )
 
 type Backend struct {
@@ -69,25 +68,6 @@ type Backend struct {
 	namespaceName  string
 	haEnabled      bool
 	lockBucketName string
-}
-
-func NewBackendConstructor(
-	client *objectstorage.ObjectStorageClient,
-	bucketName string,
-	logger log.Logger,
-	permitPool *physical.PermitPool,
-	namespaceName string,
-	haEnabled bool,
-	lockBucketName string) *Backend {
-	return &Backend{
-		client:         client,
-		bucketName:     bucketName,
-		logger:         logger,
-		permitPool:     permitPool,
-		namespaceName:  namespaceName,
-		haEnabled:      haEnabled,
-		lockBucketName: lockBucketName,
-	}
 }
 
 func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -108,7 +88,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	if haEnabledStr != "" {
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, errwrap.Wrapf("Failed to parse HA enabled: {{err}}", err)
 		}
 
 		if haEnabled {
@@ -124,7 +104,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	if authTypeAPIKeyStr != "" {
 		authTypeAPIKeyBool, err = strconv.ParseBool(authTypeAPIKeyStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing authTypeAPIKey parameter: {{err}}", err)
+			return nil, errwrap.Wrapf("Failed parsing authTypeAPIKey parameter: {{err}}", err)
 		}
 	}
 
@@ -134,16 +114,16 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	} else {
 		cp, err = auth.InstancePrincipalConfigurationProvider()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed creating InstancePrincipalConfigurationProvider: {{err}}", err)
+			return nil, errwrap.Wrapf("Failed creating InstancePrincipalConfigurationProvider: {{err}}", err)
 		}
 	}
 
 	objectStorageClient, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(cp)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed creating NewObjectStorageClientWithConfigurationProvider: {{err}}", err)
+		return nil, errwrap.Wrapf("Failed creating NewObjectStorageClientWithConfigurationProvider: {{err}}", err)
 	}
 
-	logger.Debug("physical/oci: configuration",
+	logger.Debug("configuration",
 		"bucketName", bucketName,
 		"namespaceName", namespaceName,
 		"haEnabled", haEnabled,
@@ -163,7 +143,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 }
 
 func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
-	o.logger.Debug("physical/oci: put")
+	o.logger.Debug("PUT started")
 	defer metrics.MeasureSince(metricPutFull, time.Now())
 	startAcquirePool := time.Now()
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
@@ -172,13 +152,15 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	metrics.MeasureSince(metricPutAcquirePool, startAcquirePool)
 
 	defer metrics.MeasureSince(metricPut, time.Now())
-	size := int64(binary.Size(entry.Value))
+	size := int64(len(entry.Value))
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
-		o.logger.Debug("physical/oci: Put: error generating UUID")
-		opcClientRequestId = ""
+		metrics.SetGauge(metricPutFailed, 1)
+		o.logger.Error("Failed to generate UUID")
+		return errwrap.Wrapf("Failed to generate UUID: {{}}", err)
 	}
-	o.logger.Debug("physical/oci: put", "opc-client-request-id", opcClientRequestId)
+
+	o.logger.Debug("PUT", "opc-client-request-id", opcClientRequestId)
 	request := objectstorage.PutObjectRequest{
 		NamespaceName:      &o.namespaceName,
 		BucketName:         &o.bucketName,
@@ -190,26 +172,23 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	resp, err := o.client.PutObject(ctx, request)
-	o.logRequest("put", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
+	if resp.RawResponse != nil && resp.RawResponse.Body != nil {
+		defer resp.RawResponse.Body.Close()
+	}
 
 	if err != nil {
 		metrics.SetGauge(metricPutFailed, 1)
-
-		if resp.RawResponse != nil {
-			defer resp.RawResponse.Body.Close()
-		}
-
-		return errwrap.Wrapf("failed to put data: {{err}}", err)
+		return errwrap.Wrapf("Failed to put data: {{err}}", err)
 	}
-	o.logger.Debug("physical/oci: put end")
 
-	defer resp.RawResponse.Body.Close()
+	o.logRequest("PUT", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
+	o.logger.Debug("PUT completed")
 
 	return nil
 }
 
 func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	o.logger.Debug("physical/oci: get")
+	o.logger.Debug("GET started")
 	defer metrics.MeasureSince(metricGetFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
@@ -220,10 +199,10 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	defer metrics.MeasureSince(metricGet, time.Now())
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
-		o.logger.Debug("physical/oci: Get: error generating UUID")
-		opcClientRequestId = ""
+		o.logger.Error("Failed to generate UUID")
+		return nil, errwrap.Wrapf("Failed to generate UUID: {{}}", err)
 	}
-	o.logger.Debug("physical/oci: Get", "opc-client-request-id", opcClientRequestId)
+	o.logger.Debug("GET", "opc-client-request-id", opcClientRequestId)
 	request := objectstorage.GetObjectRequest{
 		NamespaceName:      &o.namespaceName,
 		BucketName:         &o.bucketName,
@@ -231,29 +210,27 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		OpcClientRequestId: &opcClientRequestId,
 	}
 
-	response, err := o.client.GetObject(ctx, request)
-	o.logRequest("get", response.RawResponse, response.OpcClientRequestId, response.OpcRequestId, err)
+	resp, err := o.client.GetObject(ctx, request)
+	if resp.RawResponse != nil && resp.RawResponse.Body != nil {
+		defer resp.RawResponse.Body.Close()
+	}
+	o.logRequest("GET", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
 
 	if err != nil {
-
-		if response.RawResponse != nil && response.RawResponse.StatusCode == http.StatusNotFound {
-			defer response.RawResponse.Body.Close()
+		if resp.RawResponse != nil && resp.RawResponse.StatusCode == http.StatusNotFound {
 			return nil, nil
 		}
-
 		metrics.SetGauge(metricGetFailed, 1)
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read Value for %q: {{err}}", key), err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("Failed to read Value: {{err}}"), err)
 	}
 
-	defer response.RawResponse.Body.Close()
-
-	body, err := ioutil.ReadAll(response.Content)
+	body, err := ioutil.ReadAll(resp.Content)
 	if err != nil {
 		metrics.SetGauge(metricGetFailed, 1)
-		return nil, errwrap.Wrapf("failed to decode Value into bytes: {{err}}", err)
+		return nil, errwrap.Wrapf("Failed to decode Value into bytes: {{err}}", err)
 	}
 
-	o.logger.Debug("physical/oci: get end")
+	o.logger.Debug("GET completed")
 
 	return &physical.Entry{
 		Key:   key,
@@ -262,7 +239,7 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 }
 
 func (o *Backend) Delete(ctx context.Context, key string) error {
-	o.logger.Debug("physical/oci: delete")
+	o.logger.Debug("DELETE started")
 	defer metrics.MeasureSince(metricDeleteFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
@@ -273,10 +250,10 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince(metricDelete, time.Now())
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
-		o.logger.Debug("physical/oci: Delete: error generating UUID")
-		opcClientRequestId = ""
+		o.logger.Error("Delete: error generating UUID")
+		return errwrap.Wrapf("Failed to generate UUID: {{}}", err)
 	}
-	o.logger.Debug("physical/oci: Delete", "opc-client-request-id", opcClientRequestId)
+	o.logger.Debug("Delete", "opc-client-request-id", opcClientRequestId)
 	request := objectstorage.DeleteObjectRequest{
 		NamespaceName:      &o.namespaceName,
 		BucketName:         &o.bucketName,
@@ -285,26 +262,26 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 	}
 
 	resp, err := o.client.DeleteObject(ctx, request)
-	o.logRequest("delete", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
+	if resp.RawResponse != nil && resp.RawResponse.Body != nil {
+		defer resp.RawResponse.Body.Close()
+	}
+
+	o.logRequest("DELETE", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
 
 	if err != nil {
-
 		if resp.RawResponse != nil && resp.RawResponse.StatusCode == http.StatusNotFound {
-			defer resp.RawResponse.Body.Close()
 			return nil
 		}
-
 		metrics.SetGauge(metricDeleteFailed, 1)
-		return errwrap.Wrapf("failed to delete Key: {{err}}", err)
+		return errwrap.Wrapf("Failed to delete Key: {{err}}", err)
 	}
-	o.logger.Debug("physical/oci: delete end")
-	defer resp.RawResponse.Body.Close()
+	o.logger.Debug("DELETE completed")
 
 	return nil
 }
 
 func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
-	o.logger.Debug("physical/oci: list")
+	o.logger.Debug("LIST started")
 	defer metrics.MeasureSince(metricListFull, time.Now())
 	metrics.SetGauge(metricPermitsUsed, float32(o.permitPool.CurrentPermits()))
 	startAcquirePool := time.Now()
@@ -321,10 +298,10 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 		opcClientRequestId, err := uuid.GenerateUUID()
 		if err != nil {
-			o.logger.Debug("physical/oci: List: error generating UUID")
-			opcClientRequestId = ""
+			o.logger.Error("List: error generating UUID")
+			return nil, errwrap.Wrapf("Failed to generate UUID {{}}", err)
 		}
-		o.logger.Debug("physical/oci: List", "opc-client-request-id", opcClientRequestId)
+		o.logger.Debug("LIST", "opc-client-request-id", opcClientRequestId)
 		request := objectstorage.ListObjectsRequest{
 			NamespaceName:      &o.namespaceName,
 			BucketName:         &o.bucketName,
@@ -334,8 +311,8 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			OpcClientRequestId: &opcClientRequestId,
 		}
 
-		response, err := o.client.ListObjects(ctx, request)
-		o.logRequest("list", response.RawResponse, response.OpcClientRequestId, response.OpcRequestId, err)
+		resp, err := o.client.ListObjects(ctx, request)
+		o.logRequest("LIST", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
 
 		if err != nil {
 			metrics.SetGauge(metricListFailed, 1)
@@ -343,32 +320,31 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			return nil, errwrap.Wrapf("failed to list using prefix: {{err}}", err)
 		}
 
-		for _, commonPrefix := range response.Prefixes {
+		for _, commonPrefix := range resp.Prefixes {
 			commonPrefix := strings.TrimPrefix(commonPrefix, prefix)
 			keys = strutil.AppendIfMissing(keys, commonPrefix)
 		}
 
-		for _, object := range response.Objects {
+		for _, object := range resp.Objects {
 			key := strings.TrimPrefix(*object.Name, prefix)
 			keys = strutil.AppendIfMissing(keys, key)
 		}
 
-		if response.NextStartWith == nil {
-			response.RawResponse.Body.Close()
+		if resp.NextStartWith == nil {
+			resp.RawResponse.Body.Close()
 			break
 		}
 
-		start = response.NextStartWith
-		response.RawResponse.Body.Close()
+		start = resp.NextStartWith
+		resp.RawResponse.Body.Close()
 	}
 
 	sort.Strings(keys)
-	o.logger.Debug("physical/oci: list end")
+	o.logger.Debug("LIST completed")
 	return keys, nil
 }
 
 func (o *Backend) logRequest(operation string, response *http.Response, clientOpcRequestIdPtr *string, opcRequestIdPtr *string, err error) {
-
 	statusCode := 0
 	clientOpcRequestId := " "
 	opcRequestId := " "
@@ -388,8 +364,13 @@ func (o *Backend) logRequest(operation string, response *http.Response, clientOp
 		opcRequestId = *opcRequestIdPtr
 	}
 
-	logLine := fmt.Sprintf("physical/oci: %s client:opc-request-id %s opc-request-id: %s status-code: %d",
-		operation, clientOpcRequestId, opcRequestId, statusCode)
+	statusCodeStr := "No response"
+	if statusCode != 0 {
+		statusCodeStr = strconv.Itoa(statusCode)
+	}
+
+	logLine := fmt.Sprintf("%s client:opc-request-id %s opc-request-id: %s status-code: %s",
+		operation, clientOpcRequestId, opcRequestId, statusCodeStr)
 	if err == nil {
 		o.logger.Debug(logLine)
 	} else {

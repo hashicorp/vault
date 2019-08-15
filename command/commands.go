@@ -143,7 +143,7 @@ var (
 		"manta":                  physManta.NewMantaBackend,
 		"mssql":                  physMSSQL.NewMSSQLBackend,
 		"mysql":                  physMySQL.NewMySQLBackend,
-		"oci_objectstorage":      physOCI.NewBackend,
+		"oci":                    physOCI.NewBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
 		"s3":                     physS3.NewS3Backend,
 		"spanner":                physSpanner.NewBackend,
