@@ -1,18 +1,23 @@
 ## Next
 
+## 1.2.2 (August 15, 2019)
+
 CHANGES:
 
- * auth/approle: Fix an error where an empty `token_type` string was not being
-   correctly handled as `TokenTypeDefault` [GH-7273]
  * auth/pcf: The signature format has been updated to use the standard Base64
    encoding instead of the URL-safe variant. Signatures created using the
    previous format will continue to be accepted [PCF-27]
  * core: The http response code returned when an identity token key is not found
    has been changed from 400 to 404
+   
+IMPROVEMENTS: 
+
  * identity: Remove 512 entity limit for groups [GH-7317]
    
 BUG FIXES:
 
+ * auth/approle: Fix an error where an empty `token_type` string was not being
+   correctly handled as `TokenTypeDefault` [GH-7273]
  * auth/radius: Fix panic when logging in [GH-7286]
  * ui: the string-list widget will now honor multiline input [GH-7254]
  * ui: various visual bugs in the KV interface were addressed [GH-7307]
