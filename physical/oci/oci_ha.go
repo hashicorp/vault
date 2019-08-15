@@ -255,7 +255,7 @@ OUTER:
 		if (lockRecordCache == nil) ||
 			(lockRecordCache.lockRecord == nil) ||
 			(lockRecordCache.lockRecord.Identity != l.identity) ||
-			(time.Now().UTC().Sub(lockRecordCache.lastUpdate) > l.ttl) {
+			(time.Now().Sub(lockRecordCache.lastUpdate) > l.ttl) {
 			l.backend.logger.Debug("WatchLock: Lock record cache is nil, stale or does not belong to self.")
 			break OUTER
 		}
@@ -437,7 +437,7 @@ func (l *Lock) writeLock() (bool, error) {
 	lockRecordCache := loadLockRecordCache(l)
 	if (lockRecordCache == nil) || lockRecordCache.lockRecord == nil ||
 		lockRecordCache.lockRecord.Identity != l.identity ||
-		time.Now().UTC().Sub(lockRecordCache.lastUpdate) > l.ttl {
+		time.Now().Sub(lockRecordCache.lastUpdate) > l.ttl {
 		// case secondary
 		currentLockRecord, currentEtag, err := l.get(ctx)
 		if err != nil {
@@ -456,7 +456,7 @@ func (l *Lock) writeLock() (bool, error) {
 		}
 
 		// Current lock record being null implies that there is no leader. In this case we want to try acquiring lock.
-		if currentLockRecord != nil && time.Now().UTC().Sub(lockRecordCache.lastUpdate) < LockCacheMinAcceptableAge {
+		if currentLockRecord != nil && time.Now().Sub(lockRecordCache.lastUpdate) < LockCacheMinAcceptableAge {
 			return false, nil
 		}
 		// cache is old enough and current, try acquiring lock as secondary
