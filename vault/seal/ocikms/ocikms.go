@@ -79,7 +79,7 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	case config[KMSConfigKeyID] != "":
 		k.keyID = config[KMSConfigKeyID]
 	default:
-		metrics.SetGauge(metricInitFailed, 1)
+		metrics.IncrCounter(metricInitFailed, 1)
 		return nil, fmt.Errorf("'%s' not found for OCI KMS seal configuration", KMSConfigKeyID)
 	}
 	k.logger.Info("OCI KMS configuration", KMSConfigKeyID, k.keyID)
@@ -91,7 +91,7 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	case config[KMSConfigCryptoEndpoint] != "":
 		k.cryptoEndpoint = config[KMSConfigCryptoEndpoint]
 	default:
-		metrics.SetGauge(metricInitFailed, 1)
+		metrics.IncrCounter(metricInitFailed, 1)
 		return nil, fmt.Errorf("'%s' not found for OCI KMS seal configuration", KMSConfigCryptoEndpoint)
 	}
 	k.logger.Info("OCI KMS configuration", KMSConfigCryptoEndpoint, k.cryptoEndpoint)
@@ -103,21 +103,21 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	if authTypeAPIKeyStr != "" {
 		k.authTypeAPIKey, err = strconv.ParseBool(authTypeAPIKeyStr)
 		if err != nil {
-			metrics.SetGauge(metricInitFailed, 1)
+			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("failed parsing authTypeAPIKey parameter: {{err}}", err)
 		}
 	}
 	if k.authTypeAPIKey {
-		k.logger.Info(fmt.Sprintf("using OCI KMS with user principal"))
+		k.logger.Info("using OCI KMS with user principal")
 	} else {
-		k.logger.Info(fmt.Sprintf("using OCI KMS with instance principal"))
+		k.logger.Info("using OCI KMS with instance principal")
 	}
 
 	// Check and set OCI KMS crypto client
 	if k.cryptoClient == nil {
 		kmsCryptoClient, err := k.getOCIKMSClient()
 		if err != nil {
-			metrics.SetGauge(metricInitFailed, 1)
+			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("error initializing OCI KMS clients: {{err}}", err)
 		}
 
@@ -139,10 +139,10 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		}
 		generateDEKResponse, err := kmsCryptoClient.GenerateDataEncryptionKey(context.Background(), dekInput)
 		if err != nil || generateDEKResponse.Ciphertext == nil {
-			metrics.SetGauge(metricInitFailed, 1)
+			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("failed keyID validation: {{err}}", err)
 		}
-		k.logger.Info(fmt.Sprintf("successfully validated keyID"))
+		k.logger.Info("successfully validated keyID")
 
 		// Store client
 		k.cryptoClient = kmsCryptoClient
@@ -221,7 +221,7 @@ func (k *OCIKMSSeal) Finalize(context.Context) error {
 func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
 	defer metrics.MeasureSince(metricEncrypt, time.Now())
 	if plaintext == nil || len(plaintext) == 0 {
-		metrics.SetGauge(metricEncryptFailed, 1)
+		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
 
@@ -229,7 +229,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 	encodedPlaintext := base64.StdEncoding.EncodeToString(plaintext)
 
 	if k.cryptoClient == nil {
-		metrics.SetGauge(metricEncryptFailed, 1)
+		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, fmt.Errorf("nil client")
 	}
 
@@ -247,7 +247,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 	output, err := k.cryptoClient.Encrypt(ctx, input)
 
 	if err != nil {
-		metrics.SetGauge(metricEncryptFailed, 1)
+		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
 	k.logger.Debug("successfully encrypted")
@@ -282,12 +282,12 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 
 	output, err := k.cryptoClient.Decrypt(ctx, input)
 	if err != nil {
-		metrics.SetGauge(metricDecryptFailed, 1)
+		metrics.IncrCounter(metricDecryptFailed, 1)
 		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
 	}
 	plaintext, err := base64.StdEncoding.DecodeString(*output.Plaintext)
 	if err != nil {
-		metrics.SetGauge(metricDecryptFailed, 1)
+		metrics.IncrCounter(metricDecryptFailed, 1)
 		return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
 	}
 	k.logger.Debug("successfully decrypted")
