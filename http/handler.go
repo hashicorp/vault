@@ -110,7 +110,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
-	// mux.Handle("/v1/sys/host-info", handleSysHostInfo(core))
 	mux.Handle("/v1/sys/host-info", handleLogical(core))
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
