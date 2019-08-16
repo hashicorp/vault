@@ -155,7 +155,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	size := int64(len(entry.Value))
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
-		metrics.SetGauge(metricPutFailed, 1)
+		metrics.IncrCounter(metricPutFailed, 1)
 		o.logger.Error("failed to generate UUID")
 		return errwrap.Wrapf("failed to generate UUID: {{err}}", err)
 	}
@@ -177,7 +177,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	if err != nil {
-		metrics.SetGauge(metricPutFailed, 1)
+		metrics.IncrCounter(metricPutFailed, 1)
 		return errwrap.Wrapf("failed to put data: {{err}}", err)
 	}
 
@@ -220,13 +220,13 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		if resp.RawResponse != nil && resp.RawResponse.StatusCode == http.StatusNotFound {
 			return nil, nil
 		}
-		metrics.SetGauge(metricGetFailed, 1)
+		metrics.IncrCounter(metricGetFailed, 1)
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read Value: {{err}}"), err)
 	}
 
 	body, err := ioutil.ReadAll(resp.Content)
 	if err != nil {
-		metrics.SetGauge(metricGetFailed, 1)
+		metrics.IncrCounter(metricGetFailed, 1)
 		return nil, errwrap.Wrapf("failed to decode Value into bytes: {{err}}", err)
 	}
 
@@ -272,7 +272,7 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 		if resp.RawResponse != nil && resp.RawResponse.StatusCode == http.StatusNotFound {
 			return nil
 		}
-		metrics.SetGauge(metricDeleteFailed, 1)
+		metrics.IncrCounter(metricDeleteFailed, 1)
 		return errwrap.Wrapf("failed to delete Key: {{err}}", err)
 	}
 	o.logger.Debug("DELETE completed")
@@ -314,8 +314,7 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 		o.logRequest("LIST", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
 
 		if err != nil {
-			metrics.SetGauge(metricListFailed, 1)
-
+			metrics.IncrCounter(metricListFailed, 1)
 			return nil, errwrap.Wrapf("failed to list using prefix: {{err}}", err)
 		}
 
@@ -351,7 +350,7 @@ func (o *Backend) logRequest(operation string, response *http.Response, clientOp
 	if response != nil {
 		statusCode = response.StatusCode
 		if statusCode/100 == 5 {
-			metrics.SetGauge(metric5xx, 1)
+			metrics.IncrCounter(metric5xx, 1)
 		}
 	}
 

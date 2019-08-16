@@ -321,7 +321,7 @@ func (l *Lock) Unlock() error {
 		opcClientRequestId, err := uuid.GenerateUUID()
 		if err != nil {
 			l.backend.logger.Debug("Unlock: error generating UUID")
-			opcClientRequestId = ""
+			return errwrap.Wrapf("failed to generate UUID: {{err}}", err)
 		}
 		l.backend.logger.Debug("Unlock", "opc-client-request-id", opcClientRequestId)
 		request := objectstorage.DeleteObjectRequest{
@@ -336,8 +336,7 @@ func (l *Lock) Unlock() error {
 		l.backend.logRequest("deleteHA", response.RawResponse, response.OpcClientRequestId, response.OpcRequestId, err)
 
 		if err != nil {
-			metrics.SetGauge(metricDeleteFailed, 1)
-
+			metrics.IncrCounter(metricDeleteFailed, 1)
 			return errwrap.Wrapf("write lock: {{err}}", err)
 		}
 	}
@@ -391,7 +390,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 			return nil, "", nil
 		}
 
-		metrics.SetGauge(metricGetFailed, 1)
+		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error calling GET", "err", err)
 		return nil, "", errwrap.Wrapf(fmt.Sprintf("failed to read Value for %q: {{err}}", l.key), err)
 	}
@@ -400,7 +399,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 
 	body, err := ioutil.ReadAll(response.Content)
 	if err != nil {
-		metrics.SetGauge(metricGetFailed, 1)
+		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error reading content", "err", err)
 		return nil, "", errwrap.Wrapf("failed to decode Value into bytes: {{err}}", err)
 	}
@@ -408,7 +407,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 	var lockRecord LockRecord
 	err = json.Unmarshal(body, &lockRecord)
 	if err != nil {
-		metrics.SetGauge(metricGetFailed, 1)
+		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error un-marshalling content", "err", err)
 		return nil, "", errwrap.Wrapf(fmt.Sprintf("failed to read Value for %q: {{err}}", l.key), err)
 	}
@@ -518,7 +517,7 @@ func (l *Lock) writeLock() (bool, error) {
 		err = putObjectError
 
 		if putObjectResponse.RawResponse == nil {
-			metrics.SetGauge(metricPutFailed, 1)
+			metrics.IncrCounter(metricPutFailed, 1)
 			l.backend.logger.Error("PUT", "err", err)
 			break
 		}
@@ -527,7 +526,7 @@ func (l *Lock) writeLock() (bool, error) {
 
 		// Retry if the return code is 5xx
 		if (putObjectResponse.RawResponse.StatusCode / 100) == 5 {
-			metrics.SetGauge(metricPutFailed, 1)
+			metrics.IncrCounter(metricPutFailed, 1)
 			l.backend.logger.Warn("PUT. Retrying..", "err", err)
 			time.Sleep(time.Duration(100*i) * time.Millisecond)
 		} else {
