@@ -320,13 +320,16 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 		for _, commonPrefix := range resp.Prefixes {
 			commonPrefix := strings.TrimPrefix(commonPrefix, prefix)
-			keys = strutil.AppendIfMissing(keys, commonPrefix)
+			keys = append(keys, commonPrefix)
 		}
 
 		for _, object := range resp.Objects {
 			key := strings.TrimPrefix(*object.Name, prefix)
-			keys = strutil.AppendIfMissing(keys, key)
+			keys = append(keys, key)
 		}
+
+		// Duplicate keys are not expected
+		keys = strutil.RemoveDuplicates(keys, false)
 
 		if resp.NextStartWith == nil {
 			resp.RawResponse.Body.Close()
