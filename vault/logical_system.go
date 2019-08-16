@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
@@ -2611,22 +2612,45 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 }
 
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{}
 	info, err := b.Core.CollectHostInfo()
 	if err != nil {
-		return nil, err
+		// If the error is a HostInfoError, we return them as response warnings
+		if errs, ok := err.(*multierror.Error); ok {
+			var warnings []string
+			for _, mErr := range errs.Errors {
+				if errwrap.ContainsType(mErr, new(HostInfoError)) {
+					warnings = append(warnings, mErr.Error())
+				}
+			}
+			resp.Warnings = warnings
+		} else {
+			return nil, err
+		}
+	}
+
+	if info == nil {
+		return nil, errors.New("unable to collect host information: nil HostInfo")
 	}
 
 	respData := map[string]interface{}{
 		"collection_time": info.CollectionTime,
-		"cpu":             info.CPU,
-		"disk":            info.Disk,
-		"host":            info.Host,
-		"memory":          info.Memory,
 	}
+	if info.CPU != nil {
+		respData["cpu"] = info.CPU
+	}
+	if info.Disk != nil {
+		respData["disk"] = info.Disk
+	}
+	if info.Host != nil {
+		respData["host"] = info.Host
+	}
+	if info.Memory != nil {
+		respData["memory"] = info.Memory
+	}
+	resp.Data = respData
 
-	return &logical.Response{
-		Data: respData,
-	}, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

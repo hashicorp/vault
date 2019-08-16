@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
@@ -21,8 +23,25 @@ func (c *Sys) HostInfo() (*HostInfoResponse, error) {
 	}
 	defer resp.Body.Close()
 
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
 	var result HostInfoResponse
-	err = resp.DecodeJSON(&result)
+	err = mapstructure.WeakDecode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	result.CollectionTime, err = time.Parse(time.RFC3339, secret.Data["collection_time"].(string))
+	if err != nil {
+		return nil, err
+	}
+
 	return &result, err
 }
 

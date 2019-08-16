@@ -12,7 +12,7 @@ func TestCollectHostInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.CollectionTime.IsZero() {
-		t.Fatal("expected non-zero collection_time")
+		t.Fatal("expected non-zero CollectionTime")
 	}
 	if info.CPU == nil {
 		t.Fatal("expected non-nil CPU value")

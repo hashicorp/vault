@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -18,33 +19,50 @@ type HostInfo struct {
 	Memory         *mem.VirtualMemoryStat `json:"memory"`
 }
 
+type HostInfoError struct {
+	Err error
+}
+
+func (e *HostInfoError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *HostInfoError) Error() string {
+	return e.Err.Error()
+}
+
 func (c *Core) CollectHostInfo() (*HostInfo, error) {
-	var retErr error
+	var retErr *multierror.Error
 	info := &HostInfo{CollectionTime: time.Now()}
 
 	if h, err := host.Info(); err != nil {
-		retErr = multierror.Append(retErr, err)
+		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
 		info.Host = h
 	}
 
 	if v, err := mem.VirtualMemory(); err != nil {
-		retErr = multierror.Append(retErr, err)
+		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
 		info.Memory = v
 	}
 
-	if d, err := disk.Usage("/"); err != nil {
-		retErr = multierror.Append(retErr, err)
+	diskPath := "/"
+	if runtime.GOOS == "windows" {
+		diskPath = "C:"
+	}
+
+	if d, err := disk.Usage(diskPath); err != nil {
+		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
 		info.Disk = d
 	}
 
 	if c, err := cpu.Info(); err != nil {
-		retErr = multierror.Append(retErr, err)
+		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
 		info.CPU = c
 	}
 
-	return info, retErr
+	return info, retErr.ErrorOrNil()
 }
