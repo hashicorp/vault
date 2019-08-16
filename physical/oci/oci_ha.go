@@ -480,7 +480,7 @@ func (l *Lock) writeLock() (bool, error) {
 		return false, errwrap.Wrapf("failed to generate UUID", err)
 	}
 	l.backend.logger.Debug("putHa", "opc-client-request-id", opcClientRequestId)
-	size := int64(binary.Size(newLockRecordJson))
+	size := int64(len(newLockRecordJson))
 	putRequest := objectstorage.PutObjectRequest{
 		NamespaceName:      &l.backend.namespaceName,
 		BucketName:         &l.backend.lockBucketName,
