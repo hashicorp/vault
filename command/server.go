@@ -22,10 +22,12 @@ import (
 
 	"github.com/hashicorp/vault/helper/metricsutil"
 
+	monitoring "cloud.google.com/go/monitoring/apiv3"
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
+	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -42,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -51,6 +54,7 @@ import (
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -1966,6 +1970,20 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the stackdriver sink
+	if telConfig.StackdriverProjectID != "" {
+		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent.String()))
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
+		}
+		sink := stackdriver.NewSink(client, &stackdriver.Config{
+			ProjectID: telConfig.StackdriverProjectID,
+			Location:  telConfig.StackdriverLocation,
+			Namespace: telConfig.StackdriverNamespace,
+		})
 		fanout = append(fanout, sink)
 	}
 
