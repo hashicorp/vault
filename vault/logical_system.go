@@ -166,6 +166,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
@@ -2609,6 +2610,25 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format)
 }
 
+func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	info, err := b.Core.CollectHostInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	respData := map[string]interface{}{
+		"collection_time": info.CollectionTime,
+		"cpu":             info.CPU,
+		"disk":            info.Disk,
+		"host":            info.Host,
+		"memory":          info.Memory,
+	}
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
+}
+
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This ordering of lookups has been validated already in the wrapping
 	// validation func, we're just doing this for a safety check
@@ -4041,5 +4061,11 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"host-info": {
+		"Information about the the host instance that this Vault server is running on.",
+		`Information about the the host instance that this Vault server is running on.
+		The information that gets collected includes host hardware information, and CPU,
+		disk, and memory utilization`,
 	},
 }
