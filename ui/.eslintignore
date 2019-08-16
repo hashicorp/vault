@@ -9,11 +9,11 @@
 # dependencies
 /bower_components/
 /node_modules/
+/.storybook/
 /stories/
 
 # misc
 /coverage/
-!.*
 
 # ember-try
 /.node_modules.ember-try/
