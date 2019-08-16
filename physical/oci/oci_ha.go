@@ -459,8 +459,6 @@ func (l *Lock) writeLock() (bool, error) {
 			return false, nil
 		}
 		// cache is old enough and current, try acquiring lock as secondary
-	} else {
-		// case primary :: Keeping this block to make it easy to read code
 	}
 
 	newLockRecord := &LockRecord{
