@@ -478,8 +478,8 @@ func (l *Lock) writeLock() (bool, error) {
 
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
-		l.backend.logger.Debug("putHa: error generating UUID")
-		opcClientRequestId = ""
+		l.backend.logger.Error("putHa: error generating UUID")
+		return false, errwrap.Wrapf("failed to generate UUID", err)
 	}
 	l.backend.logger.Debug("putHa", "opc-client-request-id", opcClientRequestId)
 	size := int64(binary.Size(newLockRecordJson))
