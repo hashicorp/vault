@@ -182,7 +182,7 @@ func (k *OCIKMSSeal) getOCIKMSClient() (*keymanagement.KmsCryptoClient, error) {
 func (k *OCIKMSSeal) getRequestMetadata() common.RequestMetadata {
 	// Only retry for 5xx errors
 	retryOn5xxFunc := func(r common.OCIOperationResponse) bool {
-		return r.Error != nil || r.Response.HTTPResponse().StatusCode >= 500
+		return r.Error != nil && r.Response.HTTPResponse().StatusCode >= 500
 	}
 	return getRequestMetadataWithCustomizedRetryPolicy(retryOn5xxFunc)
 }
@@ -250,7 +250,7 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		metrics.SetGauge(metricEncryptFailed, 1)
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
-	k.logger.Debug(fmt.Sprintf("successfully encrypted"))
+	k.logger.Debug("successfully encrypted")
 
 	ret := &physical.EncryptedBlobInfo{
 		Ciphertext: []byte(*output.Ciphertext),
@@ -290,7 +290,7 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 		metrics.SetGauge(metricDecryptFailed, 1)
 		return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
 	}
-	k.logger.Debug(fmt.Sprintf("successfully decrypted"))
+	k.logger.Debug("successfully decrypted")
 
 	return plaintext, nil
 }
