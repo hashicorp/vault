@@ -21,6 +21,7 @@ import (
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
+	auditStackdriver "github.com/hashicorp/vault/builtin/audit/stackdriver"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
@@ -104,9 +105,10 @@ const (
 
 var (
 	auditBackends = map[string]audit.Factory{
-		"file":   auditFile.Factory,
-		"socket": auditSocket.Factory,
-		"syslog": auditSyslog.Factory,
+		"file":        auditFile.Factory,
+		"socket":      auditSocket.Factory,
+		"syslog":      auditSyslog.Factory,
+		"stackdriver": auditStackdriver.Factory,
 	}
 
 	credentialBackends = map[string]logical.Factory{
