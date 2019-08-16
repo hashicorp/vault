@@ -369,7 +369,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
 		l.backend.logger.Error("getHa: error generating UUID")
-		return nil, "", errwrap.Wrapf("Failed to generate UUID: {{}}", err)
+		return nil, "", errwrap.Wrapf("failed to generate UUID: {{err}}", err)
 	}
 	l.backend.logger.Debug("getHa", "opc-client-request-id", opcClientRequestId)
 
