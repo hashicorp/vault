@@ -144,11 +144,6 @@ func TestBackend_users(t *testing.T) {
 }
 
 func TestBackend_acceptance(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -210,7 +205,6 @@ func TestBackend_acceptance(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		PreCheck:          testAccPreCheck(t, host, port),
-		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
 			// Login with valid but unknown user will fail because unregistered_user_policies is empty
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),

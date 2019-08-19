@@ -43,8 +43,9 @@ github.com/DataDog/datadog-go/statsd
 github.com/Jeffail/gabs
 # github.com/Masterminds/semver v1.4.2
 github.com/Masterminds/semver
-# github.com/Microsoft/go-winio v0.4.12
+# github.com/Microsoft/go-winio v0.4.13
 github.com/Microsoft/go-winio
+github.com/Microsoft/go-winio/pkg/guid
 # github.com/NYTimes/gziphandler v1.1.1
 github.com/NYTimes/gziphandler
 # github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
@@ -150,7 +151,7 @@ github.com/briankassouf/jose/crypto
 github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
 github.com/briankassouf/jose
-# github.com/cenkalti/backoff v2.1.1+incompatible
+# github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
 # github.com/census-instrumentation/opencensus-proto v0.2.0
 github.com/census-instrumentation/opencensus-proto/gen-go/agent/common/v1
@@ -175,7 +176,7 @@ github.com/circonus-labs/circonusllhist
 github.com/cloudfoundry-community/go-cfclient
 # github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 github.com/cockroachdb/cockroach-go/crdb
-# github.com/containerd/continuity v0.0.0-20181203112020-004b46473808
+# github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/pathdriver
 # github.com/coreos/go-oidc v2.0.0+incompatible
 github.com/coreos/go-oidc
@@ -185,6 +186,8 @@ github.com/coreos/go-semver/semver
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf
 github.com/coreos/pkg/capnslog
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
@@ -194,7 +197,7 @@ github.com/dgrijalva/jwt-go
 github.com/dimchansky/utfbom
 # github.com/docker/go-connections v0.4.0
 github.com/docker/go-connections/nat
-# github.com/docker/go-units v0.3.3
+# github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 github.com/duosecurity/duo_api_golang
@@ -287,7 +290,7 @@ github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
-# github.com/hashicorp/go-raftchunking v0.0.0-20190722150955-a5774da47e6e
+# github.com/hashicorp/go-raftchunking v0.6.2
 github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
 # github.com/hashicorp/go-retryablehttp v0.5.4
@@ -319,55 +322,55 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.1-0.20190722150907-447155de1bd3
+# github.com/hashicorp/raft v1.1.1
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.1
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190722164529-3bdfad02a66f
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190722164620-5255fa1e475b
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190722164653-e6c0f193acb8
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190722164802-5650a5772ea9
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190722165048-f821ecc201e6
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190722165124-0e53029fd4ac
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190814210103-f64f0cb4d8cf
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190722165205-4a6b73beb8d7
+# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190814210109-476d6beb6ec0
 github.com/hashicorp/vault-plugin-auth-pcf
 github.com/hashicorp/vault-plugin-auth-pcf/signatures
 github.com/hashicorp/vault-plugin-auth-pcf/models
 github.com/hashicorp/vault-plugin-auth-pcf/util
 github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190719145839-141f0c4c6e51
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190719145845-20f6dd24c49b
+# github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190719145853-d1dae0d343e9
+# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190719145901-e7f82e48889a
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190719145913-aabfd80b820f
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190719145923-57b1f6ad133c
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190719145932-9f91890bf2db
+# github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.3-0.20190719145648-41d3939b1ff9 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.12-0.20190719143932-2c807ec75a51 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -459,7 +462,7 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/kr/pretty
 # github.com/kr/text v0.1.0
 github.com/kr/text
-# github.com/lib/pq v1.1.1
+# github.com/lib/pq v1.2.0
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
@@ -533,6 +536,8 @@ github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/posener/complete v1.2.1
 github.com/posener/complete
 github.com/posener/complete/cmd/install
@@ -567,8 +572,11 @@ github.com/ryanuber/go-glob
 github.com/samuel/go-zookeeper/zk
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/sirupsen/logrus v1.2.0
+# github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.3.0
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43
@@ -663,7 +671,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/jwt
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/clientcredentials
-# golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5
 golang.org/x/sys/unix
@@ -725,7 +733,7 @@ google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/grpc v1.20.1
+# google.golang.org/grpc v1.22.0
 google.golang.org/grpc/grpclog
 google.golang.org/grpc/codes
 google.golang.org/grpc
@@ -752,6 +760,7 @@ google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/tap
 google.golang.org/grpc/health

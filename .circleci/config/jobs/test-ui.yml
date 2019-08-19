@@ -8,7 +8,7 @@ steps:
   - run:
       name: Test UI
       command: |
-        set -eux -o pipefail
+        set -x
 
         # Install Chrome
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \

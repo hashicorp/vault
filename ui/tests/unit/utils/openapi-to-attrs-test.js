@@ -58,32 +58,36 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       editType: 'stringArray',
       defaultValue: 'Grace Hopper,Lady Ada',
       fieldGroup: 'default',
+      label: 'Awesome-people',
     },
     favoriteIceCream: {
       editType: 'string',
       type: 'string',
       possibleValues: ['vanilla', 'chocolate', 'strawberry'],
       fieldGroup: 'default',
+      label: 'Favorite-ice-cream',
     },
     defaultValue: {
       editType: 'number',
       type: 'number',
       defaultValue: 300,
       fieldGroup: 'default',
+      label: 'Default-value',
     },
     default: {
       editType: 'number',
       type: 'number',
       defaultValue: 30,
       fieldGroup: 'default',
+      label: 'Default',
     },
-
     superSecret: {
       type: 'string',
       editType: 'string',
       sensitive: true,
       helpText: 'A really secret thing',
       fieldGroup: 'default',
+      label: 'Super-secret',
     },
   };
 

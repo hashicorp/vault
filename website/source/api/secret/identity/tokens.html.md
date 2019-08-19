@@ -91,7 +91,9 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 
 - `verification_ttl` `(int or time string: "24h")` - Controls how long the public portion of a signing key will be available for verification after being rotated.
 
-- `algorithm` `(string: "RS256")` - Signing algorithm to use. This will default to `"RS256"`, and is currently the only allowed value.
+- `allowed_client_ids` `(list: [])` - Array of role client ids allowed to use this key for signing. If empty, no roles are allowed. If "*", all roles are allowed.
+
+- `algorithm` `(string: "RS256")` - Signing algorithm to use. Allowed values are: RS256 (default), RS384, RS512, ES256, ES384, ES512, EdDSA.
 
 ### Sample Payload
 

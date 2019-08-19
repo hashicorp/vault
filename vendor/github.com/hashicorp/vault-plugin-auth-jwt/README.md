@@ -1,4 +1,4 @@
-# Vault Plugin: JWT Auth Backend [![Build Status](https://travis-ci.org/hashicorp/vault-plugin-auth-jwt.svg?branch=master)](https://travis-ci.org/hashicorp/vault-plugin-auth-jwt)
+# Vault Plugin: JWT Auth Backend [![CircleCI](https://circleci.com/gh/hashicorp/vault-plugin-auth-jwt.svg?style=svg)](https://circleci.com/gh/hashicorp/vault-plugin-auth-jwt)
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
 This plugin allows for JWTs (including OIDC tokens) to authenticate with Vault.

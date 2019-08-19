@@ -518,7 +518,7 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("no named key found at %q", name), nil
+		return nil, nil
 	}
 
 	var storedNamedKey namedKey
@@ -1563,6 +1563,16 @@ func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interfac
 }
 
 func (c *oidcCache) Flush(ns *namespace.Namespace) {
-	// TODO iterate and delete by ns
-	c.c.Flush()
+	for itemKey := range c.c.Items() {
+		if isTargetNamespacedKey(itemKey, []string{nilNamespace.ID, ns.ID}) {
+			c.c.Delete(itemKey)
+		}
+	}
+}
+
+// isTargetNamespacedKey returns true for a properly constructed namespaced key (<version>:<nsID>:<key>)
+// where <nsID> matches any targeted nsID
+func isTargetNamespacedKey(nskey string, nsTargets []string) bool {
+	split := strings.Split(nskey, ":")
+	return len(split) >= 3 && strutil.StrListContains(nsTargets, split[1])
 }

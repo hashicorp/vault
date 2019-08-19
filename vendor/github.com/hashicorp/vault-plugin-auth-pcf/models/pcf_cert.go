@@ -17,7 +17,7 @@ func NewPCFCertificateFromx509(certificate *x509.Certificate) (*PCFCertificate, 
 
 	pcfCert := &PCFCertificate{
 		InstanceID: certificate.Subject.CommonName,
-		IPAddress:  certificate.IPAddresses[0],
+		IPAddress:  certificate.IPAddresses[0].String(),
 	}
 
 	spaces := 0
@@ -63,7 +63,7 @@ func NewPCFCertificate(instanceID, orgID, spaceID, appID, ipAddress string) (*PC
 		OrgID:      orgID,
 		SpaceID:    spaceID,
 		AppID:      appID,
-		IPAddress:  net.ParseIP(ipAddress),
+		IPAddress:  ipAddress,
 	}
 	if err := pcfCert.validate(); err != nil {
 		return nil, err
@@ -74,8 +74,7 @@ func NewPCFCertificate(instanceID, orgID, spaceID, appID, ipAddress string) (*PC
 // PCFCertificate isn't intended to be instantiated directly; but rather through one of the New
 // methods, which contain logic validating that the expected fields exist.
 type PCFCertificate struct {
-	InstanceID, OrgID, SpaceID, AppID string
-	IPAddress                         net.IP
+	InstanceID, OrgID, SpaceID, AppID, IPAddress string
 }
 
 func (c *PCFCertificate) validate() error {
@@ -91,8 +90,11 @@ func (c *PCFCertificate) validate() error {
 	if c.SpaceID == "" {
 		return errors.New("no space ID on given certificate")
 	}
-	if c.IPAddress.IsUnspecified() {
+	if c.IPAddress == "" {
 		return errors.New("ip address is unspecified")
+	}
+	if net.ParseIP(c.IPAddress) == nil {
+		return fmt.Errorf("%q could not be parsed as a valid IP address", c.IPAddress)
 	}
 	return nil
 }

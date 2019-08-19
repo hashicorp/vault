@@ -8,6 +8,7 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	golang.org/x/tools/cmd/goimports \
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
@@ -16,7 +17,7 @@ EXTERNAL_TOOLS=\
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
-GO_VERSION_MIN=1.12.4
+GO_VERSION_MIN=1.12.7
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -47,12 +48,6 @@ dev-ui-mem: BUILD_TAGS+=memprofiler
 dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
-
-testtravis: BUILD_TAGS+=travis
-testtravis: test
-
-testracetravis: BUILD_TAGS+=travis
-testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep

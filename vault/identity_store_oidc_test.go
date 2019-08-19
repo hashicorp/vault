@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	gocache "github.com/patrickmn/go-cache"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -969,6 +970,97 @@ func TestOIDC_Path_Introspect(t *testing.T) {
 			t.Fatalf("expected a valid token to return an empty error message but instead got %q", iresp.Error)
 		}
 	}
+}
+
+func TestOIDC_isTargetNamespacedKey(t *testing.T) {
+	tests := []struct {
+		nsTargets []string
+		nskey     string
+		expected  bool
+	}{
+		{[]string{"nsid"}, "v0:nsid:key", true},
+		{[]string{"nsid"}, "v0:nsid:", true},
+		{[]string{"nsid"}, "v0:nsid", false},
+		{[]string{"nsid"}, "v0:", false},
+		{[]string{"nsid"}, "v0", false},
+		{[]string{"nsid"}, "", false},
+		{[]string{"nsid1"}, "v0:nsid2:key", false},
+		{[]string{"nsid1"}, "nsid1:nsid2:nsid1", false},
+		{[]string{"nsid1"}, "nsid1:nsid1:nsid1", true},
+		{[]string{"nsid"}, "nsid:nsid:nsid:nsid:nsid:nsid", true},
+		{[]string{"nsid"}, ":::", false},
+		{[]string{""}, ":::", true}, // "" is a valid key for cache.Set/Get
+		{[]string{"nsid1"}, "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", true},
+		{[]string{"nsid0"}, "nsid0:nsid1:nsid0:nsid1:nsid0:nsid1", false},
+		{[]string{"nsid0", "nsid1"}, "v0:nsid2:key", false},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "v0:nsid3:key", true},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "nsid0:nsid1:nsid2:nsid3:nsid4:nsid5", true},
+		{[]string{"nsid0", "nsid1", "nsid2", "nsid3", "nsid4"}, "nsid4:nsid5:nsid6:nsid7:nsid8:nsid9", false},
+		{[]string{"nsid0", "nsid0", "nsid0", "nsid0", "nsid0"}, "nsid0:nsid0:nsid0:nsid0:nsid0:nsid0", true},
+		{[]string{"nsid1", "nsid1", "nsid2", "nsid2"}, "nsid0:nsid0:nsid0:nsid0:nsid0:nsid0", false},
+		{[]string{"nsid1", "nsid1", "nsid2", "nsid2"}, "nsid0:nsid0:nsid0:nsid0:nsid0:nsid0", false},
+	}
+
+	for _, test := range tests {
+		actual := isTargetNamespacedKey(test.nskey, test.nsTargets)
+		if test.expected != actual {
+			t.Fatalf("expected %t but got %t for nstargets: %q and nskey: %q", test.expected, actual, test.nsTargets, test.nskey)
+		}
+	}
+}
+
+func TestOIDC_Flush(t *testing.T) {
+	c := newOIDCCache()
+	ns := []*namespace.Namespace{
+		nilNamespace, //ns[0] is nilNamespace
+		&namespace.Namespace{ID: "ns1"},
+		&namespace.Namespace{ID: "ns2"},
+	}
+
+	// populateNs populates cache by ns with some data
+	populateNs := func() {
+		for i := range ns {
+			for _, val := range []string{"keyA", "keyB", "keyC"} {
+				c.SetDefault(ns[i], val, struct{}{})
+			}
+		}
+	}
+
+	// validate verifies that cache items exist or do not exist based on their namespaced key
+	verify := func(items map[string]gocache.Item, expect, doNotExpect []*namespace.Namespace) {
+		for _, expectNs := range expect {
+			found := false
+			for i := range items {
+				if isTargetNamespacedKey(i, []string{expectNs.ID}) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("Expected cache to contain an entry with a namespaced key for namespace: %q but did not find one", expectNs.ID)
+			}
+		}
+
+		for _, doNotExpectNs := range doNotExpect {
+			for i := range items {
+				if isTargetNamespacedKey(i, []string{doNotExpectNs.ID}) {
+					t.Fatalf("Did not expect cache to contain an entry with a namespaced key for namespace: %q but found the key: %q", doNotExpectNs.ID, i)
+				}
+			}
+		}
+	}
+
+	// flushing ns1 should flush ns1 and nilNamespace but not ns2
+	populateNs()
+	c.Flush(ns[1])
+	items := c.c.Items()
+	verify(items, []*namespace.Namespace{ns[2]}, []*namespace.Namespace{ns[0], ns[1]})
+
+	// flushing nilNamespace should flush nilNamespace but not ns1 or ns2
+	populateNs()
+	c.Flush(ns[0])
+	items = c.c.Items()
+	verify(items, []*namespace.Namespace{ns[1], ns[2]}, []*namespace.Namespace{ns[0]})
 }
 
 // some helpers

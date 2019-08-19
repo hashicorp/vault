@@ -38,7 +38,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 		t.Fatal(err)
 	}
 
-	err = follower.SetupCluster(context.Background(), nil, nil)
+	err = follower.SetupCluster(context.Background(), SetupOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 	}
 
 	// Start Raft
-	err = raft1.SetupCluster(context.Background(), nil, nil)
+	err = raft1.SetupCluster(context.Background(), SetupOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}

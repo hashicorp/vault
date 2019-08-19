@@ -247,7 +247,6 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
-			DisableClustering: true,
 		},
 
 		HAStorage: &Storage{
@@ -255,15 +254,19 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+			DisableClustering: true,
 		},
 
 		CacheSize: 45678,
 
-		EnableUI: true,
+		EnableUI:    true,
+		EnableUIRaw: true,
 
-		EnableRawEndpoint: true,
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
 
-		DisableSealWrap: true,
+		DisableSealWrap:    true,
+		DisableSealWrapRaw: true,
 
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "foo",
@@ -287,6 +290,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
 
