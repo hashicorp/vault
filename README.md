@@ -74,11 +74,21 @@ $ make bootstrap
 ...
 ```
 
-To compile a development version of Vault, run `make` or `make dev`. To compile a development version of Vault Enterprise, run `make premdev`. This will
+To compile a development version of Vault, run `make` or `make dev`. This will
 put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
 $ make dev
+...
+$ bin/vault
+...
+```
+
+To compile a development version of Vault Enterprise, run `make premdev`. Keep in mind this binary will contain a perpetual built-in license and should thus be protected from unauthorized use. Running `make premdev` will
+put the Vault binary in the `bin` and `$GOPATH/bin` folders:
+
+```sh
+$ make premdev
 ...
 $ bin/vault
 ...
