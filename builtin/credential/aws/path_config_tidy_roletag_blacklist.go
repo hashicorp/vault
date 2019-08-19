@@ -12,11 +12,11 @@ const (
 	roletagBlacklistConfigPath = "config/tidy/roletag-blacklist"
 )
 
-func pathConfigTidyRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathConfigTidyRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", roletagBlacklistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 15552000, //180d
 				Description: `The amount of extra time that must have passed beyond the roletag
@@ -24,7 +24,7 @@ expiration, before it is removed from the backend storage.
 Defaults to 4320h (180 days).`,
 			},
 
-			"disable_periodic_tidy": &framework.FieldSchema{
+			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to 'true', disables the periodic tidying of blacklisted entries.",
@@ -33,11 +33,19 @@ Defaults to 4320h (180 days).`,
 
 		ExistenceCheck: b.pathConfigTidyRoletagBlacklistExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyRoletagBlacklistCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyRoletagBlacklistCreateUpdate,
-			logical.ReadOperation:   b.pathConfigTidyRoletagBlacklistRead,
-			logical.DeleteOperation: b.pathConfigTidyRoletagBlacklistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyRoletagBlacklistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigTidyRoletagBlacklistHelpSyn,

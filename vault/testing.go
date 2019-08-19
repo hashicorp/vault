@@ -143,8 +143,10 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		t.Fatal(err)
 	}
 
+	errInjector := physical.NewErrorInjector(physicalBackend, 0, logger)
+
 	// Start off with base test core config
-	conf := testCoreConfig(t, physicalBackend, logger)
+	conf := testCoreConfig(t, errInjector, logger)
 
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI

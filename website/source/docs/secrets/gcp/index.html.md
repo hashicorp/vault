@@ -340,17 +340,21 @@ You can either:
 ### Access Tokens vs. Service Account Keys
 
 Advantages of `access_tokens`:
+
 * Can generate infinite number of tokens per roleset
 
 Disadvantages of `access_tokens`:
+
 * Cannot be used with some client libraries or tools
 * Have a static life-time of 1 hr that cannot be modified, revoked, or extended.
 
 Advantages of `service_account_keys`:
+
 * Controllable life-time through Vault, allowing for longer access
 * Can be used by all normal GCP tooling
 
 Disadvantages of `service_account_keys`:
+
 * Infinite lifetime in GCP (i.e. if they are not managed properly, leaked keys can live forever)
 * Limited to 10 per roleset/service account.
 

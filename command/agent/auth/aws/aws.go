@@ -279,7 +279,7 @@ func (a *awsMethod) pollForCreds(accessKey, secretKey, sessionToken string, freq
 			return
 		case <-ticker.C:
 			if err := a.checkCreds(accessKey, secretKey, sessionToken); err != nil {
-				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
+				a.logger.Warn("unable to retrieve current creds, retaining last creds", "error", err)
 			}
 		}
 	}
