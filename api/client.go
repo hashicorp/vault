@@ -174,7 +174,6 @@ func DefaultConfig() *Config {
 	}
 
 	config.Backoff = retryablehttp.LinearJitterBackoff
-	config.CheckRetry = retryablehttp.DefaultRetryPolicy
 	config.MaxRetries = 2
 
 	return config
