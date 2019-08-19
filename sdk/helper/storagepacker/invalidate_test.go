@@ -120,8 +120,8 @@ func createItemsForBucket(key string, n int) []*Item {
 	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 	return allItems
@@ -133,7 +133,7 @@ func createBucket(key string, items []*Item) *Bucket {
 		ItemMap: make(map[string][]byte, len(items)),
 	}
 	for _, item := range items {
-		b.ItemMap[item.ID] = item.Data
+		b.ItemMap[item.ID] = item.Value
 	}
 	return b
 }
@@ -210,8 +210,8 @@ func TestStoragePackerV2_InvalidateItemDeletion(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storagePacker.PutItem(ctx, allItems...)
 	storagePacker.PutItem(ctx, &Item{
-		ID:   allItems[0].ID,
-		Data: incompressibleData(1000),
+		ID:    allItems[0].ID,
+		Value: incompressibleData(1000),
 	})
 
 	present, deleted, err := storagePacker.InvalidateItems(ctx, bucketPath, rawBucket)
@@ -227,7 +227,7 @@ func TestStoragePackerV2_InvalidateItemDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lookup[0] != nil || lookup[1] != nil {
+	if lookup[0].Value != nil || lookup[1].Value != nil {
 		t.Fatalf("deleted values are still reported from GetItems")
 	}
 }
@@ -383,8 +383,8 @@ func TestStoragePackerV2_InvalidateDeletedBucket(t *testing.T) {
 	items002 := createItemsForBucket("002", n)
 	allItems := append(items001[1:], items002...)
 
-	items001[1].Data = []byte("version 2")
-	items001[2].Data = []byte("version 2")
+	items001[1].Value = []byte("version 2")
+	items001[2].Value = []byte("version 2")
 
 	// Base bucket, contains 2n items
 	b00 := createBucket("00", allItems)

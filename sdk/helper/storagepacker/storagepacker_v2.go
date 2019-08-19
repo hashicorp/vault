@@ -401,7 +401,7 @@ func (p *partitionedRequests) upsertItems() error {
 
 	for _, r := range p.Requests {
 		// Nil data checked earlier
-		bucket.ItemMap[r.ID] = r.Value.Data
+		bucket.ItemMap[r.ID] = r.Value
 	}
 	return nil
 }
@@ -418,11 +418,8 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 		if item.ID == "" {
 			return fmt.Errorf("missing ID in item at index %v", idx)
 		}
-		if item.Message != nil {
-			return fmt.Errorf("'Message' is deprecated; use 'Data' instead")
-		}
-		if item.Data == nil {
-			return fmt.Errorf("missing data in item at index %v", idx)
+		if item.Value == nil {
+			return fmt.Errorf("missing value in item at index %v", idx)
 		}
 		if _, found := idsSeen[item.ID]; found {
 			return fmt.Errorf("duplicate ID %v in item at index %v", item.ID, idx)
@@ -431,15 +428,15 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 	}
 
 	// Data flow:
-	//     (id, data)+
+	//     (id, value)+
 	// 1. compute hashes
-	//     (id, key=hash(id), data)+
+	//     (id, key=hash(id), value)+
 	// 2. sort and partition by bucket
-	//     bucket NN => (id, key=NN*, data)+
+	//     bucket NN => (id, key=NN*, value)+
 	// 3. acquire storage locks in storage lock order
 	// 4. process items in each bucket
 
-	requests := s.keysForItems(items)
+	requests := s.computeKeysForItems(items)
 
 	// Identify the buckets and acquire their corresponding write-locks
 	retryRequired := true
@@ -474,7 +471,7 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, items ...*Item) error {
 // DeleteItem removes the items identified by the set of IDs from storage.
 // Deletion of a non-existent ID is not signalled as an error.
 func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) error {
-	requests := s.keysForIDs(itemIDs)
+	requests := s.itemsForIDs(itemIDs)
 
 	// Identify the buckets and acquire their corresponding write-locks
 	retryRequired := true
@@ -513,7 +510,7 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemIDs ...string) err
 // Missing items signal by nil's in the returned slice so that the the request
 // and response lengths are the same.
 func (s *StoragePackerV2) GetItems(ctx context.Context, ids ...string) ([]*Item, error) {
-	requests := s.keysForIDs(ids)
+	requests := s.itemsForIDs(ids)
 
 	// Identify the buckets and acquire their corresponding read-locks
 	// If we wanted to increase parallelism, perhaps could lock just one bucket
@@ -541,20 +538,12 @@ func (s *StoragePackerV2) GetItems(ctx context.Context, ids ...string) ([]*Item,
 		for _, req := range p.Requests {
 			data, ok := p.Bucket.ItemMap[req.ID]
 			if ok {
-				req.Value = &Item{
-					ID:   req.ID,
-					Data: data,
-				}
+				req.Value = data
 			}
 		}
 	}
 
-	// Copy just the values to the output
-	items := make([]*Item, len(requests))
-	for i, req := range requests {
-		items[i] = req.Value
-	}
-	return items, nil
+	return requests, nil
 }
 
 // GetItem fetches a single item by ID.
@@ -596,8 +585,8 @@ func (s *StoragePackerV2) AllItems(context.Context) ([]*Item, error) {
 		}
 		for id, data := range bucket.ItemMap {
 			items = append(items, &Item{
-				ID:   id,
-				Data: data,
+				ID:    id,
+				Value: data,
 			})
 		}
 		return false

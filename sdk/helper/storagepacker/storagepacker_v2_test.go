@@ -93,8 +93,8 @@ func TestStoragePackerV2(t *testing.T) {
 
 	// Persist a storage entry
 	item1 := &Item{
-		ID:   "item1",
-		Data: []byte("data1"),
+		ID:    "item1",
+		Value: []byte("data1"),
 	}
 
 	ctx := namespace.RootContext(nil)
@@ -129,7 +129,7 @@ func TestStoragePackerV2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fetchedItem != nil {
+	if fetchedItem.Value != nil {
 		t.Fatalf("failed to delete item")
 	}
 }
@@ -181,8 +181,8 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem(t *testing.T) {
 
 	ctx = namespace.RootContext(nil)
 	err = storagePacker.PutItem(ctx, &Item{
-		ID:   entity.ID,
-		Data: marshaledBytes,
+		ID:    entity.ID,
+		Value: marshaledBytes,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem(t *testing.T) {
 	}
 
 	var itemDecoded identity.Entity
-	err = proto.Unmarshal(itemFetched.Data, &itemDecoded)
+	err = proto.Unmarshal(itemFetched.Value, &itemDecoded)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,8 +211,8 @@ func TestStoragePackerV2_Recovery(t *testing.T) {
 
 	// Persist a storage entry
 	item1 := &Item{
-		ID:   "item1",
-		Data: []byte("data1"),
+		ID:    "item1",
+		Value: []byte("data1"),
 	}
 
 	ctx := namespace.RootContext(nil)
@@ -307,8 +307,8 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 	allItems := make([]*Item, 30)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i%3][i/3],
-			Data: incompressibleData(1000),
+			ID:    ids[i%3][i/3],
+			Value: incompressibleData(1000),
 		}
 	}
 
@@ -372,7 +372,7 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 		} else if storedItem == nil {
 			t.Errorf("recovery: Nil item %v ID %v",
 				idx, item.ID)
-		} else if !bytes.Equal(storedItem.Data, item.Data) {
+		} else if !bytes.Equal(storedItem.Value, item.Value) {
 			t.Errorf("recovery: Item %v ID %v: data mismatch",
 				idx, item.ID)
 		}
@@ -382,8 +382,8 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 	// it goes in 00/0 but sharding 00 will overwrite it with the old
 	// version.
 	allItems[0] = &Item{
-		ID:   ids[0][0],
-		Data: incompressibleData(1000),
+		ID:    ids[0][0],
+		Value: incompressibleData(1000),
 	}
 	storagePacker2.PutItem(ctx, allItems[0])
 
@@ -402,7 +402,7 @@ func TestStoragePackerV2_RecoveryAfterCrash(t *testing.T) {
 		} else if storedItem == nil {
 			t.Errorf("postinsert: Nil item %v ID %v",
 				idx, item.ID)
-		} else if !bytes.Equal(storedItem.Data, item.Data) {
+		} else if !bytes.Equal(storedItem.Value, item.Value) {
 			t.Errorf("postinsert: Item %v ID %v: data mismatch",
 				idx, item.ID)
 		}
@@ -418,7 +418,7 @@ func checkAllItems(t *testing.T, storagePacker *StoragePackerV2, ctx context.Con
 		} else if storedItem == nil {
 			t.Errorf("Nil item %v ID %v Key %v",
 				idx, item.ID, GetItemIDHash(item.ID))
-		} else if !bytes.Equal(storedItem.Data, item.Data) {
+		} else if !bytes.Equal(storedItem.Value, item.Value) {
 			t.Errorf("Item %v ID %v: data mismatch",
 				idx, item.ID)
 		}
@@ -449,14 +449,14 @@ func TestStoragePackerV2_Recurse(t *testing.T) {
 	allItems := make([]*Item, 10)
 	for i, _ := range allItems[:9] {
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 
 	allItems[9] = &Item{
-		ID:   ids[9],
-		Data: incompressibleData(9000),
+		ID:    ids[9],
+		Value: incompressibleData(9000),
 	}
 
 	for idx, item := range allItems[:9] {
@@ -480,8 +480,8 @@ func run_concurrentTest(t *testing.T, n int, ids [][]string) {
 	allItems := make([]*Item, n*2)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i/n][i%n],
-			Data: incompressibleData(1000),
+			ID:    ids[i/n][i%n],
+			Value: incompressibleData(1000),
 		}
 	}
 
@@ -534,8 +534,8 @@ func TestStoragePackerV2_Variadic(t *testing.T) {
 	for i, _ := range allItems {
 		ids[i] = fmt.Sprintf("test-%d", i)
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 
@@ -557,7 +557,7 @@ func TestStoragePackerV2_Variadic(t *testing.T) {
 			t.Errorf("nil item %v ID %v", idx, requestedIDs[idx])
 		} else if item.ID != requestedIDs[idx] {
 			t.Errorf("mismatched return value on item %v requested %v got %v", idx, requestedIDs[idx], item.ID)
-		} else if !bytes.Equal(allItems[100+idx].Data, item.Data) {
+		} else if !bytes.Equal(allItems[100+idx].Value, item.Value) {
 			t.Errorf("item %v ID %v: data mismatch", idx, item.ID)
 		}
 	}
@@ -581,15 +581,15 @@ func TestStoragePackerV2_Variadic(t *testing.T) {
 	if len(items) != 3 {
 		t.Fatalf("mismatched response length %v request length %v", len(items), 3)
 	}
-	if items[0] != nil {
+	if items[0].Value != nil {
 		t.Errorf("test-1 sill present")
 	}
-	if items[1] == nil {
+	if items[1].Value == nil {
 		t.Errorf("test-120 not present")
 	} else if items[1].ID != "test-120" {
 		t.Errorf("test-120 ID mismatch, got %v", items[1].ID)
 	}
-	if items[2] != nil {
+	if items[2].Value != nil {
 		t.Errorf("test-doesnotexist reported present")
 	}
 }
@@ -604,8 +604,8 @@ func TestStoragePackerV2_DuplicateItem(t *testing.T) {
 	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 
@@ -648,7 +648,7 @@ func TestStoragePackerV2_DuplicateItem(t *testing.T) {
 	if len(deletedItems) != 3 {
 		t.Fatalf("GetItem on deleted IDs has wrong length %d", len(deletedItems))
 	}
-	if deletedItems[0] != nil || deletedItems[1] != nil || deletedItems[2] != nil {
+	if deletedItems[0].Value != nil || deletedItems[1].Value != nil || deletedItems[2].Value != nil {
 		t.Fatalf("items not deleted")
 	}
 
@@ -669,7 +669,7 @@ func checkReturnedItems(t *testing.T, allItems []*Item, returnedItems []*Item) {
 		orig, found := itemsById[item.ID]
 		if !found {
 			t.Errorf("item %q unexpectedly present or duplicated", item.ID)
-		} else if !bytes.Equal(orig.Data, item.Data) {
+		} else if !bytes.Equal(orig.Value, item.Value) {
 			t.Errorf("item %q: data mismatch", item.ID)
 		}
 		delete(itemsById, item.ID)
@@ -693,8 +693,8 @@ func TestStoragePackerV2_AllItems(t *testing.T) {
 	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 
@@ -733,8 +733,8 @@ func TestStoragePackerV2_Queued(t *testing.T) {
 	for i, _ := range allItems {
 		ids[i] = fmt.Sprintf("test-%d", i)
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(100),
+			ID:    ids[i],
+			Value: incompressibleData(100),
 		}
 	}
 
@@ -849,15 +849,9 @@ func TestStoragePackerV2_PutItemErrors(t *testing.T) {
 	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   fmt.Sprintf("test-%d", i),
-			Data: []byte("dontcare"),
+			ID:    fmt.Sprintf("test-%d", i),
+			Value: []byte("dontcare"),
 		}
-	}
-
-	entity := getEntity()
-	message, err := ptypes.MarshalAny(entity)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	cases := []struct {
@@ -867,17 +861,14 @@ func TestStoragePackerV2_PutItemErrors(t *testing.T) {
 	}{
 		{0, "nil item", nil},
 		{1, "missing ID", &Item{
-			ID:   "",
-			Data: []byte("dontcare")}},
-		{2, "missing data", &Item{
-			ID:   "present",
-			Data: nil}},
-		{3, "deprecated", &Item{
-			ID:      "present",
-			Message: message}},
+			ID:    "",
+			Value: []byte("dontcare")}},
+		{2, "missing value", &Item{
+			ID:    "present",
+			Value: nil}},
 		{4, "duplicate", &Item{
-			ID:   "test-1",
-			Data: []byte("dontcare")}},
+			ID:    "test-1",
+			Value: []byte("dontcare")}},
 	}
 
 	for _, tc := range cases {
@@ -900,23 +891,18 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 	b := &LockedBucket{
 		Bucket: &Bucket{
 			Key:       "00",
-			Items:     []*Item{},
 			ItemMap:   nil,
 			HasShards: false,
 		},
 	}
-	item := &itemRequest{
-		ID:  id,
-		Key: GetItemIDHash(id),
-		Value: &Item{
-			ID:      id,
-			Message: nil,
-			Data:    []byte{0, 1, 2, 3, 4},
-		},
+	item := &Item{
+		ID:    id,
+		key:   GetItemIDHash(id),
+		Value: []byte{0, 1, 2, 3, 4},
 	}
 	p := &partitionedRequests{
 		Bucket:   b,
-		Requests: []*itemRequest{item},
+		Requests: []*Item{item},
 	}
 
 	var nilPR *partitionedRequests
@@ -928,7 +914,7 @@ func TestStoragePackerV2_UpsertErrors(t *testing.T) {
 
 	p2 := &partitionedRequests{
 		Bucket:   nil,
-		Requests: []*itemRequest{item},
+		Requests: []*Item{item},
 	}
 	err = p2.upsertItems()
 	if err == nil {
@@ -1050,7 +1036,7 @@ func TestStoragePackerV2_StorageErrors(t *testing.T) {
 
 	backend := storage.underlying.(*inmem.InmemBackend)
 	backend.FailPut(true)
-	err := storagePacker.PutItem(ctx, &Item{ID: "test", Data: []byte("test")})
+	err := storagePacker.PutItem(ctx, &Item{ID: "test", Value: []byte("test")})
 	if err == nil {
 		t.Fatalf("Error not signalled to PutItem")
 	} else {
@@ -1058,7 +1044,7 @@ func TestStoragePackerV2_StorageErrors(t *testing.T) {
 	}
 
 	backend.FailPut(false)
-	err = storagePacker.PutItem(ctx, &Item{ID: "test", Data: []byte("test")})
+	err = storagePacker.PutItem(ctx, &Item{ID: "test", Value: []byte("test")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1079,8 +1065,8 @@ func TestStoragePackerV2_StorageErrors(t *testing.T) {
 	allItems := make([]*Item, n)
 	for i, _ := range allItems {
 		allItems[i] = &Item{
-			ID:   ids[i],
-			Data: incompressibleData(1000),
+			ID:    ids[i],
+			Value: incompressibleData(1000),
 		}
 	}
 

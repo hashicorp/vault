@@ -9,12 +9,12 @@ import (
 // This lets us operate bucket-by-bucket.
 type partitionedRequests struct {
 	Bucket   *LockedBucket
-	Requests []*itemRequest
+	Requests []*Item
 }
 
 // partitionRequests takes a list of requests and partition them by which
 // bucket the Key belongs to.
-func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]*partitionedRequests, error) {
+func (s *StoragePackerV2) partitionRequests(unsortedRequests []*Item) ([]*partitionedRequests, error) {
 	sortedRequests := sortRequests(unsortedRequests)
 
 	partition := make([]*partitionedRequests, 0)
@@ -33,16 +33,16 @@ func (s *StoragePackerV2) partitionRequests(unsortedRequests []*itemRequest) ([]
 	defer s.bucketsCacheLock.RUnlock()
 
 	for _, r := range sortedRequests {
-		_, bucketRaw, found := s.bucketsCache.LongestPrefix(r.Key)
+		_, bucketRaw, found := s.bucketsCache.LongestPrefix(r.key)
 		if !found {
-			return nil, fmt.Errorf("key %s not found in bucket cache", r.Key)
+			return nil, fmt.Errorf("key %s not found in bucket cache", r.key)
 		}
 		bucket := bucketRaw.(*LockedBucket)
 		if lastBucket == nil || lastBucket.Bucket != bucket {
 			// Distinct from previous bucket
 			lastBucket = &partitionedRequests{
 				Bucket:   bucket,
-				Requests: []*itemRequest{r},
+				Requests: []*Item{r},
 			}
 			partition = append(partition, lastBucket)
 		} else {

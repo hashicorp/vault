@@ -80,7 +80,7 @@ func TestStoragePackerV2_PartitionProperties(t *testing.T) {
 		}
 
 		s := getStoragePacker(t)
-		requests := s.keysForIDs(ids)
+		requests := s.itemsForIDs(ids)
 		partition, err := s.partitionRequests(requests)
 		if err != nil {
 			t.Logf("error in partitionRequests: %v", err)

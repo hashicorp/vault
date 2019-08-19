@@ -100,8 +100,8 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 	if !replacementBucket.HasShards && replacementBucket.ItemMap != nil {
 		for k, v := range replacementBucket.ItemMap {
 			present = append(present, &Item{
-				ID:   k,
-				Data: v,
+				ID:    k,
+				Value: v,
 			})
 		}
 	}
@@ -139,7 +139,7 @@ func (s *StoragePackerV2) InvalidateItems(ctx context.Context, path string, newV
 // another copy (or version) of it exists in a different bucket.
 // First return value is items that are no longer present.
 // Second return value is items present elsewhere in the tree.
-func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeDeleted []*itemRequest) ([]*Item, []*Item, error) {
+func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeDeleted []*Item) ([]*Item, []*Item, error) {
 	deleted := make([]*Item, 0)
 	revisit := make([]*Item, 0)
 
@@ -173,8 +173,8 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 					var data []byte
 					if data, found = b.ItemMap[request.ID]; found {
 						revisit = append(revisit, &Item{
-							ID:   request.ID,
-							Data: data,
+							ID:    request.ID,
+							Value: data,
 						})
 						break // no need to check lower buckets
 					}
@@ -183,7 +183,7 @@ func (s *StoragePackerV2) identifyItemsAbsentOrShadowed(bucketKey string, maybeD
 			if !found {
 				// Include the original value
 				// though maybe this is overkill and we should just return IDs.
-				deleted = append(deleted, request.Value)
+				deleted = append(deleted, request)
 			}
 		}
 	}
@@ -222,17 +222,14 @@ func (s *StoragePackerV2) newEmptyBucket(bucketKey string) *LockedBucket {
 	}
 }
 
-func itemDifferenceBetween(originalBucket *LockedBucket, replacementBucket *LockedBucket) []*itemRequest {
-	maybeDeleted := make([]*itemRequest, 0)
+func itemDifferenceBetween(originalBucket *LockedBucket, replacementBucket *LockedBucket) []*Item {
+	maybeDeleted := make([]*Item, 0)
 
 	add := func(id string, val []byte) {
-		maybeDeleted = append(maybeDeleted, &itemRequest{
-			ID:  id,
-			Key: GetItemIDHash(id),
-			Value: &Item{
-				ID:   id,
-				Data: val,
-			},
+		maybeDeleted = append(maybeDeleted, &Item{
+			ID:    id,
+			key:   GetItemIDHash(id),
+			Value: val,
 		})
 	}
 

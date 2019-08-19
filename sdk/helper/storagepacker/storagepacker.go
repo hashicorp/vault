@@ -15,8 +15,8 @@ type StoragePacker interface {
 	// Delete the specified set of itemIDs
 	DeleteItem(context.Context, ...string) error
 
-	// Retrieve a set of items identified by ID; missing items signal by nil's in
-	// the returned slice so that the the request and response lengths are the same.
+	// Retrieve a set of items identified by ID; missing items have nil Value,
+	// so that the the request and response lengths are the same.
 	GetItems(context.Context, ...string) ([]*Item, error)
 
 	// Special case single item to avoid the slice
