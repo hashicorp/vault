@@ -1,4 +1,3 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, object, text, boolean, select } from '@storybook/addon-knobs';

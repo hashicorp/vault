@@ -1,4 +1,3 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, text, boolean } from '@storybook/addon-knobs';
@@ -12,7 +11,8 @@ storiesOf('ConfirmAction/', module)
     })
   )
   .add(
-    `ConfirmAction`, () => ({
+    `ConfirmAction`,
+    () => ({
       template: hbs`
         <h5 class="title is-5">Confirm Action</h5>
         <ConfirmAction

@@ -144,7 +144,8 @@ export default Service.extend({
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
       });
       const hasMatchingPath =
-        (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+        (matchingPath && !this.isDenied(globPaths[matchingPath])) ||
+        Object.prototype.hasOwnProperty.call(globPaths, '');
 
       if (matchingPath && capability) {
         return this.hasCapability(globPaths[matchingPath], capability) && hasMatchingPath;

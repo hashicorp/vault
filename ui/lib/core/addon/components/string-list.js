@@ -41,29 +41,29 @@ export default Component.extend({
   }),
 
   /*
-    *
-    * @public
-    * @param String - ['array'|'string]
-    *
-    * Optional type for `inputValue` - defaults to `'array'`
-    * Needs to match type of `inputValue` because it is set by the component on init.
-    *
-    */
+   *
+   * @public
+   * @param String - ['array'|'string]
+   *
+   * Optional type for `inputValue` - defaults to `'array'`
+   * Needs to match type of `inputValue` because it is set by the component on init.
+   *
+   */
   type: 'array',
 
   /*
-    *
-    * @private
-    * @param Ember.ArrayProxy
-    *
-    * mutable array that contains objects in the form of
-    * {
-    *   value: 'somestring',
-    * }
-    *
-    * used to track the state of values bound to the various inputs
-    *
-    */
+   *
+   * @private
+   * @param Ember.ArrayProxy
+   *
+   * mutable array that contains objects in the form of
+   * {
+   *   value: 'somestring',
+   * }
+   *
+   * used to track the state of values bound to the various inputs
+   *
+   */
   /* eslint-disable ember/no-side-effects */
   inputList: computed(function() {
     return ArrayProxy.create({

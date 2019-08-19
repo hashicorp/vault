@@ -1,4 +1,3 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
@@ -7,8 +6,10 @@ import notes from './toolbar.md';
 storiesOf('Toolbar/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`Toolbar`, () => ({
-    template: hbs`
+  .add(
+    `Toolbar`,
+    () => ({
+      template: hbs`
       <h5 class="title is-5">Toolbar</h5>
       <section class="box is-fullwidth is-shadowless">
         <h5 class="title is-6">Example for list views</h5>
@@ -72,9 +73,9 @@ storiesOf('Toolbar/', module)
         </Toolbar>
       </section>
     `,
-    context: {
-      example: select('Example', ['List', 'Show', 'Code editor'], 'List'),
-    },
-  }),
-  {notes}
-);
+      context: {
+        example: select('Example', ['List', 'Show', 'Code editor'], 'List'),
+      },
+    }),
+    { notes }
+  );
