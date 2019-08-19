@@ -14,11 +14,11 @@ CHANGES:
    previous format will continue to be accepted [PCF-27]
  * core: The http response code returned when an identity token key is not found
    has been changed from 400 to 404
-   
+
 IMPROVEMENTS: 
 
  * identity: Remove 512 entity limit for groups [GH-7317]
-   
+
 BUG FIXES:
 
  * auth/approle: Fix an error where an empty `token_type` string was not being
