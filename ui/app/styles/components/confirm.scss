@@ -6,13 +6,13 @@
 }
 
 .confirm {
-  transition: transform 150ms;
+  transition: transform $speed;
   padding-top: 2px;
 }
 
 .show-confirm {
   transform: translateX(-100%);
-  transition: transform 150ms;
+  transition: transform $speed;
 }
 
 .confirm-overlay {
