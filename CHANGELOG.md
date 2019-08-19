@@ -14,11 +14,11 @@ CHANGES:
    previous format will continue to be accepted [PCF-27]
  * core: The http response code returned when an identity token key is not found
    has been changed from 400 to 404
-   
+
 IMPROVEMENTS: 
 
  * identity: Remove 512 entity limit for groups [GH-7317]
-   
+
 BUG FIXES:
 
  * auth/approle: Fix an error where an empty `token_type` string was not being
@@ -186,6 +186,8 @@ BUG FIXES:
 
  * audit: Log requests and responses due to invalid wrapping token provided
    [GH-6541]
+ * audit: Fix bug preventing request counter queries from working with auditing 
+   enabled [GH-6767
  * auth/aws: AWS Roles are now upgraded and saved to the latest version just
    after the AWS credential plugin is mounted. [GH-7025]
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN
