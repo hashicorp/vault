@@ -139,6 +139,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
 			return
 		}
+		if entry == nil {
+			return
+		}
 
 		var setting casesensitivity
 		if err := entry.DecodeJSON(&setting); err != nil {
