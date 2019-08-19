@@ -1,5 +1,10 @@
 ## Next
 
+IMPROVEMENTS:
+
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
+   of value data [GH-7199]
+
 BUG FIXES:
 
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
