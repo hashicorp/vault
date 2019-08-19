@@ -9,5 +9,6 @@ export default {
   hasTitle: isPresent('[data-test-title]'),
   hasError: isPresent('[data-test-error]'),
   submit: clickable('[data-test-submit]'),
-  fillInField: fillable('[data-test-field]'),
+  fillInValue: fillable('[data-test-ttl-value]'),
+  fillInUnit: fillable('[data-test-select="ttl-unit"]'),
 };

@@ -11,12 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 )
 
 const TimeFormat = "2006-01-02T15:04:05Z"
+const signatureVersion = "v1"
 
 type SignatureData struct {
 	SigningTime time.Time
@@ -66,7 +68,7 @@ func Sign(pathToPrivateKey string, signatureData *SignatureData) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(signatureBytes), nil
+	return fmt.Sprintf("%s:%s", signatureVersion, base64.StdEncoding.EncodeToString(signatureBytes)), nil
 }
 
 // Verify ensures that a given signature was created by a private key
@@ -75,16 +77,36 @@ func Sign(pathToPrivateKey string, signatureData *SignatureData) (string, error)
 // and to be issued by a chain leading to the root CA certificate. There's a
 // util function for this named Validate.
 func Verify(signature string, signatureData *SignatureData) (*x509.Certificate, error) {
+	var signatureBytes []byte
+	var err error
+
 	if signatureData == nil {
 		return nil, errors.New("signatureData must be provided")
 	}
 
-	// Use the CA certificate to verify the signature we've received.
-	signatureBytes, err := base64.URLEncoding.DecodeString(signature)
-	if err != nil {
-		return nil, err
+	// Parse signature format
+	parts := strings.Split(signature, ":")
+
+	switch len(parts) {
+	// Original release using URL-safe encoding and no embedded version
+	case 1:
+		signatureBytes, err = base64.URLEncoding.DecodeString(parts[0])
+		if err != nil {
+			return nil, err
+		}
+	case 2:
+		if parts[0] != "v1" {
+			return nil, fmt.Errorf("invalid signature version %q", parts[0])
+		}
+		signatureBytes, err = base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("invalid signature format")
 	}
 
+	// Use the CA certificate to verify the signature we've received.
 	cfInstanceCertContentsBytes := []byte(signatureData.CFInstanceCertContents)
 	var block *pem.Block
 	var result error

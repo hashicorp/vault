@@ -28,7 +28,7 @@ requests.
     $ vault secrets enable kmip
     Success! Enabled the kmip secrets engine at: kmip/
     ```
-    
+
 1. Configure the secrets engine with the desired listener addresses to use and
 TLS parameters, or leave unwritten to use default values
 

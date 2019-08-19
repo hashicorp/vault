@@ -3,6 +3,16 @@
 This plugin leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation)
 for authenticating to Vault. 
 
+## Official Documentation
+
+This plugin's docs reside in the following places:
+
+- [Overview](https://www.vaultproject.io/docs/auth/pcf.html)
+- [API](https://www.vaultproject.io/api/auth/pcf/index.html)
+
+The documentation below is intended to further elaborate, and is targeted at those developing, using,
+troubleshooting, and maintaining this plugin.
+
 ## Known Risks
 
 This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because PCF
@@ -302,6 +312,16 @@ Then, add a role that will be used to grant specific Vault policies to those log
 application IDs. However, if `bound_application_ids` is omitted, then _any_ application ID will match. We recommend
 configuring as many bound parameters as possible.
 
+The `bound_application_ids`, `bound_space_ids`, and `bound_organization_ids` that are tied to a particular application
+can be found by looking at the `instance.crt` using the following command:
+
+```
+$ openssl crl2pkcs7 -nocrl -certfile instance.crt | openssl pkcs7 -print_certs -text -noout
+...
+        Subject: OU=organization:bc3874b4-002b-4548-ab27-f9bd38450651, OU=space:dd84618a-16f2-4dee-9936-04181acb6cc0, OU=app:b7b5a288-afa9-4022-802f-173ad94ebb02, CN=a9cff876-58f9-4247-67a6-62f2
+...
+```
+
 Also, by default, the IP address on the certificate presented at login must match that of the caller. However, if
 your callers tend to be proxied, this may not work for you. If that's the case, set `disable_ip_matching` to true.
 ```
@@ -488,11 +508,12 @@ which can be verified by entering the same string into
 
 Use the private key at `CF_INSTANCE_KEY` to sign the resulting sha
 using the [RSASSA-PSS](https://tools.ietf.org/html/rfc4056) algorithm 
-with a SHA256 hash and a salt length of 222. Random material is injected 
+with a SHA256 hash and a salt length of 20. The output is base64 encoded
+and prefixed with a version, currently `v1:`. Random material is injected 
 into this algorithm so the resulting string will be different each time, 
 but here is one example result so you can compare yours to its format:
 ```
-GVg5_uez-Z0544pgkVSd6vQztHO_j6X3LZ2PqhUv_Uh0iMfoT-U2MKgdjOSrkpVpINsFqxKk4_-p2nHlQOmJPSPFlAso7i6Y6j9SnSIuXfAS_Y3vk85cYh1zPDM9R6fBVniADMCIXJEXWIC1IMmOccZcDXoBKJJKLp1iffLQBzDfSiUT6in1GBOMLavFpL6RO9jq6UHQXYrYBKy11ZdcDa4zLRaxiHv-GbSG_-THOs3VgVtTY_XqrMAwJIDOoL4_2H43b1BHEXWgt5W3wpyqvV8TvmlMRq8begwjm5NG8_Qtvv6QGLNozmRkNEGiV1di1wb1Qrt_6f_1tWrEbTvvwQ==
+v1:GVg5_uez+Z0544pgkVSd6vQztHO_j6X3LZ2PqhUv/Uh0iMfoT-U2MKgdjOSrkpVpINsFqxKk4/+p2nHlQOmJPSPFlAso7i6Y6j9SnSIuXfAS/Y3vk85cYh1zPDM9R6fBVniADMCIXJEXWIC1IMmOccZcDXoBKJJKLp1iffLQBzDfSiUT6in1GBOMLavFpL6RO9jq6UHQXYrYBKy11ZdcDa4zLRaxiHv-GbSG/+THOs3VgVtTY/+XqrMAwJIDOoL4_2H43b1BHEXWgt5W3wpyqvV8TvmlMRq8begwjm5NG8/+Qtvv6QGLNozmRkNEGiV1di1wb1Qrt6f1tWrEbTvvwQ==
 ```
 
 This signature should be placed in the `signature` field of login requests.
@@ -543,7 +564,7 @@ signature = private_key.sign(
     hashes.SHA256(),
 )
 
-print(base64.urlsafe_b64encode(signature))
+print("v1:" + base64.b64encode(signature))
 ```
 
 ### Quick Start

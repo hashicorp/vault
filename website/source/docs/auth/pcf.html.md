@@ -4,7 +4,7 @@ page_title: "PCF - Auth Methods"
 sidebar_title: "PCF"
 sidebar_current: "docs-auth-pcf"
 description: |-
-The pcf auth method allows automated authentication of PCF instances.
+  The pcf auth method allows automated authentication of PCF instances.
 ---
 
 # Pivotal Cloud Foundry (PCF) Auth Method

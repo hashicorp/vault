@@ -1,6 +1,7 @@
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
+import autosize from 'autosize';
 import layout from '../templates/components/string-list';
 
 export default Component.extend({
@@ -83,6 +84,16 @@ export default Component.extend({
     this.setType();
     this.toList();
     this.send('addInput');
+  },
+
+  didInsertElement() {
+    this._super(...arguments);
+    autosize(this.element.querySelector('textarea'));
+  },
+
+  didUpdate() {
+    this._super(...arguments);
+    autosize.update(this.element.querySelector('textarea'));
   },
 
   setType() {

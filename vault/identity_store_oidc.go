@@ -518,7 +518,7 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("no named key found at %q", name), nil
+		return nil, nil
 	}
 
 	var storedNamedKey namedKey

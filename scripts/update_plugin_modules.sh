@@ -42,7 +42,7 @@ rm -rf vendor
 go mod vendor
 git add .
 git commit --allow-empty -m "Updating plugin deps"
-if [ ! -z $PUSH_COMMITS ]
+if [ ! -z $PUSH_VAULT_COMMIT ]
 then
 	git push
 fi
