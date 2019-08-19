@@ -12,7 +12,6 @@ See the `Trigger` component for a description of properties.
   <Confirm as |c|>
     <c.Trigger
       @id={{item.id}}
-      @onTrigger={{action c.onTrigger item.id}}
       @triggerText="Delete"
       @message="This will permanently delete this secret and all its vesions."
       @onConfirm={{action "delete" item "secret"}}

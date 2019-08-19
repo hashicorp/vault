@@ -14,7 +14,6 @@
   <Confirm as |c|>
     <c.Trigger
       @id={{item.id}}
-      @onTrigger={{action c.onTrigger item.id}}
       @triggerText="Delete"
       @message="This will permanently delete this secret and all its vesions."
       @onConfirm={{action "delete" item "secret"}}
@@ -24,7 +23,6 @@
 ```
 
  * @param id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
- * @param onTrigger {Func} - A function that displays the confirmation message. This must receive the `id` listed above.
  * @param onConfirm=null {Func} - The action to take when the user clicks the confirm button.
  * @param [title='Delete this?'] {String} - The header text to display in the confirmation message.
  * @param [triggerText='Delete'] {String} - The text on the trigger button.

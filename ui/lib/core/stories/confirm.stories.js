@@ -22,7 +22,6 @@ storiesOf('Confirm/Confirm', module)
             <c.Trigger
               @id={{id}}
               @title={{title}}
-              @onTrigger={{action c.onTrigger id}}
               @triggerText={{triggerText}}
               @message={{message}}
               @confirmButtonText={{confirmButtonText}}

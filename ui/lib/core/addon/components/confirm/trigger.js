@@ -22,7 +22,6 @@ import layout from '../../templates/components/confirm/trigger';
  * ```
  *
  * @param id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
- * @param onTrigger {Func} - A function that displays the confirmation message. This must receive the `id` listed above.
  * @param onConfirm=null {Func} - The action to take when the user clicks the confirm button.
  * @param [title='Delete this?'] {String} - The header text to display in the confirmation message.
  * @param [triggerText='Delete'] {String} - The text on the trigger button.

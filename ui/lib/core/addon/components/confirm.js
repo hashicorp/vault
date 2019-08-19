@@ -13,7 +13,6 @@ import layout from '../templates/components/confirm';
  * <Confirm as |c|>
  *   <c.Trigger
  *     @id={{item.id}}
- *     @onTrigger={{action c.onTrigger item.id}}
  *     @triggerText="Delete"
  *     @message="This will permanently delete this secret and all its vesions."
  *     @onConfirm={{action "delete" item "secret"}}
@@ -26,7 +25,7 @@ import layout from '../templates/components/confirm';
 
 export default Component.extend({
   layout,
-  itemId: null,
+  openTrigger: null,
   height: 0,
   style: computed('height', function() {
     return htmlSafe(`height: ${this.height}px`);
