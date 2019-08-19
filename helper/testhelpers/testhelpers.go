@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
