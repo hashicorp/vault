@@ -45,7 +45,7 @@ export default function(paths) {
   return deepmerge.all(
     tree.map(p => {
       p = p.replace(/\.+/g, DOT_REPLACEMENT);
-      return unflatten({ [p]: null }, { delimiter: '/' });
+      return unflatten({ [p]: null }, { delimiter: '/', object: true });
     })
   );
 }
