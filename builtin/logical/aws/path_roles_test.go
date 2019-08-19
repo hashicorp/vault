@@ -217,7 +217,7 @@ func TestUserPathValidity(t *testing.T) {
 func TestRoleEntryValidationCredTypes(t *testing.T) {
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{},
-		PolicyArns: []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 	}
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with no CredentialTypes %#v passed validation", roleEntry)
@@ -237,7 +237,7 @@ func TestRoleEntryValidationIamUserCred(t *testing.T) {
 
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{iamUserCred},
-		PolicyArns: []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 	}
 	err := roleEntry.validate()
 	if err != nil {
@@ -256,7 +256,7 @@ func TestRoleEntryValidationIamUserCred(t *testing.T) {
 
 	roleEntry = awsRoleEntry{
 		CredentialTypes: []string{iamUserCred},
-		RoleArns: []string{"arn:aws:iam::123456789012:role/SomeRole"},
+		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
 	}
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with invalid RoleArns parameter %#v passed validation", roleEntry)
@@ -264,8 +264,8 @@ func TestRoleEntryValidationIamUserCred(t *testing.T) {
 
 	roleEntry = awsRoleEntry{
 		CredentialTypes: []string{iamUserCred},
-		PolicyArns: []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
-		DefaultSTSTTL: 1,
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
+		DefaultSTSTTL:   1,
 	}
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with unrecognized DefaultSTSTTL %#v passed validation", roleEntry)
@@ -281,10 +281,10 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{assumedRoleCred},
-		RoleArns: []string{"arn:aws:iam::123456789012:role/SomeRole"},
-		PolicyDocument: allowAllPolicyDocument,
-		DefaultSTSTTL: 2,
-		MaxSTSTTL: 3,
+		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
+		PolicyDocument:  allowAllPolicyDocument,
+		DefaultSTSTTL:   2,
+		MaxSTSTTL:       3,
 	}
 	if err := roleEntry.validate(); err != nil {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
@@ -310,9 +310,9 @@ func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
 	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{federationTokenCred},
-		PolicyDocument: allowAllPolicyDocument,
-		DefaultSTSTTL: 2,
-		MaxSTSTTL: 3,
+		PolicyDocument:  allowAllPolicyDocument,
+		DefaultSTSTTL:   2,
+		MaxSTSTTL:       3,
 	}
 	if err := roleEntry.validate(); err != nil {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)

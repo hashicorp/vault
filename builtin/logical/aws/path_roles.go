@@ -266,7 +266,6 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.UserPath = userPathRaw.(string)
 	}
 
-
 	if legacyRole != "" {
 		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
 		if roleEntry.InvalidData != "" {
@@ -485,8 +484,8 @@ func (r *awsRoleEntry) validate() error {
 	}
 
 	if r.MaxSTSTTL > 0 &&
-	r.DefaultSTSTTL > 0 &&
-	r.DefaultSTSTTL > r.MaxSTSTTL {
+		r.DefaultSTSTTL > 0 &&
+		r.DefaultSTSTTL > r.MaxSTSTTL {
 		errors = multierror.Append(errors, fmt.Errorf(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
 	}
 
