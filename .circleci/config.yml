@@ -130,7 +130,7 @@ jobs:
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
-          yarn run test-oss
+          yarn test:oss
         name: Test UI
     - store_artifacts:
         path: ui/test-results
@@ -561,7 +561,7 @@ workflows:
 #           # Run Ember tests
 #           cd ui
 #           mkdir -p test-results/qunit
-#           yarn run test-oss
+#           yarn test:oss
 #         name: Test UI
 #     - store_artifacts:
 #         path: ui/test-results

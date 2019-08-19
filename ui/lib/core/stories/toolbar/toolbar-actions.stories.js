@@ -1,14 +1,15 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import { withKnobs, select } from '@storybook/addon-knobs';
+import { withKnobs } from '@storybook/addon-knobs';
 import notes from './toolbar-actions.md';
 
 storiesOf('Toolbar/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`ToolbarActions`, () => ({
-    template: hbs`
+  .add(
+    `ToolbarActions`,
+    () => ({
+      template: hbs`
         <h5 class="title is-5">ToolbarActions</h5>
         <Toolbar>
           <ToolbarActions>
@@ -21,7 +22,7 @@ storiesOf('Toolbar/', module)
           </ToolbarActions>
         </Toolbar>
     `,
-    context: {},
-  }),
-  {notes}
-);
+      context: {},
+    }),
+    { notes }
+  );
