@@ -44,6 +44,6 @@ export default Component.extend({
   confirmButtonText: 'Delete',
   cancelButtonText: 'Cancel',
   showConfirm: computed('renderedTrigger', function() {
-    return !!this.renderedTrigger;
+    return this.renderedTrigger === this.id;
   }),
 });
