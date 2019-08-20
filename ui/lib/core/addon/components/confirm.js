@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { htmlSafe } from '@ember/template';
 import layout from '../templates/components/confirm';
+import { next } from '@ember/runloop';
 
 /**
  * @module Confirm
@@ -27,6 +28,7 @@ export default Component.extend({
   layout,
   openTrigger: null,
   height: 0,
+  focusTrigger: null,
   style: computed('height', function() {
     return htmlSafe(`height: ${this.height}px`);
   }),
@@ -48,13 +50,22 @@ export default Component.extend({
     this.set('height', height);
   },
   actions: {
-    onTrigger: function(itemId) {
+    onTrigger: function(itemId, e) {
       this.set('openTrigger', itemId);
+
+      // store a reference to the trigger so we can focus the element
+      // after clicking cancel
+      this.set('focusTrigger', e.target);
       this.updateHeight();
     },
     onCancel: function() {
       this.set('openTrigger', '');
       this.updateHeight();
+
+      next(() => {
+        this.focusTrigger.focus();
+        this.set('focusTrigger', null);
+      });
     },
   },
 });
