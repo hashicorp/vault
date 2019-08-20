@@ -6,7 +6,7 @@ export function linkParams({ mode, secret, queryParams }) {
   let params;
   const route = `vault.cluster.secrets.backend.${mode}`;
 
-  if (!secret || secret === ' ') {
+  if ((mode !== 'versions' && !secret) || secret === ' ') {
     params = [route + '-root'];
   } else {
     params = [route, encodePath(secret)];
@@ -20,6 +20,7 @@ export function linkParams({ mode, secret, queryParams }) {
 }
 
 export default Component.extend({
+  onLinkClick() {},
   tagName: '',
   // so that ember-test-selectors doesn't log a warning
   supportsDataTestProperties: true,

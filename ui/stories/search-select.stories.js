@@ -1,4 +1,3 @@
-/* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './search-select.md';
@@ -13,13 +12,13 @@ storiesOf('SearchSelect/', module)
   .add(`SearchSelect`, () => ({
     template: hbs`
       <h5 class="title is-5">Search Select</h5>
-      <SearchSelect 
-        @id="groups" 
-        @models={{models}} 
-        @onChange={{onChange}} 
+      <SearchSelect
+        @id="groups"
+        @models={{models}}
+        @onChange={{onChange}}
         @inputValue={{inputValue}}
         @label={{label}}
-        @fallbackComponent="string-list" 
+        @fallbackComponent="string-list"
         @staticOptions={{staticOptions}}/>
     `,
     context: {
