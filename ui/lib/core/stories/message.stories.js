@@ -1,16 +1,16 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import notes from './trigger.md';
+import notes from './message.md';
 
-storiesOf('Confirm/Trigger/', module)
+storiesOf('Confirm/Message/', module)
   .addParameters({ options: { showPanel: true } })
   .add(
-    `Trigger`,
+    `Message`,
     () => ({
       template: hbs`
-      <h5 class="title is-5">Trigger</h5>
-      <Trigger/>
+      <h5 class="title is-5">Message</h5>
+      <Message/>
     `,
       context: {},
     }),

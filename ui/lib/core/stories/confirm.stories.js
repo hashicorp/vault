@@ -19,7 +19,7 @@ storiesOf('Confirm/Confirm', module)
       <div class="popup-menu-content">
         <div class="box">
           <Confirm as |c|>
-            <c.Trigger
+            <c.Message
               @id={{id}}
               @title={{title}}
               @triggerText={{triggerText}}

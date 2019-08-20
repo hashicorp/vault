@@ -76,7 +76,7 @@
                     {{/if}}
                     {{#if item.canDelete}}
                       <li class="action">
-                        <c.Trigger
+                        <c.Message
                           @id={{item.id}}
                           @triggerText={{if backendModel.isV2KV "Permanently delete" "Delete"}}
                           @message="This will permanently delete this secret and all its vesions."

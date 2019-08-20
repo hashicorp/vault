@@ -31,7 +31,7 @@
               </button>
             </li>
             <li class="action">
-              <c.Trigger
+              <c.Message
                 @id={{get auth 'authData.displayName'}}
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
                 @onConfirm={{action "revokeToken"}}
@@ -40,7 +40,7 @@
             </li>
           {{else}}
             <li class="action text-right">
-              <c.Trigger
+              <c.Message
                 @id={{get auth 'authData.displayName'}}
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
                 @onConfirm={{action "revokeToken"}}

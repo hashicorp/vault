@@ -11,7 +11,7 @@ import layout from '../templates/components/confirm';
  * ```js
  * <div class="box">
  * <Confirm as |c|>
- *   <c.Trigger
+ *   <c.Message
  *     @id={{item.id}}
  *     @triggerText="Delete"
  *     @message="This will permanently delete this secret and all its vesions."

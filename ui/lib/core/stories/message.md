@@ -1,7 +1,7 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/confirm.js. To make changes, first edit that file and run "yarn gen-story-md confirm" to re-generate the content.-->
 
-## Trigger
-`Trigger` components are a button that shows a confirmation message. They should only be rendered within a `Confirm` component.
+## Message
+`Message` components trigger and display a confirmation message. They should only be used within a `Confirm` component.
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@
 ```js
 <div class="box">
   <Confirm as |c|>
-    <c.Trigger
+    <c.Message
       @id={{item.id}}
       @triggerText="Delete"
       @message="This will permanently delete this secret and all its vesions."

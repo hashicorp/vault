@@ -1,18 +1,17 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import layout from '../../templates/components/confirm/trigger';
+import layout from '../../templates/components/confirm/message';
 
 /**
- * @module Trigger
- * `Trigger` components trigger a confirmation message. They should only be used within a `Confirm` component.
+ * @module Message
+ * `Message` components trigger and display a confirmation message. They should only be used within a `Confirm` component.
  *
  * @example
  * ```js
  * <div class="box">
  * <Confirm as |c|>
- *   <c.Trigger
+ *   <c.Message
  *     @id={{item.id}}
- *     @onTrigger={{action c.onTrigger item.id}}
  *     @triggerText="Delete"
  *     @message="This will permanently delete this secret and all its vesions."
  *     @onConfirm={{action "delete" item "secret"}}
