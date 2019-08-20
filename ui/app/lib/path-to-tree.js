@@ -38,6 +38,8 @@ export default function(paths) {
     return accumulator;
   }, []);
 
+
+  tree = tree.sort((a, b)=> a.localeCompare(b));
   // after the reduction we're left with an array that contains
   // strings that represent the longest branches
   // we'll replace the dots in the paths, then expand the path
