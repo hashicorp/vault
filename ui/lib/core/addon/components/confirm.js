@@ -5,7 +5,7 @@ import layout from '../templates/components/confirm';
 
 /**
  * @module Confirm
- * `Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Trigger` which triggers the message.
+ * `Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Message` which triggers the message.
  *
  * @example
  * ```js
