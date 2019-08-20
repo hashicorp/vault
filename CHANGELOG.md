@@ -1,4 +1,14 @@
-## Next
+## 1.3 (Unreleased)
+
+FEATURES:
+
+ * **Stackdriver Metrics Sync**: Vault can now send metrics to
+   [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-6957]
+
+
+## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
 
