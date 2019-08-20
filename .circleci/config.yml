@@ -45,7 +45,7 @@ jobs:
     - run:
         command: |
           cd ui
-          yarn install --ignore-optional
+          yarn install
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
@@ -468,7 +468,7 @@ workflows:
 #     - run:
 #         command: |
 #           cd ui
-#           yarn install --ignore-optional
+#           yarn install
 #           npm rebuild node-sass
 #         name: Install UI dependencies
 #     - save_yarn_cache
