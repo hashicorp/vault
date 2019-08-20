@@ -34,6 +34,14 @@ const (
 	KMSConfigAuthTypeAPIKey = "authTypeAPIKey"
 )
 
+const (
+	// OCIKMSEncrypt is used to directly encrypt the data with KMS
+	OCIKMSEncrypt = iota
+	// OCIKMSEnvelopeAESGCMEncrypt is when a data encryption key is generated and
+	// the data is encrypted with AESGCM and the key is encrypted with KMS
+	OCIKMSEnvelopeAESGCMEncrypt
+)
+
 var (
 	metricInit    = []string{"ocikms", "init"}
 	metricEncrypt = []string{"ocikms", "encrypt"}
@@ -225,19 +233,25 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
 
-	// KMS required base64 encrypted plain text before sending to the service
-	encodedPlaintext := base64.StdEncoding.EncodeToString(plaintext)
+	env, err := seal.NewEnvelope().Encrypt(plaintext)
+	if err != nil {
+		metrics.IncrCounter(metricEncryptFailed, 1)
+		return nil, errwrap.Wrapf("error wrapping data: {{err}}", err)
+	}
 
 	if k.cryptoClient == nil {
 		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, fmt.Errorf("nil client")
 	}
 
+	// OCI KMS required base64 encrypted plain text before sending to the service
+	encodedKey := base64.StdEncoding.EncodeToString(env.Key)
+
 	// Build Encrypt Request
 	requestMetadata := k.getRequestMetadata()
 	encryptedDataDetails := keymanagement.EncryptDataDetails{
 		KeyId:     &k.keyID,
-		Plaintext: &encodedPlaintext,
+		Plaintext: &encodedKey,
 	}
 
 	input := keymanagement.EncryptRequest{
@@ -245,20 +259,22 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		RequestMetadata:    requestMetadata,
 	}
 	output, err := k.cryptoClient.Encrypt(ctx, input)
-
 	if err != nil {
 		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
-	k.logger.Debug("successfully encrypted")
 
 	ret := &physical.EncryptedBlobInfo{
-		Ciphertext: []byte(*output.Ciphertext),
+		Ciphertext: env.Ciphertext,
+		IV:         env.IV,
 		KeyInfo: &physical.SealKeyInfo{
-			KeyID: k.keyID,
+			Mechanism:  OCIKMSEnvelopeAESGCMEncrypt,
+			KeyID:      k.keyID,
+			WrappedKey: []byte(*output.Ciphertext),
 		},
 	}
 
+	k.logger.Debug("successfully encrypted")
 	return ret, nil
 }
 
@@ -268,29 +284,71 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}
 
+	// Default to mechanism used before key info was stored
+	if in.KeyInfo == nil {
+		in.KeyInfo = &physical.SealKeyInfo{
+			Mechanism: OCIKMSEncrypt,
+		}
+	}
+
 	requestMetadata := k.getRequestMetadata()
+	var plaintext []byte
+	switch in.KeyInfo.Mechanism {
+	case OCIKMSEncrypt:
+		cipherText := string(in.Ciphertext)
+		decryptedDataDetails := keymanagement.DecryptDataDetails{
+			KeyId:      &k.keyID,
+			Ciphertext: &cipherText,
+		}
+		input := keymanagement.DecryptRequest{
+			DecryptDataDetails: decryptedDataDetails,
+			RequestMetadata:    requestMetadata,
+		}
 
-	cipherText := string(in.Ciphertext)
-	decryptedDataDetails := keymanagement.DecryptDataDetails{
-		KeyId:      &k.keyID,
-		Ciphertext: &cipherText,
-	}
-	input := keymanagement.DecryptRequest{
-		DecryptDataDetails: decryptedDataDetails,
-		RequestMetadata:    requestMetadata,
-	}
+		output, err := k.cryptoClient.Decrypt(ctx, input)
+		if err != nil {
+			metrics.IncrCounter(metricDecryptFailed, 1)
+			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+		}
+		plaintext, err = base64.StdEncoding.DecodeString(*output.Plaintext)
+		if err != nil {
+			metrics.IncrCounter(metricDecryptFailed, 1)
+			return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
+		}
+		k.logger.Debug("successfully decrypted")
+	case OCIKMSEnvelopeAESGCMEncrypt:
+		cipherTextBlob := string(in.KeyInfo.WrappedKey)
+		decryptedDataDetails := keymanagement.DecryptDataDetails{
+			KeyId:      &k.keyID,
+			Ciphertext: &cipherTextBlob,
+		}
+		input := keymanagement.DecryptRequest{
+			DecryptDataDetails: decryptedDataDetails,
+			RequestMetadata:    requestMetadata,
+		}
+		output, err := k.cryptoClient.Decrypt(ctx, input)
+		if err != nil {
+			metrics.IncrCounter(metricDecryptFailed, 1)
+			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+		}
+		plaintext, err = base64.StdEncoding.DecodeString(*output.Plaintext)
+		if err != nil {
+			metrics.IncrCounter(metricDecryptFailed, 1)
+			return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
+		}
 
-	output, err := k.cryptoClient.Decrypt(ctx, input)
-	if err != nil {
-		metrics.IncrCounter(metricDecryptFailed, 1)
-		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+		envInfo := &seal.EnvelopeInfo{
+			Key:        plaintext,
+			IV:         in.IV,
+			Ciphertext: in.Ciphertext,
+		}
+		plaintext, err = seal.NewEnvelope().Decrypt(envInfo)
+		if err != nil {
+			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+		}
+	default:
+		return nil, fmt.Errorf("invalid mechanism: %d", in.KeyInfo.Mechanism)
 	}
-	plaintext, err := base64.StdEncoding.DecodeString(*output.Plaintext)
-	if err != nil {
-		metrics.IncrCounter(metricDecryptFailed, 1)
-		return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
-	}
-	k.logger.Debug("successfully decrypted")
 
 	return plaintext, nil
 }
