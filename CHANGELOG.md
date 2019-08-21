@@ -147,6 +147,7 @@ IMPROVEMENTS:
  * agent: Allow EC2 nonce to be passed in [GH-6953]
  * agent: Add optional `namespace` parameter, which sets the default namespace
    for the auto-auth functionality [GH-6988]
+ * agent: Add cert auto-auth method [GH-6652]
  * api: Add support for passing data to delete operations via `DeleteWithData`
    [GH-7139]
  * audit/file: Dramatically speed up file operations by changing
