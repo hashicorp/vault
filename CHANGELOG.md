@@ -19,6 +19,7 @@ BUG FIXES:
 
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
    not being applied to tokens generated using the OIDC login flow [JWT-67]
+ * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
 
 ## 1.2.2 (August 15, 2019)
