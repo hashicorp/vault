@@ -3,9 +3,18 @@
 ## Message
 `Message` components trigger and display a confirmation message. They should only be used within a `Confirm` component.
 
+**Properties**
+
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| counters | <code>Array</code> | <code></code> | A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests` endpoint. |
+| id | <code>ID</code> | <code></code> | A unique identifier used to bind a trigger to a confirmation message. |
+| onConfirm | <code>Func</code> | <code></code> | The action to take when the user clicks the confirm button. |
+| [triggerText] | <code>String</code> |<code>'Delete'</code> | The text on the trigger button. |
+| [title] | <code>String</code> | <code>'Delete this?'</code> | The header text to display in the confirmation message. |
+| [message] | <code>String</code> | <code>'You will not be able to recover it later.'</code> | The message to display above the confirm and cancel buttons. |
+| [confirmButtonText] | <code>String</code> | <code>'Delete'</code> | The text to display on the confirm button. |
+| [cancelButtonText] | <code>String</code> | <code>'Cancel'</code> | The text to display on the cancel button. |
+
 
 **Example**
   
@@ -21,15 +30,6 @@
   </Confirm>
 </div>
 ```
-
- * @param id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
- * @param onConfirm=null {Func} - The action to take when the user clicks the confirm button.
- * @param [title='Delete this?'] {String} - The header text to display in the confirmation message.
- * @param [triggerText='Delete'] {String} - The text on the trigger button.
- * @param [message='You will not be able to recover it later.'] {String} -
- * @param [confirmButtonText='Delete'] {String} - The text to display on the confirm button.
- * @param [cancelButtonText='Cancel'] {String} - The text to display on the cancel button.
- */
 
 **See**
 

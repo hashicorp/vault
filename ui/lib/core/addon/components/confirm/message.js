@@ -20,13 +20,13 @@ import layout from '../../templates/components/confirm/message';
  * </div>
  * ```
  *
- * @param id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
- * @param onConfirm=null {Func} - The action to take when the user clicks the confirm button.
- * @param [title='Delete this?'] {String} - The header text to display in the confirmation message.
- * @param [triggerText='Delete'] {String} - The text on the trigger button.
- * @param [message='You will not be able to recover it later.'] {String} -
- * @param [confirmButtonText='Delete'] {String} - The text to display on the confirm button.
- * @param [cancelButtonText='Cancel'] {String} - The text to display on the cancel button.
+ * @property id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
+ * @property onConfirm=null {Func} - The action to take when the user clicks the confirm button.
+ * @property [triggerText='Delete'] {String} - The text on the trigger button.
+ * @property [title='Delete this?'] {String} - The header text to display in the confirmation message.
+ * @property [message='You will not be able to recover it later.'] {String} - The message to display above the confirm and cancel buttons.
+ * @property [confirmButtonText='Delete'] {String} - The text to display on the confirm button.
+ * @property [cancelButtonText='Cancel'] {String} - The text to display on the cancel button.
  */
 
 export default Component.extend({
