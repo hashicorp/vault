@@ -17,7 +17,6 @@ import { next } from '@ember/runloop';
  *     @triggerText="Delete"
  *     @message="This will permanently delete this secret and all its vesions."
  *     @onConfirm={{action "delete" item "secret"}}
- *     @onCancel={{action c.onCancel}}
  *     />
  * </Confirm>
  * </div>
