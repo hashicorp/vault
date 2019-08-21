@@ -20,6 +20,7 @@ export default Route.extend(ListRoute, {
     const { type, method, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
     let modelType = `generated-${singularize(itemType)}-${type}`;
+    console.log(modelType);
 
     return this.store
       .lazyPaginatedQuery(modelType, {
@@ -55,8 +56,9 @@ export default Route.extend(ListRoute, {
     const { method, itemType, itemModel, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('method', method);
-    controller.set('useSubItemNav', itemModel && itemModel.parentItem);
-    console.log(itemModel);
+    if (itemType.includes('_')) {
+      controller.set('parentType', itemType.split('_')[0]);
+    }
     controller.set('methodModel', methodModel);
     controller.set('model.paths', itemModel.paths);
   },

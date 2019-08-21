@@ -12,7 +12,7 @@ export default Route.extend({
     return this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
       paths.itemTypes.forEach(item => {
         let modelType = `generated-${item}-${type}`;
-        newModelFetches.push(this.pathHelp.getNewModel(modelType, method, apiPath, itemType));
+        newModelFetches.push(this.pathHelp.getNewModel(modelType, method, apiPath, item));
       });
       return Promise.all(newModelFetches);
     });
@@ -20,6 +20,7 @@ export default Route.extend({
 
   model() {
     const { type, method, itemType } = this.getMethodAndModelInfo();
+    debugger; // eslint-disable-line
     const modelType = `generated-${singularize(itemType)}-${type}`;
     return this.store.createRecord(modelType, {
       itemType,
@@ -29,11 +30,12 @@ export default Route.extend({
   },
 
   getMethodAndModelInfo() {
-    const { item_type: itemType } = this.paramsFor(this.routeName);
+    const { item_type: itemType, item_id: itemID } = this.paramsFor(this.routeName);
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
     const { apiPath, type } = methodModel;
-    return { apiPath, type, method, itemType };
+    debugger;
+    return { apiPath, type, method, itemType, itemID };
   },
 
   setupController(controller) {

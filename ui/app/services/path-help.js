@@ -14,6 +14,8 @@ import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-at
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
+import { apiPath as dynamicPath } from 'vault/utils/api-path';
+
 const { belongsTo } = DS;
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
@@ -32,7 +34,7 @@ export default Service.extend({
     });
   },
 
-  getNewModel(modelType, backend, apiPath, itemType) {
+  getNewModel(modelType, backend, apiPath, itemType, itemID) {
     let owner = getOwner(this);
     const modelName = `model:${modelType}`;
     const modelFactory = owner.factoryFor(modelName);
@@ -54,7 +56,7 @@ export default Service.extend({
 
     //use paths to dynamically create our openapi help url
     //if we have a brand new model
-    return this.getPaths(apiPath, backend, itemType)
+    return this.getPaths(apiPath, backend, itemType, itemID)
       .then(pathInfo => {
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
         //if we have an adapter already use that, otherwise create one
@@ -95,6 +97,11 @@ export default Service.extend({
       return pathInfo;
     }
 
+    if (pathName.includes('{')) {
+      //we need to know if there are url params
+      pathName.split('{')[1].split('}')[0];
+    }
+
     let itemType, itemName;
     if (displayAttrs.itemType) {
       itemType = displayAttrs.itemType;
@@ -129,6 +136,7 @@ export default Service.extend({
       operations,
       action: displayAttrs.action,
       navigation: displayAttrs.navigation === true,
+      param: pathName.includes('{') ? pathName.split('{')[1].split('}')[0] : false,
     });
 
     return pathInfo;
@@ -155,6 +163,7 @@ export default Service.extend({
         itemType,
         itemTypes: [],
         paths: [],
+        itemID,
       });
     });
   },
@@ -198,41 +207,58 @@ export default Service.extend({
     });
   },
 
+  replaceParamInPath(path, id) {
+    let pathParts = path.split('{');
+    let pathBeginning = pathParts[0];
+    pathParts = pathParts[1].split('}');
+    let pathEnd = pathParts[1];
+    return `${pathBeginning.slice(1)}${id}${pathEnd}`;
+  },
+
   getNewAdapter(pathInfo, itemType) {
     //we need list and create paths to set the correct urls for actions
-
     let paths = this.filterPathsByItemType(pathInfo, itemType);
-    const { apiPath } = pathInfo;
-    const listPath = paths.find(path => path.operations.includes('list'));
-    const createPath = paths.find(path => path.action === 'Create');
-    const deletePath = paths.find(path => path.action === 'Delete');
+    let { apiPath } = pathInfo;
+    if (pathInfo.itemID) {
+      paths.forEach(path => {
+        if (path.path.includes('{')) {
+          path.path = this.replaceParamInPath(path.path, pathInfo.itemID);
+        }
+      });
+    }
+    const getPath = paths.find(path => path.operations.includes('get'));
+    const createPath = paths.find(path => path.action === 'Create' || path.operations.includes('post'));
+    const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
       urlForItem(method, id) {
-        let url = `${this.buildURL()}/${apiPath}${listPath.path.slice(1)}/`;
+        debugger;
+        let url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/`;
         if (id) {
           url = url + encodePath(id);
         }
         return url;
       },
 
-      urlForFindRecord(id, modelName, snapshot) {
-        return this.urlForItem(modelName, id, snapshot);
+      urlForFindRecord(id, modelName) {
+        return this.urlForItem(modelName, id);
       },
 
+      //urlForQuery if there is an id and we are listing, use the id to construct the path
+
       urlForUpdateRecord(id) {
-        let path = createPath.path.slice(1, path.indexOf('{') - 1);
+        let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let path = createPath.path.slice(1, path.indexOf('{') - 1);
+        let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let path = deletePath.path.slice(1, path.indexOf('{') - 1);
+        let path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });

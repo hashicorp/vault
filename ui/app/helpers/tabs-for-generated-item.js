@@ -7,6 +7,8 @@ export function tabsForGeneratedItem([model, paths]) {
     paths = model.paths.paths.filter(path => path.navigation);
   }
 
+  console.log(paths);
+
   let tabs = paths
     .map(path => {
       if (path.itemType === model.paths.itemType && path.operations.includes('list')) {
