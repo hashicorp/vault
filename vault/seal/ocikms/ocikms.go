@@ -16,30 +16,33 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
 const (
 	// OCI KMS key ID to use for encryption and decryption
 	EnvOCIKMSSealKeyID = "VAULT_OCIKMS_SEAL_KEY_ID"
-	// OCI KMS key ID to use for encryption and decryption
+	// OCI KMS crypto endpoint to use for encryption and decryption
 	EnvOCIKMSCryptoEndpoint = "VAULT_OCIKMS_CRYPTO_ENDPOINT"
+	// OCI KMS management endpoint to manage keys
+	EnvOCIKMSManagementEndpoint = "VAULT_OCIKMS_MANAGEMENT_ENDPOINT"
 	// Maximum number of retries
 	KMSMaximumNumberOfRetries = 5
 	// keyID config
 	KMSConfigKeyID = "keyID"
 	// cryptoEndpoint config
 	KMSConfigCryptoEndpoint = "cryptoEndpoint"
+	// managementEndpoint config
+	KMSConfigManagementEndpoint = "managementEndpoint"
 	// authTypeAPIKey config
 	KMSConfigAuthTypeAPIKey = "authTypeAPIKey"
 )
 
 const (
-	// OCIKMSEncrypt is used to directly encrypt the data with KMS
-	OCIKMSEncrypt = iota
 	// OCIKMSEnvelopeAESGCMEncrypt is when a data encryption key is generated and
 	// the data is encrypted with AESGCM and the key is encrypted with KMS
-	OCIKMSEnvelopeAESGCMEncrypt
+	OCIKMSEnvelopeAESGCMEncrypt = iota
 )
 
 var (
@@ -56,11 +59,18 @@ var (
 type OCIKMSMechanism uint32
 
 type OCIKMSSeal struct {
-	authTypeAPIKey bool                           // true for user principal, false for instance principal, default is false
-	keyID          string                         // OCI KMS keyID
-	cryptoEndpoint string                         // OCI KMS crypto endpoint
-	cryptoClient   *keymanagement.KmsCryptoClient // OCI KMS crypto client
-	logger         log.Logger
+	authTypeAPIKey bool   // true for user principal, false for instance principal, default is false
+	keyID          string // OCI KMS keyID
+
+	cryptoEndpoint     string // OCI KMS crypto endpoint
+	managementEndpoint string // OCI KMS management endpoint
+
+	cryptoClient     *keymanagement.KmsCryptoClient     // OCI KMS crypto client
+	managementClient *keymanagement.KmsManagementClient // OCI KMS management client
+
+	currentKeyID *atomic.Value // Current key version which is used for encryption/decryption
+
+	logger log.Logger
 }
 
 var _ seal.Access = (*OCIKMSSeal)(nil)
@@ -68,9 +78,10 @@ var _ seal.Access = (*OCIKMSSeal)(nil)
 // NewSeal creates a new OCIKMSSeal seal with the provided logger
 func NewSeal(logger log.Logger) *OCIKMSSeal {
 	k := &OCIKMSSeal{
-		logger: logger,
-		keyID:  "",
+		logger:       logger,
+		currentKeyID: new(atomic.Value),
 	}
+	k.currentKeyID.Store("")
 	return k
 }
 
@@ -104,6 +115,18 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	}
 	k.logger.Info("OCI KMS configuration", KMSConfigCryptoEndpoint, k.cryptoEndpoint)
 
+	// Check and set managementEndpoint
+	switch {
+	case os.Getenv(EnvOCIKMSManagementEndpoint) != "":
+		k.managementEndpoint = os.Getenv(EnvOCIKMSManagementEndpoint)
+	case config[KMSConfigManagementEndpoint] != "":
+		k.managementEndpoint = config[KMSConfigManagementEndpoint]
+	default:
+		metrics.IncrCounter(metricInitFailed, 1)
+		return nil, fmt.Errorf("'%s' not found for OCI KMS seal configuration", KMSConfigManagementEndpoint)
+	}
+	k.logger.Info("OCI KMS configuration", KMSConfigManagementEndpoint, k.managementEndpoint)
+
 	// Check and set authTypeAPIKey
 	var err error
 	k.authTypeAPIKey = false
@@ -123,10 +146,10 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 
 	// Check and set OCI KMS crypto client
 	if k.cryptoClient == nil {
-		kmsCryptoClient, err := k.getOCIKMSClient()
+		kmsCryptoClient, err := k.getOCIKMSCryptoClient()
 		if err != nil {
 			metrics.IncrCounter(metricInitFailed, 1)
-			return nil, errwrap.Wrapf("error initializing OCI KMS clients: {{err}}", err)
+			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
 		}
 
 		// KeyID validation by trying to generate a DEK
@@ -156,58 +179,31 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		k.cryptoClient = kmsCryptoClient
 	}
 
+	// Check and set OCI KMS management client
+	if k.managementClient == nil {
+		kmsManagementClient, err := k.getOCIKMSManagementClient()
+		if err != nil {
+			metrics.IncrCounter(metricInitFailed, 1)
+			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
+		}
+
+		keyVersion, err := k.getCurrentKeyVersion(kmsManagementClient)
+		if err != nil {
+			metrics.IncrCounter(metricInitFailed, 1)
+			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
+		}
+		k.currentKeyID.Store(keyVersion)
+
+		k.managementClient = kmsManagementClient
+	}
+
 	// Map that holds non-sensitive configuration info
 	sealInfo := make(map[string]string)
 	sealInfo[KMSConfigKeyID] = k.keyID
 	sealInfo[KMSConfigCryptoEndpoint] = k.cryptoEndpoint
+	sealInfo[KMSConfigManagementEndpoint] = k.managementEndpoint
 
 	return sealInfo, nil
-}
-
-// Build OCI KMS crypto client
-func (k *OCIKMSSeal) getOCIKMSClient() (*keymanagement.KmsCryptoClient, error) {
-	var cp common.ConfigurationProvider
-	var err error
-	if k.authTypeAPIKey {
-		cp = common.DefaultConfigProvider()
-	} else {
-		cp, err = auth.InstancePrincipalConfigurationProvider()
-		if err != nil {
-			return nil, errwrap.Wrapf("failed creating InstancePrincipalConfigurationProvider: {{err}}", err)
-		}
-	}
-
-	// Build crypto client
-	kmsCryptoClient, err := keymanagement.NewKmsCryptoClientWithConfigurationProvider(cp, k.cryptoEndpoint)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed creating NewKmsCryptoClientWithConfigurationProvider: {{err}}", err)
-	}
-
-	return &kmsCryptoClient, nil
-}
-
-// Request metadata includes retry policy
-func (k *OCIKMSSeal) getRequestMetadata() common.RequestMetadata {
-	// Only retry for 5xx errors
-	retryOn5xxFunc := func(r common.OCIOperationResponse) bool {
-		return r.Error != nil && r.Response.HTTPResponse().StatusCode >= 500
-	}
-	return getRequestMetadataWithCustomizedRetryPolicy(retryOn5xxFunc)
-}
-
-func getRequestMetadataWithCustomizedRetryPolicy(fn func(r common.OCIOperationResponse) bool) common.RequestMetadata {
-	return common.RequestMetadata{
-		RetryPolicy: getExponentialBackoffRetryPolicy(uint(KMSMaximumNumberOfRetries), fn),
-	}
-}
-
-func getExponentialBackoffRetryPolicy(n uint, fn func(r common.OCIOperationResponse) bool) *common.RetryPolicy {
-	// The duration between each retry operation, you might want to wait longer each time the retry fails
-	exponentialBackoff := func(r common.OCIOperationResponse) time.Duration {
-		return time.Duration(math.Pow(float64(2), float64(r.AttemptNumber-1))) * time.Second
-	}
-	policy := common.NewRetryPolicy(n, fn, exponentialBackoff)
-	return &policy
 }
 
 func (k *OCIKMSSeal) SealType() string {
@@ -215,7 +211,7 @@ func (k *OCIKMSSeal) SealType() string {
 }
 
 func (k *OCIKMSSeal) KeyID() string {
-	return k.keyID
+	return k.currentKeyID.Load().(string)
 }
 
 func (k *OCIKMSSeal) Init(context.Context) error {
@@ -264,12 +260,21 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
 
+	keyVersion, err := k.getCurrentKeyVersion(k.managementClient)
+	if err != nil {
+		metrics.IncrCounter(metricEncryptFailed, 1)
+		return nil, errwrap.Wrapf("error getting current key version: {{err}}", err)
+	}
+	// Update key version
+	k.currentKeyID.Store(keyVersion)
+
 	ret := &physical.EncryptedBlobInfo{
 		Ciphertext: env.Ciphertext,
 		IV:         env.IV,
 		KeyInfo: &physical.SealKeyInfo{
-			Mechanism:  OCIKMSEnvelopeAESGCMEncrypt,
-			KeyID:      k.keyID,
+			Mechanism: OCIKMSEnvelopeAESGCMEncrypt,
+			// Storing current key version in case we want to re-wrap older entries
+			KeyID:      keyVersion,
 			WrappedKey: []byte(*output.Ciphertext),
 		},
 	}
@@ -284,38 +289,9 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}
 
-	// Default to mechanism used before key info was stored
-	if in.KeyInfo == nil {
-		in.KeyInfo = &physical.SealKeyInfo{
-			Mechanism: OCIKMSEncrypt,
-		}
-	}
-
 	requestMetadata := k.getRequestMetadata()
 	var plaintext []byte
 	switch in.KeyInfo.Mechanism {
-	case OCIKMSEncrypt:
-		cipherText := string(in.Ciphertext)
-		decryptedDataDetails := keymanagement.DecryptDataDetails{
-			KeyId:      &k.keyID,
-			Ciphertext: &cipherText,
-		}
-		input := keymanagement.DecryptRequest{
-			DecryptDataDetails: decryptedDataDetails,
-			RequestMetadata:    requestMetadata,
-		}
-
-		output, err := k.cryptoClient.Decrypt(ctx, input)
-		if err != nil {
-			metrics.IncrCounter(metricDecryptFailed, 1)
-			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
-		}
-		plaintext, err = base64.StdEncoding.DecodeString(*output.Plaintext)
-		if err != nil {
-			metrics.IncrCounter(metricDecryptFailed, 1)
-			return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
-		}
-		k.logger.Debug("successfully decrypted")
 	case OCIKMSEnvelopeAESGCMEncrypt:
 		cipherTextBlob := string(in.KeyInfo.WrappedKey)
 		decryptedDataDetails := keymanagement.DecryptDataDetails{
@@ -331,14 +307,14 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 			metrics.IncrCounter(metricDecryptFailed, 1)
 			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
 		}
-		plaintext, err = base64.StdEncoding.DecodeString(*output.Plaintext)
+		envelopKey, err := base64.StdEncoding.DecodeString(*output.Plaintext)
 		if err != nil {
 			metrics.IncrCounter(metricDecryptFailed, 1)
 			return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
 		}
 
 		envInfo := &seal.EnvelopeInfo{
-			Key:        plaintext,
+			Key:        envelopKey,
 			IV:         in.IV,
 			Ciphertext: in.Ciphertext,
 		}
@@ -351,4 +327,88 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 	}
 
 	return plaintext, nil
+}
+
+func (k *OCIKMSSeal) getConfigProvider() (common.ConfigurationProvider, error) {
+	var cp common.ConfigurationProvider
+	var err error
+	if k.authTypeAPIKey {
+		cp = common.DefaultConfigProvider()
+	} else {
+		cp, err = auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			return nil, errwrap.Wrapf("failed creating InstancePrincipalConfigurationProvider: {{err}}", err)
+		}
+	}
+	return cp, nil
+}
+
+// Build OCI KMS crypto client
+func (k *OCIKMSSeal) getOCIKMSCryptoClient() (*keymanagement.KmsCryptoClient, error) {
+	cp, err := k.getConfigProvider()
+	if err != nil {
+		return nil, errwrap.Wrapf("failed creating configuration provider: {{err}}", err)
+	}
+
+	// Build crypto client
+	kmsCryptoClient, err := keymanagement.NewKmsCryptoClientWithConfigurationProvider(cp, k.cryptoEndpoint)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed creating NewKmsCryptoClientWithConfigurationProvider: {{err}}", err)
+	}
+
+	return &kmsCryptoClient, nil
+}
+
+// Build OCI KMS management client
+func (k *OCIKMSSeal) getOCIKMSManagementClient() (*keymanagement.KmsManagementClient, error) {
+	cp, err := k.getConfigProvider()
+	if err != nil {
+		return nil, errwrap.Wrapf("failed creating configuration provider: {{err}}", err)
+	}
+
+	// Build crypto client
+	kmsManagementClient, err := keymanagement.NewKmsManagementClientWithConfigurationProvider(cp, k.managementEndpoint)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed creating NewKmsCryptoClientWithConfigurationProvider: {{err}}", err)
+	}
+
+	return &kmsManagementClient, nil
+}
+
+// Request metadata includes retry policy
+func (k *OCIKMSSeal) getRequestMetadata() common.RequestMetadata {
+	// Only retry for 5xx errors
+	retryOn5xxFunc := func(r common.OCIOperationResponse) bool {
+		return r.Error != nil && r.Response.HTTPResponse().StatusCode >= 500
+	}
+	return getRequestMetadataWithCustomizedRetryPolicy(retryOn5xxFunc)
+}
+
+func getRequestMetadataWithCustomizedRetryPolicy(fn func(r common.OCIOperationResponse) bool) common.RequestMetadata {
+	return common.RequestMetadata{
+		RetryPolicy: getExponentialBackoffRetryPolicy(uint(KMSMaximumNumberOfRetries), fn),
+	}
+}
+
+func getExponentialBackoffRetryPolicy(n uint, fn func(r common.OCIOperationResponse) bool) *common.RetryPolicy {
+	// The duration between each retry operation, you might want to wait longer each time the retry fails
+	exponentialBackoff := func(r common.OCIOperationResponse) time.Duration {
+		return time.Duration(math.Pow(float64(2), float64(r.AttemptNumber-1))) * time.Second
+	}
+	policy := common.NewRetryPolicy(n, fn, exponentialBackoff)
+	return &policy
+}
+
+func (k *OCIKMSSeal) getCurrentKeyVersion(managementClient *keymanagement.KmsManagementClient) (string, error) {
+	requestMetadata := k.getRequestMetadata()
+	getKeyInput := keymanagement.GetKeyRequest{
+		KeyId:           &k.keyID,
+		RequestMetadata: requestMetadata,
+	}
+	getKeyResponse, err := managementClient.GetKey(context.Background(), getKeyInput)
+	if err != nil || getKeyResponse.CurrentKeyVersion == nil {
+		return "", errwrap.Wrapf("failed getting current key version: {{err}}", err)
+	}
+
+	return *getKeyResponse.CurrentKeyVersion, nil
 }
