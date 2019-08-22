@@ -77,7 +77,7 @@
                         <c.Message
                           @id={{item.id}}
                           @triggerText={{if backendModel.isV2KV "Permanently delete" "Delete"}}
-                          @message="This will permanently delete this secret and all its vesions."
+                          @message="This will permanently delete this secret and all its versions."
                           @onConfirm={{action "delete" item "secret"}}/>
                       </li>
                     {{/if}}
