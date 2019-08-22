@@ -13,7 +13,7 @@ import layout from '../../templates/components/confirm/message';
  *   <c.Message
  *     @id={{item.id}}
  *     @triggerText="Delete"
- *     @message="This will permanently delete this secret and all its vesions."
+ *     @message="This will permanently delete this secret and all its versions."
  *     @onConfirm={{action "delete" item "secret"}}
  *     />
  * </Confirm>
