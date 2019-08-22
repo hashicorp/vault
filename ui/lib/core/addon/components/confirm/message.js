@@ -36,6 +36,7 @@ export default Component.extend({
   id: null,
   onCancel() {},
   onConfirm() {},
+  resetTrigger() {},
   title: 'Delete this?',
   message: 'You will not be able to recover it later.',
   triggerText: 'Delete',
@@ -44,4 +45,10 @@ export default Component.extend({
   showConfirm: computed('renderedTrigger', function() {
     return this.renderedTrigger === this.id;
   }),
+  actions: {
+    onConfirm() {
+      this.onConfirm();
+      this.resetTrigger();
+    },
+  },
 });
