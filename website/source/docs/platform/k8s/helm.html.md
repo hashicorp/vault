@@ -52,7 +52,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.1.1
+$ git checkout v0.1.2
 
 # Run Helm
 $ helm install --dry-run ./
@@ -72,6 +72,8 @@ and consider if they're appropriate for your deployment.
 
   * `image` (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
 
+  * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such was the `VAULT_ADDR` environment variable on the Vault pods).
+
 * `server` - Values that configure running a Vault server within Kubernetes.
 
   * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
@@ -87,7 +89,7 @@ and consider if they're appropriate for your deployment.
 
   * `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
-    * `enabled` (`boolean: false`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
+    - `enabled` (`boolean: false`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
 
   * `extraEnvironmentVars` (`string: null`) - The extra environment variables to be applied to the Vault server.  This should be a multi-line key/value string.
 
@@ -99,6 +101,25 @@ and consider if they're appropriate for your deployment.
        GOOGLE_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
+  * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
+
+      - `envName` (`string: required`) -
+      Name of the environment variable to be populated in the Vault container.
+      
+      - `secretName` (`string: required`) -
+      Name of Kubernetes secret used to populate the environment variable defined by `envName`.
+
+      - `secretKey` (`string: required`) -
+      Name of the key where the requested secret value is located in the Kubernetes secret.
+
+    ```yaml
+    # Extra Environment Variables populated from a secret.
+     extraSecretEnvironmentVars:
+      - envName: AWS_SECRET_ACCESS_KEY
+        secretName: vault
+        secretKey: AWS_SECRET_ACCESS_KEY
+    ```
+
   * `extraVolumes` (`array: []`) - A list of extra volumes to mount to Vault servers. This is useful for bringing in extra data that can be referenced by other configurations at a well known path, such as TLS certificates. The value of this should be a list of objects. Each object supports the following keys:
 
       - `type` (`string: required`) -
@@ -106,12 +127,18 @@ and consider if they're appropriate for your deployment.
 
       - `name` (`string: required`) -
       Name of the configMap or secret to be mounted. This also controls the path
-      that it is mounted to. The volume will be mounted to `/vault/userconfig/<name>`.
+      that it is mounted to. The volume will be mounted to `/vault/userconfig/<name>` by default
+      unless `path` is configured.
+      
+      - `path` (`string: /vault/userconfigs`) -
+      Name of the path where a configMap or secret are mounted.  If none specified 
+      the volume will be mounted to `/vault/userconfig/<name of volume>`.
 
         ```yaml
         extraVolumes:
           -  type: "secret"
              name: "vault-certs"
+             path: "/etc/pki"
         ```
 
   * `affinity` (`string`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
@@ -156,9 +183,9 @@ and consider if they're appropriate for your deployment.
 
   * `service` - Values that configure the Kubernetes service created for Vault.
 
-    * `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
+    - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
 
-    * `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes.  By default the Vault service will be given a Cluster IP address, set to `None` to disable.  When disabled Kubernetes will create a "headless" service.  Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
+    - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes.  By default the Vault service will be given a Cluster IP address, set to `None` to disable.  When disabled Kubernetes will create a "headless" service.  Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
 
   * `extraVolumes` - This configures the `Service` resource created for the Vault server.
 
@@ -290,6 +317,17 @@ and consider if they're appropriate for your deployment.
   The available service types are documented on
   [the Kubernetes website](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
 
+  - `serviceNodePort` (`int: null`) -
+  Sets the Node Port value when using `serviceType: NodePort` on the Vault UI service.
+   
+  - `annotations` (`string`) - This value defines additional annotations for the UI service. This should be a formatted as a multi-line string.
+
+    ```yaml
+    annotations: |
+      "sample/annotation1": "foo"
+      "sample/annotation2": "bar"
+    ```
+
 ## Helm Chart Examples
 
 The following are different configuration examples to support a variety of 
@@ -302,7 +340,7 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.1"
+  image: "vault:1.2.2"
  
 server:
   standalone:
@@ -342,15 +380,13 @@ certificate authority:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.1"
+  image: "vault:1.2.2"
+  tlsDisable: false
 
 server:
   extraVolumes:
   - type: secret
     name: vault-server-tls
-
-  extraEnvironmentVars:
-    VAULT_ADDR: "https://localhost:8200"
 
   standalone:
     enabled: true
@@ -385,7 +421,7 @@ auditing enabled.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.1"
+  image: "vault:1.2.2"
 
 server:
   standalone:
@@ -432,7 +468,7 @@ Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.0"
+  image: "vault:1.2.2"
 
 server:
   extraEnvironmentVars:
