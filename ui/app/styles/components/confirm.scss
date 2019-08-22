@@ -15,6 +15,10 @@
   transition: transform $speed;
 }
 
+.confirm.show-confirm {
+  visibility: hidden;
+}
+
 .confirm-overlay {
   position: absolute;
   background-color: white;
