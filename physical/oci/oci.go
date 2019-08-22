@@ -372,9 +372,9 @@ func (o *Backend) logRequest(operation string, response *http.Response, clientOp
 
 	logLine := fmt.Sprintf("%s client:opc-request-id %s opc-request-id: %s status-code: %s",
 		operation, clientOpcRequestId, opcRequestId, statusCodeStr)
-	if err == nil {
-		o.logger.Debug(logLine)
-	} else {
+	if err != nil && statusCode/100 == 5 {
 		o.logger.Error(logLine, "error", err)
+	} else {
+		o.logger.Debug(logLine)
 	}
 }
