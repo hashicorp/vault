@@ -1,16 +1,16 @@
 ---
 layout: "docs"
-page_title: "PCF - Auth Methods"
-sidebar_title: "PCF"
-sidebar_current: "docs-auth-pcf"
+page_title: "CF - Auth Methods"
+sidebar_title: "CF"
+sidebar_current: "docs-auth-cf"
 description: |-
-  The pcf auth method allows automated authentication of PCF instances.
+  The cf auth method allows automated authentication of CF instances.
 ---
 
-# Pivotal Cloud Foundry (PCF) Auth Method
+# Cloud Foundry (CF) Auth Method
 
-The `pcf` auth method provides an automated mechanism to retrieve a Vault token
-for PCF instances. It leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation).
+The `cf` auth method provides an automated mechanism to retrieve a Vault token
+for CF instances. It leverages CF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation).
 At a high level, this works as follows:
 
 1. You construct a request to Vault including your `CF_INSTANCE_CERT`, signed by your `CF_INSTANCE_KEY`.
@@ -22,8 +22,8 @@ At a high level, this works as follows:
 
 ## Known Risks
 
-This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because 
-PCF makes its CA certificate and private key available to certain users at any time, it's possible for 
+This authentication engine uses CF's instance identity service to authenticate users to Vault. Because 
+CF makes its CA certificate and private key available to certain users at any time, it's possible for 
 someone with access to them to self-issue identity certificates that meet the criteria for a Vault role, 
 allowing them to gain unintended access to Vault.
 
@@ -38,8 +38,8 @@ system, or through carefully limiting the users who can access CredHub.
 
 ### Preparing to Configure the Plugin
 
-To configure this plugin, you'll need to gather the CA certificate that PCF uses to issue each `CF_INSTANCE_CERT`,
-and you'll need to configure it to access the PCF API. 
+To configure this plugin, you'll need to gather the CA certificate that CF uses to issue each `CF_INSTANCE_CERT`,
+and you'll need to configure it to access the CF API. 
 
 To gain your instance identity CA certificate, in the [cf dev](https://github.com/cloudfoundry-incubator/cfdev)
 environment it can be found using:
@@ -73,7 +73,7 @@ Log into CredHub with the credentials you obtained earlier:
 $ credhub login --client-name=director_to_credhub --client-secret=some-secret
 ```
 
-And view the root certificate PCF uses to issue instance identity certificates:
+And view the root certificate CF uses to issue instance identity certificates:
 
 ```
 $ credhub get -n /cf/diego-instance-identity-root-ca
@@ -171,11 +171,11 @@ Certificate:
          60:b2:69:7c
 ```
 
-You will also need to configure access to the PCF API. To prepare for this, we will now
+You will also need to configure access to the CF API. To prepare for this, we will now
 use the [cf](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html) command-line tool.
 
 First, while in the directory containing the `metadata` file you used earlier to authenticate
-to PCF, run `$ pcf target`. This points the `cf` tool at the same place as the `pcf` tool. Next,
+to CF, run `$ pcf target`. This points the `cf` tool at the same place as the `pcf` tool. Next,
 run `$ cf api` to view the API endpoint that Vault will use.
 
 Next, configure a user for Vault to use. This plugin was tested with Org Manager level 
@@ -188,14 +188,14 @@ $ cf org-users my-example-org
 $ cf set-org-role vault my-example-org OrgManager
 ```
 
-Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first 
+Next, CF often uses a self-signed certificate for TLS, which can be rejected at first 
 with an error like:
 
 ```
 x509: certificate signed by unknown authority
 ```
 
-If you encounter this error, you will need to first gain a copy of the certificate that PCF
+If you encounter this error, you will need to first gain a copy of the certificate that CF
 is using for the API via:
 
 ```
@@ -211,62 +211,62 @@ $ openssl s_client -showcerts -servername api.sys.somewhere.cf-app.com -connect 
 Part of the response will contain a certificate, which you'll need to copy and paste to
 a well-formatted local file. Please see `ca.crt` above for an example of how the certificate
 should look, and how to verify it can be parsed using `openssl`. The walkthrough below presumes
-you name this file `pcfapi.crt`.
+you name this file `cfapi.crt`.
 
 ### Walkthrough
 
-After obtaining the information described above, a Vault operator will configure the PCF auth method
+After obtaining the information described above, a Vault operator will configure the CF auth method
 like so:
 
 ```
-$ vault auth enable pcf
+$ vault auth enable cf
 
-$ vault write auth/pcf/config \
+$ vault write auth/cf/config \
       identity_ca_certificates=@ca.crt \
-      pcf_api_addr=https://api.dev.cfdev.sh \
-      pcf_username=vault \
-      pcf_password=pa55w0rd \
-      pcf_api_trusted_certificates=@pcfapi.crt
+      cf_api_addr=https://api.dev.cfdev.sh \
+      cf_username=vault \
+      cf_password=pa55w0rd \
+      cf_api_trusted_certificates=@cfapi.crt
       
-$ vault write auth/pcf/roles/my-role \
+$ vault write auth/cf/roles/my-role \
     bound_application_ids=2d3e834a-3a25-4591-974c-fa5626d5d0a1 \
     bound_space_ids=3d2eba6b-ef19-44d5-91dd-1975b0db5cc9 \
     bound_organization_ids=34a878d0-c2f9-4521-ba73-a9f664e82c7bf \
     policies=my-policy
 ```
 
-Once configured, from a PCF instance containing real values for the `CF_INSTANCE_CERT` and 
+Once configured, from a CF instance containing real values for the `CF_INSTANCE_CERT` and 
 `CF_INSTANCE_KEY`, login can be performed using:
 
 ```
-$ vault login -method=pcf role=test-role
+$ vault login -method=cf role=test-role
 ```
 
-For PCF, we do also offer an agent that, once configured, can be used to obtain a Vault token on
+For CF, we do also offer an agent that, once configured, can be used to obtain a Vault token on
 your behalf.
 
 ### Maintenance
 
-In testing we found that PCF instance identity CA certificates were set to expire in 3 years. Some
-PCF docs indicate they expire every 4 years. However long they last, at some point you may need 
+In testing we found that CF instance identity CA certificates were set to expire in 3 years. Some
+CF docs indicate they expire every 4 years. However long they last, at some point you may need 
 to add another CA certificate - one that's soon to expire, and one that is currently or soon-to-be
 valid. 
 
 ```
 $ CURRENT=$(cat /path/to/current-ca.crt)
 $ FUTURE=$(cat /path/to/future-ca.crt)
-$ vault write auth/vault-plugin-auth-pcf/config identity_ca_certificates="$CURRENT,$FUTURE"
+$ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT,$FUTURE"
 ```
 
 If Vault receives a `CF_INSTANCE_CERT` matching _any_ of the `identity_ca_certificates`,
 the instance cert will be considered valid.
 
-A similar approach can be taken to update the `pcf_api_trusted_certificates`.
+A similar approach can be taken to update the `cf_api_trusted_certificates`.
 
 ### Troubleshooting At-A-Glance
 
 If you receive an error containing `x509: certificate signed by unknown authority`, set 
-`pcf_api_trusted_certificates` as described above.
+`cf_api_trusted_certificates` as described above.
 
 If you're unable to authenticate using the `CF_INSTANCE_CERT`, first obtain a current copy
 of your `CF_INSTANCE_CERT` and copy it to your local environment. Then divide it into two 
@@ -290,5 +290,5 @@ match the certificates you're checking.
 
 ## API
 
-The PCF auth method has a full HTTP API. Please see the [PCF Auth API](/api/auth/pcf/index.html) 
+The CF auth method has a full HTTP API. Please see the [CF Auth API](/api/auth/cf/index.html) 
 for more details.

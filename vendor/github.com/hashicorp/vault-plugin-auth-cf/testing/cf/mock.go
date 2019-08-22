@@ -1,4 +1,4 @@
-package pcf
+package cf
 
 import (
 	"fmt"

@@ -1,45 +1,45 @@
 ---
 layout: "api"
-page_title: "PCF - Auth Methods - HTTP API"
-sidebar_title: "PCF"
-sidebar_current: "api-http-auth-pcf"
+page_title: "CF - Auth Methods - HTTP API"
+sidebar_title: "CF"
+sidebar_current: "api-http-auth-cf"
 description: |-
-  This is the API documentation for the Vault PCF auth method.
+  This is the API documentation for the Vault CF auth method.
 ---
 
-# Pivotal Cloud Foundry (PCF) Auth Method (API)
+# Pivotal Cloud Foundry (CF) Auth Method (API)
 
-This is the API documentation for the Vault PCF auth method. For
-general information about the usage and operation of the PCF method, please
-see the [Vault PCF method documentation](/docs/auth/pcf.html).
+This is the API documentation for the Vault CF auth method. For
+general information about the usage and operation of the CF method, please
+see the [Vault CF method documentation](/docs/auth/cf.html).
 
-This documentation assumes the PCF method is mounted at the `/auth/pcf`
+This documentation assumes the CF method is mounted at the `/auth/cf`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Create Configuration
 
 Configure the root CA certificate to be used for verifying instance identity
-certificates, and configure access to the PCF API. For detailed instructions
-on how to obtain these values, please see the [Vault PCF method 
-documentation](/docs/auth/pcf.html).
+certificates, and configure access to the CF API. For detailed instructions
+on how to obtain these values, please see the [Vault CF method
+documentation](/docs/auth/cf.html).
 
 | Method   | Path                  |
 | :--------|---------------------- |
-| `POST`   | `/auth/pcf/config`    |
+| `POST`   | `/auth/cf/config`    |
 
 ### Parameters
 
 - `identity_ca_certificates` `(array: [], required)` - The root CA certificate(s) 
 to be used for verifying that the `CF_INSTANCE_CERT` presented for logging in was
 issued by the proper authority.
-- `pcf_api_addr` `(string: required)`: PCF's full API address, to be used for verifying
+- `cf_api_addr` `(string: required)`: CF's full API address, to be used for verifying
 that a given `CF_INSTANCE_CERT` shows an application ID, space ID, and organization ID 
 that presently exist.
-- `pcf_username` `(string: required)`: The username for authenticating to the PCF API.
-- `pcf_password` `(string: required)`: The password for authenticating to the PCF API.
-- `pcf_api_trusted_certificates` `(array: [])`: The certificate that's presented by the
-PCF API. This configures Vault to trust this certificate when making API calls, resolving
+- `cf_username` `(string: required)`: The username for authenticating to the CF API.
+- `cf_password` `(string: required)`: The password for authenticating to the CF API.
+- `cf_api_trusted_certificates` `(array: [])`: The certificate that's presented by the
+CF API. This configures Vault to trust this certificate when making API calls, resolving
 `x509: certificate signed by unknown authority` errors.
 - `login_max_seconds_not_before` `(int: 300)`: The maximum number of seconds in the past when a
 signature could have been created. The lower the value, the lower the risk of replay
@@ -53,10 +53,10 @@ the lower the risk of replay attacks.
 ```json
 {
   "identity_ca_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "pcf_api_addr": "https://api.sys.somewhere.cf-app.com",
-  "pcf_username": "vault",
-  "pcf_password": "pa55w0rd",
-  "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
+  "cf_api_addr": "https://api.sys.somewhere.cf-app.com",
+  "cf_username": "vault",
+  "cf_password": "pa55w0rd",
+  "cf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
   "login_max_seconds_not_before": 5,
   "login_max_seconds_not_after": 1
 }
@@ -69,23 +69,23 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/pcf/config
+    http://127.0.0.1:8200/v1/auth/cf/config
 ```
 
 ## Read Config
 
-Returns the present PCF configuration.
+Returns the present CF configuration.
 
 | Method   | Path                  |
 | :--------|---------------------- |
-| `GET`    | `/auth/pcf/config`    |
+| `GET`    | `/auth/cf/config`    |
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/pcf/config
+    http://127.0.0.1:8200/v1/auth/cf/config
 ```
 
 ### Sample Response
@@ -93,9 +93,9 @@ $ curl \
 ```json
 {
   "identity_ca_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
-  "pcf_api_addr": "https://api.sys.somewhere.cf-app.com",
-  "pcf_username": "vault",
-  "pcf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
+  "cf_api_addr": "https://api.sys.somewhere.cf-app.com",
+  "cf_username": "vault",
+  "cf_api_trusted_certificates": ["-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----"],
   "login_max_seconds_not_before": 5,
   "login_max_seconds_not_after": 1
 }
@@ -103,11 +103,11 @@ $ curl \
 
 ## Delete Config
 
-Deletes the present PCF configuration.
+Deletes the present CF configuration.
 
 | Method   | Path                  |
 | :--------|---------------------- |
-| `DELETE` | `/auth/pcf/config`    |
+| `DELETE` | `/auth/cf/config`    |
 
 ### Sample Request
 
@@ -115,13 +115,13 @@ Deletes the present PCF configuration.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/pcf/config
+    http://127.0.0.1:8200/v1/auth/cf/config
 ```
 
 ## Create Role
 
 Create a role in Vault granting a particular level of access to a particular group
-of PCF instances. We recommend using the PCF API or the CF CLI to gain the IDs you
+of CF instances. We recommend using the CF API or the CF CLI to gain the IDs you
 wish to target. 
 
 If you list no `bound` parameters, then any entity with a valid 
@@ -130,7 +130,7 @@ will be able to authenticate against this role.
 
 | Method   | Path                   |
 | :--------|----------------------- |
-| `POST`   | `/auth/pcf/roles/:role`|
+| `POST`   | `/auth/cf/roles/:role`|
 
 ### Parameters
 
@@ -144,7 +144,7 @@ an instance must be a member of to qualify as a member of this role.
 - `bound_instance_ids` `(array: [])` - An optional list of instance IDs 
 an instance must be a member of to qualify as a member of this role. Please note that 
 every time you use `cf push` on an app, its instance ID changes. Also, instance IDs 
-are not verifiable as being presently alive using the PCF API. Thus, we recommend against
+are not verifiable as being presently alive using the CF API. Thus, we recommend against
 using this setting for most use cases.
 - `disable_ip_matching` `(bool: false)` - If set to true, disables the default behavior 
 that logging in must be performed from an acceptable IP address described by the 
@@ -176,23 +176,23 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/pcf/roles/:role
+    http://127.0.0.1:8200/v1/auth/cf/roles/:role
 ```
 
 ## Read Role
 
-Returns a PCF role.
+Returns a CF role.
 
 | Method   | Path                   |
 | :--------|----------------------- |
-| `GET`    | `/auth/pcf/roles/:role`|
+| `GET`    | `/auth/cf/roles/:role`|
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/pcf/roles/:role
+    http://127.0.0.1:8200/v1/auth/cf/roles/:role
 ```
 
 ### Sample Response
@@ -213,11 +213,11 @@ $ curl \
 
 ## Delete Role
 
-Deletes a PCF role.
+Deletes a CF role.
 
 | Method   | Path                   |
 | :--------|----------------------- |
-| `DELETE` | `/auth/pcf/roles/:role`|
+| `DELETE` | `/auth/cf/roles/:role`|
 
 ### Sample Request
 
@@ -225,16 +225,16 @@ Deletes a PCF role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/pcf/roles/:role
+    http://127.0.0.1:8200/v1/auth/cf/roles/:role
 ```
 
 ## List Roles
 
-Returns a PCF role.
+Returns a CF role.
 
 | Method   | Path                   |
 | :--------|----------------------- |
-| `LIST`   | `/auth/pcf/roles`      |
+| `LIST`   | `/auth/cf/roles`      |
 
 ### Sample Request
 
@@ -242,7 +242,7 @@ Returns a PCF role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
-    http://127.0.0.1:8200/v1/auth/pcf/roles
+    http://127.0.0.1:8200/v1/auth/cf/roles
 ```
 
 ### Sample Response
@@ -260,12 +260,12 @@ $ curl \
 
 ## Login
 
-Log in to PCF. 
+Log in to CF.
 
 Vault provides both an agent and a CLI tool for logging in that
 eliminates the need to build a signature yourself. However, if you do wish to 
-build the signature, its signing algorithm is viewable [here](https://github.com/hashicorp/vault-plugin-auth-pcf/tree/master/signatures).
-The [plugin repo](https://github.com/hashicorp/vault-plugin-auth-pcf) also contains
+build the signature, its signing algorithm is viewable [here](https://github.com/hashicorp/vault-plugin-auth-cf/tree/master/signatures).
+The [plugin repo](https://github.com/hashicorp/vault-plugin-auth-cf) also contains
 a command-line tool (`generate-signature`) that can be compiled as a binary for generating a signature,
 and a test that outputs steps in generating the signature so they can be duplicated.
 
@@ -284,7 +284,7 @@ rsa.SignPSS(rand.Reader, rsaPrivateKey, crypto.SHA256, checksum, nil)
 
 | Method   | Path                   |
 | :--------|----------------------- |
-| `POST`   | `/auth/pcf/login`      |
+| `POST`   | `/auth/cf/login`      |
 
 ### Parameters
 
@@ -313,7 +313,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/pcf/login
+    http://127.0.0.1:8200/v1/auth/cf/login
 ```
 
 ### Sample Response
