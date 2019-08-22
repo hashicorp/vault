@@ -7321,12 +7321,13 @@ ember-native-dom-helpers@^0.5.3:
     broccoli-funnel "^1.1.0"
     ember-cli-babel "^6.6.0"
 
-ember-power-select-with-create@cibernox/ember-power-select-with-create#6203918f247c1c5d692db4f9185ab8321d2125e1:
-  version "0.6.1"
-  resolved "https://codeload.github.com/cibernox/ember-power-select-with-create/tar.gz/6203918f247c1c5d692db4f9185ab8321d2125e1"
+ember-power-select-with-create@^0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/ember-power-select-with-create/-/ember-power-select-with-create-0.6.2.tgz#05faf361c435f5c2c61c24e687aebddefd569897"
+  integrity sha512-8OKUJWpLTImP+N+SkUqTYJByaZ7XDhePdhjqZtcimc6O1eEAdEGkh8itOLMLw95+X51Wua1DwfdoRycu+iqqQQ==
   dependencies:
-    ember-cli-babel "^6.6.0"
-    ember-cli-htmlbars "^2.0.1"
+    ember-cli-babel "^7.1.2"
+    ember-cli-htmlbars "^3.0.0"
     ember-power-select "^2.0.0"
 
 ember-power-select@^2.0.0:

@@ -101,7 +101,7 @@
     "ember-load-initializers": "^2.0.0",
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-maybe-in-element": "^0.4.0",
-    "ember-power-select-with-create": "cibernox/ember-power-select-with-create#6203918f247c1c5d692db4f9185ab8321d2125e1",
+    "ember-power-select-with-create": "^0.6.2",
     "ember-qunit": "^4.4.1",
     "ember-radio-button": "^2.0.1",
     "ember-resolver": "^5.0.1",
