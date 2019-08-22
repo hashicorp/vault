@@ -69,24 +69,32 @@ module('Unit | Lib | path to tree', function() {
     ],
     [
       'sorting lexicographically',
-      ['99', 'bat', 'bat/bird', 'animal/flying/birds', 'animal/walking/dogs', 'animal/walking/cats', '1/thing'],
+      [
+        '99',
+        'bat',
+        'bat/bird',
+        'animal/flying/birds',
+        'animal/walking/dogs',
+        'animal/walking/cats',
+        '1/thing',
+      ],
       {
         1: {
           thing: null,
         },
         99: null,
-        animal:  {
+        animal: {
           flying: {
-            birds:null,
+            birds: null,
           },
           walking: {
             cats: null,
             dogs: null,
-          }
+          },
         },
         bat: {
-          bird: null
-        }
+          bird: null,
+        },
       },
     ],
   ];
