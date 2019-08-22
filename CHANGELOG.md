@@ -21,6 +21,9 @@ BUG FIXES:
    not being applied to tokens generated using the OIDC login flow [JWT-67]
  * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
+ * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
+ * ui: Fix an issue with the namespace picker being unable to render nested
+   namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
 
 ## 1.2.2 (August 15, 2019)
 
