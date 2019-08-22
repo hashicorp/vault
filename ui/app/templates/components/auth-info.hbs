@@ -37,7 +37,7 @@
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
                 @triggerText={{concat "Revoke " (get auth 'authData.displayName')}}
-                @confirmButtonText='Revoke token'
+                @confirmButtonText='Revoke'
                 />
             </li>
           {{else}}
@@ -48,7 +48,7 @@
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
                 @triggerText={{concat "Revoke " (get auth 'authData.displayName')}}
-                @confirmButtonText='Revoke token'
+                @confirmButtonText='Revoke'
                 />
             </li>
           {{/if}}
