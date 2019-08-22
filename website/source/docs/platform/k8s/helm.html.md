@@ -72,7 +72,7 @@ and consider if they're appropriate for your deployment.
 
   * `image` (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
 
-  * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such was the `VAULT_ADDR` environment variable on the Vault pods).
+  * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
 * `server` - Values that configure running a Vault server within Kubernetes.
 
@@ -131,7 +131,7 @@ and consider if they're appropriate for your deployment.
       unless `path` is configured.
       
       - `path` (`string: /vault/userconfigs`) -
-      Name of the path where a configMap or secret are mounted.  If none specified 
+      Name of the path where a configMap or secret is mounted.  If not specified 
       the volume will be mounted to `/vault/userconfig/<name of volume>`.
 
         ```yaml
