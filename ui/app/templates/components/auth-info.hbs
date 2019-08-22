@@ -36,7 +36,9 @@
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
-                @triggerText={{concat "Revoke " (get auth 'authData.displayName')}}/>
+                @triggerText={{concat "Revoke " (get auth 'authData.displayName')}}
+                @confirmButtonText='Revoke token'
+                />
             </li>
           {{else}}
             <li class="action text-right">
@@ -45,7 +47,9 @@
                 @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
                 @onConfirm={{action "revokeToken"}}
                 @message="You will not be able to log in again with this token."
-                @triggerText={{concat "Revoke " (get auth 'authData.displayName')}} />
+                @triggerText={{concat "Revoke " (get auth 'authData.displayName')}}
+                @confirmButtonText='Revoke token'
+                />
             </li>
           {{/if}}
         {{/if}}
