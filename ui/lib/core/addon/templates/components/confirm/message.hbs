@@ -1,4 +1,4 @@
-
+{{#if showConfirm}}
   {{#maybe-in-element wormholeReference false}}
     <div class="confirm-action-message">
       <div class="message is-highlight">
@@ -30,12 +30,13 @@
       </div>
     </div>
   {{/maybe-in-element}}
+{{/if}}
 
-  <button
-    type="button"
-    class="link is-destroy"
-    disabled={{showConfirm}}
-    onclick={{action this.onTrigger id}}
-    data-test-confirm-action-trigger={{id}}>
-    {{triggerText}}
-  </button>
+<button
+  type="button"
+  class="link is-destroy"
+  disabled={{showConfirm}}
+  onclick={{action this.onTrigger id}}
+  data-test-confirm-action-trigger={{id}}>
+  {{triggerText}}
+</button>
