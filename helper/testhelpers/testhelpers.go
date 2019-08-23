@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"sync"
 	"sync/atomic"
 	"time"
 
