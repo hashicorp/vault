@@ -3,14 +3,19 @@ import { setupTest } from 'ember-qunit';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import apiPath from 'vault/utils/api-path';
 import { get } from '@ember/object';
+import DS from 'ember-data';
 
 let MODEL_TYPE = 'test-form-model';
+
+let makeModelClass = () => {
+  return DS.Model.extend();
+};
 
 module('Unit | lib | attach capabilities', function(hooks) {
   setupTest(hooks);
 
   test('it attaches passed capabilities', function(assert) {
-    let mc = this.owner.lookup('service:store').modelFor(MODEL_TYPE);
+    let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
@@ -28,7 +33,7 @@ module('Unit | lib | attach capabilities', function(hooks) {
   });
 
   test('it adds a static method to the model class', function(assert) {
-    let mc = this.owner.lookup('service:store').modelFor(MODEL_TYPE);
+    let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
@@ -40,7 +45,7 @@ module('Unit | lib | attach capabilities', function(hooks) {
   });
 
   test('calling static method with single response JSON-API document adds expected relationships', function(assert) {
-    let mc = this.owner.lookup('service:store').modelFor(MODEL_TYPE);
+    let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/${'id'}`,
       deletePath: apiPath`delete/${'id'}`,
@@ -89,7 +94,7 @@ module('Unit | lib | attach capabilities', function(hooks) {
   });
 
   test('calling static method with an arrary response JSON-API document adds expected relationships', function(assert) {
-    let mc = this.owner.lookup('service:store').modelFor(MODEL_TYPE);
+    let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/${'id'}`,
       deletePath: apiPath`delete/${'id'}`,
