@@ -5,6 +5,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"sync/atomic"
+	"time"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -13,11 +19,6 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/common/auth"
 	"github.com/oracle/oci-go-sdk/keymanagement"
-	"math"
-	"os"
-	"strconv"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -37,12 +38,6 @@ const (
 	KMSConfigManagementEndpoint = "managementEndpoint"
 	// authTypeAPIKey config
 	KMSConfigAuthTypeAPIKey = "authTypeAPIKey"
-)
-
-const (
-	// OCIKMSEnvelopeAESGCMEncrypt is when a data encryption key is generated and
-	// the data is encrypted with AESGCM and the key is encrypted with KMS
-	OCIKMSEnvelopeAESGCMEncrypt = iota
 )
 
 var (
@@ -186,15 +181,14 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
 		}
+		k.managementClient = kmsManagementClient
 
-		keyVersion, err := k.getCurrentKeyVersion(kmsManagementClient)
+		keyVersion, err := k.getCurrentKeyVersion()
 		if err != nil {
 			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
 		}
 		k.currentKeyID.Store(keyVersion)
-
-		k.managementClient = kmsManagementClient
 	}
 
 	// Map that holds non-sensitive configuration info
@@ -260,7 +254,9 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
 
-	keyVersion, err := k.getCurrentKeyVersion(k.managementClient)
+	// Note: It is potential a timing issue if the key gets rotated between this
+	// getCurrentKeyVersion operation and above Encrypt operation
+	keyVersion, err := k.getCurrentKeyVersion()
 	if err != nil {
 		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, errwrap.Wrapf("error getting current key version: {{err}}", err)
@@ -272,7 +268,6 @@ func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.E
 		Ciphertext: env.Ciphertext,
 		IV:         env.IV,
 		KeyInfo: &physical.SealKeyInfo{
-			Mechanism: OCIKMSEnvelopeAESGCMEncrypt,
 			// Storing current key version in case we want to re-wrap older entries
 			KeyID:      keyVersion,
 			WrappedKey: []byte(*output.Ciphertext),
@@ -290,40 +285,34 @@ func (k *OCIKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo
 	}
 
 	requestMetadata := k.getRequestMetadata()
-	var plaintext []byte
-	switch in.KeyInfo.Mechanism {
-	case OCIKMSEnvelopeAESGCMEncrypt:
-		cipherTextBlob := string(in.KeyInfo.WrappedKey)
-		decryptedDataDetails := keymanagement.DecryptDataDetails{
-			KeyId:      &k.keyID,
-			Ciphertext: &cipherTextBlob,
-		}
-		input := keymanagement.DecryptRequest{
-			DecryptDataDetails: decryptedDataDetails,
-			RequestMetadata:    requestMetadata,
-		}
-		output, err := k.cryptoClient.Decrypt(ctx, input)
-		if err != nil {
-			metrics.IncrCounter(metricDecryptFailed, 1)
-			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
-		}
-		envelopKey, err := base64.StdEncoding.DecodeString(*output.Plaintext)
-		if err != nil {
-			metrics.IncrCounter(metricDecryptFailed, 1)
-			return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
-		}
+	cipherTextBlob := string(in.KeyInfo.WrappedKey)
+	decryptedDataDetails := keymanagement.DecryptDataDetails{
+		KeyId:      &k.keyID,
+		Ciphertext: &cipherTextBlob,
+	}
+	input := keymanagement.DecryptRequest{
+		DecryptDataDetails: decryptedDataDetails,
+		RequestMetadata:    requestMetadata,
+	}
+	output, err := k.cryptoClient.Decrypt(ctx, input)
+	if err != nil {
+		metrics.IncrCounter(metricDecryptFailed, 1)
+		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+	}
+	envelopKey, err := base64.StdEncoding.DecodeString(*output.Plaintext)
+	if err != nil {
+		metrics.IncrCounter(metricDecryptFailed, 1)
+		return nil, errwrap.Wrapf("error base64 decrypting data: {{err}}", err)
+	}
+	envInfo := &seal.EnvelopeInfo{
+		Key:        envelopKey,
+		IV:         in.IV,
+		Ciphertext: in.Ciphertext,
+	}
 
-		envInfo := &seal.EnvelopeInfo{
-			Key:        envelopKey,
-			IV:         in.IV,
-			Ciphertext: in.Ciphertext,
-		}
-		plaintext, err = seal.NewEnvelope().Decrypt(envInfo)
-		if err != nil {
-			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
-		}
-	default:
-		return nil, fmt.Errorf("invalid mechanism: %d", in.KeyInfo.Mechanism)
+	plaintext, err := seal.NewEnvelope().Decrypt(envInfo)
+	if err != nil {
+		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
 	}
 
 	return plaintext, nil
@@ -399,13 +388,16 @@ func getExponentialBackoffRetryPolicy(n uint, fn func(r common.OCIOperationRespo
 	return &policy
 }
 
-func (k *OCIKMSSeal) getCurrentKeyVersion(managementClient *keymanagement.KmsManagementClient) (string, error) {
+func (k *OCIKMSSeal) getCurrentKeyVersion() (string, error) {
+	if k.managementClient == nil {
+		return "", fmt.Errorf("managementClient has not yet initialized")
+	}
 	requestMetadata := k.getRequestMetadata()
 	getKeyInput := keymanagement.GetKeyRequest{
 		KeyId:           &k.keyID,
 		RequestMetadata: requestMetadata,
 	}
-	getKeyResponse, err := managementClient.GetKey(context.Background(), getKeyInput)
+	getKeyResponse, err := k.managementClient.GetKey(context.Background(), getKeyInput)
 	if err != nil || getKeyResponse.CurrentKeyVersion == nil {
 		return "", errwrap.Wrapf("failed getting current key version: {{err}}", err)
 	}
