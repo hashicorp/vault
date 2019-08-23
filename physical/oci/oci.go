@@ -374,7 +374,5 @@ func (o *Backend) logRequest(operation string, response *http.Response, clientOp
 		operation, clientOpcRequestId, opcRequestId, statusCodeStr)
 	if err != nil && statusCode/100 == 5 {
 		o.logger.Error(logLine, "error", err)
-	} else {
-		o.logger.Debug(logLine)
 	}
 }
