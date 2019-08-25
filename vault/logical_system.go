@@ -3427,6 +3427,15 @@ This path responds to the following HTTP methods.
         Initializes a new vault.
 		`,
 	},
+	"health": {
+		"Checks the health status of the Vault.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /
+		Returns health information about the Vault.
+		`,
+	},
 	"generate-root": {
 		"Reads, generates, or deletes a root token regeneration process.",
 		`
