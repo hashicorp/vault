@@ -326,6 +326,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d80111
 github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115/go.mod h1:sRhTnkcbjJgPeES0ddCTq8S2waSakyMiWLUwO5J/Wjk=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce h1:X8umWdCqSVk/75ZjEBDxYL+V8i+jK3KbJbFoyOryCww=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce/go.mod h1:WstOCHERNbk2dblnY5MV9Qeh/hzTSQpVs5xPuyAzlBo=
+github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee h1:gJG1PJGiqi+0M0HTYlwDyV5CyetLhFl9DxyMJre5H9Y=
+github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee/go.mod h1:zOag32+pm1R4FFNhXMLP506Oesjoai3gHEEpxqUaTr0=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1 h1:8DR00s+Wmc21i3sfzvsqW88VMdf6NI2ue+onGoHshww=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102 h1:RTHVdxCDwxTq/4zZFkV+b8zexkSU5EOXkY2D/kAvyFU=
@@ -334,8 +336,6 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835 
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835/go.mod h1:Ti2NPndKhSGpSL6gWg11n7TkmuI7318BIPeojayIVRU=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190814210103-f64f0cb4d8cf h1:JnBSA5CnZps9JEX9RJZAdJ5tUVogWMIvVvatNmzGe38=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190814210103-f64f0cb4d8cf/go.mod h1:qkrONCr71ckSCTItJQ1j9uet/faieZJ5c7+GZugTm7s=
-github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190814210109-476d6beb6ec0 h1:d12XATwgTmHBAF5LLnpv4dSl3bEXjAU9Ahtf9gKDDFg=
-github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190814210109-476d6beb6ec0/go.mod h1:d4nD8sbyQmb1XspLqkZkJzqmrdA2CoaFFRTRd3jHu0s=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93 h1:kXTV1ImOPgDGZxAlbEQfiXgnZY/34vfgnZVhI/tscmg=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93/go.mod h1:N9XpfMXjeLHBgUd8iy4avOC4mCSqUC7B/R8AtCYhcfE=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250 h1:+mm2cM5msg/USImbvnMS2yzCMBYMCO3CrvsATWGtHtY=

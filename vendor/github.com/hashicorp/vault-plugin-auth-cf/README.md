@@ -1,21 +1,21 @@
-# vault-plugin-auth-pcf
+# vault-plugin-auth-cf
 
-This plugin leverages PCF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation)
+This plugin leverages Cloud Foundry's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation)
 for authenticating to Vault. 
 
 ## Official Documentation
 
 This plugin's docs reside in the following places:
 
-- [Overview](https://www.vaultproject.io/docs/auth/pcf.html)
-- [API](https://www.vaultproject.io/api/auth/pcf/index.html)
+- [Overview](https://www.vaultproject.io/docs/auth/cf.html)
+- [API](https://www.vaultproject.io/api/auth/cf/index.html)
 
 The documentation below is intended to further elaborate, and is targeted at those developing, using,
 troubleshooting, and maintaining this plugin.
 
 ## Known Risks
 
-This authentication engine uses PCF's instance identity service to authenticate users to Vault. Because PCF
+This authentication engine uses Cloud Foundry's instance identity service to authenticate users to Vault. Because Cloud Foundry
 makes its CA certificate and **private key** available to certain users at any time, it's possible for someone
 with access to them to self-issue identity certificates that meet the criteria for a Vault role, allowing
 them to gain unintended access to Vault.
@@ -30,12 +30,12 @@ or through carefully limiting the users who can access CredHub.
 ## Getting Started
 
 The following guide provides instructions on how obtain the necessary credentials and certificates in order 
-to set up the PCF auth method. The sample PCF endpoints uses `*.lagunaniguel.cf-app.com` which should be
+to set up the Cloud Foundry auth method. The sample Cloud Foundry endpoints uses `*.lagunaniguel.cf-app.com` which should be
 replaced with the appropriate endpoints for your environment.
 
 ### Obtaining Your Instance Identity CA Certificate
 
-In most versions of PCF, instance identity is enabled out-of-the-box. Check by pulling your CA certificate,
+In most versions of Cloud Foundry, instance identity is enabled out-of-the-box. Check by pulling your CA certificate,
 which you'll need to configure this auth engine. There are undoubtedly multiple ways to do this, but this
 is how we did it.
 
@@ -278,33 +278,33 @@ openssl s_client -showcerts -connect pcf.lagunaniguel.cf-app.com:443
 
 You'll see a certificate outputted as part of the response, which should be broken
 out into a separate well-formatted file like the `ca.crt` above, and used for the
-`pcf_api_trusted_certificates` field.
+`cf_api_trusted_certificates` field.
 
 ## Downloading the Plugin
 
-- `$ git clone git@github.com:hashicorp/vault-plugin-auth-pcf.git`
-- `$ cd vault-plugin-auth-pcf`
-- `$ PCF_HOME=$(pwd)`
+- `$ git clone git@github.com:hashicorp/vault-plugin-auth-cf.git`
+- `$ cd vault-plugin-auth-cf`
+- `$ CF_HOME=$(pwd)`
 
 ## Sample Usage
 
 Please note that this example uses `generate-signature`, a tool installed through `$ make tools`.
 
-First, enable the PCF auth engine.
+First, enable the CF auth engine.
 ```
-$ vault auth enable pcf
+$ vault auth enable cf
 ```
 
 Next, configure the plugin. In the `config` call below, `certificates` is intended to be the instance
 identity CA certificate you pulled above.
 
 ```
-$ vault write auth/pcf/config \
+$ vault write auth/cf/config \
       identity_ca_certificates=@ca.crt \
-      pcf_api_addr=https://api.sys.lagunaniguel.cf-app.com \
-      pcf_username=vault \
-      pcf_password=pa55word \
-      pcf_api_trusted_certificates=@pcfapi.crt
+      cf_api_addr=https://api.sys.lagunaniguel.cf-app.com \
+      cf_username=vault \
+      cf_password=pa55word \
+      cf_api_trusted_certificates=@cfapi.crt
 ```
 
 Then, add a role that will be used to grant specific Vault policies to those logging in with it. When a constraint like
@@ -325,7 +325,7 @@ $ openssl crl2pkcs7 -nocrl -certfile instance.crt | openssl pkcs7 -print_certs -
 Also, by default, the IP address on the certificate presented at login must match that of the caller. However, if
 your callers tend to be proxied, this may not work for you. If that's the case, set `disable_ip_matching` to true.
 ```
-$ vault write auth/pcf/roles/test-role \
+$ vault write auth/cf/roles/test-role \
     bound_application_ids=2d3e834a-3a25-4591-974c-fa5626d5d0a1 \
     bound_space_ids=3d2eba6b-ef19-44d5-91dd-1975b0db5cc9 \
     bound_organization_ids=34a878d0-c2f9-4521-ba73-a9f664e82c7bf \
@@ -335,14 +335,14 @@ $ vault write auth/pcf/roles/test-role \
 Logging in is intended to be performed using your `CF_INSTANCE_CERT` and `CF_INSTANCE_KEY`. This is an example of how
 it can be done.
 ```
-$ export CF_INSTANCE_CERT=$PCF_HOME/testdata/fake-certificates/instance.crt
-$ export CF_INSTANCE_KEY=$PCF_HOME/testdata/fake-certificates/instance.key
-$ vault login -method=pcf role=test-role
+$ export CF_INSTANCE_CERT=$CF_HOME/testdata/fake-certificates/instance.crt
+$ export CF_INSTANCE_KEY=$CF_HOME/testdata/fake-certificates/instance.key
+$ vault login -method=cf role=test-role
 ```
 
 ### Updating the CA Certificate
 
-In PCF, most CA certificates expire after 4 years. However, it's possible to configure your own CA certificate for the
+In Cloud Foundry, most CA certificates expire after 4 years. However, it's possible to configure your own CA certificate for the
 instance identity service, and its expiration date could vary. Either way, sometimes CA certificates expire and it may
 be necessary to have multiple configured so the beginning date of once commences when another expires.
 
@@ -350,7 +350,7 @@ To configure multiple certificates, simply update the config to include the curr
 ```
 $ CURRENT=$(cat /path/to/current-ca.crt)
 $ FUTURE=$(cat /path/to/future-ca.crt)
-$ vault write auth/vault-plugin-auth-pcf/config certificates="$CURRENT,$FUTURE"
+$ vault write auth/vault-plugin-auth-cf/config certificates="$CURRENT,$FUTURE"
 ```
 
 All other configured values will remain untouched; however, the previous value for `certificates` will be overwritten
@@ -362,20 +362,20 @@ login will succeed.
 
 ## Troubleshooting
 
-### Obtaining a Certificate Error from the PCF API
+### Obtaining a Certificate Error from the CF API
 
 When configuring this plugin, you may encounter an error like:
 ```
-Error writing data to auth/pcf/config: Error making API request.
+Error writing data to auth/cf/config: Error making API request.
 
-URL: PUT http://127.0.0.1:8200/v1/auth/pcf/config
+URL: PUT http://127.0.0.1:8200/v1/auth/cf/config
 Code: 500. Errors:
 
 * 1 error occurred:
-	* unable to establish an initial connection to the PCF API: Could not get api /v2/info: Get https://api.sys.lagunaniguel.cf-app.com/v2/info: x509: certificate signed by unknown authority
+	* unable to establish an initial connection to the CF API: Could not get api /v2/info: Get https://api.sys.lagunaniguel.cf-app.com/v2/info: x509: certificate signed by unknown authority
 ```
 
-To resolve this error, review instructions above regarding setting the `pcf_api_trusted_certificates` field.
+To resolve this error, review instructions above regarding setting the `cf_api_trusted_certificates` field.
 
 ### verify-certs
 
@@ -388,7 +388,7 @@ verify-certs -ca-cert=local/path/to/ca.crt -instance-cert=local/path/to/instance
 ```
 The `ca-cert` should be the cert that was used to issue the given client certificate.
 
-The `instance-cert` given should be the value for the `CF_INSTANCE_CERT` variable in the PCF environment you're
+The `instance-cert` given should be the value for the `CF_INSTANCE_CERT` variable in the Cloud Foundry environment you're
 using, and the `instance-key` should be the value for the `CF_INSTANCE_KEY`.
 
 The tool does take the _local path to_ these certificates, so you'll need to gather them and place them on your
@@ -396,7 +396,7 @@ local machine to verify they all will work together.
 
 ### generate-signature
 
-This tool, installed by `make tools`, is for generating a valid signature to be used for signing into Vault via PCF. 
+This tool, installed by `make tools`, is for generating a valid signature to be used for signing into Vault via Cloud Foundry. 
 
 It can be used as a standalone tool for generating a signature like so:
 ```
@@ -414,25 +414,25 @@ export CF_INSTANCE_KEY=path/to/instance.key
 export SIGNING_TIME=$(date -u)
 export ROLE='test-role'
 
-vault write auth/vault-plugin-auth-pcf/login \
+vault write auth/vault-plugin-auth-cf/login \
     role=$ROLE \
     certificate=$CF_INSTANCE_CERT \
     signing-time=SIGNING_TIME \
     signature=$(generate-signature)
 ```
-If the tool is being run in a PCF environment already containing the `CF_INSTANCE_CERT` and `CF_INSTANCE_KEY`, those
+If the tool is being run in a Cloud Foundry environment already containing the `CF_INSTANCE_CERT` and `CF_INSTANCE_KEY`, those
 variables obviously won't need to be manually set before the tool is used and can just be pulled as they are.
 
 ## Developing
 
-### mock-pcf-server
+### mock-cf-server
 
-This tool, installed by `make tools`, is for use in development. It lets you run a mocked PCF server for use in local 
-testing, with output that can be used as the `pcf_api_addr`, `pcf_username`, and `pcf_password` in your config.
+This tool, installed by `make tools`, is for use in development. It lets you run a mocked Cloud Foundry server for use in local 
+testing, with output that can be used as the `cf_api_addr`, `cf_username`, and `cf_password` in your config.
 
 Example use:
 ```
-$ mock-pcf-server
+$ mock-cf-server
 running at http://127.0.0.1:33671
 username is username
 password is password
@@ -520,7 +520,7 @@ This signature should be placed in the `signature` field of login requests.
 
 If you implement the algorithm above and still encounter errors logging in,
 it may help to generate test certificates using the `make-test-certs` tool.
-These certificates are accurate enough mocks of real PCF certificates, and 
+These certificates are accurate enough mocks of real Cloud Foundry certificates, and 
 are used for testing. Using this tool to generate your test certificates will
 rule out any error with the certificates you may have created yourself.
 
@@ -537,7 +537,7 @@ path to key to use as CF_INSTANCE_KEY: /tmp/5c08f79d-b2a5-c211-2862-00fe0a3b647d
 - [Java](https://github.com/tyrannosaurus-becks/vault-tools-auth-pcf)
 - Python:
 ```
-## PCF signature creation example in Python using the [Cryptography](https://cryptography.io) library
+## CF signature creation example in Python using the [Cryptography](https://cryptography.io) library
 import base64
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -576,25 +576,25 @@ make dev
 make tools
 
 # In one shell window, run Vault with the plugin available in the catalog.
-vault server -dev -dev-root-token-id=root -dev-plugin-dir=$PCF_HOME/bin -log-level=debug
+vault server -dev -dev-root-token-id=root -dev-plugin-dir=$CF_HOME/bin -log-level=debug
 
-# In another shell window, run a mock of the PCF API so the plugin's client calls won't fail.
-mock-pcf-server
+# In another shell window, run a mock of the CF API so the plugin's client calls won't fail.
+mock-cf-server
 
 # In another shell window, execute the following commands to exercise each endpoint.
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=root
-export MOCK_PCF_SERVER_ADDR='something' # ex. http://127.0.0.1:32937
+export MOCK_CF_SERVER_ADDR='something' # ex. http://127.0.0.1:32937
 
-vault auth enable vault-plugin-auth-pcf
+vault auth enable vault-plugin-auth-cf
 
-vault write auth/vault-plugin-auth-pcf/config \
-    certificates=@$PCF_HOME/testdata/fake-certificates/ca.crt \
-    pcf_api_addr=$MOCK_PCF_SERVER_ADDR \
-    pcf_username=username \
-    pcf_password=password
+vault write auth/vault-plugin-auth-cf/config \
+    certificates=@$CF_HOME/testdata/fake-certificates/ca.crt \
+    cf_api_addr=$MOCK_CF_SERVER_ADDR \
+    cf_username=username \
+    cf_password=password
     
-vault write auth/vault-plugin-auth-pcf/roles/test-role \
+vault write auth/vault-plugin-auth-cf/roles/test-role \
     bound_application_ids=2d3e834a-3a25-4591-974c-fa5626d5d0a1 \
     bound_space_ids=3d2eba6b-ef19-44d5-91dd-1975b0db5cc9 \
     bound_organization_ids=34a878d0-c2f9-4521-ba73-a9f664e82c7bf \
@@ -605,11 +605,11 @@ vault write auth/vault-plugin-auth-pcf/roles/test-role \
     max_ttl=86400s \
     period=86400s
     
-export CF_INSTANCE_CERT=$PCF_HOME/testdata/fake-certificates/instance.crt
-export CF_INSTANCE_KEY=$PCF_HOME/testdata/fake-certificates/instance.key
+export CF_INSTANCE_CERT=$CF_HOME/testdata/fake-certificates/instance.crt
+export CF_INSTANCE_KEY=$CF_HOME/testdata/fake-certificates/instance.key
 export SIGNING_TIME=$(date -u)
 export ROLE='test-role'
-vault write auth/vault-plugin-auth-pcf/login \
+vault write auth/vault-plugin-auth-cf/login \
     role=$ROLE \
     certificate=@$CF_INSTANCE_CERT \
     signing_time="$SIGNING_TIME" \
@@ -617,7 +617,7 @@ vault write auth/vault-plugin-auth-pcf/login \
     
 vault token renew <token>
 
-CURRENT=$(cat $PCF_HOME/testdata/fake-certificates/ca.crt)
-FUTURE=$(cat $PCF_HOME/testdata/fake-certificates/ca.crt)
-vault write auth/vault-plugin-auth-pcf/config certificates="$CURRENT,$FUTURE"
+CURRENT=$(cat $CF_HOME/testdata/fake-certificates/ca.crt)
+FUTURE=$(cat $CF_HOME/testdata/fake-certificates/ca.crt)
+vault write auth/vault-plugin-auth-cf/config certificates="$CURRENT,$FUTURE"
 ```

@@ -1,4 +1,4 @@
-package pcf
+package cf
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 const (
 	// These env vars are used frequently to pull the client certificate and private key
-	// from PCF containers; thus are placed here for ease of discovery and use from
+	// from CF containers; thus are placed here for ease of discovery and use from
 	// outside packages.
 	EnvVarInstanceCertificate = "CF_INSTANCE_CERT"
 	EnvVarInstanceKey         = "CF_INSTANCE_KEY"
@@ -43,7 +43,7 @@ type backend struct {
 }
 
 const backendHelp = `
-The PCF auth backend supports logging in using PCF's identity service.
+The CF auth backend supports logging in using CF's identity service.
 Once a CA certificate is configured, and Vault is configured to consume
-PCF's API, PCF's instance identity credentials can be used to authenticate.'
+CF's API, CF's instance identity credentials can be used to authenticate.'
 `

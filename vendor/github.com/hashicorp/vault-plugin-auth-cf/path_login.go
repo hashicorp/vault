@@ -1,4 +1,4 @@
-package pcf
+package cf
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-auth-pcf/models"
-	"github.com/hashicorp/vault-plugin-auth-pcf/signatures"
-	"github.com/hashicorp/vault-plugin-auth-pcf/util"
+	"github.com/hashicorp/vault-plugin-auth-cf/models"
+	"github.com/hashicorp/vault-plugin-auth-cf/signatures"
+	"github.com/hashicorp/vault-plugin-auth-cf/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -36,7 +36,7 @@ func (b *backend) pathLogin() *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "CF_INSTANCE_CERT Contents",
 				},
-				Description: "The full body of the file available at the CF_INSTANCE_CERT path on the PCF instance.",
+				Description: "The full body of the file available at the CF_INSTANCE_CERT path on the CF instance.",
 			},
 			"signing_time": {
 				Required: true,
@@ -80,7 +80,7 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("'role-name' is required"), nil
 	}
 
-	// Ensure the pcf certificate meets the role's constraints.
+	// Ensure the cf certificate meets the role's constraints.
 	role, err := getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
@@ -157,8 +157,8 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Read PCF's identity fields from the certificate.
-	pcfCert, err := models.NewPCFCertificateFromx509(signingCert)
+	// Read CF's identity fields from the certificate.
+	cfCert, err := models.NewCFCertificateFromx509(signingCert)
 	if err != nil {
 		return nil, err
 	}
@@ -167,10 +167,10 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 	// in an un-encoded format, as opposed to the encoded format that will appear in the Vault
 	// audit logs.
 	if b.Logger().IsDebug() {
-		b.Logger().Debug(fmt.Sprintf("handling login attempt from %+v", pcfCert))
+		b.Logger().Debug(fmt.Sprintf("handling login attempt from %+v", cfCert))
 	}
 
-	if err := b.validate(config, role, pcfCert, req.Connection.RemoteAddr); err != nil {
+	if err := b.validate(config, role, cfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -178,16 +178,16 @@ func (b *backend) operationLoginUpdate(ctx context.Context, req *logical.Request
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{
 			"role":        roleName,
-			"instance_id": pcfCert.InstanceID,
-			"ip_address":  pcfCert.IPAddress,
+			"instance_id": cfCert.InstanceID,
+			"ip_address":  cfCert.IPAddress,
 		},
-		DisplayName: pcfCert.InstanceID,
+		DisplayName: cfCert.InstanceID,
 		Alias: &logical.Alias{
-			Name: pcfCert.AppID,
+			Name: cfCert.AppID,
 			Metadata: map[string]string{
-				"org_id":   pcfCert.OrgID,
-				"app_id":   pcfCert.AppID,
-				"space_id": pcfCert.SpaceID,
+				"org_id":   cfCert.OrgID,
+				"app_id":   cfCert.AppID,
+				"space_id": cfCert.SpaceID,
 			},
 		},
 	}
@@ -205,7 +205,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 	if config == nil {
-		return nil, errors.New("no configuration is available for reaching the PCF API")
+		return nil, errors.New("no configuration is available for reaching the CF API")
 	}
 
 	roleName, err := getOrErr("role", req.Auth.InternalData)
@@ -247,8 +247,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	}
 
 	// Reconstruct the certificate and ensure it still meets all constraints.
-	pcfCert, err := models.NewPCFCertificate(instanceID, orgID, spaceID, appID, ipAddr)
-	if err := b.validate(config, role, pcfCert, req.Connection.RemoteAddr); err != nil {
+	cfCert, err := models.NewCFCertificate(instanceID, orgID, spaceID, appID, ipAddr)
+	if err := b.validate(config, role, cfCert, req.Connection.RemoteAddr); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -259,67 +259,67 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	return resp, nil
 }
 
-func (b *backend) validate(config *models.Configuration, role *models.RoleEntry, pcfCert *models.PCFCertificate, reqConnRemoteAddr string) error {
+func (b *backend) validate(config *models.Configuration, role *models.RoleEntry, cfCert *models.CFCertificate, reqConnRemoteAddr string) error {
 	if !role.DisableIPMatching {
-		if !matchesIPAddress(reqConnRemoteAddr, net.ParseIP(pcfCert.IPAddress)) {
+		if !matchesIPAddress(reqConnRemoteAddr, net.ParseIP(cfCert.IPAddress)) {
 			return errors.New("no matching IP address")
 		}
 	}
-	if !meetsBoundConstraints(pcfCert.InstanceID, role.BoundInstanceIDs) {
-		return fmt.Errorf("instance ID %s doesn't match role constraints of %s", pcfCert.InstanceID, role.BoundInstanceIDs)
+	if !meetsBoundConstraints(cfCert.InstanceID, role.BoundInstanceIDs) {
+		return fmt.Errorf("instance ID %s doesn't match role constraints of %s", cfCert.InstanceID, role.BoundInstanceIDs)
 	}
-	if !meetsBoundConstraints(pcfCert.AppID, role.BoundAppIDs) {
-		return fmt.Errorf("app ID %s doesn't match role constraints of %s", pcfCert.AppID, role.BoundAppIDs)
+	if !meetsBoundConstraints(cfCert.AppID, role.BoundAppIDs) {
+		return fmt.Errorf("app ID %s doesn't match role constraints of %s", cfCert.AppID, role.BoundAppIDs)
 	}
-	if !meetsBoundConstraints(pcfCert.OrgID, role.BoundOrgIDs) {
-		return fmt.Errorf("org ID %s doesn't match role constraints of %s", pcfCert.OrgID, role.BoundOrgIDs)
+	if !meetsBoundConstraints(cfCert.OrgID, role.BoundOrgIDs) {
+		return fmt.Errorf("org ID %s doesn't match role constraints of %s", cfCert.OrgID, role.BoundOrgIDs)
 	}
-	if !meetsBoundConstraints(pcfCert.SpaceID, role.BoundSpaceIDs) {
-		return fmt.Errorf("space ID %s doesn't match role constraints of %s", pcfCert.SpaceID, role.BoundSpaceIDs)
+	if !meetsBoundConstraints(cfCert.SpaceID, role.BoundSpaceIDs) {
+		return fmt.Errorf("space ID %s doesn't match role constraints of %s", cfCert.SpaceID, role.BoundSpaceIDs)
 	}
-	// Use the PCF API to ensure everything still exists and to verify whatever we can.
-	client, err := util.NewPCFClient(config)
+	// Use the CF API to ensure everything still exists and to verify whatever we can.
+	client, err := util.NewCFClient(config)
 	if err != nil {
 		return err
 	}
 
 	// Here, if it were possible, we _would_ do an API call to check the instance ID,
-	// but currently there's no known way to do that via the pcf API.
+	// but currently there's no known way to do that via the cf API.
 
 	// Check everything we can using the app ID.
-	app, err := client.AppByGuid(pcfCert.AppID)
+	app, err := client.AppByGuid(cfCert.AppID)
 	if err != nil {
 		return err
 	}
-	if app.Guid != pcfCert.AppID {
-		return fmt.Errorf("cert app ID %s doesn't match API's expected one of %s", pcfCert.AppID, app.Guid)
+	if app.Guid != cfCert.AppID {
+		return fmt.Errorf("cert app ID %s doesn't match API's expected one of %s", cfCert.AppID, app.Guid)
 	}
-	if app.SpaceGuid != pcfCert.SpaceID {
-		return fmt.Errorf("cert space ID %s doesn't match API's expected one of %s", pcfCert.SpaceID, app.SpaceGuid)
+	if app.SpaceGuid != cfCert.SpaceID {
+		return fmt.Errorf("cert space ID %s doesn't match API's expected one of %s", cfCert.SpaceID, app.SpaceGuid)
 	}
 	if app.Instances <= 0 {
 		return errors.New("app doesn't have any live instances")
 	}
 
 	// Check everything we can using the org ID.
-	org, err := client.GetOrgByGuid(pcfCert.OrgID)
+	org, err := client.GetOrgByGuid(cfCert.OrgID)
 	if err != nil {
 		return err
 	}
-	if org.Guid != pcfCert.OrgID {
-		return fmt.Errorf("cert org ID %s doesn't match API's expected one of %s", pcfCert.OrgID, org.Guid)
+	if org.Guid != cfCert.OrgID {
+		return fmt.Errorf("cert org ID %s doesn't match API's expected one of %s", cfCert.OrgID, org.Guid)
 	}
 
 	// Check everything we can using the space ID.
-	space, err := client.GetSpaceByGuid(pcfCert.SpaceID)
+	space, err := client.GetSpaceByGuid(cfCert.SpaceID)
 	if err != nil {
 		return err
 	}
-	if space.Guid != pcfCert.SpaceID {
-		return fmt.Errorf("cert space ID %s doesn't match API's expected one of %s", pcfCert.SpaceID, space.Guid)
+	if space.Guid != cfCert.SpaceID {
+		return fmt.Errorf("cert space ID %s doesn't match API's expected one of %s", cfCert.SpaceID, space.Guid)
 	}
-	if space.OrganizationGuid != pcfCert.OrgID {
-		return fmt.Errorf("cert org ID %s doesn't match API's expected one of %s", pcfCert.OrgID, space.OrganizationGuid)
+	if space.OrganizationGuid != cfCert.OrgID {
+		return fmt.Errorf("cert org ID %s doesn't match API's expected one of %s", cfCert.OrgID, space.OrganizationGuid)
 	}
 	return nil
 }
@@ -386,7 +386,7 @@ Authenticates an entity with Vault.
 `
 
 const pathLoginDesc = `
-Authenticate PCF entities using a client certificate issued by the 
+Authenticate CF entities using a client certificate issued by the 
 configured Certificate Authority, and signed by a client key belonging
 to the client certificate.
 `

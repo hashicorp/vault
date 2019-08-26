@@ -8,14 +8,14 @@ import (
 	"strings"
 )
 
-// NewPCFCertificateFromx509 converts a x509 certificate to a valid, well-formed PCF certificate,
+// NewCFCertificateFromx509 converts a x509 certificate to a valid, well-formed CF certificate,
 // erroring if this isn't possible.
-func NewPCFCertificateFromx509(certificate *x509.Certificate) (*PCFCertificate, error) {
+func NewCFCertificateFromx509(certificate *x509.Certificate) (*CFCertificate, error) {
 	if len(certificate.IPAddresses) != 1 {
-		return nil, fmt.Errorf("valid PCF certs have one IP address, but this has %s", certificate.IPAddresses)
+		return nil, fmt.Errorf("valid CF certs have one IP address, but this has %s", certificate.IPAddresses)
 	}
 
-	pcfCert := &PCFCertificate{
+	cfCert := &CFCertificate{
 		InstanceID: certificate.Subject.CommonName,
 		IPAddress:  certificate.IPAddresses[0].String(),
 	}
@@ -25,17 +25,17 @@ func NewPCFCertificateFromx509(certificate *x509.Certificate) (*PCFCertificate, 
 	apps := 0
 	for _, ou := range certificate.Subject.OrganizationalUnit {
 		if strings.HasPrefix(ou, "space:") {
-			pcfCert.SpaceID = strings.Split(ou, "space:")[1]
+			cfCert.SpaceID = strings.Split(ou, "space:")[1]
 			spaces++
 			continue
 		}
 		if strings.HasPrefix(ou, "organization:") {
-			pcfCert.OrgID = strings.Split(ou, "organization:")[1]
+			cfCert.OrgID = strings.Split(ou, "organization:")[1]
 			orgs++
 			continue
 		}
 		if strings.HasPrefix(ou, "app:") {
-			pcfCert.AppID = strings.Split(ou, "app:")[1]
+			cfCert.AppID = strings.Split(ou, "app:")[1]
 			apps++
 			continue
 		}
@@ -49,35 +49,35 @@ func NewPCFCertificateFromx509(certificate *x509.Certificate) (*PCFCertificate, 
 	if apps > 1 {
 		return nil, fmt.Errorf("expected 1 app but received %d", apps)
 	}
-	if err := pcfCert.validate(); err != nil {
+	if err := cfCert.validate(); err != nil {
 		return nil, err
 	}
-	return pcfCert, nil
+	return cfCert, nil
 }
 
-// NewPCFCertificateFromx509 converts the given fields to a valid, well-formed PCF certificate,
+// NewCFCertificateFromx509 converts the given fields to a valid, well-formed CF certificate,
 // erroring if this isn't possible.
-func NewPCFCertificate(instanceID, orgID, spaceID, appID, ipAddress string) (*PCFCertificate, error) {
-	pcfCert := &PCFCertificate{
+func NewCFCertificate(instanceID, orgID, spaceID, appID, ipAddress string) (*CFCertificate, error) {
+	cfCert := &CFCertificate{
 		InstanceID: instanceID,
 		OrgID:      orgID,
 		SpaceID:    spaceID,
 		AppID:      appID,
 		IPAddress:  ipAddress,
 	}
-	if err := pcfCert.validate(); err != nil {
+	if err := cfCert.validate(); err != nil {
 		return nil, err
 	}
-	return pcfCert, nil
+	return cfCert, nil
 }
 
-// PCFCertificate isn't intended to be instantiated directly; but rather through one of the New
+// CFCertificate isn't intended to be instantiated directly; but rather through one of the New
 // methods, which contain logic validating that the expected fields exist.
-type PCFCertificate struct {
+type CFCertificate struct {
 	InstanceID, OrgID, SpaceID, AppID, IPAddress string
 }
 
-func (c *PCFCertificate) validate() error {
+func (c *CFCertificate) validate() error {
 	if c.InstanceID == "" {
 		return errors.New("no instance ID on given certificate")
 	}

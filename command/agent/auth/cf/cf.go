@@ -1,4 +1,4 @@
-package pcf
+package cf
 
 import (
 	"context"
@@ -8,25 +8,25 @@ import (
 	"os"
 	"time"
 
-	pcf "github.com/hashicorp/vault-plugin-auth-pcf"
-	"github.com/hashicorp/vault-plugin-auth-pcf/signatures"
+	cf "github.com/hashicorp/vault-plugin-auth-cf"
+	"github.com/hashicorp/vault-plugin-auth-cf/signatures"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
 
-type pcfMethod struct {
+type cfMethod struct {
 	mountPath string
 	roleName  string
 }
 
-func NewPCFAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
+func NewCFAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
 		return nil, errors.New("empty config")
 	}
 	if conf.Config == nil {
 		return nil, errors.New("empty config data")
 	}
-	a := &pcfMethod{
+	a := &cfMethod{
 		mountPath: conf.MountPath,
 	}
 	if raw, ok := conf.Config["role"]; ok {
@@ -41,18 +41,18 @@ func NewPCFAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (p *pcfMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
-	pathToClientCert := os.Getenv(pcf.EnvVarInstanceCertificate)
+func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
+	pathToClientCert := os.Getenv(cf.EnvVarInstanceCertificate)
 	if pathToClientCert == "" {
-		return "", nil, fmt.Errorf("missing %q value", pcf.EnvVarInstanceCertificate)
+		return "", nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceCertificate)
 	}
 	certBytes, err := ioutil.ReadFile(pathToClientCert)
 	if err != nil {
 		return "", nil, err
 	}
-	pathToClientKey := os.Getenv(pcf.EnvVarInstanceKey)
+	pathToClientKey := os.Getenv(cf.EnvVarInstanceKey)
 	if pathToClientKey == "" {
-		return "", nil, fmt.Errorf("missing %q value", pcf.EnvVarInstanceKey)
+		return "", nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceKey)
 	}
 	signingTime := time.Now().UTC()
 	signatureData := &signatures.SignatureData{
@@ -73,10 +73,10 @@ func (p *pcfMethod) Authenticate(ctx context.Context, client *api.Client) (strin
 	return fmt.Sprintf("%s/login", p.mountPath), data, nil
 }
 
-func (p *pcfMethod) NewCreds() chan struct{} {
+func (p *cfMethod) NewCreds() chan struct{} {
 	return nil
 }
 
-func (p *pcfMethod) CredSuccess() {}
+func (p *cfMethod) CredSuccess() {}
 
-func (p *pcfMethod) Shutdown() {}
+func (p *cfMethod) Shutdown() {}

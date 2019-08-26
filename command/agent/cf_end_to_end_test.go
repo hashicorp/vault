@@ -9,12 +9,12 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
-	credPCF "github.com/hashicorp/vault-plugin-auth-pcf"
-	"github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates"
-	pcfAPI "github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf"
+	credCF "github.com/hashicorp/vault-plugin-auth-cf"
+	"github.com/hashicorp/vault-plugin-auth-cf/testing/certificates"
+	cfAPI "github.com/hashicorp/vault-plugin-auth-cf/testing/cf"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	agentpcf "github.com/hashicorp/vault/command/agent/auth/pcf"
+	agentcf "github.com/hashicorp/vault/command/agent/auth/cf"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestPCFEndToEnd(t *testing.T) {
+func TestCFEndToEnd(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 
 	coreConfig := &vault.CoreConfig{
@@ -31,7 +31,7 @@ func TestPCFEndToEnd(t *testing.T) {
 		DisableCache: true,
 		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
-			"pcf": credPCF.Factory,
+			"cf": credCF.Factory,
 		},
 	}
 
@@ -45,51 +45,51 @@ func TestPCFEndToEnd(t *testing.T) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
-	if err := client.Sys().EnableAuthWithOptions("pcf", &api.EnableAuthOptions{
-		Type: "pcf",
+	if err := client.Sys().EnableAuthWithOptions("cf", &api.EnableAuthOptions{
+		Type: "cf",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	testIPAddress := "127.0.0.1"
 
-	// Generate some valid certs that look like the ones we get from PCF.
-	testPCFCerts, err := certificates.Generate(pcfAPI.FoundServiceGUID, pcfAPI.FoundOrgGUID, pcfAPI.FoundSpaceGUID, pcfAPI.FoundAppGUID, testIPAddress)
+	// Generate some valid certs that look like the ones we get from CF.
+	testCFCerts, err := certificates.Generate(cfAPI.FoundServiceGUID, cfAPI.FoundOrgGUID, cfAPI.FoundSpaceGUID, cfAPI.FoundAppGUID, testIPAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := testPCFCerts.Close(); err != nil {
+		if err := testCFCerts.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
 	// Start a mock server representing their API.
-	mockPCFAPI := pcfAPI.MockServer(false)
-	defer mockPCFAPI.Close()
+	mockCFAPI := cfAPI.MockServer(false)
+	defer mockCFAPI.Close()
 
-	// Configure a CA certificate like a Vault operator would in setting up PCF.
-	if _, err := client.Logical().Write("auth/pcf/config", map[string]interface{}{
-		"identity_ca_certificates": testPCFCerts.CACertificate,
-		"pcf_api_addr":             mockPCFAPI.URL,
-		"pcf_username":             pcfAPI.AuthUsername,
-		"pcf_password":             pcfAPI.AuthPassword,
+	// Configure a CA certificate like a Vault operator would in setting up CF.
+	if _, err := client.Logical().Write("auth/cf/config", map[string]interface{}{
+		"identity_ca_certificates": testCFCerts.CACertificate,
+		"cf_api_addr":             mockCFAPI.URL,
+		"cf_username":             cfAPI.AuthUsername,
+		"cf_password":             cfAPI.AuthPassword,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	// Configure a role to be used for logging in, another thing a Vault operator would do.
-	if _, err := client.Logical().Write("auth/pcf/roles/test-role", map[string]interface{}{
-		"bound_instance_ids":     pcfAPI.FoundServiceGUID,
-		"bound_organization_ids": pcfAPI.FoundOrgGUID,
-		"bound_space_ids":        pcfAPI.FoundSpaceGUID,
-		"bound_application_ids":  pcfAPI.FoundAppGUID,
+	if _, err := client.Logical().Write("auth/cf/roles/test-role", map[string]interface{}{
+		"bound_instance_ids":     cfAPI.FoundServiceGUID,
+		"bound_organization_ids": cfAPI.FoundOrgGUID,
+		"bound_space_ids":        cfAPI.FoundSpaceGUID,
+		"bound_application_ids":  cfAPI.FoundAppGUID,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	os.Setenv(credPCF.EnvVarInstanceCertificate, testPCFCerts.PathToInstanceCertificate)
-	os.Setenv(credPCF.EnvVarInstanceKey, testPCFCerts.PathToInstanceKey)
+	os.Setenv(credCF.EnvVarInstanceCertificate, testCFCerts.PathToInstanceCertificate)
+	os.Setenv(credCF.EnvVarInstanceKey, testCFCerts.PathToInstanceKey)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	timer := time.AfterFunc(30*time.Second, func() {
@@ -97,8 +97,8 @@ func TestPCFEndToEnd(t *testing.T) {
 	})
 	defer timer.Stop()
 
-	am, err := agentpcf.NewPCFAuthMethod(&auth.AuthConfig{
-		MountPath: "auth/pcf",
+	am, err := agentcf.NewCFAuthMethod(&auth.AuthConfig{
+		MountPath: "auth/cf",
 		Config: map[string]interface{}{
 			"role": "test-role",
 		},
