@@ -17,10 +17,9 @@ func configureOCIKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[
 	}
 	autoseal := vault.NewAutoSeal(kms)
 	if kmsInfo != nil {
-		*infoKeys = append(*infoKeys, "Seal Type", "OCI KMS KeyID", "OCI KMS Crypto Endpoint")
+		*infoKeys = append(*infoKeys, "Seal Type", "OCI KMS KeyID")
 		(*info)["Seal Type"] = configSeal.Type
 		(*info)["OCI KMS KeyID"] = kmsInfo["keyID"]
-		(*info)["OCI KMS Crypto Endpoint"] = kmsInfo["cryptoEndpoint"]
 	}
 	return autoseal, nil
 }

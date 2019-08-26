@@ -146,31 +146,6 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 			metrics.IncrCounter(metricInitFailed, 1)
 			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
 		}
-
-		// KeyID validation by trying to generate a DEK
-		keyLength := 32
-		includePlaintextKey := true
-		generateKeyDetails := keymanagement.GenerateKeyDetails{
-			IncludePlaintextKey: &includePlaintextKey,
-			KeyId:               &k.keyID,
-			KeyShape: &keymanagement.KeyShape{
-				Algorithm: "AES",
-				Length:    &keyLength,
-			},
-		}
-		requestMetadata := k.getRequestMetadata()
-		dekInput := keymanagement.GenerateDataEncryptionKeyRequest{
-			GenerateKeyDetails: generateKeyDetails,
-			RequestMetadata:    requestMetadata,
-		}
-		generateDEKResponse, err := kmsCryptoClient.GenerateDataEncryptionKey(context.Background(), dekInput)
-		if err != nil || generateDEKResponse.Ciphertext == nil {
-			metrics.IncrCounter(metricInitFailed, 1)
-			return nil, errwrap.Wrapf("failed keyID validation: {{err}}", err)
-		}
-		k.logger.Info("successfully validated keyID")
-
-		// Store client
 		k.cryptoClient = kmsCryptoClient
 	}
 
@@ -182,14 +157,15 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
 		}
 		k.managementClient = kmsManagementClient
-
-		keyVersion, err := k.getCurrentKeyVersion()
-		if err != nil {
-			metrics.IncrCounter(metricInitFailed, 1)
-			return nil, errwrap.Wrapf("error initializing OCI KMS client: {{err}}", err)
-		}
-		k.currentKeyID.Store(keyVersion)
 	}
+
+	// Calling Encrypt method with empty string just to validate keyId access and store current keyVersion
+	encryptedBlobInfo, err := k.Encrypt(context.Background(), []byte(""))
+	if err != nil || encryptedBlobInfo == nil {
+		metrics.IncrCounter(metricInitFailed, 1)
+		return nil, errwrap.Wrapf("failed keyID validation: {{err}}", err)
+	}
+	k.logger.Info("successfully validated keyID")
 
 	// Map that holds non-sensitive configuration info
 	sealInfo := make(map[string]string)
@@ -218,7 +194,7 @@ func (k *OCIKMSSeal) Finalize(context.Context) error {
 
 func (k *OCIKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
 	defer metrics.MeasureSince(metricEncrypt, time.Now())
-	if plaintext == nil || len(plaintext) == 0 {
+	if plaintext == nil {
 		metrics.IncrCounter(metricEncryptFailed, 1)
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
