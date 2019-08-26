@@ -14,6 +14,7 @@ IMPROVEMENTS:
 
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
    of value data [GH-7199]
+ * pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346](https://github.com/hashicorp/vault/pull/7346).
 
 BUG FIXES:
 
