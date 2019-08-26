@@ -67,7 +67,7 @@ func GetFingerprints(pgpKeys []string, entities []*openpgp.Entity) ([]string, er
 }
 
 // GetEntities takes in a string array of base64-encoded PGP keys and returns
-// the openpgp Entities
+// the openpgp Entities, entities which are revoked will be ignored
 func GetEntities(pgpKeys []string) ([]*openpgp.Entity, error) {
 	ret := make([]*openpgp.Entity, 0, len(pgpKeys))
 	for _, keystring := range pgpKeys {
@@ -79,7 +79,10 @@ func GetEntities(pgpKeys []string) ([]*openpgp.Entity, error) {
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing given PGP key: {{err}}", err)
 		}
-		ret = append(ret, entity)
+
+		if !(len(entity.Revocations) > 0) {
+			ret = append(ret, entity)
+		}
 	}
 	return ret, nil
 }
