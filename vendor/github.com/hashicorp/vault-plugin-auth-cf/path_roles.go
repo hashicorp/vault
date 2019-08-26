@@ -1,10 +1,10 @@
-package pcf
+package cf
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault-plugin-auth-pcf/models"
+	"github.com/hashicorp/vault-plugin-auth-cf/models"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"

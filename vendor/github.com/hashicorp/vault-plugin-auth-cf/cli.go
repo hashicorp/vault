@@ -1,4 +1,4 @@
-package pcf
+package cf
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-auth-pcf/signatures"
+	"github.com/hashicorp/vault-plugin-auth-cf/signatures"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -17,7 +17,7 @@ type CLIHandler struct{}
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
 	if !ok {
-		mount = "pcf"
+		mount = "cf"
 	}
 
 	role := m["role"]
@@ -79,33 +79,33 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-Usage: vault login -method=pcf [CONFIG K=V...]
+Usage: vault login -method=cf [CONFIG K=V...]
 
-  The PCF auth method allows users to authenticate using PCF's instance identity service.
+  The CF auth method allows users to authenticate using CF's instance identity service.
 
-  The PCF credentials may be specified explicitly via the command line:
+  The CF credentials may be specified explicitly via the command line:
 
-      $ vault login -method=pcf role=...
+      $ vault login -method=cf role=...
 
   This will automatically pull from the CF_INSTANCE_CERT and CF_INSTANCE_KEY values
   in your local environment. If they're not available or you wish to override them, 
   they may also be supplied explicitly:
 
-      $ vault login -method=pcf role=... cf_instance_cert=... cf_instance_key=...
+      $ vault login -method=cf role=... cf_instance_cert=... cf_instance_key=...
 
 Configuration:
 
   cf_instance_cert=<string>
-      Explicit value to use for the path to the PCF instance certificate.
+      Explicit value to use for the path to the CF instance certificate.
 
   cf_instance_key=<string>
-      Explicit value to use for the path to the PCF instance key.
+      Explicit value to use for the path to the CF instance key.
 
   mount=<string>
-      Path where the PCF credential method is mounted. This is usually provided
+      Path where the CF credential method is mounted. This is usually provided
       via the -path flag in the "vault login" command, but it can be specified
       here as well. If specified here, it takes precedence over the value for
-      -path. The default value is "pcf".
+      -path. The default value is "cf".
 
   role=<string>
       Name of the role to request a token against

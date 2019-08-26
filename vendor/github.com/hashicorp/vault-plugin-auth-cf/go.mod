@@ -1,4 +1,4 @@
-module github.com/hashicorp/vault-plugin-auth-pcf
+module github.com/hashicorp/vault-plugin-auth-cf
 
 go 1.12
 

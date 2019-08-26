@@ -334,7 +334,14 @@ github.com/hashicorp/vault-plugin-auth-alicloud/tools
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190730042513-cbbe5ae0021d
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190730042519-f5a47667d35c
+# github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
+github.com/hashicorp/vault-plugin-auth-cf
+github.com/hashicorp/vault-plugin-auth-cf/signatures
+github.com/hashicorp/vault-plugin-auth-cf/models
+github.com/hashicorp/vault-plugin-auth-cf/util
+github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
+github.com/hashicorp/vault-plugin-auth-cf/testing/cf
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190730042527-3d85d12ec6b6
