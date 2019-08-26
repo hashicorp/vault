@@ -188,7 +188,15 @@ $ cf org-users my-example-org
 $ cf set-org-role vault my-example-org OrgManager
 ```
 
-Next, CF often uses a self-signed certificate for TLS, which can be rejected at first 
+Specifically, the `vault` user created here will need to be able to perform the following API calls:
+
+- Method: "GET", endpoint: "/v2/info"
+- Method: "POST", endpoint: "/oauth/token"
+- Method: "GET", endpoint: "/v2/apps/$APP_ID"
+- Method: "GET", endpoint: "/v2/organizations/$ORG_ID"
+- Method: "GET", endpoint: "/v2/spaces/$SPACE_ID"
+
+Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first 
 with an error like:
 
 ```

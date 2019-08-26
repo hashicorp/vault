@@ -63,6 +63,11 @@ var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
 var memProfilerEnabled = false
 
+var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
+	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
+	return 1
+}
+
 const storageMigrationLock = "core/migration"
 
 type ServerCommand struct {
@@ -705,7 +710,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if c.flagDevFourCluster {
-		return c.enableFourClusterDev(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
