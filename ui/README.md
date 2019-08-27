@@ -15,6 +15,8 @@
     - [Storybook Commands at a Glance](#storybook-commands-at-a-glance)
     - [Writing Stories](#writing-stories)
       - [Adding a new story](#adding-a-new-story)
+    - [Code Generators](#code-generators-1)
+  - [Further Reading / Useful Links](#further-reading--useful-links)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -30,12 +32,10 @@ You will need the following things properly installed on your computer.
 - [Yarn](https://yarnpkg.com/en/)
 - [Git](https://git-scm.com/)
 - [Ember CLI](https://ember-cli.com/)
-- [Husky\*](https://github.com/typicode/husky)
 - [lint-staged\*](https://www.npmjs.com/package/lint-staged)
 
-\* Husky and lint-staged are optional dependencies - running `yarn` will install them.
-If don't want them installed (husky adds files for every hooks in `.git/hooks/`),
-then you can run `yarn --ignore-optional`. If you've ignored the optional deps
+\* lint-staged is an optional dependency - running `yarn` will install it.
+If don't want optional dependencies installed you can run `yarn --ignore-optional`. If you've ignored the optional deps
 previously and want to install them, you have to tell yarn to refetch all deps by
 running `yarn --force`.
 
