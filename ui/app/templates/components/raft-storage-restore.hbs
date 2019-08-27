@@ -1,0 +1,26 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="key-value-header breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          {{#link-to "vault.cluster.storage"}}
+            Raft Storage
+          {{/link-to}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Restore Snapshot
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<AlertBanner
+  @type="warning"
+  @message="Raft snapshots can be very large files. Be prepared for uploading the file to take some time."
+  />
+
+<BinaryFile @onChange={{action (mut file)}} />
