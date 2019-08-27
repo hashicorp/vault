@@ -75,7 +75,6 @@ type FSM struct {
 	l           sync.RWMutex
 	path        string
 	logger      log.Logger
-	permitPool  *physical.PermitPool
 	noopRestore bool
 
 	db *bolt.DB
@@ -159,9 +158,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	}
 
 	f := &FSM{
-		path:       conf["path"],
-		logger:     logger,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		path:   conf["path"],
+		logger: logger,
 
 		db:               boltDB,
 		latestTerm:       latestTerm,
@@ -245,9 +243,6 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 func (f *FSM) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft", "delete"}, time.Now())
 
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -259,9 +254,6 @@ func (f *FSM) Delete(ctx context.Context, path string) error {
 // Delete deletes the given key from the bolt file.
 func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 	defer metrics.MeasureSince([]string{"raft", "delete_prefix"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -286,9 +278,6 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -324,9 +313,6 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft", "put"}, time.Now())
 
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -339,9 +325,6 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -374,9 +357,6 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 // Transaction writes all the operations in the provided transaction to the bolt
 // file.
 func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -721,9 +701,6 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 		Key:   key,
 		Value: b,
 	}
-
-	f.f.permitPool.Acquire()
-	defer f.f.permitPool.Release()
 
 	f.f.l.RLock()
 	defer f.f.l.RUnlock()

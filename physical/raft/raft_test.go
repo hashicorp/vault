@@ -365,8 +365,8 @@ func TestRaft_Backend_Performance(t *testing.T) {
 func BenchmarkDB_Puts(b *testing.B) {
 	raft, dir := getRaft(b, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(b, true, false)
-	defer os.RemoveAll(dir2)
+	//raft2, dir2 := getRaft(b, true, false)
+	//defer os.RemoveAll(dir2)
 
 	bench := func(b *testing.B, s physical.Backend, dataSize int) {
 		data, err := uuid.GenerateRandomBytes(dataSize)
@@ -391,7 +391,7 @@ func BenchmarkDB_Puts(b *testing.B) {
 	}
 
 	b.Run("256b", func(b *testing.B) { bench(b, raft, 256) })
-	b.Run("256kb", func(b *testing.B) { bench(b, raft2, 256*1024) })
+	//	b.Run("256kb", func(b *testing.B) { bench(b, raft2, 256*1024) })
 }
 
 func BenchmarkDB_Snapshot(b *testing.B) {

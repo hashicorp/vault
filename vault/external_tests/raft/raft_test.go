@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -973,4 +975,61 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 		testhelpers.WaitForNCoresSealed(t, cluster2, 3)
 	}
+}
+
+func BenchmarkRaft_SingleNode(b *testing.B) {
+	var cleanupFuncs []func()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+		Mutex: &sync.Mutex{},
+		Name:  "cluster1",
+	})
+	coreConfig := &vault.CoreConfig{
+		Logger: logger,
+		// TODO: remove this later
+		DisablePerformanceStandby: true,
+	}
+	i := 0
+	cluster := vault.NewTestCluster(b, coreConfig, &vault.TestClusterOptions{
+		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
+			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(b, logger, fmt.Sprintf("core-%d", i))
+			i++
+			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
+			return backend, err
+		},
+		Logger:             logger,
+		KeepStandbysSealed: true,
+		HandlerFunc:        vaulthttp.Handler,
+	})
+	defer func() {
+		for _, c := range cleanupFuncs {
+			c()
+		}
+	}()
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	leaderClient := cluster.Cores[0].Client
+
+	bench := func(b *testing.B, dataSize int) {
+		data, err := uuid.GenerateRandomBytes(dataSize)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		testName := b.Name()
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("secret/%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
+			_, err := leaderClient.Logical().Write(key, map[string]interface{}{
+				"test": data,
+			})
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+
+	b.Run("256b", func(b *testing.B) { bench(b, 25) })
 }
