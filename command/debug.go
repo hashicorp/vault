@@ -19,8 +19,17 @@ import (
 
 const (
 	debugIndexVersion = 1
-	debugMinDuration  = 1 * time.Minute
-	debugMinInterval  = 5 * time.Second
+
+	// debugMinInterval is the minimum acceptable interval capture value. This
+	// value applies to duration and all interval-related flags.
+	debugMinInterval = 5 * time.Second
+
+	// debugDurationGrace is the grace period added to duration to allow for
+	// "last frame" capture if the interval falls into the last duration time
+	// value. For instance, using default values, adding a grace duration lets
+	// the command capture 5 intervals (0, 30, 60, 90, and 120th second) before
+	// exiting.
+	debugDurationGrace = 1 * time.Second
 )
 
 var _ cli.Command = (*DebugCommand)(nil)
@@ -29,11 +38,12 @@ var _ cli.CommandAutocomplete = (*DebugCommand)(nil)
 type DebugCommand struct {
 	*BaseCommand
 
-	flagCompress bool
-	flagDuration time.Duration
-	flagInterval time.Duration
-	flagOutput   string
-	flagTargets  []string
+	flagCompress        bool
+	flagDuration        time.Duration
+	flagInterval        time.Duration
+	flagMetricsInterval time.Duration
+	flagOutput          string
+	flagTargets         []string
 
 	ShutdownCh chan struct{}
 }
@@ -72,7 +82,16 @@ func (c *DebugCommand) Flags() *FlagSets {
 		Target:     &c.flagInterval,
 		Completion: complete.PredictAnything,
 		Default:    30 * time.Second,
-		Usage:      "The interval to run the command.",
+		Usage: "The interval in which to perform profiling and server state " +
+			"capture, excluding metrics.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "metrics-interval",
+		Target:     &c.flagMetricsInterval,
+		Completion: complete.PredictAnything,
+		Default:    10 * time.Second,
+		Usage:      "The interval in which to perform metrics capture.",
 	})
 
 	f.StringVar(&StringVar{
@@ -144,14 +163,20 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	// Guard duration and interval values to acceptable values
-	if c.flagDuration < debugMinDuration {
-		c.flagDuration = debugMinDuration
+	if c.flagDuration < debugMinInterval {
+		c.flagDuration = debugMinInterval
 	}
 	if c.flagInterval < debugMinInterval {
 		c.flagInterval = debugMinInterval
 	}
 	if c.flagInterval > c.flagDuration {
 		c.flagInterval = c.flagDuration
+	}
+	if c.flagMetricsInterval < debugMinInterval {
+		c.flagMetricsInterval = debugMinInterval
+	}
+	if c.flagMetricsInterval > c.flagDuration {
+		c.flagMetricsInterval = c.flagDuration
 	}
 
 	if len(c.flagTargets) == 0 {
@@ -176,8 +201,18 @@ func (c *DebugCommand) Run(args []string) int {
 		return 1
 	}
 
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Unable to create client to connect to Vault: %s", err))
+		return 1
+	}
+
 	// Populate initial index fields
+	idxOutput := map[string]interface{}{
+		"files": []string{},
+	}
 	debugIndex := &debugIndex{
+		VaultAddress:  client.Address(),
 		ClientVersion: version.GetVersion().VersionNumber(),
 		Compress:      c.flagCompress,
 		Duration:      int(c.flagDuration.Seconds()),
@@ -186,12 +221,13 @@ func (c *DebugCommand) Run(args []string) int {
 		Version:       debugIndexVersion,
 		Targets:       c.flagTargets,
 		Timestamp:     captureTime,
-		Output:        make(map[string]interface{}),
+		Output:        idxOutput,
 		Errors:        []*captureError{},
 	}
 
 	// Print debug information
 	c.UI.Output("==> Starting debug capture...")
+	c.UI.Info(fmt.Sprintf("      Vault Address: %s", debugIndex.VaultAddress))
 	c.UI.Info(fmt.Sprintf("     Client Version: %s", debugIndex.ClientVersion))
 	c.UI.Info(fmt.Sprintf("           Duration: %s", c.flagDuration))
 	c.UI.Info(fmt.Sprintf("           Interval: %s", c.flagInterval))
@@ -205,7 +241,7 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	// Capture polling information
-	if err := c.capturePollingTargets(debugIndex); err != nil {
+	if err := c.capturePollingTargets(debugIndex, client); err != nil {
 		c.UI.Error(fmt.Sprintf("Error capturing dynamic information: %s", err))
 		return 2
 	}
@@ -243,34 +279,30 @@ func (c *DebugCommand) captureStaticTargets(index *debugIndex) error {
 	return nil
 }
 
-func (c *DebugCommand) capturePollingTargets(index *debugIndex) error {
-	durationCh := time.After(c.flagDuration)
+func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Client) error {
+	durationCh := time.After(c.flagDuration + debugDurationGrace)
 	errCh := make(chan *captureError)
 	defer close(errCh)
 
 	var wg sync.WaitGroup
 	var serverStatusCollection []*serverStatus
+	var metricsCollection []map[string]interface{}
 
-	client, err := c.Client()
-	if err != nil {
-		return err
-	}
-
-	captureInterval := func() {
+	intervalCapture := func() {
 		currentTimestamp := time.Now().UTC()
 
 		if strutil.StrListContains(c.flagTargets, "config") {
 
 		}
-		if strutil.StrListContains(c.flagTargets, " metrics") {
 
-		}
 		if strutil.StrListContains(c.flagTargets, " pprof") {
 
 		}
+
 		if strutil.StrListContains(c.flagTargets, "replication-status") {
 
 		}
+
 		if strutil.StrListContains(c.flagTargets, "server-status") {
 			c.UI.Info(fmt.Sprintf("     %s [INFO]: Capturing server-status", currentTimestamp.Format(time.RFC3339)))
 
@@ -302,21 +334,78 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex) error {
 		wg.Wait()
 	}
 
+	metricsIntervalCapture := func() {
+		currentTimestamp := time.Now().UTC().Format(time.RFC3339)
+
+		if strutil.StrListContains(c.flagTargets, "metrics") {
+			c.UI.Info(fmt.Sprintf("     %s [INFO]: Capturing metrics", currentTimestamp))
+
+			healthStatus, err := client.Sys().Health()
+			if err != nil {
+				errCh <- newCaptureError("metrics", err)
+				return
+			}
+
+			// Check replication status. We skip on process metrics if we're one
+			// of the following (since the request will be forwarded):
+			// 1. Any type of DR Node
+			// 2. Non-DR, non-performance standby nodes
+			switch {
+			case healthStatus.ReplicationDRMode != "disabled":
+				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics capture on DR node", currentTimestamp))
+				return
+			case healthStatus.Standby && !healthStatus.PerformanceStandby:
+				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics on standby node", currentTimestamp))
+				return
+			}
+
+			wg.Add(1)
+			go func() {
+				r := client.NewRequest("GET", "/v1/sys/metrics")
+
+				metricsResp, err := client.RawRequest(r)
+				if err != nil {
+					errCh <- newCaptureError("metrics", err)
+				}
+				if metricsResp != nil {
+					defer metricsResp.Body.Close()
+
+					metricsEntry := make(map[string]interface{})
+					err := json.NewDecoder(metricsResp.Body).Decode(&metricsEntry)
+					if err != nil {
+						errCh <- newCaptureError("metrics", err)
+					}
+					metricsCollection = append(metricsCollection, metricsEntry)
+				}
+
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
+
 	// Upon exit write the targets that we've collection its respective files
 	// and update the index.
 	defer func() {
-		output, err := json.MarshalIndent(serverStatusCollection, "", "  ")
+		metricsBytes, err := json.MarshalIndent(metricsCollection, "", "  ")
+		if err != nil {
+			c.UI.Error("Error marshaling metrics.json data")
+			return
+		}
+		if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "metrics.json"), metricsBytes, 0644); err != nil {
+			c.UI.Error("Error writing data to metrics.json")
+			return
+		}
+		index.Output["files"] = append(index.Output["files"].([]string), "metrics.json")
+
+		serverStatusBytes, err := json.MarshalIndent(serverStatusCollection, "", "  ")
 		if err != nil {
 			c.UI.Error("Error marshaling server-status.json data")
 			return
 		}
-		if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "server-status.json"), output, 0644); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "server-status.json"), serverStatusBytes, 0644); err != nil {
 			c.UI.Error("Error writing data to server-status.json")
 			return
-		}
-
-		if index.Output["files"] == nil {
-			index.Output["files"] = make([]string, 0)
 		}
 		index.Output["files"] = append(index.Output["files"].([]string), "server-status.json")
 	}()
@@ -324,16 +413,20 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex) error {
 	// Start capture by capturing the first interval before we hit the first
 	// ticker.
 	c.UI.Info("==> Capturing dynamic information...")
-	go captureInterval()
+	go intervalCapture()
+	go metricsIntervalCapture()
 
 	// Capture at each interval, until end of duration or interrupt.
 	intervalTicker := time.Tick(c.flagInterval)
+	metricsIntervalTicker := time.Tick(c.flagMetricsInterval)
 	for {
 		select {
 		case err := <-errCh:
 			index.Errors = append(index.Errors, err)
 		case <-intervalTicker:
-			go captureInterval()
+			go intervalCapture()
+		case <-metricsIntervalTicker:
+			go metricsIntervalCapture()
 		case <-durationCh:
 			return nil
 		case <-c.ShutdownCh:
@@ -344,6 +437,7 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex) error {
 
 // debugIndex represents the data in the index file
 type debugIndex struct {
+	VaultAddress  string                 `json:"vault_address"`
 	Version       int                    `json:"version"`
 	ClientVersion string                 `json:"client_version"`
 	Timestamp     time.Time              `json:"timestamp"`
