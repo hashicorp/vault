@@ -13,12 +13,12 @@
         {{/secret-link}}
       </li>
 
-      <li class="{{if (eq tab '') 'is-active'}}">
+      <li class="{{if (eq tab 'details') 'is-active'}}">
         {{#secret-link
           secret=key.id
           mode="show"
           replace=true
-          queryParams=(query-params tab='')
+          queryParams=(query-params tab='details')
           data-test-transit-link="details"
           }}
           Details
