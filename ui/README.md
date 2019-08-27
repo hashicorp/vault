@@ -143,10 +143,10 @@ Each component in `vault/ui/app/components` should have a corresponding `[compon
  *   {{/if}}
  * ```
  *
- * @param toggleAttr=null {String} - The attribute upon which to toggle.
- * @param attrTarget=null {Object} - The target upon which the event handler should be added.
- * @param [openLabel=Hide options] {String} - The message to display when the toggle is open. //optional params are denoted by square brackets
- * @param [closedLabel=More options] {String} - The message to display when the toggle is closed.
+ * @param {String} toggleAttr=null - The attribute upon which to toggle.
+ * @param {Object} attrTarget=null - The target upon which the event handler should be added.
+ * @param {String} [openLabel=Hide options] - The message to display when the toggle is open. //optional params are denoted by square brackets
+ * @param {String} [closedLabel=More options] - The message to display when the toggle is closed.
  */
 ````
 Note that placing a param inside brackets (e.g. `[closedLabel=More options]` indicates it is optional and has a default value of `'More options'`.)
