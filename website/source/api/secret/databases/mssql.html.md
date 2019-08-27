@@ -24,10 +24,10 @@ has a number of parameters to further configure a connection.
 | `POST`   | `/database/config/:name`     |
 
 ### Parameters
-- `connection_url` `(string: <required>)` - Specifies the MSSQL DSN. This field
+- `connection_url` `(string: <required>)` - Specifies the [MSSQL DSN](#MSSQL DSN). This field
   can be templated and supports passing the username and password
   parameters in the following format {{field_name}}.  A templated connection URL is
-  required when using root credential rotation.
+  required when using root credential rotation. 
 
 - `max_open_connections` `(int: 2)` - Specifies the maximum number of open
   connections to the database.
@@ -44,13 +44,79 @@ has a number of parameters to further configure a connection.
 
 - `password` `(string: "")` - The root credential password used in the connection URL. 
 
+### MSSQL DSN
+
+The MSSQL database plugin supports connection URL in three forms
+
+- `sqlserver` `scheme` - sqlserver://{{username}}:{{password}}@localhost:1433
+
+- `ADO` `key/value style` - server=localhost\\SQLExpress;user id=sa;database=master;app name=MyAppName
+
+- `ODBC` `key/value style` - odbc:server=localhost\\SQLExpress;user id=sa;database=master;app name=MyAppName
+
+NOTES:
+
+- The username in `sqlserver scheme` URL does not support Windows domain user in the format of `domain name`\\`username`. An alternative is passing `user id` parameter on query string, when using `sqlserver scheme`, or adding `user id` key with value to the list of parameters in case of ADO/ODBC connection string. The list of parameters are available below.
+
+Common parameters:
+- user id - enter the SQL Server Authentication user id or the Windows Authentication user id in the DOMAIN\User format. On Windows, if user id is empty or missing Single-Sign-On is used.
+- password
+- database
+- connection timeout - in seconds (default is 0 for no timeout), set to 0 for no timeout. Recommended to set to 0 and use context to manage query and connection timeouts.
+dial timeout - in seconds (default is 15), set to 0 for no timeout
+encrypt
+  - disable - Data send between client and server is not encrypted.
+  - false - Data sent between client and server is not encrypted beyond the - login packet. (Default)
+  - true - Data sent between client and server is encrypted.
+- app name - The application name (default is go-mssqldb)
+
+Please visit github repository of the database driver [here](https://github.com/denisenkom/go-mssqldb/blob/master/README.md#connection-parameters-and-dsn) for full reference of supported parameters.
+
+
 ### Sample Payload
 
+- sqlserver scheme
 ```json
 {
   "plugin_name": "mssql-database-plugin",
   "allowed_roles": "readonly",
   "connection_url": "sqlserver://{{username}}:{{password}}@localhost:1433",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "sa",
+  "password": "yourStrong(!)Password"
+}
+```
+- sqlserver scheme with Windows domain user
+```json
+{
+  "plugin_name": "mssql-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "sqlserver://localhost:1433?user+id={{username}}&password={{password}}",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "sa",
+  "password": "yourStrong(!)Password"
+}
+```
+- ADO
+```json
+{
+  "plugin_name": "mssql-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "server=localhost\\SQLExpress;user id={{username}};password={{password}};database=master;app name=MyAppName",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "sa",
+  "password": "yourStrong(!)Password"
+}
+```
+- ODBC
+```json
+{
+  "plugin_name": "mssql-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "odbc:server=localhost\\SQLExpress;user id={{username}};password={{password}};database=master;app name=MyAppName",
   "max_open_connections": 5,
   "max_connection_lifetime": "5s",
   "username": "sa",
