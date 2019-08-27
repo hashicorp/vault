@@ -1,0 +1,96 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Raft Storage
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+  <Toolbar>
+    <ToolbarActions>
+      <BasicDropdown
+        @class="popup-menu"
+        @horizontalPosition="auto-right"
+        @verticalPosition="below"
+        as |D|
+      >
+        <D.trigger
+          data-test-popup-menu-trigger="true"
+          @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+          @tagName="button"
+        >
+          Snapshots
+          <Chevron @direction="down" @isButton={{true}} />
+        </D.trigger>
+        <D.content @class="popup-menu-content">
+          <nav class="box menu">
+            <ul class="menu-list">
+              <li class="action">
+                <button type="button" class="link is-ghost">
+                  Download
+                </button>
+              </li>
+              <li class="action">
+                {{#link-to "vault.cluster.storage-restore"}}
+                  Restore
+                {{/link-to}}
+              </li>
+            </ul>
+          </nav>
+        </D.content>
+      </BasicDropdown>
+    </ToolbarActions>
+  </Toolbar>
+
+  <table class="is-fullwidth">
+    <caption class="is-collapsed">Raft servers</caption>
+    <thead class="has-text-weight-semibold">
+      <tr>
+        <th scope="col">Address</th>
+        <th scope="col">Voter</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each this.model as |server|}}
+        <tr>
+          <td>
+            {{server.address}}
+            {{#if server.leader}}
+            <span>Leader</span>
+            {{/if}}
+          </td>
+          <td>
+
+      {{#if server.voter}}
+        <Icon
+          aria-label="Yes"
+          class="icon-true has-text-success"
+          @size="l"
+          @glyph="check-circle-outline"
+        />
+      {{else}}
+        <Icon
+          aria-label="No"
+          class="icon-false"
+          @size="l"
+          @glyph="cancel-square-outline"
+        />
+      {{/if}}
+            </td>
+          <td class="has-text-right">
+            <PopupMenu>
+              <nav>
+                <ul>
+                  <li class="action">
+                    <button type="button" class="link is-ghost">
+                      Remove Peer
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
