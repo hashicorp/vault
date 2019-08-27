@@ -40,38 +40,43 @@
   </nav>
 </div>
 
-<Toolbar>
-  <ToolbarActions>
-    {{#if (eq tab 'versions')}}
-      <TransitKeyActions
-        @key={{key}}
-        @selectedAction="rotate"
-        @capabilities={{capabilities}}
-        @onRefresh={{action "refresh"}}
-      />
-    {{/if}}
-    {{#if (eq mode "show") }}
-      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+{{#unless (eq tab 'actions')}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if (eq tab 'versions')}}
+        <TransitKeyActions
+          @key={{key}}
+          @selectedAction="rotate"
+          @capabilities={{capabilities}}
+          @onRefresh={{action "refresh"}}
+        />
+      {{/if}}
+      {{#if (eq mode "show") }}
+        {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+          <ToolbarSecretLink
+            @secret={{key.id}}
+            @mode="edit"
+            replace=true
+          >
+            Edit encryption key
+          </ToolbarSecretLink>
+        {{/if}}
         <ToolbarSecretLink
           @secret={{key.id}}
-          @mode="edit"
-          replace=true
+          @mode="actions"
+          @data-test-transit-key-actions-link=true
         >
-          Edit encryption key
+          Key actions
         </ToolbarSecretLink>
       {{/if}}
-      <ToolbarSecretLink
-        @secret={{key.id}}
-        @mode="actions"
-        @data-test-transit-key-actions-link=true
-      >
-        Key actions
-      </ToolbarSecretLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
+    </ToolbarActions>
+  </Toolbar>
+{{/unless}}
 
-{{#if (eq tab 'versions')}}
+
+{{#if (eq tab 'actions')}}
+  <p>Encrypt</p>
+{{else if (eq tab 'versions')}}
   {{#if (or
       (eq key.type "aes256-gcm96")
       (eq key.type "chacha20-poly1305")
