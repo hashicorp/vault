@@ -65,8 +65,8 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 	return
 }
 
-func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
-	displayName, policyName, policy string,
+func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
+	displayName, policyName, policy string, policyARNs []string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
@@ -75,12 +75,26 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 
 	username, usernameWarning := genUsername(displayName, policyName, "sts")
 
-	tokenResp, err := stsClient.GetFederationToken(
-		&sts.GetFederationTokenInput{
-			Name:            aws.String(username),
-			Policy:          aws.String(policy),
-			DurationSeconds: &lifeTimeInSeconds,
-		})
+	getTokenInput := &sts.GetFederationTokenInput{
+		Name:            aws.String(username),
+		DurationSeconds: &lifeTimeInSeconds,
+	}
+	if len(policy) > 0 {
+		getTokenInput.Policy = aws.String(policy)
+	}
+	if len(policyARNs) > 0 {
+		getTokenInput.PolicyArns = convertPolicyARNs(policyARNs)
+	}
+
+	// If neither a policy document nor policy ARNs are specified, then GetFederationToken will
+	// return credentials equivalent to that of the Vault server itself. We probably don't want
+	// that by default; the behavior can be explicitly opted in to by associating the Vault role
+	// with a policy ARN or document that allows the appropriate permissions.
+	if policy == "" && len(policyARNs) == 0 {
+		return logical.ErrorResponse(fmt.Sprintf("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred)), nil
+	}
+
+	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -111,7 +125,7 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 }
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
-	displayName, roleName, roleArn, policy string,
+	displayName, roleName, roleArn, policy string, policyARNs []string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
@@ -127,6 +141,9 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	}
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
+	}
+	if len(policyARNs) > 0 {
+		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
 
@@ -333,4 +350,15 @@ func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Reque
 func normalizeDisplayName(displayName string) string {
 	re := regexp.MustCompile("[^a-zA-Z0-9+=,.@_-]")
 	return re.ReplaceAllString(displayName, "_")
+}
+
+func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
+	size := len(policyARNs)
+	retval := make([]*sts.PolicyDescriptorType, size, size)
+	for i, arn := range policyARNs {
+		retval[i] = &sts.PolicyDescriptorType{
+			Arn: aws.String(arn),
+		}
+	}
+	return retval
 }

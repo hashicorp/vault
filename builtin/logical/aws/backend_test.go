@@ -72,7 +72,7 @@ func TestBackend_basicSTS(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
-			createRole(t, roleName, awsAccountID)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -90,7 +90,10 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepRead(t, "sts", "test2", []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
-			return teardown(accessKey, roleName, userName)
+			if err := deleteTestRole(roleName); err != nil {
+				return err
+			}
+			return deleteTestUser(accessKey, userName)
 		},
 	})
 }
@@ -200,7 +203,7 @@ func getAccountID() (string, error) {
 	return *res.Account, nil
 }
 
-func createRole(t *testing.T, roleName, awsAccountID string) {
+func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string) {
 	const testRoleAssumePolicy = `{
       "Version": "2012-10-17",
       "Statement": [
@@ -234,14 +237,16 @@ func createRole(t *testing.T, roleName, awsAccountID string) {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
-	attachment := &iam.AttachRolePolicyInput{
-		PolicyArn: aws.String(ec2PolicyArn),
-		RoleName:  aws.String(roleName), // Required
-	}
-	_, err = svc.AttachRolePolicy(attachment)
+	for _, policyARN := range policyARNs {
+		attachment := &iam.AttachRolePolicyInput{
+			PolicyArn: aws.String(policyARN),
+			RoleName:  aws.String(roleName), // Required
+		}
+		_, err = svc.AttachRolePolicy(attachment)
 
-	if err != nil {
-		t.Fatalf("AWS CreateRole failed: %v", err)
+		if err != nil {
+			t.Fatalf("AWS AttachRolePolicy failed: %v", err)
+		}
 	}
 }
 
@@ -332,14 +337,25 @@ func deleteTestRole(roleName string) error {
 	}
 	svc := iam.New(session.New(awsConfig))
 
-	attachment := &iam.DetachRolePolicyInput{
-		PolicyArn: aws.String(ec2PolicyArn),
-		RoleName:  aws.String(roleName), // Required
+	listAttachmentsInput := &iam.ListAttachedRolePoliciesInput{
+		RoleName: aws.String(roleName),
 	}
-	_, err := svc.DetachRolePolicy(attachment)
+	detacher := func(result *iam.ListAttachedRolePoliciesOutput, lastPage bool) bool {
+		for _, policy := range result.AttachedPolicies {
+			detachInput := &iam.DetachRolePolicyInput{
+				PolicyArn: policy.PolicyArn,
+				RoleName:  aws.String(roleName), // Required
+			}
+			_, err := svc.DetachRolePolicy(detachInput)
+			if err != nil {
+				log.Printf("[WARN] AWS DetachRolePolicy failed for policy %s: %v", *policy.PolicyArn, err)
+			}
+		}
+		return true
+	}
+	err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher)
 	if err != nil {
 		log.Printf("[WARN] AWS DetachRolePolicy failed: %v", err)
-		return err
 	}
 
 	params := &iam.DeleteRoleInput{
@@ -356,11 +372,7 @@ func deleteTestRole(roleName string) error {
 	return nil
 }
 
-func teardown(accessKey *awsAccessKey, roleName, userName string) error {
-
-	if err := deleteTestRole(roleName); err != nil {
-		return err
-	}
+func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -387,20 +399,20 @@ func teardown(accessKey *awsAccessKey, roleName, userName string) error {
 		return err
 	}
 
-	deleteUserPolicyInput := &iam.DeleteUserPolicyInput{
+	deleteTestUserPolicyInput := &iam.DeleteUserPolicyInput{
 		PolicyName: aws.String("SelfDestructionTimebomb"),
 		UserName:   aws.String(userName),
 	}
-	_, err = svc.DeleteUserPolicy(deleteUserPolicyInput)
+	_, err = svc.DeleteUserPolicy(deleteTestUserPolicyInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUserPolicy failed: %v", err)
 		return err
 	}
-	deleteUserInput := &iam.DeleteUserInput{
+	deleteTestUserInput := &iam.DeleteUserInput{
 		UserName: aws.String(userName),
 	}
 	log.Printf("[INFO] AWS DeleteUser: %s", userName)
-	_, err = svc.DeleteUser(deleteUserInput)
+	_, err = svc.DeleteUser(deleteTestUserInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUser failed: %v", err)
 		return err
@@ -704,6 +716,7 @@ const testDynamoPolicy = `{
 
 const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 const iamPolicyArn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+const dynamoPolicyArn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
 
 func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
@@ -825,7 +838,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
@@ -839,6 +852,73 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)
+		},
+	})
+}
+
+func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
+
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+	roleData := map[string]interface{}{
+		"policy_arns":     iamPolicyArn,
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
+		"credential_type": assumedRoleCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn})
+			log.Printf("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
+func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
+	t.Parallel()
+	userName := generateUniqueName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	roleData := map[string]interface{}{
+		"policy_arns":     dynamoPolicyArn,
+		"credential_type": federationTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
+			//return deleteTestUser(accessKey, userName)
+			return nil
 		},
 	})
 }
@@ -862,7 +942,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},

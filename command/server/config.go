@@ -241,6 +241,14 @@ type Telemetry struct {
 	// Default: 24h
 	PrometheusRetentionTime    time.Duration `hcl:"-"`
 	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
+
+	// Stackdriver:
+	// StackdriverProjectID is the project to publish stackdriver metrics to.
+	StackdriverProjectID string `hcl:"stackdriver_project_id"`
+	// StackdriverLocation is the GCP or AWS region of the monitored resource.
+	StackdriverLocation string `hcl:"stackdriver_location"`
+	// StackdriverNamespace is the namespace identifier, such as a cluster name.
+	StackdriverNamespace string `hcl:"stackdriver_namespace"`
 }
 
 func (s *Telemetry) GoString() string {

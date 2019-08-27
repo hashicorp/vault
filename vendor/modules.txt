@@ -1,8 +1,10 @@
 # cloud.google.com/go v0.39.0
+cloud.google.com/go/monitoring/apiv3
 cloud.google.com/go/storage
 cloud.google.com/go/spanner
 cloud.google.com/go/kms/apiv1
 cloud.google.com/go/civil
+cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
@@ -11,7 +13,6 @@ cloud.google.com/go/internal/version
 cloud.google.com/go/internal/fields
 cloud.google.com/go/internal/protostruct
 cloud.google.com/go/spanner/internal/backoff
-cloud.google.com/go/compute/metadata
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
 # contrib.go.opencensus.io/exporter/ocagent v0.4.12
@@ -182,7 +183,7 @@ github.com/containerd/continuity/pathdriver
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
-# github.com/coreos/go-systemd v0.0.0-20180511133405-39ca1b05acc7
+# github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf
 github.com/coreos/pkg/capnslog
@@ -253,6 +254,8 @@ github.com/golang/protobuf/protoc-gen-go/plugin
 github.com/golang/snappy
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
+# github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+github.com/google/go-metrics-stackdriver
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
@@ -293,7 +296,7 @@ github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-raftchunking v0.6.2
 github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
-# github.com/hashicorp/go-retryablehttp v0.5.4
+# github.com/hashicorp/go-retryablehttp v0.6.2
 github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-rootcerts v1.0.1
 github.com/hashicorp/go-rootcerts
@@ -335,6 +338,13 @@ github.com/hashicorp/vault-plugin-auth-alicloud/tools
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
 github.com/hashicorp/vault-plugin-auth-centrify
+# github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
+github.com/hashicorp/vault-plugin-auth-cf
+github.com/hashicorp/vault-plugin-auth-cf/signatures
+github.com/hashicorp/vault-plugin-auth-cf/models
+github.com/hashicorp/vault-plugin-auth-cf/util
+github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
+github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 # github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
@@ -342,13 +352,6 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190814210103-f64f0cb4d8cf
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190814210109-476d6beb6ec0
-github.com/hashicorp/vault-plugin-auth-pcf
-github.com/hashicorp/vault-plugin-auth-pcf/signatures
-github.com/hashicorp/vault-plugin-auth-pcf/models
-github.com/hashicorp/vault-plugin-auth-pcf/util
-github.com/hashicorp/vault-plugin-auth-pcf/testing/certificates
-github.com/hashicorp/vault-plugin-auth-pcf/testing/pcf
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
@@ -368,7 +371,7 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20190826193927-72e177e5f3e1 => ./api
 github.com/hashicorp/vault/api
 # github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
@@ -397,11 +400,11 @@ github.com/hashicorp/vault/sdk/helper/keysutil
 github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/logging
 github.com/hashicorp/vault/sdk/helper/mlock
+github.com/hashicorp/vault/sdk/helper/useragent
 github.com/hashicorp/vault/sdk/physical
 github.com/hashicorp/vault/sdk/physical/file
 github.com/hashicorp/vault/sdk/physical/inmem
 github.com/hashicorp/vault/sdk/version
-github.com/hashicorp/vault/sdk/helper/useragent
 github.com/hashicorp/vault/sdk/helper/cryptoutil
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -691,20 +694,20 @@ golang.org/x/text/runes
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
 # google.golang.org/api v0.5.0
+google.golang.org/api/option
 google.golang.org/api/iam/v1
 google.golang.org/api/googleapi
 google.golang.org/api/iterator
-google.golang.org/api/option
+google.golang.org/api/transport
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
+google.golang.org/api/internal
 google.golang.org/api/oauth2/v2
 google.golang.org/api/gensupport
 google.golang.org/api/transport/http
 google.golang.org/api/storage/v1
 google.golang.org/api/googleapi/internal/uritemplates
-google.golang.org/api/internal
 google.golang.org/api/transport/grpc
-google.golang.org/api/transport
 google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http/internal/propagation
 google.golang.org/api/support/bundler
@@ -724,12 +727,18 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 # google.golang.org/genproto v0.0.0-20190513181449-d00d292a067c
 google.golang.org/genproto/googleapis/cloud/kms/v1
+google.golang.org/genproto/googleapis/api/metric
+google.golang.org/genproto/googleapis/api/monitoredres
+google.golang.org/genproto/googleapis/monitoring/v3
+google.golang.org/genproto/googleapis/api/distribution
 google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/spanner/v1
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/api
+google.golang.org/genproto/googleapis/api/label
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/googleapis/api/httpbody
@@ -739,8 +748,8 @@ google.golang.org/grpc/codes
 google.golang.org/grpc
 google.golang.org/grpc/keepalive
 google.golang.org/grpc/status
-google.golang.org/grpc/credentials
 google.golang.org/grpc/metadata
+google.golang.org/grpc/credentials
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/connectivity
