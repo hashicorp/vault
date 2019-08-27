@@ -7,7 +7,7 @@ const getPathOption = require('ember-cli-get-component-path-option');
 const normalizeEntityName = require('ember-cli-normalize-entity-name');
 
 module.exports = {
-  description: 'Generates a component. Name must contain a hyphen.',
+  description: 'Generates a component.',
 
   availableOptions: [
     {
