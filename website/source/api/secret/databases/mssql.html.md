@@ -48,17 +48,25 @@ has a number of parameters to further configure a connection.
 
 The MSSQL database plugin supports connection URL in three forms
 
-- `sqlserver` `scheme` - sqlserver://{{username}}:{{password}}@localhost:1433
+- `sqlserver` `scheme` - URL format of connection string with `sqlserver` protocol prefix, for example
 
-- `ADO` `key/value style` - server=localhost\\SQLExpress;user id=sa;database=master;app name=MyAppName
+  - sqlserver://{{username}}:{{password}}@localhost:1433
+  - sqlserver://yourdomain\youruser:yourpassword@localhost:1433?connection+timeout=30
 
-- `ODBC` `key/value style` - odbc:server=localhost\\SQLExpress;user id=sa;database=master;app name=MyAppName
+- `ADO` `key/value style` - Key/Value pair format with semicolon separator for example
 
-NOTES:
+  - server=localhost\\SQLExpress;user id=sa;password=yourpassword;database=master;app name=MyAppName
+  - server=localhost\\SQLExpress;user id=yourdomain\youruser;password=yourpassword;database=master;app name=MyAppName
+
+- `ODBC` `key/value style` - Key/Value pair format with `odbc:` prefix, for example
+  - odbc:server=localhost\\SQLExpress;user id=sa;password=yourpassword;database=master;app name=MyAppName
+  - odbc:server=localhost\\SQLExpress;user id=yourdomain\youruser;password=yourpassword;database=master;app name=MyAppName
+
+##### NOTES:
 
 - The username in `sqlserver scheme` URL does not support Windows domain user in the format of `domain name`\\`username`. An alternative is passing `user id` parameter on query string, when using `sqlserver scheme`, or adding `user id` key with value to the list of parameters in case of ADO/ODBC connection string. The list of parameters are available below.
 
-Common parameters:
+#### Common parameters:
 - user id - enter the SQL Server Authentication user id or the Windows Authentication user id in the DOMAIN\User format. On Windows, if user id is empty or missing Single-Sign-On is used.
 - password
 - database
