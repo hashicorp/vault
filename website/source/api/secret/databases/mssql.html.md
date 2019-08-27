@@ -53,7 +53,7 @@ The MSSQL database plugin supports connection URL in three forms
   - sqlserver://{{username}}:{{password}}@localhost:1433
   - sqlserver://yourdomain\youruser:yourpassword@localhost:1433?connection+timeout=30
 
-- `ADO` `key/value style` - Key/Value pair format with semicolon separator for example
+- `ADO` `key/value style` - Key/Value pair format with semicolon separator, for example
 
   - server=localhost\\SQLExpress;user id=sa;password=yourpassword;database=master;app name=MyAppName
   - server=localhost\\SQLExpress;user id=yourdomain\youruser;password=yourpassword;database=master;app name=MyAppName
