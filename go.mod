@@ -28,6 +28,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -43,6 +44,7 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/hashicorp/consul/api v1.0.1
 	github.com/hashicorp/errwrap v1.0.0
@@ -65,10 +67,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
+	github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190814210103-f64f0cb4d8cf
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190814210109-476d6beb6ec0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
@@ -76,7 +78,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98
+	github.com/hashicorp/vault/api v1.0.5-0.20190826193927-72e177e5f3e1
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
@@ -86,6 +88,7 @@ require (
 	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.0.9

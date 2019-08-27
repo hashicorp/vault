@@ -1,15 +1,30 @@
-## Next
+## 1.3 (Unreleased)
+
+FEATURES:
+
+ * **Stackdriver Metrics Sync**: Vault can now send metrics to
+   [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-6957]
+
+
+## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
 
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
    of value data [GH-7199]
+ * pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility ([GH-7346](https://github.com/hashicorp/vault/pull/7346)).
 
 BUG FIXES:
 
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
    not being applied to tokens generated using the OIDC login flow [JWT-67]
+ * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
+ * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
+ * ui: Fix an issue with the namespace picker being unable to render nested
+   namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
 
 ## 1.2.2 (August 15, 2019)
 
@@ -137,6 +152,7 @@ IMPROVEMENTS:
  * agent: Allow EC2 nonce to be passed in [GH-6953]
  * agent: Add optional `namespace` parameter, which sets the default namespace
    for the auto-auth functionality [GH-6988]
+ * agent: Add cert auto-auth method [GH-6652]
  * api: Add support for passing data to delete operations via `DeleteWithData`
    [GH-7139]
  * audit/file: Dramatically speed up file operations by changing

@@ -504,15 +504,6 @@ message TTLReply {
 	int64 TTL = 1;
 }
 
-message SudoPrivilegeArgs {
-	string path = 1;
-	string token = 2;
-}
-
-message SudoPrivilegeReply {
-	bool sudo = 1;
-}
-
 message TaintedReply {
 	bool tainted = 1;
 }
@@ -568,10 +559,6 @@ service SystemView {
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
 	rpc MaxLeaseTTL(Empty) returns (TTLReply);
-
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	rpc SudoPrivilege(SudoPrivilegeArgs) returns (SudoPrivilegeReply);
 
 	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special

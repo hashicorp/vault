@@ -282,6 +282,7 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{assumedRoleCred},
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 		PolicyDocument:  allowAllPolicyDocument,
 		DefaultSTSTTL:   2,
 		MaxSTSTTL:       3,
@@ -290,11 +291,6 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
 	}
 
-	roleEntry.PolicyArns = []string{"arn:aws:iam::aws:policy/AdministratorAccess"}
-	if roleEntry.validate() == nil {
-		t.Errorf("bad: invalid roleEntry with unrecognized PolicyArns %#v passed validation", roleEntry)
-	}
-	roleEntry.PolicyArns = []string{}
 	roleEntry.MaxSTSTTL = 1
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with MaxSTSTTL < DefaultSTSTTL %#v passed validation", roleEntry)
@@ -311,6 +307,7 @@ func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{federationTokenCred},
 		PolicyDocument:  allowAllPolicyDocument,
+		PolicyArns:      []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 		DefaultSTSTTL:   2,
 		MaxSTSTTL:       3,
 	}
