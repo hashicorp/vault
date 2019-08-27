@@ -1,6 +1,18 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
+      <li class="{{if (eq tab 'actions') 'is-active'}}">
+        {{#secret-link
+          secret=key.id
+          mode="show"
+          replace=true
+          queryParams=(query-params tab='actions')
+          data-test-transit-link="actions"
+          }}
+          Key Actions
+        {{/secret-link}}
+      </li>
+
       <li class="{{if (eq tab '') 'is-active'}}">
         {{#secret-link
           secret=key.id
