@@ -24,7 +24,7 @@ has a number of parameters to further configure a connection.
 | `POST`   | `/database/config/:name`     |
 
 ### Parameters
-- `connection_url` `(string: <required>)` - Specifies the [MSSQL DSN](#MSSQL DSN). This field
+- `connection_url` `(string: <required>)` - Specifies the [MSSQL DSN](#mssql-dsn). This field
   can be templated and supports passing the username and password
   parameters in the following format {{field_name}}.  A templated connection URL is
   required when using root credential rotation. 
@@ -42,7 +42,7 @@ has a number of parameters to further configure a connection.
 
 - `username` `(string: "")` - The root credential username used in the connection URL. 
 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `password` `(string: "")` - The root credential password used in the connection URL.
 
 ### MSSQL DSN
 
@@ -73,7 +73,7 @@ encrypt
 Please visit github repository of the database driver [here](https://github.com/denisenkom/go-mssqldb/blob/master/README.md#connection-parameters-and-dsn) for full reference of supported parameters.
 
 
-### Sample Payload
+### Sample Payloads
 
 - sqlserver scheme
 ```json
@@ -95,7 +95,7 @@ Please visit github repository of the database driver [here](https://github.com/
   "connection_url": "sqlserver://localhost:1433?user+id={{username}}&password={{password}}",
   "max_open_connections": 5,
   "max_connection_lifetime": "5s",
-  "username": "sa",
+  "username": "yourdomain\youruser",
   "password": "yourStrong(!)Password"
 }
 ```
