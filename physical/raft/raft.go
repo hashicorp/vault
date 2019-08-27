@@ -21,6 +21,7 @@ import (
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 
@@ -606,7 +607,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -628,6 +629,13 @@ func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
 	}
 	defer snap.Close()
 
+	size, err := snap.Size()
+	if err != nil {
+		return err
+	}
+
+	out.Header().Add("Content-Disposition", "attachment")
+	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
 	_, err = io.Copy(out, snap)
 	if err != nil {
 		return err

@@ -28,7 +28,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	var data map[string]interface{}
 	var origBody io.ReadCloser
 	var requestReader io.ReadCloser
-	var responseWriter io.Writer
+	var responseWriter http.ResponseWriter
 
 	// Determine the operation
 	var op logical.Operation
