@@ -25,7 +25,7 @@ func TestSysHostInfo(t *testing.T) {
 		t.Fatal("expected non-nil HostInfo")
 	}
 
-	if info.CollectionTime.IsZero() {
+	if info.Timestamp == "" {
 		t.Fatalf("expected a valid timestamp")
 	}
 	if info.CPU == nil {

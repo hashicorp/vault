@@ -2634,7 +2634,7 @@ func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request
 	}
 
 	respData := map[string]interface{}{
-		"collection_time": info.CollectionTime,
+		"timestamp": info.Timestamp,
 	}
 	if info.CPU != nil {
 		respData["cpu"] = info.CPU

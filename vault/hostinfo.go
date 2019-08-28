@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"runtime"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -12,11 +11,11 @@ import (
 )
 
 type HostInfo struct {
-	CollectionTime time.Time              `json:"collection_time"`
-	CPU            []cpu.InfoStat         `json:"cpu"`
-	Disk           *disk.UsageStat        `json:"disk"`
-	Host           *host.InfoStat         `json:"host"`
-	Memory         *mem.VirtualMemoryStat `json:"memory"`
+	Timestamp time.Time              `json:"timestamp"`
+	CPU       []cpu.InfoStat         `json:"cpu"`
+	Disk      []*disk.UsageStat      `json:"disk"`
+	Host      *host.InfoStat         `json:"host"`
+	Memory    *mem.VirtualMemoryStat `json:"memory"`
 }
 
 type HostInfoError struct {
@@ -33,7 +32,7 @@ func (e *HostInfoError) Error() string {
 
 func (c *Core) CollectHostInfo() (*HostInfo, error) {
 	var retErr *multierror.Error
-	info := &HostInfo{CollectionTime: time.Now()}
+	info := &HostInfo{Timestamp: time.Now().UTC()}
 
 	if h, err := host.Info(); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{err})
@@ -47,15 +46,20 @@ func (c *Core) CollectHostInfo() (*HostInfo, error) {
 		info.Memory = v
 	}
 
-	diskPath := "/"
-	if runtime.GOOS == "windows" {
-		diskPath = "C:"
-	}
-
-	if d, err := disk.Usage(diskPath); err != nil {
+	parts, err := disk.Partitions(false)
+	if err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
-		info.Disk = d
+		var usage []*disk.UsageStat
+		for _, part := range parts {
+			u, err := disk.Usage(part.Mountpoint)
+			if err != nil {
+				retErr = multierror.Append(retErr, &HostInfoError{err})
+			}
+			usage = append(usage, u)
+
+		}
+		info.Disk = usage
 	}
 
 	if c, err := cpu.Info(); err != nil {

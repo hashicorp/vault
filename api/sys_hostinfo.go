@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/shirou/gopsutil/cpu"
@@ -37,18 +36,13 @@ func (c *Sys) HostInfo() (*HostInfoResponse, error) {
 		return nil, err
 	}
 
-	result.CollectionTime, err = time.Parse(time.RFC3339, secret.Data["collection_time"].(string))
-	if err != nil {
-		return nil, err
-	}
-
 	return &result, err
 }
 
 type HostInfoResponse struct {
-	CollectionTime time.Time              `json:"collection_time"`
-	CPU            []cpu.InfoStat         `json:"cpu"`
-	Disk           *disk.UsageStat        `json:"disk"`
-	Host           *host.InfoStat         `json:"host"`
-	Memory         *mem.VirtualMemoryStat `json:"memory"`
+	Timestamp string                 `json:"timestamp" mapstructure:"-"`
+	CPU       []cpu.InfoStat         `json:"cpu"`
+	Disk      []*disk.UsageStat      `json:"disk"`
+	Host      *host.InfoStat         `json:"host"`
+	Memory    *mem.VirtualMemoryStat `json:"memory"`
 }
