@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/shirou/gopsutil/cpu"
@@ -30,17 +31,26 @@ func (c *Sys) HostInfo() (*HostInfoResponse, error) {
 		return nil, errors.New("data from server response is empty")
 	}
 
+	// Parse timestamp separately since WeakDecode can't handle this field.
+	timestampRaw := secret.Data["timestamp"].(string)
+	timestamp, err := time.Parse(time.RFC3339, timestampRaw)
+	if err != nil {
+		return nil, err
+	}
+	delete(secret.Data, "timestamp")
+
 	var result HostInfoResponse
 	err = mapstructure.WeakDecode(secret.Data, &result)
 	if err != nil {
 		return nil, err
 	}
+	result.Timestamp = timestamp
 
 	return &result, err
 }
 
 type HostInfoResponse struct {
-	Timestamp string                 `json:"timestamp" mapstructure:"-"`
+	Timestamp time.Time              `json:"timestamp"`
 	CPU       []cpu.InfoStat         `json:"cpu"`
 	Disk      []*disk.UsageStat      `json:"disk"`
 	Host      *host.InfoStat         `json:"host"`
