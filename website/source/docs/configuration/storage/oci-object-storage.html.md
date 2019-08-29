@@ -32,7 +32,7 @@ For more information on OCI object storage, please see the Oracle's [OCI object 
 
 To use the OCI ObjectStorage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
 
-The OCI object storage backend does not support creating the buckets automatically at this time, but this could be a future enhancement.
+The OCI object storage backend does not support creating the buckets automatically at this time.
 
 
 ## `OCI ObjectStorage` Authentication
