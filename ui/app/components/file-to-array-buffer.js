@@ -25,7 +25,7 @@ export default Component.extend({
   readFile(file) {
     const reader = new FileReader();
     reader.onload = () => this.send('onChange', reader.result, file.name);
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   },
 
   actions: {

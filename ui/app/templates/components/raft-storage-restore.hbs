@@ -27,7 +27,7 @@
   @message="Raft snapshots can be very large files. Be prepared for uploading the file to take some time."
   />
 
-<BinaryFile @onChange={{action (mut file)}} />
+<FileToArrayBuffer @onChange={{action (mut file)}} />
 
 <div class="b-checkbox">
   <input
