@@ -2611,6 +2611,9 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format)
 }
 
+// handleHostInfo collects and returns host-related information, which includes
+// system information, cpu, disk, and memory usage. Any capture-related errors
+// returned by the collection method will be returned as response warnings.
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{}
 	info, err := b.Core.CollectHostInfo()
@@ -2621,6 +2624,11 @@ func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request
 			for _, mErr := range errs.Errors {
 				if errwrap.ContainsType(mErr, new(HostInfoError)) {
 					warnings = append(warnings, mErr.Error())
+				} else {
+					// If the error is a multierror, it should only be for
+					// HostInfoError, but if it's not for any reason, we return
+					// it as an error to avoid it being swallowed.
+					return nil, err
 				}
 			}
 			resp.Warnings = warnings

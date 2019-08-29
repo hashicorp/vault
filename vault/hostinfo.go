@@ -10,6 +10,7 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+// HostInfo holds all the information that gets captured on the host.
 type HostInfo struct {
 	Timestamp time.Time              `json:"timestamp"`
 	CPU       []cpu.InfoStat         `json:"cpu"`
@@ -18,6 +19,7 @@ type HostInfo struct {
 	Memory    *mem.VirtualMemoryStat `json:"memory"`
 }
 
+// HostInfoError is a typed error for more convenient error checking.
 type HostInfoError struct {
 	Err error
 }
@@ -30,6 +32,12 @@ func (e *HostInfoError) Error() string {
 	return e.Err.Error()
 }
 
+// CollectHostInfo returns information on the host, which includes general
+// host status, CPU, memory, and disk utilization.
+//
+// The function does a best-effort capture on the most information possible,
+// continuing on capture errors encountered and appending them to a resulting
+// multierror.Error that gets returned at the end.
 func (c *Core) CollectHostInfo() (*HostInfo, error) {
 	var retErr *multierror.Error
 	info := &HostInfo{Timestamp: time.Now().UTC()}
