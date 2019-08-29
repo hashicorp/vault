@@ -17,11 +17,11 @@ The OCI ObjectStorage backend is used to persist Vault's data in OCI object stor
 
 ```hcl
 storage "oci_objectstorage" {
-   namespaceName = "<object_storage_namespace_name>"
-   bucketName = "<vault_data_bucket_name>"
+   namespace_name = "<object_storage_namespace_name>"
+   bucket_name = "<vault_data_bucket_name>"
    ha_enabled = "<boolean true/false>"
-   lockBucketName = "<leader_lock_bucket_name>"
-   authTypeAPIKey = "<boolean setting for using api-key instead of instance principals>"
+   lock_bucket_name = "<leader_lock_bucket_name>"
+   auth_type_api_key = "<boolean setting for using api-key instead of instance principals>"
 }
 ```
 
@@ -43,9 +43,9 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 ## `OCI ObjectStorage` Parameters
 
-- `namespaceName` `(string: <required>)` – Specifies the name of the ObjectStorage namespaces containing the data bucket and the lock bucket.
+- `namespace_name` `(string: <required>)` – Specifies the name of the ObjectStorage namespaces containing the data bucket and the lock bucket.
 
-- `bucketName` `(string: <required>)` - Specifies the name of the bucket that will be used to store the vault data.
+- `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the vault data.
 
 
 ### High Availability Parameters
@@ -54,7 +54,7 @@ For more information on service accounts, please see the [OCI Identity documenta
   enabled. This is a boolean value, but it is specified as a string like "true"
   or "false".
 
-- `lockBucketName` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
+- `lock_bucket_name` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
 
 ## `OCI ObjectStorage` Examples
 
@@ -64,8 +64,8 @@ This example shows configuring OCI ObjectStorage with high availability enabled.
 
 ```hcl
 storage "oci_objectstorage" {
-    namespaceName = "MyNamespace
-    bucketName = "DataBucket"
+    namespace_name = "MyNamespace
+    bucket_name = "DataBucket"
 }
 ```
 
