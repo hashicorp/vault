@@ -47,7 +47,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   to be used to make OCI KMS key management requests. May also be specified by the `VAULT_OCIKMS_MANAGEMENT_ENDPOINT` environment
   variable.
 - `auth_type_api_key` `(boolean: false)`: Specifies if using API key to authenticate to OCI KMS service.
-  If it is `false`, Vault authenticates using instance principal from compute instance. See Authentication section for details. Default is `false`. 
+  If it is `false`, Vault authenticates using the instance principal from the compute instance. See Authentication section for details. Default is `false`. 
 
 ## Authentication
 
