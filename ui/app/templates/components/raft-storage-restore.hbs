@@ -18,9 +18,39 @@
   </p.levelLeft>
 </PageHeader>
 
+<form {{action (perform this.restore this.file) on="submit"}}>
+  <MessageError @errors={{this.errors}} />
+  <div class="box is-sideless is-fullwidth is-marginless">
 <AlertBanner
   @type="warning"
+  @title="This might take a while"
   @message="Raft snapshots can be very large files. Be prepared for uploading the file to take some time."
   />
 
 <BinaryFile @onChange={{action (mut file)}} />
+
+<div class="b-checkbox">
+  <input
+    type="checkbox"
+    id="force-restore"
+    class="styled"
+    checked={{this.forceRestore}}
+    onchange={{action
+      (mut this.forceRestore)
+      value="target.checked"
+    }}
+  />
+  <label for="force-restore" class="is-label">
+    Force restore
+  </label>
+  <p class="help-text has-short-padding has-text-grey-dark is-size-7">
+  Bypasses checks ensuring the Autounseal or shamir keys are consistent with the snapshot data.
+  </p>
+</div>
+  </div>
+<FormSaveButtons
+  @saveButtonText="Restore"
+  @isSaving={{this.restore.isRunning}}
+  @cancelLinkParams={{array "vault.cluster.storage"}}
+/>
+</form>

@@ -8,8 +8,8 @@ export default Component.extend({
       let resp = await adapter.rawRequest('/v1/sys/storage/raft/snapshot', 'GET');
       let blob = await resp.blob();
 
-      let filename = 'raft.snap';
-      let file = new Blob([blob], { type: 'application/x-gzip' });
+      let filename = 'raft.gzip';
+      let file = new Blob([blob], { type: 'application/gzip' });
       file.name = filename;
       let a = document.createElement('a');
       a.href = window.URL.createObjectURL(file);
