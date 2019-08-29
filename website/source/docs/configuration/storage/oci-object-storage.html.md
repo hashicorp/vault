@@ -4,7 +4,7 @@ page_title: "OCI ObjectStorage - Storage Backends - Configuration"
 sidebar_title: "OCI ObjectStorage"
 sidebar_current: "docs-configuration-storage-oci-objectstorage"
 description: |-
-  The OCI ObjectStorage backend is used to persist Vault's data in OCI object storage, an internet-scale, high-performance storage platform that offers reliable and cost-efficient data durability.
+  The OCI ObjectStorage backend is used to persist Vault's data in OCI object storage.
 ---
 
 # OCI ObjectStorage Storage Backend
