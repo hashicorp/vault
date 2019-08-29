@@ -22,7 +22,7 @@ The OCI KMS seal is activated by one of the following:
   
 ## `ocikms` Example
 
-This example shows configuring OCI KMS seal through the Vault configuration file
+This example shows configuring the OCI KMS seal through the Vault configuration file
 by providing all the required values:
 
 ```hcl
