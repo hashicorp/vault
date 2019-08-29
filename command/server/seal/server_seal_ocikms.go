@@ -19,7 +19,7 @@ func configureOCIKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[
 	if kmsInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "OCI KMS KeyID")
 		(*info)["Seal Type"] = configSeal.Type
-		(*info)["OCI KMS KeyID"] = kmsInfo["keyID"]
+		(*info)["OCI KMS KeyID"] = kmsInfo["key_id"]
 	}
 	return autoseal, nil
 }

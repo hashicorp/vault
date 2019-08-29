@@ -56,7 +56,7 @@ func initSeal(t *testing.T) *OCIKMSSeal {
 
 	mockConfig := map[string]string{
 
-		"authTypeAPIKey": "true",
+		"auth_type_api_key": "true",
 	}
 
 	_, err = s.SetConfig(mockConfig)

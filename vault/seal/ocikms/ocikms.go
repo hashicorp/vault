@@ -31,13 +31,13 @@ const (
 	// Maximum number of retries
 	KMSMaximumNumberOfRetries = 5
 	// keyID config
-	KMSConfigKeyID = "keyID"
+	KMSConfigKeyID = "key_id"
 	// cryptoEndpoint config
-	KMSConfigCryptoEndpoint = "cryptoEndpoint"
+	KMSConfigCryptoEndpoint = "crypto_endpoint"
 	// managementEndpoint config
-	KMSConfigManagementEndpoint = "managementEndpoint"
+	KMSConfigManagementEndpoint = "management_endpoint"
 	// authTypeAPIKey config
-	KMSConfigAuthTypeAPIKey = "authTypeAPIKey"
+	KMSConfigAuthTypeAPIKey = "auth_type_api_key"
 )
 
 var (
@@ -130,7 +130,7 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		k.authTypeAPIKey, err = strconv.ParseBool(authTypeAPIKeyStr)
 		if err != nil {
 			metrics.IncrCounter(metricInitFailed, 1)
-			return nil, errwrap.Wrapf("failed parsing authTypeAPIKey parameter: {{err}}", err)
+			return nil, errwrap.Wrapf("failed parsing "+KMSConfigAuthTypeAPIKey+" parameter: {{err}}", err)
 		}
 	}
 	if k.authTypeAPIKey {
@@ -163,9 +163,9 @@ func (k *OCIKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	encryptedBlobInfo, err := k.Encrypt(context.Background(), []byte(""))
 	if err != nil || encryptedBlobInfo == nil {
 		metrics.IncrCounter(metricInitFailed, 1)
-		return nil, errwrap.Wrapf("failed keyID validation: {{err}}", err)
+		return nil, errwrap.Wrapf("failed "+KMSConfigKeyID+" validation: {{err}}", err)
 	}
-	k.logger.Info("successfully validated keyID")
+	k.logger.Info("successfully validated " + KMSConfigKeyID)
 
 	// Map that holds non-sensitive configuration info
 	sealInfo := make(map[string]string)
