@@ -66,7 +66,7 @@ variables or as configuration parameters.
     # management_endpoint can be replaced by VAULT_OCIKMS_MANAGEMENT_ENDPOINT environment var
     # key_id can be replaced by VAULT_OCIKMS_SEAL_KEY_ID environment var
     ```
-1. If you want to use User Principal, the plugin will take API key you defined for OCI SDK, often under `~/.oci/config`.
+1. If you want to use User Principal, the plugin will take the API key you defined for OCI SDK, often under `~/.oci/config`.
     ```
     seal "ocikms" {
         auth_type_api_key   = true
