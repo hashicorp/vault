@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/vault/vault"
@@ -17,19 +18,29 @@ func TestSysHostInfo(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 
 	// Query against the active node, should get host information back
-	info, err := cores[0].Client.Sys().HostInfo()
+	secret, err := cores[0].Client.Logical().Read("sys/host-info")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info == nil {
-		t.Fatal("expected non-nil HostInfo")
+	if secret == nil || secret.Data == nil {
+		t.Fatal("expected data in the response")
+	}
+
+	dataBytes, err := json.Marshal(secret.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var info vault.HostInfo
+	if err := json.Unmarshal(dataBytes, &info); err != nil {
+		t.Fatal(err)
 	}
 
 	if info.Timestamp.IsZero() {
-		t.Fatalf("expected a valid timestamp")
+		t.Fatal("expected non-zero Timestamp")
 	}
 	if info.CPU == nil {
-		t.Fatal("expected CPU info")
+		t.Fatal("expected non-nil CPU value")
 	}
 	if info.Disk == nil {
 		t.Fatal("expected disk info")
@@ -42,8 +53,8 @@ func TestSysHostInfo(t *testing.T) {
 	}
 
 	// Query against the standby, should error
-	info, err = cores[1].Client.Sys().HostInfo()
-	if err == nil || info != nil {
-		t.Fatalf("expected error on standby node, HostInfo: %v", info)
+	secret, err = cores[1].Client.Logical().Read("sys/host-info")
+	if err == nil || secret != nil {
+		t.Fatalf("expected error on standby node, HostInfo: %v", secret)
 	}
 }
