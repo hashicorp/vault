@@ -71,12 +71,12 @@ type Backend struct {
 }
 
 func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	bucketName := conf["bucketName"]
+	bucketName := conf["bucket_name"]
 	if bucketName == "" {
 		return nil, errors.New("missing bucket name")
 	}
 
-	namespaceName := conf["namespaceName"]
+	namespaceName := conf["namespace_name"]
 	if bucketName == "" {
 		return nil, errors.New("missing namespace name")
 	}
@@ -92,7 +92,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 		}
 
 		if haEnabled {
-			lockBucketName = conf["lockBucketName"]
+			lockBucketName = conf["lock_bucket_name"]
 			if lockBucketName == "" {
 				return nil, errors.New("missing lock bucket name")
 			}
@@ -100,11 +100,11 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	}
 
 	authTypeAPIKeyBool := false
-	authTypeAPIKeyStr := conf["authTypeAPIKey"]
+	authTypeAPIKeyStr := conf["auth_type_api_key"]
 	if authTypeAPIKeyStr != "" {
 		authTypeAPIKeyBool, err = strconv.ParseBool(authTypeAPIKeyStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing authTypeAPIKey parameter: {{err}}", err)
+			return nil, errwrap.Wrapf("failed parsing auth_type_api_key parameter: {{err}}", err)
 		}
 	}
 
@@ -124,11 +124,11 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	}
 
 	logger.Debug("configuration",
-		"bucketName", bucketName,
-		"namespaceName", namespaceName,
-		"haEnabled", haEnabled,
-		"lockBucketName", lockBucketName,
-		"authTypeAPIKey", authTypeAPIKeyBool,
+		"bucket_name", bucketName,
+		"namespace_name", namespaceName,
+		"ha_enabled", haEnabled,
+		"lock_bucket_name", lockBucketName,
+		"auth_type_api_key", authTypeAPIKeyBool,
 	)
 
 	return &Backend{

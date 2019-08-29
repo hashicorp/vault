@@ -66,11 +66,11 @@ func getTenancyOcid(configProvider common.ConfigurationProvider, t *testing.T) (
 
 func createBackend(bucketName string, namespaceName string, haEnabledStr string, lockBucketName string, t *testing.T) physical.Backend {
 	backend, err := NewBackend(map[string]string{
-		"authTypeAPIKey": "true",
-		"bucketName":     bucketName,
-		"namespaceName":  namespaceName,
+		"auth_type_api_key": "true",
+		"bucket_name":     bucketName,
+		"namespace_name":  namespaceName,
 		"ha_enabled":     haEnabledStr,
-		"lockBucketName": lockBucketName,
+		"lock_bucket_name": lockBucketName,
 	}, logging.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
