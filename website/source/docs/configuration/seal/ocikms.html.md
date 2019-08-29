@@ -102,9 +102,9 @@ The most common policy allows a dynamic group of tenant A to use KMS's keys in t
    
 ## `ocikms` Rotate OCI KMS Master Key
 
-For the [OCI KMS key rotation feature][oci-kms-rotation], OCI KMS will create a new version of key internally. This process is independent from the vault, vault still uses the same `key_id` without any interruption.
+For the [OCI KMS key rotation feature][oci-kms-rotation], OCI KMS will create a new version of key internally. This process is independent from Vault, and Vault still uses the same `key_id` without any interruption.
 
-If you want to change the `key_id`, migrate to Shamir, change `key_id`, and then migrate to OCI KMS with the new `key_id`.
+If you want to change the `key_id`: migrate to Shamir, change `key_id`, and then migrate to OCI KMS with the new `key_id`.
 
 [oci-sdk]: https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm
 [oci-dg]:  https://docs.cloud.oracle.com/iaas/Content/Identity/Tasks/managingdynamicgroups.htm
