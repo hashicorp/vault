@@ -63,6 +63,7 @@ func (c *Core) CollectHostInfo() (*HostInfo, error) {
 			u, err := disk.Usage(part.Mountpoint)
 			if err != nil {
 				retErr = multierror.Append(retErr, &HostInfoError{err})
+				continue
 			}
 			usage = append(usage, u)
 
