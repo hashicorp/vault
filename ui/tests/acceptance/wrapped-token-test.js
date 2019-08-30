@@ -1,10 +1,9 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, visit, settled } from '@ember/test-helpers';
+import { currentURL } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import auth from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { next } from '@ember/runloop';
 
 const consoleComponent = create(consoleClass);
 

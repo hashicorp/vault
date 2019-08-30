@@ -117,7 +117,7 @@ export default Component.extend(DEFAULTS, {
     'selectedAuthIsPath',
     function() {
       let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
-      if (!methods && !this.wrappedToken) {
+      if (!methods && !wrappedToken) {
         return {};
       }
       if (keyIsPath) {
