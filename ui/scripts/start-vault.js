@@ -94,11 +94,10 @@ async function processLines(input, eachLine = () => {}) {
       }
     } catch (error) {
       console.log(error);
-    } finally {
-      process.exit(0);
+      process.exit(1);
     }
   } catch (error) {
     console.log(error);
-    process.exit(0);
+    process.exit(1);
   }
 })();
