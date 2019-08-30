@@ -49,6 +49,7 @@ var _ physical.Backend = (*FSM)(nil)
 var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
 var _ raft.ConfigurationStore = (*FSM)(nil)
+var _ raft.BatchingFSM = (*FSM)(nil)
 
 type restoreCallback func(context.Context) error
 
@@ -382,6 +383,97 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 		return nil
 	})
 	return err
+}
+
+// Apply will apply a log value to the FSM. This is called from the raft
+// library.
+func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
+	commands := make([]*LogData, len(logs))
+	for i, log := range logs {
+		command := &LogData{}
+		err := proto.Unmarshal(log.Data, command)
+		if err != nil {
+			f.logger.Error("error proto unmarshaling log data", "error", err)
+			panic("error proto unmarshaling log data")
+		}
+		// TODO: what about config logs?
+		commands[i] = command
+	}
+
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	// Only advance latest pointer if this log has a higher index value than
+	// what we have seen in the past.
+	var logIndex []byte
+	var err error
+	latestIndex, _ := f.LatestState()
+	lastLog := logs[len(logs)-1]
+	if latestIndex.Index < lastLog.Index {
+		logIndex, err = proto.Marshal(&IndexValue{
+			Term:  lastLog.Term,
+			Index: lastLog.Index,
+		})
+		if err != nil {
+			f.logger.Error("unable to marshal latest index", "error", err)
+			panic("unable to marshal latest index")
+		}
+	}
+
+	err = f.db.Update(func(tx *bolt.Tx) error {
+		for _, command := range commands {
+			b := tx.Bucket(dataBucketName)
+			for _, op := range command.Operations {
+				var err error
+				switch op.OpType {
+				case putOp:
+					err = b.Put([]byte(op.Key), op.Value)
+				case deleteOp:
+					err = b.Delete([]byte(op.Key))
+				case restoreCallbackOp:
+					if f.restoreCb != nil {
+						// Kick off the restore callback function in a go routine
+						go f.restoreCb(context.Background())
+					}
+				default:
+					return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+				}
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// TODO: benchmark so we can know how much time this adds
+		if f.storeLatestState && len(logIndex) > 0 {
+			b := tx.Bucket(configBucketName)
+			err = b.Put(latestIndexKey, logIndex)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		f.logger.Error("failed to store data", "error", err)
+		panic("failed to store data")
+	}
+
+	// If we advanced the latest value, update the in-memory representation too.
+	if len(logIndex) > 0 {
+		atomic.StoreUint64(f.latestTerm, lastLog.Term)
+		atomic.StoreUint64(f.latestIndex, lastLog.Index)
+	}
+
+	resp := make([]interface{}, len(logs))
+	for i := range logs {
+		resp[i] = &FSMApplyResponse{
+			Success: true,
+		}
+	}
+
+	return resp
 }
 
 // Apply will apply a log value to the FSM. This is called from the raft
