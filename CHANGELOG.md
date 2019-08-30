@@ -7,7 +7,6 @@ FEATURES:
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
 
-
 ## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
@@ -25,6 +24,7 @@ BUG FIXES:
  * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
  * ui: Fix an issue with the namespace picker being unable to render nested
    namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
+ * auth plugin for Kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
 
 ## 1.2.2 (August 15, 2019)
 
