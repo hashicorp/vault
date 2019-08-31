@@ -5,7 +5,8 @@ export default Component.extend({
   actions: {
     async downloadSnapshot() {
       let adapter = getOwner(this).lookup('adapter:application');
-      let resp = await adapter.rawRequest('/v1/sys/storage/raft/snapshot', 'GET');
+      let url = '/v1/sys/storage/raft/snapshot';
+      let resp = await adapter.rawRequest(url, 'GET');
       let blob = await resp.blob();
 
       let filename = 'raft.gzip';
