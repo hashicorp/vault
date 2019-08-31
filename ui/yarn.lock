@@ -7436,10 +7436,9 @@ ember-runtime-enumerable-includes-polyfill@^2.0.0:
     ember-cli-babel "^6.9.0"
     ember-cli-version-checker "^2.1.0"
 
-ember-service-worker@^0.8.0:
+ember-service-worker@meirish/ember-service-worker#configurable-scope:
   version "0.8.0"
-  resolved "https://registry.yarnpkg.com/ember-service-worker/-/ember-service-worker-0.8.0.tgz#851ccfe07c1941cfb7cb547f6c62b6259223b6c6"
-  integrity sha512-bzwWXv5My7+HnfmhVpeBcK3REngICkJXJEIdQWc3IRe65FIqFsIa4zegK6SAJr1HiMMeVmjol/Sgbjxz41Gi+w==
+  resolved "https://codeload.github.com/meirish/ember-service-worker/tar.gz/86c8dcf5cfc42e1e721b8c7d68afb513a2c288c7"
   dependencies:
     broccoli-caching-writer "^3.0.3"
     broccoli-file-creator "^2.1.1"

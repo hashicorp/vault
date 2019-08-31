@@ -107,7 +107,7 @@
     "ember-resolver": "^5.0.1",
     "ember-responsive": "^3.0.0-beta.3",
     "ember-router-helpers": "^0.2.0",
-    "ember-service-worker": "^0.8.0",
+    "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
     "ember-source": "~3.8.0",
     "ember-svg-jar": "^2.1.0",
@@ -164,7 +164,8 @@
       "lib/css",
       "lib/kmip",
       "lib/open-api-explorer",
-      "lib/replication"
+      "lib/replication",
+      "lib/service-worker-authenticated-download"
     ]
   }
 }
