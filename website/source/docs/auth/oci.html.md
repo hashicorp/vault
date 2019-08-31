@@ -134,7 +134,7 @@ $ vault login -method=oci auth_type=apikey role=devrole
 
 1.  First, sign the following request with your OCI credentials and obtain the signing string and the authorization header. Replace the endpoint, scheme (http or https) & role of the URL corresponding to your vault configuration. For more information on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm).
 
-    `http://127.0.0.1/v1/auth/oci/role/devrole`
+    `http://127.0.0.1/v1/auth/oci/login/devrole`
 
 1.  On signing the above request, you would get headers similar to:
 
@@ -142,7 +142,7 @@ $ vault login -method=oci auth_type=apikey role=devrole
     The signing string would look like (line breaks inserted into the (request-target) header for easier reading):
                 
     date: Fri, 22 Aug 2019 21:02:19 GMT
-    (request-target): get /v1/auth/oci/role/devrole
+    (request-target): get /v1/auth/oci/login/devrole
     host: 127.0.0.1
     
     The Authorization header would look like:
@@ -159,12 +159,16 @@ $ vault login -method=oci auth_type=apikey role=devrole
 1.  Add the signed headers to the "request_headers" field and make the actual request to vault. An exampe is given below:
 
     ```
-    POST http://127.0.0.1/v1/auth/oci/role/devrole
+    POST http://127.0.0.1/v1/auth/oci/login/devrole
        "request_headers": {
            "date": ["Fri, 22 Aug 2019 21:02:19 GMT"],
-           "(request-target)": ["get /v1/auth/oci/role/devrole"],
+           "(request-target)": ["get /v1/auth/oci/login/devrole"],
            "host": ["127.0.0.1"],
            "content-type": ["application/json"],
            "authorization": ["Signature algorithm=\"rsa-sha256\",headers=\"date (request-target) host\",keyId=\"ocid1.tenancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3rynjq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7\",signature=\"GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPeDUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M=\",version=\"1\""]
        }
     ```
+    
+## API
+
+The OCI Auth method has a full HTTP API. Please see the [API docs](/api/auth/oci/index.html) for more details.
