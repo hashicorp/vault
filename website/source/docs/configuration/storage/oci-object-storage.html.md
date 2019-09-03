@@ -58,9 +58,9 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 ## `OCI ObjectStorage` Examples
 
-### High Availability
+### Standalone vault instance
 
-This example shows configuring OCI ObjectStorage with high availability enabled.
+This example shows configuring OCI ObjectStorage as a standalone instance.
 
 ```hcl
 storage "oci_objectstorage" {
@@ -69,9 +69,9 @@ storage "oci_objectstorage" {
 }
 ```
 
-### Standalone vault instance
+### High Availability
 
-This example shows configuring OCI ObjectStorage as a standalone instance.
+This example shows configuring OCI ObjectStorage with high availability enabled.
 
 ```hcl
 storage "oci_objectstorage" {
