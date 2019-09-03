@@ -208,10 +208,10 @@ type Telemetry struct {
 	// CirconusCheckTags is a comma separated list of tags to apply to the check. Note that
 	// the value of CirconusCheckSearchTag will always be added to the check.
 	// Default: none
-	CirconusCheckTags string `mapstructure:"circonus_check_tags"`
+	CirconusCheckTags string `hcl:"circonus_check_tags"`
 	// CirconusCheckDisplayName is the name for the check which will be displayed in the Circonus UI.
 	// Default: value of CirconusCheckInstanceID
-	CirconusCheckDisplayName string `mapstructure:"circonus_check_display_name"`
+	CirconusCheckDisplayName string `hcl:"circonus_check_display_name"`
 	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
 	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
 	// is provided, an attempt will be made to search for an existing check using Instance ID and
@@ -239,8 +239,16 @@ type Telemetry struct {
 	// Prometheus:
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
 	// Default: 24h
-	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTime    time.Duration `hcl:"-"`
 	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
+
+	// Stackdriver:
+	// StackdriverProjectID is the project to publish stackdriver metrics to.
+	StackdriverProjectID string `hcl:"stackdriver_project_id"`
+	// StackdriverLocation is the GCP or AWS region of the monitored resource.
+	StackdriverLocation string `hcl:"stackdriver_location"`
+	// StackdriverNamespace is the namespace identifier, such as a cluster name.
+	StackdriverNamespace string `hcl:"stackdriver_namespace"`
 }
 
 func (s *Telemetry) GoString() string {

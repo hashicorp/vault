@@ -1,9 +1,53 @@
-## Next
+## 1.3 (Unreleased)
+
+FEATURES:
+
+ * **Stackdriver Metrics Sync**: Vault can now send metrics to
+   [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-6957]
+
+## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
 
- * auth/jwt: Handle groups claim values that are strings, in addition to
-   list of strings [JWT-63]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
+   of value data [GH-7199]
+ * pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility ([GH-7346](https://github.com/hashicorp/vault/pull/7346)).
+
+BUG FIXES:
+
+ * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
+   not being applied to tokens generated using the OIDC login flow [JWT-67]
+ * storage/couchdb: Fix a file descriptor leak [GH-7345]
+ * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
+ * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
+ * ui: Fix an issue with the namespace picker being unable to render nested
+   namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
+ * auth plugin for Kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
+
+## 1.2.2 (August 15, 2019)
+
+CHANGES:
+
+ * auth/pcf: The signature format has been updated to use the standard Base64
+   encoding instead of the URL-safe variant. Signatures created using the
+   previous format will continue to be accepted [PCF-27]
+ * core: The http response code returned when an identity token key is not found
+   has been changed from 400 to 404
+
+IMPROVEMENTS: 
+
+ * identity: Remove 512 entity limit for groups [GH-7317]
+
+BUG FIXES:
+
+ * auth/approle: Fix an error where an empty `token_type` string was not being
+   correctly handled as `TokenTypeDefault` [GH-7273]
+ * auth/radius: Fix panic when logging in [GH-7286]
+ * ui: the string-list widget will now honor multiline input [GH-7254]
+ * ui: various visual bugs in the KV interface were addressed [GH-7307]
+ * ui: fixed incorrect URL to access help in LDAP auth [GH-7299]
 
 ## 1.2.1 (August 6th, 2019)
 
@@ -108,6 +152,7 @@ IMPROVEMENTS:
  * agent: Allow EC2 nonce to be passed in [GH-6953]
  * agent: Add optional `namespace` parameter, which sets the default namespace
    for the auto-auth functionality [GH-6988]
+ * agent: Add cert auto-auth method [GH-6652]
  * api: Add support for passing data to delete operations via `DeleteWithData`
    [GH-7139]
  * audit/file: Dramatically speed up file operations by changing
@@ -163,6 +208,8 @@ BUG FIXES:
 
  * audit: Log requests and responses due to invalid wrapping token provided
    [GH-6541]
+ * audit: Fix bug preventing request counter queries from working with auditing 
+   enabled [GH-6767
  * auth/aws: AWS Roles are now upgraded and saved to the latest version just
    after the AWS credential plugin is mounted. [GH-7025]
  * auth/aws: Fix a case where a panic could stem from a malformed assumed-role ARN

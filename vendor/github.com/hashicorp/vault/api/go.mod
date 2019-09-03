@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-retryablehttp v0.5.4
+	github.com/hashicorp/go-retryablehttp v0.6.2
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190805214312-16112a336457

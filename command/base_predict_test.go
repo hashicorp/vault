@@ -333,6 +333,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"cassandra-database-plugin",
 				"centrify",
 				"cert",
+				"cf",
 				"consul",
 				"elasticsearch-database-plugin",
 				"gcp",
@@ -357,7 +358,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"nomad",
 				"oidc",
 				"okta",
-				"pcf",
+				"pcf", // Deprecated.
 				"pki",
 				"postgresql",
 				"postgresql-database-plugin",
