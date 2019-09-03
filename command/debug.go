@@ -351,8 +351,8 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 			// 1. Any type of DR Node
 			// 2. Non-DR, non-performance standby nodes
 			switch {
-			case healthStatus.ReplicationDRMode != "disabled":
-				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics capture on DR node", currentTimestamp))
+			case healthStatus.ReplicationDRMode == "secondary":
+				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics capture on DR secondary node", currentTimestamp))
 				return
 			case healthStatus.Standby && !healthStatus.PerformanceStandby:
 				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics on standby node", currentTimestamp))
