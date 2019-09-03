@@ -12,7 +12,8 @@ const isCI = !!process.env.CI;
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
     'ember-service-worker': {
-      serviceWorkerScope: '/v1/sys/storage/raft/snapshot',
+      serviceWorkerScope: config.serviceWorkerScope,
+      skipWaitingOnMessage: true,
     },
     svgJar: {
       //optimize: false,

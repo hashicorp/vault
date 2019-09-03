@@ -25,12 +25,15 @@
           <nav class="box menu">
             <ul class="menu-list">
               <li class="action">
-                <a href="/v1/sys/storage/raft/snapshot">
-                  Download
-                </a>
-                <button type="button" class="link is-ghost" onclick={{action "downloadSnapshot"}}>
-                  Download
+                {{#if this.useServiceWorker}}
+                <a href="/v1/sys/storage/raft/snapshot" onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}>
+                    Download
+                  </a>
+                {{else}}
+                  <button type="button" class="link is-ghost" onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}>
+                    Download
                 </button>
+                {{/if}}
               </li>
               <li class="action">
                 {{#link-to "vault.cluster.storage-restore"}}
