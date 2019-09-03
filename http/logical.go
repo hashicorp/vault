@@ -27,7 +27,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	var data map[string]interface{}
 	var origBody io.ReadCloser
-	var requestReader io.ReadCloser
+	var passHTTPReq bool
 	var responseWriter io.Writer
 
 	// Determine the operation
@@ -68,10 +68,10 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		// Parse the request if we can
 		if op == logical.UpdateOperation {
 			// If we are uploading a snapshot we don't want to parse it. Instead
-			// we will simply add the request body to the logical request object
+			// we will simply add the HTTP request to the logical request object
 			// for later consumption.
 			if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
-				requestReader = r.Body
+				passHTTPReq = true
 				origBody = r.Body
 			} else {
 				origBody, err = parseRequest(core, r, w, &data)
@@ -131,8 +131,8 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
-	if requestReader != nil {
-		req.RequestReader = requestReader
+	if passHTTPReq {
+		req.HTTPRequest = r
 	}
 	if responseWriter != nil {
 		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
