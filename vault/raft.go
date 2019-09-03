@@ -124,7 +124,7 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 	if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      raftTLS,
-		ClusterListener: c.clusterListener,
+		ClusterListener: c.getClusterListener(),
 		StartAsLeader:   creating,
 	}); err != nil {
 		return err
@@ -133,7 +133,7 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			c.logger.Info("stopping raft server")
-			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("failed to stop raft server", "error", err)
 			}
 		}
@@ -715,7 +715,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 	err = raftStorage.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
-		ClusterListener: c.clusterListener,
+		ClusterListener: c.getClusterListener(),
 	})
 	if err != nil {
 		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)
