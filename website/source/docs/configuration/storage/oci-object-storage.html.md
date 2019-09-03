@@ -58,7 +58,7 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 ## `OCI ObjectStorage` Examples
 
-### Standalone vault instance
+### Standalone Vault instance
 
 This example shows configuring OCI ObjectStorage as a standalone instance.
 
