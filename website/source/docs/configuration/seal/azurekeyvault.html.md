@@ -72,7 +72,7 @@ Azure authentication values:
 ```
 
 ~> **Note:** If Vault is hosted on Azure, Vault can use Managed Service
-Identities (MSI) to access Azure instead of an environment and  shared client id
+Identities (MSI) to access Azure instead of an environment and shared client id
 and secret.  MSI must be
 [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm)
 on the VMs hosting Vault, and it is the preferred configuration since MSI
