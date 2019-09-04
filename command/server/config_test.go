@@ -349,6 +349,72 @@ func TestLoadConfigDir(t *testing.T) {
 	}
 }
 
+func TestConfig_Sanitized(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config3.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:443",
+				},
+			},
+		},
+
+		Storage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "top_level_api_addr",
+			ClusterAddr:  "top_level_cluster_addr",
+		},
+
+		HAStorage: &Storage{
+			Type:              "consul",
+			RedirectAddr:      "top_level_api_addr",
+			ClusterAddr:       "top_level_cluster_addr",
+			DisableClustering: true,
+		},
+
+		Telemetry: &Telemetry{
+			StatsdAddr:              "bar",
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
+		},
+
+		Seals: []*Seal{
+			{
+				Type:     "awskms",
+				Disabled: false,
+			},
+		},
+
+		DisableCache: true,
+		DisableMlock: true,
+		EnableUI:     true,
+
+		EnableRawEndpoint: true,
+
+		DisableSealWrap: true,
+
+		MaxLeaseTTL:     10 * time.Hour,
+		DefaultLeaseTTL: 10 * time.Hour,
+		ClusterName:     "testcluster",
+
+		PidFile: "./pidfile",
+
+		APIAddr:     "top_level_api_addr",
+		ClusterAddr: "top_level_cluster_addr",
+	}
+
+	sanitizedConfig := config.Sanitized()
+
+	if !reflect.DeepEqual(sanitizedConfig, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", sanitizedConfig, expected)
+	}
+}
+
 func TestParseListeners(t *testing.T) {
 	obj, _ := hcl.Parse(strings.TrimSpace(`
 listener "tcp" {

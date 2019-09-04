@@ -924,7 +924,7 @@ func (c *Config) Sanitized() *Config {
 			Type:              c.Storage.Type,
 			RedirectAddr:      c.Storage.RedirectAddr,
 			ClusterAddr:       c.Storage.ClusterAddr,
-			DisableClustering: c.DisableClustering,
+			DisableClustering: c.Storage.DisableClustering,
 		}
 	}
 
@@ -932,10 +932,10 @@ func (c *Config) Sanitized() *Config {
 	var sanitizedHAStorage *Storage
 	if c.HAStorage != nil {
 		sanitizedHAStorage = &Storage{
-			Type:              c.Storage.Type,
-			RedirectAddr:      c.Storage.RedirectAddr,
-			ClusterAddr:       c.Storage.ClusterAddr,
-			DisableClustering: c.DisableClustering,
+			Type:              c.HAStorage.Type,
+			RedirectAddr:      c.HAStorage.RedirectAddr,
+			ClusterAddr:       c.HAStorage.ClusterAddr,
+			DisableClustering: c.HAStorage.DisableClustering,
 		}
 	}
 
@@ -955,7 +955,7 @@ func (c *Config) Sanitized() *Config {
 	var sanitizedTelemetry *Telemetry
 	if c.Telemetry != nil {
 		sanitizedTelemetry = &Telemetry{
-			StatsiteAddr:                       c.Telemetry.StatsdAddr,
+			StatsiteAddr:                       c.Telemetry.StatsiteAddr,
 			StatsdAddr:                         c.Telemetry.StatsdAddr,
 			DisableHostname:                    c.Telemetry.DisableHostname,
 			CirconusAPIToken:                   "",
