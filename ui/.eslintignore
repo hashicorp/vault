@@ -8,6 +8,8 @@
 
 # dependencies
 /bower_components/
+/node_modules/
+/.storybook/
 /stories/
 
 # misc

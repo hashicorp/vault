@@ -339,7 +339,8 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 	if groupsClaimRaw == nil {
 		return nil, nil, fmt.Errorf("%q claim not found in token", role.GroupsClaim)
 	}
-	groups, ok := groupsClaimRaw.([]interface{})
+
+	groups, ok := normalizeList(groupsClaimRaw)
 
 	if !ok {
 		return nil, nil, fmt.Errorf("%q claim could not be converted to string list", role.GroupsClaim)

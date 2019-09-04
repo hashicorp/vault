@@ -129,7 +129,7 @@ export default Component.extend({
       return `Add new ${singularize(this.label)}: ${id}`;
     },
     hideCreateOptionOnSameID(id) {
-      let existingOption = this.options.findBy('id', id) || this.options.findBy('name', id);
+      let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
       return !existingOption;
     },
   },
