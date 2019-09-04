@@ -35,7 +35,7 @@
       }}
       <div class="field">
         <div class="content">
-          <p>You can encrypt plaintext data using <span class="tag">examplekey</span> as the encryption key.</p>
+          <p>You can encrypt plaintext data using <span class="tag">examplekey</span>as the encryption key.</p>
         </div>
         <label for="plaintext" class="is-label">
           Plaintext
@@ -53,6 +53,16 @@
             data-test-transit-input="plaintext"
           }}
           {{b64-toggle value=plaintext isInput=false data-test-transit-b64-toggle="plaintext"}}
+          <div class="b-checkbox">
+            <input type="checkbox"
+              id="b64-toggle"
+              class="styled"
+              checked={{false}}
+              data-test-transit-b64-toggle="plaintext" />
+            <label for="b64-toggle" class="is-label">
+              This data is already encoded in base64
+            </label>
+          </div>
         </div>
       </div>
       {{#if key.derived}}
