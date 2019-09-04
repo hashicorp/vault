@@ -52,6 +52,7 @@ import (
 	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
+	physOCI "github.com/hashicorp/vault/physical/oci"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
 	physRaft "github.com/hashicorp/vault/physical/raft"
 	physS3 "github.com/hashicorp/vault/physical/s3"
@@ -142,6 +143,7 @@ var (
 		"manta":                  physManta.NewMantaBackend,
 		"mssql":                  physMSSQL.NewMSSQLBackend,
 		"mysql":                  physMySQL.NewMySQLBackend,
+		"oci":                    physOCI.NewBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
 		"s3":                     physS3.NewS3Backend,
 		"spanner":                physSpanner.NewBackend,
