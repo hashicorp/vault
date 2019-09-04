@@ -34,11 +34,24 @@
         key_version=key_version
       }}
       <div class="field">
+        <div class="content">
+          <p>You can encrypt plaintext data using <span class="tag">examplekey</span> as the encryption key.</p>
+        </div>
         <label for="plaintext" class="is-label">
           Plaintext
         </label>
         <div class="control is-relative">
-          {{textarea id="plaintext" value=plaintext class="textarea" data-test-transit-input="plaintext"}}
+          {{ivy-codemirror
+            value=plaintext
+            id="plaintext"
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="plaintext"
+          }}
           {{b64-toggle value=plaintext isInput=false data-test-transit-b64-toggle="plaintext"}}
         </div>
       </div>
