@@ -28,20 +28,20 @@ storage "oci_objectstorage" {
 For more information on OCI object storage, please see the Oracle's [OCI object storage documentation][ocios-docs].
 
 
-## `OCI ObjectStorage` Setup
+## `oci_objectstorage` Setup
 
 To use the OCI ObjectStorage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
 
 The OCI object storage backend does not support creating the buckets automatically at this time.
 
 
-## `OCI ObjectStorage` Authentication
+## `oci_objectstorage` Authentication
 
 The OCI ObjectStorage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
 
 For more information on service accounts, please see the [OCI Identity documentation] [oci-identity].
 
-## `OCI ObjectStorage` Parameters
+## `oci_objectstorage` Parameters
 
 - `namespace_name` `(string: <required>)` – Specifies the name of the ObjectStorage namespaces containing the data bucket and the lock bucket.
 
@@ -56,7 +56,7 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 - `lock_bucket_name` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
 
-## `OCI ObjectStorage` Examples
+## `oci_objectstorage` Examples
 
 ### Standalone vault instance
 
