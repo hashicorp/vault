@@ -916,7 +916,6 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 // - Seals.Config
 // - Telemetry.CirconusAPIToken
 func (c *Config) Sanitized() *Config {
-
 	// Sanitize storage stanza
 	var sanitizedStorage *Storage
 	if c.Storage != nil {

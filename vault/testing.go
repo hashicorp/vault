@@ -1347,6 +1347,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if base != nil {
+		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.EnableUI = base.EnableUI
 		coreConfig.DefaultLeaseTTL = base.DefaultLeaseTTL
