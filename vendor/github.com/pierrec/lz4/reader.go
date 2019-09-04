@@ -14,6 +14,9 @@ import (
 // The Header may change between Read() calls in case of concatenated frames.
 type Reader struct {
 	Header
+	// Handler called when a block has been successfully read.
+	// It provides the number of bytes read.
+	OnBlockDone func(size int)
 
 	buf      [8]byte       // Scrap buffer.
 	pos      int64         // Current position in src.
@@ -76,7 +79,7 @@ func (z *Reader) readHeader(first bool) error {
 		return fmt.Errorf("lz4: invalid version: got %d; expected %d", v, Version)
 	}
 	if b>>5&1 == 0 {
-		return fmt.Errorf("lz4: block dependency not supported")
+		return ErrBlockDependency
 	}
 	z.BlockChecksum = b>>4&1 > 0
 	frameSize := b>>3&1 > 0
@@ -101,7 +104,7 @@ func (z *Reader) readHeader(first bool) error {
 	z.data = z.zdata[:cap(z.zdata)][bSize:]
 	z.idx = len(z.data)
 
-	z.checksum.Write(buf[0:2])
+	_, _ = z.checksum.Write(buf[0:2])
 
 	if frameSize {
 		buf := buf[:8]
@@ -110,7 +113,7 @@ func (z *Reader) readHeader(first bool) error {
 		}
 		z.Size = binary.LittleEndian.Uint64(buf)
 		z.pos += 8
-		z.checksum.Write(buf)
+		_, _ = z.checksum.Write(buf)
 	}
 
 	// Header checksum.
@@ -158,6 +161,9 @@ func (z *Reader) Read(buf []byte) (int, error) {
 		if debugFlag {
 			debug("reading block from writer")
 		}
+		// Reset uncompressed buffer
+		z.data = z.zdata[:cap(z.zdata)][len(z.zdata):]
+
 		// Block length: 0 = end of frame, highest bit set: uncompressed.
 		bLen, err := z.readUint32()
 		if err != nil {
@@ -208,6 +214,9 @@ func (z *Reader) Read(buf []byte) (int, error) {
 				return 0, err
 			}
 			z.pos += int64(bLen)
+			if z.OnBlockDone != nil {
+				z.OnBlockDone(int(bLen))
+			}
 
 			if z.BlockChecksum {
 				checksum, err := z.readUint32()
@@ -252,10 +261,13 @@ func (z *Reader) Read(buf []byte) (int, error) {
 				return 0, err
 			}
 			z.data = z.data[:n]
+			if z.OnBlockDone != nil {
+				z.OnBlockDone(n)
+			}
 		}
 
 		if !z.NoChecksum {
-			z.checksum.Write(z.data)
+			_, _ = z.checksum.Write(z.data)
 			if debugFlag {
 				debug("current frame checksum %x", z.checksum.Sum32())
 			}
