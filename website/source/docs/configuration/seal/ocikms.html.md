@@ -54,27 +54,30 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
-1. If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed at https://www.vaultproject.io/docs/configuration/.
-    ```hcl
-    seal "ocikms" {
-        crypto_endpoint     = "<kms-crypto-endpoint>"
-        management_endpoint = "<kms-management-endpoint>"
-        key_id              = "<kms-key-id>"
-    }
-    # Notes:
-    # crypto_endpoint can be replaced by VAULT_OCIKMS_CRYPTO_ENDPOINT environment var
-    # management_endpoint can be replaced by VAULT_OCIKMS_MANAGEMENT_ENDPOINT environment var
-    # key_id can be replaced by VAULT_OCIKMS_SEAL_KEY_ID environment var
-    ```
-1. If you want to use User Principal, the plugin will take the API key you defined for OCI SDK, often under `~/.oci/config`.
-    ```
-    seal "ocikms" {
-        auth_type_api_key   = true
-        crypto_endpoint     = "<kms-crypto-endpoint>"
-        management_endpoint = "<kms-management-endpoint>"
-        key_id              = "<kms-key-id>"
-    }
-    ```
+If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed at https://www.vaultproject.io/docs/configuration/.
+
+```hcl
+seal "ocikms" {
+    crypto_endpoint     = "<kms-crypto-endpoint>"
+    management_endpoint = "<kms-management-endpoint>"
+    key_id              = "<kms-key-id>"
+}
+# Notes:
+# crypto_endpoint can be replaced by VAULT_OCIKMS_CRYPTO_ENDPOINT environment var
+# management_endpoint can be replaced by VAULT_OCIKMS_MANAGEMENT_ENDPOINT environment var
+# key_id can be replaced by VAULT_OCIKMS_SEAL_KEY_ID environment var
+```
+   
+If you want to use User Principal, the plugin will take the API key you defined for OCI SDK, often under `~/.oci/config`.
+
+```hcl
+seal "ocikms" {
+    auth_type_api_key   = true
+    crypto_endpoint     = "<kms-crypto-endpoint>"
+    management_endpoint = "<kms-management-endpoint>"
+    key_id              = "<kms-key-id>"
+}
+```
 
 To grant permission for a compute instance to use OCI KMS service, write policies for KMS access.
 
@@ -82,23 +85,22 @@ To grant permission for a compute instance to use OCI KMS service, write policie
 - Create a policy that allows the Dynamic Group to use or manage keys from OCI KMS. There are multiple ways to write these policies. The [OCI Identity Policy][oci-id] can be used as a reference or starting point.
 
 The most common policy allows a dynamic group of tenant A to use KMS's keys in tenant B:
-1. Policy for tenant A
-    ```text
-    define tenancy tenantB as <tenantB-ocid>
-     
-    endorse dynamic-group <dynamic-group-name> to use keys in tenancy tenantB
+
+```text
+define tenancy tenantB as <tenantB-ocid>
  
-    ```
-1. Policy for tenant B
-   ```text
-   define tenancy tenantA as <tenantA-ocid>
-    
-   define dynamic-group <dynamic-group-name> as <dynamic-group-ocid>
+endorse dynamic-group <dynamic-group-name> to use keys in tenancy tenantB
 
-   admit dynamic-group <dynamic-group-name> of tenancy tenantA to use keys in compartment <key-compartment>
+```
 
+```text
+define tenancy tenantA as <tenantA-ocid>
 
-   ```
+define dynamic-group <dynamic-group-name> as <dynamic-group-ocid>
+
+admit dynamic-group <dynamic-group-name> of tenancy tenantA to use keys in compartment <key-compartment>
+
+```
    
 ## `ocikms` Rotate OCI KMS Master Key
 
