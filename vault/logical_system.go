@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
@@ -222,6 +223,27 @@ type SystemBackend struct {
 	mfaLock   *sync.RWMutex
 	mfaLogger log.Logger
 	logger    log.Logger
+}
+
+// handleConfigState returns the current configuration state. The configuration
+// data that it returns is a sanitized version of the combined configuration
+// file(s) provided.
+func (b *SystemBackend) handleConfigState(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.SanitizedConfig()
+
+	configMap := structs.New(config).Map()
+
+	// Remove the raw values from the map
+	for k := range configMap {
+		if strings.HasSuffix(k, "Raw") {
+			delete(configMap, k)
+		}
+	}
+
+	resp := &logical.Response{
+		Data: configMap,
+	}
+	return resp, nil
 }
 
 // handleCORSRead returns the current CORS configuration

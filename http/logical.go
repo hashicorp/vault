@@ -277,6 +277,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		if needsForward {
+			// Do not forward these specific requests since they are only
+			// applicable to the local node.
+			if strings.HasPrefix(req.Path, "sys/config/state/") {
+				return
+			}
+
 			if origBody != nil {
 				r.Body = origBody
 			}
