@@ -636,6 +636,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
+	out.Header().Add("Content-Type", "application/gzip")
 	_, err = io.Copy(out, snap)
 	if err != nil {
 		return err
