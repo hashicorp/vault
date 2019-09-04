@@ -47,7 +47,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
@@ -64,27 +64,28 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/golang-lru v0.5.1
+	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 	github.com/hashicorp/raft v1.1.1
 	github.com/hashicorp/raft-snapshot v1.0.1
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190730042457-c395df6cf9ad
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190730042506-ea9c527dad54
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190730042513-cbbe5ae0021d
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190730042519-f5a47667d35c
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190730042527-3d85d12ec6b6
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190730042533-e4b69df916b8
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9
+	github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
 	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190813234723-10bdf3b39ed9
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190730042544-81772df4467d
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190730042549-a191a183a1f3
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190730042556-6c462a37ae43
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190730042604-fc8e75528aa0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190730042611-bdbdbdf0ecec
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190730042620-21e481a323c7
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190730042626-1ef9e711c818
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205542-3b036e58e950
-	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
+	github.com/hashicorp/vault/api v1.0.5-0.20190904164530-82f8309ab640
+	github.com/hashicorp/vault/sdk v0.1.14-0.20190904164450-29f2490f986b
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -93,6 +94,7 @@ require (
 	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.1.1
 	github.com/mattn/go-colorable v0.0.9
@@ -109,7 +111,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
-	github.com/oracle/oci-go-sdk v5.15.0+incompatible
+	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
@@ -126,10 +128,10 @@ require (
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	google.golang.org/api v0.5.0
-	google.golang.org/genproto v0.0.0-20190513181449-d00d292a067c
+	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
 	google.golang.org/grpc v1.22.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
