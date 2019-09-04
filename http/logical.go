@@ -280,6 +280,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			// Do not forward these specific requests since they are only
 			// applicable to the local node.
 			if strings.HasPrefix(req.Path, "sys/config/state/") {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 				return
 			}
 

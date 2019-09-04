@@ -514,14 +514,15 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ns, err := namespace.FromContext(r.Context())
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+		path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+
 		// If we are a performance standby we can handle the request.
 		if core.PerfStandby() {
-			ns, err := namespace.FromContext(r.Context())
-			if err != nil {
-				respondError(w, http.StatusBadRequest, err)
-				return
-			}
-			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 			switch {
 			case !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
@@ -556,6 +557,13 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		}
 		if leaderAddr == "" {
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"))
+			return
+		}
+
+		// These requests should always be served locally
+		switch {
+		case strings.HasPrefix(path, "sys/config/state/"):
+			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			return
 		}
 
