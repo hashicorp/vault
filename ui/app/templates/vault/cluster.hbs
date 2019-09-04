@@ -91,7 +91,7 @@
 {{/if}}
 <div class="global-flash">
   {{#each flashMessages.queue as |flash|}}
-    {{#flash-message data-test-flash-message=true flash=flash as |component flash close|}}
+    {{#flash-message data-test-flash-message=true flash=flash as |customComponent flash close|}}
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}

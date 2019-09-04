@@ -8,6 +8,7 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	golang.org/x/tools/cmd/goimports \
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
@@ -141,9 +142,9 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests"
-	@cd ui && yarn run test-oss
+	@cd ui && yarn run test:oss
 
 ember-ci-test: # Deprecated, to be removed soon.
 	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
@@ -160,13 +161,13 @@ check-browserstack-creds:
 
 test-ui-browserstack: check-vault-in-path check-browserstack-creds
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests in Browserstack"
 	@cd ui && yarn run test:browserstack
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -174,10 +175,10 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets

@@ -88,6 +88,13 @@ $ go get github.com/adfinis-sygroup/vault-client
 $ cabal install vault-tool
 ```
 
+
+* [gothic](http://hackage.haskell.org/package/gothic)
+
+```shell
+$ stack install gothic
+```
+
 ### Java
 
 * [Spring Vault](https://github.com/spring-projects/spring-vault)

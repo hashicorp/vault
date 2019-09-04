@@ -107,6 +107,7 @@
     - docs/auth/github.html
     - docs/auth/ldap.html
     - docs/auth/okta.html
+    - docs/auth/cf.html
     - docs/auth/radius.html
     - docs/auth/cert.html
     - docs/auth/token.html
@@ -124,6 +125,10 @@
   title: "Plugin Backends"
   docs:
     - docs/plugin/index.html
+-
+  title: "Platforms"
+  docs:
+    - docs/platform/k8s/index.html
 -
   title: "Vault Enterprise"
   docs:

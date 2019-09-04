@@ -1,5 +1,5 @@
 import { run } from '@ember/runloop';
-import { copy } from '@ember/object/internals';
+import { copy } from 'ember-copy';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';

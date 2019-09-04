@@ -3,7 +3,7 @@ import layout from '../templates/components/confirm-action';
 
 /**
  * @module ConfirmAction
- * `ConfirmAction` is a button followed by a confirmation message and button used to prevent users from performing actions they do not intend to.
+ * `ConfirmAction` is a button followed by a pop up confirmation message and button used to prevent users from performing actions they do not intend to.
  *
  * @example
  * ```js

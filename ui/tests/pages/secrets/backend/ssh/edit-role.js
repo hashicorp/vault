@@ -13,9 +13,9 @@ export default create({
   save: clickable('[data-test-role-ssh-create]'),
 
   async createOTPRole(name) {
+    await this.name(name);
     await this.toggleMore()
       .keyType('otp')
-      .name(name)
       .defaultUser('admin')
       .CIDR('0.0.0.0/0')
       .save();
