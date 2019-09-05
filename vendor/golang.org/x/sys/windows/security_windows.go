@@ -170,15 +170,20 @@ const (
 //sys	CopySid(destSidLen uint32, destSid *SID, srcSid *SID) (err error) = advapi32.CopySid
 //sys	AllocateAndInitializeSid(identAuth *SidIdentifierAuthority, subAuth byte, subAuth0 uint32, subAuth1 uint32, subAuth2 uint32, subAuth3 uint32, subAuth4 uint32, subAuth5 uint32, subAuth6 uint32, subAuth7 uint32, sid **SID) (err error) = advapi32.AllocateAndInitializeSid
 //sys	createWellKnownSid(sidType WELL_KNOWN_SID_TYPE, domainSid *SID, sid *SID, sizeSid *uint32) (err error) = advapi32.CreateWellKnownSid
+//sys	isWellKnownSid(sid *SID, sidType WELL_KNOWN_SID_TYPE) (isWellKnown bool) = advapi32.IsWellKnownSid
 //sys	FreeSid(sid *SID) (err error) [failretval!=0] = advapi32.FreeSid
 //sys	EqualSid(sid1 *SID, sid2 *SID) (isEqual bool) = advapi32.EqualSid
+//sys	getSidIdentifierAuthority(sid *SID) (authority *SidIdentifierAuthority) = advapi32.GetSidIdentifierAuthority
+//sys	getSidSubAuthorityCount(sid *SID) (count *uint8) = advapi32.GetSidSubAuthorityCount
+//sys	getSidSubAuthority(sid *SID, index uint32) (subAuthority *uint32) = advapi32.GetSidSubAuthority
+//sys	isValidSid(sid *SID) (isValid bool) = advapi32.IsValidSid
 
 // The security identifier (SID) structure is a variable-length
 // structure used to uniquely identify users or groups.
 type SID struct{}
 
 // StringToSid converts a string-format security identifier
-// sid into a valid, functional sid.
+// SID into a valid, functional SID.
 func StringToSid(s string) (*SID, error) {
 	var sid *SID
 	p, e := UTF16PtrFromString(s)
@@ -193,7 +198,7 @@ func StringToSid(s string) (*SID, error) {
 	return sid.Copy()
 }
 
-// LookupSID retrieves a security identifier sid for the account
+// LookupSID retrieves a security identifier SID for the account
 // and the name of the domain on which the account was found.
 // System specify target computer to search.
 func LookupSID(system, account string) (sid *SID, domain string, accType uint32, err error) {
@@ -230,7 +235,7 @@ func LookupSID(system, account string) (sid *SID, domain string, accType uint32,
 	}
 }
 
-// String converts sid to a string format
+// String converts SID to a string format
 // suitable for display, storage, or transmission.
 func (sid *SID) String() (string, error) {
 	var s *uint16
@@ -242,12 +247,12 @@ func (sid *SID) String() (string, error) {
 	return UTF16ToString((*[256]uint16)(unsafe.Pointer(s))[:]), nil
 }
 
-// Len returns the length, in bytes, of a valid security identifier sid.
+// Len returns the length, in bytes, of a valid security identifier SID.
 func (sid *SID) Len() int {
 	return int(GetLengthSid(sid))
 }
 
-// Copy creates a duplicate of security identifier sid.
+// Copy creates a duplicate of security identifier SID.
 func (sid *SID) Copy() (*SID, error) {
 	b := make([]byte, sid.Len())
 	sid2 := (*SID)(unsafe.Pointer(&b[0]))
@@ -258,8 +263,42 @@ func (sid *SID) Copy() (*SID, error) {
 	return sid2, nil
 }
 
-// LookupAccount retrieves the name of the account for this sid
-// and the name of the first domain on which this sid is found.
+// IdentifierAuthority returns the identifier authority of the SID.
+func (sid *SID) IdentifierAuthority() SidIdentifierAuthority {
+	return *getSidIdentifierAuthority(sid)
+}
+
+// SubAuthorityCount returns the number of sub-authorities in the SID.
+func (sid *SID) SubAuthorityCount() uint8 {
+	return *getSidSubAuthorityCount(sid)
+}
+
+// SubAuthority returns the sub-authority of the SID as specified by
+// the index, which must be less than sid.SubAuthorityCount().
+func (sid *SID) SubAuthority(idx uint32) uint32 {
+	if idx >= uint32(sid.SubAuthorityCount()) {
+		panic("sub-authority index out of range")
+	}
+	return *getSidSubAuthority(sid, idx)
+}
+
+// IsValid returns whether the SID has a valid revision and length.
+func (sid *SID) IsValid() bool {
+	return isValidSid(sid)
+}
+
+// Equals compares two SIDs for equality.
+func (sid *SID) Equals(sid2 *SID) bool {
+	return EqualSid(sid, sid2)
+}
+
+// IsWellKnown determines whether the SID matches the well-known sidType.
+func (sid *SID) IsWellKnown(sidType WELL_KNOWN_SID_TYPE) bool {
+	return isWellKnownSid(sid, sidType)
+}
+
+// LookupAccount retrieves the name of the account for this SID
+// and the name of the first domain on which this SID is found.
 // System specify target computer to search for.
 func (sid *SID) LookupAccount(system string) (account, domain string, accType uint32, err error) {
 	var sys *uint16
@@ -287,7 +326,7 @@ func (sid *SID) LookupAccount(system string) (account, domain string, accType ui
 	}
 }
 
-// Various types of pre-specified sids that can be synthesized at runtime.
+// Various types of pre-specified SIDs that can be synthesized and compared at runtime.
 type WELL_KNOWN_SID_TYPE uint32
 
 const (
@@ -413,13 +452,13 @@ const (
 	WinBuiltinDeviceOwnersSid                     = 119
 )
 
-// Creates a sid for a well-known predefined alias, generally using the constants of the form
+// Creates a SID for a well-known predefined alias, generally using the constants of the form
 // Win*Sid, for the local machine.
 func CreateWellKnownSid(sidType WELL_KNOWN_SID_TYPE) (*SID, error) {
 	return CreateWellKnownDomainSid(sidType, nil)
 }
 
-// Creates a sid for a well-known predefined alias, generally using the constants of the form
+// Creates a SID for a well-known predefined alias, generally using the constants of the form
 // Win*Sid, for the domain specified by the domainSid parameter.
 func CreateWellKnownDomainSid(sidType WELL_KNOWN_SID_TYPE, domainSid *SID) (*SID, error) {
 	n := uint32(50)
@@ -564,12 +603,22 @@ type Tokenprimarygroup struct {
 
 type Tokengroups struct {
 	GroupCount uint32
-	Groups     [1]SIDAndAttributes
+	Groups     [1]SIDAndAttributes // Use AllGroups() for iterating.
+}
+
+// AllGroups returns a slice that can be used to iterate over the groups in g.
+func (g *Tokengroups) AllGroups() []SIDAndAttributes {
+	return (*[(1 << 28) - 1]SIDAndAttributes)(unsafe.Pointer(&g.Groups[0]))[:g.GroupCount:g.GroupCount]
 }
 
 type Tokenprivileges struct {
 	PrivilegeCount uint32
-	Privileges     [1]LUIDAndAttributes
+	Privileges     [1]LUIDAndAttributes // Use AllPrivileges() for iterating.
+}
+
+// AllPrivileges returns a slice that can be used to iterate over the privileges in p.
+func (p *Tokenprivileges) AllPrivileges() []LUIDAndAttributes {
+	return (*[(1 << 27) - 1]LUIDAndAttributes)(unsafe.Pointer(&p.Privileges[0]))[:p.PrivilegeCount:p.PrivilegeCount]
 }
 
 type Tokenmandatorylabel struct {
@@ -714,7 +763,7 @@ func (t Token) GetUserProfileDirectory() (string, error) {
 	}
 }
 
-// Returns whether the current token is elevated from a UAC perspective.
+// IsElevated returns whether the current token is elevated from a UAC perspective.
 func (token Token) IsElevated() bool {
 	var isElevated uint32
 	var outLen uint32
@@ -725,7 +774,7 @@ func (token Token) IsElevated() bool {
 	return outLen == uint32(unsafe.Sizeof(isElevated)) && isElevated != 0
 }
 
-// Returns the linked token, which may be an elevated UAC token.
+// GetLinkedToken returns the linked token, which may be an elevated UAC token.
 func (token Token) GetLinkedToken() (Token, error) {
 	var linkedToken Token
 	var outLen uint32
