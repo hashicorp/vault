@@ -17,6 +17,7 @@ IMPROVEMENTS:
 
 IMPROVEMENTS:
 
+ * auth/jwt: Groups claim matching now treats a string response as a single element list [JWT-63]
  * auth/kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
  * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346].
 
