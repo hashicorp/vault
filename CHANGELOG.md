@@ -9,6 +9,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * core: Exit ScanView if context has been cancelled [GH-7419]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
    of value data [GH-7199]
 
