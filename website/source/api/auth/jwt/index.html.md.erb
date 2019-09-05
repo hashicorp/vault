@@ -135,8 +135,18 @@ entities attempting to login. At least one of the bound values must be set.
 - `verbose_oidc_logging` `(bool: false)` - Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
-
-<%= partial "partials/tokenfields" %>
+- `policies` `(array: [])` - Policies to be set on tokens issued using this
+  role.
+- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
+  provided as "1h", where hour is the largest suffix.
+- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
+  this role.
+- `period` `(string: "")` - If set, indicates that the token generated using
+  this role should never expire. The token should be renewed within the duration
+  specified by this value. At each renewal, the token's TTL will be set to the
+  value of this parameter.
+- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
+  roles to client IPs falling within the range of the specified CIDR(s).
 
 ### Sample Payload
 

@@ -61,8 +61,11 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"policy_arns": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+				Type: framework.TypeCommaStringSlice,
+				Description: fmt.Sprintf(`ARNs of AWS policies. Behavior varies by credential_type. When credential_type is
+%s, then it will attach the specified policies to the generated IAM user.
+When credential_type is %s or %s, the policies will be passed as the
+PolicyArns parameter, acting as a filter on permissions available.`, iamUserCred, assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Policy ARNs",
 				},
@@ -265,7 +268,6 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 		roleEntry.UserPath = userPathRaw.(string)
 	}
-
 
 	if legacyRole != "" {
 		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
@@ -485,8 +487,8 @@ func (r *awsRoleEntry) validate() error {
 	}
 
 	if r.MaxSTSTTL > 0 &&
-	r.DefaultSTSTTL > 0 &&
-	r.DefaultSTSTTL > r.MaxSTSTTL {
+		r.DefaultSTSTTL > 0 &&
+		r.DefaultSTSTTL > r.MaxSTSTTL {
 		errors = multierror.Append(errors, fmt.Errorf(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
 	}
 
@@ -501,9 +503,6 @@ func (r *awsRoleEntry) validate() error {
 
 	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
 		errors = multierror.Append(errors, fmt.Errorf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred))
-	}
-	if len(r.PolicyArns) > 0 && !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
-		errors = multierror.Append(errors, fmt.Errorf("cannot supply policy_arns when credential_type isn't %s", iamUserCred))
 	}
 
 	return errors.ErrorOrNil()

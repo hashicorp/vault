@@ -86,7 +86,10 @@ func (m *couchDBClient) put(e couchDBEntry) error {
 		return err
 	}
 	req.SetBasicAuth(m.username, m.password)
-	_, err = m.Client.Do(req)
+	resp, err := m.Client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 
 	return err
 }
