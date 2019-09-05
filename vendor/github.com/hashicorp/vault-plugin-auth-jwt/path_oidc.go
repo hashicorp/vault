@@ -199,25 +199,29 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		tokenMetadata[k] = v
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:     role.Policies,
-			DisplayName:  alias.Name,
-			Period:       role.Period,
-			NumUses:      role.NumUses,
-			Alias:        alias,
-			GroupAliases: groupAliases,
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
-			Metadata: tokenMetadata,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			BoundCIDRs: role.BoundCIDRs,
+	auth := &logical.Auth{
+		Policies:     role.Policies,
+		DisplayName:  alias.Name,
+		Period:       role.Period,
+		NumUses:      role.NumUses,
+		Alias:        alias,
+		GroupAliases: groupAliases,
+		InternalData: map[string]interface{}{
+			"role": roleName,
 		},
+		Metadata: tokenMetadata,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+			TTL:       role.TTL,
+			MaxTTL:    role.MaxTTL,
+		},
+		BoundCIDRs: role.BoundCIDRs,
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	return resp, nil
