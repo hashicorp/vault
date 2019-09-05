@@ -1,10 +1,10 @@
 ---
 layout: "docs"
-page_title: "CF - Auth Methods"
-sidebar_title: "CF"
+page_title: "Cloud Foundry - Auth Methods"
+sidebar_title: "Cloud Foundry"
 sidebar_current: "docs-auth-cf"
 description: |-
-  The cf auth method allows automated authentication of CF instances.
+  The cf auth method allows automated authentication of Cloud Foundry instances.
 ---
 
 # Cloud Foundry (CF) Auth Method
