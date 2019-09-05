@@ -9,6 +9,12 @@ FEATURES:
 
 ## 1.2.3 (Unreleased)
 
+FEATURES:
+
+  * [Oracle Cloud (OCI) auth method](https://github.com/hashicorp/vault-plugin-auth-oci)
+  * [Oracle Cloud (OCI) object storage backend](https://github.com/hashicorp/vault/pull/6985)
+  * [Oracle Cloud (OCI) KMS auto-unseal plugin](https://github.com/hashicorp/vault/pull/6950)
+
 IMPROVEMENTS:
 
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
