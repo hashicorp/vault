@@ -356,6 +356,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"mysql-legacy-database-plugin",
 				"mysql-rds-database-plugin",
 				"nomad",
+				"oci",
 				"oidc",
 				"okta",
 				"pcf", // Deprecated.

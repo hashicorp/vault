@@ -7,13 +7,19 @@ FEATURES:
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
 
+IMPROVEMENTS:
+
+ * core: Exit ScanView if context has been cancelled [GH-7419]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
+   of value data [GH-7199]
+
 ## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
 
- * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
-   of value data [GH-7199]
- * pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility ([GH-7346](https://github.com/hashicorp/vault/pull/7346)).
+ * auth/jwt: Groups claim matching now treats a string response as a single element list [JWT-63]
+ * auth/kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
+ * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346].
 
 BUG FIXES:
 
@@ -24,7 +30,7 @@ BUG FIXES:
  * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
  * ui: Fix an issue with the namespace picker being unable to render nested
    namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
- * auth plugin for Kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
+
 
 ## 1.2.2 (August 15, 2019)
 
