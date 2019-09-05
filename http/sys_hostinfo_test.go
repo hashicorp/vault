@@ -52,7 +52,16 @@ func TestSysHostInfo(t *testing.T) {
 		t.Fatal("expected memory info")
 	}
 
-	// Query against the standby, should error
+	// Check we're standby
+	healthResp, err := cores[1].Client.Sys().Health()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !healthResp.Standby {
+		t.Fatal("expected node to be standby")
+	}
+
+	// Query against a standby, should error
 	secret, err = cores[1].Client.Logical().Read("sys/host-info")
 	if err == nil || secret != nil {
 		t.Fatalf("expected error on standby node, HostInfo: %v", secret)
