@@ -29,7 +29,6 @@ import (
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
-	credPCF "github.com/hashicorp/vault-plugin-auth-pcf"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"

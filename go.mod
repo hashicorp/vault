@@ -70,7 +70,6 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190814210057-5e4c92d2b835
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9
 	github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
-	github.com/hashicorp/vault-plugin-auth-pcf v0.0.0-20190813234723-10bdf3b39ed9
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
@@ -100,6 +99,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.0
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.0.0
+	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
