@@ -225,10 +225,10 @@ type SystemBackend struct {
 	logger    log.Logger
 }
 
-// handleConfigState returns the current configuration state. The configuration
+// handleConfigStateSanitized returns the current configuration state. The configuration
 // data that it returns is a sanitized version of the combined configuration
 // file(s) provided.
-func (b *SystemBackend) handleConfigState(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config := b.Core.SanitizedConfig()
 
 	configMap := structs.New(config).Map()
