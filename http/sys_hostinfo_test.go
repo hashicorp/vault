@@ -53,13 +53,7 @@ func TestSysHostInfo(t *testing.T) {
 	}
 
 	// Check we're standby
-	healthResp, err := cores[1].Client.Sys().Health()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !healthResp.Standby {
-		t.Fatal("expected node to be standby")
-	}
+	vault.TestWaitStandby(t, cores[1].Core)
 
 	// Query against a standby, should error
 	secret, err = cores[1].Client.Logical().Read("sys/host-info")
