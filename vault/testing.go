@@ -783,25 +783,6 @@ func TestWaitActiveWithError(core *Core) error {
 	return nil
 }
 
-func TestWaitStandby(t testing.T, core *Core) {
-	t.Helper()
-	start := time.Now()
-	var standby bool
-	var err error
-	for time.Now().Sub(start) < 30*time.Second {
-		standby, err = core.Standby()
-		if standby {
-			break
-		}
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !standby {
-		t.Fatal("should be in standby mode")
-	}
-}
-
 type TestCluster struct {
 	BarrierKeys        [][]byte
 	RecoveryKeys       [][]byte

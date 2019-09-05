@@ -52,9 +52,6 @@ func TestSysHostInfo(t *testing.T) {
 		t.Fatal("expected memory info")
 	}
 
-	// Check we're standby
-	vault.TestWaitStandby(t, cores[1].Core)
-
 	// Query against a standby, should error
 	secret, err = cores[1].Client.Logical().Read("sys/host-info")
 	if err == nil || secret != nil {
