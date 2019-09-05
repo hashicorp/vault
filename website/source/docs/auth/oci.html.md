@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "OCI Auth method"
-sidebar_title: "OCI"
+sidebar_title: "Oracle Cloud Infrastructure"
 sidebar_current: "docs-auth-oci"
 description: |-
   The OCI Auth method for Vault enables authentication and authorization using OCI Identity credentials.
