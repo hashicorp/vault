@@ -38,6 +38,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
@@ -1414,6 +1415,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 
+	}
+
+	if coreConfig.RawConfig == nil {
+		coreConfig.RawConfig = new(server.Config)
 	}
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
