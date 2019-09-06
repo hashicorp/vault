@@ -9,18 +9,24 @@ FEATURES:
 
 IMPROVEMENTS:
 
- * auth/jwt: The redirect callback host may now be specified for CLI logins [JWT-71]
+ * auth/jwt: The redirect callback host may now be specified for CLI logins
+   [JWT-71]
  * core: Exit ScanView if context has been cancelled [GH-7419]
- * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
-   of value data [GH-7199]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary
+   copies of value data [GH-7199]
 
 ## 1.2.3 (Unreleased)
 
 IMPROVEMENTS:
 
- * auth/jwt: Groups claim matching now treats a string response as a single element list [JWT-63]
- * auth/kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
- * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346].
+ * auth/jwt: Groups claim matching now treats a string response as a single
+   element list [JWT-63]
+ * auth/kubernetes: enable better support for projected tokens API by allowing
+   user to specify issuer [GH-65]
+ * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining
+   full backwards compatibility [GH-7346]
+ * replication: Premium packages now come with unlimited performance standby
+   nodes
 
 BUG FIXES:
 
@@ -31,7 +37,6 @@ BUG FIXES:
  * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
  * ui: Fix an issue with the namespace picker being unable to render nested
    namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
-
 
 ## 1.2.2 (August 15, 2019)
 
