@@ -173,6 +173,7 @@ func (r *Renewer) renewAuth() error {
 		return ErrRenewerNotRenewable
 	}
 
+	initialTime := time.Now()
 	priorDuration := time.Duration(r.secret.Auth.LeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
 
@@ -192,7 +193,7 @@ func (r *Renewer) renewAuth() error {
 		case batchToken:
 			// It's a batch token, can't renew, just keep same expiration so we
 			// exit when it's reauthentication time
-			leaseDuration = priorDuration
+			leaseDuration = initialTime.Add(priorDuration).Sub(time.Now())
 
 		// Push a message that a renewal took place.
 		default:
@@ -247,9 +248,6 @@ func (r *Renewer) renewAuth() error {
 		case <-r.stopCh:
 			return nil
 		case <-time.After(sleepDuration):
-			if batchToken {
-				return nil
-			}
 			continue
 		}
 	}
