@@ -2,7 +2,6 @@ package transit
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -113,7 +112,7 @@ func newTransitClient(logger log.Logger, config map[string]string) (*transitClie
 		apiClient.SetNamespace(namespace)
 	}
 	if apiClient.Token() == "" {
-		return nil, nil, errors.New("missing token")
+		logger.Info("no token provided to transit auto-seal")
 	}
 
 	client := &transitClient{
