@@ -255,10 +255,13 @@ func (r *Renewer) renewAuth() error {
 
 // renewLease is a helper for renewing a lease.
 func (r *Renewer) renewLease() error {
-	if !r.secret.Renewable || r.secret.LeaseID == "" {
+	if r.secret.LeaseID == "" {
 		return ErrRenewerNotRenewable
 	}
 
+	nonRenewable := !r.secret.Renewable
+
+	initialTime := time.Now()
 	priorDuration := time.Duration(r.secret.LeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
 
@@ -272,30 +275,40 @@ func (r *Renewer) renewLease() error {
 		default:
 		}
 
-		// Renew the lease.
-		renewal, err := client.Sys().Renew(leaseID, r.increment)
-		if err != nil {
-			return err
-		}
+		var leaseDuration time.Duration
 
-		// Push a message that a renewal took place.
-		select {
-		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
+		switch {
+		case nonRenewable:
+			// Can't renew, just keep same expiration so we exit when it's
+			// reread time
+			leaseDuration = initialTime.Add(priorDuration).Sub(time.Now())
+
 		default:
-		}
+			// Renew the lease.
+			renewal, err := client.Sys().Renew(leaseID, r.increment)
+			if err != nil {
+				return err
+			}
 
-		// Somehow, sometimes, this happens.
-		if renewal == nil {
-			return ErrRenewerNoSecretData
-		}
+			// Push a message that a renewal took place.
+			select {
+			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
+			default:
+			}
 
-		// Do nothing if we are not renewable
-		if !renewal.Renewable {
-			return ErrRenewerNotRenewable
-		}
+			// Somehow, sometimes, this happens.
+			if renewal == nil {
+				return ErrRenewerNoSecretData
+			}
 
-		// Grab the lease duration
-		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
+			// Do nothing if we are not renewable
+			if !renewal.Renewable {
+				return ErrRenewerNotRenewable
+			}
+
+			// Grab the lease duration
+			leaseDuration = time.Duration(renewal.LeaseDuration) * time.Second
+		}
 
 		// We keep evaluating a new grace period so long as the lease is
 		// extending. Once it stops extending, we've hit the max and need to
