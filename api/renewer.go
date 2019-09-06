@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 )
@@ -42,9 +41,10 @@ var (
 //
 //
 // The `DoneCh` will return if renewal fails or if the remaining lease duration
-// after a renewal is less than or equal to the grace (in number of seconds). In
-// both cases, the caller should attempt a re-read of the secret. Clients should
-// check the return value of the channel to see if renewal was successful.
+// after a renewal is less than or equal to the grace (in number of seconds).
+// In both cases, the caller should attempt a re-read of the secret or
+// reauthenticate to get a new token. Clients should check the return value of
+// the channel to see if renewal was successful.
 type Renewer struct {
 	l sync.Mutex
 
@@ -167,11 +167,11 @@ func (r *Renewer) Renew() {
 
 // renewAuth is a helper for renewing authentication.
 func (r *Renewer) renewAuth() error {
-	batchToken := strings.HasPrefix(r.secret.Auth.ClientToken, "b.")
-
-	if !batchToken && (!r.secret.Auth.Renewable || r.secret.Auth.ClientToken == "") {
+	if r.secret.Auth.ClientToken == "" {
 		return ErrRenewerNotRenewable
 	}
+
+	nonRenewable := !r.secret.Auth.Renewable
 
 	initialTime := time.Now()
 	priorDuration := time.Duration(r.secret.Auth.LeaseDuration) * time.Second
@@ -190,9 +190,9 @@ func (r *Renewer) renewAuth() error {
 		var leaseDuration time.Duration
 
 		switch {
-		case batchToken:
-			// It's a batch token, can't renew, just keep same expiration so we
-			// exit when it's reauthentication time
+		case nonRenewable:
+			// Can't renew, just keep same expiration so we exit when it's
+			// reauthentication time
 			leaseDuration = initialTime.Add(priorDuration).Sub(time.Now())
 
 		// Push a message that a renewal took place.
