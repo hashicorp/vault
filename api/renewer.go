@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 )
@@ -166,7 +167,9 @@ func (r *Renewer) Renew() {
 
 // renewAuth is a helper for renewing authentication.
 func (r *Renewer) renewAuth() error {
-	if !r.secret.Auth.Renewable || r.secret.Auth.ClientToken == "" {
+	batchToken := strings.HasPrefix(r.secret.Auth.ClientToken, "b.")
+
+	if !batchToken && (!r.secret.Auth.Renewable || r.secret.Auth.ClientToken == "") {
 		return ErrRenewerNotRenewable
 	}
 
@@ -183,30 +186,40 @@ func (r *Renewer) renewAuth() error {
 		default:
 		}
 
-		// Renew the auth.
-		renewal, err := client.Auth().Token().RenewTokenAsSelf(token, r.increment)
-		if err != nil {
-			return err
-		}
+		var leaseDuration time.Duration
+
+		switch {
+		case batchToken:
+			// It's a batch token, can't renew, just keep same expiration so we
+			// exit when it's reauthentication time
+			leaseDuration = priorDuration
 
 		// Push a message that a renewal took place.
-		select {
-		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
 		default:
-		}
+			renewal, err := client.Auth().Token().RenewTokenAsSelf(token, r.increment)
+			if err != nil {
+				return err
+			}
 
-		// Somehow, sometimes, this happens.
-		if renewal == nil || renewal.Auth == nil {
-			return ErrRenewerNoSecretData
-		}
+			// Push a message that a renewal took place.
+			select {
+			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
+			default:
+			}
 
-		// Do nothing if we are not renewable
-		if !renewal.Auth.Renewable {
-			return ErrRenewerNotRenewable
-		}
+			// Somehow, sometimes, this happens.
+			if renewal == nil || renewal.Auth == nil {
+				return ErrRenewerNoSecretData
+			}
 
-		// Grab the lease duration
-		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
+			// Do nothing if we are not renewable
+			if !renewal.Auth.Renewable {
+				return ErrRenewerNotRenewable
+			}
+
+			// Grab the lease duration
+			leaseDuration = time.Duration(renewal.Auth.LeaseDuration) * time.Second
+		}
 
 		// We keep evaluating a new grace period so long as the lease is
 		// extending. Once it stops extending, we've hit the max and need to
@@ -234,6 +247,9 @@ func (r *Renewer) renewAuth() error {
 		case <-r.stopCh:
 			return nil
 		case <-time.After(sleepDuration):
+			if batchToken {
+				return nil
+			}
 			continue
 		}
 	}
