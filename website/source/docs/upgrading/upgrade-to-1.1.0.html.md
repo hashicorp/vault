@@ -35,8 +35,14 @@ CLI commands deprecated in 0.9.2 are now removed. Please see the CLI help output
 
 -> **NOTE:** This is a known issue applicable to _Vault Enterprise_.
 
-WAL replay could take a long time during the initial reindex while it is
-blocking the incoming traffic to Vault.  This is fixed in [Vault
-1.1.3](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#113-june-5th-2019)
-and strongly recommended to upgrade your Vault to 1.1.3 if you are running Vault
-Enterprise 1.1.0, 1.1.1 or 1.1.2.
+During upgrades to 1.1.0, 1.1.1 or 1.1.2, Vault replication secondaries may
+require an automatically-triggered reindex, either if upgrading from a pre-0.8
+version of Vault or if a previously-issued reindex operation has failed in the
+past. In these reindex scenarios, the secondary cluster will perform a complete
+WAL replay, which can take a long time and is a partially blocking operation.
+
+This is fixed in [Vault
+1.1.3](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#113-june-5th-2019),
+and we recommend upgrading to Vault 1.1.3+ rather than any prior 1.1.x version.
+We also strongly recommend upgrading your Vault cluster to 1.1.3 if you are
+running Vault Enterprise 1.1.0, 1.1.1 or 1.1.2.
