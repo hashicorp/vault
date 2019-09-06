@@ -15,10 +15,10 @@ for Vault 1.0.3 compared to 1.1.0. Please read it carefully.
 
 ## JWT Backend Changes
 
-Specifying the group claims parameter has changed to use a standards based lookup.  The groups_claim_delimiter_pattern 
+Specifying the group claims parameter has changed to use a standards based lookup.  The groups_claim_delimiter_pattern
 has been removed and if the groups claim is not at the top level, it can now be specified as a JSONPointer.
 
-Additionally, roles now have a "role type" parameter with a default type of "oidc". To configure new JWT roles, a role 
+Additionally, roles now have a "role type" parameter with a default type of "oidc". To configure new JWT roles, a role
 type of "jwt" must be explicitly specified.
 
 ## Deprecated CLI Commands Removed
@@ -27,6 +27,16 @@ CLI commands deprecated in 0.9.2 are now removed. Please see the CLI help output
 
 ## Additional Changes
 
-* Vault no longer automatically mounts a k/v backend at the "secret/" path when initalizing Vault.
+* Vault no longer automatically mounts a k/v backend at the "secret/" path when initializing Vault.
 * Vault's cluster port will now be opened on HA standby nodes.
-* Vault no longer supports running netRPC plugins. These were deprecated in favor of gRPC based plugins and any plugin built since 0.9.4 defaults to gRPC. Older plugins may need to be recompiled against the latest Vault dependencies. 
+* Vault no longer supports running netRPC plugins. These were deprecated in favor of gRPC based plugins and any plugin built since 0.9.4 defaults to gRPC. Older plugins may need to be recompiled against the latest Vault dependencies.
+
+## Known Issues
+
+-> **NOTE:** This is a known issue applicable to _Vault Enterprise_.
+
+WAL replay could take a long time during the initial reindex while it is
+blocking the incoming traffic to Vault.  This is fixed in [Vault
+1.1.3](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#113-june-5th-2019)
+and strongly recommended to upgrade your Vault to 1.1.3 if you are running Vault
+Enterprise 1.1.0, 1.1.1 or 1.1.2.
