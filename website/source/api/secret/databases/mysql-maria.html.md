@@ -85,8 +85,7 @@ list the plugin does not support that statement type.
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
   array. The '{{name}}' and '{{password}}' values will be substituted. The
-  generated password will be a random alphanumeric 20 character string, this is
-  currently not configurable.
+  generated password will be a random alphanumeric 20 character string.
 
 - `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a
