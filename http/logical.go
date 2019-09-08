@@ -59,7 +59,11 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 			data = parseQuery(queryVals)
 		}
 
-		if path == "sys/storage/raft/snapshot" {
+		switch {
+		case strings.HasPrefix(path, "sys/pprof/"):
+			passHTTPReq = true
+			responseWriter = w
+		case path == "sys/storage/raft/snapshot":
 			responseWriter = w
 		}
 
