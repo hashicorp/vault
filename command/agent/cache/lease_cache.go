@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent"
+	"github.com/hashicorp/vault/command/agent/agentint"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
@@ -395,7 +395,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 	client.SetToken(req.Token)
 	client.SetHeaders(req.Request.Header)
 
-	renewer, err := agent.NewRenewer(client, &agent.RenewerInput{
+	renewer, err := agentint.NewRenewer(client, &agentint.RenewerInput{
 		Secret: secret,
 	})
 	if err != nil {
