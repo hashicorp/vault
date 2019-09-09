@@ -2,12 +2,13 @@
 package oci
 
 import (
+	"os"
+	"testing"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/objectstorage"
-	"os"
-	"testing"
 )
 
 func TestOCIHABackend(t *testing.T) {

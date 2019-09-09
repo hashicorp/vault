@@ -71,9 +71,9 @@ func TestCFEndToEnd(t *testing.T) {
 	// Configure a CA certificate like a Vault operator would in setting up CF.
 	if _, err := client.Logical().Write("auth/cf/config", map[string]interface{}{
 		"identity_ca_certificates": testCFCerts.CACertificate,
-		"cf_api_addr":             mockCFAPI.URL,
-		"cf_username":             cfAPI.AuthUsername,
-		"cf_password":             cfAPI.AuthPassword,
+		"cf_api_addr":              mockCFAPI.URL,
+		"cf_username":              cfAPI.AuthUsername,
+		"cf_password":              cfAPI.AuthPassword,
 	}); err != nil {
 		t.Fatal(err)
 	}
