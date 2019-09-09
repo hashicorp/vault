@@ -41,10 +41,9 @@ var (
 //
 //
 // The `DoneCh` will return if renewal fails or if the remaining lease duration
-// after a renewal is less than or equal to the grace (in number of seconds).
-// In both cases, the caller should attempt a re-read of the secret or
-// reauthenticate to get a new token. Clients should check the return value of
-// the channel to see if renewal was successful.
+// after a renewal is less than or equal to the grace (in number of seconds). In
+// both cases, the caller should attempt a re-read of the secret. Clients should
+// check the return value of the channel to see if renewal was successful.
 type Renewer struct {
 	l sync.Mutex
 
@@ -167,13 +166,10 @@ func (r *Renewer) Renew() {
 
 // renewAuth is a helper for renewing authentication.
 func (r *Renewer) renewAuth() error {
-	if r.secret.Auth.ClientToken == "" {
+	if !r.secret.Auth.Renewable || r.secret.Auth.ClientToken == "" {
 		return ErrRenewerNotRenewable
 	}
 
-	nonRenewable := !r.secret.Auth.Renewable
-
-	initialTime := time.Now()
 	priorDuration := time.Duration(r.secret.Auth.LeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
 
@@ -187,40 +183,30 @@ func (r *Renewer) renewAuth() error {
 		default:
 		}
 
-		var leaseDuration time.Duration
-
-		switch {
-		case nonRenewable:
-			// Can't renew, just keep same expiration so we exit when it's
-			// reauthentication time
-			leaseDuration = initialTime.Add(priorDuration).Sub(time.Now())
+		// Renew the auth.
+		renewal, err := client.Auth().Token().RenewTokenAsSelf(token, r.increment)
+		if err != nil {
+			return err
+		}
 
 		// Push a message that a renewal took place.
+		select {
+		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
 		default:
-			renewal, err := client.Auth().Token().RenewTokenAsSelf(token, r.increment)
-			if err != nil {
-				return err
-			}
-
-			// Push a message that a renewal took place.
-			select {
-			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
-			default:
-			}
-
-			// Somehow, sometimes, this happens.
-			if renewal == nil || renewal.Auth == nil {
-				return ErrRenewerNoSecretData
-			}
-
-			// Do nothing if we are not renewable
-			if !renewal.Auth.Renewable {
-				return ErrRenewerNotRenewable
-			}
-
-			// Grab the lease duration
-			leaseDuration = time.Duration(renewal.Auth.LeaseDuration) * time.Second
 		}
+
+		// Somehow, sometimes, this happens.
+		if renewal == nil || renewal.Auth == nil {
+			return ErrRenewerNoSecretData
+		}
+
+		// Do nothing if we are not renewable
+		if !renewal.Auth.Renewable {
+			return ErrRenewerNotRenewable
+		}
+
+		// Grab the lease duration
+		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
 
 		// We keep evaluating a new grace period so long as the lease is
 		// extending. Once it stops extending, we've hit the max and need to
@@ -255,13 +241,10 @@ func (r *Renewer) renewAuth() error {
 
 // renewLease is a helper for renewing a lease.
 func (r *Renewer) renewLease() error {
-	if r.secret.LeaseID == "" {
+	if !r.secret.Renewable || r.secret.LeaseID == "" {
 		return ErrRenewerNotRenewable
 	}
 
-	nonRenewable := !r.secret.Renewable
-
-	initialTime := time.Now()
 	priorDuration := time.Duration(r.secret.LeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
 
@@ -275,40 +258,30 @@ func (r *Renewer) renewLease() error {
 		default:
 		}
 
-		var leaseDuration time.Duration
-
-		switch {
-		case nonRenewable:
-			// Can't renew, just keep same expiration so we exit when it's
-			// reread time
-			leaseDuration = initialTime.Add(priorDuration).Sub(time.Now())
-
-		default:
-			// Renew the lease.
-			renewal, err := client.Sys().Renew(leaseID, r.increment)
-			if err != nil {
-				return err
-			}
-
-			// Push a message that a renewal took place.
-			select {
-			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
-			default:
-			}
-
-			// Somehow, sometimes, this happens.
-			if renewal == nil {
-				return ErrRenewerNoSecretData
-			}
-
-			// Do nothing if we are not renewable
-			if !renewal.Renewable {
-				return ErrRenewerNotRenewable
-			}
-
-			// Grab the lease duration
-			leaseDuration = time.Duration(renewal.LeaseDuration) * time.Second
+		// Renew the lease.
+		renewal, err := client.Sys().Renew(leaseID, r.increment)
+		if err != nil {
+			return err
 		}
+
+		// Push a message that a renewal took place.
+		select {
+		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
+		default:
+		}
+
+		// Somehow, sometimes, this happens.
+		if renewal == nil {
+			return ErrRenewerNoSecretData
+		}
+
+		// Do nothing if we are not renewable
+		if !renewal.Renewable {
+			return ErrRenewerNotRenewable
+		}
+
+		// Grab the lease duration
+		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
 
 		// We keep evaluating a new grace period so long as the lease is
 		// extending. Once it stops extending, we've hit the max and need to
