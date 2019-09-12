@@ -40,9 +40,9 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
-- `username` `(string: "")` - The root credential username used in the connection URL. 
+- `username` `(string: "")` - The root credential username used in the connection URL.
 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `password` `(string: "")` - The root credential password used in the connection URL.
 
 ### Sample Payload
 
@@ -85,7 +85,8 @@ list the plugin does not support that statement type.
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
   array. The '{{name}}', '{{password}}' and '{{expiration}}' values will be
-  substituted.
+  substituted. The generated password will be a random alphanumeric 20 character
+  string.
 
 - `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a
@@ -111,4 +112,5 @@ list the plugin does not support that statement type.
   executed to rotate the password for a given username. Must be a
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
-  array. The '{{name}}' and '{{password}}' values will be substituted.
+  array. The '{{name}}' and '{{password}}' values will be substituted. The
+  generated password will be a random alphanumeric 20 character string.
