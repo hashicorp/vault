@@ -127,9 +127,12 @@ export default Route.extend(UnloadModelRoute, {
     try {
       if (secretModel.failedServerRead) {
         // we couldn't read metadata, so we want to directly fetch the version
-        versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
-          reload: true,
-        });
+
+        versionModel =
+          this.store.peekRecord('secret-v2-version', JSON.stringify(versionId)) ||
+          (await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
+            reload: true,
+          }));
       } else {
         // we may have previously errored, so roll it back here
         version.rollbackAttributes();
@@ -142,18 +145,20 @@ export default Route.extend(UnloadModelRoute, {
       if (error.httpStatus === 403 && capabilities.get('canUpdate')) {
         // versionModel is then a partial model from the metadata (if we have read there), or
         // we need to create one on the client
-        versionModel = version || this.store.createRecord('secret-v2-version');
-        versionModel.setProperties({
-          failedServerRead: true,
-        });
-        // if it was created on the client we need to trigger an event via ember-data
-        // so that it won't try to create the record on save
-        if (versionModel.isNew) {
-          versionModel.set('id', JSON.stringify(versionId));
-          //TODO make this a util to better show what's happening
-          // this is because we want the ember-data model save to call update instead of create
-          // in the adapter so we have to force the frontend model to a "saved" state
-          versionModel.send('pushedData');
+        if (version) {
+          version.set('failedServerRead', true);
+          versionModel = version;
+        } else {
+          this.store.push({
+            data: {
+              type: 'secret-v2-version',
+              id: JSON.stringify(versionId),
+              attributes: {
+                failedServerRead: true,
+              },
+            },
+          });
+          versionModel = this.store.peekRecord('secret-v2-version', JSON.stringify(versionId));
         }
       } else {
         throw error;
@@ -162,18 +167,23 @@ export default Route.extend(UnloadModelRoute, {
     return versionModel;
   },
 
-  handleSecretModelError(capabilities, secret, modelType, error) {
+  handleSecretModelError(capabilities, secretId, modelType, error) {
     // can't read the path and don't have update capability, so re-throw
     if (!capabilities.get('canUpdate') && modelType === 'secret') {
       throw error;
     }
     // don't have access to the metadata for v2 or the secret for v1,
     // so we make a stub model and mark it as `failedServerRead`
-    let secretModel = this.store.createRecord(modelType);
-    secretModel.setProperties({
-      id: secret,
-      failedServerRead: true,
+    this.store.push({
+      data: {
+        id: secretId,
+        type: modelType,
+        attributes: {
+          failedServerRead: true,
+        },
+      },
     });
+    let secretModel = this.store.peekRecord(modelType, secretId);
     return secretModel;
   },
 

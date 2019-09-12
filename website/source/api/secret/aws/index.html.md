@@ -240,9 +240,12 @@ updated with the new attributes.
   is allowed to assume. Required when `credential_type` is `assumed_role` and
   prohibited otherwise. This is a comma-separated string or JSON array.
 
-- `policy_arns` `(list: [])` – Specifies the ARNs of the AWS managed policies to
-  be attached to IAM users when they are requested. Valid only when
-  `credential_type` is `iam_user`. When `credential_type` is `iam_user`, at
+- `policy_arns` `(list: [])` – Specifies a list of AWS managed policy ARN. The
+  behavior depends on the credential type. With `iam_user`, the policies will
+  be attached to IAM users when they are requested. With `assumed_role` and
+  `federation_token`, the policy ARNs will act as a filter on what the
+  credentials can do, similar to `policy_document`.
+  When `credential_type` is `iam_user` or `federation_token`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
 
@@ -250,7 +253,7 @@ updated with the new attributes.
   behavior depends on the credential type. With `iam_user`, the policy document
   will be attached to the IAM user generated and augment the permissions the IAM
   user has. With `assumed_role` and `federation_token`, the policy document will
-  act as a filter on what the credentials can do.
+  act as a filter on what the credentials can do, similar to `policy_arns`.
 
 - `default_sts_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
   specified when STS credentials are requested, and a default TTL is specified

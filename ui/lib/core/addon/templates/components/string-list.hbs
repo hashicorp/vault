@@ -12,9 +12,8 @@
 {{#each inputList as |data index|}}
   <div class="field is-grouped" data-test-string-list-row="{{index}}">
     <div class="control is-expanded">
-      {{input
+      {{textarea
         data-test-string-list-input=index
-        type="text"
         class="input"
         value=data.value
         name=(concat elementId "-" index)
