@@ -1,6 +1,6 @@
 <form {{action (perform save model) on="submit"}}>
   <MessageError @model={{model}} data-test-edit-form-error />
-  <div class="box is-sideless is-fullwidth is-marginless">
+  <div class="{{if this.includeBox 'box is-sideless is-fullwidth is-marginless'}}">
     <NamespaceReminder @mode="save" />
     {{#if (or model.fields model.attrs)}}
       {{#each (or model.fields model.attrs) as |attr|}}
@@ -10,7 +10,7 @@
       <FormFieldGroups @model={{model}} @mode={{@mode}} />
     {{/if}}
   </div>
-  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless {{if (not this.includeBox) 'is-shadowless'}}">
     <div class="field is-grouped">
       <div class="control">
         <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}"
@@ -23,6 +23,13 @@
           {{#link-to params=cancelLinkParams class="button"}}
             Cancel
           {{/link-to}}
+        </div>
+      {{/if}}
+      {{#if onCancel}}
+        <div class="control">
+          <button type="button" class="button" onclick={{action onCancel}}>
+          {{or @cancelButtonText "Cancel"}}
+          </button>
         </div>
       {{/if}}
     </div>
