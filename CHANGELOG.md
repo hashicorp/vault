@@ -15,7 +15,12 @@ IMPROVEMENTS:
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
 
-## 1.2.3 (Unreleased)
+## 1.2.3 (September 12, 2019)
+
+FEATURES:
+
+* **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
+  storage, auto unseal, and authentication.  
 
 IMPROVEMENTS:
 
