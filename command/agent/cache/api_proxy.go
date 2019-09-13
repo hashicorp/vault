@@ -7,6 +7,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 // APIProxy is an implementation of the proxier interface that is used to
@@ -43,8 +44,8 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	// the decompression. If gzip has already been set, remove it to avoid triggering the manual
 	// handling requirement.
 	h := clone(req.Request.Header)
-	if h.Get("Accept-Encoding") == "gzip" {
-		h.Del("Accept-Encoding")
+	if v, ok := h["Accept-Encoding"]; ok {
+		h["Accept-Encoding"] = strutil.StrListDelete(v, "gzip")
 	}
 	client.SetHeaders(h)
 
