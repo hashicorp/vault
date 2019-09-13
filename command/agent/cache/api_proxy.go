@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -36,7 +37,16 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 	client.SetToken(req.Token)
-	client.SetHeaders(req.Request.Header)
+
+	// http.Transport will transparently request gzip and decompress the response, but only if
+	// the client doesn't manually set the header (in which case the client has to handle
+	// the decompression. If gzip has already been set, remove it to avoid triggering the manual
+	// handling requirement.
+	h := clone(req.Request.Header)
+	if h.Get("Accept-Encoding") == "gzip" {
+		h.Del("Accept-Encoding")
+	}
+	client.SetHeaders(h)
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody
@@ -64,4 +74,30 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	// Bubble back the api.Response as well for error checking/handling at the handler layer.
 	return sendResponse, err
+}
+
+// clone returns a copy of h or nil if h is nil.
+//
+// TODO: This is a copy of the new (Header) Clone method in Go 1.13. We should remove this once we update.
+func clone(h http.Header) http.Header {
+	if h == nil {
+		return nil
+	}
+
+	// Find total number of values.
+	nv := 0
+	for _, vv := range h {
+		nv += len(vv)
+	}
+	sv := make([]string, nv) // shared backing array for headers' values
+	h2 := make(http.Header, len(h))
+
+	for k, vv := range h {
+		n := copy(sv, vv)
+		h2[k] = sv[:n:n]
+		sv = sv[n:]
+
+	}
+
+	return h2
 }
