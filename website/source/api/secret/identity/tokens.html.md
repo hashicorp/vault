@@ -359,7 +359,7 @@ Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `POST`   | `identity/oidc/token/:name`  |
+| `GET`   | `identity/oidc/token/:name`  |
 
 ### Parameters
 
