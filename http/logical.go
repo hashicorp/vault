@@ -60,7 +60,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		}
 
 		switch {
-		case strings.HasPrefix(path, "sys/pprof/"):
+		case strings.HasPrefix(path, "sys/pprof"):
 			passHTTPReq = true
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
@@ -281,6 +281,14 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		if needsForward {
+			// Do not forward these specific requests since they are only
+			// applicable to the local node.
+			switch {
+			case strings.HasPrefix(req.Path, "sys/pprof"):
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
+			}
+
 			if origBody != nil {
 				r.Body = origBody
 			}
