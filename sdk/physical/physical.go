@@ -148,6 +148,11 @@ func (c *PermitPool) Release() {
 	<-c.sem
 }
 
+// Get number of requests in the permit pool
+func (c *PermitPool) CurrentPermits() int {
+	return len(c.sem)
+}
+
 // Prefixes is a shared helper function returns all parent 'folders' for a
 // given vault key.
 // e.g. for 'foo/bar/baz', it returns ['foo', 'foo/bar']

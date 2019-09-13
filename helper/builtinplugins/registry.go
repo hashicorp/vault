@@ -12,6 +12,7 @@ import (
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
+	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -78,6 +79,7 @@ func newRegistry() *registry {
 			"jwt":        credJWT.Factory,
 			"kubernetes": credKube.Factory,
 			"ldap":       credLdap.Factory,
+			"oci":        credOCI.Factory,
 			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
 			"pcf":        credCF.Factory, // Deprecated.
