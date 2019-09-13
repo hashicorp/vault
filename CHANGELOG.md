@@ -12,6 +12,7 @@ IMPROVEMENTS:
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * core: Exit ScanView if context has been cancelled [GH-7419]
+ * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
 
