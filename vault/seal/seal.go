@@ -13,6 +13,7 @@ const (
 	AWSKMS        = "awskms"
 	GCPCKMS       = "gcpckms"
 	AzureKeyVault = "azurekeyvault"
+	OCIKMS        = "ocikms"
 	Transit       = "transit"
 	Test          = "test-auto"
 

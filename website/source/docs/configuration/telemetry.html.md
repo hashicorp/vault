@@ -163,3 +163,42 @@ telemetry {
   disable_hostname = true
 }
 ```
+
+### `stackdriver`
+
+These `telemetry` parameters apply to [Stackdriver Monitoring](https://cloud.google.com/monitoring/).
+
+The Stackdriver telemetry provider uses the official Google Cloud Golang SDK. This means
+it supports the common ways of
+[providing credentials to Google Cloud](https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application).
+
+To use this telemetry provider, the service account must have the following
+minimum scope(s):
+
+```text
+https://www.googleapis.com/auth/cloud-platform
+https://www.googleapis.com/auth/monitoring
+https://www.googleapis.com/auth/monitoring.write
+```
+
+And the following IAM role(s):
+
+```text
+roles/monitoring.metricWriter
+```
+
+*  `stackdriver_project_id` the Google Cloud ProjectID to send telemetry data to.
+*  `stackdriver_location` the GCP or AWS region of the monitored resource.
+*  `stackdriver_namespace` a namespace identifier for the telemetry data.
+
+It is recommended to also enable the option `disable_hostname` to avoid having prefixed
+metrics with hostname.
+
+```hcl
+telemetry {
+  stackdriver_project_id = "my-test-project"
+  stackdriver_location = "us-east1-a"
+  stackdriver_namespace = "vault-cluster-a"
+  disable_hostname = true
+}
+```

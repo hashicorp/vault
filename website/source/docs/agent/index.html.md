@@ -31,7 +31,7 @@ Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
 
 ## Caching
 
-Vault Agent allows client-side caching of responses containing newly created tokens 
+Vault Agent allows client-side caching of responses containing newly created tokens
 and responses containing leased secrets generated off of these newly created tokens.
 Please see the [Caching docs][caching] for information.
 
@@ -41,9 +41,9 @@ These are the currently-available general configuration option:
 
 - `vault` <tt>([vault][vault]: \<optional\>)</tt> - Specifies the remote Vault server the Agent connects to.
 
-- `auto-auth` <tt>([auto-auth][autoauth]: \<optional\>)</tt> - Specifies the method and other options used for Auto-Auth functionality.
+- `auto_auth` <tt>([auto_auth][autoauth]: \<optional\>)</tt> - Specifies the method and other options used for Auto-Auth functionality.
 
-- `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies options used for Caching functionality. 
+- `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies options used for Caching functionality.
 
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
@@ -112,7 +112,7 @@ auto_auth {
         }
 
         sink "file" {
-                wrap_ttl = "5m" 
+                wrap_ttl = "5m"
                 aad_env_var = "TEST_AAD_ENV"
                 dh_type = "curve25519"
                 dh_path = "/tmp/file-foo-dhpath2"

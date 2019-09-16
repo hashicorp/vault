@@ -8,7 +8,6 @@ export default create({
   create: clickable('[data-test-role-create]'),
   roleName: fillable('[data-test-input="name"]'),
   submit: clickable('[data-test-edit-form-submit]'),
-  detailDelete: clickable('[data-test-popup-menu-trigger]'),
   detailEditLink: clickable('[data-test-kmip-link-edit-role]'),
   cancelLink: clickable('[data-test-edit-form-cancel]'),
 });

@@ -24,11 +24,11 @@
   .select {
     min-width: 190px;
   }
+}
 
-  label[for='namespace'] {
-    padding: $spacing-xs;
-    color: $grey;
-  }
+.toolbar-label {
+  padding: $spacing-xs;
+  color: $grey;
 }
 
 .toolbar-scroller {
