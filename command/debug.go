@@ -1,8 +1,11 @@
 package command
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,6 +33,10 @@ const (
 	// the command capture 5 intervals (0, 30, 60, 90, and 120th second) before
 	// exiting.
 	debugDurationGrace = 1 * time.Second
+
+	// debugCompressionExt is the default compression extension used if
+	// compression is enabled.
+	debugCompressionExt = ".tar.gz"
 )
 
 var _ cli.Command = (*DebugCommand)(nil)
@@ -147,7 +154,7 @@ Usage: vault debug [options]
 
 func (c *DebugCommand) Run(args []string) int {
 	// Copy the raw args to output in the index
-	rawArgs := append([]string(nil), args...)
+	rawArgs := append([]string{}, args...)
 
 	f := c.Flags()
 
@@ -190,6 +197,22 @@ func (c *DebugCommand) Run(args []string) int {
 		c.flagOutput = fmt.Sprintf("/tmp/vault-debug-%s", formattedTime)
 	}
 
+	// If compression is enabled, trim the extension so that the files are
+	// written to a directory even if compression somehow fails. We ensure the
+	// extension during compression. We also prevent overwriting if the file
+	// already exists.
+	dstOutputFile := c.flagOutput
+	if c.flagCompress {
+		if _, err := os.Stat(dstOutputFile); os.IsNotExist(err) {
+			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
+			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
+		} else {
+			c.UI.Error(fmt.Sprintf("Output file already exists: %s", dstOutputFile))
+			return 1
+		}
+	}
+
+	// Stat check the directory to ensure we don't override any existing data.
 	if _, err := os.Stat(c.flagOutput); os.IsNotExist(err) {
 		err := os.MkdirAll(c.flagOutput, 0755)
 		if err != nil {
@@ -232,7 +255,7 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("           Duration: %s", c.flagDuration))
 	c.UI.Info(fmt.Sprintf("           Interval: %s", c.flagInterval))
 	c.UI.Info(fmt.Sprintf("            Targets: %s", strings.Join(c.flagTargets, ", ")))
-	c.UI.Info(fmt.Sprintf("              Ouput: %s", c.flagOutput))
+	c.UI.Info(fmt.Sprintf("             Output: %s", dstOutputFile))
 
 	// Capture static information
 	if err := c.captureStaticTargets(debugIndex); err != nil {
@@ -257,9 +280,11 @@ func (c *DebugCommand) Run(args []string) int {
 		return 1
 	}
 
-	// TODO: Perform compression
 	if c.flagCompress {
-
+		if err := c.compress(dstOutputFile); err != nil {
+			c.UI.Error(fmt.Sprintf("Error encountered during bundle compression: %s", err))
+		}
+		return 1
 	}
 
 	c.UI.Info(fmt.Sprintf("Success! Bundle written to: %s", c.flagOutput))
@@ -433,6 +458,88 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 			return nil
 		}
 	}
+}
+
+func (c *DebugCommand) compress(dst string) error {
+	src := c.flagOutput
+	dir := filepath.Dir(src)
+	name := filepath.Base(src)
+
+	f, err := ioutil.TempFile(dir, name+".tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create compressed temp archive: %s", err)
+	}
+
+	g := gzip.NewWriter(f)
+	t := tar.NewWriter(g)
+
+	tempName := f.Name()
+
+	defer func() {
+		// Always attempt to close and cleanup everything after this point.
+		_ = t.Close()
+		_ = g.Close()
+		_ = f.Close()
+		_ = os.Remove(tempName)
+	}()
+
+	walkFn := func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to walk filepath for archive: %s", err)
+		}
+
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return fmt.Errorf("failed to create compressed archive header: %s", err)
+		}
+
+		header.Name = filepath.Join(filepath.Base(src), strings.TrimPrefix(file, src))
+
+		if err := t.WriteHeader(header); err != nil {
+			return fmt.Errorf("failed to write compressed archive header: %s", err)
+		}
+
+		// Only copy files
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+
+		f, err := os.Open(file)
+		if err != nil {
+			return fmt.Errorf("failed to open target files for archive: %s", err)
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(t, f); err != nil {
+			return fmt.Errorf("failed to copy files for archive: %s", err)
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(src, walkFn); err != nil {
+		return err
+	}
+
+	// Guarantee that the contents of the temp file are flushed to disk.
+	if err := f.Sync(); err != nil {
+		return err
+	}
+
+	// Once tarball is created, move it to the actual output destination
+	if !strings.HasSuffix(dst, ".tar.gz") && !strings.HasSuffix(dst, ".tgz") {
+		dst = dst + debugCompressionExt
+	}
+	if err := os.Rename(tempName, dst); err != nil {
+		return err
+	}
+
+	// If everything is fine up to this point, remove original directory
+	if err := os.RemoveAll(src); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // debugIndex represents the data in the index file
