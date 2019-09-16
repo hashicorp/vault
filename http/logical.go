@@ -281,6 +281,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			// applicable to the local node.
 			switch req.Path {
 			case "sys/host-info":
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 				return
 			}
 
