@@ -13,6 +13,7 @@
     - api/auth/ldap/index.html
     - api/auth/okta/index.html
     - api/auth/cf/index.html
+    - api/auth/oci/index.html
     - api/auth/radius/index.html
     - api/auth/cert/index.html
     - api/auth/token/index.html
