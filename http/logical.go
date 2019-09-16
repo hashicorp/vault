@@ -141,14 +141,18 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 }
 
 func handleLogical(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false)
+	return handleLogicalInternal(core, false, false)
 }
 
 func handleLogicalWithInjector(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, true)
+	return handleLogicalInternal(core, true, false)
 }
 
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.Handler {
+func handleLogicalNoForward(core *vault.Core) http.Handler {
+	return handleLogicalInternal(core, false, true)
+}
+
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
@@ -276,19 +280,24 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// handles all error cases; if we hit respondLogical, the request is a
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
-		if needsForward {
+		switch {
+		case needsForward && noForward:
+			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+			return
+		case needsForward && !noForward:
 			if origBody != nil {
 				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
 			return
-		}
-		if !ok {
+		case !ok:
+			// If not ok, we simply return. The
+			return
+		default:
+			// Build and return the proper response if everything is fine.
+			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
-
-		// Build the proper response
-		respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 	})
 }
 
