@@ -442,7 +442,7 @@ type Core struct {
 	loadCaseSensitiveIdentityStore bool
 
 	// clusterListener starts up and manages connections on the cluster ports
-	clusterListener *cluster.Listener
+	clusterListener *atomic.Value
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -615,6 +615,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		underlyingPhysical:           conf.Physical,
 		redirectAddr:                 conf.RedirectAddr,
 		clusterAddr:                  new(atomic.Value),
+		clusterListener:              new(atomic.Value),
 		seal:                         conf.Seal,
 		router:                       NewRouter(),
 		sealed:                       new(uint32),
@@ -780,6 +781,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	return c, nil
 }
@@ -1515,7 +1518,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	// If the storage backend needs to be sealed
 	if shutdownRaft {
 		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
@@ -1624,7 +1627,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
 
-	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
+	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
 		if err := c.setupRaftActiveNode(ctx); err != nil {
 			return err
 		}
