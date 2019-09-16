@@ -625,7 +625,12 @@ list in order to satisfy that constraint.
 
 ### Parameters
 
-- `role` `(string: <required>)` - Name of the role.
+- `role` `(string: <required>)` - Name of the role. Vault normalizes all role
+  names to lower case. If you create two roles, "Web-Workers" and "WEB-WORKERS",
+  they will both be normalized to "web-workers" and will be regarded as the same role.
+  This is to prevent unexpected behavior due to casing differences. At all points,
+  Vault can be provided the role in any casing, and it will internally handle
+  sending it to lower case and seeking it inside its storage engine.
 - `auth_type` `(string: "iam")` - The auth type permitted for this role. Valid
   choices are "ec2" or "iam".  If no value is specified, then it will default to
   "iam" (except for legacy `aws-ec2` auth types, for which it will default to
