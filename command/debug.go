@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	// debugIndexVersion is tracks the canonical version in the index file
+	// for compatibility with future format/layout changes on the bundle.
 	debugIndexVersion = 1
 
 	// debugMinInterval is the minimum acceptable interval capture value. This
@@ -51,6 +53,9 @@ type DebugCommand struct {
 	flagMetricsInterval time.Duration
 	flagOutput          string
 	flagTargets         []string
+
+	// skipTimingChecks bypasses timing-related checks, used primarily for tests
+	skipTimingChecks bool
 
 	ShutdownCh chan struct{}
 }
@@ -153,9 +158,6 @@ Usage: vault debug [options]
 }
 
 func (c *DebugCommand) Run(args []string) int {
-	// Copy the raw args to output in the index
-	rawArgs := append([]string{}, args...)
-
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -163,99 +165,27 @@ func (c *DebugCommand) Run(args []string) int {
 		return 1
 	}
 
-	args = f.Args()
-	if len(args) > 0 {
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
+	parsedArgs := f.Args()
+	if len(parsedArgs) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(parsedArgs)))
 		return 1
 	}
 
-	// Guard duration and interval values to acceptable values
-	if c.flagDuration < debugMinInterval {
-		c.flagDuration = debugMinInterval
-	}
-	if c.flagInterval < debugMinInterval {
-		c.flagInterval = debugMinInterval
-	}
-	if c.flagInterval > c.flagDuration {
-		c.flagInterval = c.flagDuration
-	}
-	if c.flagMetricsInterval < debugMinInterval {
-		c.flagMetricsInterval = debugMinInterval
-	}
-	if c.flagMetricsInterval > c.flagDuration {
-		c.flagMetricsInterval = c.flagDuration
-	}
-
-	if len(c.flagTargets) == 0 {
-		c.flagTargets = c.defaultTargets()
-	}
-
-	captureTime := time.Now().UTC()
-	if len(c.flagOutput) == 0 {
-		formattedTime := captureTime.Format("2006-01-02T15-04-05Z")
-		// TODO: Remove /tmp prefix
-		c.flagOutput = fmt.Sprintf("/tmp/vault-debug-%s", formattedTime)
-	}
-
-	// If compression is enabled, trim the extension so that the files are
-	// written to a directory even if compression somehow fails. We ensure the
-	// extension during compression. We also prevent overwriting if the file
-	// already exists.
-	dstOutputFile := c.flagOutput
-	if c.flagCompress {
-		if _, err := os.Stat(dstOutputFile); os.IsNotExist(err) {
-			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
-			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
-		} else {
-			c.UI.Error(fmt.Sprintf("Output file already exists: %s", dstOutputFile))
-			return 1
-		}
-	}
-
-	// Stat check the directory to ensure we don't override any existing data.
-	if _, err := os.Stat(c.flagOutput); os.IsNotExist(err) {
-		err := os.MkdirAll(c.flagOutput, 0755)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Unable to create output directory: %s", err))
-			return 1
-		}
-	} else {
-		c.UI.Error(fmt.Sprintf("Output directory already exists: %s", c.flagOutput))
-		return 1
-	}
-
-	client, err := c.Client()
+	client, debugIndex, dstOutputFile, err := c.preflight(args)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Unable to create client to connect to Vault: %s", err))
+		c.UI.Error(fmt.Sprintf("Error during validation: %s", err))
 		return 1
-	}
-
-	// Populate initial index fields
-	idxOutput := map[string]interface{}{
-		"files": []string{},
-	}
-	debugIndex := &debugIndex{
-		VaultAddress:  client.Address(),
-		ClientVersion: version.GetVersion().VersionNumber(),
-		Compress:      c.flagCompress,
-		Duration:      int(c.flagDuration.Seconds()),
-		Interval:      int(c.flagInterval.Seconds()),
-		RawArgs:       rawArgs,
-		Version:       debugIndexVersion,
-		Targets:       c.flagTargets,
-		Timestamp:     captureTime,
-		Output:        idxOutput,
-		Errors:        []*captureError{},
 	}
 
 	// Print debug information
 	c.UI.Output("==> Starting debug capture...")
-	c.UI.Info(fmt.Sprintf("      Vault Address: %s", debugIndex.VaultAddress))
-	c.UI.Info(fmt.Sprintf("     Client Version: %s", debugIndex.ClientVersion))
-	c.UI.Info(fmt.Sprintf("           Duration: %s", c.flagDuration))
-	c.UI.Info(fmt.Sprintf("           Interval: %s", c.flagInterval))
-	c.UI.Info(fmt.Sprintf("            Targets: %s", strings.Join(c.flagTargets, ", ")))
-	c.UI.Info(fmt.Sprintf("             Output: %s", dstOutputFile))
+	c.UI.Info(fmt.Sprintf("       Vault Address: %s", debugIndex.VaultAddress))
+	c.UI.Info(fmt.Sprintf("      Client Version: %s", debugIndex.ClientVersion))
+	c.UI.Info(fmt.Sprintf("            Duration: %s", c.flagDuration))
+	c.UI.Info(fmt.Sprintf("            Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("    Metrics Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("             Targets: %s", strings.Join(c.flagTargets, ", ")))
+	c.UI.Info(fmt.Sprintf("              Output: %s", dstOutputFile))
 
 	// Capture static information
 	if err := c.captureStaticTargets(debugIndex); err != nil {
@@ -293,6 +223,95 @@ func (c *DebugCommand) Run(args []string) int {
 
 func (c *DebugCommand) Synopsis() string {
 	return "Runs the debug command"
+}
+
+// preflight performs various checks against the provided flags to ensure they
+// are valid/reasonable values. It also takes care of instantiating a client and
+// index object for use by the command.
+func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, *debugIndex, string, error) {
+	if !c.skipTimingChecks {
+		// Guard duration and interval values to acceptable values
+		if c.flagDuration < debugMinInterval {
+			c.UI.Info(fmt.Sprintf("Overwriting duration value %q to the minimum value of %q", c.flagDuration, debugMinInterval))
+			c.flagDuration = debugMinInterval
+		}
+		if c.flagInterval < debugMinInterval {
+			c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the minimum value of %q", c.flagInterval, debugMinInterval))
+			c.flagInterval = debugMinInterval
+		}
+		if c.flagInterval > c.flagDuration {
+			c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the duration value %q", c.flagInterval, c.flagDuration))
+			c.flagInterval = c.flagDuration
+		}
+		if c.flagMetricsInterval < debugMinInterval {
+			c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the minimum value of %q", c.flagMetricsInterval, debugMinInterval))
+			c.flagMetricsInterval = debugMinInterval
+		}
+		if c.flagMetricsInterval > c.flagDuration {
+			c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the duration value %q", c.flagMetricsInterval, c.flagDuration))
+			c.flagMetricsInterval = c.flagDuration
+		}
+	}
+
+	if len(c.flagTargets) == 0 {
+		c.flagTargets = c.defaultTargets()
+	}
+
+	captureTime := time.Now().UTC()
+	if len(c.flagOutput) == 0 {
+		formattedTime := captureTime.Format("2006-01-02T15-04-05Z")
+		c.flagOutput = fmt.Sprintf("vault-debug-%s", formattedTime)
+	}
+
+	// If compression is enabled, trim the extension so that the files are
+	// written to a directory even if compression somehow fails. We ensure the
+	// extension during compression. We also prevent overwriting if the file
+	// already exists.
+	dstOutputFile := c.flagOutput
+	if c.flagCompress {
+		if _, err := os.Stat(dstOutputFile); os.IsNotExist(err) {
+			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
+			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
+		} else {
+			return nil, nil, "", fmt.Errorf("output file already exists: %s", dstOutputFile)
+		}
+	}
+
+	// Stat check the directory to ensure we don't override any existing data.
+	if _, err := os.Stat(c.flagOutput); os.IsNotExist(err) {
+		err := os.MkdirAll(c.flagOutput, 0755)
+		if err != nil {
+			return nil, nil, "", fmt.Errorf("unable to create output directory: %s", err)
+		}
+	} else {
+		return nil, nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
+	}
+
+	// Populate initial index fields
+	idxOutput := map[string]interface{}{
+		"files": []string{},
+	}
+	debugIndex := &debugIndex{
+		VaultAddress:    client.Address(),
+		ClientVersion:   version.GetVersion().VersionNumber(),
+		Compress:        c.flagCompress,
+		Duration:        int(c.flagDuration.Seconds()),
+		Interval:        int(c.flagInterval.Seconds()),
+		MetricsInterval: int(c.flagMetricsInterval.Seconds()),
+		RawArgs:         rawArgs,
+		Version:         debugIndexVersion,
+		Targets:         c.flagTargets,
+		Timestamp:       captureTime,
+		Output:          idxOutput,
+		Errors:          []*captureError{},
+	}
+
+	return client, debugIndex, dstOutputFile, nil
 }
 
 func (c *DebugCommand) defaultTargets() []string {
@@ -544,17 +563,18 @@ func (c *DebugCommand) compress(dst string) error {
 
 // debugIndex represents the data in the index file
 type debugIndex struct {
-	VaultAddress  string                 `json:"vault_address"`
-	Version       int                    `json:"version"`
-	ClientVersion string                 `json:"client_version"`
-	Timestamp     time.Time              `json:"timestamp"`
-	Duration      int                    `json:"duration_seconds"`
-	Interval      int                    `json:"interval_seconds"`
-	Compress      bool                   `json:"compress"`
-	RawArgs       []string               `json:"raw_args"`
-	Targets       []string               `json:"targets"`
-	Output        map[string]interface{} `json:"output"`
-	Errors        []*captureError        `json:"errors"`
+	VaultAddress    string                 `json:"vault_address"`
+	Version         int                    `json:"version"`
+	ClientVersion   string                 `json:"client_version"`
+	Timestamp       time.Time              `json:"timestamp"`
+	Duration        int                    `json:"duration_seconds"`
+	Interval        int                    `json:"interval_seconds"`
+	MetricsInterval int                    `json:"metrics_interval_seconds"`
+	Compress        bool                   `json:"compress"`
+	RawArgs         []string               `json:"raw_args"`
+	Targets         []string               `json:"targets"`
+	Output          map[string]interface{} `json:"output"`
+	Errors          []*captureError        `json:"errors"`
 }
 
 // captureError hold an error entry that can occur during polling capture.
