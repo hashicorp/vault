@@ -1,0 +1,61 @@
+<AlertBanner
+  @type="warning"
+  @message="Vault is sealed"
+  @yieldWithoutColumn={{true}}
+>
+  <div class="has-text-warn is-flex is-flex-v-centered">
+    <div>
+    <span class="is-size-6 has-text-warning is-inline-block ">Warning</span> Vault is sealed
+    </div>
+  </div>
+</AlertBanner>
+{{#if this.showJoinForm}}
+    <div class="box is-marginless is-shadowless">
+  <EditForm @model={{compute (action "newModel")}}
+    @saveButtonText="Join"
+    @cancelButtonText="Back"
+    @onCancel={{action (mut this.showJoinForm) false}}
+    @flashEnabled={{false}}
+    @includeBox={{false}}
+    />
+    </div>
+{{else}}
+  <form onsubmit={{action "advanceFirstScreen" }}>
+    <div class="box is-marginless is-shadowless">
+      <h2 class="title is-6">
+        This server is configured to use Raft Storage.
+        <br />
+        <br />
+        How do you want to get started?
+      </h2>
+      <RadioButton
+        @value="join"
+        @groupValue={{this.preference}}
+        @changed={{action (mut this.preference) }}
+        @name="setup-pref"
+        @radioId="join"
+        @classNames="vlt-radio is-block"
+      >
+        <label for="join" />
+        Join an existing Raft cluster
+      </RadioButton>
+
+      <RadioButton
+        @value="init"
+        @groupValue={{this.preference}}
+        @changed={{action (mut this.preference) }}
+        @name="setup-pref"
+        @radioId="init"
+        @classNames="vlt-radio is-block"
+      >
+        <label for="init" />
+        Create a new Raft cluster
+      </RadioButton>
+    </div>
+    <div class="box is-marginless is-shadowless">
+      <button type="submit" class="button is-primary">
+        Next
+      </button>
+    </div>
+  </form>
+{{/if}}
