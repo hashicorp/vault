@@ -1,9 +1,12 @@
 package command
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/mitchellh/cli"
 )
 
@@ -21,6 +24,9 @@ func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
 func TestDebugCommand_Run(t *testing.T) {
 	t.Parallel()
 
+	testDir := testutil.TempDir(t, "debug")
+	defer os.RemoveAll(testDir)
+
 	cases := []struct {
 		name string
 		args []string
@@ -29,13 +35,20 @@ func TestDebugCommand_Run(t *testing.T) {
 	}{
 		{
 			"valid",
-			[]string{"-duration=1s"},
+			[]string{
+				"-duration=1s",
+				fmt.Sprintf("-output=%s/valid", testDir),
+			},
 			"",
 			0,
 		},
 		{
 			"too_many_args",
-			[]string{"-duration=1s", "foo"},
+			[]string{
+				"-duration=1s",
+				fmt.Sprintf("-output=%s/too_many_args", testDir),
+				"foo",
+			},
 			"Too many arguments",
 			1,
 		},
