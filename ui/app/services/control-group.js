@@ -95,17 +95,29 @@ export default Service.extend({
     return RSVP.reject(error);
   },
 
-  urlFromTransition(transition) {
-    let routes = Object.keys(transition.params);
-    let params = [];
-    for (let route of routes) {
-      let param = transition.params[route];
-      if (Object.keys(param).length) {
-        params.push(param);
+  paramsFromTransition(transitionTo, params, queryParams) {
+    let returnedParams = params.slice();
+    let qps = queryParams;
+    transitionTo.paramNames.map(name => {
+      let param = transitionTo.params[name];
+      if (param.length) {
+        // push on to the front of the array since were're started at the end
+        returnedParams.unshift(param);
       }
+    });
+    qps = { ...queryParams, ...transitionTo.queryParams };
+    // if there's a parent transition, recurse to get its route params
+    if (transitionTo.parent) {
+      [returnedParams, qps] = this.paramsFromTransition(transitionTo.parent, returnedParams, qps);
     }
-    let url = this.get('router').urlFor(transition.targetName, ...params, {
-      queryParams: transition.queryParams,
+    return [returnedParams, qps];
+  },
+
+  urlFromTransition(transitionObj) {
+    let transition = transitionObj.to;
+    let [params, queryParams] = this.paramsFromTransition(transition, [], {});
+    let url = this.get('router').urlFor(transition.name, ...params, {
+      queryParams,
     });
     return url.replace('/ui', '');
   },
