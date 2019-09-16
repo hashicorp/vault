@@ -47,7 +47,7 @@
     </ToolbarActions>
   </Toolbar>
 
-  <table class="is-fullwidth">
+  <table class="vlt-table is-fullwidth">
     <caption class="is-collapsed">Raft servers</caption>
     <thead class="has-text-weight-semibold">
       <tr>
@@ -83,7 +83,7 @@
         />
       {{/if}}
             </td>
-          <td class="has-text-right">
+          <td class="middle no-padding has-text-right">
             <PopupMenu>
               <Confirm as |c|>
               <nav>
@@ -94,7 +94,7 @@
                       @onConfirm={{action "removePeer" server}}
                       @triggerText="Remove Peer"
                       @confirmButtonText="Remove"
-                      @title={{concat "Remove " server.nodeId "?"}} 
+                      @title={{concat "Remove " server.nodeId "?"}}
                       @message="This will remove the server from the raft cluster."
                     />
                   </li>
