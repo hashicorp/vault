@@ -213,8 +213,8 @@ func (c *DebugCommand) Run(args []string) int {
 	if c.flagCompress {
 		if err := c.compress(dstOutputFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error encountered during bundle compression: %s", err))
+			return 1
 		}
-		return 1
 	}
 
 	c.UI.Info(fmt.Sprintf("Success! Bundle written to: %s", c.flagOutput))
@@ -257,6 +257,15 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, *debugIndex, st
 		c.flagTargets = c.defaultTargets()
 	}
 
+	// Make sure we can talk to the server
+	client, err := c.Client()
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
+	}
+	if _, err := client.Sys().Health(); err != nil {
+		return nil, nil, "", fmt.Errorf("unable to connect to the server: %s", err)
+	}
+
 	captureTime := time.Now().UTC()
 	if len(c.flagOutput) == 0 {
 		formattedTime := captureTime.Format("2006-01-02T15-04-05Z")
@@ -285,11 +294,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, *debugIndex, st
 		}
 	} else {
 		return nil, nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		return nil, nil, "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
 	}
 
 	// Populate initial index fields

@@ -29,13 +29,13 @@ func TestDebugCommand_Run(t *testing.T) {
 	}{
 		{
 			"valid",
-			nil,
+			[]string{"-duration=1s"},
 			"",
 			0,
 		},
 		{
 			"too_many_args",
-			[]string{"foo"},
+			[]string{"-duration=1s", "foo"},
 			"Too many arguments",
 			1,
 		},
@@ -52,6 +52,7 @@ func TestDebugCommand_Run(t *testing.T) {
 
 			ui, cmd := testDebugCommand(t)
 			cmd.client = client
+			cmd.skipTimingChecks = true
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
