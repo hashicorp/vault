@@ -172,6 +172,7 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
+  // storageType is the the storage type set in the storage configuration
 	storageType string
 
 	// redirectAddr is the address we advertise as leader if held
@@ -1826,6 +1827,7 @@ func (c *Core) SealAccess() *SealAccess {
 	return NewSealAccess(c.seal)
 }
 
+// StorageType returns a string equal to the storage configuration's type.
 func (c *Core) StorageType() string {
 	return c.storageType
 }
