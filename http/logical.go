@@ -312,7 +312,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			forwardRequest(core, w, r)
 			return
 		case !ok:
-			// If not ok, we simply return. The
+			// If not ok, we simply return. The call on request should have
+			// taken care of setting the appropriate response code and payload
+			// in this case.
 			return
 		default:
 			// Build and return the proper response if everything is fine.
