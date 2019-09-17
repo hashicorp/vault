@@ -140,15 +140,34 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	return req, origBody, 0, nil
 }
 
+// handleLogical returns a handler for processing logical requests. These requests
+// may or may not end up getting forwarded under certain scenarios if the node
+// is a performance standby. Some of these cases include:
+//     - Perf standby and token with limited use count.
+//     - Perf standby and token re-validation needed (e.g. due to invalid token).
+//     - Perf standby and control group error.
 func handleLogical(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false)
+	return handleLogicalInternal(core, false, false)
 }
 
+// handleLogicalWithInjector returns a handler for processing logical requests
+// that also have their logical response data injected at the top-level payload.
+// All forwarding behavior remains the same as `handleLogical`.
 func handleLogicalWithInjector(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, true)
+	return handleLogicalInternal(core, true, false)
 }
 
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.Handler {
+// handleLogicalNoForward returns a handler for processing logical local-only
+// requests. These types of requests never forwarded, and return an
+// `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
+func handleLogicalNoForward(core *vault.Core) http.Handler {
+	return handleLogicalInternal(core, false, true)
+}
+
+// handleLogicalInternal is a common helper that returns a handler for
+// processing logical requests. The behavior depends on the various boolean
+// toggles. Refer to usage on functions for possible behaviors.
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
@@ -158,6 +177,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 
 		// Always forward requests that are using a limited use count token.
 		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			// Prevent forwarding on local-only requests.
+			if noForward {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
+			}
+
 			if origBody != nil {
 				r.Body = origBody
 			}
@@ -276,19 +301,26 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// handles all error cases; if we hit respondLogical, the request is a
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
-		if needsForward {
+		switch {
+		case needsForward && noForward:
+			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+			return
+		case needsForward && !noForward:
 			if origBody != nil {
 				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
 			return
-		}
-		if !ok {
+		case !ok:
+			// If not ok, we simply return. The call on request should have
+			// taken care of setting the appropriate response code and payload
+			// in this case.
+			return
+		default:
+			// Build and return the proper response if everything is fine.
+			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
-
-		// Build the proper response
-		respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 	})
 }
 
