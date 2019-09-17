@@ -1,4 +1,4 @@
-package vault
+package hostutil
 
 import (
 	"time"
@@ -38,7 +38,7 @@ func (e *HostInfoError) Error() string {
 // The function does a best-effort capture on the most information possible,
 // continuing on capture errors encountered and appending them to a resulting
 // multierror.Error that gets returned at the end.
-func (c *Core) CollectHostInfo() (*HostInfo, error) {
+func CollectHostInfo() (*HostInfo, error) {
 	var retErr *multierror.Error
 	info := &HostInfo{Timestamp: time.Now().UTC()}
 

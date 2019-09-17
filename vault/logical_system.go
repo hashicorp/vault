@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -2616,7 +2617,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 // returned by the collection method will be returned as response warnings.
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{}
-	info, err := b.Core.CollectHostInfo()
+	info, err := hostutil.CollectHostInfo()
 	if err != nil {
 		// If the error is a HostInfoError, we return them as response warnings
 		if errs, ok := err.(*multierror.Error); ok {

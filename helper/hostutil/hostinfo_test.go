@@ -1,13 +1,11 @@
-package vault
+package hostutil
 
 import (
 	"testing"
 )
 
 func TestCollectHostInfo(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
-
-	info, err := c.CollectHostInfo()
+	info, err := CollectHostInfo()
 	if err != nil {
 		t.Fatal(err)
 	}
