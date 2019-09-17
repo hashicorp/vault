@@ -112,7 +112,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux := http.NewServeMux()
 
 	// Handle pprof paths
-	mux.Handle("/v1/sys/pprof/", handleLogical(core))
+	mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
