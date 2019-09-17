@@ -140,14 +140,26 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	return req, origBody, 0, nil
 }
 
+// handleLogical returns a handler for processing logical requests. These requests
+// may or may not end up getting forwarded under certain scenarios if the node
+// is a performance standby. Some of these cases include:
+//     - Perf standby and token with limited use count.
+//     - Perf standby and token re-validation needed (e.g. due to invalid token).
+//     - Perf standby and control group error.
 func handleLogical(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, false)
 }
 
+// handleLogicalNoForward returns a handler for processing logical requests that
+// also have their logical response data injected at the top-level payload. All
+// forwarding behavior remains the same as `handleLogical`.
 func handleLogicalWithInjector(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, true, false)
 }
 
+// handleLogicalNoForward returns a handler for processing logical local-only
+// requests. These types of requests never forwarded, and return an
+// `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
 func handleLogicalNoForward(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, true)
 }
@@ -162,6 +174,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 
 		// Always forward requests that are using a limited use count token.
 		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			// Prevent forwarding on local-only requests.
+			if noForward {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
+			}
+
 			if origBody != nil {
 				r.Body = origBody
 			}
