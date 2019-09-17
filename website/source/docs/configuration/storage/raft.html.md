@@ -15,6 +15,9 @@ description: |-
 
 # Raft Storage Backend
 
+!> **NOTE:** Vault's Integrated Storage is currently a ***Technology Preview***
+feature and not suitable for deployment in production.
+
 The Raft storage backend is used to persist Vault's data. Unlike other storage
 backends, Raft storage does not operate from a single source of data. Instead
 all the nodes in a Vault cluster will have a replicated copy of Vault's data.
