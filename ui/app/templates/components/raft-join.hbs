@@ -2,23 +2,28 @@
   @type="warning"
   @message="Vault is sealed"
   @yieldWithoutColumn={{true}}
+  class="is-marginless"
 >
-  <div class="has-text-warn is-flex is-flex-v-centered">
+  <div class="is-flex is-flex-v-centered">
     <div>
-    <span class="is-size-6 has-text-warning is-inline-block ">Warning</span> Vault is sealed
+    <span class="message-title">Warning</span> Vault is sealed
     </div>
   </div>
 </AlertBanner>
 {{#if this.showJoinForm}}
-    <div class="box is-marginless is-shadowless">
-  <EditForm @model={{compute (action "newModel")}}
+  <div class="box is-marginless is-shadowless">
+    <h2 class="title is-5">
+      Join an existing Raft cluster
+    </h2>
+    <EditForm @model={{compute (action "newModel")}}
     @saveButtonText="Join"
     @cancelButtonText="Back"
     @onCancel={{action (mut this.showJoinForm) false}}
+    @onSave={{transition-to "vault.cluster.unseal"}}
     @flashEnabled={{false}}
     @includeBox={{false}}
     />
-    </div>
+  </div>
 {{else}}
   <form onsubmit={{action "advanceFirstScreen" }}>
     <div class="box is-marginless is-shadowless">
@@ -39,7 +44,6 @@
         <label for="join" />
         Join an existing Raft cluster
       </RadioButton>
-
       <RadioButton
         @value="init"
         @groupValue={{this.preference}}
