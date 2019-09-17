@@ -150,9 +150,9 @@ func handleLogical(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, false)
 }
 
-// handleLogicalNoForward returns a handler for processing logical requests that
-// also have their logical response data injected at the top-level payload. All
-// forwarding behavior remains the same as `handleLogical`.
+// handleLogicalWithInjector returns a handler for processing logical requests
+// that also have their logical response data injected at the top-level payload.
+// All forwarding behavior remains the same as `handleLogical`.
 func handleLogicalWithInjector(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, true, false)
 }
