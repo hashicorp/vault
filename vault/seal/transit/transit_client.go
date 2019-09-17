@@ -2,7 +2,6 @@ package transit
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -113,7 +112,7 @@ func newTransitClient(logger log.Logger, config map[string]string) (*transitClie
 		apiClient.SetNamespace(namespace)
 	}
 	if apiClient.Token() == "" {
-		return nil, nil, errors.New("missing token")
+		logger.Info("no token provided to transit auto-seal")
 	}
 
 	client := &transitClient{
@@ -122,7 +121,7 @@ func newTransitClient(logger log.Logger, config map[string]string) (*transitClie
 		keyName:   keyName,
 	}
 
-	if !disableRenewal {
+	if !disableRenewal && apiClient.Token() != "" {
 		// Renew the token immediately to get a secret to pass to renewer
 		secret, err := apiClient.Auth().Token().RenewTokenAsSelf(apiClient.Token(), 0)
 		// If we don't get an error renewing, set up a renewer.  The token may not be renewable or not have
