@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -31,7 +32,7 @@ func TestSysHostInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var info vault.HostInfo
+	var info hostutil.HostInfo
 	if err := json.Unmarshal(dataBytes, &info); err != nil {
 		t.Fatal(err)
 	}

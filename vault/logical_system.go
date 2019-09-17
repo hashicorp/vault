@@ -2623,7 +2623,7 @@ func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request
 		if errs, ok := err.(*multierror.Error); ok {
 			var warnings []string
 			for _, mErr := range errs.Errors {
-				if errwrap.ContainsType(mErr, new(HostInfoError)) {
+				if errwrap.ContainsType(mErr, new(hostutil.HostInfoError)) {
 					warnings = append(warnings, mErr.Error())
 				} else {
 					// If the error is a multierror, it should only be for
