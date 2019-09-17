@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/subtle"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -672,6 +673,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			return nil, errwrap.Wrapf("error parsing cluster cipher suites: {{err}}", err)
 		}
 		c.clusterCipherSuites = suites
+	} else {
+		// Add in forward compatible TLS 1.3 suites, followed by handpicked 1.2 suites
+		c.clusterCipherSuites = []uint16{
+			// 1.3
+			tls.TLS_AES_128_GCM_SHA256,
+			tls.TLS_AES_256_GCM_SHA384,
+			tls.TLS_CHACHA20_POLY1305_SHA256,
+			// 1.2
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+		}
 	}
 
 	// Load CORS config and provide a value for the core field.
