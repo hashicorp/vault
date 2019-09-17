@@ -164,6 +164,9 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, true)
 }
 
+// handleLogicalInternal is a common helper that returns a handler for
+// processing logical requests. The behavior depends on the various boolean
+// toggles. Refer to usage on functions for possible behaviors.
 func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
