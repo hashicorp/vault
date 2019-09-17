@@ -83,7 +83,7 @@
                 {{/link-to}}
               </li>
             {{/if}}
-            {{#if (has-permission 'status' routeParams='raft')}}
+            {{#if (and cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
               <li class="action">
                 {{#link-to "vault.cluster.storage" activeCluster.name invokeAction=onLinkClick}}
                   <div class="level is-mobile">
