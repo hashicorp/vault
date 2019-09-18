@@ -1,6 +1,7 @@
 package hostutil
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -25,7 +26,8 @@ type HostInfo struct {
 
 // HostInfoError is a typed error for more convenient error checking.
 type HostInfoError struct {
-	Err error
+	Type string
+	Err  error
 }
 
 func (e *HostInfoError) WrappedErrors() []error {
@@ -33,7 +35,7 @@ func (e *HostInfoError) WrappedErrors() []error {
 }
 
 func (e *HostInfoError) Error() string {
-	return e.Err.Error()
+	return fmt.Sprintf("%s: %s", e.Type, e.Err.Error())
 }
 
 // CollectHostInfo returns information on the host, which includes general
@@ -47,26 +49,26 @@ func CollectHostInfo() (*HostInfo, error) {
 	info := &HostInfo{Timestamp: time.Now().UTC()}
 
 	if h, err := host.Info(); err != nil {
-		retErr = multierror.Append(retErr, &HostInfoError{err})
+		retErr = multierror.Append(retErr, &HostInfoError{"host", err})
 	} else {
 		info.Host = h
 	}
 
 	if v, err := mem.VirtualMemory(); err != nil {
-		retErr = multierror.Append(retErr, &HostInfoError{err})
+		retErr = multierror.Append(retErr, &HostInfoError{"memory", err})
 	} else {
 		info.Memory = v
 	}
 
 	parts, err := disk.Partitions(false)
 	if err != nil {
-		retErr = multierror.Append(retErr, &HostInfoError{err})
+		retErr = multierror.Append(retErr, &HostInfoError{"disk", err})
 	} else {
 		var usage []*disk.UsageStat
-		for _, part := range parts {
+		for i, part := range parts {
 			u, err := disk.Usage(part.Mountpoint)
 			if err != nil {
-				retErr = multierror.Append(retErr, &HostInfoError{err})
+				retErr = multierror.Append(retErr, &HostInfoError{fmt.Sprintf("disk.%d", i), err})
 				continue
 			}
 			usage = append(usage, u)
@@ -76,14 +78,14 @@ func CollectHostInfo() (*HostInfo, error) {
 	}
 
 	if c, err := cpu.Info(); err != nil {
-		retErr = multierror.Append(retErr, &HostInfoError{err})
+		retErr = multierror.Append(retErr, &HostInfoError{"cpu", err})
 	} else {
 		info.CPU = c
 	}
 
 	t, err := cpu.Times(true)
 	if err != nil {
-		retErr = multierror.Append(retErr, &HostInfoError{err})
+		retErr = multierror.Append(retErr, &HostInfoError{"cpu_times", err})
 	} else {
 		info.CPUTimes = t
 	}
