@@ -65,18 +65,25 @@ func sealStatusRequest(c *Sys, r *Request) (*SealStatusResponse, error) {
 }
 
 type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
+	Type                     string `json:"type"`
+	Initialized              bool   `json:"initialized"`
+	Sealed                   bool   `json:"sealed"`
+	T                        int    `json:"t"`
+	N                        int    `json:"n"`
+	Progress                 int    `json:"progress"`
+	Nonce                    string `json:"nonce"`
+	Version                  string `json:"version"`
+	Migration                bool   `json:"migration"`
+	ClusterName              string `json:"cluster_name,omitempty"`
+	ClusterID                string `json:"cluster_id,omitempty"`
+	RecoverySeal             bool   `json:"recovery_seal"`
+	HAEnabled                bool   `json:"ha_enabled"`
+	IsSelf                   bool   `json:"is_self"`
+	LeaderAddress            string `json:"leader_address"`
+	LeaderClusterAddress     string `json:"leader_cluster_address"`
+	PerfStandby              bool   `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64 `json:"last_wal"`
 }
 
 type UnsealOpts struct {

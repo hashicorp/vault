@@ -341,31 +341,19 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
 	}
 
-	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
-	// we cannot query for the leader since we are sealed.
-	leaderStatus, err := client.Sys().Leader()
-	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
-		leaderStatus = &api.LeaderResponse{HAEnabled: true}
-		err = nil
-	}
-	if err != nil {
-		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
-		return 1
-	}
-
 	// Output if HA is enabled
-	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
-	if leaderStatus.HAEnabled {
+	out = append(out, fmt.Sprintf("HA Enabled | %t", status.HAEnabled))
+	if status.HAEnabled {
 		mode := "sealed"
 		if !status.Sealed {
-			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
+			out = append(out, fmt.Sprintf("HA Cluster | %s", status.LeaderClusterAddress))
 			mode = "standby"
 			showLeaderAddr := false
-			if leaderStatus.IsSelf {
+			if status.IsSelf {
 				mode = "active"
 			} else {
-				if leaderStatus.LeaderAddress == "" {
-					leaderStatus.LeaderAddress = "<none>"
+				if status.LeaderAddress == "" {
+					status.LeaderAddress = "<none>"
 				}
 				showLeaderAddr = true
 			}
@@ -373,18 +361,18 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 
 			// This is down here just to keep ordering consistent
 			if showLeaderAddr {
-				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
+				out = append(out, fmt.Sprintf("Active Node Address | %s", status.LeaderAddress))
 			}
 
-			if leaderStatus.PerfStandby {
-				out = append(out, fmt.Sprintf("Performance Standby Node | %t", leaderStatus.PerfStandby))
-				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
+			if status.PerfStandby {
+				out = append(out, fmt.Sprintf("Performance Standby Node | %t", status.PerfStandby))
+				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", status.PerfStandbyLastRemoteWAL))
 			}
 		}
 	}
 
-	if leaderStatus.LastWAL != 0 {
-		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
+	if status.LastWAL != 0 {
+		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
 	}
 
 	ui.Output(tableOutput(out, nil))
