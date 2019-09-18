@@ -12,10 +12,16 @@ IMPROVEMENTS:
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * core: Exit ScanView if context has been cancelled [GH-7419]
+ * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
 
-## 1.2.3 (Unreleased)
+## 1.2.3 (September 12, 2019)
+
+FEATURES:
+
+* **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
+  storage, auto unseal, and authentication.  
 
 IMPROVEMENTS:
 
