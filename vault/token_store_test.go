@@ -849,6 +849,9 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	ts := exp.tokenStore
 
 	rootToken, err := ts.rootToken(namespace.RootContext(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
 	root := rootToken.ID
 
 	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
@@ -2117,6 +2120,9 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	ts := exp.tokenStore
 
 	rootToken, err := ts.rootToken(namespace.RootContext(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
 	root := rootToken.ID
 
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
@@ -2657,6 +2663,9 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 			"mount_accessor": tokenMountAccessor,
 		},
 	})
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{
