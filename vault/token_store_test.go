@@ -4992,17 +4992,18 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 	cubbyFuncLock.Unlock()
 
+	errCh := make(chan error)
+	defer close(errCh)
 	go func() {
 		cubbyFuncLock.RLock()
 		err := ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
 		cubbyFuncLock.RUnlock()
-		if err == nil {
-			t.Fatalf("expected error")
-		}
+		errCh <- err
 	}()
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
+
 	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
@@ -5011,8 +5012,10 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal("nil token entry")
 	}
 
-	// Let things catch up
-	time.Sleep(2 * time.Second)
+	err = <-errCh
+	if err == nil {
+		t.Fatal("expected error on ts.revokeInternal() in anonymous goroutine")
+	}
 
 	// Put back to normal
 	cubbyFuncLock.Lock()
