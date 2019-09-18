@@ -128,7 +128,7 @@ func (h *Handler) startTrace(w http.ResponseWriter, r *http.Request) (*http.Requ
 		// TODO: Handle cases where ContentLength is not set.
 	} else if r.ContentLength > 0 {
 		span.AddMessageReceiveEvent(0, /* TODO: messageID */
-			int64(r.ContentLength), -1)
+			r.ContentLength, -1)
 	}
 	return r.WithContext(ctx), span.End
 }
@@ -173,8 +173,6 @@ type trackingResponseWriter struct {
 
 // Compile time assertion for ResponseWriter interface
 var _ http.ResponseWriter = (*trackingResponseWriter)(nil)
-
-var logTagsErrorOnce sync.Once
 
 func (t *trackingResponseWriter) end(tags *addedTags) {
 	t.endOnce.Do(func() {

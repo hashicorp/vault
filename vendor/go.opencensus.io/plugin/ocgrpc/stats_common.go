@@ -61,14 +61,14 @@ var (
 // Server tags are applied to the context used to process each RPC, as well as
 // the measures at the end of each RPC.
 var (
-	KeyServerMethod, _ = tag.NewKey("grpc_server_method")
-	KeyServerStatus, _ = tag.NewKey("grpc_server_status")
+	KeyServerMethod = tag.MustNewKey("grpc_server_method")
+	KeyServerStatus = tag.MustNewKey("grpc_server_status")
 )
 
 // Client tags are applied to measures at the end of each RPC.
 var (
-	KeyClientMethod, _ = tag.NewKey("grpc_client_method")
-	KeyClientStatus, _ = tag.NewKey("grpc_client_status")
+	KeyClientMethod = tag.MustNewKey("grpc_client_method")
+	KeyClientStatus = tag.MustNewKey("grpc_client_status")
 )
 
 var (

@@ -82,7 +82,7 @@ func Sum() *Aggregation {
 // Distribution indicates that the desired aggregation is
 // a histogram distribution.
 //
-// An distribution aggregation may contain a histogram of the values in the
+// A distribution aggregation may contain a histogram of the values in the
 // population. The bucket boundaries for that histogram are described
 // by the bounds. This defines len(bounds)+1 buckets.
 //
