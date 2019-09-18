@@ -10,10 +10,14 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
-// HostInfo holds all the information that gets captured on the host.
+// HostInfo holds all the information that gets captured on the host. The
+// set of information captured depends on the host operating system. For more
+// information, refer to: https://github.com/shirou/gopsutil#current-status
 type HostInfo struct {
+	// Timestamp returns the timestamp in UTC on the collection time.
 	Timestamp time.Time              `json:"timestamp"`
 	CPU       []cpu.InfoStat         `json:"cpu"`
+	CPUTimes  []cpu.TimesStat        `json:"cpu_times"`
 	Disk      []*disk.UsageStat      `json:"disk"`
 	Host      *host.InfoStat         `json:"host"`
 	Memory    *mem.VirtualMemoryStat `json:"memory"`
@@ -75,6 +79,13 @@ func CollectHostInfo() (*HostInfo, error) {
 		retErr = multierror.Append(retErr, &HostInfoError{err})
 	} else {
 		info.CPU = c
+	}
+
+	t, err := cpu.Times(true)
+	if err != nil {
+		retErr = multierror.Append(retErr, &HostInfoError{err})
+	} else {
+		info.CPUTimes = t
 	}
 
 	return info, retErr.ErrorOrNil()

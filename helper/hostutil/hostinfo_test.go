@@ -15,6 +15,9 @@ func TestCollectHostInfo(t *testing.T) {
 	if info.CPU == nil {
 		t.Fatal("expected non-nil CPU value")
 	}
+	if info.CPUTimes == nil {
+		t.Fatal("expected non-nil CPUTimes value")
+	}
 	if info.Disk == nil {
 		t.Fatal("expected non-nil Disk value")
 	}

@@ -2648,6 +2648,9 @@ func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request
 	if info.CPU != nil {
 		respData["cpu"] = info.CPU
 	}
+	if info.CPUTimes != nil {
+		respData["cpu_times"] = info.CPUTimes
+	}
 	if info.Disk != nil {
 		respData["disk"] = info.Disk
 	}
