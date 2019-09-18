@@ -4,8 +4,8 @@ import { task } from 'ember-concurrency';
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
-    entities: 'identity/entities',
-    groups: 'identity/groups',
+    entities: 'identity/entity/id',
+    groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
     namespaces: 'sys/namespaces',
     'control-groups': 'sys/control-group/',
@@ -28,12 +28,15 @@ const API_PATHS = {
     license: 'sys/license',
     seal: 'sys/seal',
   },
+  metrics: {
+    requests: 'sys/internal/counters/requests',
+  },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/auth': ['vault.cluster.access.methods'],
-  'identity/entities': ['vault.cluster.access.identity', 'entities'],
-  'identity/groups': ['vault.cluster.access.identity', 'groups'],
+  'identity/entity/id': ['vault.cluster.access.identity', 'entities'],
+  'identity/group/id': ['vault.cluster.access.identity', 'groups'],
   'sys/leases/lookup': ['vault.cluster.access.leases'],
   'sys/namespaces': ['vault.cluster.access.namespaces'],
   'sys/control-group/': ['vault.cluster.access.control-groups'],
@@ -141,7 +144,8 @@ export default Service.extend({
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
       });
       const hasMatchingPath =
-        (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+        (matchingPath && !this.isDenied(globPaths[matchingPath])) ||
+        Object.prototype.hasOwnProperty.call(globPaths, '');
 
       if (matchingPath && capability) {
         return this.hasCapability(globPaths[matchingPath], capability) && hasMatchingPath;

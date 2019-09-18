@@ -71,6 +71,15 @@ func (c *NamespaceListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing namespaces: %s", err))
 		return 2
 	}
+
+	_, ok := extractListData(secret)
+	if Format(c.UI) != "table" {
+		if secret == nil || secret.Data != nil || !ok {
+			OutputData(c.UI, map[string]interface{}{})
+			return 2
+		}
+	}
+
 	if secret == nil {
 		c.UI.Error(fmt.Sprintf("No namespaces found"))
 		return 2
@@ -85,7 +94,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if _, ok := extractListData(secret); !ok {
+	if !ok {
 		c.UI.Error(fmt.Sprintf("No entries found"))
 		return 2
 	}

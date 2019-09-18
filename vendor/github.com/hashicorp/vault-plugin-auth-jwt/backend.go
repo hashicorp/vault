@@ -2,13 +2,15 @@ package jwtauth
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -30,6 +32,7 @@ type jwtAuthBackend struct {
 
 	l            sync.RWMutex
 	provider     *oidc.Provider
+	keySet       oidc.KeySet
 	cachedConfig *jwtConfig
 	oidcStates   *cache.Cache
 
@@ -124,6 +127,29 @@ func (b *jwtAuthBackend) getProvider(config *jwtConfig) (*oidc.Provider, error) 
 
 	b.provider = provider
 	return provider, nil
+}
+
+// getKeySet returns a new JWKS KeySet based on the provided config.
+func (b *jwtAuthBackend) getKeySet(config *jwtConfig) (oidc.KeySet, error) {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if b.keySet != nil {
+		return b.keySet, nil
+	}
+
+	if config.JWKSURL == "" {
+		return nil, errors.New("keyset error: jwks_url not configured")
+	}
+
+	ctx, err := b.createCAContext(b.providerCtx, config.JWKSCAPEM)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing jwks_ca_pem: {{err}}", err)
+	}
+
+	b.keySet = oidc.NewRemoteKeySet(ctx, config.JWKSURL)
+
+	return b.keySet, nil
 }
 
 const (

@@ -1,4 +1,6 @@
+// env: node
 module.exports = {
+  parser: 'babel-eslint',
   root: true,
   parserOptions: {
     ecmaVersion: 2018,
@@ -13,6 +15,7 @@ module.exports = {
   rules: {
     'no-unused-vars': ['error', { ignoreRestSiblings: true }],
     'prettier/prettier': 'error',
+    'ember/no-jquery': 'error',
   },
   globals: {
     TextEncoderLite: true,

@@ -45,7 +45,7 @@ uses that driver to interact with the database.
 
 ## `cockroachdb` Examples
 
-This example shows connecting to a PostgresSQL cluster using full SSL
+This example shows connecting to a PostgreSQL cluster using full SSL
 verification (recommended).
 
 ```hcl

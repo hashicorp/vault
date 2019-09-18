@@ -22,10 +22,6 @@ type SystemView interface {
 	// this value, as Vault will revoke them
 	MaxLeaseTTL() time.Duration
 
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	SudoPrivilege(ctx context.Context, path string, token string) bool
-
 	// Returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
 	// circumstances; a primary use-case is as a guard in revocation functions.
@@ -72,6 +68,7 @@ type SystemView interface {
 
 type ExtendedSystemView interface {
 	Auditor() Auditor
+	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 }
 
 type StaticSystemView struct {
@@ -102,6 +99,10 @@ func (a noopAuditor) AuditResponse(ctx context.Context, input *LogInput) error {
 
 func (d StaticSystemView) Auditor() Auditor {
 	return noopAuditor{}
+}
+
+func (d StaticSystemView) ForwardGenericRequest(ctx context.Context, req *Request) (*Response, error) {
+	return nil, errors.New("ForwardGenericRequest is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {

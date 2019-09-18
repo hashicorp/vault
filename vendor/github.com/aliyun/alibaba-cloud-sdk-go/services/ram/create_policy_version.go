@@ -79,6 +79,7 @@ type CreatePolicyVersionRequest struct {
 	SetAsDefault   requests.Boolean `position:"Query" name:"SetAsDefault"`
 	PolicyName     string           `position:"Query" name:"PolicyName"`
 	PolicyDocument string           `position:"Query" name:"PolicyDocument"`
+	RotateStrategy string           `position:"Query" name:"RotateStrategy"`
 }
 
 // CreatePolicyVersionResponse is the response struct for api CreatePolicyVersion
@@ -93,7 +94,7 @@ func CreateCreatePolicyVersionRequest() (request *CreatePolicyVersionRequest) {
 	request = &CreatePolicyVersionRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicyVersion", "ram", "openAPI")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicyVersion", "", "")
 	return
 }
 

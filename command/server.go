@@ -22,10 +22,12 @@ import (
 
 	"github.com/hashicorp/vault/helper/metricsutil"
 
+	monitoring "cloud.google.com/go/monitoring/apiv3"
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
+	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -42,14 +44,17 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -57,6 +62,11 @@ var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
 var memProfilerEnabled = false
+
+var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
+	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
+	return 1
+}
 
 const storageMigrationLock = "core/migration"
 
@@ -86,12 +96,13 @@ type ServerCommand struct {
 	reloadedCh      chan (struct{}) // for tests
 
 	// new stuff
-	flagConfigs        []string
-	flagLogLevel       string
-	flagDev            bool
-	flagDevRootTokenID string
-	flagDevListenAddr  string
-
+	flagConfigs          []string
+	flagLogLevel         string
+	flagLogFormat        string
+	flagDev              bool
+	flagDevRootTokenID   string
+	flagDevListenAddr    string
+	flagDevNoStoreToken  bool
 	flagDevPluginDir     string
 	flagDevPluginInit    bool
 	flagDevHA            bool
@@ -107,6 +118,7 @@ type ServerCommand struct {
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
 	flagTestServerConfig bool
+	flagDevConsul        bool
 }
 
 type ServerListener struct {
@@ -173,6 +185,17 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.flagLogFormat,
+		Default: notSetValue,
+		// EnvVar can't be just "VAULT_LOG_FORMAT", because more than one env var name is supported
+		// for backwards compatibility reasons.
+		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
+		Completion: complete.PredictSet("standard", "json"),
+		Usage:      `Log format. Supported values are "standard" and "json".`,
+	})
+
 	f = set.NewFlagSet("Dev Options")
 
 	f.BoolVar(&BoolVar{
@@ -198,6 +221,14 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "127.0.0.1:8200",
 		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
 		Usage:   "Address to bind to in \"dev\" mode.",
+	})
+	f.BoolVar(&BoolVar{
+		Name:    "dev-no-store-token",
+		Target:  &c.flagDevNoStoreToken,
+		Default: false,
+		Usage: "Do not persist the dev root token to the token helper " +
+			"(usually the local filesystem) for use in future requests. " +
+			"The token will only be displayed in the command output.",
 	})
 
 	// Internal-only flags to follow.
@@ -291,6 +322,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "dev-consul",
+		Target:  &c.flagDevConsul,
+		Default: false,
+		Hidden:  true,
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "combine-logs",
@@ -334,6 +372,70 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Automatically enable dev mode if other dev flags are provided.
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+		c.flagDev = true
+	}
+
+	// Validation
+	if !c.flagDev {
+		switch {
+		case len(c.flagConfigs) == 0:
+			c.UI.Error("Must specify at least one config path using -config")
+			return 1
+		case c.flagDevRootTokenID != "":
+			c.UI.Warn(wrapAtLength(
+				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
+					"Your request has been ignored."))
+			c.flagDevRootTokenID = ""
+		}
+	}
+
+	// Load the configuration
+	var config *server.Config
+	if c.flagDev {
+		var devStorageType string
+		switch {
+		case c.flagDevConsul:
+			devStorageType = "consul"
+		case c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional_ha"
+		case !c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional"
+		case c.flagDevHA && !c.flagDevTransactional:
+			devStorageType = "inmem_ha"
+		default:
+			devStorageType = "inmem"
+		}
+		config = server.DevConfig(devStorageType)
+		if c.flagDevListenAddr != "" {
+			config.Listeners[0].Config["address"] = c.flagDevListenAddr
+		}
+	}
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
+			return 1
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Ensure at least one config was found.
+	if config == nil {
+		c.UI.Output(wrapAtLength(
+			"No configuration files found. Please provide configurations with the " +
+				"-config flag. If you are supplying the path to a directory, please " +
+				"ensure the directory contains files with the .hcl or .json " +
+				"extension."))
+		return 1
+	}
+
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
@@ -365,6 +467,27 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	logFormat := logging.UnspecifiedFormat
+	if c.flagLogFormat != notSetValue {
+		var err error
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		logFormat = logging.ParseEnvLogFormat()
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		var err error
+		logFormat, err = logging.ParseLogFormat(config.LogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+	}
+
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = log.New(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
@@ -372,62 +495,18 @@ func (c *ServerCommand) Run(args []string) int {
 			Level:  log.Trace,
 		})
 	} else {
-		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+		c.logger = log.New(&log.LoggerOptions{
+			Output: c.logWriter,
+			Level:  level,
+			// Note that if logFormat is either unspecified or standard, then
+			// the resulting logger's format will be standard.
+			JSONFormat: logFormat == logging.JSONFormat,
+		})
 	}
 
 	allLoggers := []log.Logger{c.logger}
 
-	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
-		c.flagDev = true
-	}
-
-	// Validation
-	if !c.flagDev {
-		switch {
-		case len(c.flagConfigs) == 0:
-			c.UI.Error("Must specify at least one config path using -config")
-			return 1
-		case c.flagDevRootTokenID != "":
-			c.UI.Warn(wrapAtLength(
-				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
-					"Your request has been ignored."))
-			c.flagDevRootTokenID = ""
-		}
-	}
-
-	// Load the configuration
-	var config *server.Config
-	if c.flagDev {
-		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
-		if c.flagDevListenAddr != "" {
-			config.Listeners[0].Config["address"] = c.flagDevListenAddr
-		}
-	}
-	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path, c.logger)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
-			return 1
-		}
-
-		if config == nil {
-			config = current
-		} else {
-			config = config.Merge(current)
-		}
-	}
-
-	// Ensure at least one config was found.
-	if config == nil {
-		c.UI.Output(wrapAtLength(
-			"No configuration files found. Please provide configurations with the " +
-				"-config flag. If you are supply the path to a directory, please " +
-				"ensure the directory contains files with the .hcl or .json " +
-				"extension."))
-		return 1
-	}
-
+	// adjust log level based on config setting
 	if config.LogLevel != "" && logLevelWasNotSet {
 		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 		logLevelString = configLogLevel
@@ -448,6 +527,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
 	allLoggers = append(allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
@@ -491,6 +571,10 @@ func (c *ServerCommand) Run(args []string) int {
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
 	if !exists {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
+		return 1
+	}
+	if config.Storage.Type == "raft" && len(config.ClusterAddr) == 0 {
+		c.UI.Error("Cluster address must be set when using raft storage")
 		return 1
 	}
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
@@ -541,7 +625,7 @@ func (c *ServerCommand) Run(args []string) int {
 			var seal vault.Seal
 			sealLogger := c.logger.Named(sealType)
 			allLoggers = append(allLoggers, sealLogger)
-			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -626,7 +710,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if c.flagDevFourCluster {
-		return c.enableFourClusterDev(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -972,7 +1056,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(core, barrierSeal, unwrapSeal); err != nil {
+	if err := adjustCoreForSealMigration(c.logger, core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -1284,7 +1368,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			var config *server.Config
 			var level log.Level
 			for _, path := range c.flagConfigs {
-				current, err := server.LoadConfig(path, c.logger)
+				current, err := server.LoadConfig(path)
 				if err != nil {
 					c.logger.Error("could not reload config", "path", path, "error", err)
 					goto RUNRELOADFUNCS
@@ -1448,12 +1532,14 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Set the token
-	tokenHelper, err := c.TokenHelper()
-	if err != nil {
-		return nil, err
-	}
-	if err := tokenHelper.Store(init.RootToken); err != nil {
-		return nil, err
+	if !c.flagDevNoStoreToken {
+		tokenHelper, err := c.TokenHelper()
+		if err != nil {
+			return nil, err
+		}
+		if err := tokenHelper.Store(init.RootToken); err != nil {
+			return nil, err
+		}
 	}
 
 	kvVer := "2"
@@ -1889,6 +1975,20 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the stackdriver sink
+	if telConfig.StackdriverProjectID != "" {
+		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent.String()))
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
+		}
+		sink := stackdriver.NewSink(client, &stackdriver.Config{
+			ProjectID: telConfig.StackdriverProjectID,
+			Location:  telConfig.StackdriverLocation,
+			Namespace: telConfig.StackdriverNamespace,
+		})
 		fanout = append(fanout, sink)
 	}
 

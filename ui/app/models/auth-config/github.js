@@ -19,6 +19,7 @@ export default AuthConfig.extend({
       {
         'GitHub Options': ['baseUrl'],
       },
+      { TTLs: ['ttl', 'maxTtl'] },
     ];
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);

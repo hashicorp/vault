@@ -10,6 +10,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+var (
+	logicalBackendAdjustmentFactor = 1
+)
+
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
 
@@ -211,7 +215,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 		// backends are found by walking the directory, which includes the database backend,
 		// however, the plugins registry omits that one
-		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1 {
+		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor {
 			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1, len(backends))
 		}
 

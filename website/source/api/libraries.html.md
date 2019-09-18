@@ -59,6 +59,10 @@ $ Install-Package VaultSharp
 $ Install-Package Vault
 ```
 
+### C++
+
+* [libvault](https://github.com/abedra/libvault)
+
 ### Clojure
 
 * [vault-clj](https://github.com/amperity/vault-clj)
@@ -84,6 +88,13 @@ $ go get github.com/adfinis-sygroup/vault-client
 $ cabal install vault-tool
 ```
 
+
+* [gothic](http://hackage.haskell.org/package/gothic)
+
+```shell
+$ stack install gothic
+```
+
 ### Java
 
 * [Spring Vault](https://github.com/spring-projects/spring-vault)
@@ -99,12 +110,6 @@ $ cabal install vault-tool
 
 ```shell
 $ npm install node-vault
-```
-
-* [vaulted](https://github.com/chiefy/vaulted)
-
-```shell
-$ npm install vaulted
 ```
 
 ### PHP

@@ -6,16 +6,12 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestLoadConfigFile(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config.hcl", logger)
+	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -85,9 +81,7 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_topLevel(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl", logger)
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -161,9 +155,7 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 }
 
 func TestLoadConfigFile_json(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config.hcl.json", logger)
+	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -229,9 +221,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 }
 
 func TestLoadConfigFile_json2(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json", logger)
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -257,7 +247,6 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
-			DisableClustering: true,
 		},
 
 		HAStorage: &Storage{
@@ -265,15 +254,19 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+			DisableClustering: true,
 		},
 
 		CacheSize: 45678,
 
-		EnableUI: true,
+		EnableUI:    true,
+		EnableUIRaw: true,
 
-		EnableRawEndpoint: true,
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
 
-		DisableSealWrap: true,
+		DisableSealWrap:    true,
+		DisableSealWrapRaw: true,
 
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "foo",
@@ -297,13 +290,12 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
 
 func TestLoadConfigDir(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	config, err := LoadConfigDir("./test-fixtures/config-dir", logger)
+	config, err := LoadConfigDir("./test-fixtures/config-dir")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

@@ -26,6 +26,11 @@
   }
 }
 
+.toolbar-label {
+  padding: $spacing-xs;
+  color: $grey;
+}
+
 .toolbar-scroller {
   align-items: center;
   display: flex;

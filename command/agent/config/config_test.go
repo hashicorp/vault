@@ -112,6 +112,7 @@ func TestLoadConfigFile(t *testing.T) {
 			Method: &Method{
 				Type:      "aws",
 				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},

@@ -27,6 +27,11 @@ storage "postgresql" {
 }
 ```
 
+~> **Note:** The PostgreSQL storage backend plugin will attempt to use SSL 
+when connecting to the database.  If SSL is not enabled the `connection_url` 
+will need to be configured to disable SSL.  See the documentation below 
+to disable SSL.
+
 The PostgreSQL storage backend does not automatically create the table. Here is
 some sample SQL to create the schema and indexes.
 
@@ -96,10 +101,19 @@ LANGUAGE plpgsql;
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
 
+- `max_idle_connections` `(int)` - Default not set. Sets the maximum number of 
+  connections in the idle connection pool. See
+  [golang docs on SetMaxIdleConns][golang_SetMaxIdleConns] for more information. 
+  Requires 1.2 or later.
+
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to PostgreSQL.
 
 - `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
+
+- `ha_table` `(string: "vault_ha_locks")` – Specifies the name of the table to use
+  for storing high availability information. This table must already exist (Vault
+  will not attempt to create it).
 
 ## `postgresql` Examples
 
@@ -123,5 +137,6 @@ storage "postgresql" {
 }
 ```
 
+[golang_SetMaxIdleConns]: https://golang.org/pkg/database/sql/#DB.SetMaxIdleConns
 [postgresql]: https://www.postgresql.org/
 [pglib]: https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters

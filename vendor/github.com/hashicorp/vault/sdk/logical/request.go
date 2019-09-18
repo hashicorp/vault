@@ -2,6 +2,7 @@ package logical
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -171,6 +172,14 @@ type Request struct {
 	// ClientTokenSource tells us where the client token was sourced from, so
 	// we can delete it before sending off to plugins
 	ClientTokenSource ClientTokenSource
+
+	// HTTPRequest, if set, can be used to access fields from the HTTP request
+	// that generated this logical.Request object, such as the request body.
+	HTTPRequest *http.Request `json:"-" sentinel:""`
+
+	// ResponseWriter if set can be used to stream a response value to the http
+	// request that generated this logical.Request object.
+	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
 }
 
 // Get returns a data field and guards for nil Data
@@ -294,3 +303,11 @@ const (
 )
 
 type MFACreds map[string][]string
+
+// InitializationRequest stores the parameters and context of an Initialize()
+// call being made to a logical.Backend.
+type InitializationRequest struct {
+
+	// Storage can be used to durably store and retrieve state.
+	Storage Storage
+}

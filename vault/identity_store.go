@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -75,7 +75,19 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		BackendType: logical.TypeLogical,
 		Paths:       iStore.paths(),
 		Invalidate:  iStore.Invalidate,
+		PathsSpecial: &logical.Paths{
+			Unauthenticated: []string{
+				"oidc/.well-known/*",
+			},
+		},
+		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			iStore.oidcPeriodicFunc(ctx)
+
+			return nil
+		},
 	}
+
+	iStore.oidcCache = newOIDCCache()
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -93,6 +105,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		groupPaths(i),
 		lookupPaths(i),
 		upgradePaths(i),
+		oidcPaths(i),
 	)
 }
 
@@ -247,6 +260,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 		txn.Commit()
 		return
+
+	case strings.HasPrefix(key, oidcTokensPrefix):
+		i.oidcCache.Flush(nil)
 	}
 }
 

@@ -41,6 +41,10 @@ const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
 
+// Deprecated values
+const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
+const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
 // "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
@@ -136,8 +140,8 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultPooledClient(),
+		Timeout:    time.Second * 60,
 	}
-	config.HttpClient.Timeout = time.Second * 60
 
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
@@ -246,6 +250,8 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
+	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -286,7 +292,14 @@ func (c *Config) ReadEnvironment() error {
 		if err != nil {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
+	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
+		var err error
+		envInsecure, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse VAULT_INSECURE")
+		}
 	}
+
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}

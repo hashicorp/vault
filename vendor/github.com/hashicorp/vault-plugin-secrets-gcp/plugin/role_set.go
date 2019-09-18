@@ -88,8 +88,7 @@ func (rs *RoleSet) save(ctx context.Context, s logical.Storage) error {
 }
 
 func (rs *RoleSet) bindingHash() string {
-	ssum := sha256.Sum256([]byte(rs.RawBindings)[:])
-	return base64.StdEncoding.EncodeToString(ssum[:])
+	return getStringHash(rs.RawBindings)
 }
 
 func (rs *RoleSet) getServiceAccount(iamAdmin *iam.Service) (*iam.ServiceAccount, error) {
@@ -414,4 +413,9 @@ func roleSetServiceAccountName(rsName string) (name string) {
 		name = fmt.Sprintf("vault%s-%s", rsName[:len(rsName)-toTrunc], intSuffix)
 	}
 	return name
+}
+
+func getStringHash(bindingsRaw string) string {
+	ssum := sha256.Sum256([]byte(bindingsRaw)[:])
+	return base64.StdEncoding.EncodeToString(ssum[:])
 }

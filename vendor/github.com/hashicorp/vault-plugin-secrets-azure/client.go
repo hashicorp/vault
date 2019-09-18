@@ -132,7 +132,7 @@ func (c *client) createSP(
 		now := time.Now().UTC()
 		result, err := c.provider.CreateServicePrincipal(ctx, graphrbac.ServicePrincipalCreateParameters{
 			AppID:          app.AppID,
-			AccountEnabled: to.StringPtr("true"),
+			AccountEnabled: to.BoolPtr(true),
 			PasswordCredentials: &[]graphrbac.PasswordCredential{
 				graphrbac.PasswordCredential{
 					StartDate: &date.Time{Time: now},
@@ -254,7 +254,7 @@ func (c *client) deleteApp(ctx context.Context, appObjectID string) error {
 }
 
 // assignRoles assigns Azure roles to a service principal.
-func (c *client) assignRoles(ctx context.Context, sp *graphrbac.ServicePrincipal, roles []*azureRole) ([]string, error) {
+func (c *client) assignRoles(ctx context.Context, sp *graphrbac.ServicePrincipal, roles []*AzureRole) ([]string, error) {
 	var ids []string
 
 	for _, role := range roles {

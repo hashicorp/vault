@@ -9,7 +9,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -904,7 +904,6 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	}
 }
 
-// Ensure we get a client token
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
 	noop := &NoopAudit{}

@@ -210,6 +210,9 @@ message Auth {
 
 	// TokenType is the type of token being requested
 	uint32 token_type = 17;
+
+	// Whether the default policy should be added automatically by core
+	bool no_default_policy = 18;
 }
 
 message TokenEntry {
@@ -352,6 +355,15 @@ message HandleRequestReply {
 	ProtoError err = 2;
 }
 
+// InitializeArgs is the args for Initialize method.
+message InitializeArgs {
+}
+
+// InitializeReply is the reply for Initialize method.
+message InitializeReply {
+	ProtoError err = 1;
+}
+
 // SpecialPathsReply is the reply for SpecialPaths method.
 message SpecialPathsReply {
 	Paths paths = 1;
@@ -431,6 +443,10 @@ service Backend {
 	// and SystemView clients.
 	rpc Setup(SetupArgs) returns (SetupReply);
 
+	// Initialize is invoked just after mounting a backend to allow it to
+	// handle any initialization tasks that need to be performed.
+	rpc Initialize(InitializeArgs) returns (InitializeReply);
+
    	// Type returns the BackendType for the particular backend
 	rpc Type(Empty) returns (TypeReply);
 }
@@ -488,15 +504,6 @@ message TTLReply {
 	int64 TTL = 1;
 }
 
-message SudoPrivilegeArgs {
-	string path = 1;
-	string token = 2;
-}
-
-message SudoPrivilegeReply {
-	bool sudo = 1;
-}
-
 message TaintedReply {
 	bool tainted = 1;
 }
@@ -552,10 +559,6 @@ service SystemView {
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
 	rpc MaxLeaseTTL(Empty) returns (TTLReply);
-
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	rpc SudoPrivilege(SudoPrivilegeArgs) returns (SudoPrivilegeReply);
 
 	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special

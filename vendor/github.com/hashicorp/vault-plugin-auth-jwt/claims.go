@@ -96,22 +96,27 @@ func validateBoundClaims(logger log.Logger, boundClaims, allClaims map[string]in
 			return fmt.Errorf("claim %q is missing", claim)
 		}
 
-		var expVals []interface{}
+		var actVals, expVals []interface{}
 
-		switch v := expValue.(type) {
-		case []interface{}:
-			expVals = v
-		case string:
-			expVals = []interface{}{v}
-		default:
+		actVals, ok := normalizeList(actValue)
+		if !ok {
+			return fmt.Errorf("received claim is not a string or list: %v", actValue)
+		}
+
+		expVals, ok = normalizeList(expValue)
+		if !ok {
 			return fmt.Errorf("bound claim is not a string or list: %v", expValue)
 		}
 
 		found := false
+
+	scan:
 		for _, v := range expVals {
-			if actValue == v {
-				found = true
-				break
+			for _, av := range actVals {
+				if av == v {
+					found = true
+					break scan
+				}
 			}
 		}
 
@@ -121,4 +126,22 @@ func validateBoundClaims(logger log.Logger, boundClaims, allClaims map[string]in
 	}
 
 	return nil
+}
+
+// normalizeList takes a string or list and returns a list. This is useful when
+// providers are expected to return a list (typically of strings) but reduce it
+// to a string type when the list count is 1.
+func normalizeList(raw interface{}) ([]interface{}, bool) {
+	var normalized []interface{}
+
+	switch v := raw.(type) {
+	case []interface{}:
+		normalized = v
+	case string:
+		normalized = []interface{}{v}
+	default:
+		return nil, false
+	}
+
+	return normalized, true
 }

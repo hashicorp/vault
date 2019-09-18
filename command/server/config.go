@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -60,6 +59,10 @@ type Config struct {
 
 	LogLevel string `hcl:"log_level"`
 
+	// LogFormat specifies the log format.  Valid values are "standard" and "json".  The values are case-insenstive.
+	// If no log format is specified, then standard format will be used.
+	LogFormat string `hcl:"log_format"`
+
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
@@ -80,13 +83,13 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(ha, transactional bool) *Config {
+func DevConfig(storageType string) *Config {
 	ret := &Config{
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
 		Storage: &Storage{
-			Type: "inmem",
+			Type: storageType,
 		},
 
 		Listeners: []*Listener{
@@ -107,15 +110,6 @@ func DevConfig(ha, transactional bool) *Config {
 			PrometheusRetentionTime: prometheusDefaultRetentionTime,
 			DisableHostname:         true,
 		},
-	}
-
-	switch {
-	case ha && transactional:
-		ret.Storage.Type = "inmem_transactional_ha"
-	case !ha && transactional:
-		ret.Storage.Type = "inmem_transactional"
-	case ha && !transactional:
-		ret.Storage.Type = "inmem_ha"
 	}
 
 	return ret
@@ -214,10 +208,10 @@ type Telemetry struct {
 	// CirconusCheckTags is a comma separated list of tags to apply to the check. Note that
 	// the value of CirconusCheckSearchTag will always be added to the check.
 	// Default: none
-	CirconusCheckTags string `mapstructure:"circonus_check_tags"`
+	CirconusCheckTags string `hcl:"circonus_check_tags"`
 	// CirconusCheckDisplayName is the name for the check which will be displayed in the Circonus UI.
 	// Default: value of CirconusCheckInstanceID
-	CirconusCheckDisplayName string `mapstructure:"circonus_check_display_name"`
+	CirconusCheckDisplayName string `hcl:"circonus_check_display_name"`
 	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
 	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
 	// is provided, an attempt will be made to search for an existing check using Instance ID and
@@ -245,8 +239,16 @@ type Telemetry struct {
 	// Prometheus:
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
 	// Default: 24h
-	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTime    time.Duration `hcl:"-"`
 	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
+
+	// Stackdriver:
+	// StackdriverProjectID is the project to publish stackdriver metrics to.
+	StackdriverProjectID string `hcl:"stackdriver_project_id"`
+	// StackdriverLocation is the GCP or AWS region of the monitored resource.
+	StackdriverLocation string `hcl:"stackdriver_location"`
+	// StackdriverNamespace is the namespace identifier, such as a cluster name.
+	StackdriverNamespace string `hcl:"stackdriver_namespace"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -329,6 +331,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LogLevel = c.LogLevel
 	if c2.LogLevel != "" {
 		result.LogLevel = c2.LogLevel
+	}
+
+	result.LogFormat = c.LogFormat
+	if c2.LogFormat != "" {
+		result.LogFormat = c2.LogFormat
 	}
 
 	result.ClusterName = c.ClusterName
@@ -424,29 +431,29 @@ func (c *Config) Merge(c2 *Config) *Config {
 
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
-func LoadConfig(path string, logger log.Logger) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path, logger)
+		return LoadConfigDir(path)
 	}
-	return LoadConfigFile(path, logger)
+	return LoadConfigFile(path)
 }
 
 // LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string, logger log.Logger) (*Config, error) {
+func LoadConfigFile(path string) (*Config, error) {
 	// Read the file
 	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfig(string(d), logger)
+	return ParseConfig(string(d))
 }
 
-func ParseConfig(d string, logger log.Logger) (*Config, error) {
+func ParseConfig(d string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -589,7 +596,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
-func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
+func LoadConfigDir(dir string) (*Config, error) {
 	f, err := os.Open(dir)
 	if err != nil {
 		return nil, err
@@ -638,7 +645,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 
 	var result *Config
 	for _, f := range files {
-		config, err := LoadConfigFile(f, logger)
+		config, err := LoadConfigFile(f)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
 		}

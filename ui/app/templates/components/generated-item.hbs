@@ -1,0 +1,78 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">
+            /
+          </span>
+          {{#link-to
+            "vault.cluster.access.method.item.list"
+            itemType
+          }}
+            {{pluralize itemType}}
+          {{/link-to}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    {{#if (eq mode "show")}}
+      <h1 class="title is-3">
+        {{model.id}}
+      </h1>
+    {{else}}
+      <h1 class="title is-3">
+        {{capitalize mode}}
+        {{singularize itemType}}
+        {{#if (eq mode "edit")}}
+          {{model.id}}
+        {{/if}}
+      </h1>
+    {{/if}}
+  </p.levelLeft>
+</PageHeader>
+{{#if (eq mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "deleteItem"}}
+        @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}} @cancelButtonText="Cancel"
+        data-test-secret-delete="true">
+        Delete
+        {{itemType}}
+      </ConfirmAction>
+      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" itemType model.id}}
+        @data-test-configure-link="true">
+        Edit {{singularize itemType}}
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+{{#if (eq mode "show")}}
+  <FieldGroupShow @model={{model}} @showAllFields=true />
+{{else}}
+  <form {{action (perform saveModel) on="submit"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="save" @noun={{itemType}} />
+      <MessageError @model={{model}} />
+      <FormFieldGroups @model={{model}} @mode={{mode}} />
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" data-test-save-config="true"
+          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{saveModel.isRunning}}>
+          Save
+        </button>
+        {{#if (eq mode "create")}}
+          {{#link-to 'vault.cluster.access.method.item.list' class="button" data-test-cancel-link=true}}
+            Cancel
+          {{/link-to}}
+        {{else}}
+          {{#link-to 'vault.cluster.access.method.item.show' model.id class="button" data-test-cancel-link=true}}
+            Cancel
+          {{/link-to}}
+        {{/if}}
+      </div>
+    </div>
+  </form>
+{{/if}}

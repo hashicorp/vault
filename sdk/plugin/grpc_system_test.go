@@ -8,7 +8,7 @@ import (
 
 	"reflect"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,26 +48,6 @@ func TestSystem_GRPC_maxLeaseTTL(t *testing.T) {
 
 	expected := sys.MaxLeaseTTL()
 	actual := testSystemView.MaxLeaseTTL()
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected: %v, got: %v", expected, actual)
-	}
-}
-
-func TestSystem_GRPC_sudoPrivilege(t *testing.T) {
-	sys := logical.TestSystemView()
-	sys.SudoPrivilegeVal = true
-	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
-		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
-			impl: sys,
-		})
-	})
-	defer client.Close()
-	testSystemView := newGRPCSystemView(client)
-
-	ctx := context.Background()
-
-	expected := sys.SudoPrivilege(ctx, "foo", "bar")
-	actual := testSystemView.SudoPrivilege(ctx, "foo", "bar")
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
@@ -184,6 +164,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 				},
 			},
 		},
+		Disabled: true,
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

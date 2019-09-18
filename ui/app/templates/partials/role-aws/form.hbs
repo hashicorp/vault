@@ -1,4 +1,4 @@
-<form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
+<form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
     <NamespaceReminder @mode={{mode}} @noun="AWS role" />
@@ -9,7 +9,7 @@
           Multiple credential types is deprecated and you must choose one in order to save this role."
       />
     {{/if}}
-    {{#each (if (eq mode 'edit') (drop 1 model.fields) model.fields) as |attr|}}
+    {{#each (if (eq mode 'edit') (drop 1 (or model.fields (array))) model.fields) as |attr|}}
       {{form-field data-test-field attr=attr model=model}}
     {{/each}}
   </div>

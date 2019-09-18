@@ -1,0 +1,16 @@
+{
+  "name": "kmip",
+  "keywords": [
+    "ember-addon",
+    "ember-engine"
+  ],
+  "dependencies": {
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*"
+  },
+  "ember-addon": {
+    "paths": [
+      "../core"
+    ]
+  }
+}

@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const adminAccessPolicyARN = "arn:aws:iam::aws:policy/AdministratorAccess"
+
 func TestBackend_PathListRoles(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -229,7 +231,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 
 	roleData := map[string]interface{}{
 		"credential_type":          iamUserCred,
-		"policy_arns":              []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
+		"policy_arns":              []string{adminAccessPolicyARN},
 		"permissions_boundary_arn": permissionsBoundaryARN,
 	}
 	request := &logical.Request{
@@ -287,7 +289,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 
 	roleData = map[string]interface{}{
 		"credential_type":          iamUserCred,
-		"policy_arns":              []string{"arn:aws:iam::aws:role/AdministratorAccess"},
+		"policy_arns":              []string{adminAccessPolicyARN},
 		"permissions_boundary_arn": "arn:aws:notiam::aws:policy/FooBar",
 	}
 	request.Data = roleData
@@ -316,4 +318,133 @@ func TestValidateAWSManagedPolicy(t *testing.T) {
 	if err != nil {
 		t.Errorf("bad: expected arn of %s to not return an error but it did: %#v", arn, err)
 	}
+}
+
+func TestRoleEntryValidationCredTypes(t *testing.T) {
+	roleEntry := awsRoleEntry{
+		CredentialTypes: []string{},
+		PolicyArns:      []string{adminAccessPolicyARN},
+	}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with no CredentialTypes %#v passed validation", roleEntry)
+	}
+	roleEntry.CredentialTypes = []string{"invalid_type"}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with invalid CredentialTypes %#v passed validation", roleEntry)
+	}
+	roleEntry.CredentialTypes = []string{iamUserCred, "invalid_type"}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with invalid CredentialTypes %#v passed validation", roleEntry)
+	}
+}
+
+func TestRoleEntryValidationIamUserCred(t *testing.T) {
+	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	roleEntry := awsRoleEntry{
+		CredentialTypes:        []string{iamUserCred},
+		PolicyArns:             []string{adminAccessPolicyARN},
+		PermissionsBoundaryARN: adminAccessPolicyARN,
+	}
+	err := roleEntry.validate()
+	if err != nil {
+		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
+	}
+	roleEntry.PolicyDocument = allowAllPolicyDocument
+	err = roleEntry.validate()
+	if err != nil {
+		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
+	}
+	roleEntry.PolicyArns = []string{}
+	err = roleEntry.validate()
+	if err != nil {
+		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
+	}
+
+	roleEntry = awsRoleEntry{
+		CredentialTypes: []string{iamUserCred},
+		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
+	}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with invalid RoleArns parameter %#v passed validation", roleEntry)
+	}
+
+	roleEntry = awsRoleEntry{
+		CredentialTypes: []string{iamUserCred},
+		PolicyArns:      []string{adminAccessPolicyARN},
+		DefaultSTSTTL:   1,
+	}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized DefaultSTSTTL %#v passed validation", roleEntry)
+	}
+	roleEntry.DefaultSTSTTL = 0
+	roleEntry.MaxSTSTTL = 1
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized MaxSTSTTL %#v passed validation", roleEntry)
+	}
+}
+
+func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
+	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	roleEntry := awsRoleEntry{
+		CredentialTypes: []string{assumedRoleCred},
+		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
+		PolicyArns:      []string{adminAccessPolicyARN},
+		PolicyDocument:  allowAllPolicyDocument,
+		DefaultSTSTTL:   2,
+		MaxSTSTTL:       3,
+	}
+	if err := roleEntry.validate(); err != nil {
+		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
+	}
+
+	roleEntry.MaxSTSTTL = 1
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with MaxSTSTTL < DefaultSTSTTL %#v passed validation", roleEntry)
+	}
+	roleEntry.MaxSTSTTL = 0
+	roleEntry.UserPath = "/foobar/"
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized UserPath %#v passed validation", roleEntry)
+	}
+	roleEntry.UserPath = ""
+	roleEntry.PermissionsBoundaryARN = adminAccessPolicyARN
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized PermissionsBoundary %#v passed validation", roleEntry)
+	}
+}
+
+func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
+	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	roleEntry := awsRoleEntry{
+		CredentialTypes: []string{federationTokenCred},
+		PolicyDocument:  allowAllPolicyDocument,
+		PolicyArns:      []string{adminAccessPolicyARN},
+		DefaultSTSTTL:   2,
+		MaxSTSTTL:       3,
+	}
+	if err := roleEntry.validate(); err != nil {
+		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)
+	}
+
+	roleEntry.RoleArns = []string{"arn:aws:iam::123456789012:role/SomeRole"}
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized RoleArns %#v passed validation", roleEntry)
+	}
+	roleEntry.RoleArns = []string{}
+	roleEntry.UserPath = "/foobar/"
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized UserPath %#v passed validation", roleEntry)
+	}
+
+	roleEntry.UserPath = ""
+	roleEntry.MaxSTSTTL = 1
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with MaxSTSTTL < DefaultSTSTTL %#v passed validation", roleEntry)
+	}
+	roleEntry.MaxSTSTTL = 0
+	roleEntry.PermissionsBoundaryARN = adminAccessPolicyARN
+	if roleEntry.validate() == nil {
+		t.Errorf("bad: invalid roleEntry with unrecognized PermissionsBoundary %#v passed validation", roleEntry)
+	}
+
 }

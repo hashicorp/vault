@@ -8,14 +8,13 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-ldap/ldap v3.0.2+incompatible
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
-	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/golang/snappy v0.0.1
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-immutable-radix v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-plugin v1.0.0
+	github.com/hashicorp/go-plugin v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/go-version v1.1.0
@@ -32,7 +31,8 @@ require (
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
 	golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
 	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
-	google.golang.org/grpc v1.19.1
+	google.golang.org/grpc v1.22.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 )

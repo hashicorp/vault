@@ -15,7 +15,7 @@ func TestDefaultSeal_Config(t *testing.T) {
 
 	core, _, _ := TestCoreUnsealed(t)
 
-	defSeal := NewDefaultSeal()
+	defSeal := NewDefaultSeal(nil)
 	defSeal.SetCore(core)
 	err := defSeal.SetBarrierConfig(context.Background(), bc)
 	if err != nil {
@@ -31,7 +31,7 @@ func TestDefaultSeal_Config(t *testing.T) {
 	}
 
 	// Now, test without the benefit of the cached value in the seal
-	defSeal = NewDefaultSeal()
+	defSeal = NewDefaultSeal(nil)
 	defSeal.SetCore(core)
 	newBc, err = defSeal.BarrierConfig(context.Background())
 	if err != nil {

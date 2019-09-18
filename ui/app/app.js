@@ -14,6 +14,11 @@ App = Application.extend({
   podModulePrefix: config.podModulePrefix,
   Resolver,
   engines: {
+    openApiExplorer: {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
+      },
+    },
     replication: {
       dependencies: {
         services: [
@@ -26,6 +31,24 @@ App = Application.extend({
           'version',
           'wizard',
         ],
+      },
+    },
+    kmip: {
+      dependencies: {
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'path-help',
+          'router',
+          'store',
+          'version',
+          'wizard',
+          'secret-mount-path',
+        ],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
       },
     },
   },
