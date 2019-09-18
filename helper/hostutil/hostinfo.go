@@ -16,12 +16,19 @@ import (
 // information, refer to: https://github.com/shirou/gopsutil#current-status
 type HostInfo struct {
 	// Timestamp returns the timestamp in UTC on the collection time.
-	Timestamp time.Time              `json:"timestamp"`
-	CPU       []cpu.InfoStat         `json:"cpu"`
-	CPUTimes  []cpu.TimesStat        `json:"cpu_times"`
-	Disk      []*disk.UsageStat      `json:"disk"`
-	Host      *host.InfoStat         `json:"host"`
-	Memory    *mem.VirtualMemoryStat `json:"memory"`
+	Timestamp time.Time `json:"timestamp"`
+	// CPU returns information about the CPU such as family, model, cores, etc.
+	CPU []cpu.InfoStat `json:"cpu"`
+	// CPUTimes returns statistics on CPU usage represented in Jiffies.
+	CPUTimes []cpu.TimesStat `json:"cpu_times"`
+	// Disk returns statitics on disk usage for all accessible partitions.
+	Disk []*disk.UsageStat `json:"disk"`
+	// Host returns general host information such as hostname, platform, uptime,
+	// kernel version, etc.
+	Host *host.InfoStat `json:"host"`
+	// Memory contains statistics about the memory such as total, available, and
+	// used memory in number of bytes.
+	Memory *mem.VirtualMemoryStat `json:"memory"`
 }
 
 // HostInfoError is a typed error for more convenient error checking.
