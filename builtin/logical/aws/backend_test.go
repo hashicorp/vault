@@ -917,8 +917,7 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
 		},
 		Teardown: func() error {
-			//return deleteTestUser(accessKey, userName)
-			return nil
+			return deleteTestUser(accessKey, userName)
 		},
 	})
 }

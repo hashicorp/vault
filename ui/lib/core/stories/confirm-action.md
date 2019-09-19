@@ -1,7 +1,7 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/confirm-action.js. To make changes, first edit that file and run "yarn gen-story-md confirm-action" to re-generate the content.-->
 
 ## ConfirmAction
-`ConfirmAction` is a button followed by a confirmation message and button used to prevent users from performing actions they do not intend to.
+`ConfirmAction` is a button followed by a pop up confirmation message and button used to prevent users from performing actions they do not intend to.
 
 **Properties**
 

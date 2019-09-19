@@ -7,6 +7,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/agentint"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -99,7 +100,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		credCh = make(chan struct{})
 	}
 
-	var renewer *api.Renewer
+	var renewer *agentint.Renewer
 
 	for {
 		select {
@@ -196,7 +197,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			renewer.Stop()
 		}
 
-		renewer, err = ah.client.NewRenewer(&api.RenewerInput{
+		renewer, err = agentint.NewRenewer(ah.client, &agentint.RenewerInput{
 			Secret: secret,
 		})
 		if err != nil {

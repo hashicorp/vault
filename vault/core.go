@@ -172,6 +172,9 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
+	// storageType is the the storage type set in the storage configuration
+	storageType string
+
 	// redirectAddr is the address we advertise as leader if held
 	redirectAddr string
 
@@ -442,7 +445,7 @@ type Core struct {
 	loadCaseSensitiveIdentityStore bool
 
 	// clusterListener starts up and manages connections on the cluster ports
-	clusterListener *cluster.Listener
+	clusterListener *atomic.Value
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -473,6 +476,8 @@ type CoreConfig struct {
 	AuditBackends map[string]audit.Factory `json:"audit_backends" structs:"audit_backends" mapstructure:"audit_backends"`
 
 	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
+
+	StorageType string `json:"storage_type" structs:"storage_type" mapstructure:"storage_type"`
 
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
@@ -546,6 +551,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisableCache:              c.DisableCache,
 		DisableMlock:              c.DisableMlock,
 		CacheSize:                 c.CacheSize,
+		StorageType:               c.StorageType,
 		RedirectAddr:              c.RedirectAddr,
 		ClusterAddr:               c.ClusterAddr,
 		DefaultLeaseTTL:           c.DefaultLeaseTTL,
@@ -613,8 +619,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
 		underlyingPhysical:           conf.Physical,
+		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
 		clusterAddr:                  new(atomic.Value),
+		clusterListener:              new(atomic.Value),
 		seal:                         conf.Seal,
 		router:                       NewRouter(),
 		sealed:                       new(uint32),
@@ -780,6 +788,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	return c, nil
 }
@@ -1515,7 +1525,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	// If the storage backend needs to be sealed
 	if shutdownRaft {
 		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-			if err := raftStorage.TeardownCluster(c.clusterListener); err != nil {
+			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
@@ -1624,7 +1634,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
 
-	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
+	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
 		if err := c.setupRaftActiveNode(ctx); err != nil {
 			return err
 		}
@@ -1815,6 +1825,11 @@ func (c *Core) ActiveNodeReplicationState() consts.ReplicationState {
 
 func (c *Core) SealAccess() *SealAccess {
 	return NewSealAccess(c.seal)
+}
+
+// StorageType returns a string equal to the storage configuration's type.
+func (c *Core) StorageType() string {
+	return c.storageType
 }
 
 func (c *Core) Logger() log.Logger {

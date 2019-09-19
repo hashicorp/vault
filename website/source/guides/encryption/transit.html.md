@@ -418,7 +418,7 @@ that the data gets encrypted using the latest version of the key after the
 rotation.
 
 
-Execute the following command to rewrap your cipertext from [Step 2](#step2)
+Execute the following command to rewrap your ciphertext from [Step 2](#step2)
 with the latest version of the encryption key:
 
 ```plaintext
@@ -481,7 +481,7 @@ that the data gets encrypted using the latest version of the key after the
 rotation.
 
 
-Execute the `transit/rewrap` endpoint to rewrap your cipertext from [Step 2](#step2)
+Execute the `transit/rewrap` endpoint to rewrap your ciphertext from [Step 2](#step2)
 with the latest version of the encryption key:
 
 ```plaintext
