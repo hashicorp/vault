@@ -1,9 +1,10 @@
-import { addSuccessHandler, PROJECT_REVISION } from 'ember-service-worker/service-worker-registration';
+import { addSuccessHandler } from 'ember-service-worker/service-worker-registration';
+import Namespace from '@ember/application/namespace';
 
 function getToken() {
   // fix this later by allowing registration somewhere in the app lifecycle were we can have access to
   // services, etc.
-  return Ember.Namespace.NAMESPACES_BY_ID['vault'].__container__.lookup('service:auth').currentToken;
+  return Namespace.NAMESPACES_BY_ID['vault'].__container__.lookup('service:auth').currentToken;
 }
 
 addSuccessHandler(function(registration) {

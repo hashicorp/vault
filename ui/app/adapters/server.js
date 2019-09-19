@@ -1,5 +1,4 @@
 import ApplicationAdapter from './application';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   urlForFindAll() {
