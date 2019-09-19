@@ -1,11 +1,8 @@
 package command
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/mholt/archiver"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -179,13 +177,13 @@ func (c *DebugCommand) Run(args []string) int {
 
 	// Print debug information
 	c.UI.Output("==> Starting debug capture...")
-	c.UI.Info(fmt.Sprintf("       Vault Address: %s", debugIndex.VaultAddress))
-	c.UI.Info(fmt.Sprintf("      Client Version: %s", debugIndex.ClientVersion))
-	c.UI.Info(fmt.Sprintf("            Duration: %s", c.flagDuration))
-	c.UI.Info(fmt.Sprintf("            Interval: %s", c.flagInterval))
-	c.UI.Info(fmt.Sprintf("    Metrics Interval: %s", c.flagInterval))
-	c.UI.Info(fmt.Sprintf("             Targets: %s", strings.Join(c.flagTargets, ", ")))
-	c.UI.Info(fmt.Sprintf("              Output: %s", dstOutputFile))
+	c.UI.Info(fmt.Sprintf("         Vault Address: %s", debugIndex.VaultAddress))
+	c.UI.Info(fmt.Sprintf("        Client Version: %s", debugIndex.ClientVersion))
+	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
+	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
+	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
 
 	// Capture static information
 	if err := c.captureStaticTargets(debugIndex); err != nil {
@@ -213,11 +211,14 @@ func (c *DebugCommand) Run(args []string) int {
 	if c.flagCompress {
 		if err := c.compress(dstOutputFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error encountered during bundle compression: %s", err))
+			// We want to inform that data collection was captured and stored in
+			// a directory even if compression fails
+			c.UI.Info(fmt.Sprintf("Data written to: %s", c.flagOutput))
 			return 1
 		}
 	}
 
-	c.UI.Info(fmt.Sprintf("Success! Bundle written to: %s", c.flagOutput))
+	c.UI.Info(fmt.Sprintf("Success! Bundle written to: %s", dstOutputFile))
 	return 0
 }
 
@@ -278,6 +279,13 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, *debugIndex, st
 	// already exists.
 	dstOutputFile := c.flagOutput
 	if c.flagCompress {
+		if !strings.HasSuffix(dstOutputFile, ".tar.gz") && !strings.HasSuffix(dstOutputFile, ".tgz") {
+			dstOutputFile = dstOutputFile + debugCompressionExt
+		}
+
+		// Ensure that the file doesn't already exist, and ensure that we always
+		// trim the extension from flagOutput since we'll be progressively
+		// writing to that.
 		if _, err := os.Stat(dstOutputFile); os.IsNotExist(err) {
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
@@ -484,82 +492,14 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 }
 
 func (c *DebugCommand) compress(dst string) error {
-	src := c.flagOutput
-	dir := filepath.Dir(src)
-	name := filepath.Base(src)
-
-	f, err := ioutil.TempFile(dir, name+".tmp")
-	if err != nil {
-		return fmt.Errorf("failed to create compressed temp archive: %s", err)
-	}
-
-	g := gzip.NewWriter(f)
-	t := tar.NewWriter(g)
-
-	tempName := f.Name()
-
-	defer func() {
-		// Always attempt to close and cleanup everything after this point.
-		_ = t.Close()
-		_ = g.Close()
-		_ = f.Close()
-		_ = os.Remove(tempName)
-	}()
-
-	walkFn := func(file string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to walk filepath for archive: %s", err)
-		}
-
-		header, err := tar.FileInfoHeader(fi, fi.Name())
-		if err != nil {
-			return fmt.Errorf("failed to create compressed archive header: %s", err)
-		}
-
-		header.Name = filepath.Join(filepath.Base(src), strings.TrimPrefix(file, src))
-
-		if err := t.WriteHeader(header); err != nil {
-			return fmt.Errorf("failed to write compressed archive header: %s", err)
-		}
-
-		// Only copy files
-		if !fi.Mode().IsRegular() {
-			return nil
-		}
-
-		f, err := os.Open(file)
-		if err != nil {
-			return fmt.Errorf("failed to open target files for archive: %s", err)
-		}
-		defer f.Close()
-
-		if _, err := io.Copy(t, f); err != nil {
-			return fmt.Errorf("failed to copy files for archive: %s", err)
-		}
-
-		return nil
-	}
-
-	if err := filepath.Walk(src, walkFn); err != nil {
-		return err
-	}
-
-	// Guarantee that the contents of the temp file are flushed to disk.
-	if err := f.Sync(); err != nil {
-		return err
-	}
-
-	// Once tarball is created, move it to the actual output destination
-	if !strings.HasSuffix(dst, ".tar.gz") && !strings.HasSuffix(dst, ".tgz") {
-		dst = dst + debugCompressionExt
-	}
-	if err := os.Rename(tempName, dst); err != nil {
-		return err
+	tgz := archiver.NewTarGz()
+	if err := tgz.Archive([]string{c.flagOutput}, dst); err != nil {
+		return fmt.Errorf("failed to compress data: %s", err)
 	}
 
 	// If everything is fine up to this point, remove original directory
-	if err := os.RemoveAll(src); err != nil {
-		return err
+	if err := os.RemoveAll(c.flagOutput); err != nil {
+		return fmt.Errorf("failed to remove data directory: %s", err)
 	}
 
 	return nil
