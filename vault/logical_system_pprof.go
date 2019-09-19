@@ -3,7 +3,9 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http/pprof"
+	"strconv"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -147,6 +149,18 @@ func (b *SystemBackend) handlePprofProfile(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	// Return an error if seconds exceeds max request duration. This follows a
+	// similar behavior to how pprof treats seconds > WriteTimeout (i.e. it
+	// error with a 400), and avoids drift between what gets audited vs what
+	// ends up happening.
+	if secQueryVal := req.HTTPRequest.FormValue("seconds"); secQueryVal != "" {
+		maxDur := int64(DefaultMaxRequestDuration.Seconds())
+		sec, _ := strconv.ParseInt(secQueryVal, 10, 64)
+		if sec > maxDur {
+			return logical.ErrorResponse(fmt.Sprintf("seconds %d exceeds max request duration of %d", sec, maxDur)), nil
+		}
+	}
+
 	pprof.Profile(req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
@@ -163,6 +177,18 @@ func (b *SystemBackend) handlePprofSymbol(ctx context.Context, req *logical.Requ
 func (b *SystemBackend) handlePprofTrace(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if err := checkRequestHandlerParams(req); err != nil {
 		return nil, err
+	}
+
+	// Return an error if seconds exceeds max request duration. This follows a
+	// similar behavior to how pprof treats seconds > WriteTimeout (i.e. it
+	// error with a 400), and avoids drift between what gets audited vs what
+	// ends up happening.
+	if secQueryVal := req.HTTPRequest.FormValue("seconds"); secQueryVal != "" {
+		maxDur := int64(DefaultMaxRequestDuration.Seconds())
+		sec, _ := strconv.ParseInt(secQueryVal, 10, 64)
+		if sec > maxDur {
+			return logical.ErrorResponse(fmt.Sprintf("seconds %d exceeds max request duration of %d", sec, maxDur)), nil
+		}
 	}
 
 	pprof.Trace(req.ResponseWriter, req.HTTPRequest)
