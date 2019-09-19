@@ -1692,6 +1692,12 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		return err
 	}
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		if err := seal.UpgradeKeys(c.activeContext); err != nil {
+			return err
+		}
+	}
+
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
 

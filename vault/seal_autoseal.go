@@ -147,6 +147,69 @@ func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	return keys, nil
 }
 
+func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
+	pe, err := d.core.physical.Get(ctx, StoredBarrierKeysPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
+	}
+
+	// This is not strictly an error; we may not have any stored keys, for
+	// instance, if we're not initialized
+	if pe == nil {
+		return nil
+	}
+
+	blobInfo := &physical.EncryptedBlobInfo{}
+	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+		return errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
+	}
+
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+		d.core.logger.Info("autoseal: upgrading stored keys")
+
+		pt, err := d.Decrypt(ctx, blobInfo)
+		if err != nil {
+			return errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
+		}
+
+		// Decode the barrier entry
+		var keys [][]byte
+		if err := json.Unmarshal(pt, &keys); err != nil {
+			return errwrap.Wrapf("failed to decode stored keys: {{err}}", err)
+		}
+
+		if err := d.SetStoredKeys(ctx, keys); err != nil {
+			return errwrap.Wrapf("failed to save upgraded stored keys: {{err}}", err)
+		}
+	}
+	return nil
+}
+
+// UpgradeKeys re-encrypts and saves the stored keys and the recovery key
+// with the current key if the current KeyID is different from the KeyID
+// the stored keys and the recovery key are encrypted with. The provided
+// Context must be non-nil.
+func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
+	// Exit if the context has been canceled
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// Many of the seals update their keys to the latest KeyID when Encrypt
+	// is called.
+	if _, err := d.Encrypt(ctx, []byte("a")); err != nil {
+		return err
+	}
+
+	if err := d.upgradeRecoveryKey(ctx); err != nil {
+		return err
+	}
+	if err := d.upgradeStoredKeys(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	if d.barrierConfig.Load().(*SealConfig) != nil {
 		return d.barrierConfig.Load().(*SealConfig).Clone(), nil
@@ -428,6 +491,35 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 	}
 
 	return pt, nil
+}
+
+func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
+	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to fetch recovery key: {{err}}", err)
+	}
+	if pe == nil {
+		return fmt.Errorf("no recovery key found")
+	}
+
+	blobInfo := &physical.EncryptedBlobInfo{}
+	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+		return errwrap.Wrapf("failed to proto decode recovery key: {{err}}", err)
+	}
+
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+		d.core.logger.Info("autoseal: upgrading recovery key")
+
+		pt, err := d.Decrypt(ctx, blobInfo)
+		if err != nil {
+			return errwrap.Wrapf("failed to decrypt encrypted recovery key: {{err}}", err)
+
+		}
+		if err := d.SetRecoveryKey(ctx, pt); err != nil {
+			return errwrap.Wrapf("failed to save upgraded recovery key: {{err}}", err)
+		}
+	}
+	return nil
 }
 
 // migrateRecoveryConfig is a helper func to migrate the recovery config to
