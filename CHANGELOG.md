@@ -6,6 +6,10 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+   
+CHANGES: 
+ * sys/seal-status now has a `storage_type` field denoting what type of storage
+   the cluster is configured to use
 
 IMPROVEMENTS:
 

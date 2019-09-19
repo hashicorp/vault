@@ -192,7 +192,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := config.LoadConfig(c.flagConfigs[0], c.logger)
+	config, err := config.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
