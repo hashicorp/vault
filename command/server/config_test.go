@@ -355,57 +355,76 @@ func TestConfig_Sanitized(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	expected := &Config{
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
+	expected := map[string]interface{}{
+		"APIAddr":                   "top_level_api_addr",
+		"CacheSize":                 0,
+		"ClusterAddr":               "top_level_cluster_addr",
+		"ClusterCipherSuites":       "",
+		"ClusterName":               "testcluster",
+		"DefaultLeaseTTL":           36000000000000,
+		"DefaultMaxRequestDuration": 0,
+		"DisableCache":              true,
+		"DisableClustering":         false,
+		"DisableIndexing":           false,
+		"DisableMlock":              true,
+		"DisablePerformanceStandby": false,
+		"DisablePrintableCheck":     false,
+		"DisableSealWrap":           true,
+		"EnableRawEndpoint":         true,
+		"EnableUI":                  true,
+		"HAStorage": map[string]interface{}{
+			"ClusterAddr":       "top_level_cluster_addr",
+			"DisableClustering": true,
+			"RedirectAddr":      "top_level_api_addr",
+			"Type":              "consul"},
+		"Listeners": []interface{}{
+			map[string]interface{}{
+				"Config": map[string]interface{}{
 					"address": "127.0.0.1:443",
 				},
+				"Type": "tcp",
 			},
 		},
-
-		Storage: &Storage{
-			Type:         "consul",
-			RedirectAddr: "top_level_api_addr",
-			ClusterAddr:  "top_level_cluster_addr",
-		},
-
-		HAStorage: &Storage{
-			Type:              "consul",
-			RedirectAddr:      "top_level_api_addr",
-			ClusterAddr:       "top_level_cluster_addr",
-			DisableClustering: true,
-		},
-
-		Telemetry: &Telemetry{
-			StatsdAddr:              "bar",
-			PrometheusRetentionTime: prometheusDefaultRetentionTime,
-		},
-
-		Seals: []*Seal{
-			{
-				Type:     "awskms",
-				Disabled: false,
+		"LogFormat":       "",
+		"LogLevel":        "",
+		"MaxLeaseTTL":     36000000000000,
+		"PidFile":         "./pidfile",
+		"PluginDirectory": "",
+		"Seals": []interface{}{
+			map[string]interface{}{
+				"Disabled": false,
+				"Type":     "awskms",
 			},
 		},
-
-		DisableCache: true,
-		DisableMlock: true,
-		EnableUI:     true,
-
-		EnableRawEndpoint: true,
-
-		DisableSealWrap: true,
-
-		MaxLeaseTTL:     10 * time.Hour,
-		DefaultLeaseTTL: 10 * time.Hour,
-		ClusterName:     "testcluster",
-
-		PidFile: "./pidfile",
-
-		APIAddr:     "top_level_api_addr",
-		ClusterAddr: "top_level_cluster_addr",
+		"Storage": map[string]interface{}{
+			"ClusterAddr":       "top_level_cluster_addr",
+			"DisableClustering": false,
+			"RedirectAddr":      "top_level_api_addr",
+			"Type":              "consul",
+		},
+		"Telemetry": map[string]interface{}{
+			"CirconusAPIApp":                     "",
+			"CirconusAPIToken":                   "",
+			"CirconusAPIURL":                     "",
+			"CirconusBrokerID":                   "",
+			"CirconusBrokerSelectTag":            "",
+			"CirconusCheckDisplayName":           "",
+			"CirconusCheckForceMetricActivation": "",
+			"CirconusCheckID":                    "",
+			"CirconusCheckInstanceID":            "",
+			"CirconusCheckSearchTag":             "",
+			"CirconusCheckSubmissionURL":         "",
+			"CirconusCheckTags":                  "",
+			"CirconusSubmissionInterval":         "",
+			"DisableHostname":                    false,
+			"DogStatsDAddr":                      "",
+			"DogStatsDTags":                      []string(nil),
+			"PrometheusRetentionTime":            86400000000000,
+			"StackdriverLocation":                "",
+			"StackdriverNamespace":               "",
+			"StackdriverProjectID":               "",
+			"StatsdAddr":                         "bar",
+			"StatsiteAddr":                       ""},
 	}
 
 	sanitizedConfig := config.Sanitized()

@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
@@ -231,18 +230,8 @@ type SystemBackend struct {
 // file(s) provided.
 func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config := b.Core.SanitizedConfig()
-
-	configMap := structs.New(config).Map()
-
-	// Remove the raw values from the map
-	for k := range configMap {
-		if strings.HasSuffix(k, "Raw") {
-			delete(configMap, k)
-		}
-	}
-
 	resp := &logical.Response{
-		Data: configMap,
+		Data: config,
 	}
 	return resp, nil
 }

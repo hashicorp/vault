@@ -915,110 +915,118 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 // - HAStorage.Config
 // - Seals.Config
 // - Telemetry.CirconusAPIToken
-func (c *Config) Sanitized() *Config {
-	// Sanitize storage stanza
-	var sanitizedStorage *Storage
-	if c.Storage != nil {
-		sanitizedStorage = &Storage{
-			Type:              c.Storage.Type,
-			RedirectAddr:      c.Storage.RedirectAddr,
-			ClusterAddr:       c.Storage.ClusterAddr,
-			DisableClustering: c.Storage.DisableClustering,
+func (c *Config) Sanitized() map[string]interface{} {
+	result := map[string]interface{}{
+		"CacheSize":             c.CacheSize,
+		"DisableCache":          c.DisableCache,
+		"DisableMlock":          c.DisableMlock,
+		"DisablePrintableCheck": c.DisablePrintableCheck,
+
+		"EnableUI": c.EnableUI,
+
+		"MaxLeaseTTL":     c.MaxLeaseTTL,
+		"DefaultLeaseTTL": c.DefaultLeaseTTL,
+
+		"DefaultMaxRequestDuration": c.DefaultMaxRequestDuration,
+
+		"ClusterName":         c.ClusterName,
+		"ClusterCipherSuites": c.ClusterCipherSuites,
+
+		"PluginDirectory": c.PluginDirectory,
+
+		"LogLevel":  c.LogLevel,
+		"LogFormat": c.LogFormat,
+
+		"PidFile":           c.PidFile,
+		"EnableRawEndpoint": c.EnableRawEndpoint,
+
+		"APIAddr":           c.APIAddr,
+		"ClusterAddr":       c.ClusterAddr,
+		"DisableClustering": c.DisableClustering,
+
+		"DisablePerformanceStandby": c.DisablePerformanceStandby,
+
+		"DisableSealWrap": c.DisableSealWrap,
+
+		"DisableIndexing": c.DisableIndexing,
+	}
+
+	// Sanitize listeners
+	if len(c.Listeners) != 0 {
+		var sanitizedListeners []interface{}
+		for _, ln := range c.Listeners {
+			cleanLn := map[string]interface{}{
+				"Type":   ln.Type,
+				"Config": ln.Config,
+			}
+			sanitizedListeners = append(sanitizedListeners, cleanLn)
 		}
+		result["Listeners"] = sanitizedListeners
+	}
+
+	// Sanitize storage stanza
+	if c.Storage != nil {
+		sanitizedStorage := map[string]interface{}{
+			"Type":              c.Storage.Type,
+			"RedirectAddr":      c.Storage.RedirectAddr,
+			"ClusterAddr":       c.Storage.ClusterAddr,
+			"DisableClustering": c.Storage.DisableClustering,
+		}
+		result["Storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
-	var sanitizedHAStorage *Storage
 	if c.HAStorage != nil {
-		sanitizedHAStorage = &Storage{
-			Type:              c.HAStorage.Type,
-			RedirectAddr:      c.HAStorage.RedirectAddr,
-			ClusterAddr:       c.HAStorage.ClusterAddr,
-			DisableClustering: c.HAStorage.DisableClustering,
+		sanitizedHAStorage := map[string]interface{}{
+			"Type":              c.HAStorage.Type,
+			"RedirectAddr":      c.HAStorage.RedirectAddr,
+			"ClusterAddr":       c.HAStorage.ClusterAddr,
+			"DisableClustering": c.HAStorage.DisableClustering,
 		}
+		result["HAStorage"] = sanitizedHAStorage
 	}
 
 	// Sanitize seals stanza
-	var sanitizedSeals []*Seal
 	if len(c.Seals) != 0 {
+		var sanitizedSeals []interface{}
 		for _, s := range c.Seals {
-			cleanSeal := &Seal{
-				Type:     s.Type,
-				Disabled: s.Disabled,
+			cleanSeal := map[string]interface{}{
+				"Type":     s.Type,
+				"Disabled": s.Disabled,
 			}
 			sanitizedSeals = append(sanitizedSeals, cleanSeal)
 		}
+		result["Seals"] = sanitizedSeals
 	}
 
 	// Sanitize telemetry stanza
-	var sanitizedTelemetry *Telemetry
 	if c.Telemetry != nil {
-		sanitizedTelemetry = &Telemetry{
-			StatsiteAddr:                       c.Telemetry.StatsiteAddr,
-			StatsdAddr:                         c.Telemetry.StatsdAddr,
-			DisableHostname:                    c.Telemetry.DisableHostname,
-			CirconusAPIToken:                   "",
-			CirconusAPIApp:                     c.Telemetry.CirconusAPIApp,
-			CirconusAPIURL:                     c.Telemetry.CirconusAPIURL,
-			CirconusSubmissionInterval:         c.Telemetry.CirconusSubmissionInterval,
-			CirconusCheckSubmissionURL:         c.Telemetry.CirconusCheckSubmissionURL,
-			CirconusCheckID:                    c.Telemetry.CirconusCheckID,
-			CirconusCheckForceMetricActivation: c.Telemetry.CirconusCheckForceMetricActivation,
-			CirconusCheckInstanceID:            c.Telemetry.CirconusCheckInstanceID,
-			CirconusCheckSearchTag:             c.Telemetry.CirconusCheckSearchTag,
-			CirconusCheckTags:                  c.Telemetry.CirconusCheckTags,
-			CirconusCheckDisplayName:           c.Telemetry.CirconusCheckDisplayName,
-			CirconusBrokerID:                   c.Telemetry.CirconusBrokerID,
-			CirconusBrokerSelectTag:            c.Telemetry.CirconusBrokerSelectTag,
-			DogStatsDAddr:                      c.Telemetry.DogStatsDAddr,
-			DogStatsDTags:                      c.Telemetry.DogStatsDTags,
-			PrometheusRetentionTime:            c.Telemetry.PrometheusRetentionTime,
-			PrometheusRetentionTimeRaw:         c.Telemetry.PrometheusRetentionTimeRaw,
-			StackdriverProjectID:               c.Telemetry.StackdriverProjectID,
-			StackdriverLocation:                c.Telemetry.StackdriverLocation,
-			StackdriverNamespace:               c.Telemetry.StackdriverNamespace,
+		sanitizedTelemetry := map[string]interface{}{
+			"StatsiteAddr":                       c.Telemetry.StatsiteAddr,
+			"StatsdAddr":                         c.Telemetry.StatsdAddr,
+			"DisableHostname":                    c.Telemetry.DisableHostname,
+			"CirconusAPIToken":                   "",
+			"CirconusAPIApp":                     c.Telemetry.CirconusAPIApp,
+			"CirconusAPIURL":                     c.Telemetry.CirconusAPIURL,
+			"CirconusSubmissionInterval":         c.Telemetry.CirconusSubmissionInterval,
+			"CirconusCheckSubmissionURL":         c.Telemetry.CirconusCheckSubmissionURL,
+			"CirconusCheckID":                    c.Telemetry.CirconusCheckID,
+			"CirconusCheckForceMetricActivation": c.Telemetry.CirconusCheckForceMetricActivation,
+			"CirconusCheckInstanceID":            c.Telemetry.CirconusCheckInstanceID,
+			"CirconusCheckSearchTag":             c.Telemetry.CirconusCheckSearchTag,
+			"CirconusCheckTags":                  c.Telemetry.CirconusCheckTags,
+			"CirconusCheckDisplayName":           c.Telemetry.CirconusCheckDisplayName,
+			"CirconusBrokerID":                   c.Telemetry.CirconusBrokerID,
+			"CirconusBrokerSelectTag":            c.Telemetry.CirconusBrokerSelectTag,
+			"DogStatsDAddr":                      c.Telemetry.DogStatsDAddr,
+			"DogStatsDTags":                      c.Telemetry.DogStatsDTags,
+			"PrometheusRetentionTime":            c.Telemetry.PrometheusRetentionTime,
+			"StackdriverProjectID":               c.Telemetry.StackdriverProjectID,
+			"StackdriverLocation":                c.Telemetry.StackdriverLocation,
+			"StackdriverNamespace":               c.Telemetry.StackdriverNamespace,
 		}
+		result["Telemetry"] = sanitizedTelemetry
 	}
 
-	return &Config{
-		Listeners: c.Listeners,
-		Storage:   sanitizedStorage,
-		HAStorage: sanitizedHAStorage,
-		Seals:     sanitizedSeals,
-
-		CacheSize:             c.CacheSize,
-		DisableCache:          c.DisableCache,
-		DisableMlock:          c.DisableMlock,
-		DisablePrintableCheck: c.DisablePrintableCheck,
-
-		EnableUI: c.EnableUI,
-
-		Telemetry: sanitizedTelemetry,
-
-		MaxLeaseTTL:     c.MaxLeaseTTL,
-		DefaultLeaseTTL: c.DefaultLeaseTTL,
-
-		DefaultMaxRequestDuration: c.DefaultMaxRequestDuration,
-
-		ClusterName:         c.ClusterName,
-		ClusterCipherSuites: c.ClusterCipherSuites,
-
-		PluginDirectory: c.PluginDirectory,
-
-		LogLevel:  c.LogLevel,
-		LogFormat: c.LogFormat,
-
-		PidFile:           c.PidFile,
-		EnableRawEndpoint: c.EnableRawEndpoint,
-
-		APIAddr:           c.APIAddr,
-		ClusterAddr:       c.ClusterAddr,
-		DisableClustering: c.DisableClustering,
-
-		DisablePerformanceStandby: c.DisablePerformanceStandby,
-
-		DisableSealWrap: c.DisableSealWrap,
-
-		DisableIndexing: c.DisableIndexing,
-	}
+	return result
 }

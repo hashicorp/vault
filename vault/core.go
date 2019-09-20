@@ -1982,7 +1982,7 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.stateLock.Unlock()
 }
 
-func (c *Core) SanitizedConfig() *server.Config {
+func (c *Core) SanitizedConfig() map[string]interface{} {
 	return c.rawConfig.Sanitized()
 }
 
