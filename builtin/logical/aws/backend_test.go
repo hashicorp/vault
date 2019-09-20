@@ -57,6 +57,25 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
+	t.Parallel()
+	roleData := map[string]interface{}{
+		"credential_type":          iamUserCred,
+		"policy_arns":              adminAccessPolicyArn,
+		"permissions_boundary_arn": iamPolicyArn,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listIamUsersTest, describeAzsTestUnauthorized}),
+		},
+	})
+}
+
 func TestBackend_basicSTS(t *testing.T) {
 	t.Parallel()
 	awsAccountID, err := getAccountID()
@@ -681,13 +700,14 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":     []string(nil),
-				"role_arns":       []string(nil),
-				"policy_document": value,
-				"credential_type": strings.Join([]string{iamUserCred, federationTokenCred}, ","),
-				"default_sts_ttl": int64(0),
-				"max_sts_ttl":     int64(0),
-				"user_path":       "",
+				"policy_arns":              []string(nil),
+				"role_arns":                []string(nil),
+				"policy_document":          value,
+				"credential_type":          strings.Join([]string{iamUserCred, federationTokenCred}, ","),
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -714,6 +734,7 @@ const testDynamoPolicy = `{
 }
 `
 
+const adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
 const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 const iamPolicyArn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
 const dynamoPolicyArn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
@@ -782,13 +803,14 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"user_path":       "/path/",
 	}
 	expectedRoleData := map[string]interface{}{
-		"policy_document": compacted,
-		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
-		"credential_type": iamUserCred,
-		"role_arns":       []string(nil),
-		"default_sts_ttl": int64(0),
-		"max_sts_ttl":     int64(0),
-		"user_path":       "/path/",
+		"policy_document":          compacted,
+		"policy_arns":              []string{ec2PolicyArn, iamPolicyArn},
+		"credential_type":          iamUserCred,
+		"role_arns":                []string(nil),
+		"default_sts_ttl":          int64(0),
+		"max_sts_ttl":              int64(0),
+		"user_path":                "/path/",
+		"permissions_boundary_arn": "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -986,13 +1008,14 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":     []string{value},
-				"role_arns":       []string(nil),
-				"policy_document": "",
-				"credential_type": iamUserCred,
-				"default_sts_ttl": int64(0),
-				"max_sts_ttl":     int64(0),
-				"user_path":       "",
+				"policy_arns":              []string{value},
+				"role_arns":                []string(nil),
+				"policy_document":          "",
+				"credential_type":          iamUserCred,
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

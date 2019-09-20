@@ -665,6 +665,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RawConfig:                 config,
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
+		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,

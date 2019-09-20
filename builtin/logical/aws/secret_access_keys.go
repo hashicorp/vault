@@ -202,11 +202,16 @@ func (b *backend) secretAccessKeysCreate(
 		userPath = "/"
 	}
 
-	// Create the user
-	_, err = iamClient.CreateUser(&iam.CreateUserInput{
+	createUserRequest := &iam.CreateUserInput{
 		UserName: aws.String(username),
 		Path:     aws.String(userPath),
-	})
+	}
+	if role.PermissionsBoundaryARN != "" {
+		createUserRequest.PermissionsBoundary = aws.String(role.PermissionsBoundaryARN)
+	}
+
+	// Create the user
+	_, err = iamClient.CreateUser(createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
