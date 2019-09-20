@@ -2,7 +2,9 @@ package vault
 
 import (
 	"context"
+	"golang.org/x/sync/errgroup"
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -801,26 +803,51 @@ func TestACL_CreationRace(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	stopTime := time.Now().Add(20 * time.Second)
+	// CircleCI looks to be capable of ~500 concurrent goroutines
+	parallelCount := 300
+	fireSeconds := 20
 
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for {
-				if time.Now().After(stopTime) {
-					return
-				}
-				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
-				if err != nil {
-					t.Fatalf("err: %v", err)
-				}
-			}
-		}()
+	t.Logf("concurrent creation of %d ACL creation goroutines for %d seconds",
+		parallelCount, fireSeconds)
+
+	routineCounts := make([]int, parallelCount)
+	currentRoutines := make(chan struct{}, parallelCount)
+	var mutex sync.Mutex
+
+	fireUntil := time.Now().Add(time.Duration(fireSeconds) * time.Second)
+	var group errgroup.Group
+
+	for {
+		if time.Now().After(fireUntil) {
+			break
+		}
+		currentRoutines <- struct{}{}
+		group.Go(func() error {
+			_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
+			mutex.Lock()
+			routineCounts = append(routineCounts, len(currentRoutines))
+			mutex.Unlock()
+			<-currentRoutines
+			return err
+		})
 	}
 
-	wg.Wait()
+	err = group.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sort.Ints(routineCounts)
+	if len(routineCounts) < 1 {
+		t.Fatal("no concurrency counts were collected")
+	}
+
+	highWaterMark := routineCounts[len(routineCounts)-1]
+
+	if highWaterMark < parallelCount {
+		t.Fatalf("unable to achieve desired concurrency: %d/%d",
+			highWaterMark, parallelCount)
+	}
 }
 
 var tokenCreationPolicy = `
