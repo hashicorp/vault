@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 )
@@ -354,6 +355,7 @@ func TestConfig_Sanitized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	sanitizedConfig := config.Sanitized()
 
 	expected := map[string]interface{}{
 		"APIAddr":                   "top_level_api_addr",
@@ -361,8 +363,8 @@ func TestConfig_Sanitized(t *testing.T) {
 		"ClusterAddr":               "top_level_cluster_addr",
 		"ClusterCipherSuites":       "",
 		"ClusterName":               "testcluster",
-		"DefaultLeaseTTL":           36000000000000,
-		"DefaultMaxRequestDuration": 0,
+		"DefaultLeaseTTL":           10 * time.Hour,
+		"DefaultMaxRequestDuration": 0 * time.Second,
 		"DisableCache":              true,
 		"DisableClustering":         false,
 		"DisableIndexing":           false,
@@ -387,7 +389,7 @@ func TestConfig_Sanitized(t *testing.T) {
 		},
 		"LogFormat":       "",
 		"LogLevel":        "",
-		"MaxLeaseTTL":     36000000000000,
+		"MaxLeaseTTL":     10 * time.Hour,
 		"PidFile":         "./pidfile",
 		"PluginDirectory": "",
 		"Seals": []interface{}{
@@ -419,7 +421,7 @@ func TestConfig_Sanitized(t *testing.T) {
 			"DisableHostname":                    false,
 			"DogStatsDAddr":                      "",
 			"DogStatsDTags":                      []string(nil),
-			"PrometheusRetentionTime":            86400000000000,
+			"PrometheusRetentionTime":            24 * time.Hour,
 			"StackdriverLocation":                "",
 			"StackdriverNamespace":               "",
 			"StackdriverProjectID":               "",
@@ -427,10 +429,8 @@ func TestConfig_Sanitized(t *testing.T) {
 			"StatsiteAddr":                       ""},
 	}
 
-	sanitizedConfig := config.Sanitized()
-
-	if !reflect.DeepEqual(sanitizedConfig, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", sanitizedConfig, expected)
+	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 
