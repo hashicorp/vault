@@ -3,14 +3,9 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"reflect"
-	"strconv"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/command/server"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -28,27 +23,29 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	var actual map[string]interface{}
 	var expected map[string]interface{}
 
-	expectedConfig := new(server.Config)
-	configResp := structs.New(expectedConfig.Sanitized()).Map()
-
-	var nilObject interface{}
-	// Do some surgery on the expected config to line up the
-	// types and string the raw fields.
-	for k, v := range configResp {
-		if strings.HasSuffix(k, "Raw") {
-			delete(configResp, k)
-			continue
-		}
-		switch v.(type) {
-		case int:
-			configResp[k] = json.Number(strconv.Itoa(v.(int)))
-		case time.Duration:
-			configResp[k] = json.Number(strconv.Itoa(int(v.(time.Duration))))
-		}
+	configResp := map[string]interface{}{
+		"APIAddr":                   "",
+		"CacheSize":                 json.Number("0"),
+		"ClusterAddr":               "",
+		"ClusterCipherSuites":       "",
+		"ClusterName":               "",
+		"DefaultLeaseTTL":           json.Number("0"),
+		"DefaultMaxRequestDuration": json.Number("0"),
+		"DisableCache":              false,
+		"DisableClustering":         false,
+		"DisableIndexing":           false,
+		"DisableMlock":              false,
+		"DisablePerformanceStandby": false,
+		"DisablePrintableCheck":     false,
+		"DisableSealWrap":           false,
+		"EnableRawEndpoint":         false,
+		"EnableUI":                  false,
+		"LogFormat":                 "",
+		"LogLevel":                  "",
+		"MaxLeaseTTL":               json.Number("0"),
+		"PidFile":                   "",
+		"PluginDirectory":           "",
 	}
-	configResp["HAStorage"] = nilObject
-	configResp["Storage"] = nilObject
-	configResp["Telemetry"] = nilObject
 
 	expected = map[string]interface{}{
 		"lease_id":       "",
@@ -63,8 +60,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad mismatch response body:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad mismatch response body: diff: %v", diff)
 	}
 
 }
