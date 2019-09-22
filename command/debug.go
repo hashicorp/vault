@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,7 +38,51 @@ const (
 	// debugCompressionExt is the default compression extension used if
 	// compression is enabled.
 	debugCompressionExt = ".tar.gz"
+
+	// fileFriendlyTimeFormat is the time format used for file and directory
+	// naming.
+	fileFriendlyTimeFormat = "2006-01-02T15-04-05Z"
 )
+
+// debugIndex represents the data in the index file
+type debugIndex struct {
+	VaultAddress    string                 `json:"vault_address"`
+	Version         int                    `json:"version"`
+	ClientVersion   string                 `json:"client_version"`
+	Timestamp       time.Time              `json:"timestamp"`
+	Duration        int                    `json:"duration_seconds"`
+	Interval        int                    `json:"interval_seconds"`
+	MetricsInterval int                    `json:"metrics_interval_seconds"`
+	Compress        bool                   `json:"compress"`
+	RawArgs         []string               `json:"raw_args"`
+	Targets         []string               `json:"targets"`
+	Output          map[string]interface{} `json:"output"`
+	Errors          []*captureError        `json:"errors"`
+}
+
+// captureError hold an error entry that can occur during polling capture.
+// It includes the timestamp, the target, and the error itself.
+type captureError struct {
+	TargetError string    `json:"error"`
+	Target      string    `json:"target"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+// newCaptureError instantiates a new captureError.
+func newCaptureError(target string, err error) *captureError {
+	return &captureError{
+		TargetError: err.Error(),
+		Target:      target,
+		Timestamp:   time.Now().UTC(),
+	}
+}
+
+// serverStatus holds a single interval entry for the server-status target
+type serverStatus struct {
+	Timestamp time.Time               `json:"timestamp"`
+	Health    *api.HealthResponse     `json:"health"`
+	Seal      *api.SealStatusResponse `json:"seal"`
+}
 
 var _ cli.Command = (*DebugCommand)(nil)
 var _ cli.CommandAutocomplete = (*DebugCommand)(nil)
@@ -181,7 +226,7 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("        Client Version: %s", debugIndex.ClientVersion))
 	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
 	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
-	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
 	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
 	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
 
@@ -269,7 +314,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, *debugIndex, st
 
 	captureTime := time.Now().UTC()
 	if len(c.flagOutput) == 0 {
-		formattedTime := captureTime.Format("2006-01-02T15-04-05Z")
+		formattedTime := captureTime.Format(fileFriendlyTimeFormat)
 		c.flagOutput = fmt.Sprintf("vault-debug-%s", formattedTime)
 	}
 
@@ -336,23 +381,134 @@ func (c *DebugCommand) captureStaticTargets(index *debugIndex) error {
 }
 
 func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Client) error {
+	startTime := time.Now()
 	durationCh := time.After(c.flagDuration + debugDurationGrace)
+
+	// Track current and total counts to show progress. We add one to the total
+	// since we also capture the last tick on the total duration time frame
+	// given a non-zero grace value.
+	totalCount := int(c.flagDuration.Seconds()/c.flagInterval.Seconds()) + 1
+	idxCount := 1
+
+	mTotalCount := int(c.flagDuration.Seconds()/c.flagMetricsInterval.Seconds()) + 1
+	mIdxCount := 1
+
 	errCh := make(chan *captureError)
 	defer close(errCh)
 
 	var wg sync.WaitGroup
+	// Profiling needs its own separate wait group since profile
+	// and trace needs to be ran in a goroutine, but we want to
+	// finish a capture before moving to the next one.
+	var wgProf sync.WaitGroup
+
 	var serverStatusCollection []*serverStatus
 	var metricsCollection []map[string]interface{}
 
 	intervalCapture := func() {
 		currentTimestamp := time.Now().UTC()
+		currentTimestampStr := currentTimestamp.Format(time.RFC3339)
+
+		// Create a sub-directory for pprof and possibly other data
+		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
+		dirName := filepath.Join(c.flagOutput, currentDir)
+		if err := os.MkdirAll(dirName, 0755); err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
+			return
+		}
+		index.Output[currentDir] = map[string]interface{}{
+			"timestamp": currentTimestamp,
+			"files":     []string{},
+		}
 
 		if strutil.StrListContains(c.flagTargets, "config") {
 
 		}
 
-		if strutil.StrListContains(c.flagTargets, " pprof") {
+		if strutil.StrListContains(c.flagTargets, "pprof") {
+			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing pprof", currentTimestampStr, idxCount, totalCount))
 
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				// Wait for other profiling requests to finish before starting this one.
+				wgProf.Wait()
+
+				// Capture goroutines
+				data, err := pprofGoroutine(client)
+				if err != nil {
+					errCh <- newCaptureError("pprof.goroutine", err)
+				}
+
+				err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
+				if err != nil {
+					errCh <- newCaptureError("pprof.goroutine", err)
+				}
+				// Add file to the index
+				filesArr := index.Output[currentDir].(map[string]interface{})["files"]
+				index.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "goroutine.prof")
+
+				// Capture heap
+				data, err = pprofHeap(client)
+				if err != nil {
+					errCh <- newCaptureError("pprof.heap", err)
+				}
+
+				err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
+				if err != nil {
+					errCh <- newCaptureError("pprof.heap", err)
+				}
+				// Add file to the index
+				filesArr = index.Output[currentDir].(map[string]interface{})["files"]
+				index.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "heap.prof")
+
+				// If the our remaining duration is less than the interval value
+				// skip profile and trace.
+				runDuration := currentTimestamp.Sub(startTime)
+				if (c.flagDuration+debugDurationGrace)-runDuration < c.flagInterval {
+					return
+				}
+
+				// Capture profile
+				wgProf.Add(1)
+				go func() {
+					defer wgProf.Done()
+					data, err := pprofProfile(client, c.flagInterval)
+					if err != nil {
+						errCh <- newCaptureError("pprof.profile", err)
+						return
+					}
+
+					err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0644)
+					if err != nil {
+						errCh <- newCaptureError("pprof.profile", err)
+					}
+					filesArr = index.Output[currentDir].(map[string]interface{})["files"]
+					index.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "profile.prof")
+
+				}()
+
+				// Capture trace
+				wgProf.Add(1)
+				go func() {
+					defer wgProf.Done()
+					data, err := pprofTrace(client, c.flagInterval)
+					if err != nil {
+						errCh <- newCaptureError("pprof.trace", err)
+						return
+					}
+
+					err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0644)
+					if err != nil {
+						errCh <- newCaptureError("pprof.trace", err)
+					}
+					filesArr = index.Output[currentDir].(map[string]interface{})["files"]
+					index.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "trace.out")
+
+				}()
+				wgProf.Wait()
+			}()
 		}
 
 		if strutil.StrListContains(c.flagTargets, "replication-status") {
@@ -360,7 +516,7 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 		}
 
 		if strutil.StrListContains(c.flagTargets, "server-status") {
-			c.UI.Info(fmt.Sprintf("     %s [INFO]: Capturing server-status", currentTimestamp.Format(time.RFC3339)))
+			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing server-status", currentTimestampStr, idxCount, totalCount))
 
 			wg.Add(1)
 			go func() {
@@ -394,7 +550,7 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 		currentTimestamp := time.Now().UTC().Format(time.RFC3339)
 
 		if strutil.StrListContains(c.flagTargets, "metrics") {
-			c.UI.Info(fmt.Sprintf("     %s [INFO]: Capturing metrics", currentTimestamp))
+			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing metrics", currentTimestamp, mIdxCount, mTotalCount))
 
 			healthStatus, err := client.Sys().Health()
 			if err != nil {
@@ -480,12 +636,15 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 		case err := <-errCh:
 			index.Errors = append(index.Errors, err)
 		case <-intervalTicker:
+			idxCount++
 			go intervalCapture()
 		case <-metricsIntervalTicker:
+			mIdxCount++
 			go metricsIntervalCapture()
 		case <-durationCh:
 			return nil
 		case <-c.ShutdownCh:
+			c.UI.Info("Caught interrupt signal, exiting...")
 			return nil
 		}
 	}
@@ -505,42 +664,74 @@ func (c *DebugCommand) compress(dst string) error {
 	return nil
 }
 
-// debugIndex represents the data in the index file
-type debugIndex struct {
-	VaultAddress    string                 `json:"vault_address"`
-	Version         int                    `json:"version"`
-	ClientVersion   string                 `json:"client_version"`
-	Timestamp       time.Time              `json:"timestamp"`
-	Duration        int                    `json:"duration_seconds"`
-	Interval        int                    `json:"interval_seconds"`
-	MetricsInterval int                    `json:"metrics_interval_seconds"`
-	Compress        bool                   `json:"compress"`
-	RawArgs         []string               `json:"raw_args"`
-	Targets         []string               `json:"targets"`
-	Output          map[string]interface{} `json:"output"`
-	Errors          []*captureError        `json:"errors"`
-}
-
-// captureError hold an error entry that can occur during polling capture.
-// It includes the timestamp, the target, and the error itself.
-type captureError struct {
-	TargetError string    `json:"error"`
-	Target      string    `json:"target"`
-	Timestamp   time.Time `json:"timestamp"`
-}
-
-// newCaptureError instantiates a new captureError.
-func newCaptureError(target string, err error) *captureError {
-	return &captureError{
-		TargetError: err.Error(),
-		Target:      target,
-		Timestamp:   time.Now().UTC(),
+func pprofGoroutine(client *api.Client) ([]byte, error) {
+	req := client.NewRequest("GET", "/v1/sys/pprof/goroutine")
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
-// serverStatus holds a single interval entry for the server-status target
-type serverStatus struct {
-	Timestamp time.Time               `json:"timestamp"`
-	Health    *api.HealthResponse     `json:"health"`
-	Seal      *api.SealStatusResponse `json:"seal"`
+func pprofHeap(client *api.Client) ([]byte, error) {
+	req := client.NewRequest("GET", "/v1/sys/pprof/heap")
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func pprofProfile(client *api.Client, duration time.Duration) ([]byte, error) {
+	seconds := int(duration.Seconds())
+	secStr := strconv.Itoa(seconds)
+
+	req := client.NewRequest("GET", "/v1/sys/pprof/profile")
+	req.Params.Add("seconds", secStr)
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func pprofTrace(client *api.Client, duration time.Duration) ([]byte, error) {
+	seconds := int(duration.Seconds())
+	secStr := strconv.Itoa(seconds)
+
+	req := client.NewRequest("GET", "/v1/sys/pprof/trace")
+	req.Params.Add("seconds", secStr)
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
