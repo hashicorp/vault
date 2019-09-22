@@ -11,7 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mholt/archiver"
@@ -99,7 +102,10 @@ type DebugCommand struct {
 
 	// skipTimingChecks bypasses timing-related checks, used primarily for tests
 	skipTimingChecks bool
+	// logger is the logger used for outputting capture progress
+	logger hclog.Logger
 
+	// ShutdownCh is used to capture interrupt signal and end polling capture
 	ShutdownCh chan struct{}
 }
 
@@ -214,6 +220,12 @@ func (c *DebugCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Initialize the logger for debug output
+	logWriter := &gatedwriter.Writer{Writer: os.Stderr}
+	if c.logger == nil {
+		c.logger = logging.NewVaultLoggerWithWriter(logWriter, hclog.Trace)
+	}
+
 	client, debugIndex, dstOutputFile, err := c.preflight(args)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error during validation: %s", err))
@@ -229,6 +241,10 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
 	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
 	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
+	c.UI.Output("")
+
+	// Release the log gate.
+	logWriter.Flush()
 
 	// Capture static information
 	if err := c.captureStaticTargets(debugIndex); err != nil {
@@ -377,6 +393,10 @@ func (c *DebugCommand) defaultTargets() []string {
 
 func (c *DebugCommand) captureStaticTargets(index *debugIndex) error {
 	c.UI.Info("==> Capturing static information...")
+	// TODO: Perform config state capture
+	c.logger.Info("capturing configuration state")
+	c.UI.Output("")
+	// Capture configuration state
 	return nil
 }
 
@@ -407,9 +427,8 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 
 	intervalCapture := func() {
 		currentTimestamp := time.Now().UTC()
-		currentTimestampStr := currentTimestamp.Format(time.RFC3339)
 
-		// Create a sub-directory for pprof and possibly other data
+		// Create a sub-directory for pprof data
 		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 		dirName := filepath.Join(c.flagOutput, currentDir)
 		if err := os.MkdirAll(dirName, 0755); err != nil {
@@ -426,7 +445,7 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 		}
 
 		if strutil.StrListContains(c.flagTargets, "pprof") {
-			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing pprof", currentTimestampStr, idxCount, totalCount))
+			c.logger.Info("capturing pprof data", "current", idxCount, "total", totalCount)
 
 			wg.Add(1)
 			go func() {
@@ -516,7 +535,7 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 		}
 
 		if strutil.StrListContains(c.flagTargets, "server-status") {
-			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing server-status", currentTimestampStr, idxCount, totalCount))
+			c.logger.Info("capturing server status information", "current", idxCount, "total", totalCount)
 
 			wg.Add(1)
 			go func() {
@@ -547,10 +566,8 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 	}
 
 	metricsIntervalCapture := func() {
-		currentTimestamp := time.Now().UTC().Format(time.RFC3339)
-
 		if strutil.StrListContains(c.flagTargets, "metrics") {
-			c.UI.Info(fmt.Sprintf("     %s [INFO]: (%d/%d) Capturing metrics", currentTimestamp, mIdxCount, mTotalCount))
+			c.logger.Info("capturing metrics", "current", mIdxCount, "total", mTotalCount)
 
 			healthStatus, err := client.Sys().Health()
 			if err != nil {
@@ -564,10 +581,10 @@ func (c *DebugCommand) capturePollingTargets(index *debugIndex, client *api.Clie
 			// 2. Non-DR, non-performance standby nodes
 			switch {
 			case healthStatus.ReplicationDRMode == "secondary":
-				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics capture on DR secondary node", currentTimestamp))
+				c.logger.Info("skipping metrics capture on DR secondary node")
 				return
 			case healthStatus.Standby && !healthStatus.PerformanceStandby:
-				c.UI.Info(fmt.Sprintf("     %s [INFO]: Skipping metrics on standby node", currentTimestamp))
+				c.logger.Info("skipping metrics on standby node")
 				return
 			}
 
