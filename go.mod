@@ -29,8 +29,9 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
+	github.com/coreos/etcd v3.3.15+incompatible // indirect
 	github.com/coreos/go-semver v0.2.0
-	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
+	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -47,7 +48,6 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
-	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/hashicorp/consul/api v1.0.1
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
@@ -103,7 +103,6 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.0.0
-	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -119,7 +118,10 @@ require (
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.3.0
 	go.etcd.io/bbolt v1.3.2
-	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
+	go.etcd.io/etcd v3.3.15+incompatible
+	go.uber.org/atomic v1.4.0 // indirect
+	go.uber.org/multierr v1.1.0 // indirect
+	go.uber.org/zap v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
