@@ -4,6 +4,7 @@ import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -29,7 +30,7 @@ export default ApplicationAdapter.extend({
     return this._super(...arguments).catch(errorOrModel => {
       // if it's a real 404, this will be an error, if not
       // it will be the body of a deleted / destroyed version
-      if (errorOrModel instanceof DS.AdapterError) {
+      if (errorOrModel instanceof DS.AdapterError || errorOrModel instanceof ControlGroupError) {
         throw errorOrModel;
       }
       return errorOrModel;
