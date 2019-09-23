@@ -75,10 +75,10 @@ This example shows configuring OCI Object Storage with high availability enabled
 
 ```hcl
 storage "oci_objectstorage" {
-   namespaceName = "MyNamespace
-   bucketName = "DataBucket"
+   namespace_name = "MyNamespace
+   bucket_name = "DataBucket"
    ha_enabled = "true"
-   lockBucketName = "LockBucket"
+   lock_bucket_name = "LockBucket"
 }
 ```
 
