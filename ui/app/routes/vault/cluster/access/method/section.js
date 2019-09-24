@@ -23,7 +23,7 @@ export default Route.extend({
     const { section_name: section } = this.paramsFor(this.routeName);
     this._super(...arguments);
     controller.set('section', section);
-    let method = this.modelFor('vault.cluster.access.method');
-    controller.set('paths', method.paths.paths.filter(path => path.navigation).map(path => path.path));
+    //let method = this.modelFor('vault.cluster.access.method');
+    //controller.set('paths', method.paths.paths.filter(path => path.navigation));
   },
 });

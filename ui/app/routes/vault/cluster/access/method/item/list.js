@@ -9,26 +9,39 @@ export default Route.extend(ListRoute, {
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
+    let subItemType, parentID, parentType;
+    //we have a nested item
+    if (itemType.includes('~*')) {
+      let types = itemType.split('~*');
+      parentType = types[0];
+      subItemType = itemType;
+      //we have an ID (e.g. role~*my-role~*secret-id)
+      if (types.length === 3) {
+        subItemType = `${types[0]}~*${types[2]}`;
+        parentID = types[1];
+      }
+    }
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
     const itemModel = this.modelFor('vault.cluster.access.method.item');
-    const { apiPath, type } = methodModel;
-    return { apiPath, type, method, itemType, itemModel, methodModel };
+    const { type } = methodModel;
+    return { type, method, itemType, itemModel, methodModel, subItemType, parentID, parentType };
   },
 
   model() {
-    const { type, method, itemType } = this.getMethodAndModelInfo();
+    const { type, method, itemType, parentID, subItemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
-    let modelType = `generated-${singularize(itemType)}-${type}`;
+    let modelType = `generated-${singularize(subItemType || itemType)}-${type}`;
+    debugger;
     console.log(modelType);
 
     return this.store
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',
-        page: page,
-        pageFilter: pageFilter,
+        page,
+        pageFilter,
         type: itemType,
-        method: method,
+        method,
       })
       .catch(err => {
         if (err.httpStatus === 404) {
@@ -53,12 +66,20 @@ export default Route.extend(ListRoute, {
   },
   setupController(controller) {
     this._super(...arguments);
-    const { method, itemType, itemModel, methodModel } = this.getMethodAndModelInfo();
+    const {
+      method,
+      itemType,
+      itemModel,
+      methodModel,
+      parentType,
+      parentID,
+      subItemType,
+    } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
+    controller.set('subItemType', subItemType);
     controller.set('method', method);
-    if (itemType.includes('_')) {
-      controller.set('parentType', itemType.split('_')[0]);
-    }
+    controller.set('parentType', parentType);
+    controller.set('parentID', parentID);
     controller.set('methodModel', methodModel);
     controller.set('model.paths', itemModel.paths);
   },

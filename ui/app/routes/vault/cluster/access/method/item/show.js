@@ -18,7 +18,9 @@ export default Route.extend({
 
   setupController(controller) {
     this._super(...arguments);
+    const { item_id: itemID } = this.paramsFor(this.routeName);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
     controller.set('itemType', singularize(itemType));
+    controller.set('itemID', itemID);
   },
 });

@@ -14,9 +14,6 @@ import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-at
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
-import { apiPath as dynamicPath } from 'vault/utils/api-path';
-
-const { belongsTo } = DS;
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -67,9 +64,7 @@ export default Service.extend({
         }
         let path, paths;
         //if we have an item we want the create info for that itemType
-        if (itemType) {
-          paths = this.filterPathsByItemType(pathInfo, itemType);
-        }
+        paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find(path => path.operations.includes('post') && path.action !== 'Delete');
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
@@ -108,7 +103,7 @@ export default Service.extend({
       let items = itemType.split(':');
       itemName = items[items.length - 1];
       items = items.map(item => dasherize(singularize(item.toLowerCase())));
-      itemType = items.join('_');
+      itemType = items.join('~*');
     }
 
     if (itemType && !pathInfo.itemTypes.includes(itemType)) {
@@ -143,8 +138,14 @@ export default Service.extend({
   },
 
   filterPathsByItemType(pathInfo, itemType) {
+    if (!itemType) {
+      return pathInfo.paths;
+    }
+    //if we are a subItem we really want to filter by the parentItem
+    //itemType = itemType.split('~*')[0];
+
     return pathInfo.paths.filter(path => {
-      return itemType === path.itemType || path.itemType.indexOf(`${itemType}_`) === 0;
+      return itemType === path.itemType || path.itemType.indexOf(`${itemType}~*`) === 0;
     });
   },
 
@@ -207,32 +208,46 @@ export default Service.extend({
     });
   },
 
-  replaceParamInPath(path, id) {
-    let pathParts = path.split('{');
-    let pathBeginning = pathParts[0];
-    pathParts = pathParts[1].split('}');
-    let pathEnd = pathParts[1];
-    return `${pathBeginning.slice(1)}${id}${pathEnd}`;
-  },
-
   getNewAdapter(pathInfo, itemType) {
+    debugger;
     //we need list and create paths to set the correct urls for actions
     let paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
-    if (pathInfo.itemID) {
-      paths.forEach(path => {
-        if (path.path.includes('{')) {
-          path.path = this.replaceParamInPath(path.path, pathInfo.itemID);
-        }
-      });
-    }
+    // if (pathInfo.itemID) {
+    //   paths.forEach(path => {
+    //     if (path.path.includes('{') && path.itemType.includes('~*')) {
+    //       path.path = this.replaceParamInPath(path.path, pathInfo.itemID);
+    //     }
+    //   });
+    // }
     const getPath = paths.find(path => path.operations.includes('get'));
+    //the action might be "Generate" or something like that so we'll grab the first post endpoint if there
+    //isn't one with "Create"
+    //TODO: look into a more sophisticated way to determine the create endpoint
     const createPath = paths.find(path => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(method, id) {
+      replaceParamInPath(path, id) {
+        let pathParts = path.split('{');
+        let pathBeginning = pathParts[0];
+        pathParts = pathParts[1].split('}');
+        let pathEnd = pathParts[1];
+        return `${pathBeginning.slice(1)}${id}${pathEnd}`;
+      },
+
+      urlForItem(method, id, type) {
         debugger;
+
+        if (type) {
+          let types = type.split('~*');
+          let parentID;
+          if (types.length === 3) {
+            parentID = types[2];
+            getPath.path = this.replaceParamInPath(getPath.path, parentID);
+          }
+        }
+
         let url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/`;
         if (id) {
           url = url + encodePath(id);
@@ -245,13 +260,13 @@ export default Service.extend({
       },
 
       //urlForQuery if there is an id and we are listing, use the id to construct the path
-
       urlForUpdateRecord(id) {
         let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
+        debugger;
         const { id } = snapshot;
         let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;

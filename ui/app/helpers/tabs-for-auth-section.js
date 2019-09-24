@@ -92,7 +92,7 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
 
     tabs = paths
       .map(path => {
-        if (path.path.includes('{')) {
+        if (!path.navigation || path.itemType.includes('~*')) {
           return;
         }
         return {

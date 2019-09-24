@@ -41,12 +41,12 @@ Router.map(function() {
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
-          // /item/role:*my-role:*secret-id/
-          // /item/role:*secret-id
+          // /item/role**my-role**secret-id/
+          // /item/role**secret-id
           this.route('item', { path: '/item/:item_type' }, function() {
             this.route('list', { path: '/' });
             this.route('create');
-            // /item/role:*my-role:*secret-id/show/my-secret-id
+            // /item/role**my-role**secret-id/show/my-secret-id
             this.route('edit', { path: '/edit/:item_id' });
             this.route('show', { path: '/show/:item_id' });
           });
