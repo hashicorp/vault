@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/y0ssar1an/q"
 )
 
@@ -325,20 +326,26 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 				},
 			},
 		},
+		Templates: []*ctconfig.TemplateConfig{
+			&ctconfig.TemplateConfig{
+				Source:      strPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
+				Perms:       fileMode(0600),
+			},
+		},
 		PidFile: "./pidfile",
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
 
-	config, err = LoadConfig("./test-fixtures/config-embedded-type.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	q.Q(config)
+func strPtr(s string) *string {
+	return &s
+}
 
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
-	}
+// FileMode returns a pointer to the given os.FileMode.
+func fileMode(o os.FileMode) *os.FileMode {
+	return &o
 }
