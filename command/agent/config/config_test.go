@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/y0ssar1an/q"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -93,8 +94,14 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 }
 
 func TestLoadConfigFile(t *testing.T) {
-	os.Setenv("TEST_AAD_ENV", "aad")
-	defer os.Unsetenv("TEST_AAD_ENV")
+	if err := os.Setenv("TEST_AAD_ENV", "aad"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TEST_AAD_ENV"); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	config, err := LoadConfig("./test-fixtures/config.hcl")
 	if err != nil {
@@ -273,6 +280,63 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 		},
 		PidFile: "./pidfile",
 	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestLoadConfigFile_Template_Single tests a single template definition in a
+// configuration file, with most entries supplied
+func TestLoadConfigFile_Template_Single(t *testing.T) {
+	q.Q("---------")
+	q.Q("starting")
+	q.Q("---------")
+	defer func() {
+		q.Q("---------")
+		q.Q("end")
+		q.Q("---------")
+		q.Q("")
+	}()
+	config, err := LoadConfig("./test-fixtures/config-template.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				&Sink{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+
+	config, err = LoadConfig("./test-fixtures/config-embedded-type.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	q.Q(config)
 
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)

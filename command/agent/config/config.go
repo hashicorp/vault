@@ -14,16 +14,18 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/y0ssar1an/q"
 )
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth   `hcl:"auto_auth"`
-	ExitAfterAuth bool        `hcl:"exit_after_auth"`
-	PidFile       string      `hcl:"pid_file"`
-	Listeners     []*Listener `hcl:"listeners"`
-	Cache         *Cache      `hcl:"cache"`
-	Vault         *Vault      `hcl:"vault"`
+	AutoAuth      *AutoAuth         `hcl:"auto_auth"`
+	ExitAfterAuth bool              `hcl:"exit_after_auth"`
+	PidFile       string            `hcl:"pid_file"`
+	Listeners     []*Listener       `hcl:"listeners"`
+	Cache         *Cache            `hcl:"cache"`
+	Vault         *Vault            `hcl:"vault"`
+	Templates     []*TemplateConfig `hcl:"templates"`
 }
 
 type Vault struct {
@@ -74,6 +76,68 @@ type Sink struct {
 	Config     map[string]interface{}
 }
 
+type TemplateConfig struct {
+	// Backup determines if this template should retain a backup. The default
+	// value is false.
+	Backup *bool `hcl:"backup"`
+
+	// Command is the arbitrary command to execute after a template has
+	// successfully rendered. This is DEPRECATED. Use Exec instead.
+	Command *string `hcl:"command"`
+
+	// CommandTimeout is the amount of time to wait for the command to finish
+	// before force-killing it. This is DEPRECATED. Use Exec instead.
+	CommandTimeoutRaw interface{}    `hcl:"command_timeout"`
+	CommandTimeout    *time.Duration `hcl:"-"`
+
+	// Contents are the raw template contents to evaluate. Either this or Source
+	// must be specified, but not both.
+	Contents *string `hcl:"contents"`
+
+	// CreateDestDirs tells Consul Template to create the parent directories of
+	// the destination path if they do not exist. The default value is true.
+	CreateDestDirs *bool `hcl:"create_dest_dirs"`
+
+	// Destination is the location on disk where the template should be rendered.
+	// This is required unless running in debug/dry mode.
+	Destination *string `hcl:"destination"`
+
+	// ErrMissingKey is used to control how the template behaves when attempting
+	// to index a struct or map key that does not exist.
+	ErrMissingKey *bool `hcl:"error_on_missing_key"`
+
+	// // Exec is the configuration for the command to run when the template renders
+	// // successfully.
+	// Exec *ExecConfig `hcl:"exec"`
+
+	// Perms are the file system permissions to use when creating the file on
+	// disk. This is useful for when files contain sensitive information, such as
+	// secrets from Vault.
+	PermsRaw interface{}  `hcl:"perms"`
+	Perms    *os.FileMode `hcl:"-"`
+
+	// Source is the path on disk to the template contents to evaluate. Either
+	// this or Contents should be specified, but not both.
+	Source *string `hcl:"source"`
+
+	// // Wait configures per-template quiescence timers.
+	// Wait *WaitConfig `hcl:"wait"`
+
+	// LeftDelim and RightDelim are optional configurations to control what
+	// delimiter is utilized when parsing the template.
+	LeftDelim  *string `hcl:"left_delimiter"`
+	RightDelim *string `hcl:"right_delimiter"`
+
+	// FunctionBlacklist is a list of functions that this template is not
+	// permitted to run.
+	FunctionBlacklist []string `hcl:"function_blacklist"`
+
+	// SandboxPath adds a prefix to any path provided to the `file` function
+	// and causes an error if a relative path tries to traverse outside that
+	// prefix.
+	SandboxPath *string `hcl:"sandbox_path"`
+}
+
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
 func LoadConfig(path string) (*Config, error) {
@@ -121,6 +185,11 @@ func LoadConfig(path string) (*Config, error) {
 	err = parseCache(&result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+	}
+
+	err = parseTemplates(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'templates':{{err}}", err)
 	}
 
 	if result.Cache != nil {
@@ -406,5 +475,55 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.AutoAuth.Sinks = ts
+	return nil
+}
+
+func parseTemplates(result *Config, list *ast.ObjectList) error {
+	name := "template"
+
+	templateList := list.Filter(name)
+	if len(templateList.Items) < 1 {
+		return nil
+	}
+
+	var tcs []*TemplateConfig
+
+	for _, item := range templateList.Items {
+		var tc TemplateConfig
+		if err := hcl.DecodeObject(&tc, item.Val); err != nil {
+			q.Q("error here:", err)
+			return err
+		}
+
+		if tc.CommandTimeoutRaw != nil {
+			timeout, err := parseutil.ParseDurationSecond(tc.CommandTimeoutRaw)
+			if err != nil {
+				return err
+			}
+			tc.CommandTimeout = &timeout
+			tc.CommandTimeoutRaw = nil
+		}
+
+		q.Q(tc.PermsRaw)
+		perms := os.FileMode(0644)
+		if tc.PermsRaw != nil {
+			switch tc.PermsRaw.(type) {
+			case int:
+				perms = os.FileMode(tc.PermsRaw.(int))
+			default:
+				return errors.New("error parsing perms")
+			}
+			tc.PermsRaw = nil
+			tc.Perms = &perms
+		}
+		q.Q(tc.Perms.String())
+
+		// check source vs contents
+		// check command / timeout
+
+		tcs = append(tcs, &tc)
+	}
+
+	result.Templates = tcs
 	return nil
 }
