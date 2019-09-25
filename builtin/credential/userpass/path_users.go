@@ -41,6 +41,9 @@ func pathUsers(b *backend) *framework.Path {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
 			},
 
 			"policies": &framework.FieldSchema{
@@ -80,8 +83,8 @@ func pathUsers(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Action:     "Create",
-			ItemType:   "User",
+			Action:   "Create",
+			ItemType: "User",
 		},
 	}
 
