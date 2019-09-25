@@ -12,7 +12,7 @@ import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-at
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
-import { dasherize } from '@ember/string';
+import { dasherize, capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
@@ -182,7 +182,7 @@ export default Service.extend({
       //include url params
       if (params) {
         const { name, schema, description } = params[0];
-        let label = name.split('_').join(' ');
+        let label = capitalize(name.split('_').join(' '));
 
         paramProp[name] = {
           'x-vault-displayAttrs': {

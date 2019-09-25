@@ -36,13 +36,18 @@ export const expandOpenApiProps = function(props) {
       defaultValue: value || null,
     };
 
-    attrDefn.label = capitalize(name || propName);
+    //only set a label if we have one from OpenAPI
+    //otherwise the propName will be humanized by the form-field component
+    if (name) {
+      attrDefn.label = name;
+    }
 
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
     if (editType !== 'ttl' && type !== 'array') {
       attrDefn.type = type;
     }
+
     // loop to remove empty vals
     for (let attrProp in attrDefn) {
       if (attrDefn[attrProp] == null) {
