@@ -13,7 +13,7 @@ description: |-
 ~> **NOTE:** This is a [K/V Version 2](/docs/secrets/kv/kv-v2.html) secrets
 engine command, and not available for Version 1.
 
-The `secrets enable` command permanently removes the specified versions' data
+The `kv destroy` command permanently removes the specified versions' data
 from the key/value secrets engine. If no key exists at the path, no action is
 taken.
 

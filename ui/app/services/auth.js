@@ -93,7 +93,9 @@ export default Service.extend({
       method: opts.method || 'GET',
       headers: opts.headers || {},
     }).then(response => {
-      if (response.status >= 200 && response.status < 300) {
+      if (response.status === 204) {
+        return resolve();
+      } else if (response.status >= 200 && response.status < 300) {
         return resolve(response.json());
       } else {
         return reject();

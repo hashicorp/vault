@@ -16,6 +16,7 @@ import (
 // fileSink is a Sink implementation that writes a token to a file
 type fileSink struct {
 	path   string
+	mode   os.FileMode
 	logger hclog.Logger
 }
 
@@ -29,6 +30,7 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 
 	f := &fileSink{
 		logger: conf.Logger,
+		mode:   0640,
 	}
 
 	pathRaw, ok := conf.Config["path"]
@@ -42,11 +44,26 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 
 	f.path = path
 
+	if modeRaw, ok := conf.Config["mode"]; ok {
+		f.logger.Debug("verifying override for default file sink mode")
+		mode, typeOK := modeRaw.(int)
+		if !typeOK {
+			return nil, errors.New("could not parse 'mode' as integer")
+		}
+
+		if !os.FileMode(mode).IsRegular() {
+			return nil, fmt.Errorf("file mode does not represent a regular file")
+		}
+
+		f.logger.Debug("overriding default file sink", "mode", mode)
+		f.mode = os.FileMode(mode)
+	}
+
 	if err := f.WriteToken(""); err != nil {
 		return nil, errwrap.Wrapf("error during write check: {{err}}", err)
 	}
 
-	f.logger.Info("file sink configured", "path", f.path)
+	f.logger.Info("file sink configured", "path", f.path, "mode", f.mode)
 
 	return f, nil
 }
@@ -69,7 +86,7 @@ func (f *fileSink) WriteToken(token string) error {
 	fileName := filepath.Base(f.path)
 	tmpSuffix := strings.Split(u, "-")[0]
 
-	tmpFile, err := os.OpenFile(filepath.Join(targetDir, fmt.Sprintf("%s.tmp.%s", fileName, tmpSuffix)), os.O_WRONLY|os.O_CREATE, 0640)
+	tmpFile, err := os.OpenFile(filepath.Join(targetDir, fmt.Sprintf("%s.tmp.%s", fileName, tmpSuffix)), os.O_WRONLY|os.O_CREATE, f.mode)
 	if err != nil {
 		return errwrap.Wrapf(fmt.Sprintf("error opening temp file in dir %s for writing: {{err}}", targetDir), err)
 	}

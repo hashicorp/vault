@@ -44,18 +44,6 @@ func (s *gRPCSystemViewClient) MaxLeaseTTL() time.Duration {
 	return time.Duration(reply.TTL)
 }
 
-func (s *gRPCSystemViewClient) SudoPrivilege(ctx context.Context, path string, token string) bool {
-	reply, err := s.client.SudoPrivilege(ctx, &pb.SudoPrivilegeArgs{
-		Path:  path,
-		Token: token,
-	})
-	if err != nil {
-		return false
-	}
-
-	return reply.Sudo
-}
-
 func (s *gRPCSystemViewClient) Tainted() bool {
 	reply, err := s.client.Tainted(context.Background(), &pb.Empty{})
 	if err != nil {
@@ -174,13 +162,6 @@ func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*p
 	ttl := s.impl.MaxLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
-	}, nil
-}
-
-func (s *gRPCSystemViewServer) SudoPrivilege(ctx context.Context, args *pb.SudoPrivilegeArgs) (*pb.SudoPrivilegeReply, error) {
-	sudo := s.impl.SudoPrivilege(ctx, args.Path, args.Token)
-	return &pb.SudoPrivilegeReply{
-		Sudo: sudo,
 	}, nil
 }
 

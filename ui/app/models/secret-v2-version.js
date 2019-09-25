@@ -5,6 +5,7 @@ import { bool } from '@ember/object/computed';
 const { attr, belongsTo } = DS;
 
 export default Secret.extend({
+  failedServerRead: attr('boolean'),
   pathAttr: 'path',
   version: attr('number'),
   secret: belongsTo('secret-v2'),

@@ -1,5 +1,6 @@
 import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
@@ -45,7 +46,7 @@ export function executeUICommand(command, logAndOutput, commandFns) {
 }
 
 export function parseCommand(command, shouldThrow) {
-  let args = argTokenizer(command);
+  let args = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
   }
@@ -63,8 +64,6 @@ export function parseCommand(command, shouldThrow) {
         let strippedArg = arg
           // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
           .split(/=(.+)/)
-          // remove matched wrapping " or ' from each item
-          .map(item => item.replace(/^("|')(.+)(\1)$/, '$2'))
           // if there were quotes, there's an empty string as the last member in the array that we don't want,
           // so filter it out
           .filter(str => str !== '')

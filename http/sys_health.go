@@ -146,10 +146,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = sealedCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
-	case !perfStandbyOK && perfStandby:
-		code = perfStandbyCode
-	case !standbyOK && standby:
-		code = standbyCode
+	case perfStandby:
+		if !perfStandbyOK {
+			code = perfStandbyCode
+		}
+	case standby:
+		if !standbyOK {
+			code = standbyCode
+		}
 	}
 
 	// Fetch the local cluster name and identifier

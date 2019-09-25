@@ -19,9 +19,13 @@ and are automatically revoked when the Vault lease expires.
 Vault supports three different types of credentials to retrieve from AWS:
 
 1. `iam_user`: Vault will create an IAM user for each lease, attach the managed
-   and inline IAM policies as specified in the role to the user, and then return
-   the access key and secret key to the caller. IAM users have no session tokens
-   and so no session token will be returned.
+   and inline IAM policies as specified in the role to the user, and if a
+   [permissions
+   boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+   is specified on the role, the permissions boundary will also be attached.
+   Vault will then generate an access key and secret key for the IAM user and
+   return them to the caller. IAM users have no session tokens and so no
+   session token will be returned.
 2. `assumed_role`: Vault will call
    [sts:AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
    and return the access key, secret key, and session token to the caller.
@@ -185,6 +189,59 @@ permissions Vault needs:
 }
 ```
 
+Vault also supports AWS Permissions Boundaries when creating IAM users. If you
+wish to enforce that Vault always attaches a permissions boundary to an IAM
+user, you can use a policy like:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
+        "iam:ListGroupsForUser",
+        "iam:ListUserPolicies",
+        "iam:RemoveUserFromGroup"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachUserPolicy",
+        "iam:CreateUser",
+        "iam:DeleteUserPolicy",
+        "iam:DetachUserPolicy",
+        "iam:PutUserPolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": [
+            "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:policy/PolicyName"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+where the "iam:PermissionsBoundary" condition contains the list of permissions
+boundary policies that you wish to ensure that Vault uses. This policy will
+ensure that Vault uses one of the permissions boundaries specified (not all of
+them).
+
 ## STS credentials
 
 The above demonstrated usage with `iam_user` credential types. As mentioned,
@@ -198,15 +255,15 @@ does not allow temporary credentials (such as those from an IAM instance
 profile) to be used.
 
 An STS federation token inherits a set of permissions that are the combination
-(intersection) of three sets of permissions:
+(intersection) of four sets of permissions:
 
 1. The permissions granted to the `aws/config/root` credentials
-2. The user inline policy configured for the `aws/role`
-3. An implicit deny policy on IAM or STS operations.
+2. The user inline policy configured in the Vault role
+3. The managed policy ARNs configured in the Vault role
+4. An implicit deny policy on IAM or STS operations.
 
-Roles with a `credential_type` of `federation_token` can only specify a
-`policy_document` in the Vault role. AWS does not support support managed
-policies.
+Roles with a `credential_type` of `federation_token` can specify both a
+`policy_document` and `policy_arns` parameter in the Vault role.
 
 The `aws/config/root` credentials require IAM permissions for
 `sts:GetFederationToken` and the permissions to delegate to the STS
@@ -322,13 +379,17 @@ the aws/root/config credentials to assume the role.
 When specifying a Vault role with a `credential_type` of `assumed_role`, you can
 specify more than one IAM role ARN. If you do so, Vault clients can select which
 role ARN they would like to assume when retrieving credentials from that role.
-You can further specify a `policy_document` which, if specified, acts as a
+
+Further, you can specify both a `policy_document` and `policy_arns` parameters;
+if specified, each acts as a
 filter on the IAM permissions granted to the assumed role. For an action to be
 allowed, it must be permitted by both the IAM policy on the AWS role that is
-assumed as well as the `policy_document` specified on the Vault role. (The
+assumed, the `policy_document` specified on the Vault role (if specified), and
+the managed policies specified by the `policy_arns` parameter. (The
 `policy_document` parameter is passed in as the `Policy` parameter to the
 [sts:AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
-API call.)
+API call, while the `policy_arns` parameter is passed in as the `PolicyArns`
+parameter to the same call.)
 
 Note: When multiple `role_arns` are specified, clients requesting credentials
 can specify any of the role ARNs that are defined on the Vault role in order to

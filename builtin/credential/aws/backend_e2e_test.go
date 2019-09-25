@@ -100,7 +100,7 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 	}
 }
 
-func setupAwsTestCluster(t *testing.T, ctx context.Context) *vault.TestCluster {
+func setupAwsTestCluster(t *testing.T, _ context.Context) *vault.TestCluster {
 
 	// create a cluster with the aws auth backend built-in
 	logger := logging.NewVaultLogger(hclog.Trace)

@@ -60,9 +60,15 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 			t.Fatal(err)
 		}
 
-		err = backend.SetupCluster(context.Background(), nil, nil)
+		err = backend.SetupCluster(context.Background(), SetupOpts{})
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		for {
+			if backend.AppliedIndex() >= 2 {
+				break
+			}
 		}
 
 	}
@@ -259,9 +265,9 @@ func TestRaft_Recovery(t *testing.T) {
 	}
 
 	// Bring up the nodes again
-	raft1.SetupCluster(context.Background(), nil, nil)
-	raft2.SetupCluster(context.Background(), nil, nil)
-	raft4.SetupCluster(context.Background(), nil, nil)
+	raft1.SetupCluster(context.Background(), SetupOpts{})
+	raft2.SetupCluster(context.Background(), SetupOpts{})
+	raft4.SetupCluster(context.Background(), SetupOpts{})
 
 	peers, err := raft1.Peers(context.Background())
 	if err != nil {
