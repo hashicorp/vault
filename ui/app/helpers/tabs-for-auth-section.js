@@ -77,6 +77,7 @@ const TABS_FOR_SHOW = {};
 
 export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
+  debugger;
   if (sectionType === 'authSettings') {
     tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
@@ -85,14 +86,19 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
     });
     return tabs;
   }
-  if (paths) {
-    tabs = paths.map(path => {
-      let itemName = path.slice(1); //get rid of leading slash
-      return {
-        label: capitalize(pluralize(itemName)),
-        routeParams: ['vault.cluster.access.method.item.list', itemName],
-      };
-    });
+  if (paths || model.paths) {
+    if (model.paths) {
+      paths = model.paths.paths.filter(path => path.navigation);
+    }
+
+    tabs = paths
+      .map(path => {
+        return {
+          label: capitalize(pluralize(path.itemName)),
+          routeParams: ['vault.cluster.access.method.item.list', path.itemType],
+        };
+      })
+      .compact();
   } else {
     tabs = (TABS_FOR_SHOW[model.type] || []).slice();
   }

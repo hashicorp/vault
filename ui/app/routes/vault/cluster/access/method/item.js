@@ -13,6 +13,7 @@ export default Route.extend({
   },
 
   getMethodAndModelInfo() {
+    debugger;
     const { item_type: itemType } = this.paramsFor(this.routeName);
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
@@ -26,7 +27,11 @@ export default Route.extend({
     controller.set('itemType', itemType);
     controller.set('method', method);
     this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+      let navigationPaths = paths.paths.filter(path => path.navigation);
+      controller.set(
+        'paths',
+        navigationPaths.filter(path => path.itemType.includes(itemType)).map(path => path.path)
+      );
     });
   },
 });
