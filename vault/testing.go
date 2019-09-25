@@ -27,8 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
@@ -1486,6 +1488,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		default:
 			localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+		}
+
+		if localConfig.MetricsHelper == nil {
+			inm := metrics.NewInmemSink(10*time.Second, time.Minute)
+			metrics.DefaultInmemSignal(inm)
+			localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
 		}
 
 		c, err := NewCore(&localConfig)

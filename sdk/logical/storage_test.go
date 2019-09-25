@@ -34,6 +34,24 @@ func TestScanView(t *testing.T) {
 	}
 }
 
+func TestScanView_CancelContext(t *testing.T) {
+	s := prepKeyStorage(t)
+
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	var i int
+	err := ScanView(ctx, s, func(path string) {
+		cancelCtx()
+		i++
+	})
+
+	if err == nil {
+		t.Error("Want context cancel err, got none")
+	}
+	if i != 1 {
+		t.Errorf("Want i==1, got %d", i)
+	}
+}
+
 func TestCollectKeys(t *testing.T) {
 	s := prepKeyStorage(t)
 
