@@ -135,6 +135,8 @@
 }
 
 .ember-basic-dropdown-content {
+  background-color: transparent;
+
   &--left.popup-menu {
     margin: 0px 0 0 -8px;
   }

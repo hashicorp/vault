@@ -23,10 +23,10 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
 	"github.com/hashicorp/vault/command/agent/auth/cert"
+	"github.com/hashicorp/vault/command/agent/auth/cf"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
-	"github.com/hashicorp/vault/command/agent/auth/pcf"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
@@ -192,7 +192,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := config.LoadConfig(c.flagConfigs[0], c.logger)
+	config, err := config.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
@@ -342,6 +342,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = azure.NewAzureAuthMethod(authConfig)
 		case "cert":
 			method, err = cert.NewCertAuthMethod(authConfig)
+		case "cf":
+			method, err = cf.NewCFAuthMethod(authConfig)
 		case "gcp":
 			method, err = gcp.NewGCPAuthMethod(authConfig)
 		case "jwt":
@@ -350,8 +352,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
-		case "pcf":
-			method, err = pcf.NewPCFAuthMethod(authConfig)
+		case "pcf": // Deprecated.
+			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 			return 1
