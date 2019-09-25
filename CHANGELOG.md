@@ -19,6 +19,10 @@ IMPROVEMENTS:
  * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
+   
+BUG FIXES:
+ * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
+   could cause confusing error messages during `vault login` [GH-7508]
 
 ## 1.2.3 (September 12, 2019)
 
