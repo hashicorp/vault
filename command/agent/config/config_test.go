@@ -288,18 +288,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 }
 
 // TestLoadConfigFile_Template_Single tests a single template definition in a
-// configuration file, with most entries supplied
+// configuration file, with minimum entries
 func TestLoadConfigFile_Template_Single(t *testing.T) {
-	q.Q("---------")
-	q.Q("starting")
-	q.Q("---------")
-	defer func() {
-		q.Q("---------")
-		q.Q("end")
-		q.Q("---------")
-		q.Q("")
-	}()
-	config, err := LoadConfig("./test-fixtures/config-template.hcl")
+	config, err := LoadConfig("./test-fixtures/config-template-min.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -330,7 +321,6 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 			&ctconfig.TemplateConfig{
 				Source:      strPtr("/path/on/disk/to/template.ctmpl"),
 				Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
-				Perms:       fileMode(0600),
 			},
 		},
 		PidFile: "./pidfile",
@@ -341,8 +331,77 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Template_Multiple tests multiple template definition in a
+// configuration file, with most entries supplied
+func TestLoadConfigFile_Template_Many(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-template-many.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				&Sink{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Templates: []*ctconfig.TemplateConfig{
+			&ctconfig.TemplateConfig{
+				Source:         strPtr("/path/on/disk/to/template.ctmpl"),
+				Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
+				ErrMissingKey:  boolPtr(false),
+				CreateDestDirs: boolPtr(true),
+				Command:        strPtr("restart service foo"),
+				Perms:          fileMode(0600),
+			},
+			&ctconfig.TemplateConfig{
+				Source:      strPtr("/path/on/disk/to/template2.ctmpl"),
+				Destination: strPtr("/path/on/disk/where/template/will/render2.txt"),
+				Backup:      boolPtr(true),
+				Perms:       fileMode(0755),
+				Wait: &ctconfig.WaitConfig{
+					Min: timeDurationPtr("2s"),
+					Max: timeDurationPtr("10s"),
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+	q.Q(config.Templates[1].Wait)
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func timeDurationPtr(duration string) *time.Duration {
+	d, _ := time.ParseDuration(duration)
+
+	return &d
 }
 
 // FileMode returns a pointer to the given os.FileMode.

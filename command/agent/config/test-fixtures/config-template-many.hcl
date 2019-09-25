@@ -27,21 +27,24 @@ template {
   source      = "/path/on/disk/to/template.ctmpl"
   destination = "/path/on/disk/where/template/will/render.txt"
 
-  #create_dest_dirs = true
+  create_dest_dirs = true
 
-  #contents = "{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"
-  # command              = "restart service foo"
-  # command_timeout      = "60s"
-  # error_on_missing_key = false
-  perms = 0600
+  command = "restart service foo"
 
-  # backup               = true
-  # left_delimiter       = "{{"
-  # right_delimiter      = "}}"
-  # function_blacklist   = []
-  # sandbox_path         = ""
-  # wait {
-  #   min = "2s"
-  #   max = "10s"
-  # }
+  error_on_missing_key = false
+  perms                = 0600
+}
+
+template {
+  source      = "/path/on/disk/to/template2.ctmpl"
+  destination = "/path/on/disk/where/template/will/render2.txt"
+
+  perms = 0755
+
+  backup = true
+
+  wait {
+    min = "2s"
+    max = "10s"
+  }
 }
