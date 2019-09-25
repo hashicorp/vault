@@ -77,7 +77,6 @@ const TABS_FOR_SHOW = {};
 
 export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
-  debugger;
   if (sectionType === 'authSettings') {
     tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({

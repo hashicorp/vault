@@ -28,13 +28,16 @@ export const expandOpenApiProps = function(props) {
     let attrDefn = {
       editType,
       helpText: description,
-      sensitive: sensitive,
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || null,
     };
+
+    if (sensitive) {
+      attrDefn.sensitive = true;
+    }
 
     //only set a label if we have one from OpenAPI
     //otherwise the propName will be humanized by the form-field component

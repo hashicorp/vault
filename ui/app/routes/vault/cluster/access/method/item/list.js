@@ -52,7 +52,6 @@ export default Route.extend(ListRoute, {
   setupController(controller) {
     this._super(...arguments);
     const { apiPath, method, itemType } = this.getMethodAndModelInfo();
-    debugger;
     controller.set('itemType', itemType);
     controller.set('method', method);
     this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {

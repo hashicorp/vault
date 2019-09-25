@@ -13,7 +13,6 @@ export default Route.extend({
   },
 
   getMethodAndModelInfo() {
-    debugger;
     const { item_type: itemType } = this.paramsFor(this.routeName);
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
