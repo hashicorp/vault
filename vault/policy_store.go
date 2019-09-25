@@ -145,12 +145,6 @@ path "sys/tools/hash" {
 path "sys/tools/hash/*" {
     capabilities = ["update"]
 }
-path "sys/tools/random" {
-    capabilities = ["update"]
-}
-path "sys/tools/random/*" {
-    capabilities = ["update"]
-}
 
 # Allow checking the status of a Control Group request if the user has the
 # accessor

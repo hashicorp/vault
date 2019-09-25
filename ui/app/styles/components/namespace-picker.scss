@@ -64,6 +64,10 @@
   border-radius: $radius;
   box-shadow: $box-shadow, $box-shadow-high;
 
+  &.ember-basic-dropdown-content {
+    background: $white;
+  }
+
   @include from($mobile) {
     width: $drawer-width;
   }

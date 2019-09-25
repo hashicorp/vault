@@ -8,6 +8,7 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	golang.org/x/tools/cmd/goimports \
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
@@ -16,7 +17,7 @@ EXTERNAL_TOOLS=\
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
-GO_VERSION_MIN=1.12.4
+GO_VERSION_MIN=1.12.7
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -47,12 +48,6 @@ dev-ui-mem: BUILD_TAGS+=memprofiler
 dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
-
-testtravis: BUILD_TAGS+=travis
-testtravis: test
-
-testracetravis: BUILD_TAGS+=travis
-testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
@@ -147,9 +142,9 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests"
-	@cd ui && yarn run test-oss
+	@cd ui && yarn run test:oss
 
 ember-ci-test: # Deprecated, to be removed soon.
 	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
@@ -166,13 +161,13 @@ check-browserstack-creds:
 
 test-ui-browserstack: check-vault-in-path check-browserstack-creds
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@echo "--> Running ember tests in Browserstack"
 	@cd ui && yarn run test:browserstack
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -180,10 +175,10 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets

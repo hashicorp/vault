@@ -11,7 +11,7 @@ export default Controller.extend({
   queryParams: [{ authMethod: 'with' }],
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
-  redirectTo: null,
+  redirectTo: alias('vaultController.redirectTo'),
 
   updateNamespace: task(function*(value) {
     // debounce

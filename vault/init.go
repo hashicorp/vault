@@ -11,8 +11,6 @@ import (
 
 	"github.com/hashicorp/vault/physical/raft"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -150,16 +148,18 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 		}
-		if err := c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, []raft.Peer{
+		if err := raftStorage.Bootstrap(ctx, []raft.Peer{
 			{
-				ID:      c.underlyingPhysical.(*raft.RaftBackend).NodeID(),
+				ID:      raftStorage.NodeID(),
 				Address: parsedClusterAddr.Host,
 			},
 		}); err != nil {
 			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
 		}
 
-		if err := raftStorage.SetupCluster(ctx, nil, nil); err != nil {
+		if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
+			StartAsLeader: true,
+		}); err != nil {
 			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
 		}
 
@@ -297,24 +297,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
-	if _, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		raftTLS, err := raft.GenerateTLSKey()
-		if err != nil {
-			return nil, err
-		}
-
-		keyring := &raft.RaftTLSKeyring{
-			Keys:        []*raft.RaftTLSKey{raftTLS},
-			ActiveKeyID: raftTLS.ID,
-		}
-
-		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
-		if err != nil {
-			return nil, err
-		}
-		if err := c.barrier.Put(ctx, entry); err != nil {
-			return nil, err
-		}
+	if err := c.createRaftTLSKeyring(ctx); err != nil {
+		c.logger.Error("failed to create raft TLS keyring", "error", err)
+		return nil, err
 	}
 
 	// Prepare to re-seal

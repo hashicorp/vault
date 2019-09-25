@@ -88,51 +88,50 @@
               {{/link-to}}
             </div>
             <div class="column has-text-right">
-              {{#popup-menu name="policy-nav"}}
-                <nav class="menu">
-                  <ul class="menu-list">
-                    {{#if item.updatePath.isPending}}
-                      <li class="action">
-                        <button disabled type="button" class="link button is-loading is-transparent">
-                          loading
-                        </button>
-                      </li>
-                      <li class="action">
-                        <button disabled type="button" class="link button is-loading is-transparent">
-                          loading
-                        </button>
-                      </li>
-                    {{else}}
-                      {{#if item.canRead}}
+              <PopupMenu name="policy-nav">
+                <Confirm as |c|>
+                  <nav class="menu">
+                    <ul class="menu-list">
+                      {{#if item.updatePath.isPending}}
                         <li class="action">
-                          {{#link-to "vault.cluster.policy.show" policyType item.id data-test-policy-link="show"}}
-                            Details
-                          {{/link-to}}
+                          <button disabled type="button" class="link button is-loading is-transparent">
+                            loading
+                          </button>
                         </li>
-                      {{/if}}
-                      {{#if item.canEdit}}
                         <li class="action">
-                          {{#link-to "vault.cluster.policy.edit" policyType item.id data-test-policy-link="edit"}}
-                            Edit
-                          {{/link-to}}
+                          <button disabled type="button" class="link button is-loading is-transparent">
+                            loading
+                          </button>
                         </li>
+                      {{else}}
+                        {{#if item.canRead}}
+                          <li class="action">
+                            {{#link-to "vault.cluster.policy.show" policyType item.id data-test-policy-link="show"}}
+                              Details
+                            {{/link-to}}
+                          </li>
+                        {{/if}}
+                        {{#if item.canEdit}}
+                          <li class="action">
+                            {{#link-to "vault.cluster.policy.edit" policyType item.id data-test-policy-link="edit"}}
+                              Edit
+                            {{/link-to}}
+                          </li>
+                        {{/if}}
+                        {{#if item.canDelete}}
+                          <li class="action">
+                            <c.Message
+                              @id={{item.id}}
+                              @confirmMessage="This will permanently delete this policy and may affect access to some data"
+                              @onConfirm={{action "deletePolicy" item}}
+                              data-test-policy-delete={{item.id}}/>
+                          </li>
+                        {{/if}}
                       {{/if}}
-                      {{#if item.canDelete}}
-                        <li class="action">
-                          <ConfirmAction
-                            @buttonClasses="link is-destroy"
-                            @confirmMessage="This will permanently delete this policy and may affect access to some data"
-                            @onConfirmAction={{action "deletePolicy" item}}
-                            data-test-policy-delete={{item.id}}
-                          >
-                            Delete
-                          </ConfirmAction>
-                        </li>
-                      {{/if}}
-                    {{/if}}
-                  </ul>
-                </nav>
-              {{/popup-menu}}
+                    </ul>
+                  </nav>
+                </Confirm>
+              </PopupMenu>
             </div>
           </div>
         {{/linked-block}}

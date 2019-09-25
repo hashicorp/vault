@@ -3,15 +3,17 @@ package raft
 import (
 	"bytes"
 	"context"
-	fmt "fmt"
+	"fmt"
 	"hash/crc64"
 	"io"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -38,7 +40,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 		t.Fatal(err)
 	}
 
-	err = follower.SetupCluster(context.Background(), nil, nil)
+	err = follower.SetupCluster(context.Background(), SetupOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +329,7 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 	}
 
 	// Start Raft
-	err = raft1.SetupCluster(context.Background(), nil, nil)
+	err = raft1.SetupCluster(context.Background(), SetupOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +364,8 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snap := &bytes.Buffer{}
+	recorder := httptest.NewRecorder()
+	snap := logical.NewHTTPResponseWriter(recorder)
 
 	err := raft1.Snapshot(snap, nil)
 	if err != nil {
@@ -380,7 +383,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(snap), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(recorder.Body), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

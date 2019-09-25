@@ -126,7 +126,8 @@ export default Component.extend({
   // gets set as  'lastMenuLeaves' in the ember concurrency task above
   menuLeaves: computed('namespacePath', 'namespaceTree', function() {
     let ns = this.get('namespacePath');
-    let leaves = ancestorKeysForKey(ns) || [];
+    ns = ns.replace(/^\//, '');
+    let leaves = ancestorKeysForKey(ns);
     leaves.push(ns);
     leaves = this.maybeAddRoot(leaves);
 
