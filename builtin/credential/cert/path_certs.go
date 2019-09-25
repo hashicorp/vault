@@ -23,6 +23,10 @@ func pathListCerts(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "Certificate",
+		},
 	}
 }
 
@@ -59,18 +63,27 @@ At least one must exist in the Common Name. Supports globbing.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allowed DNS SANs",
+				},
 			},
 
 			"allowed_email_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allowed Email SANs",
+				},
 			},
 
 			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allowed URI SANs",
+				},
 			},
 
 			"allowed_organizational_units": &framework.FieldSchema{
@@ -137,6 +150,10 @@ certificate.`,
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "Certificate",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
