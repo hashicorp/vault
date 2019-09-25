@@ -6,30 +6,58 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+   
+CHANGES: 
+ * sys/seal-status now has a `storage_type` field denoting what type of storage
+   the cluster is configured to use
 
 IMPROVEMENTS:
 
+ * auth/jwt: The redirect callback host may now be specified for CLI logins
+   [JWT-71]
  * core: Exit ScanView if context has been cancelled [GH-7419]
- * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
-   of value data [GH-7199]
+ * secrets/aws: The root config can now be read [GH-7245]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary
+   copies of value data [GH-7199]
+   
+BUG FIXES:
+ * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
+   could cause confusing error messages during `vault login` [GH-7508]
 
-## 1.2.3 (Unreleased)
+## 1.2.3 (September 12, 2019)
+
+FEATURES:
+
+* **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
+  storage, auto unseal, and authentication.  
 
 IMPROVEMENTS:
 
- * auth/kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
- * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346].
+ * auth/jwt: Groups claim matching now treats a string response as a single
+   element list [JWT-63]
+ * auth/kubernetes: enable better support for projected tokens API by allowing
+   user to specify issuer [GH-65]
+ * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining
+   full backwards compatibility [GH-7346]
+ * replication: Premium packages now come with unlimited performance standby
+   nodes
 
 BUG FIXES:
 
- * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
-   not being applied to tokens generated using the OIDC login flow [JWT-67]
+ * agent: Allow batch tokens and other non-renewable tokens to be used for
+   agent operations [GH-7441]
+ * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters
+   were not being applied to tokens generated using the OIDC login flow
+   [JWT-67]
+ * seal/transit: Allow using Vault Agent for transit seal operations [GH-7441]
  * storage/couchdb: Fix a file descriptor leak [GH-7345]
- * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
- * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
+ * ui: Fix a bug where the status menu would disappear when trying to revoke a
+   token [GH-7337]
+ * ui: Fix a regression that prevented input of custom items in search-select
+   [GH-7338]
  * ui: Fix an issue with the namespace picker being unable to render nested
-   namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
-
+   namespaces named with numbers and sorting of namespaces in the picker
+   [GH-7333]
 
 ## 1.2.2 (August 15, 2019)
 

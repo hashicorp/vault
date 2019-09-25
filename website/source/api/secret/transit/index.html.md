@@ -1229,11 +1229,12 @@ keyring. Once trimmed, previous versions of the key cannot be recovered.
 
 ### Parameters
 
-- `min_version` `(int: <required>)` - The minimum version for the key ring. All
-  versions before this version will be permanently deleted. This value can at
-  most be equal to the lesser of `min_decryption_version` and
-  `min_encryption_version`. This is not allowed to be set when either
-  `min_encryption_version` or `min_decryption_version` is set to zero.
+- `min_available_version` `(int: <required>)` - The minimum available version
+  for the key ring. All versions before this version will be permanently
+  deleted. This value can at most be equal to the lesser of
+  `min_decryption_version` and `min_encryption_version`. This is not allowed to
+  be set when either `min_encryption_version` or `min_decryption_version` is set
+  to zero.
 
 ### Sample Payload
 

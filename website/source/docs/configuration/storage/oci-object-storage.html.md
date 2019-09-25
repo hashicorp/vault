@@ -1,19 +1,19 @@
 ---
 layout: "docs"
-page_title: "OCI ObjectStorage - Storage Backends - Configuration"
-sidebar_title: "OCI ObjectStorage"
-sidebar_current: "docs-configuration-storage-oci-objectstorage"
+page_title: "OCI Object Storage - Storage Backends - Configuration"
+sidebar_title: "OCI Object Storage"
+sidebar_current: "docs-configuration-storage-oci-object-storage"
 description: |-
-  The OCI ObjectStorage backend is used to persist Vault's data in OCI object storage.
+  The OCI Object Storage backend is used to persist Vault's data in OCI Object Storage.
 ---
 
-# OCI ObjectStorage Storage Backend
+# OCI Object Storage Storage Backend
 
-The OCI ObjectStorage backend is used to persist Vault's data in OCI object storage.
+The OCI Object Storage backend is used to persist Vault's data in OCI Object Storage.
 
-- **High Availability** – the OCI ObjectStorage backend supports high availability.
+- **High Availability** – the OCI Object Storage backend supports high availability.
 
-- **Community Supported** – the OCI ObjectStorage backend is supported by the community. While it has undergone review by HashiCorp employees, they may not be as knowledgeable about the technology. If you encounter problems with them, you may be referred to the original author.
+- **Community Supported** – the OCI Object Storage backend is supported by the community. While it has undergone review by HashiCorp employees, they may not be as knowledgeable about the technology. If you encounter problems with them, you may be referred to the original author.
 
 ```hcl
 storage "oci_objectstorage" {
@@ -25,25 +25,25 @@ storage "oci_objectstorage" {
 }
 ```
 
-For more information on OCI object storage, please see the Oracle's [OCI object storage documentation][ocios-docs].
+For more information on OCI Object Storage, please see the Oracle's [OCI Object Storage documentation][ocios-docs].
 
 
 ## `oci_objectstorage` Setup
 
-To use the OCI ObjectStorage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
+To use the OCI Object Storage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
 
-The OCI object storage backend does not support creating the buckets automatically at this time.
+The OCI Object Storage backend does not support creating the buckets automatically at this time.
 
 
 ## `oci_objectstorage` Authentication
 
-The OCI ObjectStorage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
+The OCI Object Storage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
 
 For more information on service accounts, please see the [OCI Identity documentation] [oci-identity].
 
 ## `oci_objectstorage` Parameters
 
-- `namespace_name` `(string: <required>)` – Specifies the name of the ObjectStorage namespaces containing the data bucket and the lock bucket.
+- `namespace_name` `(string: <required>)` – Specifies the name of the OCI Object Storage namespaces containing the data bucket and the lock bucket.
 
 - `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the vault data.
 
@@ -60,7 +60,7 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 ### Standalone Vault instance
 
-This example shows configuring OCI ObjectStorage as a standalone instance.
+This example shows configuring OCI Object Storage as a standalone instance.
 
 ```hcl
 storage "oci_objectstorage" {
@@ -71,14 +71,14 @@ storage "oci_objectstorage" {
 
 ### High Availability
 
-This example shows configuring OCI ObjectStorage with high availability enabled.
+This example shows configuring OCI Object Storage with high availability enabled.
 
 ```hcl
 storage "oci_objectstorage" {
-   namespaceName = "MyNamespace
-   bucketName = "DataBucket"
+   namespace_name = "MyNamespace
+   bucket_name = "DataBucket"
    ha_enabled = "true"
-   lockBucketName = "LockBucket"
+   lock_bucket_name = "LockBucket"
 }
 ```
 

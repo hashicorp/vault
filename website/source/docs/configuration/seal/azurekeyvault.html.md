@@ -39,7 +39,7 @@ seal "azurekeyvault" {
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
-- `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization. May 
+- `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization. May
   also be specified by the `AZURE_TENANT_ID` environment variable.
 
 - `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
@@ -48,10 +48,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `client_secret` `(string: <required or MSI>)`: The client secret for credentials to query the Azure APIs.
   May also be specified by the `AZURE_CLIENT_SECRET` environment variable.
 
-- `environment` `(string: "AZUREPUBLICCLOUD")`: The Azure Cloud environment API endpoints to use.  May also 
+- `environment` `(string: "AZUREPUBLICCLOUD")`: The Azure Cloud environment API endpoints to use.  May also
   be specified by the `AZURE_ENVIRONMENT` environment variable.
 
-- `vault_name` `(string: <required>)`: The Key Vault vault to use the encryption keys for encryption and 
+- `vault_name` `(string: <required>)`: The Key Vault vault to use the encryption keys for encryption and
   decryption. May also be specified by the `VAULT_AZUREKEYVAULT_VAULT_NAME` environment variable.
 
 - `key_name` `(string: <required>)`: The Key Vault key to use for encryption and decryption. May also be specified by the
@@ -71,9 +71,15 @@ Azure authentication values:
 * `AZURE_ENVIRONMENT`
 ```
 
-Note: If Vault is hosted on Azure, Vault can use Managed Service Identities (MSI) to access Azure instead of an environment and 
-shared client id and secret.  MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) 
-on the VMs hosting Vault. 
+~> **Note:** If Vault is hosted on Azure, Vault can use Managed Service
+Identities (MSI) to access Azure instead of an environment and shared client id
+and secret.  MSI must be
+[enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm)
+on the VMs hosting Vault, and it is the preferred configuration since MSI
+prevents your Azure credentials from being stored as clear text. Refer to the
+[Production
+Hardening](https://learn.hashicorp.com/vault/day-one/production-hardening) guide
+for more best practices.
 
 
 ## `azurekeyvault` Environment Variables
@@ -88,5 +94,5 @@ environment variables:
 
 ## Key Rotation
 
-This seal supports rotating keys defined in Azure Key Vault.  Key metadata is stored with the 
+This seal supports rotating keys defined in Azure Key Vault.  Key metadata is stored with the
 encrypted data to ensure the correct key is used during decryption operations.
