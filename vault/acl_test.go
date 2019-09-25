@@ -796,15 +796,13 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 	}
 }
 
-// NOTE: this test doesn't catch any races ATM
 func TestACL_CreationRace(t *testing.T) {
 	policy, err := ParseACLPolicy(namespace.RootNamespace, valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	// CircleCI looks to be capable of ~500 concurrent goroutines
-	parallelCount := 300
+	parallelCount := 10000
 	fireSeconds := 20
 
 	t.Logf("concurrent creation of %d ACL creation goroutines for %d seconds",
@@ -845,7 +843,7 @@ func TestACL_CreationRace(t *testing.T) {
 	highWaterMark := routineCounts[len(routineCounts)-1]
 
 	if highWaterMark < parallelCount {
-		t.Fatalf("unable to achieve desired concurrency: %d/%d",
+		t.Skipf("no meaningful test: unable to achieve desired concurrency: %d/%d",
 			highWaterMark, parallelCount)
 	}
 }
