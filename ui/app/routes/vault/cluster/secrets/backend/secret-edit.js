@@ -7,6 +7,8 @@ import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
+// this isn't working, potentially because there are multiple models
+// we need to unload both models, not just 1 for kvv2
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
   secretParam() {
