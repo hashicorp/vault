@@ -85,6 +85,10 @@ configuration entries:
   security of data transmissions to and from the Vault server. This value can
   be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 
+- `tls_server_name (string: optional)` - Name to use as the SNI host when
+  connecting via TLS. This value can be overridden by setting the
+  `VAULT_TLS_SERVER_NAME` environment variable.
+
 ## Example Configuration
 
 An example configuration, with very contrived values, follows:
