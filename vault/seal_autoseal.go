@@ -9,6 +9,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -26,6 +27,7 @@ type autoSeal struct {
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
 	core           *Core
+	logger         log.Logger
 }
 
 // Ensure we are implementing the Seal interface
@@ -53,6 +55,10 @@ func (d *autoSeal) checkCore() error {
 
 func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
+	if d.logger == nil {
+		d.logger = d.core.Logger().Named("autoseal")
+		d.core.AddLogger(d.logger)
+	}
 }
 
 func (d *autoSeal) Init(ctx context.Context) error {
@@ -162,7 +168,7 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 	}
 
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
-		d.core.logger.Info("autoseal: upgrading stored keys")
+		d.logger.Info("upgrading stored keys")
 
 		pt, err := d.Decrypt(ctx, blobInfo)
 		if err != nil {
@@ -215,14 +221,14 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	entry, err := d.core.physical.Get(ctx, barrierSealConfigPath)
 	if err != nil {
-		d.core.logger.Error("autoseal: failed to read seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("failed to read seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read %q seal configuration: {{err}}", sealType), err)
 	}
 
 	// If the seal configuration is missing, we are not initialized
 	if entry == nil {
-		if d.core.logger.IsInfo() {
-			d.core.logger.Info("autoseal: seal configuration missing, not initialized", "seal_type", sealType)
+		if d.logger.IsInfo() {
+			d.logger.Info("seal configuration missing, not initialized", "seal_type", sealType)
 		}
 		return nil, nil
 	}
@@ -230,20 +236,20 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	conf := &SealConfig{}
 	err = json.Unmarshal(entry.Value, conf)
 	if err != nil {
-		d.core.logger.Error("autoseal: failed to decode seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("failed to decode seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode %q seal configuration: {{err}}", sealType), err)
 	}
 
 	// Check for a valid seal configuration
 	if err := conf.Validate(); err != nil {
-		d.core.logger.Error("autoseal: invalid seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("invalid seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("%q seal validation failed: {{err}}", sealType), err)
 	}
 
 	barrierTypeUpgradeCheck(d.BarrierType(), conf)
 
 	if conf.Type != d.BarrierType() {
-		d.core.logger.Error("autoseal: barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierType())
+		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierType())
 	}
 
@@ -276,7 +282,7 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 	}
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
-		d.core.logger.Error("autoseal: failed to write barrier seal configuration", "error", err)
+		d.logger.Error("failed to write barrier seal configuration", "error", err)
 		return errwrap.Wrapf("failed to write barrier seal configuration: {{err}}", err)
 	}
 
@@ -309,13 +315,13 @@ func (d *autoSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 	var err error
 	entry, err = d.core.physical.Get(ctx, recoverySealConfigPlaintextPath)
 	if err != nil {
-		d.core.logger.Error("autoseal: failed to read seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("failed to read seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read %q seal configuration: {{err}}", sealType), err)
 	}
 
 	if entry == nil {
 		if d.core.Sealed() {
-			d.core.logger.Info("autoseal: seal configuration missing, but cannot check old path as core is sealed", "seal_type", sealType)
+			d.logger.Info("seal configuration missing, but cannot check old path as core is sealed", "seal_type", sealType)
 			return nil, nil
 		}
 
@@ -328,8 +334,8 @@ func (d *autoSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 
 		// If the seal configuration is missing, then we are not initialized.
 		if be == nil {
-			if d.core.logger.IsInfo() {
-				d.core.logger.Info("autoseal: seal configuration missing, not initialized", "seal_type", sealType)
+			if d.logger.IsInfo() {
+				d.logger.Info("seal configuration missing, not initialized", "seal_type", sealType)
 			}
 			return nil, nil
 		}
@@ -343,18 +349,18 @@ func (d *autoSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 
 	conf := &SealConfig{}
 	if err := json.Unmarshal(entry.Value, conf); err != nil {
-		d.core.logger.Error("autoseal: failed to decode seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("failed to decode seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode %q seal configuration: {{err}}", sealType), err)
 	}
 
 	// Check for a valid seal configuration
 	if err := conf.Validate(); err != nil {
-		d.core.logger.Error("autoseal: invalid seal configuration", "seal_type", sealType, "error", err)
+		d.logger.Error("invalid seal configuration", "seal_type", sealType, "error", err)
 		return nil, errwrap.Wrapf(fmt.Sprintf("%q seal validation failed: {{err}}", sealType), err)
 	}
 
 	if conf.Type != d.RecoveryType() {
-		d.core.logger.Error("autoseal: recovery seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.RecoveryType())
+		d.logger.Error("recovery seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.RecoveryType())
 		return nil, fmt.Errorf("recovery seal type of %q does not match loaded type of %q", conf.Type, d.RecoveryType())
 	}
 
@@ -394,7 +400,7 @@ func (d *autoSeal) SetRecoveryConfig(ctx context.Context, conf *SealConfig) erro
 	}
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
-		d.core.logger.Error("autoseal: failed to write recovery seal configuration", "error", err)
+		d.logger.Error("failed to write recovery seal configuration", "error", err)
 		return errwrap.Wrapf("failed to write recovery seal configuration: {{err}}", err)
 	}
 
@@ -450,7 +456,7 @@ func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	}
 
 	if err := d.core.physical.Put(ctx, be); err != nil {
-		d.core.logger.Error("autoseal: failed to write recovery key", "error", err)
+		d.logger.Error("failed to write recovery key", "error", err)
 		return errwrap.Wrapf("failed to write recovery key: {{err}}", err)
 	}
 
@@ -464,11 +470,11 @@ func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
 func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
 	if err != nil {
-		d.core.logger.Error("autoseal: failed to read recovery key", "error", err)
+		d.logger.Error("failed to read recovery key", "error", err)
 		return nil, errwrap.Wrapf("failed to read recovery key: {{err}}", err)
 	}
 	if pe == nil {
-		d.core.logger.Warn("autoseal: no recovery key found")
+		d.logger.Warn("no recovery key found")
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
@@ -500,7 +506,7 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 	}
 
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
-		d.core.logger.Info("autoseal: upgrading recovery key")
+		d.logger.Info("upgrading recovery key")
 
 		pt, err := d.Decrypt(ctx, blobInfo)
 		if err != nil {
@@ -530,8 +536,8 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 	}
 
 	// Only log if we are performing the migration
-	d.core.logger.Debug("migrating recovery seal configuration")
-	defer d.core.logger.Debug("done migrating recovery seal configuration")
+	d.logger.Debug("migrating recovery seal configuration")
+	defer d.logger.Debug("done migrating recovery seal configuration")
 
 	// Perform migration
 	pe := &physical.Entry{
