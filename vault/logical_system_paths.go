@@ -143,7 +143,40 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "health$",
-
+			Fields: map[string]*framework.FieldSchema{
+				"standbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a standby should still return the active status code.",
+				},
+				"perfstandbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a performance standby should still return the active status code.",
+				},
+				"activecode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an active node.",
+				},
+				"standbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a standby node.",
+				},
+				"drsecondarycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a DR secondary node.",
+				},
+				"performancestandbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a performance standby node.",
+				},
+				"sealedcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a sealed node.",
+				},
+				"uninitcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an uninitialized node.",
+				},
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Returns the health status of Vault.",
@@ -156,6 +189,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["health"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["health"][1]),
 		},
 
 		{
