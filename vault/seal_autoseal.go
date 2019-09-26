@@ -187,11 +187,6 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 // the stored keys and the recovery key are encrypted with. The provided
 // Context must be non-nil.
 func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
-	// Exit if the context has been canceled
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
 	// Many of the seals update their keys to the latest KeyID when Encrypt
 	// is called.
 	if _, err := d.Encrypt(ctx, []byte("a")); err != nil {
