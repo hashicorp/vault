@@ -107,12 +107,17 @@ of the role:
     password           8cab931c-d62e-a73d-60d3-5ee85139cd66
     username           v-root-e2978cd0-
     ```
-
 ## Custom Plugins
 
 This secrets engine allows custom database types to be run through the exposed
 plugin interface. Please see the [custom database
 plugin](/docs/secrets/databases/custom.html) for more information.
+
+## Password Generation
+
+Password generation for both static and dynamic database credentials occurs via the ''GetPassword()'' function. For static credentials, the ''SetCredentials()''function is also used on the output of ''GetPassword().''
+
+Please see the [DB plugin credentials source code](https://github.com/hashicorp/vault/blob/master/sdk/database/dbplugin/database.pb.go) for more information.
 
 ## API
 
