@@ -250,7 +250,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Default: false,
 			EnvVar:  api.EnvVaultSkipVerify,
 		})
-		c.setStringFlag(f, config.Vault.TLSSkipVerify, &StringVar{
+		c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
 			Name:    flagTLSServerName,
 			Target:  &c.flagTLSServerName,
 			Default: "",
