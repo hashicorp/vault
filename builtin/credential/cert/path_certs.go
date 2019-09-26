@@ -51,12 +51,18 @@ Must be x509 PEM encoded.`,
 At least one must exist in either the Common Name or SANs. Supports globbing.  
 This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
 allowed_email_sans, allowed_uri_sans.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Certificate Options",
+				},
 			},
 
 			"allowed_common_names": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Certificate Options",
+				},
 			},
 
 			"allowed_dns_sans": &framework.FieldSchema{
@@ -65,6 +71,7 @@ At least one must exist in the Common Name. Supports globbing.`,
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed DNS SANs",
+					Group: "Certificate Options",
 				},
 			},
 
@@ -74,6 +81,7 @@ At least one must exist in the SANs. Supports globbing.`,
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed Email SANs",
+					Group: "Certificate Options",
 				},
 			},
 
@@ -83,6 +91,7 @@ At least one must exist in the SANs. Supports globbing.`,
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed URI SANs",
+					Group: "Certificate Options",
 				},
 			},
 
@@ -90,6 +99,9 @@ At least one must exist in the SANs. Supports globbing.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Certificate Options",
+				},
 			},
 
 			"required_extensions": &framework.FieldSchema{
@@ -97,6 +109,9 @@ At least one must exist in the OU field.`,
 				Description: `A comma-separated string or array of extensions
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Certificate Options",
+				},
 			},
 
 			"display_name": &framework.FieldSchema{
