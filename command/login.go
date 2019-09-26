@@ -215,6 +215,12 @@ func (c *LoginCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Evolving token formats across Vault versions have caused issues during CLI logins. Unless
+	// token auth is being used, omit any token picked up from TokenHelper.
+	if authMethod != "token" {
+		client.SetToken("")
+	}
+
 	// Authenticate delegation to the auth handler
 	secret, err := authHandler.Auth(client, config)
 	if err != nil {
