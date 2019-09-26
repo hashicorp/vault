@@ -46,6 +46,6 @@ accessed. It is rare to have a single key that can access all secrets. This
 makes it easier to have fine-grained access for consumers of Vault.
 
 For tips on how to integrate Vault using configuration management, please see
-[Using HashiCorp's Vault with Chef](https://www.hashicorp.com/blog/using-hashicorp-vault-with-chef.html).
+[Using HashiCorp's Vault with Chef](https://www.hashicorp.com/blog/using-hashicorps-vault-with-chef.html).
 Although this post is about Chef, the principles can be broadly applied to many
 of the tools listed here.

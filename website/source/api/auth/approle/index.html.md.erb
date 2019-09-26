@@ -91,7 +91,7 @@ enabled while creating or updating a role.
 {
   "token_ttl": "10m",
   "token_max_ttl": "15m",
-  "policies": [
+  "token_policies": [
     "default"
   ],
   "period": 0,
@@ -141,7 +141,7 @@ $ curl \
     "token_max_ttl": 1800,
     "secret_id_ttl": 600,
     "secret_id_num_uses": 40,
-    "policies": [
+    "token_policies": [
       "default"
     ],
     "period": 0,
@@ -589,7 +589,7 @@ $ curl \
     "renewable": true,
     "lease_duration": 1200,
     "metadata": null,
-    "policies": [
+    "token_policies": [
       "default"
     ],
     "accessor": "fd6c9a00-d2dc-3b11-0be5-af7ae0e1d374",
