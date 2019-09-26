@@ -152,11 +152,8 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 	if err != nil {
 		return errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
 	}
-
-	// This is not strictly an error; we may not have any stored keys, for
-	// instance, if we're not initialized
 	if pe == nil {
-		return nil
+		return fmt.Errorf("no stored keys found")
 	}
 
 	blobInfo := &physical.EncryptedBlobInfo{}
