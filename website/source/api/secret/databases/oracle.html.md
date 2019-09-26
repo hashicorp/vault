@@ -37,15 +37,21 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
+- `username` `(string: "")` - The root credential username used in the connection URL.
+
+- `password` `(string: "")` - The root credential password used in the connection URL.
+
 ### Sample Payload
 
 ```json
 {
   "plugin_name": "oracle-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "system/Oracle@localhost:1521/OraDoc.localhost",
+  "connection_url": "{{username}}/{{password}}@localhost:1521/OraDoc.localhost",
   "max_open_connections": 5,
-  "max_connection_lifetime": "5s"
+  "max_connection_lifetime": "5s",
+  "username": "system",
+  "password": "Oracle"
 }
 ```
 
