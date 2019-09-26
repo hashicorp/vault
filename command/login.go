@@ -60,7 +60,7 @@ Usage: vault login [options] [AUTH K=V...]
 
   If an auth method is enabled at a non-standard path, the -method flag still
   refers to the canonical type, but the -path flag refers to the enabled path.
-  If a github auth method was enabled at "github-ent", authenticate like this:
+  If a github auth method was enabled at "github-prod", authenticate like this:
 
       $ vault login -method=github -path=github-prod
 
