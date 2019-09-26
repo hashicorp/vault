@@ -21,6 +21,7 @@ IMPROVEMENTS:
    copies of value data [GH-7199]
    
 BUG FIXES:
+ * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
 
