@@ -384,9 +384,13 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 	return err
 }
 
-// Apply will apply a log value to the FSM. This is called from the raft
+// ApplyBatch will apply a set of logs to the FSM. This is called from the raft
 // library.
 func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
+	if len(logs) == 0 {
+		return []interface{}{}
+	}
+
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, len(logs))
