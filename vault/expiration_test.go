@@ -528,6 +528,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	te := &logical.TokenEntry{
 		ID:          root.ID,
 		Path:        "auth/github/login",
+		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
 	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
