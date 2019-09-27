@@ -48,7 +48,6 @@ var (
 var _ physical.Backend = (*FSM)(nil)
 var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
-var _ raft.ConfigurationStore = (*FSM)(nil)
 var _ raft.BatchingFSM = (*FSM)(nil)
 
 type restoreCallback func(context.Context) error
@@ -88,7 +87,7 @@ type FSM struct {
 	// additional state in the backend.
 	storeLatestState bool
 
-	chunker *raftchunking.ChunkingConfigurationStore
+	chunker *raftchunking.ChunkingBatchingFSM
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -169,7 +168,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		storeLatestState: storeLatestState,
 	}
 
-	f.chunker = raftchunking.NewChunkingConfigurationStore(f, &FSMChunkStorage{
+	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
 		f:   f,
 		ctx: context.Background(),
 	})
@@ -646,61 +645,6 @@ func (s *noopSnapshotter) Persist(sink raft.SnapshotSink) error {
 
 // Release doesn't do anything.
 func (s *noopSnapshotter) Release() {}
-
-// StoreConfig satisfies the raft.ConfigurationStore interface and persists the
-// latest raft server configuration to the bolt file.
-func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration) {
-	f.l.RLock()
-	defer f.l.RUnlock()
-
-	var indexBytes []byte
-	latestIndex, _ := f.LatestState()
-	// Only write the new index if we are advancing the pointer
-	if index > latestIndex.Index {
-		latestIndex.Index = index
-
-		var err error
-		indexBytes, err = proto.Marshal(latestIndex)
-		if err != nil {
-			f.logger.Error("unable to marshal latest index", "error", err)
-			panic(fmt.Sprintf("unable to marshal latest index: %v", err))
-		}
-	}
-
-	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
-	configBytes, err := proto.Marshal(protoConfig)
-	if err != nil {
-		f.logger.Error("unable to marshal config", "error", err)
-		panic(fmt.Sprintf("unable to marshal config: %v", err))
-	}
-
-	if f.storeLatestState {
-		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(configBucketName)
-			err := b.Put(latestConfigKey, configBytes)
-			if err != nil {
-				return err
-			}
-
-			// TODO: benchmark so we can know how much time this adds
-			if len(indexBytes) > 0 {
-				err = b.Put(latestIndexKey, indexBytes)
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
-		if err != nil {
-			f.logger.Error("unable to store latest configuration", "error", err)
-			panic(fmt.Sprintf("unable to store latest configuration: %v", err))
-		}
-	}
-
-	f.witnessIndex(latestIndex)
-	f.latestConfig.Store(protoConfig)
-}
 
 // raftConfigurationToProtoConfiguration converts a raft configuration object to
 // a proto value.

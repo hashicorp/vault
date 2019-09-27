@@ -10,6 +10,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace github.com/hashicorp/raft => ../raft
 
+replace github.com/hashicorp/go-raftchunking => ../go-raftchunking
+
 require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
