@@ -12,20 +12,21 @@
 </AlertBanner>
 {{#if this.showJoinForm}}
   <div class="box is-marginless is-shadowless">
-    <h2 class="title is-5">
+    <h2 class="title is-5" data-test-join-header>
       Join an existing Raft cluster
     </h2>
-    <EditForm @model={{compute (action "newModel")}}
-    @saveButtonText="Join"
-    @cancelButtonText="Back"
-    @onCancel={{action (mut this.showJoinForm) false}}
-    @onSave={{transition-to "vault.cluster.unseal"}}
-    @flashEnabled={{false}}
-    @includeBox={{false}}
+    <EditForm
+      @model={{compute (action "newModel")}}
+      @saveButtonText="Join"
+      @cancelButtonText="Back"
+      @onCancel={{action (mut this.showJoinForm) false}}
+      @onSave={{transition-to "vault.cluster.unseal"}}
+      @flashEnabled={{false}}
+      @includeBox={{false}}
     />
   </div>
 {{else}}
-  <form onsubmit={{action "advanceFirstScreen" }}>
+  <form onsubmit={{action "advanceFirstScreen" }} data-test-join-choice>
     <div class="box is-marginless is-shadowless">
       <h2 class="title is-6">
         This server is configured to use Raft Storage.
@@ -52,12 +53,12 @@
         @radioId="init"
         @classNames="vlt-radio is-block"
       >
-        <label for="init" />
+        <label for="init" data-test-join-init />
         Create a new Raft cluster
       </RadioButton>
     </div>
     <div class="box is-marginless is-shadowless">
-      <button type="submit" class="button is-primary">
+      <button type="submit" class="button is-primary" data-test-next>
         Next
       </button>
     </div>
