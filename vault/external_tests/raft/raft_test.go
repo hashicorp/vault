@@ -7,15 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault-enterprise/physical"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -25,7 +22,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t *testing.T) *vault.TestCluster {
+func raftCluster(t testing.TB) *vault.TestCluster {
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -738,35 +735,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	var cleanupFuncs []func()
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
-		Mutex: &sync.Mutex{},
-		Name:  "cluster1",
-	})
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		// TODO: remove this later
-		DisablePerformanceStandby: true,
-	}
-	i := 0
-	cluster := vault.NewTestCluster(b, coreConfig, &vault.TestClusterOptions{
-		PhysicalFactory: func(logger hclog.Logger) (physical.Backend, error) {
-			backend, cleanupFunc, err := testhelpers.CreateRaftBackend(b, logger, fmt.Sprintf("core-%d", i))
-			i++
-			cleanupFuncs = append(cleanupFuncs, cleanupFunc)
-			return backend, err
-		},
-		Logger:             logger,
-		KeepStandbysSealed: true,
-		HandlerFunc:        vaulthttp.Handler,
-	})
-	defer func() {
-		for _, c := range cleanupFuncs {
-			c()
-		}
-	}()
-	cluster.Start()
+	cluster := raftCluster(b)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
