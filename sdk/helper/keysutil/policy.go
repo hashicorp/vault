@@ -1043,7 +1043,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, pssType int) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1156,13 +1156,25 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
+		var pssOptions rsa.PSSOptions
+		switch {
+		case pssType < -1:
+			return nil, errutil.InternalError{Err: "unsupported pss type"}
+		case pssType == rsa.PSSSaltLengthAuto:
+			pssOptions = rsa.PSSOptions{Hash: algo, SaltLength: rsa.PSSSaltLengthAuto}
+		case  pssType == rsa.PSSSaltLengthEqualsHash:
+			pssOptions = rsa.PSSOptions{Hash: algo, SaltLength: rsa.PSSSaltLengthEqualsHash}
+		default:
+			pssOptions = rsa.PSSOptions{Hash: algo, SaltLength: pssType}
+		}
+
 		if sigAlgorithm == "" {
 			sigAlgorithm = "pss"
 		}
 
 		switch sigAlgorithm {
 		case "pss":
-			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &pssOptions)
 			if err != nil {
 				return nil, err
 			}

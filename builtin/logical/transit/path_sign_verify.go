@@ -2,8 +2,10 @@ package transit
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -120,6 +122,13 @@ to the min_encryption_version configured on the key.`,
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
+			"pss_salt_length": {
+				Type:        framework.TypeString,
+				Default:     "auto",
+				Description: `The method to use for salt length. Currently only applies to RSA key types.
+Options are 'auto' (0), 'hash' (-1) or a numeric value. Defaults to 'auto'`,
+			},
+
 			"marshaling_algorithm": {
 				Type:        framework.TypeString,
 				Default:     "asn1",
@@ -234,6 +243,20 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("invalid hash algorithm %q", hashAlgorithmStr)), logical.ErrInvalidRequest
 	}
 
+	var pssType int
+	pssSaltLengthTypeStr := d.Get("pss_salt_length").(string)
+	switch pssSaltLengthTypeStr {
+	case "auto":
+		pssType = rsa.PSSSaltLengthAuto
+	case "hash":
+		pssType = rsa.PSSSaltLengthEqualsHash
+	default:
+		pssType, err := strconv.Atoi(pssSaltLengthTypeStr)
+		if err != nil || pssType < -1 {
+			return logical.ErrorResponse(fmt.Sprintf("invalid pss type %q", pssSaltLengthTypeStr)), logical.ErrInvalidRequest
+		}
+	}
+
 	marshalingStr := d.Get("marshaling_algorithm").(string)
 	marshaling, ok := keysutil.MarshalingTypeMap[marshalingStr]
 	if !ok {
@@ -320,7 +343,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
+		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling, pssType)
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
