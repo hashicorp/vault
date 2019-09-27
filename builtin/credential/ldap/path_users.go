@@ -22,7 +22,6 @@ func pathUsersList(b *backend) *framework.Path {
 		HelpDescription: pathUserHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Navigation: true,
-			Action:     "Create",
 			ItemType:   "User",
 		},
 	}
