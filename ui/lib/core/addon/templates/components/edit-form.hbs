@@ -10,28 +10,11 @@
       <FormFieldGroups @model={{model}} @mode={{@mode}} />
     {{/if}}
   </div>
-  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless {{if (not this.includeBox) 'is-shadowless'}}">
-    <div class="field is-grouped">
-      <div class="control">
-        <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}"
-          disabled={{save.isRunning}}>
-          {{saveButtonText}}
-        </button>
-      </div>
-      {{#if cancelLinkParams}}
-        <div class="control">
-          {{#link-to params=cancelLinkParams class="button"}}
-            Cancel
-          {{/link-to}}
-        </div>
-      {{/if}}
-      {{#if onCancel}}
-        <div class="control">
-          <button type="button" class="button" onclick={{action onCancel}}>
-          {{or @cancelButtonText "Cancel"}}
-          </button>
-        </div>
-      {{/if}}
-    </div>
-  </div>
+  <FormSaveButtons
+    @isSaving={{this.save.isRunning}}
+    @saveButtonText={{this.saveButtonText}}
+    @canceLinkParams={{@canceLinkParams}}
+    @includeBox={{this.includeBox}}
+    @onCancel={{@onCancel}}
+    />
 </form>

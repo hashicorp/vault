@@ -1,4 +1,4 @@
-  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+<div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless {{if (eq @includeBox false) 'is-shadowless'}}">
     <div class="field is-grouped">
       <div class="control">
         <button type="submit" data-test-edit-form-submit class="button is-primary {{if @isSaving 'loading'}}"
@@ -9,8 +9,15 @@
       {{#if @cancelLinkParams}}
         <div class="control">
           {{#link-to params=@cancelLinkParams class="button"}}
-            Cancel
+            {{or @cancelButtonText "Cancel"}}
           {{/link-to}}
+        </div>
+      {{/if}}
+      {{#if @onCancel}}
+        <div class="control">
+          <button type="button" class="button" onclick={{action onCancel}} data-test-cancel-button>
+          {{or @cancelButtonText "Cancel"}}
+          </button>
         </div>
       {{/if}}
     </div>
