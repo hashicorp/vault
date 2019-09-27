@@ -37,7 +37,8 @@ const (
 )
 
 var (
-	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForward          = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForwardLocalOnly = errors.New("cannot forward local-only request")
 )
 
 type ClusterLeaderParams struct {

@@ -100,7 +100,7 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 ```json
 {
   "rotation_period":"12h",
-  "verification_ttl":43200,
+  "verification_ttl":43200
 }
 ```
 
