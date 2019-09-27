@@ -12,12 +12,13 @@ export const expandOpenApiProps = function(props) {
     if (deprecated === true) {
       continue;
     }
-    let { name, value, group, sensitive } = prop['x-vault-displayAttrs'] || {};
+    let { name, value, group, sensitive, editType } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
       type = 'number';
     }
-    let editType = type;
+
+    editType = editType || type;
 
     if (format === 'seconds') {
       editType = 'ttl';
