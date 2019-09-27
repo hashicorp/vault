@@ -1,10 +1,13 @@
 import Component from '@ember/component';
+import filesize from 'filesize';
 
 export default Component.extend({
   classNames: ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'],
   onChange: () => {},
   file: null,
   fileName: null,
+  fileSize: null,
+  fileLastModified: null,
 
   /*
    * @public
@@ -24,7 +27,7 @@ export default Component.extend({
 
   readFile(file) {
     const reader = new FileReader();
-    reader.onload = () => this.send('onChange', reader.result, file.name);
+    reader.onload = () => this.send('onChange', reader.result, file);
     reader.readAsArrayBuffer(file);
   },
 
@@ -41,10 +44,14 @@ export default Component.extend({
     clearFile() {
       this.send('onChange');
     },
-    onChange(file, filename) {
-      this.set('file', file);
-      this.set('fileName', filename);
-      this.onChange(file, filename);
+    onChange(fileAsBytes, fileMeta) {
+      let { name, size, lastModifiedDate } = fileMeta || {};
+      let fileSize = size ? filesize(size) : null;
+      this.set('file', fileAsBytes);
+      this.set('fileName', name);
+      this.set('fileSize', fileSize);
+      this.set('fileLastModified', lastModifiedDate);
+      this.onChange(fileAsBytes, name);
     },
   },
 });
