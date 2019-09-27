@@ -76,6 +76,10 @@ func ParsePGPKeys(keyfiles []string) ([]string, error) {
 	for i, keyfile := range keyfiles {
 		keyfile = strings.TrimSpace(keyfile)
 
+		if len(keyfile) <= 0 {
+			return nil, fmt.Errorf("empty filename with index %v, can't open it", i)
+		}
+
 		if strings.HasPrefix(keyfile, kbPrefix) {
 			key, ok := keybaseMap[keyfile]
 			if !ok || key == "" {

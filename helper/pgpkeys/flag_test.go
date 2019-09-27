@@ -157,6 +157,18 @@ func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
 	}
 }
 
+func TestEmptyFileNameList(t *testing.T) {
+	emptyFileNames := []string{""}
+	_, e := ParsePGPKeys(emptyFileNames)
+	if e == nil {
+		t.Error("Error is nil")
+		return
+	}
+	if e.Error() != "empty filename with index 0, can't open it" {
+		t.Error("An error message doesn't match")
+	}
+}
+
 const pubKey1 = `mQENBFXbjPUBCADjNjCUQwfxKL+RR2GA6pv/1K+zJZ8UWIF9S0lk7cVIEfJiprzzwiMwBS5cD0da
 rGin1FHvIWOZxujA7oW0O2TUuatqI3aAYDTfRYurh6iKLC+VS+F7H+/mhfFvKmgr0Y5kDCF1j0T/
 063QZ84IRGucR/X43IY7kAtmxGXH0dYOCzOe5UBX1fTn3mXGe2ImCDWBH7gOViynXmb6XNvXkP0f
