@@ -5,8 +5,13 @@
         {{#each fields as |attr|}}
           {{#if (not-eq attr.options.fieldValue "id")}}
             <InfoTableRow @alwaysRender={{showAllFields}}
-              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-              @value={{get @model attr.name}} />
+              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}>
+              {{#if attr.options.sensitive}}
+                this value is sensitive and cannot be shown
+              {{else}}
+                {{get @model attr.name}}
+              {{/if}}
+            </InfoTableRow>
           {{/if}}
         {{/each}}
       {{else}}
@@ -16,8 +21,13 @@
           </h2>
           {{#each fields as |attr|}}
             <InfoTableRow @alwaysRender={{showAllFields}}
-              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-              @value={{get @model attr.name}} />
+              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}>
+              {{#if attr.options.sensitive}}
+                this value is sensitive and cannot be shown
+              {{else}}
+                {{get @model attr.name}}
+              {{/if}}
+            </InfoTableRow>
           {{/each}}
         </div>
       {{/if}}
