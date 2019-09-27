@@ -51,6 +51,13 @@ export default Service.extend({
       newModel = DS.Model.extend({});
     }
 
+    //we don't have an apiPath for dynamic secrets
+    //and we don't need paths for them yet
+    if (!apiPath) {
+      helpUrl = newModel.proto().getHelpUrl(backend);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+    }
+
     //use paths to dynamically create our openapi help url
     //if we have a brand new model
     return this.getPaths(apiPath, backend, itemType)
