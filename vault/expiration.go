@@ -1147,6 +1147,12 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
+	authExpirationTime := auth.ExpirationTime()
+
+	if te.TTL == 0 && authExpirationTime.IsZero() && (len(te.Policies) != 1 || te.Policies[0] != "root") {
+		return errors.New("refusing to register a lease for a non-root token with no TTL")
+	}
+
 	if te.Type == logical.TokenTypeBatch {
 		return errors.New("cannot register a lease for a batch token")
 	}
@@ -1185,7 +1191,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		Auth:        auth,
 		Path:        te.Path,
 		IssueTime:   time.Now(),
-		ExpireTime:  auth.ExpirationTime(),
+		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
 	}
 
