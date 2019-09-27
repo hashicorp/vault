@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/http/httpproxy"
+
 	"github.com/hashicorp/vault/helper/metricsutil"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -548,6 +550,11 @@ func (c *ServerCommand) Run(args []string) int {
 	if config.DefaultMaxRequestDuration != 0 {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
+
+	// log proxy settings
+	proxyCfg := httpproxy.FromEnvironment()
+	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
+		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
