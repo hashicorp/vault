@@ -102,6 +102,7 @@ export default DS.RESTAdapter.extend(AdapterFetch, {
       method: type || 'GET',
       headers: opts.headers || {},
       body: opts.body,
+      signal: opts.signal,
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
