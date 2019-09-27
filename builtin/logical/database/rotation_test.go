@@ -956,7 +956,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	}
 }
 
-// Demonstrates a bug fix for collision of locks
+// Demonstrates a bug fix for the credential rotation not releasing locks
 func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
