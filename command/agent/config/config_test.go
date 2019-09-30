@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	"github.com/y0ssar1an/q"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -287,10 +286,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_Template_Single tests a single template definition in a
-// configuration file, with minimum entries
+// TestLoadConfigFile_Template_Single tests template definitions in Vault Agent
+// configuration files
 func TestLoadConfigFile_Template_Single(t *testing.T) {
-
 	testCases := map[string]struct {
 		fixturePath       string
 		expectedTemplates []*ctconfig.TemplateConfig
@@ -304,7 +302,6 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 				},
 			},
 		},
-
 		"full": {
 			fixturePath: "./test-fixtures/config-template-full.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
@@ -324,6 +321,29 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 					Wait: &ctconfig.WaitConfig{
 						Min: timeDurationPtr("5s"),
 						Max: timeDurationPtr("30s"),
+					},
+				},
+			},
+		},
+		"many": {
+			fixturePath: "./test-fixtures/config-template-many.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:         strPtr("/path/on/disk/to/template.ctmpl"),
+					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  boolPtr(false),
+					CreateDestDirs: boolPtr(true),
+					Command:        strPtr("restart service foo"),
+					Perms:          fileMode(0600),
+				},
+				&ctconfig.TemplateConfig{
+					Source:      strPtr("/path/on/disk/to/template2.ctmpl"),
+					Destination: strPtr("/path/on/disk/where/template/will/render2.txt"),
+					Backup:      boolPtr(true),
+					Perms:       fileMode(0755),
+					Wait: &ctconfig.WaitConfig{
+						Min: timeDurationPtr("2s"),
+						Max: timeDurationPtr("10s"),
 					},
 				},
 			},
@@ -367,65 +387,6 @@ func TestLoadConfigFile_Template_Single(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
-	}
-}
-
-// TestLoadConfigFile_Template_Multiple tests multiple template definition in a
-// configuration file, with most entries supplied
-func TestLoadConfigFile_Template_Many(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-template-many.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expected := &Config{
-		AutoAuth: &AutoAuth{
-			Method: &Method{
-				Type:      "aws",
-				MountPath: "auth/aws",
-				Namespace: "my-namespace/",
-				Config: map[string]interface{}{
-					"role": "foobar",
-				},
-			},
-			Sinks: []*Sink{
-				&Sink{
-					Type:   "file",
-					DHType: "curve25519",
-					DHPath: "/tmp/file-foo-dhpath",
-					AAD:    "foobar",
-					Config: map[string]interface{}{
-						"path": "/tmp/file-foo",
-					},
-				},
-			},
-		},
-		Templates: []*ctconfig.TemplateConfig{
-			&ctconfig.TemplateConfig{
-				Source:         strPtr("/path/on/disk/to/template.ctmpl"),
-				Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
-				ErrMissingKey:  boolPtr(false),
-				CreateDestDirs: boolPtr(true),
-				Command:        strPtr("restart service foo"),
-				Perms:          fileMode(0600),
-			},
-			&ctconfig.TemplateConfig{
-				Source:      strPtr("/path/on/disk/to/template2.ctmpl"),
-				Destination: strPtr("/path/on/disk/where/template/will/render2.txt"),
-				Backup:      boolPtr(true),
-				Perms:       fileMode(0755),
-				Wait: &ctconfig.WaitConfig{
-					Min: timeDurationPtr("2s"),
-					Max: timeDurationPtr("10s"),
-				},
-			},
-		},
-		PidFile: "./pidfile",
-	}
-	q.Q(config.Templates[1].Wait)
-
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
 	}
 }
 
