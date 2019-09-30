@@ -24,6 +24,8 @@ BUG FIXES:
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
+ * identity (enterprise): Fixed identity case sensitive loading in secondary
+   cluster [GH-7327]
 
 ## 1.2.3 (September 12, 2019)
 
