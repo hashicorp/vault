@@ -13,9 +13,9 @@
     ]
   },
   "dependencies": {
-    "ember-source": "*",
-    "ember-service-worker": "*",
+    "ember-cli-babel": "*",
     "ember-auto-import": "*",
-    "ember-cli-babel": "*"
+    "ember-source": "*",
+    "ember-service-worker": "*"
   }
 }
