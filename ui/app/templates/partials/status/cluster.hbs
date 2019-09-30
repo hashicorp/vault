@@ -64,8 +64,8 @@
       {{/if}}
     {{/unless}}
       {{#if (or
-        (has-permission 'status' routeParams='license')
-        (has-permission 'status' routeParams='raft')
+        (and version.features (has-permission 'status' routeParams='license'))
+        (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
         )
       }}
         <nav class="menu">
