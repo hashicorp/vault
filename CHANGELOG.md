@@ -22,6 +22,8 @@ IMPROVEMENTS:
    
 BUG FIXES:
  * agent: Fix handling of gzipped responses [GH-7470]
+ * auth/gcp: Fix a bug where region information in instance groups names could
+   cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
