@@ -23,6 +23,8 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
+Note: Using replication requires a storage backend that supports transactional updates, such as Consul.
+
 ## Architecture
 
 The core unit of Vault replication is a **cluster**, which is comprised of a

@@ -164,6 +164,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.toolsPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 
@@ -3425,6 +3426,15 @@ This path responds to the following HTTP methods.
 
     POST /
         Initializes a new vault.
+		`,
+	},
+	"health": {
+		"Checks the health status of the Vault.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /
+		Returns health information about the Vault.
 		`,
 	},
 	"generate-root": {
