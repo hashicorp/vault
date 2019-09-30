@@ -290,44 +290,83 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 // TestLoadConfigFile_Template_Single tests a single template definition in a
 // configuration file, with minimum entries
 func TestLoadConfigFile_Template_Single(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-template-min.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
-	expected := &Config{
-		AutoAuth: &AutoAuth{
-			Method: &Method{
-				Type:      "aws",
-				MountPath: "auth/aws",
-				Namespace: "my-namespace/",
-				Config: map[string]interface{}{
-					"role": "foobar",
+	testCases := map[string]struct {
+		fixturePath       string
+		expectedTemplates []*ctconfig.TemplateConfig
+	}{
+		"min": {
+			fixturePath: "./test-fixtures/config-template-min.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:      strPtr("/path/on/disk/to/template.ctmpl"),
+					Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
 				},
 			},
-			Sinks: []*Sink{
-				&Sink{
-					Type:   "file",
-					DHType: "curve25519",
-					DHPath: "/tmp/file-foo-dhpath",
-					AAD:    "foobar",
-					Config: map[string]interface{}{
-						"path": "/tmp/file-foo",
+		},
+
+		"full": {
+			fixturePath: "./test-fixtures/config-template-full.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Backup:         boolPtr(true),
+					Command:        strPtr("restart service foo"),
+					CommandTimeout: timeDurationPtr("60s"),
+					Contents:       strPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
+					CreateDestDirs: boolPtr(true),
+					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  boolPtr(true),
+					LeftDelim:      strPtr("<<"),
+					Perms:          fileMode(0655),
+					RightDelim:     strPtr(">>"),
+					SandboxPath:    strPtr("/path/on/disk/where"),
+
+					Wait: &ctconfig.WaitConfig{
+						Min: timeDurationPtr("5s"),
+						Max: timeDurationPtr("30s"),
 					},
 				},
 			},
 		},
-		Templates: []*ctconfig.TemplateConfig{
-			&ctconfig.TemplateConfig{
-				Source:      strPtr("/path/on/disk/to/template.ctmpl"),
-				Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
-			},
-		},
-		PidFile: "./pidfile",
 	}
 
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfig(tc.fixturePath)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			expected := &Config{
+				AutoAuth: &AutoAuth{
+					Method: &Method{
+						Type:      "aws",
+						MountPath: "auth/aws",
+						Namespace: "my-namespace/",
+						Config: map[string]interface{}{
+							"role": "foobar",
+						},
+					},
+					Sinks: []*Sink{
+						&Sink{
+							Type:   "file",
+							DHType: "curve25519",
+							DHPath: "/tmp/file-foo-dhpath",
+							AAD:    "foobar",
+							Config: map[string]interface{}{
+								"path": "/tmp/file-foo",
+							},
+						},
+					},
+				},
+				Templates: tc.expectedTemplates,
+				PidFile:   "./pidfile",
+			}
+
+			if diff := deep.Equal(config, expected); diff != nil {
+				t.Fatal(diff)
+			}
+		})
 	}
 }
 
