@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg, cfgtls *ldaputil.ConfigEntry) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
@@ -29,8 +29,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		docker.CleanupResource(t, pool, resource)
 	}
 
-	retAddress := fmt.Sprintf("localhost:%s", resource.GetPort("389/tcp"))
-
 	//pool.MaxWait = time.Second
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
@@ -41,7 +39,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		}
 
 		cfg = new(ldaputil.ConfigEntry)
-		cfg.Url = "ldap://" + retAddress
+		cfg.Url = fmt.Sprintf("ldap://localhost:%s", resource.GetPort("389/tcp"))
 		cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
 		cfg.UserAttr = "cn"
 		cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
@@ -60,5 +58,9 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)
 	}
-	return cleanup, cfg
+
+	cfgcopy := *cfg
+	cfgcopy.InsecureTLS = true
+	cfgcopy.Url = fmt.Sprintf("ldaps://localhost:%s", resource.GetPort("636/tcp"))
+	return cleanup, cfg, &cfgcopy
 }

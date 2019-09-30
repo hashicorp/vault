@@ -3,7 +3,6 @@ package ldap
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"reflect"
 	"sort"
 	"testing"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -261,7 +261,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -307,7 +307,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -390,10 +390,10 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
  * Querying the server from the command line:
  *  TODO
  *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub \
- *       '(&(objectClass=groupOfUniqueNames)(uniqueMember=uid=tesla,dc=example,dc=com))'
+         '(&(objectClass=groupOfUniqueNames)(uniqueMember=uid=tesla,dc=example,dc=com))'
  *
  *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub uid=tesla
- */
+*/
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
@@ -412,7 +412,7 @@ func factory(t *testing.T) logical.Backend {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -442,7 +442,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -460,7 +460,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -481,7 +481,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -498,7 +498,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -515,7 +515,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -877,7 +877,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
