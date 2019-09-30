@@ -6,7 +6,7 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
-   
+
 CHANGES: 
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
@@ -19,7 +19,10 @@ IMPROVEMENTS:
  * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
-   
+ * replication (enterprise): Write-Ahead-Log entries will not duplicate the
+   data belonging to the encompassing physical entries of the transaction,
+   thereby improving the performance and storage capacity.
+
 BUG FIXES:
  * agent: Fix handling of gzipped responses [GH-7470]
  * auth/gcp: Fix a bug where region information in instance groups names could
