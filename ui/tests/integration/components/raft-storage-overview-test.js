@@ -1,8 +1,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import sinon from 'sinon';
 
 module('Integration | Component | raft-storage-overview', function(hooks) {
   setupRenderingTest(hooks);
