@@ -441,7 +441,6 @@ Query this path to retrieve a set of claims about the identity tokens' configura
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/openid-configuration
 ```
@@ -474,7 +473,6 @@ Query this path to retrieve the public portion of named keys. Clients can use th
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/keys
 ```
