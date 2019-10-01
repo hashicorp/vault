@@ -667,6 +667,7 @@ golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/pkcs12/internal/rc2
 # golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 golang.org/x/net/idna
+golang.org/x/net/http/httpproxy
 golang.org/x/net/http2
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
