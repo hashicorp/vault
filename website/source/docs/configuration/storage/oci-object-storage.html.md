@@ -64,7 +64,7 @@ This example shows configuring OCI Object Storage as a standalone instance.
 
 ```hcl
 storage "oci" {
-    namespace_name = "MyNamespace
+    namespace_name = "MyNamespace"
     bucket_name = "DataBucket"
 }
 ```
@@ -75,7 +75,7 @@ This example shows configuring OCI Object Storage with high availability enabled
 
 ```hcl
 storage "oci" {
-   namespace_name = "MyNamespace
+   namespace_name = "MyNamespace"
    bucket_name = "DataBucket"
    ha_enabled = "true"
    lock_bucket_name = "LockBucket"
