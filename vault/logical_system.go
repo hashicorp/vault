@@ -3124,6 +3124,36 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeTokens, err := b.Core.countActiveTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeTokens,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeEntities, err := b.Core.countActiveEntities(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeEntities,
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		// 204 -- no ACL
@@ -4051,5 +4081,13 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"internal-counters-tokens": {
+		"Count of active tokens in this Vault cluster.",
+		"Count of active tokens in this Vault cluster.",
+	},
+	"internal-counters-entities": {
+		"Count of active entities in this Vault cluster.",
+		"Count of active entities in this Vault cluster.",
 	},
 }
