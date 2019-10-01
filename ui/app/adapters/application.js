@@ -77,12 +77,10 @@ export default DS.RESTAdapter.extend(AdapterFetch, {
           token: controlGroupToken.token,
         },
       };
-      debugger;
     }
     let opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
-      debugger;
       if (controlGroupToken) {
         controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
       }
