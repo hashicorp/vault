@@ -439,13 +439,18 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		// Flattenkeys belonging to the templates
-		flattenKeys(parsed, []string{
-			"env",
-			"exec",
-			"exec.env",
-			"wait",
-		})
+		// flatten the wait field. The initial "wait" value, if given, is a
+		// []map[string]interface{}, but we need it to be map[string]interface{}.
+		// Consul Template has a method flattenKeys that walks all of parsed and
+		// flattens every key. For Vault Agent, we only care about the wait input.
+		// Only one wait stanza is supported, however Consul Template does not error
+		// with multiple instead it flattens them down, with last value winning.
+		// Here we take the last element of the parsed["wait"] slice to keep
+		// consistency with Consul Template behavior.
+		wait, ok := parsed["wait"].([]map[string]interface{})
+		if ok {
+			parsed["wait"] = wait[len(wait)-1]
+		}
 
 		var tc ctconfig.TemplateConfig
 
@@ -472,47 +477,4 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 	}
 	result.Templates = tcs
 	return nil
-}
-
-// flattenKeys is a function that takes a map[string]interface{} and recursively
-// flattens any keys that are a []map[string]interface{} where the key is in the
-// given list of keys.
-func flattenKeys(m map[string]interface{}, keys []string) {
-	keyMap := make(map[string]struct{})
-	for _, key := range keys {
-		keyMap[key] = struct{}{}
-	}
-
-	var flatten func(map[string]interface{}, string)
-	flatten = func(m map[string]interface{}, parent string) {
-		for k, v := range m {
-			// Calculate the map key, since it could include a parent.
-			mapKey := k
-			if parent != "" {
-				mapKey = parent + "." + k
-			}
-
-			if _, ok := keyMap[mapKey]; !ok {
-				continue
-			}
-
-			switch typed := v.(type) {
-			case []map[string]interface{}:
-				if len(typed) > 0 {
-					last := typed[len(typed)-1]
-					flatten(last, mapKey)
-					m[k] = last
-				} else {
-					m[k] = nil
-				}
-			case map[string]interface{}:
-				flatten(typed, mapKey)
-				m[k] = typed
-			default:
-				m[k] = v
-			}
-		}
-	}
-
-	flatten(m, "")
 }

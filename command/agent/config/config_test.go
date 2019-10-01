@@ -319,8 +319,8 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					SandboxPath:    strPtr("/path/on/disk/where"),
 
 					Wait: &ctconfig.WaitConfig{
-						Min: timeDurationPtr("5s"),
-						Max: timeDurationPtr("30s"),
+						Min: timeDurationPtr("10s"),
+						Max: timeDurationPtr("40s"),
 					},
 				},
 			},

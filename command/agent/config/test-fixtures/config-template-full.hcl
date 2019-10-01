@@ -42,4 +42,8 @@ template {
     min = "5s"
     max = "30s"
   }
+  wait {
+    min = "10s"
+    max = "40s"
+  }
 }
