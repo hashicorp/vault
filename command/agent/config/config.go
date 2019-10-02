@@ -128,7 +128,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	err = parseTemplates(&result, list)
 	if err != nil {
-		return nil, errwrap.Wrapf("error parsing 'templates':{{err}}", err)
+		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
 	}
 
 	if result.Cache != nil {
