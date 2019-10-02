@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
+	"github.com/hashicorp/vault/command/agent/template"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -489,6 +490,8 @@ func (c *AgentCommand) Run(args []string) int {
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
 	}
+
+	_ := template.TemplateServer{}
 
 	// Server configuration output
 	padding := 24
