@@ -29,6 +29,8 @@ BUG FIXES:
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
+ * identity: Add required field `response_types_supported` to identity token
+   `.well-known/openid-configuration` response [GH-7533]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
 
