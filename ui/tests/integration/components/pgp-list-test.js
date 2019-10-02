@@ -119,8 +119,7 @@ module('Integration | Component | pgp list', function(hooks) {
       'calls onchange with an array 2 base64 converted files'
     );
 
-    // this will trim off the last input which was filled, so we should only have one file in the array
-    // now
+    // this will add a couple of inputs but should keep the existing 3
     this.set('listLength', 5);
     let expected3 = [btoa(data), '', btoa(data), '', ''];
     assert.deepEqual(
