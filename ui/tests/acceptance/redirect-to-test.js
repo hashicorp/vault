@@ -79,7 +79,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
       redirect_to: url,
       wrapped_token: wrappedToken,
     });
-    debugger;
+
     assert.equal(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });
