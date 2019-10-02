@@ -471,7 +471,7 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("mapstructure decoder creation failed")
 		}
 		if err := decoder.Decode(parsed); err != nil {
-			return errors.New("mapstructure decode failed")
+			return err
 		}
 		tcs = append(tcs, &tc)
 	}
