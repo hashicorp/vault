@@ -46,7 +46,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Default: "aes256-gcm96",
 				Description: `
 The type of key to create. Currently, "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), 'ed25519' (asymmetric), 'rsa-2048' (asymmetric), 'rsa-4096'
+(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
 (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
@@ -145,6 +145,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 	case "ecdsa-p256":
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
+	case "ecdsa-p384":
+		polReq.KeyType = keysutil.KeyType_ECDSA_P384
+	case "ecdsa-p521":
+		polReq.KeyType = keysutil.KeyType_ECDSA_P521
 	case "ed25519":
 		polReq.KeyType = keysutil.KeyType_ED25519
 	case "rsa-2048":
@@ -263,7 +267,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -277,6 +281,10 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			switch p.Type {
 			case keysutil.KeyType_ECDSA_P256:
 				key.Name = elliptic.P256().Params().Name
+			case keysutil.KeyType_ECDSA_P384:
+				key.Name = elliptic.P384().Params().Name
+			case keysutil.KeyType_ECDSA_P521:
+				key.Name = elliptic.P521().Params().Name
 			case keysutil.KeyType_ED25519:
 				if p.Derived {
 					if len(context) == 0 {
