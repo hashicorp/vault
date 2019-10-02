@@ -33,6 +33,8 @@ BUG FIXES:
    `.well-known/openid-configuration` response [GH-7533]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
+ * ui: using the `wrapped_token` query param will work with `redirect_to` and
+   will automatically log in as intended [GH-7398]
 
 ## 1.2.3 (September 12, 2019)
 
