@@ -97,6 +97,9 @@ func ParsePGPKeys(keyfiles []string) ([]string, error) {
 
 // ReadPGPFile reads the given PGP file from disk.
 func ReadPGPFile(path string) (string, error) {
+	if len(path) <= 0 {
+		return "", errors.New("empty path")
+	}
 	if path[0] == '@' {
 		path = path[1:]
 	}
