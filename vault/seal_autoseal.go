@@ -33,7 +33,7 @@ type autoSeal struct {
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel seal.Access) Seal {
+func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
