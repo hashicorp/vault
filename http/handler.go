@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -145,6 +146,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		}
 		mux.Handle("/ui", handleUIRedirect())
 		mux.Handle("/", handleUIRedirect())
+	}
+
+	// Register metrics path without authentication if enabled
+	if props.UnauthenticatedMetricsAccess {
+		mux.Handle("/v1/sys/metrics", handleMetricsUnauth(core))
 	}
 
 	additionalRoutes(mux, core)
@@ -513,6 +519,29 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 		return ioutil.NopCloser(origBody), err
 	}
 	return nil, err
+}
+
+func handleMetricsUnauth(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req := &logical.Request{Headers: r.Header}
+		format := r.Form.Get("format")
+		if format == "" {
+			format = metricsutil.FormatFromRequest(req)
+		}
+
+		// Define response
+		resp, err := core.MetricsHelper().ResponseForFormat(format)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		// Manually unarchive the logical response and send back the information
+		w.WriteHeader(resp.Data[logical.HTTPStatusCode].(int))
+		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
+		w.Write(resp.Data[logical.HTTPRawBody].([]byte))
+	})
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
