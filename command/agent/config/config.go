@@ -116,18 +116,15 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
-	err = parseListeners(&result, list)
-	if err != nil {
+	if err := parseListeners(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
 	}
 
-	err = parseCache(&result, list)
-	if err != nil {
+	if err := parseCache(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
-	err = parseTemplates(&result, list)
-	if err != nil {
+	if err := parseTemplates(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
 	}
 
