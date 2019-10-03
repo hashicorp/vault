@@ -164,8 +164,17 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	case exportTypeSigningKey:
 		switch policy.Type {
-		case keysutil.KeyType_ECDSA_P256:
-			ecKey, err := keyEntryToECPrivateKey(key, elliptic.P256())
+		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+			var curve elliptic.Curve
+			switch policy.Type {
+			case keysutil.KeyType_ECDSA_P384:
+				curve = elliptic.P384()
+			case keysutil.KeyType_ECDSA_P521:
+				curve = elliptic.P521()
+			default:
+				curve = elliptic.P256()
+			}
+			ecKey, err := keyEntryToECPrivateKey(key, curve)
 			if err != nil {
 				return "", err
 			}
