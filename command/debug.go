@@ -118,6 +118,11 @@ type DebugCommand struct {
 	ShutdownCh chan struct{}
 	// doneCh is used to signal terminal
 	doneCh chan struct{}
+
+	// Various channels for receiving state during polling capture
+	metricsCh           chan map[string]interface{}
+	serverStatusCh      chan *serverStatus
+	replicationStatusCh chan map[string]interface{}
 }
 
 func (c *DebugCommand) AutocompleteArgs() complete.Predictor {
@@ -380,6 +385,11 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		return nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
 	}
 
+	// Instantiate the channels for polling
+	c.metricsCh = make(chan map[string]interface{})
+	c.serverStatusCh = make(chan *serverStatus)
+	c.replicationStatusCh = make(chan map[string]interface{})
+
 	// Populate initial index fields
 	idxOutput := map[string]interface{}{
 		"files": []string{},
@@ -429,18 +439,19 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	errCh := make(chan *captureError)
 
 	var serverStatusCollection []*serverStatus
+	var replicationStatusCollection []map[string]interface{}
 	var metricsCollection []map[string]interface{}
-	metricsCh := make(chan map[string]interface{})
-	serverStatusCh := make(chan *serverStatus)
 
 	// Start a goroutine to collect data as soon as it's received
 	go func() {
 		for {
 			select {
-			case metricsEntry := <-metricsCh:
+			case metricsEntry := <-c.metricsCh:
 				metricsCollection = append(metricsCollection, metricsEntry)
-			case serverStatusEntry := <-serverStatusCh:
+			case serverStatusEntry := <-c.serverStatusCh:
 				serverStatusCollection = append(serverStatusCollection, serverStatusEntry)
+			case replicationStatusEntry := <-c.replicationStatusCh:
+				replicationStatusCollection = append(replicationStatusCollection, replicationStatusEntry)
 			case <-c.doneCh:
 				return
 			}
@@ -450,8 +461,8 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	// Start capture by capturing the first interval before we hit the first
 	// ticker.
 	c.UI.Info("==> Capturing dynamic information...")
-	go c.intervalCapture(client, idxCount, startTime, serverStatusCh, errCh)
-	go c.metricsIntervalCapture(client, mIdxCount, metricsCh, errCh)
+	go c.intervalCapture(client, idxCount, startTime, errCh)
+	go c.metricsIntervalCapture(client, mIdxCount, errCh)
 
 	// Capture at each interval, until end of duration or interrupt.
 	intervalTicker := time.Tick(c.flagInterval)
@@ -463,10 +474,10 @@ POLLING:
 			c.debugIndex.Errors = append(c.debugIndex.Errors, err)
 		case <-intervalTicker:
 			idxCount++
-			go c.intervalCapture(client, idxCount, startTime, serverStatusCh, errCh)
+			go c.intervalCapture(client, idxCount, startTime, errCh)
 		case <-metricsIntervalTicker:
 			mIdxCount++
-			go c.metricsIntervalCapture(client, mIdxCount, metricsCh, errCh)
+			go c.metricsIntervalCapture(client, mIdxCount, errCh)
 		case <-durationCh:
 			break POLLING
 		case <-c.ShutdownCh:
@@ -498,10 +509,20 @@ POLLING:
 	}
 	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), "server-status.json")
 
+	// Write replication-status file and update the index
+	replicationStatusBytes, err := json.MarshalIndent(replicationStatusCollection, "", "  ")
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error marshaling replication-status.json data: %v", err))
+	}
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "replication-status.json"), replicationStatusBytes, 0644); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to server-status.json: %v", err))
+	}
+	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), "replication-status.json")
+
 	return nil
 }
 
-func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTime time.Time, serverStatusCh chan<- *serverStatus, errCh chan<- *captureError) {
+func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTime time.Time, errCh chan<- *captureError) {
 	var wg sync.WaitGroup
 	currentTimestamp := time.Now().UTC()
 
@@ -622,7 +643,29 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 	}
 
 	if strutil.StrListContains(c.flagTargets, "replication-status") {
+		c.logger.Info("capturing replication status", "count", idxCount)
 
+		wg.Add(1)
+		go func() {
+			r := client.NewRequest("GET", "/v1/sys/replication/status")
+			resp, err := client.RawRequest(r)
+			if err != nil {
+				errCh <- newCaptureError("replication-status", err)
+			}
+			if resp != nil {
+				defer resp.Body.Close()
+
+				secret, err := api.ParseSecret(resp.Body)
+				if err != nil {
+					errCh <- newCaptureError("replication-status", err)
+				}
+				if replicationEntry := secret.Data; replicationEntry != nil {
+					replicationEntry["timestamp"] = currentTimestamp
+					c.replicationStatusCh <- replicationEntry
+				}
+			}
+			wg.Done()
+		}()
 	}
 
 	if strutil.StrListContains(c.flagTargets, "server-status") {
@@ -644,7 +687,7 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				Health:    healthInfo,
 				Seal:      sealInfo,
 			}
-			serverStatusCh <- entry
+			c.serverStatusCh <- entry
 
 			wg.Done()
 		}()
@@ -654,7 +697,7 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 	wg.Wait()
 }
 
-func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int, metricsCh chan<- map[string]interface{}, errCh chan<- *captureError) {
+func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int, errCh chan<- *captureError) {
 	if !strutil.StrListContains(c.flagTargets, "metrics") {
 		return
 	}
@@ -682,19 +725,19 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 
 	// Perform metrics request
 	r := client.NewRequest("GET", "/v1/sys/metrics")
-	metricsResp, err := client.RawRequest(r)
+	resp, err := client.RawRequest(r)
 	if err != nil {
 		errCh <- newCaptureError("metrics", err)
 	}
-	if metricsResp != nil {
-		defer metricsResp.Body.Close()
+	if resp != nil {
+		defer resp.Body.Close()
 
 		metricsEntry := make(map[string]interface{})
-		err := json.NewDecoder(metricsResp.Body).Decode(&metricsEntry)
+		err := json.NewDecoder(resp.Body).Decode(&metricsEntry)
 		if err != nil {
 			errCh <- newCaptureError("metrics", err)
 		}
-		metricsCh <- metricsEntry
+		c.metricsCh <- metricsEntry
 	}
 }
 
