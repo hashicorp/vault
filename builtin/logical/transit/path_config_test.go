@@ -32,11 +32,15 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	req := &logical.Request{
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
-		Path:      "keys/aes",
+		Path:      "keys/aes256",
 		Data: map[string]interface{}{
 			"derived": true,
 		},
 	}
+	doReq(req)
+
+	req.Path = "keys/aes128"
+	req.Data["type"] = "aes128-gcm96"
 	doReq(req)
 
 	req.Path = "keys/ed"
@@ -59,7 +63,13 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 	delete(req.Data, "type")
 
-	req.Path = "keys/aes/rotate"
+	req.Path = "keys/aes128/rotate"
+	doReq(req)
+	doReq(req)
+	doReq(req)
+	doReq(req)
+
+	req.Path = "keys/aes256/rotate"
 	doReq(req)
 	doReq(req)
 	doReq(req)
@@ -89,7 +99,7 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	doReq(req)
 	doReq(req)
 
-	req.Path = "keys/aes/config"
+	req.Path = "keys/aes256/config"
 	// Too high
 	req.Data["min_decryption_version"] = 7
 	doErrReq(req)
@@ -114,6 +124,8 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	req.Data["min_decryption_version"] = 2
 	req.Data["min_encryption_version"] = 3
 	doReq(req)
+	req.Path = "keys/aes128/config"
+	doReq(req)
 	req.Path = "keys/ed/config"
 	doReq(req)
 	req.Path = "keys/p256/config"
@@ -131,7 +143,7 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	}
 
 	maxKeyVersion := 5
-	key := "aes"
+	key := "aes256"
 
 	testHMAC := func(ver int, valid bool) {
 		req.Path = "hmac/" + key
@@ -184,6 +196,16 @@ func TestTransit_ConfigSettings(t *testing.T) {
 		req.Data["ciphertext"] = resp.Data["ciphertext"]
 		doReq(req)
 	}
+	testEncryptDecrypt(5, true)
+	testEncryptDecrypt(4, true)
+	testEncryptDecrypt(3, true)
+	testEncryptDecrypt(2, false)
+	testHMAC(5, true)
+	testHMAC(4, true)
+	testHMAC(3, true)
+	testHMAC(2, false)
+
+	key = "aes128"
 	testEncryptDecrypt(5, true)
 	testEncryptDecrypt(4, true)
 	testEncryptDecrypt(3, true)
