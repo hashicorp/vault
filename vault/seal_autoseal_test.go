@@ -11,10 +11,17 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
+// phy implements physical.Backend. It maps keys to a slice of entries.
+// Each call to Put appends the entry to the slice of entries for that
+// key. No deduplication is done. This allows the test for UpgradeKeys to
+// verify entries are only being updated when the underlying encryption key
+// has been updated.
 type phy struct {
 	t       *testing.T
 	entries map[string][]*physical.Entry
 }
+
+var _ physical.Backend = (*phy)(nil)
 
 func newTestBackend(t *testing.T) *phy {
 	return &phy{
