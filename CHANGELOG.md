@@ -6,8 +6,11 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+ * Transit: Signing and verification is now supported with the P-384
+   (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
 
 CHANGES: 
+
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
 
@@ -24,6 +27,7 @@ IMPROVEMENTS:
    thereby improving the performance and storage capacity.
 
 BUG FIXES:
+
  * agent: Fix handling of gzipped responses [GH-7470]
  * auth/gcp: Fix a bug where region information in instance groups names could
    cause an authorization attempt to fail [GCP-74]
