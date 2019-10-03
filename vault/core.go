@@ -611,7 +611,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
-	// Instantiate a non-nil raw config if non is provided
+	// Instantiate a non-nil raw config if none is provided
 	if conf.RawConfig == nil {
 		conf.RawConfig = new(server.Config)
 	}
