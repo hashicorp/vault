@@ -80,13 +80,6 @@ func newCaptureError(target string, err error) *captureError {
 	}
 }
 
-// serverStatus holds a single interval entry for the server-status target
-type serverStatus struct {
-	Timestamp time.Time               `json:"timestamp"`
-	Health    *api.HealthResponse     `json:"health"`
-	Seal      *api.SealStatusResponse `json:"seal"`
-}
-
 var _ cli.Command = (*DebugCommand)(nil)
 var _ cli.CommandAutocomplete = (*DebugCommand)(nil)
 
@@ -121,8 +114,9 @@ type DebugCommand struct {
 
 	// Various channels for receiving state during polling capture
 	metricsCh           chan map[string]interface{}
-	serverStatusCh      chan *serverStatus
+	serverStatusCh      chan map[string]interface{}
 	replicationStatusCh chan map[string]interface{}
+	hostInfoCh          chan map[string]interface{}
 }
 
 func (c *DebugCommand) AutocompleteArgs() complete.Predictor {
@@ -387,8 +381,9 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 
 	// Instantiate the channels for polling
 	c.metricsCh = make(chan map[string]interface{})
-	c.serverStatusCh = make(chan *serverStatus)
+	c.serverStatusCh = make(chan map[string]interface{})
 	c.replicationStatusCh = make(chan map[string]interface{})
+	c.hostInfoCh = make(chan map[string]interface{})
 
 	// Populate initial index fields
 	idxOutput := map[string]interface{}{
@@ -413,7 +408,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 }
 
 func (c *DebugCommand) defaultTargets() []string {
-	return []string{"config", "metrics", "pprof", "replication-status", "server-status"}
+	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status"}
 }
 
 func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
@@ -438,9 +433,10 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	// errCh is used to capture any polling errors and recorded in the index
 	errCh := make(chan *captureError)
 
-	var serverStatusCollection []*serverStatus
+	var serverStatusCollection []map[string]interface{}
 	var replicationStatusCollection []map[string]interface{}
 	var metricsCollection []map[string]interface{}
+	var hostInfoCollection []map[string]interface{}
 
 	// Start a goroutine to collect data as soon as it's received
 	go func() {
@@ -452,6 +448,8 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 				serverStatusCollection = append(serverStatusCollection, serverStatusEntry)
 			case replicationStatusEntry := <-c.replicationStatusCh:
 				replicationStatusCollection = append(replicationStatusCollection, replicationStatusEntry)
+			case hostInfoEntry := <-c.hostInfoCh:
+				hostInfoCollection = append(hostInfoCollection, hostInfoEntry)
 			case <-c.doneCh:
 				return
 			}
@@ -489,35 +487,19 @@ POLLING:
 	// Close the done channel signal termination
 	close(c.doneCh)
 
-	// Write metrics file and update the index
-	metricsBytes, err := json.MarshalIndent(metricsCollection, "", "  ")
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling metrics.json data: %v", err))
+	// Write collected data to their corresponding files
+	if err := c.persistCollection(metricsCollection, "metrics.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "metrics.json", err))
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "metrics.json"), metricsBytes, 0644); err != nil {
-		c.UI.Error("Error writing data to metrics.json")
+	if err := c.persistCollection(serverStatusCollection, "server_status.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "server_status.json", err))
 	}
-	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), "metrics.json")
-
-	// Write server-status file and update the index
-	serverStatusBytes, err := json.MarshalIndent(serverStatusCollection, "", "  ")
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling server-status.json data: %v", err))
+	if err := c.persistCollection(replicationStatusCollection, "replication_status.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "replication_status.json", err))
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "server-status.json"), serverStatusBytes, 0644); err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to server-status.json: %v", err))
+	if err := c.persistCollection(hostInfoCollection, "host_info.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
-	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), "server-status.json")
-
-	// Write replication-status file and update the index
-	replicationStatusBytes, err := json.MarshalIndent(replicationStatusCollection, "", "  ")
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling replication-status.json data: %v", err))
-	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "replication-status.json"), replicationStatusBytes, 0644); err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to server-status.json: %v", err))
-	}
-	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), "replication-status.json")
 
 	return nil
 }
@@ -528,6 +510,31 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 
 	if strutil.StrListContains(c.flagTargets, "config") {
 
+	}
+
+	if strutil.StrListContains(c.flagTargets, "host") {
+		c.logger.Info("capturing host information", "count", idxCount)
+
+		wg.Add(1)
+		go func() {
+			r := client.NewRequest("GET", "/v1/sys/host-info")
+			resp, err := client.RawRequest(r)
+			if err != nil {
+				errCh <- newCaptureError("host", err)
+			}
+			if resp != nil {
+				defer resp.Body.Close()
+
+				secret, err := api.ParseSecret(resp.Body)
+				if err != nil {
+					errCh <- newCaptureError("host", err)
+				}
+				if hostEntry := secret.Data; hostEntry != nil {
+					c.hostInfoCh <- hostEntry
+				}
+			}
+			wg.Done()
+		}()
 	}
 
 	if strutil.StrListContains(c.flagTargets, "pprof") {
@@ -682,12 +689,12 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				errCh <- newCaptureError("server-status.seal", err)
 			}
 
-			entry := &serverStatus{
-				Timestamp: currentTimestamp,
-				Health:    healthInfo,
-				Seal:      sealInfo,
+			statusEntry := map[string]interface{}{
+				"timestamp": currentTimestamp,
+				"health":    healthInfo,
+				"seal":      sealInfo,
 			}
-			c.serverStatusCh <- entry
+			c.serverStatusCh <- statusEntry
 
 			wg.Done()
 		}()
@@ -739,6 +746,22 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 		}
 		c.metricsCh <- metricsEntry
 	}
+}
+
+// persistCollection writes the collected data for a particular target onto the specified file, and
+// adds that file to the index.
+func (c *DebugCommand) persistCollection(collection []map[string]interface{}, outFile string) error {
+	// Write server-status file and update the index
+	bytes, err := json.MarshalIndent(collection, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0644); err != nil {
+		return err
+	}
+	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), outFile)
+
+	return nil
 }
 
 func (c *DebugCommand) compress(dst string) error {
