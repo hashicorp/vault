@@ -2,7 +2,7 @@ import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   url(id) {
-    return `${this.buildURL()}/replication/performance/primary/mount-filter/${id}`;
+    return `${this.buildURL()}/replication/performance/primary/paths-filter/${id}`;
   },
 
   findRecord(store, type, id) {

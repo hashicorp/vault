@@ -61,11 +61,11 @@
         }}
         {{#if showFilterConfig}}
           <div class="box">
-            {{mount-filter-config-list
-              config=filterConfig
-              mounts=mounts
-              id=id
-            }}
+            <PathFilterConfigList
+              @paths={{paths}}
+              @config={{filterConfig}}
+              @id={{id}}
+            />
           </div>
         {{/if}}
       </div>

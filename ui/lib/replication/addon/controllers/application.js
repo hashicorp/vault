@@ -34,7 +34,7 @@ export default Controller.extend(DEFAULTS, {
     const config = this.get('filterConfig');
     const id = this.get('id');
     config.id = id;
-    const configRecord = this.get('store').createRecord('mount-filter-config', config);
+    const configRecord = this.get('store').createRecord('path-filter-config', config);
     return configRecord.save().catch(e => this.submitError(e));
   },
 

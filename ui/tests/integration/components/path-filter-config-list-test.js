@@ -5,21 +5,21 @@ import hbs from 'htmlbars-inline-precompile';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
 const resolver = engineResolverFor('replication');
 
-module('Integration | Component | mount filter config list', function(hooks) {
+module('Integration | Component | path filter config list', function(hooks) {
   setupRenderingTest(hooks, { resolver });
 
   test('it renders', async function(assert) {
     this.set('config', { mode: 'whitelist', paths: [] });
-    this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
-    await render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
+    this.set('paths', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
+    await render(hbs`{{path-filter-config-list config=config paths=paths}}`);
 
     assert.equal(findAll('#filter-userpass').length, 1);
   });
 
   test('it sets config.paths', async function(assert) {
     this.set('config', { mode: 'whitelist', paths: [] });
-    this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
-    await render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
+    this.set('paths', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
+    await render(hbs`{{path-filter-config-list config=config paths=paths}}`);
 
     await click('#filter-userpass');
     assert.ok(this.get('config.paths').includes('userpass/'), 'adds to paths');
@@ -30,7 +30,7 @@ module('Integration | Component | mount filter config list', function(hooks) {
 
   test('it sets config.mode', async function(assert) {
     this.set('config', { mode: 'whitelist', paths: [] });
-    await render(hbs`{{mount-filter-config-list config=config}}`);
+    await render(hbs`{{path-filter-config-list config=config}}`);
     await fillIn('#filter-mode', 'blacklist');
     await blur('#filter-mode');
     assert.equal(this.get('config.mode'), 'blacklist');
