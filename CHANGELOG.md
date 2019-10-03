@@ -2,10 +2,14 @@
 
 FEATURES:
 
- * **Stackdriver Metrics Sync**: Vault can now send metrics to
+ * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+
+CHANGES: 
+ * sys/seal-status now has a `storage_type` field denoting what type of storage
+   the cluster is configured to use
 
 IMPROVEMENTS:
 
@@ -15,6 +19,22 @@ IMPROVEMENTS:
  * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
+ * replication (enterprise): Write-Ahead-Log entries will not duplicate the
+   data belonging to the encompassing physical entries of the transaction,
+   thereby improving the performance and storage capacity.
+
+BUG FIXES:
+ * agent: Fix handling of gzipped responses [GH-7470]
+ * auth/gcp: Fix a bug where region information in instance groups names could
+   cause an authorization attempt to fail [GCP-74]
+ * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
+   could cause confusing error messages during `vault login` [GH-7508]
+ * identity: Add required field `response_types_supported` to identity token
+   `.well-known/openid-configuration` response [GH-7533]
+ * identity (enterprise): Fixed identity case sensitive loading in secondary
+   cluster [GH-7327]
+ * ui: using the `wrapped_token` query param will work with `redirect_to` and
+   will automatically log in as intended [GH-7398]
 
 ## 1.2.3 (September 12, 2019)
 

@@ -172,6 +172,9 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
+	// storageType is the the storage type set in the storage configuration
+	storageType string
+
 	// redirectAddr is the address we advertise as leader if held
 	redirectAddr string
 
@@ -474,6 +477,8 @@ type CoreConfig struct {
 
 	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
 
+	StorageType string `json:"storage_type" structs:"storage_type" mapstructure:"storage_type"`
+
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
 
@@ -546,6 +551,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisableCache:              c.DisableCache,
 		DisableMlock:              c.DisableMlock,
 		CacheSize:                 c.CacheSize,
+		StorageType:               c.StorageType,
 		RedirectAddr:              c.RedirectAddr,
 		ClusterAddr:               c.ClusterAddr,
 		DefaultLeaseTTL:           c.DefaultLeaseTTL,
@@ -613,6 +619,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
 		underlyingPhysical:           conf.Physical,
+		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
 		clusterAddr:                  new(atomic.Value),
 		clusterListener:              new(atomic.Value),
@@ -1818,6 +1825,11 @@ func (c *Core) ActiveNodeReplicationState() consts.ReplicationState {
 
 func (c *Core) SealAccess() *SealAccess {
 	return NewSealAccess(c.seal)
+}
+
+// StorageType returns a string equal to the storage configuration's type.
+func (c *Core) StorageType() string {
+	return c.storageType
 }
 
 func (c *Core) Logger() log.Logger {
