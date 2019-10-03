@@ -8,6 +8,8 @@ FEATURES:
    details. [GH-6957]
  * Transit: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
+ * Transit: Encryption and decryption is now supported via AES128-GCM96
+   [GH-7555]
 
 CHANGES: 
 
