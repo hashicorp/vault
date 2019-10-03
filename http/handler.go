@@ -111,8 +111,9 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 
-	// Handle pprof paths
+	// Handle non-forwarded paths
 	mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+	mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
 
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
