@@ -30,7 +30,7 @@ export default ApplicationAdapter.extend({
     return this._super(...arguments).catch(errorOrModel => {
       // if the response is a real 404 or if the secret is gated by a control group this will be an error,
       // otherwise the response will be the body of a deleted / destroyed version
-      if (errorOrModel instanceof DS.AdapterError || errorOrModel instanceof ControlGroupError) {
+      if (errorOrModel instanceof DS.AdapterError) {
         throw errorOrModel;
       }
       return errorOrModel;
