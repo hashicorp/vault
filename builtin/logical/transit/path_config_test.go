@@ -49,6 +49,14 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	req.Data["type"] = "ecdsa-p256"
 	doReq(req)
 
+	req.Path = "keys/p384"
+	req.Data["type"] = "ecdsa-p384"
+	doReq(req)
+
+	req.Path = "keys/p521"
+	req.Data["type"] = "ecdsa-p521"
+	doReq(req)
+
 	delete(req.Data, "type")
 
 	req.Path = "keys/aes/rotate"
@@ -64,6 +72,18 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	doReq(req)
 
 	req.Path = "keys/p256/rotate"
+	doReq(req)
+	doReq(req)
+	doReq(req)
+	doReq(req)
+
+	req.Path = "keys/p384/rotate"
+	doReq(req)
+	doReq(req)
+	doReq(req)
+	doReq(req)
+
+	req.Path = "keys/p521/rotate"
 	doReq(req)
 	doReq(req)
 	doReq(req)
@@ -97,6 +117,11 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	req.Path = "keys/ed/config"
 	doReq(req)
 	req.Path = "keys/p256/config"
+	doReq(req)
+	req.Path = "keys/p384/config"
+	doReq(req)
+
+	req.Path = "keys/p521/config"
 	doReq(req)
 
 	req.Data = map[string]interface{}{
@@ -207,6 +232,26 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 	delete(req.Data, "context")
 	key = "p256"
+	testSignVerify(5, true)
+	testSignVerify(4, true)
+	testSignVerify(3, true)
+	testSignVerify(2, false)
+	testHMAC(5, true)
+	testHMAC(4, true)
+	testHMAC(3, true)
+	testHMAC(2, false)
+
+	key = "p384"
+	testSignVerify(5, true)
+	testSignVerify(4, true)
+	testSignVerify(3, true)
+	testSignVerify(2, false)
+	testHMAC(5, true)
+	testHMAC(4, true)
+	testHMAC(3, true)
+	testHMAC(2, false)
+
+	key = "p521"
 	testSignVerify(5, true)
 	testSignVerify(4, true)
 	testSignVerify(3, true)

@@ -19,9 +19,13 @@ and are automatically revoked when the Vault lease expires.
 Vault supports three different types of credentials to retrieve from AWS:
 
 1. `iam_user`: Vault will create an IAM user for each lease, attach the managed
-   and inline IAM policies as specified in the role to the user, and then return
-   the access key and secret key to the caller. IAM users have no session tokens
-   and so no session token will be returned.
+   and inline IAM policies as specified in the role to the user, and if a
+   [permissions
+   boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+   is specified on the role, the permissions boundary will also be attached.
+   Vault will then generate an access key and secret key for the IAM user and
+   return them to the caller. IAM users have no session tokens and so no
+   session token will be returned.
 2. `assumed_role`: Vault will call
    [sts:AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
    and return the access key, secret key, and session token to the caller.
@@ -184,6 +188,59 @@ permissions Vault needs:
   ]
 }
 ```
+
+Vault also supports AWS Permissions Boundaries when creating IAM users. If you
+wish to enforce that Vault always attaches a permissions boundary to an IAM
+user, you can use a policy like:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
+        "iam:ListGroupsForUser",
+        "iam:ListUserPolicies",
+        "iam:RemoveUserFromGroup"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachUserPolicy",
+        "iam:CreateUser",
+        "iam:DeleteUserPolicy",
+        "iam:DetachUserPolicy",
+        "iam:PutUserPolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": [
+            "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:policy/PolicyName"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+where the "iam:PermissionsBoundary" condition contains the list of permissions
+boundary policies that you wish to ensure that Vault uses. This policy will
+ensure that Vault uses one of the permissions boundaries specified (not all of
+them).
 
 ## STS credentials
 

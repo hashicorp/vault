@@ -55,6 +55,8 @@ const (
 	KeyType_RSA2048
 	KeyType_RSA4096
 	KeyType_ChaCha20_Poly1305
+	KeyType_ECDSA_P384
+	KeyType_ECDSA_P521
 )
 
 const (
@@ -105,7 +107,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -113,7 +115,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -135,6 +137,10 @@ func (kt KeyType) String() string {
 		return "chacha20-poly1305"
 	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
+	case KeyType_ECDSA_P384:
+		return "ecdsa-p384"
+	case KeyType_ECDSA_P521:
+		return "ecdsa-p521"
 	case KeyType_ED25519:
 		return "ed25519"
 	case KeyType_RSA2048:
@@ -1063,12 +1069,25 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	var pubKey []byte
 	var err error
 	switch p.Type {
-	case KeyType_ECDSA_P256:
-		curveBits := 256
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curveBits int
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curveBits = 384
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curveBits = 521
+			curve = elliptic.P521()
+		default:
+			curveBits = 256
+			curve = elliptic.P256()
+		}
+
 		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
-				Curve: elliptic.P256(),
+				Curve: curve,
 				X:     keyParams.EC_X,
 				Y:     keyParams.EC_Y,
 			},
@@ -1242,7 +1261,17 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	}
 
 	switch p.Type {
-	case KeyType_ECDSA_P256:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
 		var ecdsaSig ecdsaSignature
 
 		switch marshaling {
@@ -1267,7 +1296,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PublicKey{
-			Curve: elliptic.P256(),
+			Curve: curve,
 			X:     keyParams.EC_X,
 			Y:     keyParams.EC_Y,
 		}
@@ -1378,8 +1407,18 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		}
 		entry.Key = newKey
 
-	case KeyType_ECDSA_P256:
-		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
 			return err
 		}
