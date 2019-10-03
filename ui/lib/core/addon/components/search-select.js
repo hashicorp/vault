@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { computed } from '@ember/object';
 import { singularize } from 'ember-inflector';
+import layout from '../templates/components/search-select';
 
 /**
  * @module SearchSelect
@@ -20,6 +21,7 @@ import { singularize } from 'ember-inflector';
  *
  */
 export default Component.extend({
+  layout,
   'data-test-component': 'search-select',
   classNames: ['field', 'search-select'],
   store: service(),
