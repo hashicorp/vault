@@ -1700,7 +1700,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// continue to be accessible even after prior seal keys are destroyed.
 	if seal, ok := c.seal.(*autoSeal); ok {
 		if err := seal.UpgradeKeys(c.activeContext); err != nil {
-			return err
+			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
 	}
 
