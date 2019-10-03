@@ -363,6 +363,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"pki",
 				"postgresql",
 				"postgresql-database-plugin",
+				"proxy",
 				"rabbitmq",
 				"radius",
 				"ssh",

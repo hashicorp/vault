@@ -20,6 +20,7 @@ import (
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
+	credProxy "github.com/hashicorp/vault/builtin/credential/proxy"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
@@ -83,6 +84,7 @@ func newRegistry() *registry {
 			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
 			"pcf":        credCF.Factory, // Deprecated.
+			"proxy":      credProxy.Factory,
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},
