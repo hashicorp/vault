@@ -116,19 +116,16 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
-	err = parseListeners(&result, list)
-	if err != nil {
+	if err := parseListeners(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
 	}
 
-	err = parseCache(&result, list)
-	if err != nil {
+	if err := parseCache(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
-	err = parseTemplates(&result, list)
-	if err != nil {
-		return nil, errwrap.Wrapf("error parsing 'templates':{{err}}", err)
+	if err := parseTemplates(&result, list); err != nil {
+		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
 	}
 
 	if result.Cache != nil {
@@ -471,7 +468,7 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("mapstructure decoder creation failed")
 		}
 		if err := decoder.Decode(parsed); err != nil {
-			return errors.New("mapstructure decode failed")
+			return err
 		}
 		tcs = append(tcs, &tc)
 	}

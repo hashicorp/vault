@@ -286,8 +286,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_Template_Single tests template definitions in Vault Agent
-// configuration files
+// TestLoadConfigFile_Template tests template definitions in Vault Agent
 func TestLoadConfigFile_Template(t *testing.T) {
 	testCases := map[string]struct {
 		fixturePath       string
