@@ -381,8 +381,9 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client: client,
-			Logger: cacheLogger.Named("apiproxy"),
+			Client:               client,
+			Logger:               cacheLogger.Named("apiproxy"),
+			RequireRequestHeader: config.Cache.RequireRequestHeader,
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
