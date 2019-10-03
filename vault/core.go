@@ -461,6 +461,8 @@ type Core struct {
 	pendingRaftPeers map[string][]byte
 
 	coreNumber int
+
+	recoveryMode bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -536,6 +538,8 @@ type CoreConfig struct {
 	MetricsHelper *metricsutil.MetricsHelper
 
 	CounterSyncInterval time.Duration
+
+	RecoveryMode bool
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -656,6 +660,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
+		recoveryMode: conf.RecoveryMode,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

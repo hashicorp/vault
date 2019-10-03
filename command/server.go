@@ -101,6 +101,7 @@ type ServerCommand struct {
 	flagConfigs          []string
 	flagLogLevel         string
 	flagLogFormat        string
+	flagRecovery         bool
 	flagDev              bool
 	flagDevRootTokenID   string
 	flagDevListenAddr    string
@@ -196,6 +197,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
 		Completion: complete.PredictSet("standard", "json"),
 		Usage:      `Log format. Supported values are "standard" and "json".`,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "recovery",
+		Target: &c.flagRecovery,
+		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
+			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -694,6 +702,7 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
+		RecoveryMode:              c.flagRecovery,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1233,6 +1242,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			MaxRequestSize:        ln.maxRequestSize,
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
+			Recovery:              c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here

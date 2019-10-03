@@ -168,7 +168,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 
-	if core.rawEnabled {
+	if core.rawEnabled || core.recoveryMode {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
 			Pattern: "(raw/?$|raw/(?P<path>.+))",
 
