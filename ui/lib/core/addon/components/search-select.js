@@ -75,6 +75,9 @@ export default Component.extend({
     this.set('options', options);
   },
   fetchOptions: task(function*() {
+    if (!this.models) {
+      return;
+    }
     for (let modelType of this.models) {
       if (modelType.includes('identity')) {
         this.set('shouldRenderName', true);
