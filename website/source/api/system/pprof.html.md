@@ -7,7 +7,7 @@ description: |-
   The `/sys/pprof` endpoint is used to query profiling information.
 ---
 
-# `/sys/policy`
+# `/sys/pprof`
 
 The `/sys/pprof` endpoint is used to query. The response returned by
 these endpoints are equivalent to those returned by the `http/pprof`
