@@ -47,7 +47,7 @@ const (
 	fileFriendlyTimeFormat = "2006-01-02T15-04-05Z"
 )
 
-// debugIndex represents the data in the index file
+// debugIndex represents the data structure in the index file
 type debugIndex struct {
 	VaultAddress    string                 `json:"vault_address"`
 	Version         int                    `json:"version"`
@@ -63,7 +63,7 @@ type debugIndex struct {
 	Errors          []*captureError        `json:"errors"`
 }
 
-// captureError hold an error entry that can occur during polling capture.
+// captureError holds an error entry that can occur during polling capture.
 // It includes the timestamp, the target, and the error itself.
 type captureError struct {
 	TargetError string    `json:"error"`
@@ -484,7 +484,7 @@ POLLING:
 		}
 	}
 
-	// Close the done channel signal termination
+	// Close the done channel to signal termination
 	close(c.doneCh)
 
 	// Write collected data to their corresponding files
