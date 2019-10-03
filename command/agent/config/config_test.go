@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	ctconfig "github.com/hashicorp/consul-template/config"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -93,8 +94,14 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 }
 
 func TestLoadConfigFile(t *testing.T) {
-	os.Setenv("TEST_AAD_ENV", "aad")
-	defer os.Unsetenv("TEST_AAD_ENV")
+	if err := os.Setenv("TEST_AAD_ENV", "aad"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TEST_AAD_ENV"); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	config, err := LoadConfig("./test-fixtures/config.hcl")
 	if err != nil {
@@ -277,4 +284,127 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+// TestLoadConfigFile_Template tests template definitions in Vault Agent
+// configuration files
+func TestLoadConfigFile_Template(t *testing.T) {
+	testCases := map[string]struct {
+		fixturePath       string
+		expectedTemplates []*ctconfig.TemplateConfig
+	}{
+		"min": {
+			fixturePath: "./test-fixtures/config-template-min.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:      strPtr("/path/on/disk/to/template.ctmpl"),
+					Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
+				},
+			},
+		},
+		"full": {
+			fixturePath: "./test-fixtures/config-template-full.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Backup:         boolPtr(true),
+					Command:        strPtr("restart service foo"),
+					CommandTimeout: timeDurationPtr("60s"),
+					Contents:       strPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
+					CreateDestDirs: boolPtr(true),
+					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  boolPtr(true),
+					LeftDelim:      strPtr("<<"),
+					Perms:          fileMode(0655),
+					RightDelim:     strPtr(">>"),
+					SandboxPath:    strPtr("/path/on/disk/where"),
+
+					Wait: &ctconfig.WaitConfig{
+						Min: timeDurationPtr("10s"),
+						Max: timeDurationPtr("40s"),
+					},
+				},
+			},
+		},
+		"many": {
+			fixturePath: "./test-fixtures/config-template-many.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:         strPtr("/path/on/disk/to/template.ctmpl"),
+					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  boolPtr(false),
+					CreateDestDirs: boolPtr(true),
+					Command:        strPtr("restart service foo"),
+					Perms:          fileMode(0600),
+				},
+				&ctconfig.TemplateConfig{
+					Source:      strPtr("/path/on/disk/to/template2.ctmpl"),
+					Destination: strPtr("/path/on/disk/where/template/will/render2.txt"),
+					Backup:      boolPtr(true),
+					Perms:       fileMode(0755),
+					Wait: &ctconfig.WaitConfig{
+						Min: timeDurationPtr("2s"),
+						Max: timeDurationPtr("10s"),
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfig(tc.fixturePath)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			expected := &Config{
+				AutoAuth: &AutoAuth{
+					Method: &Method{
+						Type:      "aws",
+						MountPath: "auth/aws",
+						Namespace: "my-namespace/",
+						Config: map[string]interface{}{
+							"role": "foobar",
+						},
+					},
+					Sinks: []*Sink{
+						&Sink{
+							Type:   "file",
+							DHType: "curve25519",
+							DHPath: "/tmp/file-foo-dhpath",
+							AAD:    "foobar",
+							Config: map[string]interface{}{
+								"path": "/tmp/file-foo",
+							},
+						},
+					},
+				},
+				Templates: tc.expectedTemplates,
+				PidFile:   "./pidfile",
+			}
+
+			if diff := deep.Equal(config, expected); diff != nil {
+				t.Fatal(diff)
+			}
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func timeDurationPtr(duration string) *time.Duration {
+	d, _ := time.ParseDuration(duration)
+
+	return &d
+}
+
+// FileMode returns a pointer to the given os.FileMode.
+func fileMode(o os.FileMode) *os.FileMode {
+	return &o
 }
