@@ -60,7 +60,7 @@ Usage: vault login [options] [AUTH K=V...]
 
   If an auth method is enabled at a non-standard path, the -method flag still
   refers to the canonical type, but the -path flag refers to the enabled path.
-  If a github auth method was enabled at "github-ent", authenticate like this:
+  If a github auth method was enabled at "github-prod", authenticate like this:
 
       $ vault login -method=github -path=github-prod
 
@@ -213,6 +213,12 @@ func (c *LoginCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
+	}
+
+	// Evolving token formats across Vault versions have caused issues during CLI logins. Unless
+	// token auth is being used, omit any token picked up from TokenHelper.
+	if authMethod != "token" {
+		client.SetToken("")
 	}
 
 	// Authenticate delegation to the auth handler
