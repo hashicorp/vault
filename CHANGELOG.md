@@ -35,6 +35,8 @@ BUG FIXES:
    cluster [GH-7327]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
+ * secret/database: Fix bug in combined DB secrets engine that can result in
+   writes to static-roles endpoints timing out.
 
 ## 1.2.3 (September 12, 2019)
 
