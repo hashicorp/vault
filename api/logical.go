@@ -207,11 +207,21 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Undelete(path string, versions []int) (*Secret, error) {
+func (c *Logical) Undelete(path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/"+path)
 
-	if err := r.SetJSONBody(versions); err != nil {
-		return nil, err
+	var values url.Values
+	for k, v := range data {
+		if values == nil {
+			values = make(url.Values)
+		}
+		for _, val := range v {
+			values.Add(k, val)
+		}
+	}
+
+	if values != nil {
+		r.Params = values
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
