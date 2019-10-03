@@ -22,8 +22,8 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.set('isOpen', false);
     this.console.clearLog(true);
     this.clearModelCache();
-    this.replaceWith('vault.cluster.auth', { queryParams: { redirect_to: '' } });
     this.flashMessages.clearMessages();
     this.permissions.reset();
+    this.replaceWith('vault.cluster.auth');
   },
 });
