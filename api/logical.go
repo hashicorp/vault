@@ -207,6 +207,39 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 	return ParseSecret(resp.Body)
 }
 
+func (c *Logical) Undelete(path string, versions []int) (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/"+path)
+
+	if err := r.SetJSONBody(versions); err != nil {
+		return nil, err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
 	if wrappingToken != "" {
