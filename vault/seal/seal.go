@@ -16,6 +16,7 @@ const (
 	OCIKMS        = "ocikms"
 	Transit       = "transit"
 	Test          = "test-auto"
+	Local         = "local"
 
 	// HSMAutoDeprecated is a deprecated seal type prior to 0.9.0.
 	// It is still referenced in certain code paths for upgrade purporses
