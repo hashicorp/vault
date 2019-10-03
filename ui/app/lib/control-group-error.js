@@ -1,6 +1,6 @@
-import DS from 'ember-data';
+import EmberError from '@ember/error';
 
-export default class ControlGroupError extends DS.AdapterError {
+export default class ControlGroupError extends EmberError {
   constructor(wrapInfo) {
     let { accessor, creation_path, creation_time, token, ttl } = wrapInfo;
     super();
