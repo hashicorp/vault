@@ -22,6 +22,10 @@ IMPROVEMENTS:
  * secrets/aws: The root config can now be read [GH-7245]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
+ * sys: Add a new `sys/host-info` endpoint for querying information about 
+   the host [GH-7330]
+ * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
+   information to be extracted [GH-7473]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
