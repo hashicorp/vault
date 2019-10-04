@@ -1,46 +1,106 @@
-<label for="filter-mode" class="is-label">
-  Mount filter mode
-</label>
-<div class="field is-expanded">
-  <div class="select is-fullwidth">
-    <select
-      id="filter-mode"
-      onchange={{action (mut config.mode) value="target.value"}}
-      data-test-replication-filter-mount-mode=true
-    >
-      {{#each (array "whitelist" "blacklist") as |mode|}}
-        <option selected={{eq config.mode mode}} value="{{mode}}">
-        {{capitalize mode}}
-        </option>
-      {{/each}}
-    </select>
-  </div>
-  <p class="help has-text-grey">
-    {{#if (eq config.mode "blacklist")}}
-      Selected mounts will be excluded when replicating to the secondary <code>{{or id config.id}}</code>.
-    {{else}}
-      <em>Only</em> the selected mounts will be replicated to the secondary <code>{{or id config.id}}</code>.
+<h4 class="title is-5">
+  Filtered paths
+</h4>
+
+
+<div class="radio-card-selector">
+  <label
+    for="no-filtering"
+    class="radio-card
+      {{if (not config.mode) " is-selected"}}"
+  >
+    <Icon
+      @glyph="file-fill"
+      @size="xl"
+      class="has-text-grey-light"
+     />
+    <h5 class="title is-6">
+      Include everything
+    </h5>
+    All namespaces and mounts in this cluster will be replicated
+    <RadioButton
+      @value={{null}}
+      @radioClass="radio"
+      @groupValue={{config.mode}}
+      @changed={{queue
+        (action (mut config.mode))
+      }}
+      @name="config-mode"
+      @radioId="no-filtering"
+     />
+
+    <label for="no-filtering"></label>
+  </label>
+
+
+  <label
+    for="whitelist"
+    class="radio-card
+      {{if (eq config.mode "whitelist") " is-selected"}}"
+  >
+    <Icon
+      @glyph="file-fill"
+      @size="xl"
+      class="has-text-grey-light"
+     />
+    <h5 class="title is-6">
+      Whitelist
+    </h5>
+    Only include the selected namespaces and mounts
+    <RadioButton
+      @value="whitelist"
+      @radioClass="radio"
+      @groupValue={{config.mode}}
+      @changed={{queue
+        (action (mut config.mode))
+      }}
+      @name="config-mode"
+      @radioId="whitelist"
+     />
+
+    <label for="whitelist"></label>
+  </label>
+
+
+  <label
+    for="blacklist"
+    class="radio-card
+      {{if (eq config.mode "blacklist") " is-selected"}}"
+  >
+    <Icon
+      @glyph="file-fill"
+      @size="xl"
+      class="has-text-grey-light"
+     />
+    <h5 class="title is-6">
+      Blacklist
+    </h5>
+    Do not include the selected namespaces and mounts
+    <RadioButton
+      @value="blacklist"
+      @radioClass="radio"
+      @groupValue={{config.mode}}
+      @changed={{queue
+        (action (mut config.mode))
+      }}
+      @name="config-mode"
+      @radioId="blacklist"
+     />
+
+    <label for="blacklist"></label>
+  </label>
+</div>
+{{#if (or (eq config.mode "whitelist") (eq config.mode "blacklist"))}}
+
+    <SearchSelect
+      @id="paths"
+      @onInput={{action "inputChanged"}}
+      @onChange={{action "pathsChanged"}}
+      @inputValue={{config.paths}}
+      @label="Paths in this {{config.mode}}"
+      @options={{this.autoCompleteOptions}}
+      />
     {{/if}}
-  </p>
-</div>
-<label class="is-label">
-  Filtered Mounts
-</label>
-<div class="columns is-mobile is-gapless is-marginless table">
-  <div class="column is-narrow thead">
-    <div class="th"></div>
-  </div>
-  <div class="column is-5 thead">
-    <div class="th">
-      Mount Path
-    </div>
-  </div>
-  <div class="column thead">
-    <div class="th">
-      Mount Type
-    </div>
-  </div>
-</div>
 {{#each mounts as |mount|}}
   {{#unless (or mount.local (contains mount.type singletonMountTypes))}}
     {{!-- auth mounts have apiPath, secret mounts use path --}}
