@@ -51,24 +51,11 @@
       </p>
     </div>
     {{#if (eq replicationMode "performance")}}
-      <div class="field">
-        {{toggle-button
-        toggleTarget=this
-        toggleAttr='showFilterConfig'
-        closedLabel='Configure performance mount filtering'
-        openLabel='Hide performance mount filtering config'
-        data-test-replication-secondary-token-options=true
-        }}
-        {{#if showFilterConfig}}
-          <div class="box">
-            <PathFilterConfigList
-              @paths={{paths}}
-              @config={{filterConfig}}
-              @id={{id}}
-            />
-          </div>
-        {{/if}}
-      </div>
+      <PathFilterConfigList
+        @paths={{paths}}
+        @config={{filterConfig}}
+        @id={{id}}
+      />
     {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
