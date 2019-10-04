@@ -88,8 +88,7 @@ encryption key) this nonce value is **never reused**.
 				Description: `
 This parameter is required when encryption key is expected to be created.
 When performing an upsert operation, the type of key to create. Currently,
-"aes256-gcm96" (symmetric) is the only type supported. Defaults to
-"aes256-gcm96".`,
+"aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
 			},
 
 			"convergent_encryption": &framework.FieldSchema{
@@ -228,6 +227,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		keyType := d.Get("type").(string)
 		switch keyType {
+		case "aes128-gcm96":
+			polReq.KeyType = keysutil.KeyType_AES128_GCM96
 		case "aes256-gcm96":
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
 		case "chacha20-poly1305":

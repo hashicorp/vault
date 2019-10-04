@@ -8,6 +8,8 @@ FEATURES:
    details. [GH-6957]
  * Transit: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
+ * Transit: Encryption and decryption is now supported via AES128-GCM96
+   [GH-7555]
 
 CHANGES: 
 
@@ -19,12 +21,16 @@ IMPROVEMENTS:
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * core: Exit ScanView if context has been cancelled [GH-7419]
- * secrets/aws: The root config can now be read [GH-7245]
- * storage/cassandra: Improve storage efficiency by eliminating unnecessary
-   copies of value data [GH-7199]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
+ * secrets/aws: The root config can now be read [GH-7245]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary
+   copies of value data [GH-7199]
+ * sys: Add a new `sys/host-info` endpoint for querying information about 
+   the host [GH-7330]
+ * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
+   information to be extracted [GH-7473]
 
 BUG FIXES:
 
@@ -37,10 +43,10 @@ BUG FIXES:
    `.well-known/openid-configuration` response [GH-7533]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
+ * secrets/database: Fix bug in combined DB secrets engine that can result in
+   writes to static-roles endpoints timing out [GH-7518]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
- * secret/database: Fix bug in combined DB secrets engine that can result in
-   writes to static-roles endpoints timing out [GH-7518]
 
 ## 1.2.3 (September 12, 2019)
 
@@ -279,13 +285,13 @@ BUG FIXES:
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * secrets/database: Escape username/password before using in connection URL
+   [GH-7089]
  * secrets/pki: Forward revocation requests to active node when on a
    performance standby [GH-7173]
  * ui: Fix timestamp on some transit keys [GH-6827]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
- * secret/database: Escape username/password before using in connection URL
-   [GH-7089]
 
 ## 1.1.4/1.1.5 (July 25th/30th, 2019)
 
