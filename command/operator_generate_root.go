@@ -35,6 +35,7 @@ type OperatorGenerateRootCommand struct {
 	flagNonce       string
 	flagGenerateOTP bool
 	flagDRToken     bool
+	flagRecovery    bool
 
 	testStdin io.Reader // for tests
 }
@@ -131,6 +132,12 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Completion: complete.PredictNothing,
 		Usage: "Generate and print a high-entropy one-time-password (OTP) " +
 			"suitable for use with the \"-init\" flag.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "recovery",
+		Target: &c.flagRecovery,
+		Usage:  "Set this flag to do generate root operations on a Recovery tokens",
 	})
 
 	f.BoolVar(&BoolVar{

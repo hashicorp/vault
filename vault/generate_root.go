@@ -77,10 +77,10 @@ type GenerateRootResult struct {
 func (c *Core) GenerateRootProgress() (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.Sealed() {
+	if c.Sealed() && !c.recoveryMode {
 		return 0, consts.ErrSealed
 	}
-	if c.standby {
+	if c.standby && !c.recoveryMode {
 		return 0, consts.ErrStandby
 	}
 
@@ -95,10 +95,10 @@ func (c *Core) GenerateRootProgress() (int, error) {
 func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.Sealed() {
+	if c.Sealed() && !c.recoveryMode {
 		return nil, consts.ErrSealed
 	}
-	if c.standby {
+	if c.standby && !c.recoveryMode {
 		return nil, consts.ErrStandby
 	}
 
@@ -141,10 +141,10 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.Sealed() {
+	if c.Sealed() && !c.recoveryMode {
 		return consts.ErrSealed
 	}
-	if c.standby {
+	if c.standby && !c.recoveryMode {
 		return consts.ErrStandby
 	}
 
@@ -217,10 +217,10 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.Sealed() {
+	if c.Sealed() && !c.recoveryMode {
 		return nil, consts.ErrSealed
 	}
-	if c.standby {
+	if c.standby && !c.recoveryMode {
 		return nil, consts.ErrStandby
 	}
 
@@ -276,16 +276,24 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		}
 	}
 
-	// Verify the master key
-	if c.seal.RecoveryKeySupported() {
-		if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
-			c.logger.Error("root generation aborted, recovery key verification failed", "error", err)
+	switch {
+	case c.recoveryMode:
+		if err := c.barrier.Unseal(ctx, masterKey); err != nil {
+			c.logger.Error("root generation aborted, recovery token verification failed", "error", err)
 			return nil, err
 		}
-	} else {
-		if err := c.barrier.VerifyMaster(masterKey); err != nil {
-			c.logger.Error("root generation aborted, master key verification failed", "error", err)
-			return nil, err
+	default:
+		// Verify the master key
+		if c.seal.RecoveryKeySupported() {
+			if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
+				c.logger.Error("root generation aborted, recovery key verification failed", "error", err)
+				return nil, err
+			}
+		} else {
+			if err := c.barrier.VerifyMaster(masterKey); err != nil {
+				c.logger.Error("root generation aborted, master key verification failed", "error", err)
+				return nil, err
+			}
 		}
 	}
 
@@ -352,10 +360,10 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 func (c *Core) GenerateRootCancel() error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.Sealed() {
+	if c.Sealed() && !c.recoveryMode {
 		return consts.ErrSealed
 	}
-	if c.standby {
+	if c.standby && !c.recoveryMode {
 		return consts.ErrStandby
 	}
 

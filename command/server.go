@@ -374,12 +374,410 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
+func (c *ServerCommand) runRecoveryMode() int {
+	// Load the configuration
+	var config *server.Config
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
+			return 1
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Ensure at least one config was found.
+	if config == nil {
+		c.UI.Output(wrapAtLength(
+			"No configuration files found. Please provide configurations with the " +
+				"-config flag. If you are supplying the path to a directory, please " +
+				"ensure the directory contains files with the .hcl or .json " +
+				"extension."))
+		return 1
+	}
+
+	// Create a logger. We wrap it in a gated writer so that it doesn't
+	// start logging too early.
+	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logWriter = c.logGate
+	if c.flagCombineLogs {
+		c.logWriter = os.Stdout
+	}
+	var level log.Level
+	var logLevelWasNotSet bool
+	logLevelString := c.flagLogLevel
+	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
+	switch c.flagLogLevel {
+	case notSetValue, "":
+		logLevelWasNotSet = true
+		logLevelString = "info"
+		level = log.Info
+	case "trace":
+		level = log.Trace
+	case "debug":
+		level = log.Debug
+	case "notice", "info":
+		level = log.Info
+	case "warn", "warning":
+		level = log.Warn
+	case "err", "error":
+		level = log.Error
+	default:
+		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
+		return 1
+	}
+
+	logFormat := logging.UnspecifiedFormat
+	if c.flagLogFormat != notSetValue {
+		var err error
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		logFormat = logging.ParseEnvLogFormat()
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		var err error
+		logFormat, err = logging.ParseLogFormat(config.LogFormat)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+	}
+
+	c.logger = log.New(&log.LoggerOptions{
+		Output: c.logWriter,
+		Level:  level,
+		// Note that if logFormat is either unspecified or standard, then
+		// the resulting logger's format will be standard.
+		JSONFormat: logFormat == logging.JSONFormat,
+	})
+
+	// adjust log level based on config setting
+	if config.LogLevel != "" && logLevelWasNotSet {
+		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
+		switch configLogLevel {
+		case "trace":
+			c.logger.SetLevel(log.Trace)
+		case "debug":
+			c.logger.SetLevel(log.Debug)
+		case "notice", "info", "":
+			c.logger.SetLevel(log.Info)
+		case "warn", "warning":
+			c.logger.SetLevel(log.Warn)
+		case "err", "error":
+			c.logger.SetLevel(log.Error)
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown log level: %s", config.LogLevel))
+			return 1
+		}
+	}
+
+	// create GRPC logger
+	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
+	grpclog.SetLogger(&grpclogFaker{
+		logger: namedGRPCLogFaker,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
+	})
+
+	// Ensure that a backend is provided
+	if config.Storage == nil {
+		c.UI.Output("A storage backend must be specified")
+		return 1
+	}
+
+	if config.DefaultMaxRequestDuration != 0 {
+		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
+	}
+
+	// log proxy settings
+	proxyCfg := httpproxy.FromEnvironment()
+	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
+		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+
+	// If mlockall(2) isn't supported, show a warning. We disable this in dev
+	// because it is quite scary to see when first using Vault. We also disable
+	// this if the user has explicitly disabled mlock in configuration.
+	if !config.DisableMlock && !mlock.Supported() {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! mlock is not supported on this system! An mlockall(2)-like " +
+				"syscall to prevent memory from being swapped to disk is not " +
+				"supported on this system. For better security, only run Vault on " +
+				"systems where this call is supported. If you are running Vault " +
+				"in a Docker container, provide the IPC_LOCK cap to the container."))
+	}
+
+	// Initialize the backend
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
+		return 1
+	}
+	if config.Storage.Type == "raft" && len(config.ClusterAddr) == 0 {
+		c.UI.Error("Cluster address must be set when using raft storage")
+		return 1
+	}
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		return 1
+	}
+
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+	info["log level"] = logLevelString
+	infoKeys = append(infoKeys, "log level")
+
+	var barrierSeal vault.Seal
+
+	var sealConfigError error
+
+	// Handle the case where no seal is provided
+	switch len(config.Seals) {
+	case 0:
+		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+	case 1:
+		// If there's only one seal and it's disabled assume they want to
+		// migrate to a shamir seal and simply didn't provide it
+		if config.Seals[0].Disabled {
+			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		}
+	}
+	for _, configSeal := range config.Seals {
+		sealType := vaultseal.Shamir
+		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+			sealType = os.Getenv("VAULT_SEAL_TYPE")
+			configSeal.Type = sealType
+		} else {
+			sealType = configSeal.Type
+		}
+
+		var seal vault.Seal
+		sealLogger := c.logger.Named(sealType)
+		seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+		if sealConfigError != nil {
+			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+				c.UI.Error(fmt.Sprintf(
+					"Error parsing Seal configuration: %s", sealConfigError))
+				return 1
+			}
+		}
+		if seal == nil {
+			c.UI.Error(fmt.Sprintf(
+				"After configuring seal nil returned, seal type was %s", sealType))
+			return 1
+		}
+
+		barrierSeal = seal
+
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func() {
+			err = seal.Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}()
+	}
+
+	if barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+		return 1
+	}
+
+	coreConfig := &vault.CoreConfig{
+		Physical:     backend,
+		StorageType:  config.Storage.Type,
+		Seal:         barrierSeal,
+		Logger:       c.logger,
+		DisableMlock: config.DisableMlock,
+		RecoveryMode: c.flagRecovery,
+	}
+
+	// Initialize the core
+	core, newCoreError := vault.NewCore(coreConfig)
+	if newCoreError != nil {
+		if vault.IsFatalError(newCoreError) {
+			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			return 1
+		}
+	}
+
+	// Compile server information for output later
+	info["storage"] = config.Storage.Type
+	info["mlock"] = fmt.Sprintf(
+		"supported: %v, enabled: %v",
+		mlock.Supported(), !config.DisableMlock && mlock.Supported())
+	infoKeys = append(infoKeys, "mlock", "storage")
+
+	// Initialize the listeners
+	lns := make([]ServerListener, 0, len(config.Listeners))
+	for _, lnConfig := range config.Listeners {
+		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logWriter, c.UI)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
+			return 1
+		}
+
+		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
+		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
+			val, err := parseutil.ParseInt(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_size value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestSize = val
+			}
+		}
+
+		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
+			val, err := parseutil.ParseDurationSecond(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_duration value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestDuration = val
+			}
+		}
+
+		lns = append(lns, ServerListener{
+			Listener:           ln,
+			config:             lnConfig.Config,
+			maxRequestSize:     maxRequestSize,
+			maxRequestDuration: maxRequestDuration,
+		})
+	}
+
+	// Make sure we close all listeners from this point on
+	listenerCloseFunc := func() {
+		for _, ln := range lns {
+			ln.Listener.Close()
+		}
+	}
+
+	defer c.cleanupGuard.Do(listenerCloseFunc)
+
+	infoKeys = append(infoKeys, "version")
+	verInfo := version.GetVersion()
+	info["version"] = verInfo.FullVersionNumber(false)
+	if verInfo.Revision != "" {
+		info["version sha"] = strings.Trim(verInfo.Revision, "'")
+		infoKeys = append(infoKeys, "version sha")
+	}
+	infoKeys = append(infoKeys, "cgo")
+	info["cgo"] = "disabled"
+	if version.CgoEnabled {
+		info["cgo"] = "enabled"
+	}
+
+	// Server configuration output
+	padding := 24
+	sort.Strings(infoKeys)
+	c.UI.Output("==> Vault server configuration:\n")
+	for _, k := range infoKeys {
+		c.UI.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.UI.Output("")
+
+	// Initialize the HTTP servers
+	for _, ln := range lns {
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:                  core,
+			MaxRequestSize:        ln.maxRequestSize,
+			MaxRequestDuration:    ln.maxRequestDuration,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+			Recovery:              c.flagRecovery,
+		})
+
+		server := &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          c.logger.StandardLogger(nil),
+		}
+
+		go server.Serve(ln.Listener)
+	}
+
+	if sealConfigError != nil {
+		init, err := core.Initialized(context.Background())
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
+			return 1
+		}
+		if init {
+			c.UI.Error("Vault is initialized but no Seal key could be loaded")
+			return 1
+		}
+	}
+
+	if newCoreError != nil {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! A non-fatal error occurred during initialization. Please " +
+				"check the logs for more information."))
+		c.UI.Warn("")
+	}
+
+	if !c.flagCombineLogs {
+		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+	}
+
+	c.logGate.Flush()
+
+	shutdownTriggered := false
+
+	for !shutdownTriggered {
+		select {
+		case <-c.ShutdownCh:
+			c.UI.Output("==> Vault shutdown triggered")
+
+			c.cleanupGuard.Do(listenerCloseFunc)
+
+			if err := core.Shutdown(); err != nil {
+				c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+			}
+
+			shutdownTriggered = true
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+		}
+	}
+
+	return 0
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
 		return 1
+	}
+
+	if c.flagRecovery {
+		return c.runRecoveryMode()
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.

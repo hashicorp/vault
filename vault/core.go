@@ -20,11 +20,11 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/physical/raft"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
+	"github.com/patrickmn/go-cache"
 
 	"google.golang.org/grpc"
 
@@ -719,17 +719,23 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	var err error
 
+	// Construct a new AES-GCM barrier
+	c.barrier, err = NewAESGCMBarrier(c.physical)
+	if err != nil {
+		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
+	}
+
+	// All the things happening below this are not required in
+	// recovery mode
+	if c.recoveryMode {
+		return c, nil
+	}
+
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
 		if err != nil {
 			return nil, errwrap.Wrapf("core setup failed, could not verify plugin directory: {{err}}", err)
 		}
-	}
-
-	// Construct a new AES-GCM barrier
-	c.barrier, err = NewAESGCMBarrier(c.physical)
-	if err != nil {
-		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
 
 	createSecondaries(c, conf)
