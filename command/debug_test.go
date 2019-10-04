@@ -105,7 +105,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 	args := []string{
 		"-duration=1s",
 		fmt.Sprintf("-output=%s/archive", testDir),
-		"-targets=server-status",
+		"-target=server-status",
 	}
 
 	code := cmd.Run(args)

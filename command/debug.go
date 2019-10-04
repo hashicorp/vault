@@ -173,10 +173,11 @@ func (c *DebugCommand) Flags() *FlagSets {
 	})
 
 	f.StringSliceVar(&StringSliceVar{
-		Name:   "targets",
+		Name:   "target",
 		Target: &c.flagTargets,
-		Usage: "Comma-separated string or list of targets to capture. Available " +
-			"targets are: config, host, metrics, pprof, " +
+		Usage: "Target to capture, defaulting to all if none specified. " +
+			"This can be specified multiple times to capture multiple targets. " +
+			"Available targets are: config, host, metrics, pprof, " +
 			"replication-status, server-status.",
 	})
 
