@@ -49,7 +49,6 @@ export default Base.extend({
     return hash({
       cluster: this.modelFor('mode'),
       config: this.findOrCreate(params.secondary_id),
-      mounts: this.fetchMounts(),
     });
   },
 });
