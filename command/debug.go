@@ -316,18 +316,21 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 			c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the minimum value of %q", c.flagInterval, debugMinInterval))
 			c.flagInterval = debugMinInterval
 		}
-		if c.flagInterval > c.flagDuration {
-			c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the duration value %q", c.flagInterval, c.flagDuration))
-			c.flagInterval = c.flagDuration
-		}
 		if c.flagMetricsInterval < debugMinInterval {
 			c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the minimum value of %q", c.flagMetricsInterval, debugMinInterval))
 			c.flagMetricsInterval = debugMinInterval
 		}
-		if c.flagMetricsInterval > c.flagDuration {
-			c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the duration value %q", c.flagMetricsInterval, c.flagDuration))
-			c.flagMetricsInterval = c.flagDuration
-		}
+	}
+
+	// These timing checks are always applicable since interval shouldn't be
+	// greater than the duration
+	if c.flagInterval > c.flagDuration {
+		c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the duration value %q", c.flagInterval, c.flagDuration))
+		c.flagInterval = c.flagDuration
+	}
+	if c.flagMetricsInterval > c.flagDuration {
+		c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the duration value %q", c.flagMetricsInterval, c.flagDuration))
+		c.flagMetricsInterval = c.flagDuration
 	}
 
 	if len(c.flagTargets) == 0 {
@@ -624,7 +627,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				}
 				filesArr = c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
 				c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "profile.prof")
-
 			}()
 
 			// Capture trace
@@ -642,7 +644,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				}
 				filesArr = c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
 				c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "trace.out")
-
 			}()
 
 			// Wait until profile/trace is done

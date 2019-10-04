@@ -2,6 +2,7 @@ package command
 
 import (
 	"archive/tar"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -90,6 +91,8 @@ func TestDebugCommand_Run(t *testing.T) {
 func TestDebugCommand_Archive(t *testing.T) {
 	t.Parallel()
 
+	// TODO: Switch to TDT, test for not-ext, ext, no-compression cases
+
 	testDir, err := ioutil.TempDir("", "vault-debug")
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +109,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 	basePath := "archive"
 	args := []string{
 		"-duration=1s",
-		fmt.Sprintf("-output=%s/%s", basePath, testDir),
+		fmt.Sprintf("-output=%s/%s", testDir, basePath),
 		"-target=server-status",
 	}
 
@@ -116,9 +119,9 @@ func TestDebugCommand_Archive(t *testing.T) {
 	}
 
 	bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
-	_, err = os.Open(bundlePath)
-	if err != nil {
-		t.Fatalf("failed to open archive: %s", err)
+	_, err = os.Stat(bundlePath)
+	if os.IsNotExist(err) {
+		t.Fatal(err)
 	}
 
 	tgz := archiver.NewTarGz()
@@ -129,7 +132,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 		}
 
 		// Ignore base directory and index file
-		if fh.Name == basePath+"/" || fh.Name != filepath.Join(basePath, "index.json") {
+		if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
 			return nil
 		}
 
@@ -246,10 +249,107 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 }
 
 func TestDebugCommand_Pprof(t *testing.T) {
-	t.Skip("Not implemented yet")
+	t.Parallel()
+
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testDir)
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	ui, cmd := testDebugCommand(t)
+	cmd.client = client
+	cmd.skipTimingChecks = true
+
+	basePath := "pprof"
+	outputPath := filepath.Join(testDir, basePath)
+	// pprof requires a minimum interval of 1s
+	args := []string{
+		"-compress=false",
+		"-duration=1s",
+		"-interval=1s",
+		fmt.Sprintf("-output=%s", outputPath),
+		"-target=pprof",
+	}
+
+	code := cmd.Run(args)
+	if exp := 0; code != exp {
+		t.Log(ui.ErrorWriter.String())
+		t.Fatalf("expected %d to be %d", code, exp)
+	}
+
+	profiles := []string{"heap.prof", "goroutine.prof"}
+	pollingProfiles := []string{"profile.prof", "trace.out"}
+
+	// These are captures on the first (0th) and last (1st) frame
+	for _, v := range profiles {
+		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
+		if len(files) != 2 {
+			t.Errorf("output data should exist for %s: got: %v", v, files)
+		}
+	}
+
+	// Since profile and trace are polling outputs, these only get captured
+	// on the first (0th) frame.
+	for _, v := range pollingProfiles {
+		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
+		if len(files) != 1 {
+			t.Errorf("output data should exist for %s: got: %v", v, files)
+		}
+	}
 }
 
 func TestDebugCommand_IndexFile(t *testing.T) {
+	t.Parallel()
+
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testDir)
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	ui, cmd := testDebugCommand(t)
+	cmd.client = client
+	cmd.skipTimingChecks = true
+
+	basePath := "index-test"
+	outputPath := filepath.Join(testDir, basePath)
+	// pprof requires a minimum interval of 1s
+	args := []string{
+		"-compress=false",
+		"-duration=1s",
+		"-interval=1s",
+		"-metrics-interval=1s",
+		fmt.Sprintf("-output=%s", outputPath),
+	}
+
+	code := cmd.Run(args)
+	if exp := 0; code != exp {
+		t.Log(ui.ErrorWriter.String())
+		t.Fatalf("expected %d to be %d", code, exp)
+	}
+
+	content, err := ioutil.ReadFile(filepath.Join(outputPath, "index.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	index := &debugIndex{}
+	if err := json.Unmarshal(content, index); err != nil {
+		t.Fatal(err)
+	}
+	if len(index.Output) == 0 {
+		t.Fatalf("expected valid index file: got: %v", index)
+	}
+}
+
+func TestDebugCommand_TimingChecks(t *testing.T) {
 	t.Skip("Not implemented yet")
 }
 
