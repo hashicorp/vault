@@ -24,7 +24,7 @@ var (
 type generateRecoveryToken struct{}
 
 func (g generateRecoveryToken) generate(ctx context.Context, c *Core) (string, func(), error) {
-	tokenUUID, err := c.CreateDROperationToken(ctx)
+	tokenUUID, err := c.CreateRecoveryToken(ctx)
 	if err != nil {
 		return "", nil, err
 	}
@@ -37,10 +37,10 @@ func (g generateRecoveryToken) generate(ctx context.Context, c *Core) (string, f
 }
 
 func (c *Core) DeleteRecoveryToken(ctx context.Context) error {
-	return c.barrier.Delete(ctx, coreDROperationTokenPath)
+	return c.barrier.Delete(ctx, coreRecoveryTokenPath)
 }
 
-func (c *Core) CreateDROperationToken(ctx context.Context) (string, error) {
+func (c *Core) CreateRecoveryToken(ctx context.Context) (string, error) {
 	id, err := base62.Random(TokenLength)
 	if err != nil {
 		return "", err
@@ -54,7 +54,7 @@ func (c *Core) CreateDROperationToken(ctx context.Context) (string, error) {
 
 	buf, err := json.Marshal(root)
 	if err != nil {
-		return "", errwrap.Wrapf("failed to encode DR Root Token: {{err}}", err)
+		return "", errwrap.Wrapf("failed to encode Recovery Token: {{err}}", err)
 	}
 
 	if err := c.barrier.Put(ctx, &logical.StorageEntry{
@@ -68,7 +68,7 @@ func (c *Core) CreateDROperationToken(ctx context.Context) (string, error) {
 }
 
 func (c *Core) GetRecoveryToken(ctx context.Context) (string, error) {
-	raw, err := c.barrier.Get(ctx, coreDROperationTokenPath)
+	raw, err := c.barrier.Get(ctx, coreRecoveryTokenPath)
 	if err != nil {
 		return "", err
 	}
@@ -76,13 +76,13 @@ func (c *Core) GetRecoveryToken(ctx context.Context) (string, error) {
 		return "", nil
 	}
 
-	drRootToken := &RecoveryToken{}
-	err = json.Unmarshal(raw.Value, drRootToken)
+	recoveryToken := &RecoveryToken{}
+	err = json.Unmarshal(raw.Value, recoveryToken)
 	if err != nil {
 		return "", err
 	}
 
-	return drRootToken.ID, nil
+	return recoveryToken.ID, nil
 }
 
 type RecoveryToken struct {
