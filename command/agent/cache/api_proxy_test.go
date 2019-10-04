@@ -133,8 +133,9 @@ func TestAPIProxy_requireRequestHeader(t *testing.T) {
 	}
 
 	// test with invalid header value
-	req.Headers = make(http.Header)
-	req.Headers[vaultRequestHeader] = []string{"bogus"}
+	req.Headers = http.Header{
+		vaultRequestHeader: []string{"bogus"},
+	}
 
 	httpReq, err = req.ToHTTP()
 	if err != nil {
@@ -156,7 +157,6 @@ func TestAPIProxy_requireRequestHeader(t *testing.T) {
 	}
 
 	// test with correct header value
-	req.Headers = make(http.Header)
 	req.Headers[vaultRequestHeader] = []string{"true"}
 
 	httpReq, err = req.ToHTTP()
