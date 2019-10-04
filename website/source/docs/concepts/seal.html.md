@@ -93,17 +93,19 @@ For a list of examples and supported providers, please see the
 
 The seal can be migrated from Shamir keys to Auto Unseal and vice versa.
 
-  ~> **NOTE**: This is not currently supported when using replication. While
-  the primary can be migrated without issue, the secondaries, depending on
+  ~> **NOTE**: This is not currently supported when using Vault Enterprise Replication.
+  While the primary can be migrated without issue, the secondaries, depending on
   which type of seal is being migrated from/to, may not work correctly. We plan
   to support this officially in a future release.
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal/index.html) with the appropriate seal
-configuration.  When you bring your server back up, run the unseal process with the
-`-migrate` flag.  All unseal commands must specify the `-migrate` flag.  Once the
-required threshold of unseal keys are entered, the unseal keys will be migrated to 
-recovery keys.
+configuration. Bring your server back up and leave the rest of the nodes offline if
+using multi-server mode, then run the unseal process with the `-migrate` flag and bring
+the rest of the cluster online.
+
+All unseal commands must specify the `-migrate` flag. Once the required threshold of
+unseal keys are entered, unseal keys will be migrated to recovery keys.
 
 ```
 $ vault operator unseal -migrate
