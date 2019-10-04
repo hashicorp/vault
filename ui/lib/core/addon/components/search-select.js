@@ -14,7 +14,7 @@ import layout from '../templates/components/search-select';
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
- * @param inputValue {String} -  A comma-separated string or an array of strings.
+ * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param label {String} - Label for this form field
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
@@ -26,23 +26,8 @@ export default Component.extend({
   classNames: ['field', 'search-select'],
   store: service(),
 
-  /*
-   * @public
-   * @param Function
-   *
-   * Function called when any of the inputs change
-   * accepts a single param `value`
-   *
-   */
   onChange: () => {},
-
-  /*
-   * @public
-   * @param String | Array
-   * A comma-separated string or an array of strings.
-   * Defaults to an empty array.
-   *
-   */
+  onInput: () => {},
   inputValue: computed(function() {
     return [];
   }),

@@ -15,6 +15,7 @@
   </label>
   {{#power-select-with-create
     options=options
+    oninput=onInput
     onchange=(action "selectOption")
     oncreate=(action "createOption")
     placeholderComponent=(component "search-select-placeholder")
