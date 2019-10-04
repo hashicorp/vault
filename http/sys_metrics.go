@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -11,6 +12,13 @@ import (
 func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req := &logical.Request{Headers: r.Header}
+
+		// Parse form
+		if err := r.ParseForm(); err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+
 		format := r.Form.Get("format")
 		if format == "" {
 			format = metricsutil.FormatFromRequest(req)
@@ -19,14 +27,20 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		// Define response
 		resp, err := core.MetricsHelper().ResponseForFormat(format)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			respondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		// Manually extract the logical response and send back the information
 		w.WriteHeader(resp.Data[logical.HTTPStatusCode].(int))
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
-		w.Write(resp.Data[logical.HTTPRawBody].([]byte))
+		switch v := resp.Data[logical.HTTPRawBody].(type) {
+		case string:
+			w.Write([]byte(v))
+		case []byte:
+			w.Write(v)
+		default:
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
+		}
 	})
 }

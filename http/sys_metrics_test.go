@@ -14,7 +14,7 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 	metrics.DefaultInmemSignal(inm)
 	conf := &vault.CoreConfig{
 		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inm, false),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
 	}
 	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
 	ln, addr := TestServer(t, core)
@@ -46,5 +46,9 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 
 	// Should also work with token
 	resp = testHttpGet(t, token, addr+"/v1/sys/metrics")
+	testResponseStatus(t, resp, 200)
+
+	// Test if prometheus response is correct
+	resp = testHttpGet(t, "", addr+"/v1/sys/metrics?format=prometheus")
 	testResponseStatus(t, resp, 200)
 }
