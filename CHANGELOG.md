@@ -47,6 +47,7 @@ BUG FIXES:
    writes to static-roles endpoints timing out [GH-7518]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
+ * ui: Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
 
 ## 1.2.3 (September 12, 2019)
 
