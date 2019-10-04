@@ -1,12 +1,15 @@
 package command
 
 import (
+	"archive/tar"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/mholt/archiver"
 	"github.com/mitchellh/cli"
 )
 
@@ -24,7 +27,10 @@ func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
 func TestDebugCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	testDir := testutil.TempDir(t, "debug")
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(testDir)
 
 	cases := []struct {
@@ -78,4 +84,57 @@ func TestDebugCommand_Run(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDebugCommand_Archive(t *testing.T) {
+	t.Parallel()
+
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testDir)
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	_, cmd := testDebugCommand(t)
+	cmd.client = client
+	cmd.skipTimingChecks = true
+
+	args := []string{
+		"-duration=1s",
+		fmt.Sprintf("-output=%s/archive", testDir),
+		"-targets=server-status",
+	}
+
+	code := cmd.Run(args)
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d", code, exp)
+	}
+
+	basePath := "archive"
+	bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
+	_, err = os.Open(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to open archive: %s", err)
+	}
+
+	tgz := archiver.NewTarGz()
+	err = tgz.Walk(bundlePath, func(f archiver.File) error {
+		fh, ok := f.Header.(*tar.Header)
+		if !ok {
+			t.Fatalf("invalid file header: %#v", f.Header)
+		}
+
+		// Ignore base directory
+		if fh.Name == basePath+"/" {
+			return nil
+		}
+
+		if fh.Name != filepath.Join(basePath, "index.json") && fh.Name != filepath.Join(basePath, "server_status.json") {
+			t.Fatalf("unxexpected file: %s", fh.Name)
+		}
+		return nil
+	})
 }

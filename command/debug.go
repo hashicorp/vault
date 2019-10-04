@@ -272,14 +272,14 @@ func (c *DebugCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Marshal and write index.js
+	// Marshal and write index.json
 	bytes, err := json.MarshalIndent(c.debugIndex, "", "  ")
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error marshalling index: %s", err))
 		return 1
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.js"), bytes, 0644); err != nil {
-		c.UI.Error(fmt.Sprintf("Unable to write index.js file: %s", err))
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0644); err != nil {
+		c.UI.Error(fmt.Sprintf("Unable to write index.json file: %s", err))
 		return 1
 	}
 
@@ -748,9 +748,14 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 	}
 }
 
-// persistCollection writes the collected data for a particular target onto the specified file, and
-// adds that file to the index.
+// persistCollection writes the collected data for a particular target onto the
+// specified file, and adds that file to the index. If the collection is empty,
+// it returns immediately.
 func (c *DebugCommand) persistCollection(collection []map[string]interface{}, outFile string) error {
+	if len(collection) == 0 {
+		return nil
+	}
+
 	// Write server-status file and update the index
 	bytes, err := json.MarshalIndent(collection, "", "  ")
 	if err != nil {
