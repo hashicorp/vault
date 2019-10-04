@@ -3,6 +3,7 @@ import Service, { inject as service } from '@ember/service';
 import RSVP from 'rsvp';
 import ControlGroupError from 'vault/lib/control-group-error';
 import getStorage from 'vault/lib/token-storage';
+import parseURL from 'core/utils/parse-url';
 
 const CONTROL_GROUP_PREFIX = 'vault:cg-';
 const TOKEN_SEPARATOR = '☃';
@@ -71,7 +72,8 @@ export default Service.extend({
     if (this.get('version.isOSS')) {
       return null;
     }
-    let pathForUrl = url.replace('/v1/', '');
+    let pathForUrl = parseURL(url).pathname;
+    pathForUrl = pathForUrl.replace('/v1/', '');
     let tokenInfo = this.get('tokenToUnwrap');
     if (tokenInfo && tokenInfo.creation_path === pathForUrl) {
       let { token, accessor, creation_time } = tokenInfo;

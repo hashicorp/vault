@@ -28,16 +28,14 @@
     "gen-story-md": "node scripts/gen-story-md.js"
   },
   "lint-staged": {
-    "linters": {
-      "*.js": [
-        "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width 110 --write",
-        "git add"
-      ],
-      "*.scss": [
-        "prettier --write",
-        "git add"
-      ]
-    }
+    "*.js": [
+      "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width 110 --write",
+      "git add"
+    ],
+    "*.scss": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "devDependencies": {
     "@ember/optional-features": "^0.7.0",
