@@ -188,7 +188,7 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 			return checkRaw(b, path)
 		},
 	}
-	return rawPaths(r)
+	return rawPaths("", r)
 }
 
 func NewRawBackend(core *Core) *RawBackend {
@@ -200,15 +200,15 @@ func NewRawBackend(core *Core) *RawBackend {
 		},
 	}
 	r.Backend = &framework.Backend{
-		Paths: rawPaths(r),
+		Paths: rawPaths("sys/", r),
 	}
 	return r
 }
 
-func rawPaths(r *RawBackend) []*framework.Path {
+func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
-			Pattern: "(raw/?$|raw/(?P<path>.+))",
+			Pattern: prefix + "(raw/?$|raw/(?P<path>.+))",
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": &framework.FieldSchema{
