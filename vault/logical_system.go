@@ -191,10 +191,10 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 	return rawPaths(r)
 }
 
-func rawBackend(barrier SecurityBarrier, logger log.Logger) *RawBackend {
+func NewRawBackend(core *Core) *RawBackend {
 	r := &RawBackend{
-		barrier: barrier,
-		logger:  logger,
+		barrier: core.barrier,
+		logger:  core.logger,
 		checkRaw: func(path string) error {
 			return nil
 		},
