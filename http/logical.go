@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"go.uber.org/atomic"
 	"io"
 	"net"
 	"net/http"
@@ -180,12 +182,16 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, true)
 }
 
-func handleLogicalRecovery(raw *vault.RawBackend) http.Handler {
+func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
+		}
+		reqToken := r.Header.Get(consts.AuthHeaderName)
+		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
+			respondError(w, http.StatusForbidden, nil)
 		}
 
 		resp, err := raw.HandleRequest(r.Context(), req)

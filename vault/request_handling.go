@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -44,6 +45,7 @@ type HandlerProperties struct {
 	MaxRequestDuration    time.Duration
 	DisablePrintableCheck bool
 	Recovery              bool
+	RecoveryToken         *uberAtomic.String
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity

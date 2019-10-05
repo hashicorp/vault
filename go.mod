@@ -91,6 +91,7 @@ require (
 	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.2
@@ -120,6 +121,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
+	go.uber.org/atomic v1.3.2
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
