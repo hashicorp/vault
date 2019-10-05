@@ -489,5 +489,11 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 		}
 		tlsConfig.RootCAs = caPool
 	}
+
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		// the keys have already been validated.
+		certificate, _ := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey))
+		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+	}
 	return tlsConfig, nil
 }

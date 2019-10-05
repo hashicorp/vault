@@ -1,6 +1,7 @@
 package ldaputil
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -255,22 +256,18 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 
 	if _, ok := d.Raw["client_tls_cert"]; ok || !hadExisting {
 		clientTLSCert := d.Get("client_tls_cert").(string)
-		if clientTLSCert != "" {
-			if err := validateCertificate([]byte(clientTLSCert)); err != nil {
-				return nil, errwrap.Wrapf("failed to parse client tls cert: {{err}}", err)
-			}
-		}
 		cfg.ClientTLSCert = clientTLSCert
 	}
 
 	if _, ok := d.Raw["client_tls_key"]; ok || !hadExisting {
 		clientTLSKey := d.Get("client_tls_key").(string)
-		if clientTLSKey != "" {
-			if err := validateCertificate([]byte(clientTLSKey)); err != nil {
-				return nil, errwrap.Wrapf("failed to parse client tls key: {{err}}", err)
-			}
-		}
 		cfg.ClientTLSKey = clientTLSKey
+	}
+
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		if _, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey)); err != nil {
+			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+		}
 	}
 
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
@@ -440,11 +437,8 @@ func (c *ConfigEntry) Validate() error {
 		}
 	}
 	if c.ClientTLSCert != "" && c.ClientTLSKey != "" {
-		if err := validateCertificate([]byte(c.ClientTLSCert)); err != nil {
-			return errwrap.Wrapf("failed to parse client tls cert: {{err}}", err)
-		}
-		if err := validateCertificate([]byte(c.ClientTLSKey)); err != nil {
-			return errwrap.Wrapf("failed to parse client tls key: {{err}}", err)
+		if _, err := tls.X509KeyPair([]byte(c.ClientTLSCert), []byte(c.ClientTLSKey)); err != nil {
+			return errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
 	}
 	return nil
