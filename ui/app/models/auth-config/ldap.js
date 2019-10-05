@@ -20,6 +20,8 @@ export default AuthConfig.extend({
           'tlsMinVersion',
           'tlsMaxVersion',
           'certificate',
+          'clientTLSCert',
+          'clientTLSKey',
           'userattr',
           'upndomain',
         ],

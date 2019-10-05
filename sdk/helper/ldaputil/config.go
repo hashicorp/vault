@@ -107,6 +107,16 @@ Default: cn`,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
 		},
 
+		"client_tls_cert": {
+			Type:        framework.TypeString,
+			Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (optional)",
+		},
+
+		"client_tls_key": {
+			Type:        framework.TypeString,
+			Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (optional)",
+		},
+
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
