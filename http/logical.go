@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -78,7 +78,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 				passHTTPReq = true
 				origBody = r.Body
 			} else {
-				origBody, err = parseRequest(core, r, w, &data)
+				origBody, err = parseRequest(perfStandby, r, w, &data)
 				if err == io.EOF {
 					data = nil
 					err = nil
@@ -105,14 +105,32 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
-	req, err := requestAuth(core, r, &logical.Request{
+	req := &logical.Request{
 		ID:         request_id,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
 		Headers:    r.Header,
-	})
+	}
+
+	if passHTTPReq {
+		req.HTTPRequest = r
+	}
+	if responseWriter != nil {
+		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
+	}
+
+	return req, origBody, 0, nil
+}
+
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	if err != nil {
+		return nil, nil, status, err
+	}
+
+	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 			return nil, nil, http.StatusForbidden, nil
@@ -135,12 +153,6 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
-	if passHTTPReq {
-		req.HTTPRequest = r
-	}
-	if responseWriter != nil {
-		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
-	}
 	return req, origBody, 0, nil
 }
 
@@ -166,6 +178,25 @@ func handleLogicalWithInjector(core *vault.Core) http.Handler {
 // `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
 func handleLogicalNoForward(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, true)
+}
+
+func handleLogicalRecovery(raw *vault.RawBackend) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		if err != nil || statusCode != 0 {
+			respondError(w, statusCode, err)
+			return
+		}
+
+		resp, err := raw.HandleRequest(r.Context(), req)
+		if respondErrorCommon(w, req, resp, err) {
+			return
+		}
+
+		httpResp := logical.LogicalResponseToHTTPResponse(resp)
+		httpResp.RequestID = req.ID
+		respondOk(w, httpResp)
+	})
 }
 
 // handleLogicalInternal is a common helper that returns a handler for

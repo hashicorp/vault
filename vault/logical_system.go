@@ -188,6 +188,24 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 			return checkRaw(b, path)
 		},
 	}
+	return rawPaths(r)
+}
+
+func rawBackend(barrier SecurityBarrier, logger log.Logger) *RawBackend {
+	r := &RawBackend{
+		barrier: barrier,
+		logger:  logger,
+		checkRaw: func(path string) error {
+			return nil
+		},
+	}
+	r.Backend = &framework.Backend{
+		Paths: rawPaths(r),
+	}
+	return r
+}
+
+func rawPaths(r *RawBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
 			Pattern: "(raw/?$|raw/(?P<path>.+))",
@@ -2249,6 +2267,7 @@ func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *lo
 
 type (
 	RawBackend struct {
+		*framework.Backend
 		barrier  SecurityBarrier
 		logger   log.Logger
 		checkRaw func(path string) error
