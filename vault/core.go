@@ -202,6 +202,7 @@ type Core struct {
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
 	migrationSeal Seal
+	sealMigrated  *uint32
 
 	// unwrapSeal is the seal to use on Enterprise to unwrap values wrapped
 	// with the previous seal.
@@ -626,6 +627,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		seal:                         conf.Seal,
 		router:                       NewRouter(),
 		sealed:                       new(uint32),
+		sealMigrated:                 new(uint32),
 		standby:                      true,
 		baseLogger:                   conf.Logger,
 		logger:                       conf.Logger.Named("core"),
@@ -1151,6 +1153,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		// At this point we've swapped things around and need to ensure we
 		// don't migrate again
 		c.migrationSeal = nil
+		atomic.StoreUint32(c.sealMigrated, 1)
 
 		// Ensure we populate the new values
 		bc, err := c.seal.BarrierConfig(ctx)
@@ -1712,6 +1715,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// been set up properly before any writes can have happened.
 	for _, v := range c.postUnsealFuncs {
 		v()
+	}
+
+	if atomic.LoadUint32(c.sealMigrated) == 1 {
+		defer func() { atomic.StoreUint32(c.sealMigrated, 0) }()
+		c.postSealMigration(ctx)
 	}
 
 	c.logger.Info("post-unseal setup complete")
