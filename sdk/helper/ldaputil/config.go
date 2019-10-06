@@ -19,6 +19,11 @@ import (
 // Not all fields will be used by every integration.
 func ConfigFields() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
+		"anonymous_group_search": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "Use anonymous binds when performing LDAP group searches",
+		},
 		"url": {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
@@ -207,6 +212,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg = new(ConfigEntry)
 	}
 
+	if _, ok := d.Raw["anonymous_group_search"]; ok || !hadExisting {
+		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
+	}
+
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
 		cfg.Url = strings.ToLower(d.Get("url").(string))
 	}
@@ -338,6 +347,7 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 type ConfigEntry struct {
 	Url                      string `json:"url"`
 	UserDN                   string `json:"userdn"`
+	AnonymousGroupSearch     bool   `json:"anonymous_group_search"`
 	GroupDN                  string `json:"groupdn"`
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
