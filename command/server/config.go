@@ -907,7 +907,7 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 }
 
 // Sanitized returns a copy of the config with all values that are considered
-// sensitive stripped. It also strips all raw values that are mainly
+// sensitive stripped. It also strips all `*Raw` values that are mainly
 // used for parsing.
 //
 // Specifically, the fields that this method strips are:
@@ -917,38 +917,38 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 // - Telemetry.CirconusAPIToken
 func (c *Config) Sanitized() map[string]interface{} {
 	result := map[string]interface{}{
-		"CacheSize":             c.CacheSize,
-		"DisableCache":          c.DisableCache,
-		"DisableMlock":          c.DisableMlock,
-		"DisablePrintableCheck": c.DisablePrintableCheck,
+		"cache_size":              c.CacheSize,
+		"disable_cache":           c.DisableCache,
+		"disable_mlock":           c.DisableMlock,
+		"disable_printable_check": c.DisablePrintableCheck,
 
-		"EnableUI": c.EnableUI,
+		"enable_ui": c.EnableUI,
 
-		"MaxLeaseTTL":     c.MaxLeaseTTL,
-		"DefaultLeaseTTL": c.DefaultLeaseTTL,
+		"max_lease_ttl":     c.MaxLeaseTTL,
+		"default_lease_ttl": c.DefaultLeaseTTL,
 
-		"DefaultMaxRequestDuration": c.DefaultMaxRequestDuration,
+		"default_max_request_duration": c.DefaultMaxRequestDuration,
 
-		"ClusterName":         c.ClusterName,
-		"ClusterCipherSuites": c.ClusterCipherSuites,
+		"cluster_name":          c.ClusterName,
+		"cluster_cipher_suites": c.ClusterCipherSuites,
 
-		"PluginDirectory": c.PluginDirectory,
+		"plugin_directory": c.PluginDirectory,
 
-		"LogLevel":  c.LogLevel,
-		"LogFormat": c.LogFormat,
+		"log_level":  c.LogLevel,
+		"log_format": c.LogFormat,
 
-		"PidFile":           c.PidFile,
-		"EnableRawEndpoint": c.EnableRawEndpoint,
+		"pid_file":             c.PidFile,
+		"raw_storage_endpoint": c.EnableRawEndpoint,
 
-		"APIAddr":           c.APIAddr,
-		"ClusterAddr":       c.ClusterAddr,
-		"DisableClustering": c.DisableClustering,
+		"api_addr":           c.APIAddr,
+		"cluster_addr":       c.ClusterAddr,
+		"disable_clustering": c.DisableClustering,
 
-		"DisablePerformanceStandby": c.DisablePerformanceStandby,
+		"disable_performance_standby": c.DisablePerformanceStandby,
 
-		"DisableSealWrap": c.DisableSealWrap,
+		"disable_sealwrap": c.DisableSealWrap,
 
-		"DisableIndexing": c.DisableIndexing,
+		"disable_indexing": c.DisableIndexing,
 	}
 
 	// Sanitize listeners
@@ -956,34 +956,34 @@ func (c *Config) Sanitized() map[string]interface{} {
 		var sanitizedListeners []interface{}
 		for _, ln := range c.Listeners {
 			cleanLn := map[string]interface{}{
-				"Type":   ln.Type,
-				"Config": ln.Config,
+				"type":   ln.Type,
+				"config": ln.Config,
 			}
 			sanitizedListeners = append(sanitizedListeners, cleanLn)
 		}
-		result["Listeners"] = sanitizedListeners
+		result["listeners"] = sanitizedListeners
 	}
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
 		sanitizedStorage := map[string]interface{}{
-			"Type":              c.Storage.Type,
-			"RedirectAddr":      c.Storage.RedirectAddr,
-			"ClusterAddr":       c.Storage.ClusterAddr,
-			"DisableClustering": c.Storage.DisableClustering,
+			"type":               c.Storage.Type,
+			"redirect_addr":      c.Storage.RedirectAddr,
+			"cluster_addr":       c.Storage.ClusterAddr,
+			"disable_clustering": c.Storage.DisableClustering,
 		}
-		result["Storage"] = sanitizedStorage
+		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
 		sanitizedHAStorage := map[string]interface{}{
-			"Type":              c.HAStorage.Type,
-			"RedirectAddr":      c.HAStorage.RedirectAddr,
-			"ClusterAddr":       c.HAStorage.ClusterAddr,
-			"DisableClustering": c.HAStorage.DisableClustering,
+			"type":               c.HAStorage.Type,
+			"redirect_addr":      c.HAStorage.RedirectAddr,
+			"cluster_addr":       c.HAStorage.ClusterAddr,
+			"disable_clustering": c.HAStorage.DisableClustering,
 		}
-		result["HAStorage"] = sanitizedHAStorage
+		result["ha_storage"] = sanitizedHAStorage
 	}
 
 	// Sanitize seals stanza
@@ -991,41 +991,41 @@ func (c *Config) Sanitized() map[string]interface{} {
 		var sanitizedSeals []interface{}
 		for _, s := range c.Seals {
 			cleanSeal := map[string]interface{}{
-				"Type":     s.Type,
-				"Disabled": s.Disabled,
+				"type":     s.Type,
+				"disabled": s.Disabled,
 			}
 			sanitizedSeals = append(sanitizedSeals, cleanSeal)
 		}
-		result["Seals"] = sanitizedSeals
+		result["seals"] = sanitizedSeals
 	}
 
 	// Sanitize telemetry stanza
 	if c.Telemetry != nil {
 		sanitizedTelemetry := map[string]interface{}{
-			"StatsiteAddr":                       c.Telemetry.StatsiteAddr,
-			"StatsdAddr":                         c.Telemetry.StatsdAddr,
-			"DisableHostname":                    c.Telemetry.DisableHostname,
-			"CirconusAPIToken":                   "",
-			"CirconusAPIApp":                     c.Telemetry.CirconusAPIApp,
-			"CirconusAPIURL":                     c.Telemetry.CirconusAPIURL,
-			"CirconusSubmissionInterval":         c.Telemetry.CirconusSubmissionInterval,
-			"CirconusCheckSubmissionURL":         c.Telemetry.CirconusCheckSubmissionURL,
-			"CirconusCheckID":                    c.Telemetry.CirconusCheckID,
-			"CirconusCheckForceMetricActivation": c.Telemetry.CirconusCheckForceMetricActivation,
-			"CirconusCheckInstanceID":            c.Telemetry.CirconusCheckInstanceID,
-			"CirconusCheckSearchTag":             c.Telemetry.CirconusCheckSearchTag,
-			"CirconusCheckTags":                  c.Telemetry.CirconusCheckTags,
-			"CirconusCheckDisplayName":           c.Telemetry.CirconusCheckDisplayName,
-			"CirconusBrokerID":                   c.Telemetry.CirconusBrokerID,
-			"CirconusBrokerSelectTag":            c.Telemetry.CirconusBrokerSelectTag,
-			"DogStatsDAddr":                      c.Telemetry.DogStatsDAddr,
-			"DogStatsDTags":                      c.Telemetry.DogStatsDTags,
-			"PrometheusRetentionTime":            c.Telemetry.PrometheusRetentionTime,
-			"StackdriverProjectID":               c.Telemetry.StackdriverProjectID,
-			"StackdriverLocation":                c.Telemetry.StackdriverLocation,
-			"StackdriverNamespace":               c.Telemetry.StackdriverNamespace,
+			"statsite_address":                       c.Telemetry.StatsiteAddr,
+			"statsd_address":                         c.Telemetry.StatsdAddr,
+			"disable_hostname":                       c.Telemetry.DisableHostname,
+			"circonus_api_token":                     "",
+			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
+			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,
+			"circonus_submission_interval":           c.Telemetry.CirconusSubmissionInterval,
+			"circonus_submission_url":                c.Telemetry.CirconusCheckSubmissionURL,
+			"circonus_check_id":                      c.Telemetry.CirconusCheckID,
+			"circonus_check_force_metric_activation": c.Telemetry.CirconusCheckForceMetricActivation,
+			"circonus_check_instance_id":             c.Telemetry.CirconusCheckInstanceID,
+			"circonus_check_search_tag":              c.Telemetry.CirconusCheckSearchTag,
+			"circonus_check_tags":                    c.Telemetry.CirconusCheckTags,
+			"circonus_check_display_name":            c.Telemetry.CirconusCheckDisplayName,
+			"circonus_broker_id":                     c.Telemetry.CirconusBrokerID,
+			"circonus_broker_select_tag":             c.Telemetry.CirconusBrokerSelectTag,
+			"dogstatsd_addr":                         c.Telemetry.DogStatsDAddr,
+			"dogstatsd_tags":                         c.Telemetry.DogStatsDTags,
+			"prometheus_retention_time":              c.Telemetry.PrometheusRetentionTime,
+			"stackdriver_project_id":                 c.Telemetry.StackdriverProjectID,
+			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
+			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
 		}
-		result["Telemetry"] = sanitizedTelemetry
+		result["telemetry"] = sanitizedTelemetry
 	}
 
 	return result
