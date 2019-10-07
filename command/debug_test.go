@@ -92,57 +92,101 @@ func TestDebugCommand_Run(t *testing.T) {
 func TestDebugCommand_Archive(t *testing.T) {
 	t.Parallel()
 
-	// TODO: Switch to TDT, test for not-ext, ext, no-compression cases
-
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
-
-	client, closer := testVaultServer(t)
-	defer closer()
-
-	ui, cmd := testDebugCommand(t)
-	cmd.client = client
-	cmd.skipTimingChecks = true
-
-	basePath := "archive"
-	args := []string{
-		"-duration=1s",
-		fmt.Sprintf("-output=%s/%s", testDir, basePath),
-		"-target=server-status",
-	}
-
-	code := cmd.Run(args)
-	if exp := 0; code != exp {
-		t.Log(ui.ErrorWriter.String())
-		t.Fatalf("expected %d to be %d", code, exp)
+	cases := []struct {
+		name        string
+		ext         string
+		expectError bool
+	}{
+		{
+			"no-ext",
+			"",
+			false,
+		},
+		{
+			"with-ext-tar-gz",
+			".tar.gz",
+			false,
+		},
+		{
+			"with-ext-tgz",
+			".tgz",
+			false,
+		},
 	}
 
-	bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
-	_, err = os.Stat(bundlePath)
-	if os.IsNotExist(err) {
-		t.Fatal(err)
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create temp dirs for each test case since os.Stat and tgz.Walk
+			// (called down below) exhibits raciness otherwise.
+			testDir, err := ioutil.TempDir("", "vault-debug")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(testDir)
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testDebugCommand(t)
+			cmd.client = client
+			cmd.skipTimingChecks = true
+
+			// We use tc.name as the base path and apply the extension per
+			// test case.
+			basePath := tc.name
+			outputPath := filepath.Join(testDir, basePath+tc.ext)
+			args := []string{
+				"-duration=1s",
+				fmt.Sprintf("-output=%s", outputPath),
+				"-target=server-status",
+			}
+
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Log(ui.OutputWriter.String())
+				t.Log(ui.ErrorWriter.String())
+				t.Fatalf("expected %d to be %d", code, exp)
+			}
+			// If we expect an error we're done here
+			if tc.expectError {
+				return
+			}
+
+			expectedExt := tc.ext
+			if expectedExt == "" {
+				expectedExt = debugCompressionExt
+			}
+
+			bundlePath := filepath.Join(testDir, basePath+expectedExt)
+			_, err = os.Stat(bundlePath)
+			if os.IsNotExist(err) {
+				t.Log(ui.OutputWriter.String())
+				t.Fatal(err)
+			}
+
+			tgz := archiver.NewTarGz()
+			err = tgz.Walk(bundlePath, func(f archiver.File) error {
+				fh, ok := f.Header.(*tar.Header)
+				if !ok {
+					t.Fatalf("invalid file header: %#v", f.Header)
+				}
+
+				// Ignore base directory and index file
+				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
+					return nil
+				}
+
+				if fh.Name != filepath.Join(basePath, "server_status.json") {
+					t.Fatalf("unxexpected file: %s", fh.Name)
+				}
+				return nil
+			})
+		})
 	}
-
-	tgz := archiver.NewTarGz()
-	err = tgz.Walk(bundlePath, func(f archiver.File) error {
-		fh, ok := f.Header.(*tar.Header)
-		if !ok {
-			t.Fatalf("invalid file header: %#v", f.Header)
-		}
-
-		// Ignore base directory and index file
-		if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
-			return nil
-		}
-
-		if fh.Name != filepath.Join(basePath, "server_status.json") {
-			t.Fatalf("unxexpected file: %s", fh.Name)
-		}
-		return nil
-	})
 }
 
 func TestDebugCommand_CaptureTargets(t *testing.T) {
@@ -289,7 +333,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	for _, v := range profiles {
 		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
 		if len(files) != 2 {
-			t.Errorf("output data should exist for %s: got: %v", v, files)
+			t.Errorf("2 output files should exist for %s: got: %v", v, files)
 		}
 	}
 
@@ -298,7 +342,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	for _, v := range pollingProfiles {
 		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
 		if len(files) != 1 {
-			t.Errorf("output data should exist for %s: got: %v", v, files)
+			t.Errorf("1 output file should exist for %s: got: %v", v, files)
 		}
 	}
 }

@@ -98,9 +98,13 @@ type DebugCommand struct {
 	debugIndex *debugIndex
 
 	// pprofWg ensures that we are only sending a single profile/trace request
-	// at a time since the server cannot handle concurrent requests of these
-	// types.
+	// at a time since the server pprof handler cannot handle concurrent
+	// requests of these types.
 	pprofWg *sync.WaitGroup
+
+	// pollingWg ensures that polling capture goroutines are done before the
+	// bundle gets generated
+	pollingWg *sync.WaitGroup
 
 	// skipTimingChecks bypasses timing-related checks, used primarily for tests
 	skipTimingChecks bool
@@ -260,6 +264,7 @@ func (c *DebugCommand) Run(args []string) int {
 	// Setup variables
 	c.doneCh = make(chan struct{})
 	c.pprofWg = &sync.WaitGroup{}
+	c.pollingWg = &sync.WaitGroup{}
 
 	// Capture static information
 	if err := c.captureStaticTargets(client); err != nil {
@@ -297,10 +302,10 @@ func (c *DebugCommand) Synopsis() string {
 }
 
 func (c *DebugCommand) generateIndex() error {
-	// Walk the directory to generate the output layout
 	outputLayout := map[string]interface{}{
 		"files": []string{},
 	}
+	// Walk the directory to generate the output layout
 	err := filepath.Walk(c.flagOutput, func(path string, info os.FileInfo, err error) error {
 		// Prevent panic by handling failure accessing a path
 		if err != nil {
@@ -319,7 +324,6 @@ func (c *DebugCommand) generateIndex() error {
 				return err
 			}
 
-			fmt.Println("info.Name", info.Name())
 			outputLayout[info.Name()] = map[string]interface{}{
 				"timestamp": parsedTime,
 				"files":     []string{},
@@ -327,11 +331,14 @@ func (c *DebugCommand) generateIndex() error {
 			return nil
 		}
 
-		relPath := strings.TrimPrefix(path, c.flagOutput+"/")
+		relPath, err := filepath.Rel(c.flagOutput, path)
+		if err != nil {
+			return err
+		}
+
 		dir, file := filepath.Split(relPath)
 		if len(dir) != 0 {
 			dir = strings.TrimSuffix(dir, "/")
-			fmt.Println("dir", dir)
 			filesArr := outputLayout[dir].(map[string]interface{})["files"]
 			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
 		} else {
@@ -547,6 +554,9 @@ POLLING:
 		}
 	}
 
+	// Wait for any polling requests
+	c.pollingWg.Wait()
+
 	// Close the done channel to signal termination, make sure collection
 	// goroutine is terminated before proceeding to persisting the info.
 	close(c.doneCh)
@@ -570,6 +580,9 @@ POLLING:
 }
 
 func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTime time.Time, errCh chan<- *captureError) {
+	c.pollingWg.Add(1)
+	defer c.pollingWg.Done()
+
 	var wg sync.WaitGroup
 	currentTimestamp := time.Now().UTC()
 
@@ -757,6 +770,9 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 	if !strutil.StrListContains(c.flagTargets, "metrics") {
 		return
 	}
+
+	c.pollingWg.Add(1)
+	defer c.pollingWg.Done()
 
 	c.logger.Info("capturing metrics", "count", mIdxCount)
 
