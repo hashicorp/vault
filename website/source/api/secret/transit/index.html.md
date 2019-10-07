@@ -66,7 +66,7 @@ values set here cannot be changed after key creation.
 
 ```json
 {
-  "type": "ecdsa-p256",
+  "type": "ed25519",
   "derived": true
 }
 ```
