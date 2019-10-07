@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver"
@@ -350,7 +351,109 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 }
 
 func TestDebugCommand_TimingChecks(t *testing.T) {
-	t.Skip("Not implemented yet")
+	t.Parallel()
+
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testDir)
+
+	cases := []struct {
+		name            string
+		duration        string
+		interval        string
+		metricsInterval string
+	}{
+		{
+			"short-values-all",
+			"10ms",
+			"10ms",
+			"10ms",
+		},
+		{
+			"short-duration",
+			"10ms",
+			"",
+			"",
+		},
+		{
+			"short-interval",
+			debugMinInterval.String(),
+			"10ms",
+			"",
+		},
+		{
+			"short-metrics-interval",
+			debugMinInterval.String(),
+			"",
+			"10ms",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			// If we are past the minimum duration + some grace, trigger shutdown
+			// to prevent hanging
+			grace := 10 * time.Second
+			shutdownCh := make(chan struct{})
+			go func() {
+				time.AfterFunc(grace, func() {
+					close(shutdownCh)
+				})
+			}()
+
+			ui, cmd := testDebugCommand(t)
+			cmd.client = client
+			cmd.ShutdownCh = shutdownCh
+
+			basePath := tc.name
+			outputPath := filepath.Join(testDir, basePath)
+			// pprof requires a minimum interval of 1s
+			args := []string{
+				"-target=server-status",
+				fmt.Sprintf("-output=%s", outputPath),
+			}
+			if tc.duration != "" {
+				args = append(args, fmt.Sprintf("-duration=%s", tc.duration))
+			}
+			if tc.interval != "" {
+				args = append(args, fmt.Sprintf("-interval=%s", tc.interval))
+			}
+			if tc.metricsInterval != "" {
+				args = append(args, fmt.Sprintf("-metrics-interval=%s", tc.metricsInterval))
+			}
+
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Log(ui.ErrorWriter.String())
+				t.Fatalf("expected %d to be %d", code, exp)
+			}
+
+			if !strings.Contains(ui.OutputWriter.String(), "Duration: 5s") {
+				t.Fatal("expected minimum duration value")
+			}
+
+			if tc.interval != "" {
+				if !strings.Contains(ui.OutputWriter.String(), "  Interval: 5s") {
+					t.Fatal("expected minimum interval value")
+				}
+			}
+
+			if tc.metricsInterval != "" {
+				if !strings.Contains(ui.OutputWriter.String(), "Metrics Interval: 5s") {
+					t.Fatal("expected minimum metrics interval value")
+				}
+			}
+		})
+	}
 }
 
 func TestDebugCommand_NoConnection(t *testing.T) {
