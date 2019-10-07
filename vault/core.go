@@ -1998,6 +1998,12 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 	return c.rawConfig.Sanitized()
 }
 
+// MetricsHelper returns the global metrics helper which allows external
+// packages to access Vault's internal metrics.
+func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
+	return c.metricsHelper
+}
+
 // BuiltinRegistry is an interface that allows the "vault" package to use
 // the registry of builtin plugins without getting an import cycle. It
 // also allows for mocking the registry easily.

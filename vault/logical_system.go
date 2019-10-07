@@ -4120,8 +4120,8 @@ This path responds to the following HTTP methods.
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"host-info": {
-		"Information about the the host instance that this Vault server is running on.",
-		`Information about the the host instance that this Vault server is running on.
+		"Information about the host instance that this Vault server is running on.",
+		`Information about the host instance that this Vault server is running on.
 		The information that gets collected includes host hardware information, and CPU,
 		disk, and memory utilization`,
 	},

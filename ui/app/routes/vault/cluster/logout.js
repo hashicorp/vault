@@ -21,7 +21,6 @@ export default Route.extend(ModelBoundaryRoute, {
     this.namespaceService.reset();
     this.console.set('isOpen', false);
     this.console.clearLog(true);
-    this.clearModelCache();
     this.flashMessages.clearMessages();
     this.permissions.reset();
     this.replaceWith('vault.cluster.auth');

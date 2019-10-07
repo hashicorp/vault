@@ -87,7 +87,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates.
   Using this option is highly discouraged and decreases the security of data
   transmissions to and from the Vault server.  This may also be specified using the
-  `VAULT_TLS_SKIP_VERIFY` environment variable.
+  `VAULT_SKIP_VERIFY` environment variable.
 
 ## Authentication
 

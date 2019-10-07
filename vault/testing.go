@@ -157,6 +157,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
+	conf.MetricsHelper = opts.MetricsHelper
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
