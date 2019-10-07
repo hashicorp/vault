@@ -79,13 +79,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// construct a consul template vault config based the agents vault
 	// configuration
 	var runnerConfig *ctconfig.Config
-	if runnerConfig = newRunnerConfig(ts.config, ts.Templates); runnerConfig == nil {
+	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
 		ts.logger.Info("template server failed to generate runner config")
 		close(ts.DoneCh)
 		return
 	}
 
-	runner, err := manager.NewRunner(runnerConfig, false)
+	var err error
+	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Info("template server failed to create")
 		close(ts.DoneCh)
@@ -100,9 +101,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			return
 
 		case token := <-incoming:
-			// q.Q(">> incoming token")
 			if token != *latestToken {
-				// q.Q(">>:: new token")
+				ts.logger.Info("template server recieved new token")
 				ts.runner.Stop()
 				*latestToken = token
 				ctv := ctconfig.Config{
@@ -111,8 +111,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 				runnerConfig.Merge(&ctv)
+				runnerConfig.Finalize()
 				var runnerErr error
-				runner, runnerErr = manager.NewRunner(runnerConfig, false)
+				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Info("template server failed with new Vault token")
 					close(ts.DoneCh)
@@ -120,7 +121,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				}
 				go ts.runner.Start()
 			}
-		case err := <-runner.ErrCh:
+		case err := <-ts.runner.ErrCh:
 			ts.logger.Info("template server error:", err)
 			close(ts.DoneCh)
 			return

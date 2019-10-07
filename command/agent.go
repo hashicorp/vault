@@ -293,10 +293,14 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
+	// Server that periodically listen for ctx.Done() to fire and shut
+	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
+	var namespace string
 	if config.AutoAuth != nil {
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
@@ -326,7 +330,8 @@ func (c *AgentCommand) Run(args []string) int {
 		// Check if a default namespace has been set
 		mountPath := config.AutoAuth.Method.MountPath
 		if config.AutoAuth.Method.Namespace != "" {
-			mountPath = path.Join(config.AutoAuth.Method.Namespace, mountPath)
+			namespace = config.AutoAuth.Method.Namespace
+			mountPath = path.Join(namespace, mountPath)
 		}
 
 		authConfig := &auth.AuthConfig{
@@ -469,7 +474,7 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
-	var ssDoneCh, ahDoneCh chan struct{}
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers
 	if method != nil {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
@@ -487,11 +492,20 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		ssDoneCh = ss.DoneCh
 
+		ts := template.NewServer(&template.ServerConfig{
+			Logger:        c.logger.Named("template.server"),
+			VaultConf:     config.Vault,
+			Namespace:     namespace,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
+		tsDoneCh = ts.DoneCh
+
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
-	}
 
-	_ := template.TemplateServer{}
+		// TODO: should this be conditional?
+		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+	}
 
 	// Server configuration output
 	padding := 24
@@ -525,6 +539,10 @@ func (c *AgentCommand) Run(args []string) int {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
+	case <-tsDoneCh:
+		// TODO: wait for any templates to render(?)
+		c.logger.Info("template finished, exiting")
+		// TODO do we actually finish here?
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -533,6 +551,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		if ssDoneCh != nil {
 			<-ssDoneCh
+		}
+
+		if tsDoneCh != nil {
+			<-tsDoneCh
 		}
 	}
 
