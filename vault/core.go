@@ -1988,13 +1988,18 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
+// SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.stateLock.Lock()
 	c.rawConfig = conf
 	c.stateLock.Unlock()
 }
 
+// SanitizedConfig returns a sanitized version of the current config.
+// See server.Config.Sanitized for specific values omitted.
 func (c *Core) SanitizedConfig() map[string]interface{} {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
 	return c.rawConfig.Sanitized()
 }
 
