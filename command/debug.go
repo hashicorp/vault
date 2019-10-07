@@ -49,8 +49,8 @@ const (
 
 // debugIndex represents the data structure in the index file
 type debugIndex struct {
-	VaultAddress    string                 `json:"vault_address"`
 	Version         int                    `json:"version"`
+	VaultAddress    string                 `json:"vault_address"`
 	ClientVersion   string                 `json:"client_version"`
 	Timestamp       time.Time              `json:"timestamp"`
 	Duration        int                    `json:"duration_seconds"`
@@ -273,14 +273,8 @@ func (c *DebugCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Marshal and write index.json
-	bytes, err := json.MarshalIndent(c.debugIndex, "", "  ")
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshalling index: %s", err))
-		return 1
-	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0644); err != nil {
-		c.UI.Error(fmt.Sprintf("Unable to write index.json file: %s", err))
+	if err := c.generateIndex(); err != nil {
+		c.UI.Error(fmt.Sprintf("Error generating index: %s", err))
 		return 1
 	}
 
@@ -300,6 +294,70 @@ func (c *DebugCommand) Run(args []string) int {
 
 func (c *DebugCommand) Synopsis() string {
 	return "Runs the debug command"
+}
+
+func (c *DebugCommand) generateIndex() error {
+	// Walk the directory to generate the output layout
+	outputLayout := map[string]interface{}{
+		"files": []string{},
+	}
+	err := filepath.Walk(c.flagOutput, func(path string, info os.FileInfo, err error) error {
+		// Prevent panic by handling failure accessing a path
+		if err != nil {
+			return err
+		}
+
+		// Skip the base dir
+		if path == c.flagOutput {
+			return nil
+		}
+
+		// If we're a directory, simply add a corresponding map
+		if info.IsDir() {
+			parsedTime, err := time.Parse(fileFriendlyTimeFormat, info.Name())
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("info.Name", info.Name())
+			outputLayout[info.Name()] = map[string]interface{}{
+				"timestamp": parsedTime,
+				"files":     []string{},
+			}
+			return nil
+		}
+
+		relPath := strings.TrimPrefix(path, c.flagOutput+"/")
+		dir, file := filepath.Split(relPath)
+		if len(dir) != 0 {
+			dir = strings.TrimSuffix(dir, "/")
+			fmt.Println("dir", dir)
+			filesArr := outputLayout[dir].(map[string]interface{})["files"]
+			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
+		} else {
+			outputLayout["files"] = append(outputLayout["files"].([]string), file)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error generating directory output layout: %s", err)
+	}
+
+	c.debugIndex.Output = outputLayout
+
+	// Marshal into json
+	bytes, err := json.MarshalIndent(c.debugIndex, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshaling index file: %s", err)
+	}
+
+	// Write out file
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0644); err != nil {
+		return fmt.Errorf("error generating index file; %s", err)
+	}
+
+	return nil
 }
 
 // preflight performs various checks against the provided flags to ensure they
@@ -352,6 +410,9 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		c.flagOutput = fmt.Sprintf("vault-debug-%s", formattedTime)
 	}
 
+	// Strip trailing slash before proceeding
+	c.flagOutput = strings.TrimSuffix(c.flagOutput, "/")
+
 	// If compression is enabled, trim the extension so that the files are
 	// written to a directory even if compression somehow fails. We ensure the
 	// extension during compression. We also prevent overwriting if the file
@@ -390,9 +451,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 	c.hostInfoCh = make(chan map[string]interface{})
 
 	// Populate initial index fields
-	idxOutput := map[string]interface{}{
-		"files": []string{},
-	}
 	c.debugIndex = &debugIndex{
 		VaultAddress:    client.Address(),
 		ClientVersion:   version.GetVersion().VersionNumber(),
@@ -404,7 +462,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		Version:         debugIndexVersion,
 		Targets:         c.flagTargets,
 		Timestamp:       captureTime,
-		Output:          idxOutput,
 		Errors:          []*captureError{},
 	}
 
@@ -443,6 +500,7 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	var hostInfoCollection []map[string]interface{}
 
 	// Start a goroutine to collect data as soon as it's received
+	collectCh := make(chan struct{})
 	go func() {
 		for {
 			select {
@@ -455,6 +513,7 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 			case hostInfoEntry := <-c.hostInfoCh:
 				hostInfoCollection = append(hostInfoCollection, hostInfoEntry)
 			case <-c.doneCh:
+				close(collectCh)
 				return
 			}
 		}
@@ -488,8 +547,10 @@ POLLING:
 		}
 	}
 
-	// Close the done channel to signal termination
+	// Close the done channel to signal termination, make sure collection
+	// goroutine is terminated before proceeding to persisting the info.
 	close(c.doneCh)
+	<-collectCh
 
 	// Write collected data to their corresponding files
 	if err := c.persistCollection(metricsCollection, "metrics.json"); err != nil {
@@ -562,10 +623,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
 			return
 		}
-		c.debugIndex.Output[currentDir] = map[string]interface{}{
-			"timestamp": currentTimestamp,
-			"files":     []string{},
-		}
 
 		c.logger.Info("capturing pprof data", "count", idxCount)
 
@@ -583,9 +640,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			if err != nil {
 				errCh <- newCaptureError("pprof.goroutine", err)
 			}
-			// Add file to the index
-			filesArr := c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
-			c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "goroutine.prof")
 
 			// Capture heap
 			data, err = pprofHeap(client)
@@ -597,9 +651,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			if err != nil {
 				errCh <- newCaptureError("pprof.heap", err)
 			}
-			// Add file to the index
-			filesArr = c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
-			c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "heap.prof")
 
 			// If the our remaining duration is less than the interval value
 			// skip profile and trace.
@@ -625,8 +676,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				if err != nil {
 					errCh <- newCaptureError("pprof.profile", err)
 				}
-				filesArr = c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
-				c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "profile.prof")
 			}()
 
 			// Capture trace
@@ -642,8 +691,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				if err != nil {
 					errCh <- newCaptureError("pprof.trace", err)
 				}
-				filesArr = c.debugIndex.Output[currentDir].(map[string]interface{})["files"]
-				c.debugIndex.Output[currentDir].(map[string]interface{})["files"] = append(filesArr.([]string), "trace.out")
 			}()
 
 			// Wait until profile/trace is done
@@ -766,7 +813,6 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0644); err != nil {
 		return err
 	}
-	c.debugIndex.Output["files"] = append(c.debugIndex.Output["files"].([]string), outFile)
 
 	return nil
 }

@@ -103,7 +103,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	_, cmd := testDebugCommand(t)
+	ui, cmd := testDebugCommand(t)
 	cmd.client = client
 	cmd.skipTimingChecks = true
 
@@ -116,6 +116,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 
 	code := cmd.Run(args)
 	if exp := 0; code != exp {
+		t.Log(ui.ErrorWriter.String())
 		t.Fatalf("expected %d to be %d", code, exp)
 	}
 
@@ -210,7 +211,6 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 
 			code := cmd.Run(args)
 			if exp := 0; code != exp {
-				t.Log(ui.OutputWriter.String())
 				t.Log(ui.ErrorWriter.String())
 				t.Fatalf("expected %d to be %d", code, exp)
 			}
