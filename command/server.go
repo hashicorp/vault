@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"net"
@@ -705,6 +706,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
 			Recovery:              c.flagRecovery,
+			RecoveryToken:         atomic.NewString(""),
 		})
 
 		server := &http.Server{

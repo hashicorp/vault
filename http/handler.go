@@ -113,9 +113,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	switch {
 	case props.Recovery:
-		mux.Handle("/v1/sys/raw/", handleRequestForwarding(core, handleLogical(core)))
-		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateRecoveryTokenStrategy)))
-		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateRecoveryTokenStrategy)))
+		raw := vault.NewRawBackend(core)
+		strategy := vault.GenerateRecoveryTokenStrategy(props.RecoveryToken)
+		mux.Handle("/v1/sys/raw/", handleLogicalRecovery(raw, props.RecoveryToken))
+		mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core, strategy))
+		mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
 		// Handle pprof paths
 		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
@@ -489,7 +491,7 @@ func parseQuery(values url.Values) map[string]interface{} {
 	return nil
 }
 
-func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
+func parseRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -505,7 +507,7 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 		}
 	}
 	var origBody io.ReadWriter
-	if core.PerfStandby() {
+	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)
