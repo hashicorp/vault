@@ -33,6 +33,11 @@ IMPROVEMENTS:
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
    information to be extracted [GH-7473]
+ * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
+   returns the configuration state of the server. It excludes config values
+   from `storage`, `ha_storage`, and `seal` stanzas and some values
+   from `telemetry` due to potential sensitive entries in those fields.
+   
 
 BUG FIXES:
 
