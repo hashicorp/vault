@@ -401,7 +401,6 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			err := proto.Unmarshal(log.Data, command)
 			if err != nil {
 				f.logger.Error("error proto unmarshaling log data", "error", err)
-				panic(len(log.Data))
 				panic("error proto unmarshaling log data")
 			}
 			commands = append(commands, command)
