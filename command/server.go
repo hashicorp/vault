@@ -705,7 +705,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			MaxRequestSize:        ln.maxRequestSize,
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
-			Recovery:              c.flagRecovery,
+			RecoveryMode:          c.flagRecovery,
 			RecoveryToken:         atomic.NewString(""),
 		})
 
@@ -1642,7 +1642,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			MaxRequestSize:        ln.maxRequestSize,
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
-			Recovery:              c.flagRecovery,
+			RecoveryMode:          c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
