@@ -130,6 +130,7 @@
   title: "Platforms"
   docs:
     - docs/platform/k8s/index.html
+    - docs/platform/aws-mp/index.html
 -
   title: "Vault Enterprise"
   docs:
