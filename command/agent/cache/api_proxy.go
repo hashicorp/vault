@@ -1,13 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"reflect"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -16,15 +11,15 @@ import (
 // APIProxy is an implementation of the proxier interface that is used to
 // forward the request to Vault and get the response.
 type APIProxy struct {
-	client               *api.Client
-	logger               hclog.Logger
-	RequireRequestHeader bool
+	client *api.Client
+	logger hclog.Logger
+	//RequireRequestHeader bool
 }
 
 type APIProxyConfig struct {
-	Client               *api.Client
-	Logger               hclog.Logger
-	RequireRequestHeader bool
+	Client *api.Client
+	Logger hclog.Logger
+	//RequireRequestHeader bool
 }
 
 func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
@@ -32,9 +27,9 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 		return nil, fmt.Errorf("nil API client")
 	}
 	return &APIProxy{
-		client:               config.Client,
-		logger:               config.Logger,
-		RequireRequestHeader: config.RequireRequestHeader,
+		client: config.Client,
+		logger: config.Logger,
+		//RequireRequestHeader: config.RequireRequestHeader,
 	}, nil
 }
 
@@ -45,27 +40,27 @@ const (
 
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 
-	if ap.RequireRequestHeader {
-		// check for the required request header
-		val, ok := req.Request.Header[vaultRequestHeader]
-		if !ok || !reflect.DeepEqual(val, []string{"true"}) {
-			return &SendResponse{
-					Response: &api.Response{
-						Response: &http.Response{
-							StatusCode: http.StatusPreconditionFailed,
-							Header:     http.Header{},
-							Body: ioutil.NopCloser(bytes.NewReader(
-								[]byte(preconditionFailed))),
-							Request: req.Request,
-						},
-					},
-				},
-				errors.New(preconditionFailed)
-		}
+	//if ap.RequireRequestHeader {
+	//	// check for the required request header
+	//	val, ok := req.Request.Header[vaultRequestHeader]
+	//	if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+	//		return &SendResponse{
+	//				Response: &api.Response{
+	//					Response: &http.Response{
+	//						StatusCode: http.StatusPreconditionFailed,
+	//						Header:     http.Header{},
+	//						Body: ioutil.NopCloser(bytes.NewReader(
+	//							[]byte(preconditionFailed))),
+	//						Request: req.Request,
+	//					},
+	//				},
+	//			},
+	//			errors.New(preconditionFailed)
+	//	}
 
-		// remove the required request header from the request
-		delete(req.Request.Header, vaultRequestHeader)
-	}
+	//	// remove the required request header from the request
+	//	delete(req.Request.Header, vaultRequestHeader)
+	//}
 
 	client, err := ap.client.Clone()
 	if err != nil {

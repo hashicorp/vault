@@ -37,8 +37,8 @@ type Vault struct {
 }
 
 type Cache struct {
-	UseAutoAuthToken     bool `hcl:"use_auto_auth_token"`
-	RequireRequestHeader bool `hcl:"require_request_header"`
+	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
+	//RequireRequestHeader bool `hcl:"require_request_header"`
 }
 
 type Listener struct {
