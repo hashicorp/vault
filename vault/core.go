@@ -458,7 +458,7 @@ type Core struct {
 	// Stores the pending peers we are waiting to give answers
 	pendingRaftPeers map[string][]byte
 
-	// rawConfig stores the config as-is from the provided
+	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *server.Config
 
 	coreNumber int
