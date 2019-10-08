@@ -1166,6 +1166,21 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 
 }
 
+func (b *SystemBackend) hostInfoPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "host-info/?",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.handleHostInfo,
+				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
+				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+			},
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["host-info"][1]),
+	}
+}
+
 func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{

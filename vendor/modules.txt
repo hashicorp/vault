@@ -58,6 +58,8 @@ github.com/SAP/go-hdb/internal/protocol
 github.com/SAP/go-hdb/internal/bufio
 github.com/SAP/go-hdb/internal/unicode
 github.com/SAP/go-hdb/internal/unicode/cesu8
+# github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
+github.com/StackExchange/wmi
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers
@@ -221,6 +223,9 @@ github.com/ghodss/yaml
 github.com/go-errors/errors
 # github.com/go-ldap/ldap v3.0.2+incompatible
 github.com/go-ldap/ldap
+# github.com/go-ole/go-ole v1.2.1
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/go-sql-driver/mysql v1.4.1
 github.com/go-sql-driver/mysql
 # github.com/go-test/deep v1.0.2
@@ -582,6 +587,16 @@ github.com/ryanuber/go-glob
 github.com/samuel/go-zookeeper/zk
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
+# github.com/shirou/gopsutil v0.0.0-20190731134726-d80c43f9c984
+github.com/shirou/gopsutil/cpu
+github.com/shirou/gopsutil/disk
+github.com/shirou/gopsutil/host
+github.com/shirou/gopsutil/mem
+github.com/shirou/gopsutil/internal/common
+github.com/shirou/gopsutil/process
+github.com/shirou/gopsutil/net
+# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
+github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.3.0
@@ -667,6 +682,7 @@ golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/pkcs12/internal/rc2
 # golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 golang.org/x/net/idna
+golang.org/x/net/http/httpproxy
 golang.org/x/net/http2
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
