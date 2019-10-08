@@ -218,7 +218,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 	} else {
 		// We haven't finished, so generating a root token should still be the
 		// old keys (which are still currently set)
-		testhelpers.GenerateRoot(t, cluster, false)
+		testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRootRegular)
 	}
 
 	// Provide the final new key
@@ -256,7 +256,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		}
 	} else {
 		// The old keys should no longer work
-		_, err := testhelpers.GenerateRootWithError(t, cluster, false)
+		_, err := testhelpers.GenerateRootWithError(t, cluster, testhelpers.GenerateRootRegular)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -273,6 +273,6 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		if err := client.Sys().GenerateRootCancel(); err != nil {
 			t.Fatal(err)
 		}
-		testhelpers.GenerateRoot(t, cluster, false)
+		testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRootRegular)
 	}
 }

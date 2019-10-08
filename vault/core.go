@@ -725,6 +725,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
 
+	// We create the funcs here, then populate the given config with it so that
+	// the caller can share state
+	conf.ReloadFuncsLock = &c.reloadFuncsLock
+	c.reloadFuncsLock.Lock()
+	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
+	c.reloadFuncsLock.Unlock()
+	conf.ReloadFuncs = &c.reloadFuncs
+
 	// All the things happening below this are not required in
 	// recovery mode
 	if c.recoveryMode {
@@ -743,14 +751,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
 	}
-
-	// We create the funcs here, then populate the given config with it so that
-	// the caller can share state
-	conf.ReloadFuncsLock = &c.reloadFuncsLock
-	c.reloadFuncsLock.Lock()
-	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
-	c.reloadFuncsLock.Unlock()
-	conf.ReloadFuncs = &c.reloadFuncs
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {

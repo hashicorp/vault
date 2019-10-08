@@ -19,16 +19,26 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
+type GenerateRootKind int
+
+const (
+	GenerateRootRegular GenerateRootKind = 1
+	GenerateRootDR      GenerateRootKind = 2
+	GenerateRecovery    GenerateRootKind = 3
+)
+
 // Generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, drToken bool) string {
-	token, err := GenerateRootWithError(t, cluster, drToken)
+func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+	t.Helper()
+	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return token
 }
 
-func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool) (string, error) {
+func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
+	t.Helper()
 	// If recovery keys supported, use those to perform root token generation instead
 	var keys [][]byte
 	if cluster.Cores[0].SealAccess().RecoveryKeySupported() {
@@ -36,13 +46,18 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 	} else {
 		keys = cluster.BarrierKeys
 	}
-
 	client := cluster.Cores[0].Client
-	f := client.Sys().GenerateRootInit
-	if drToken {
-		f = client.Sys().GenerateDROperationTokenInit
+
+	var err error
+	var status *api.GenerateRootStatusResponse
+	switch kind {
+	case GenerateRootRegular:
+		status, err = client.Sys().GenerateRootInit("", "")
+	case GenerateRootDR:
+		status, err = client.Sys().GenerateDROperationTokenInit("", "")
+	case GenerateRecovery:
+		status, err = client.Sys().GenerateRecoveryOperationTokenInit("", "")
 	}
-	status, err := f("", "")
 	if err != nil {
 		return "", err
 	}
@@ -57,11 +72,16 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 		if i >= status.Required {
 			break
 		}
-		f := client.Sys().GenerateRootUpdate
-		if drToken {
-			f = client.Sys().GenerateDROperationTokenUpdate
+
+		strKey := base64.StdEncoding.EncodeToString(key)
+		switch kind {
+		case GenerateRootRegular:
+			status, err = client.Sys().GenerateRootUpdate(strKey, status.Nonce)
+		case GenerateRootDR:
+			status, err = client.Sys().GenerateDROperationTokenUpdate(strKey, status.Nonce)
+		case GenerateRecovery:
+			status, err = client.Sys().GenerateRecoveryOperationTokenUpdate(strKey, status.Nonce)
 		}
-		status, err = f(base64.StdEncoding.EncodeToString(key), status.Nonce)
 		if err != nil {
 			return "", err
 		}
