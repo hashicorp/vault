@@ -2,7 +2,7 @@ import Component from '@ember/component';
 import { set, get, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 
 export default Component.extend({
   namespace: service(),
@@ -11,15 +11,7 @@ export default Component.extend({
   possiblePaths: null,
   namespaces: readOnly('namespace.accessibleNamespaces'),
   autoCompleteOptions: null,
-
-  fetchMounts() {
-    return hash({
-      mounts: this.store.findAll('secret-engine'),
-      auth: this.store.findAll('auth-method'),
-    }).then(({ mounts, auth }) => {
-      return resolve(mounts.toArray().concat(auth.toArray()));
-    });
-  },
+  namespacesFetched: null,
 
   init() {
     this._super(...arguments);
@@ -28,50 +20,71 @@ export default Component.extend({
 
   fetchMountsForNamespace: task(function*(ns) {
     let adapter = this.store.adapterFor('application');
+    let secret = [];
+    let auth = [];
     let mounts = ns
       ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
       : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
-    [['secret', 'secret-engine'], ['auth', 'auth-method']].forEach(([key, modelType]) => {
+
+    ['secret', 'auth'].forEach(key => {
       for (let [id, info] of Object.entries(mounts.data[key])) {
-        let longId = ns ? `${ns}/${id}` : id;
+        let longId;
+        if (key === 'auth') {
+          longId = ns ? `${ns}/auth/${id}` : `auth/${id}`;
+        } else {
+          longId = ns ? `${ns}/${id}` : id;
+        }
         info.path = longId;
+        longId = longId.replace(/\/$/, '');
 
         // don't add singleton mounts
         if (!this.singletonMountTypes.includes(info.type)) {
-          this.store.push({
-            data: {
-              type: modelType,
-              id: longId.replace(/\/$/, ''),
-              attributes: {
-                ...info,
-              },
-            },
+          (key === 'secret' ? secret : auth).push({
+            id: longId,
+            name: longId,
+            searchText: `${longId} ${info.type} ${info.accessor}`,
           });
         }
       }
     });
     return {
-      secret: this.store.peekAll('secret-engine'),
-      auth: this.store.peekAll('auth-method'),
+      secret,
+      auth,
     };
   }),
 
-  setAutoCompleteOptions: task(function*() {
-    let { namespaces, singletonMountTypes: singletons, autoCompleteOptions } = this;
-    // fetch auth and secret methods from sys/internal/ui/mounts
-    // for any namespaces that are already autocompleted
-    let { secret, auth } = yield this.fetchMountsForNamespace.perform();
-    let options = namespaces.concat(secret.toArray(), auth.toArray()).map(val => {
-      // namespaces are just strings, mounts are objects
-      let path = val.id ? val.path : val;
+  setAutoCompleteOptions: task(function*(term, removeOptions) {
+    let { namespaces, autoCompleteOptions } = this;
+    if (removeOptions) {
+      return;
+    }
+    // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
+    let { secret: secretList, auth: authList } = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
+    if (autoCompleteOptions) {
+      var currentSecrets = autoCompleteOptions.findBy('groupName', 'Secret Engines');
+      var currentAuths = autoCompleteOptions.findBy('groupName', 'Auth Methods');
+    }
+    let formattedNamespaces = namespaces.map(val => {
       return {
-        id: path,
-        name: path,
-        searchText: path,
+        id: val,
+        name: val,
+        searchText: val,
       };
     });
-
+    let options = [];
+    if (formattedNamespaces.length) {
+      options.push({ groupName: 'Namespaces', options: formattedNamespaces });
+    }
+    if (secretList.length) {
+      let secretOptions = currentSecrets ? [...currentSecrets.options, ...secretList] : secretList;
+      options.push({ groupName: 'Secret Engines', options: secretOptions.uniqBy('id') });
+    }
+    if (authList.length) {
+      let authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
+      options.push({ groupName: 'Auth Methods', options: authOptions.uniqBy('id') });
+    }
     this.set('autoCompleteOptions', options);
+    return options;
   }).keepLatest(),
 
   // singleton mounts are not eligible for per-mount-filtering
@@ -87,12 +100,16 @@ export default Component.extend({
 
   actions: {
     pathsChanged(paths) {
-      console.table(paths);
+      // need to check the current paths and see if there's to remove then call
       this.set('config.paths', paths);
     },
 
     inputChanged(val, powerSelect) {
       console.log(val, powerSelect);
+
+      if (this.namespaces.includes(val)) {
+        this.setAutoCompleteOptions.perform(val);
+      }
     },
 
     addOrRemovePath(path, e) {

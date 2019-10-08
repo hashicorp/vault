@@ -94,10 +94,10 @@
 
     <SearchSelect
       @id="paths"
-      @onInput={{action "inputChanged"}}
       @onChange={{action "pathsChanged"}}
       @inputValue={{config.paths}}
       @label="Paths in this {{config.mode}}"
+      @search={{perform this.setAutoCompleteOptions}}
       @options={{this.autoCompleteOptions}}
       />
     {{/if}}
