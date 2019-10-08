@@ -503,7 +503,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		f.latestConfig.Store(latestConfiguration)
 	}
 
-	// Build the responses. The logs array is used here to esnure we reply to
+	// Build the responses. The logs array is used here to ensure we reply to
 	// all command values; even if they are not of the types we expect. This
 	// should future proof this function from more log types being provided.
 	resp := make([]interface{}, len(logs))
