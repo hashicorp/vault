@@ -192,12 +192,6 @@ func TestDebugCommand_Archive(t *testing.T) {
 func TestDebugCommand_CaptureTargets(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
-
 	cases := []struct {
 		name          string
 		targets       []string
@@ -236,6 +230,12 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			testDir, err := ioutil.TempDir("", "vault-debug")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(testDir)
 
 			client, closer := testVaultServer(t)
 			defer closer()

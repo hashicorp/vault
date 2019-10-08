@@ -529,7 +529,10 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	// Start capture by capturing the first interval before we hit the first
 	// ticker.
 	c.UI.Info("==> Capturing dynamic information...")
+	c.pollingWg.Add(1)
 	go c.intervalCapture(client, idxCount, startTime, errCh)
+
+	c.pollingWg.Add(1)
 	go c.metricsIntervalCapture(client, mIdxCount, errCh)
 
 	// Capture at each interval, until end of duration or interrupt.
@@ -542,9 +545,11 @@ POLLING:
 			c.debugIndex.Errors = append(c.debugIndex.Errors, err)
 		case <-intervalTicker:
 			idxCount++
+			c.pollingWg.Add(1)
 			go c.intervalCapture(client, idxCount, startTime, errCh)
 		case <-metricsIntervalTicker:
 			mIdxCount++
+			c.pollingWg.Add(1)
 			go c.metricsIntervalCapture(client, mIdxCount, errCh)
 		case <-durationCh:
 			break POLLING
@@ -580,7 +585,6 @@ POLLING:
 }
 
 func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTime time.Time, errCh chan<- *captureError) {
-	c.pollingWg.Add(1)
 	defer c.pollingWg.Done()
 
 	var wg sync.WaitGroup
@@ -767,12 +771,11 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 }
 
 func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int, errCh chan<- *captureError) {
+	defer c.pollingWg.Done()
+
 	if !strutil.StrListContains(c.flagTargets, "metrics") {
 		return
 	}
-
-	c.pollingWg.Add(1)
-	defer c.pollingWg.Done()
 
 	c.logger.Info("capturing metrics", "count", mIdxCount)
 
