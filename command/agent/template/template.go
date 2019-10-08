@@ -102,7 +102,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 		case token := <-incoming:
 			if token != *latestToken {
-				ts.logger.Info("template server recieved new token")
+				ts.logger.Info("template server received new token")
 				ts.runner.Stop()
 				*latestToken = token
 				ctv := ctconfig.Config{
@@ -122,7 +122,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				go ts.runner.Start()
 			}
 		case err := <-ts.runner.ErrCh:
-			ts.logger.Info("template server error:", err)
+			ts.logger.Info("template server error:", err.Error())
 			close(ts.DoneCh)
 			return
 		}
@@ -132,6 +132,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 // newRunnerConfig returns a consul-template runner configuration, setting the
 // Vault and Consul configurations based on the clients configs.
 func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctconfig.Config {
+	// TODO only use default Vault config
 	conf := ctconfig.DefaultConfig()
 	conf.Templates = templates.Copy()
 
