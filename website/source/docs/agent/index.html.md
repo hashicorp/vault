@@ -52,6 +52,8 @@ These are the currently-available general configuration option:
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
+- `template` <tt>([template][template`]: \<optional\>)</tt> - Specifies options used for templating Vault secrets to files.
+
 ### vault Stanza
 
 There can at most be one top level `vault` block and it has the following
@@ -135,8 +137,19 @@ listener "tcp" {
          address = "127.0.0.1:8100"
          tls_disable = true
 }
+
+template {
+  source      = "/etc/vault/server.key.ctmpl"
+  destination = "/etc/vault/server.key"
+}
+
+template {
+  source      = "/etc/vault/server.crt.ctmpl"
+  destination = "/etc/vault/server.crt"
+}
 ```
 
 [vault]: /docs/agent/index.html#vault-stanza
 [autoauth]: /docs/agent/autoauth/index.html
 [caching]: /docs/agent/caching/index.html
+[template]: /docs/agent/template/index.html
