@@ -85,7 +85,7 @@ export default Service.extend({
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       })
       .catch(err => {
-        console.err(err);
+        console.error(err);
       });
   },
 
