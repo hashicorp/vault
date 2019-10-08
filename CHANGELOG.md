@@ -25,6 +25,8 @@ IMPROVEMENTS:
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
  * secrets/aws: The root config can now be read [GH-7245]
+ * storage/azure: Add config parameter to Azure storage backend to allow
+   specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
  * sys: Add a new `sys/host-info` endpoint for querying information about 
