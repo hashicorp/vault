@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -263,13 +264,13 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		}, nil
 	}
 
-	// Recover the master key
-	var masterKey []byte
+	// Combine the key parts
+	var combinedKey []byte
 	if config.SecretThreshold == 1 {
-		masterKey = c.generateRootProgress[0]
+		combinedKey = c.generateRootProgress[0]
 		c.generateRootProgress = nil
 	} else {
-		masterKey, err = shamir.Combine(c.generateRootProgress)
+		combinedKey, err = shamir.Combine(c.generateRootProgress)
 		c.generateRootProgress = nil
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
@@ -277,20 +278,53 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	switch {
-	case c.recoveryMode:
-		if err := c.barrier.Unseal(ctx, masterKey); err != nil {
-			c.logger.Error("root generation aborted, recovery token verification failed", "error", err)
+	case c.seal.RecoveryKeySupported():
+		// Ensure that the combined recovery key is valid
+		if err := c.seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
+			c.logger.Error("root generation aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
-	default:
-		// Verify the master key
-		if c.seal.RecoveryKeySupported() {
-			if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
-				c.logger.Error("root generation aborted, recovery key verification failed", "error", err)
+		// If we are in recovery mode, then retrieve
+		// the stored keys and unseal the barrier
+		if c.recoveryMode {
+			if !c.seal.StoredKeysSupported() {
+				c.logger.Error("root generation aborted, recovery key verified but stored keys unsupported")
+				return nil, errors.New("recovery key verified but stored keys unsupported")
+			}
+			masterKeyShares, err := c.seal.GetStoredKeys(ctx)
+			if err != nil {
+				return nil, errwrap.Wrapf("unable to retrieve stored keys in recovery mode: {{err}}", err)
+			}
+
+			switch len(masterKeyShares) {
+			case 0:
+				return nil, errors.New("seal returned no master key shares in recovery mode")
+			case 1:
+				combinedKey = masterKeyShares[0]
+			default:
+				combinedKey, err = shamir.Combine(masterKeyShares)
+				if err != nil {
+					return nil, errwrap.Wrapf("failed to compute master key in recovery mode: {{err}}", err)
+				}
+			}
+
+			// Use the retrieved master key to unseal the barrier
+			if err := c.barrier.Unseal(ctx, combinedKey); err != nil {
+				c.logger.Error("root generation aborted, recovery operation token verification failed", "error", err)
 				return nil, err
 			}
-		} else {
-			if err := c.barrier.VerifyMaster(masterKey); err != nil {
+		}
+	default:
+		switch {
+		case c.recoveryMode:
+			// If we are in recovery mode, being able to unseal
+			// the barrier is how we establish authentication
+			if err := c.barrier.Unseal(ctx, combinedKey); err != nil {
+				c.logger.Error("root generation aborted, recovery token verification failed", "error", err)
+				return nil, err
+			}
+		default:
+			if err := c.barrier.VerifyMaster(combinedKey); err != nil {
 				c.logger.Error("root generation aborted, master key verification failed", "error", err)
 				return nil, err
 			}

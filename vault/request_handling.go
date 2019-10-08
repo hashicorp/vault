@@ -44,7 +44,7 @@ type HandlerProperties struct {
 	MaxRequestSize        int64
 	MaxRequestDuration    time.Duration
 	DisablePrintableCheck bool
-	Recovery              bool
+	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
 }
 
