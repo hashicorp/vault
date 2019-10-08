@@ -17,9 +17,7 @@ export default Helper.extend({
   compute([route], params) {
     let { routeParams, capabilities } = params;
     let permissions = this.permissions;
-    if (route === 'access') {
-      debugger;
-    }
+
     return permissions.hasNavPermission(route, routeParams, capabilities);
   },
 });
