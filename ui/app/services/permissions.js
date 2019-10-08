@@ -86,11 +86,11 @@ export default Service.extend({
     this.set('canViewAll', null);
   },
 
-  hasNavPermission(navItem, routeParams) {
+  hasNavPermission(navItem, routeParams, capabilities = [null]) {
     if (routeParams) {
-      return this.hasPermission(API_PATHS[navItem][routeParams]);
+      return this.hasPermission(API_PATHS[navItem][routeParams], capabilities);
     }
-    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
+    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path, capabilities));
   },
 
   navPathParams(navItem) {

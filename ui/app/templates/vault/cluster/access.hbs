@@ -7,7 +7,7 @@
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="entities")}}
+    {{#if (has-permission "access" routeParams="entities" capabilities=(array "list"))}}
       <li>
         {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
           Entities
