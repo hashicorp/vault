@@ -20,7 +20,7 @@ export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
-  namespace: service(),
+  namespaceService: service('namespace'),
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   init() {
@@ -129,7 +129,7 @@ export default Service.extend({
   persistAuthData() {
     let [firstArg, resp] = arguments;
     let tokens = this.get('tokens');
-    let currentNamespace = this.get('namespace.path') || '';
+    let currentNamespace = this.get('namespaceService.path') || '';
     let tokenName;
     let options;
     let backend;
@@ -324,7 +324,11 @@ export default Service.extend({
     const adapter = this.clusterAdapter();
 
     let resp = await adapter.authenticate(options);
-    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
+    let authData = await this.persistAuthData(
+      options,
+      resp.auth || resp.data,
+      this.get('namespaceService.path')
+    );
     await this.get('permissions').getPaths.perform();
     return authData;
   },

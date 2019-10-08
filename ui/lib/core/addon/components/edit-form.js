@@ -42,20 +42,21 @@ export default Component.extend({
       }
       return;
     }
-    this.get('flashMessages').success(this.get(messageKey));
+    this.flashMessages.success(this.get(messageKey));
     if (this.callOnSaveAfterRender) {
       next(() => {
-        this.get('onSave')({ saveType: method, model });
+        this.onSave({ saveType: method, model });
       });
       return;
     }
-    yield this.get('onSave')({ saveType: method, model });
+    yield this.onSave({ saveType: method, model });
   })
     .drop()
     .withTestWaiter(),
 
   willDestroy() {
-    let model = this.get('model');
+    let { model } = this;
+    if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
