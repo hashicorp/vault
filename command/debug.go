@@ -267,17 +267,24 @@ func (c *DebugCommand) Run(args []string) int {
 	c.pollingWg = &sync.WaitGroup{}
 
 	// Capture static information
+	c.UI.Info("==> Capturing static information...")
 	if err := c.captureStaticTargets(client); err != nil {
 		c.UI.Error(fmt.Sprintf("Error capturing static information: %s", err))
 		return 2
 	}
 
+	c.UI.Output("")
+
 	// Capture polling information
+	c.UI.Info("==> Capturing dynamic information...")
 	if err := c.capturePollingTargets(client); err != nil {
 		c.UI.Error(fmt.Sprintf("Error capturing dynamic information: %s", err))
 		return 2
 	}
 
+	c.UI.Output("Finished capturing information, bundling files...")
+
+	// Generate index file
 	if err := c.generateIndex(); err != nil {
 		c.UI.Error(fmt.Sprintf("Error generating index: %s", err))
 		return 1
@@ -480,11 +487,31 @@ func (c *DebugCommand) defaultTargets() []string {
 }
 
 func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
-	c.UI.Info("==> Capturing static information...")
-	// TODO: Perform config state capture
-	c.logger.Info("capturing configuration state")
-	c.UI.Output("")
 	// Capture configuration state
+	if strutil.StrListContains(c.flagTargets, "config") {
+		c.logger.Info("capturing configuration state")
+
+		resp, err := client.Logical().Read("sys/config/state/sanitized")
+		if err != nil {
+			captErr := newCaptureError("config", err)
+			c.debugIndex.Errors = append(c.debugIndex.Errors, captErr)
+
+			c.logger.Error("config: error capturing config state", "error", err)
+		}
+
+		if resp != nil && resp.Data != nil {
+			collection := []map[string]interface{}{
+				{
+					"timestamp": time.Now().UTC(),
+					"config":    resp.Data,
+				},
+			}
+			if err := c.persistCollection(collection, "config.json"); err != nil {
+				c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "config.json", err))
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -528,7 +555,6 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 
 	// Start capture by capturing the first interval before we hit the first
 	// ticker.
-	c.UI.Info("==> Capturing dynamic information...")
 	c.pollingWg.Add(1)
 	go c.intervalCapture(client, idxCount, startTime, errCh)
 
@@ -589,10 +615,6 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 
 	var wg sync.WaitGroup
 	currentTimestamp := time.Now().UTC()
-
-	if strutil.StrListContains(c.flagTargets, "config") {
-
-	}
 
 	if strutil.StrListContains(c.flagTargets, "host") {
 		c.logger.Info("capturing host information", "count", idxCount)

@@ -197,7 +197,11 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 		targets       []string
 		expectedFiles []string
 	}{
-		// TODO: Add case for config target
+		{
+			"config",
+			[]string{"config"},
+			[]string{"config.json"},
+		},
 		{
 			"host-info",
 			[]string{"host"},
@@ -220,8 +224,8 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 		},
 		{
 			"all-minus-pprof",
-			[]string{"host", "metrics", "replication-status", "server-status"},
-			[]string{"host_info.json", "metrics.json", "replication_status.json", "server_status.json"},
+			[]string{"config", "host", "metrics", "replication-status", "server-status"},
+			[]string{"config.json", "host_info.json", "metrics.json", "replication_status.json", "server_status.json"},
 		},
 	}
 
