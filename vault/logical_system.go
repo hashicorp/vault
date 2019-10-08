@@ -228,6 +228,17 @@ type SystemBackend struct {
 	logger    log.Logger
 }
 
+// handleConfigStateSanitized returns the current configuration state. The configuration
+// data that it returns is a sanitized version of the combined configuration
+// file(s) provided.
+func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.SanitizedConfig()
+	resp := &logical.Response{
+		Data: config,
+	}
+	return resp, nil
+}
+
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
