@@ -882,6 +882,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
 		},
+		{
+			Pattern: "internal/counters/tokens",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersTokens,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
+		},
+		{
+			Pattern: "internal/counters/entities",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersEntities,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
+		},
 	}
 }
 
