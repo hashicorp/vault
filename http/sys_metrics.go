@@ -25,11 +25,7 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		}
 
 		// Define response
-		resp, err := core.MetricsHelper().ResponseForFormat(format)
-		if err != nil {
-			respondError(w, http.StatusBadRequest, err)
-			return
-		}
+		resp := core.MetricsHelper().ResponseForFormat(format)
 
 		// Manually extract the logical response and send back the information
 		w.WriteHeader(resp.Data[logical.HTTPStatusCode].(int))
