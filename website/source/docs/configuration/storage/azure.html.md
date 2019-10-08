@@ -49,6 +49,10 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
    environment the storage account belongs to by way of the case-insensitive
    name defined in the [Azure Go SDK][azure-environment].
 
+- `arm_endpoint` `(string: "")` - Specifies the cloud environment
+  the storage account belongs to by way of the Azure Resource Manager endpoint
+  URL.
+
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
 

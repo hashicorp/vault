@@ -90,7 +90,8 @@ $ curl \
 
 ## Renew Lease
 
-This endpoint renews a lease, requesting to extend the lease.
+This endpoint renews a lease, requesting to extend the lease.  Token leases 
+cannot be renewed using this endpoint, use instead the auth/token/renew endpoint.
 
 | Method   | Path                          |
 | :---------------------------- | :--------------------- |

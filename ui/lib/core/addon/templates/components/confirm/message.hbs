@@ -35,6 +35,8 @@
   class="link is-destroy"
   disabled={{showConfirm}}
   onclick={{action this.onTrigger id}}
-  data-test-confirm-action-trigger={{id}}>
+  data-test-confirm-action-trigger={{id}}
+  ...attributes
+  >
   {{triggerText}}
 </button>
