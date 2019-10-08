@@ -1,4 +1,4 @@
-<div class="box is-shadowless is-sideless is-fullwidth is-marginless">
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each @model.fieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq group "default") (eq group "Options"))}}
@@ -15,7 +15,7 @@
           {{/if}}
         {{/each}}
       {{else}}
-        <div class="box {{unless showAllFields 'is-shadowless'}} is-sideless is-fullwidth is-marginless">
+        <div class="box {{unless showAllFields 'is-shadowless'}} box is-fullwidth is-sideless is-marginless">
           <h2 class="title is-5">
             {{group}}
           </h2>
