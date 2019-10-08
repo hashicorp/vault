@@ -7,7 +7,7 @@
             <InfoTableRow @alwaysRender={{showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}>
               {{#if attr.options.sensitive}}
-                <span class="is-help">this value is sensitive and cannot be shown</span>
+                <span class="is-help">This value is sensitive and cannot be shown.</span>
               {{else}}
                 {{get @model attr.name}}
               {{/if}}
@@ -23,7 +23,7 @@
             <InfoTableRow @alwaysRender={{showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}>
               {{#if attr.options.sensitive}}
-                <span class="is-help">this value is sensitive and cannot be shown</span>
+                <span class="is-help">This value is sensitive and cannot be shown.</span>
               {{else}}
                 {{get @model attr.name}}
               {{/if}}
