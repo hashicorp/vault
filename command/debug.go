@@ -814,8 +814,7 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 }
 
 // persistCollection writes the collected data for a particular target onto the
-// specified file, and adds that file to the index. If the collection is empty,
-// it returns immediately.
+// specified file. If the collection is empty, it returns immediately.
 func (c *DebugCommand) persistCollection(collection []map[string]interface{}, outFile string) error {
 	if len(collection) == 0 {
 		return nil
