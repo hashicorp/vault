@@ -13,12 +13,13 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"go.uber.org/atomic"
 )
 
 const (
@@ -69,6 +70,8 @@ type AESGCMBarrier struct {
 	// future versioning of barrier implementations. It's var instead
 	// of const to allow for testing
 	currentAESGCMVersionByte byte
+
+	initialized atomic.Bool
 }
 
 // NewAESGCMBarrier is used to construct a new barrier that uses
@@ -86,12 +89,17 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 // Initialized checks if the barrier has been initialized
 // and has a master key set.
 func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
+	if b.initialized.Load() {
+		return true, nil
+	}
+
 	// Read the keyring file
 	keys, err := b.backend.List(ctx, keyringPrefix)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check for initialization: {{err}}", err)
 	}
 	if strutil.StrListContains(keys, "keyring") {
+		b.initialized.Store(true)
 		return true, nil
 	}
 
@@ -100,6 +108,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check for initialization: {{err}}", err)
 	}
+	b.initialized.Store(out != nil)
 	return out != nil, nil
 }
 
