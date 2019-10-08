@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 )
@@ -346,6 +347,90 @@ func TestLoadConfigDir(t *testing.T) {
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	}
+}
+
+func TestConfig_Sanitized(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config3.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	sanitizedConfig := config.Sanitized()
+
+	expected := map[string]interface{}{
+		"api_addr":                     "top_level_api_addr",
+		"cache_size":                   0,
+		"cluster_addr":                 "top_level_cluster_addr",
+		"cluster_cipher_suites":        "",
+		"cluster_name":                 "testcluster",
+		"default_lease_ttl":            10 * time.Hour,
+		"default_max_request_duration": 0 * time.Second,
+		"disable_cache":                true,
+		"disable_clustering":           false,
+		"disable_indexing":             false,
+		"disable_mlock":                true,
+		"disable_performance_standby":  false,
+		"disable_printable_check":      false,
+		"disable_sealwrap":             true,
+		"raw_storage_endpoint":         true,
+		"enable_ui":                    true,
+		"ha_storage": map[string]interface{}{
+			"cluster_addr":       "top_level_cluster_addr",
+			"disable_clustering": true,
+			"redirect_addr":      "top_level_api_addr",
+			"type":               "consul"},
+		"listeners": []interface{}{
+			map[string]interface{}{
+				"config": map[string]interface{}{
+					"address": "127.0.0.1:443",
+				},
+				"type": "tcp",
+			},
+		},
+		"log_format":       "",
+		"log_level":        "",
+		"max_lease_ttl":    10 * time.Hour,
+		"pid_file":         "./pidfile",
+		"plugin_directory": "",
+		"seals": []interface{}{
+			map[string]interface{}{
+				"disabled": false,
+				"type":     "awskms",
+			},
+		},
+		"storage": map[string]interface{}{
+			"cluster_addr":       "top_level_cluster_addr",
+			"disable_clustering": false,
+			"redirect_addr":      "top_level_api_addr",
+			"type":               "consul",
+		},
+		"telemetry": map[string]interface{}{
+			"circonus_api_app":                       "",
+			"circonus_api_token":                     "",
+			"circonus_api_url":                       "",
+			"circonus_broker_id":                     "",
+			"circonus_broker_select_tag":             "",
+			"circonus_check_display_name":            "",
+			"circonus_check_force_metric_activation": "",
+			"circonus_check_id":                      "",
+			"circonus_check_instance_id":             "",
+			"circonus_check_search_tag":              "",
+			"circonus_submission_url":                "",
+			"circonus_check_tags":                    "",
+			"circonus_submission_interval":           "",
+			"disable_hostname":                       false,
+			"dogstatsd_addr":                         "",
+			"dogstatsd_tags":                         []string(nil),
+			"prometheus_retention_time":              24 * time.Hour,
+			"stackdriver_location":                   "",
+			"stackdriver_namespace":                  "",
+			"stackdriver_project_id":                 "",
+			"statsd_address":                         "bar",
+			"statsite_address":                       ""},
+	}
+
+	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 

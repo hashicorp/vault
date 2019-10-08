@@ -25,12 +25,19 @@ IMPROVEMENTS:
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
  * secrets/aws: The root config can now be read [GH-7245]
+ * storage/azure: Add config parameter to Azure storage backend to allow
+   specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
  * sys: Add a new `sys/host-info` endpoint for querying information about 
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
    information to be extracted [GH-7473]
+ * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
+   returns the configuration state of the server. It excludes config values
+   from `storage`, `ha_storage`, and `seal` stanzas and some values
+   from `telemetry` due to potential sensitive entries in those fields.
+   
 
 BUG FIXES:
 

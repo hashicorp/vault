@@ -228,6 +228,17 @@ type SystemBackend struct {
 	logger    log.Logger
 }
 
+// handleConfigStateSanitized returns the current configuration state. The configuration
+// data that it returns is a sanitized version of the combined configuration
+// file(s) provided.
+func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.SanitizedConfig()
+	resp := &logical.Response{
+		Data: config,
+	}
+	return resp, nil
+}
+
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
@@ -2610,7 +2621,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	if format == "" {
 		format = metricsutil.FormatFromRequest(req)
 	}
-	return b.Core.metricsHelper.ResponseForFormat(format)
+	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
 // handleHostInfo collects and returns host-related information, which includes
@@ -3174,6 +3185,36 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"counters": counters,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeTokens, err := b.Core.countActiveTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeTokens,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeEntities, err := b.Core.countActiveEntities(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeEntities,
 		},
 	}
 
@@ -4107,6 +4148,14 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"internal-counters-tokens": {
+		"Count of active tokens in this Vault cluster.",
+		"Count of active tokens in this Vault cluster.",
+	},
+	"internal-counters-entities": {
+		"Count of active entities in this Vault cluster.",
+		"Count of active entities in this Vault cluster.",
 	},
 	"host-info": {
 		"Information about the host instance that this Vault server is running on.",

@@ -668,6 +668,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
+		RawConfig:                 config,
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
@@ -973,7 +974,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
 
-		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		maxRequestDuration := vault.DefaultMaxRequestDuration
 		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
 			val, err := parseutil.ParseDurationSecond(valRaw)
 			if err != nil {
@@ -1414,6 +1415,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.logger.Error("no config found at reload time")
 				goto RUNRELOADFUNCS
 			}
+
+			core.SetConfig(config)
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
