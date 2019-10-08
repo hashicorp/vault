@@ -55,6 +55,9 @@ const (
 	KeyType_RSA2048
 	KeyType_RSA4096
 	KeyType_ChaCha20_Poly1305
+	KeyType_ECDSA_P384
+	KeyType_ECDSA_P521
+	KeyType_AES128_GCM96
 )
 
 const (
@@ -89,7 +92,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -97,7 +100,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -105,7 +108,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -113,7 +116,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -121,7 +124,7 @@ func (kt KeyType) HashSignatureInput() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -129,12 +132,18 @@ func (kt KeyType) DerivationSupported() bool {
 
 func (kt KeyType) String() string {
 	switch kt {
+	case KeyType_AES128_GCM96:
+		return "aes128-gcm96"
 	case KeyType_AES256_GCM96:
 		return "aes256-gcm96"
 	case KeyType_ChaCha20_Poly1305:
 		return "chacha20-poly1305"
 	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
+	case KeyType_ECDSA_P384:
+		return "ecdsa-p384"
+	case KeyType_ECDSA_P521:
+		return "ecdsa-p521"
 	case KeyType_ED25519:
 		return "ed25519"
 	case KeyType_RSA2048:
@@ -723,7 +732,7 @@ func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
 		}
 
 		switch p.Type {
-		case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 			n, err := derBytes.ReadFrom(limReader)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
@@ -794,40 +803,45 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	var ciphertext []byte
 
 	switch p.Type {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		hmacKey := context
 
 		var aead cipher.AEAD
 		var encKey []byte
 		var deriveHMAC bool
 
-		numBytes := 32
+		encBytes := 32
+		hmacBytes := 0
 		if p.convergentVersion(ver) > 2 {
 			deriveHMAC = true
-			numBytes = 64
+			hmacBytes = 32
 		}
-		key, err := p.DeriveKey(context, ver, numBytes)
+		if p.Type == KeyType_AES128_GCM96 {
+			encBytes = 16
+		}
+
+		key, err := p.DeriveKey(context, ver, encBytes+hmacBytes)
 		if err != nil {
 			return "", err
 		}
 
-		if len(key) < numBytes {
+		if len(key) < encBytes+hmacBytes {
 			return "", errutil.InternalError{Err: "could not derive key, length too small"}
 		}
 
-		encKey = key[:32]
-		if len(encKey) != 32 {
+		encKey = key[:encBytes]
+		if len(encKey) != encBytes {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 		if deriveHMAC {
-			hmacKey = key[32:]
-			if len(hmacKey) != 32 {
+			hmacKey = key[encBytes:]
+			if len(hmacKey) != hmacBytes {
 				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
 			}
 		}
 
 		switch p.Type {
-		case KeyType_AES256_GCM96:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
 			// Setup the cipher
 			aesCipher, err := aes.NewCipher(encKey)
 			if err != nil {
@@ -958,20 +972,25 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	var plain []byte
 
 	switch p.Type {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		var aead cipher.AEAD
 
-		encKey, err := p.DeriveKey(context, ver, 32)
+		numBytes := 32
+		if p.Type == KeyType_AES128_GCM96 {
+			numBytes = 16
+		}
+
+		encKey, err := p.DeriveKey(context, ver, numBytes)
 		if err != nil {
 			return "", err
 		}
 
-		if len(encKey) != 32 {
+		if len(encKey) != numBytes {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
 		switch p.Type {
-		case KeyType_AES256_GCM96:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
 			// Setup the cipher
 			aesCipher, err := aes.NewCipher(encKey)
 			if err != nil {
@@ -1063,12 +1082,25 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	var pubKey []byte
 	var err error
 	switch p.Type {
-	case KeyType_ECDSA_P256:
-		curveBits := 256
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curveBits int
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curveBits = 384
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curveBits = 521
+			curve = elliptic.P521()
+		default:
+			curveBits = 256
+			curve = elliptic.P256()
+		}
+
 		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
-				Curve: elliptic.P256(),
+				Curve: curve,
 				X:     keyParams.EC_X,
 				Y:     keyParams.EC_Y,
 			},
@@ -1242,7 +1274,17 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	}
 
 	switch p.Type {
-	case KeyType_ECDSA_P256:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
 		var ecdsaSig ecdsaSignature
 
 		switch marshaling {
@@ -1267,7 +1309,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PublicKey{
-			Curve: elliptic.P256(),
+			Curve: curve,
 			X:     keyParams.EC_X,
 			Y:     keyParams.EC_Y,
 		}
@@ -1370,16 +1412,30 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 	entry.HMACKey = hmacKey
 
 	switch p.Type {
-	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		// Generate a 256bit key
-		newKey, err := uuid.GenerateRandomBytes(32)
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		// Default to 256 bit key
+		numBytes := 32
+		if p.Type == KeyType_AES128_GCM96 {
+			numBytes = 16
+		}
+		newKey, err := uuid.GenerateRandomBytes(numBytes)
 		if err != nil {
 			return err
 		}
 		entry.Key = newKey
 
-	case KeyType_ECDSA_P256:
-		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
 			return err
 		}
