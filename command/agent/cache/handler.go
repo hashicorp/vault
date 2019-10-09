@@ -32,7 +32,6 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		// Check for the required request header
 		if requireRequestHeader {
-
 			val, ok := r.Header[vaultRequestHeader]
 			if !ok || !reflect.DeepEqual(val, []string{"true"}) {
 				w.WriteHeader(http.StatusPreconditionFailed)

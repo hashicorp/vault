@@ -420,7 +420,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Listeners {
-
 			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))

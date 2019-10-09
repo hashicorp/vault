@@ -13,13 +13,11 @@ import (
 type APIProxy struct {
 	client *api.Client
 	logger hclog.Logger
-	//RequireRequestHeader bool
 }
 
 type APIProxyConfig struct {
 	Client *api.Client
 	Logger hclog.Logger
-	//RequireRequestHeader bool
 }
 
 func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
@@ -29,7 +27,6 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 	return &APIProxy{
 		client: config.Client,
 		logger: config.Logger,
-		//RequireRequestHeader: config.RequireRequestHeader,
 	}, nil
 }
 
