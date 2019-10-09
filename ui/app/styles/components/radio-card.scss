@@ -1,0 +1,60 @@
+.radio-card-selector {
+  display: flex;
+}
+.radio-card {
+  width: 19rem;
+  box-shadow: $box-shadow-low;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: $spacing-xs $spacing-m;
+  border: $base-border;
+  border-radius: $radius;
+}
+.radio-card:first-child {
+  margin-left: 0;
+}
+.radio-card:last-child {
+  margin-right: 0;
+}
+
+.radio-card-row {
+  display: flex;
+  padding: $spacing-m;
+}
+.radio-card-icon {
+  color: $ui-gray-300;
+}
+.radio-card-message {
+  margin: $spacing-xxs;
+}
+
+.radio-card-message-title {
+  font-weight: $font-weight-semibold;
+  font-size: $size-7;
+  margin-bottom: $spacing-xxs;
+}
+.radio-card-message-body {
+  line-height: 1.2;
+  color: $ui-gray-500;
+  font-size: $size-8;
+}
+
+.radio-card-radio-row {
+  display: flex;
+  justify-content: center;
+  background: $ui-gray-050;
+  padding: $spacing-xs;
+}
+
+.is-selected {
+  &.radio-card {
+    border-color: $blue-500;
+  }
+  .radio-card-icon {
+    color: $black;
+  }
+  .radio-card-radio-row {
+    background: $blue-050;
+  }
+}

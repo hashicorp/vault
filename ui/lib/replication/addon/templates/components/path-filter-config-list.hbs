@@ -9,85 +9,102 @@
     class="radio-card
       {{if (not config.mode) " is-selected"}}"
   >
-    <Icon
-      @glyph="file-fill"
-      @size="xl"
-      class="has-text-grey-light"
-     />
-    <h5 class="title is-6">
-      Include everything
-    </h5>
-    All namespaces and mounts in this cluster will be replicated
-    <RadioButton
-      @value={{null}}
-      @radioClass="radio"
-      @groupValue={{config.mode}}
-      @changed={{queue
-        (action (mut config.mode))
-      }}
-      @name="config-mode"
-      @radioId="no-filtering"
-     />
-
-    <label for="no-filtering"></label>
+    <div class="radio-card-row">
+      <Icon
+        @glyph="file-fill"
+        @size="xlm"
+        class="radio-card-icon"
+       />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Include everything
+        </h5>
+        <p class="radio-card-message-body">
+          All namespaces and mounts in this cluster will be replicated
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        @value={{null}}
+        @radioClass="radio"
+        @groupValue={{config.mode}}
+        @changed={{queue
+          (action (mut config.mode))
+        }}
+        @name="config-mode"
+        @radioId="no-filtering"
+       />
+      <label for="no-filtering"></label>
+    </div>
   </label>
-
-
   <label
     for="whitelist"
     class="radio-card
       {{if (eq config.mode "whitelist") " is-selected"}}"
   >
-    <Icon
-      @glyph="file-fill"
-      @size="xl"
-      class="has-text-grey-light"
-     />
-    <h5 class="title is-6">
-      Whitelist
-    </h5>
-    Only include the selected namespaces and mounts
-    <RadioButton
-      @value="whitelist"
-      @radioClass="radio"
-      @groupValue={{config.mode}}
-      @changed={{queue
-        (action (mut config.mode))
-      }}
-      @name="config-mode"
-      @radioId="whitelist"
-     />
-
-    <label for="whitelist"></label>
+    <div class="radio-card-row">
+      <Icon
+        @glyph="file-success"
+        @size="xlm"
+        class="radio-card-icon"
+       />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Whitelist
+        </h5>
+        <p class="radio-card-message-body">
+          Only include the selected namespaces and mounts
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        @value="whitelist"
+        @radioClass="radio"
+        @groupValue={{config.mode}}
+        @changed={{queue
+          (action (mut config.mode))
+        }}
+        @name="config-mode"
+        @radioId="whitelist"
+       />
+      <label for="whitelist"></label>
+    </div>
   </label>
-
-
   <label
     for="blacklist"
     class="radio-card
       {{if (eq config.mode "blacklist") " is-selected"}}"
   >
-    <Icon
-      @glyph="file-fill"
-      @size="xl"
-      class="has-text-grey-light"
-     />
-    <h5 class="title is-6">
-      Blacklist
-    </h5>
-    Do not include the selected namespaces and mounts
-    <RadioButton
-      @value="blacklist"
-      @radioClass="radio"
-      @groupValue={{config.mode}}
-      @changed={{queue
-        (action (mut config.mode))
-      }}
-      @name="config-mode"
-      @radioId="blacklist"
-     />
-
-    <label for="blacklist"></label>
+    <div class="radio-card-row">
+      <Icon
+        @glyph="file-error"
+        @size="xlm"
+        class="radio-card-icon"
+       />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Blacklist
+        </h5>
+        <p class="radio-card-message-body">
+          Do not include the selected namespaces and mounts
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        @value="blacklist"
+        @radioClass="radio"
+        @groupValue={{config.mode}}
+        @changed={{queue
+          (action (mut config.mode))
+        }}
+        @name="config-mode"
+        @radioId="blacklist"
+       />
+      <label for="blacklist"></label>
+    </div>
   </label>
 </div>
 {{#if (or (eq config.mode "whitelist") (eq config.mode "blacklist"))}}
@@ -97,8 +114,8 @@
       @onChange={{action "pathsChanged"}}
       @inputValue={{config.paths}}
       @label="Paths in this {{config.mode}}"
-      @search={{perform this.setAutoCompleteOptions}}
       @options={{this.autoCompleteOptions}}
+      @search={{perform this.setAutoCompleteOptions}}
       />
     {{/if}}
 {{#each mounts as |mount|}}
