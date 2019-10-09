@@ -182,7 +182,7 @@ type DisplayAttributes struct {
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
 
-	//EditType is the type of form field needed for a property
+	// EditType is the type of form field needed for a property
 	//e.g. "textarea" or "file"
 	EditType string `json:"editType,omitempty"`
 }
