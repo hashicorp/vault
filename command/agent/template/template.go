@@ -39,26 +39,30 @@ type Server struct {
 	// shutdownCh is used to signal the started goroutine to shutdown
 	// shutdownCh chan struct{}
 
+	// unblockCh is used to block until a template is rendered
+	unblockCh chan struct{}
+
 	// shutdown marks whether the manager has been shutdown
 	// shutdown     bool
 	// shutdownLock sync.Mutex
 	Templates []*ctconfig.TemplateConfig
 
-	DoneCh chan struct{}
-	logger hclog.Logger
-	// client        *api.Client
+	DoneCh        chan struct{}
+	logger        hclog.Logger
 	exitAfterAuth bool
 }
 
 // NewServer returns a new configured server
-func NewServer(conf *ServerConfig) *Server {
+func NewServer(conf *ServerConfig) (*Server, chan struct{}) {
+	unblock := make(chan struct{})
 	ts := Server{
 		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
+		unblockCh:     unblock,
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
 	}
-	return &ts
+	return &ts, unblock
 }
 
 // Run kicks off the internal Consul Template runner, and listens for changes to
@@ -81,7 +85,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
 		ts.logger.Info("template server failed to generate runner config")
-		close(ts.DoneCh)
 		return
 	}
 
@@ -89,7 +92,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Info("template server failed to create")
-		close(ts.DoneCh)
 		return
 	}
 
@@ -97,7 +99,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.StopImmediately()
-			close(ts.DoneCh)
+			// TODO close ts.DoneCh
 			return
 
 		case token := <-incoming:
@@ -116,15 +118,19 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Info("template server failed with new Vault token")
-					close(ts.DoneCh)
-					return
+					// TODO: continue or fail here? Right now we just continue
+					continue
+				} else {
+					go ts.runner.Start()
 				}
-				go ts.runner.Start()
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Info("template server error:", err.Error())
-			close(ts.DoneCh)
+			// TODO close ts.DoneCh
 			return
+		case <-ts.runner.TemplateRenderedCh():
+			// A template has been rendered, unblock
+			close(ts.unblockCh)
 		}
 	}
 }

@@ -478,7 +478,12 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
-	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	// TODO: listen for SIGHUP
+	// Listen for signals
+	// signal.Notify(c.signalCh)
+
+	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
+	var ts *template.Server
 	// Start auto-auth and sink servers
 	if method != nil {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
@@ -498,7 +503,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// create an independant vault configuration for Consul Template to use
 		vaultConfig := c.setupTemplateConfig()
-		ts := template.NewServer(&template.ServerConfig{
+		ts, unblockCh = template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
 			VaultConf:     vaultConfig,
 			Namespace:     namespace,
@@ -541,14 +546,21 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
+	// Wait for the template to render
+	select {
+	case <-ctx.Done():
+	case <-unblockCh:
+	}
+
 	select {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
 	case <-tsDoneCh:
-		// TODO: wait for any templates to render(?)
 		c.logger.Info("template finished, exiting")
-		// TODO do we actually finish here?
+		// TODO: implement reloading
+	// case <-c.SighupCh:
+	// 	c.UI.Output("==> Vault Agent reload triggered")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -653,6 +665,7 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 // Template Server that matches the configuration used to create the client
 // (c.client), but in a struct of type config.Vault so that Consul Template can
 // create it's own api client internally.
+// TODO test setupTemplateConfig
 func (c *AgentCommand) setupTemplateConfig() *config.Vault {
 	cfg := new(config.Vault)
 

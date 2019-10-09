@@ -196,6 +196,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				// SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
