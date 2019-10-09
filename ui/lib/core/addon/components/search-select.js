@@ -61,6 +61,9 @@ export default Component.extend({
   },
   fetchOptions: task(function*() {
     if (!this.models) {
+      if (this.options) {
+        this.formatOptions(this.options);
+      }
       return;
     }
     for (let modelType of this.models) {
