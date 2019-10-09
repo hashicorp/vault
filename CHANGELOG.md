@@ -56,6 +56,13 @@ BUG FIXES:
    will automatically log in as intended [GH-7398]
  * ui: Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
 
+## 1.2.4 (Unreleased)
+
+BUG FIXES:
+
+  * cli: Fix panic when pgp keys list is empty [GH-7546]
+  * ui: Properly handle control groups when using kvv2 secrets engine [GH-7504]
+
 ## 1.2.3 (September 12, 2019)
 
 FEATURES:
