@@ -33,34 +33,7 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 	}, nil
 }
 
-const (
-	vaultRequestHeader = "Vault-Request"
-	preconditionFailed = "Precondition Failed"
-)
-
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
-
-	//if ap.RequireRequestHeader {
-	//	// check for the required request header
-	//	val, ok := req.Request.Header[vaultRequestHeader]
-	//	if !ok || !reflect.DeepEqual(val, []string{"true"}) {
-	//		return &SendResponse{
-	//				Response: &api.Response{
-	//					Response: &http.Response{
-	//						StatusCode: http.StatusPreconditionFailed,
-	//						Header:     http.Header{},
-	//						Body: ioutil.NopCloser(bytes.NewReader(
-	//							[]byte(preconditionFailed))),
-	//						Request: req.Request,
-	//					},
-	//				},
-	//			},
-	//			errors.New(preconditionFailed)
-	//	}
-
-	//	// remove the required request header from the request
-	//	delete(req.Request.Header, vaultRequestHeader)
-	//}
 
 	client, err := ap.client.Clone()
 	if err != nil {

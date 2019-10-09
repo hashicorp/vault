@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -20,10 +21,30 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
+const (
+	vaultRequestHeader = "Vault-Request"
+	preconditionFailed = "Precondition Failed"
+)
+
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, requireRequestHeader bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
+		// Check for the required request header
+		if requireRequestHeader {
+
+			val, ok := r.Header[vaultRequestHeader]
+			if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+				w.WriteHeader(http.StatusPreconditionFailed)
+				w.Write([]byte(preconditionFailed))
+				return
+			}
+
+			// Remove the required request header
+			delete(r.Header, vaultRequestHeader)
+		}
+
+		// Get token from the header
 		token := r.Header.Get(consts.AuthHeaderName)
 		if token == "" && inmemSink != nil {
 			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)

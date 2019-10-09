@@ -28,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/config"
+	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
@@ -192,7 +192,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := config.LoadConfig(c.flagConfigs[0])
+	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
@@ -383,7 +383,6 @@ func (c *AgentCommand) Run(args []string) int {
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 			Client: client,
 			Logger: cacheLogger.Named("apiproxy"),
-			//RequireRequestHeader: config.Cache.RequireRequestHeader,
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -419,14 +418,9 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		// Create a muxer and add paths relevant for the lease cache layer
-		mux := http.NewServeMux()
-		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-
-		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
-
 		var listeners []net.Listener
 		for i, lnConfig := range config.Listeners {
+
 			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
@@ -434,6 +428,26 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 
 			listeners = append(listeners, ln)
+
+			// Parse 'require_request_header' listener config option
+			var requireRequestHeader bool
+			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
+				switch v {
+				case true:
+					requireRequestHeader = true
+				case false:
+					// noop
+
+				default:
+					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
+					return 1
+				}
+			}
+
+			// Create a muxer and add paths relevant for the lease cache layer
+			mux := http.NewServeMux()
+			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, requireRequestHeader))
 
 			scheme := "https://"
 			if tlsConf == nil {
