@@ -2,11 +2,6 @@ import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 
-const CONFIG_DEFAULTS = {
-  mode: 'whitelist',
-  paths: [],
-};
-
 export default Controller.extend({
   flashMessages: service(),
   rm: service('replication-mode'),
@@ -14,7 +9,10 @@ export default Controller.extend({
   actions: {
     resetConfig(config) {
       if (config.get('isNew')) {
-        config.setProperties(CONFIG_DEFAULTS);
+        config.setProperties({
+          mode: 'whitelist',
+          paths: [],
+        });
       } else {
         config.rollbackAttributes();
       }

@@ -2,6 +2,7 @@ import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
+import { copy } from 'ember-copy';
 
 const DEFAULTS = {
   token: null,
@@ -17,7 +18,7 @@ const DEFAULTS = {
   },
 };
 
-export default Controller.extend(DEFAULTS, {
+export default Controller.extend(copy(DEFAULTS, true), {
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
@@ -39,7 +40,7 @@ export default Controller.extend(DEFAULTS, {
   },
 
   reset() {
-    this.setProperties(DEFAULTS);
+    this.setProperties(copy(DEFAULTS, true));
   },
 
   submitSuccess(resp, action) {
