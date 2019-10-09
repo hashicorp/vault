@@ -83,8 +83,8 @@ func pathUsers(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Create",
-			ItemType:   "User",
+			Action:   "Create",
+			ItemType: "User",
 		},
 	}
 
