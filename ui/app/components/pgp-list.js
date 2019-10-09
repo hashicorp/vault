@@ -26,12 +26,11 @@ export default Component.extend({
     if (this.listData.length === this.listLength) {
       return;
     }
-    // shorten the current list
     if (this.listLength < this.listData.length) {
+      // shorten the current list
       list = this.listData.slice(0, this.listLength);
-    }
-    // add to the current list by creating a new list and copying over existing list
-    if (this.listLength > this.listData.length) {
+    } else if (this.listLength > this.listData.length) {
+      // add to the current list by creating a new list and copying over existing list
       list = this.newList(this.listLength);
       if (this.listData.length) {
         list.splice(0, this.listData.length, ...this.listData);
