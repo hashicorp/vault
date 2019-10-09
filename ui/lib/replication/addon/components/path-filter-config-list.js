@@ -53,17 +53,29 @@ export default Component.extend({
     };
   }),
 
-  setAutoCompleteOptions: task(function*(term, removeOptions) {
-    let { namespaces, autoCompleteOptions } = this;
-    if (removeOptions) {
-      return;
+  filterOptions(list, term) {
+    return list
+      .map(({ groupName, options }) => {
+        let trimmedOptions = term ? options.filter(op => op.searchText.includes(term)) : options;
+        return trimmedOptions.length ? { groupName, options: trimmedOptions } : null;
+      })
+      .compact();
+  },
+
+  setAutoCompleteOptions: task(function*(term, powerSelect) {
+    let { namespaces, lastOptions } = this;
+    let namespaceToFetch = namespaces.find(ns => ns === term);
+    let secretList = [];
+    let authList = [];
+    let options = [];
+    if (!term || (term && namespaceToFetch)) {
+      // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
+      let result = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
+      secretList = result.secret;
+      authList = result.auth;
     }
-    // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
-    let { secret: secretList, auth: authList } = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
-    if (autoCompleteOptions) {
-      var currentSecrets = autoCompleteOptions.findBy('groupName', 'Secret Engines');
-      var currentAuths = autoCompleteOptions.findBy('groupName', 'Auth Methods');
-    }
+    var currentSecrets = lastOptions && lastOptions.findBy('groupName', 'Secret Engines');
+    var currentAuths = lastOptions && lastOptions.findBy('groupName', 'Auth Methods');
     let formattedNamespaces = namespaces.map(val => {
       return {
         id: val,
@@ -71,21 +83,22 @@ export default Component.extend({
         searchText: val,
       };
     });
-    let options = [];
-    if (formattedNamespaces.length) {
-      options.push({ groupName: 'Namespaces', options: formattedNamespaces });
+
+    options.push({ groupName: 'Namespaces', options: formattedNamespaces });
+    let secretOptions = currentSecrets ? [...currentSecrets.options, ...secretList] : secretList;
+
+    options.push({ groupName: 'Secret Engines', options: secretOptions.uniqBy('id') });
+    let authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
+
+    options.push({ groupName: 'Auth Methods', options: authOptions.uniqBy('id') });
+    if (!term) {
+      this.set('autoCompleteOptions', this.filterOptions(options));
+      return;
     }
-    if (secretList.length) {
-      let secretOptions = currentSecrets ? [...currentSecrets.options, ...secretList] : secretList;
-      options.push({ groupName: 'Secret Engines', options: secretOptions.uniqBy('id') });
-    }
-    if (authList.length) {
-      let authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
-      options.push({ groupName: 'Auth Methods', options: authOptions.uniqBy('id') });
-    }
-    this.set('autoCompleteOptions', options);
-    return options;
-  }).keepLatest(),
+    let filtered = this.filterOptions(options, term);
+    this.set('lastOptions', filtered);
+    return filtered;
+  }),
 
   // singleton mounts are not eligible for per-mount-filtering
   singletonMountTypes: computed(function() {
@@ -93,36 +106,12 @@ export default Component.extend({
   }),
 
   willDestroyElement() {
-    this.store.unloadAll('secret-engine');
-    this.store.unloadAll('auth-method');
     this._super(...arguments);
   },
 
   actions: {
     pathsChanged(paths) {
-      // need to check the current paths and see if there's to remove then call
-      this.set('config.paths', paths);
-    },
-
-    inputChanged(val, powerSelect) {
-      console.log(val, powerSelect);
-
-      if (this.namespaces.includes(val)) {
-        this.setAutoCompleteOptions.perform(val);
-      }
-    },
-
-    addOrRemovePath(path, e) {
-      let config = get(this, 'config') || [];
-      let paths = get(config, 'paths').slice();
-
-      if (e.target.checked) {
-        paths.addObject(path);
-      } else {
-        paths.removeObject(path);
-      }
-
-      set(config, 'paths', paths);
+      set(this.config, 'paths', paths);
     },
   },
 });
