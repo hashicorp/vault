@@ -183,7 +183,7 @@ type DisplayAttributes struct {
 	Action string `json:"action,omitempty"`
 
 	// EditType is the type of form field needed for a property
-	//e.g. "textarea" or "file"
+	// e.g. "textarea" or "file"
 	EditType string `json:"editType,omitempty"`
 }
 
