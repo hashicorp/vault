@@ -50,6 +50,7 @@
 .is-selected {
   &.radio-card {
     border-color: $blue-500;
+    background: $ui-gray-010;
   }
   .radio-card-icon {
     color: $black;
