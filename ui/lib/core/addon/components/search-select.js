@@ -55,7 +55,7 @@ export default Component.extend({
     });
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
-      options = this.options.concat(options);
+      options = this.options.concat(options).uniq();
     }
     this.set('options', options);
   },

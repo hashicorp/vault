@@ -13,7 +13,7 @@ const DEFAULTS = {
   primary_api_addr: null,
   primary_cluster_addr: null,
   filterConfig: {
-    mode: 'whitelist',
+    mode: null,
     paths: [],
   },
 };
