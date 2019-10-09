@@ -434,9 +434,7 @@ func (c *AgentCommand) Run(args []string) int {
 				switch v {
 				case true:
 					requireRequestHeader = true
-				case false:
-					// noop
-
+				case false /* noop */ :
 				default:
 					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
 					return 1

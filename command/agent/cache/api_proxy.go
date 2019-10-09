@@ -31,7 +31,6 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 }
 
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
-
 	client, err := ap.client.Clone()
 	if err != nil {
 		return nil, err
