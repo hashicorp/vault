@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -349,4 +350,26 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	WaitForNCoresUnsealed(t, cluster, 3)
+}
+
+// StrPtr returns a pointer to a string value
+func StrPtr(s string) *string {
+	return &s
+}
+
+// BoolPtr returns a pointer to a boolean value
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
+// TimeDurationPtr returns a pointer to a time duration value
+func TimeDurationPtr(duration string) *time.Duration {
+	d, _ := time.ParseDuration(duration)
+
+	return &d
+}
+
+// FileMode returns a pointer to the given os.FileMode
+func FileModePtr(o os.FileMode) *os.FileMode {
+	return &o
 }
