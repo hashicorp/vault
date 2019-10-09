@@ -375,14 +375,13 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *ServerCommand) runRecoveryMode() int {
+func (c *ServerCommand) parseConfig() (*server.Config, error) {
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
-			return 1
+			return nil, errwrap.Wrapf(fmt.Sprintf("error loading configuration from %s: {{err}}", path), err)
 		}
 
 		if config == nil {
@@ -390,6 +389,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 		} else {
 			config = config.Merge(current)
 		}
+	}
+	return config, nil
+}
+
+func (c *ServerCommand) runRecoveryMode() int {
+	config, err := c.parseConfig()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// Ensure at least one config was found.
@@ -402,56 +410,10 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	// Create a logger. We wrap it in a gated writer so that it doesn't
-	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
-	c.logWriter = c.logGate
-	if c.flagCombineLogs {
-		c.logWriter = os.Stdout
-	}
-	var level log.Level
-	var logLevelWasNotSet bool
-	logLevelString := c.flagLogLevel
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case notSetValue, "":
-		logLevelWasNotSet = true
-		logLevelString = "info"
-		level = log.Info
-	case "trace":
-		level = log.Trace
-	case "debug":
-		level = log.Debug
-	case "notice", "info":
-		level = log.Info
-	case "warn", "warning":
-		level = log.Warn
-	case "err", "error":
-		level = log.Error
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
+	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	if err != nil {
+		c.UI.Error(err.Error())
 		return 1
-	}
-
-	logFormat := logging.UnspecifiedFormat
-	if c.flagLogFormat != notSetValue {
-		var err error
-		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 1
-		}
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		logFormat = logging.ParseEnvLogFormat()
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		var err error
-		logFormat, err = logging.ParseLogFormat(config.LogFormat)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 1
-		}
 	}
 
 	c.logger = log.New(&log.LoggerOptions{
@@ -462,25 +424,13 @@ func (c *ServerCommand) runRecoveryMode() int {
 		JSONFormat: logFormat == logging.JSONFormat,
 	})
 
-	// adjust log level based on config setting
-	if config.LogLevel != "" && logLevelWasNotSet {
-		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-		logLevelString = configLogLevel
-		switch configLogLevel {
-		case "trace":
-			c.logger.SetLevel(log.Trace)
-		case "debug":
-			c.logger.SetLevel(log.Debug)
-		case "notice", "info", "":
-			c.logger.SetLevel(log.Info)
-		case "warn", "warning":
-			c.logger.SetLevel(log.Warn)
-		case "err", "error":
-			c.logger.SetLevel(log.Error)
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown log level: %s", config.LogLevel))
-			return 1
-		}
+	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if logLevelStr != "" {
+		logLevelString = logLevelStr
 	}
 
 	// create GRPC logger
@@ -540,7 +490,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "log level")
 
 	var barrierSeal vault.Seal
-
 	var sealConfigError error
 
 	// Handle the case where no seal is provided
@@ -590,11 +539,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}()
 	}
 
-	if barrierSeal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
-		return 1
-	}
-
 	coreConfig := &vault.CoreConfig{
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
@@ -614,11 +558,8 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Compile server information for output later
+	infoKeys = append(infoKeys, "storage")
 	info["storage"] = config.Storage.Type
-	info["mlock"] = fmt.Sprintf(
-		"supported: %v, enabled: %v",
-		mlock.Supported(), !config.DisableMlock && mlock.Supported())
-	infoKeys = append(infoKeys, "mlock", "storage")
 
 	// Initialize the listeners
 	lns := make([]ServerListener, 0, len(config.Listeners))
@@ -629,41 +570,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 			return 1
 		}
 
-		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
-		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
-			val, err := parseutil.ParseInt(valRaw)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse max_request_size value %v", valRaw))
-				return 1
-			}
-
-			if val >= 0 {
-				maxRequestSize = val
-			}
-		}
-
-		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
-		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
-			val, err := parseutil.ParseDurationSecond(valRaw)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse max_request_duration value %v", valRaw))
-				return 1
-			}
-
-			if val >= 0 {
-				maxRequestDuration = val
-			}
-		}
-
 		lns = append(lns, ServerListener{
-			Listener:           ln,
-			config:             lnConfig.Config,
-			maxRequestSize:     maxRequestSize,
-			maxRequestDuration: maxRequestDuration,
+			Listener: ln,
+			config:   lnConfig.Config,
 		})
 	}
 
-	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
 		for _, ln := range lns {
 			ln.Listener.Close()
@@ -679,11 +591,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
 	}
-	infoKeys = append(infoKeys, "cgo")
-	info["cgo"] = "disabled"
-	if version.CgoEnabled {
-		info["cgo"] = "enabled"
-	}
+
+	infoKeys = append(infoKeys, "recovery mode")
+	info["recovery mode"] = "true"
 
 	// Server configuration output
 	padding := 24
@@ -698,7 +608,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 	c.UI.Output("")
 
-	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
@@ -770,6 +679,82 @@ func (c *ServerCommand) runRecoveryMode() int {
 	return 0
 }
 
+func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
+	var logLevelString string
+	if config.LogLevel != "" && logLevelWasNotSet {
+		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
+		switch configLogLevel {
+		case "trace":
+			c.logger.SetLevel(log.Trace)
+		case "debug":
+			c.logger.SetLevel(log.Debug)
+		case "notice", "info", "":
+			c.logger.SetLevel(log.Info)
+		case "warn", "warning":
+			c.logger.SetLevel(log.Warn)
+		case "err", "error":
+			c.logger.SetLevel(log.Error)
+		default:
+			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
+		}
+	}
+	return logLevelString, nil
+}
+
+func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
+	// Create a logger. We wrap it in a gated writer so that it doesn't
+	// start logging too early.
+	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logWriter = c.logGate
+	if c.flagCombineLogs {
+		c.logWriter = os.Stdout
+	}
+	var level log.Level
+	var logLevelWasNotSet bool
+	logFormat := logging.UnspecifiedFormat
+	logLevelString := c.flagLogLevel
+	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
+	switch c.flagLogLevel {
+	case notSetValue, "":
+		logLevelWasNotSet = true
+		logLevelString = "info"
+		level = log.Info
+	case "trace":
+		level = log.Trace
+	case "debug":
+		level = log.Debug
+	case "notice", "info":
+		level = log.Info
+	case "warn", "warning":
+		level = log.Warn
+	case "err", "error":
+		level = log.Error
+	default:
+		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
+	}
+
+	if c.flagLogFormat != notSetValue {
+		var err error
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		if err != nil {
+			return level, logLevelString, logLevelWasNotSet, logFormat, err
+		}
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		logFormat = logging.ParseEnvLogFormat()
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		var err error
+		logFormat, err = logging.ParseLogFormat(config.LogFormat)
+		if err != nil {
+			return level, logLevelString, logLevelWasNotSet, logFormat, err
+		}
+	}
+
+	return level, logLevelString, logLevelWasNotSet, logFormat, nil
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -822,18 +807,16 @@ func (c *ServerCommand) Run(args []string) int {
 			config.Listeners[0].Config["address"] = c.flagDevListenAddr
 		}
 	}
-	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
-			return 1
-		}
 
-		if config == nil {
-			config = current
-		} else {
-			config = config.Merge(current)
-		}
+	parsedConfig, err := c.parseConfig()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if config == nil {
+		config = parsedConfig
+	} else {
+		config = config.Merge(parsedConfig)
 	}
 
 	// Ensure at least one config was found.
@@ -846,56 +829,10 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Create a logger. We wrap it in a gated writer so that it doesn't
-	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
-	c.logWriter = c.logGate
-	if c.flagCombineLogs {
-		c.logWriter = os.Stdout
-	}
-	var level log.Level
-	var logLevelWasNotSet bool
-	logLevelString := c.flagLogLevel
-	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
-	switch c.flagLogLevel {
-	case notSetValue, "":
-		logLevelWasNotSet = true
-		logLevelString = "info"
-		level = log.Info
-	case "trace":
-		level = log.Trace
-	case "debug":
-		level = log.Debug
-	case "notice", "info":
-		level = log.Info
-	case "warn", "warning":
-		level = log.Warn
-	case "err", "error":
-		level = log.Error
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
+	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	if err != nil {
+		c.UI.Error(err.Error())
 		return 1
-	}
-
-	logFormat := logging.UnspecifiedFormat
-	if c.flagLogFormat != notSetValue {
-		var err error
-		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 1
-		}
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		logFormat = logging.ParseEnvLogFormat()
-	}
-	if logFormat == logging.UnspecifiedFormat {
-		var err error
-		logFormat, err = logging.ParseLogFormat(config.LogFormat)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 1
-		}
 	}
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
@@ -916,25 +853,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 	allLoggers := []log.Logger{c.logger}
 
-	// adjust log level based on config setting
-	if config.LogLevel != "" && logLevelWasNotSet {
-		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-		logLevelString = configLogLevel
-		switch configLogLevel {
-		case "trace":
-			c.logger.SetLevel(log.Trace)
-		case "debug":
-			c.logger.SetLevel(log.Debug)
-		case "notice", "info", "":
-			c.logger.SetLevel(log.Info)
-		case "warn", "warning":
-			c.logger.SetLevel(log.Warn)
-		case "err", "error":
-			c.logger.SetLevel(log.Error)
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown log level: %s", config.LogLevel))
-			return 1
-		}
+	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if logLevelStr != "" {
+		logLevelString = logLevelStr
 	}
 
 	// create GRPC logger
@@ -1445,6 +1370,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	if version.CgoEnabled {
 		info["cgo"] = "enabled"
 	}
+
+	infoKeys = append(infoKeys, "recovery mode")
+	info["recovery mode"] = "false"
 
 	// Server configuration output
 	padding := 24
