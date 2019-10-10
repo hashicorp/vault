@@ -44,8 +44,9 @@ export default Service.extend({
       if (newModel.merged || modelProto.useOpenAPI !== true) {
         return resolve();
       }
-      // helpUrl = modelProto.getHelpUrl(backend);
-      // return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+
+      helpUrl = modelProto.getHelpUrl(backend);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
       newModel = DS.Model.extend({});
