@@ -8,6 +8,7 @@ const CheckIcon = require('./check-icon')
 module.exports = class BeforeAfterDiagram extends Component {
   render() {
     const data = decode(this.props._data)
+    const markedOptions = this.generateMarkedOptions()
 
     return (
       <div class={`g-before-after-diagrams ${data.theme}`}>
@@ -26,6 +27,7 @@ module.exports = class BeforeAfterDiagram extends Component {
             <div>
               {data.before_headline && (
                 <h3
+                  className="g-type-display-3"
                   dangerouslySetInnerHTML={{
                     __html: marked.inlineLexer(data.before_headline, [])
                   }}
@@ -34,7 +36,7 @@ module.exports = class BeforeAfterDiagram extends Component {
               {data.before_content && (
                 <div
                   dangerouslySetInnerHTML={{
-                    __html: marked(data.before_content)
+                    __html: marked(data.before_content, markedOptions)
                   }}
                 />
               )}
@@ -54,6 +56,7 @@ module.exports = class BeforeAfterDiagram extends Component {
             <div>
               {data.after_headline && (
                 <h3
+                  className="g-type-display-3"
                   dangerouslySetInnerHTML={{
                     __html: marked.inlineLexer(data.after_headline, [])
                   }}
@@ -62,7 +65,7 @@ module.exports = class BeforeAfterDiagram extends Component {
               {data.after_content && (
                 <div
                   dangerouslySetInnerHTML={{
-                    __html: marked(data.after_content)
+                    __html: marked(data.after_content, markedOptions)
                   }}
                 />
               )}
@@ -71,5 +74,21 @@ module.exports = class BeforeAfterDiagram extends Component {
         </div>
       </div>
     )
+  }
+
+  generateMarkedOptions() {
+    const markedRenderer = new marked.Renderer()
+
+    markedRenderer.heading = function(text, level) {
+      return `<h${level} class="g-type-label">${text}</h${level}>`
+    }
+    markedRenderer.paragraph = function(text) {
+      return `<p class="g-type-body">${text}</p>`
+    }
+    markedRenderer.list = function(text) {
+      return `<ul class="g-type-body">${text}</ul>`
+    }
+
+    return { renderer: markedRenderer }
   }
 }

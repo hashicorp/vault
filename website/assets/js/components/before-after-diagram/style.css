@@ -154,15 +154,9 @@
   & h3 {
     border-bottom: 1px solid var(--gray-9);
     color: var(--black);
-    font-weight: 300;
     margin: 0 0 24px;
     padding-bottom: 24px;
     text-align: center;
-
-    @media (max-width: 767px) {
-      font-size: 1.3125rem;
-      line-height: 2rem;
-    }
   }
 
   & h4 {

@@ -1,5 +1,4 @@
 const button = require('@hashicorp/hashi-button')
-const callouts = require('@hashicorp/hashi-callouts')
 const caseStudySlider = require('@hashicorp/hashi-case-study-slider')
 const consentManager = require('@hashicorp/hashi-consent-manager')
 const content = require('@hashicorp/hashi-content')
@@ -15,13 +14,13 @@ const productSubnav = require('@hashicorp/hashi-product-subnav')
 const sectionHeader = require('@hashicorp/hashi-section-header')
 const splitCta = require('@hashicorp/hashi-split-cta')
 const textAndContent = require('@hashicorp/hashi-text-and-content')
+const useCases = require('@hashicorp/hashi-use-cases')
 const verticalTextBlockList = require('@hashicorp/hashi-vertical-text-block-list')
 
 const beforeAfterDiagram = require('./js/components/before-after-diagram')
 
 module.exports = {
   'hashi-button': button,
-  'hashi-callouts': callouts,
   'hashi-case-study-slider': caseStudySlider,
   'hashi-consent-manager': consentManager,
   'hashi-content': content,
@@ -37,6 +36,7 @@ module.exports = {
   'hashi-section-header': sectionHeader,
   'hashi-split-cta': splitCta,
   'hashi-text-and-content': textAndContent,
+  'hashi-use-cases': useCases,
   'hashi-vertical-text-block-list': verticalTextBlockList,
   'hashi-before-after': beforeAfterDiagram
 }
