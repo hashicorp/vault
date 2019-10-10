@@ -29,9 +29,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if requireRequestHeader {
 			val, ok := r.Header["Vault-Request"]
 			if !ok || !reflect.DeepEqual(val, []string{"true"}) {
-				w.Header()["Content-Type"] = []string{"application/json"}
-				w.WriteHeader(http.StatusPreconditionFailed)
-				w.Write([]byte(`{"errors":["missing 'Vault-Request' header"]}`))
+				logical.RespondError(w, http.StatusPreconditionFailed, errors.New("missing 'Vault-Request' header"))
 				return
 			}
 

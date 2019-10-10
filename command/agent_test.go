@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	"github.com/hashicorp/vault/api"
@@ -378,7 +377,7 @@ auto_auth {
 
 func TestAgent_RequireRequestHeader(t *testing.T) {
 
-	// request is a helper function that issues HTTP requests
+	// request is a helper function that issues HTTP requests.
 	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
 		resp, err := client.RawRequest(req)
 		if err != nil {
@@ -404,7 +403,8 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return body
 	}
 
-	// makeTempFile is a helper function that creates a temp file
+	// makeTempFile is a helper function that creates a temp file and
+	// populates  it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
 		if err != nil {
@@ -414,6 +414,22 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		f.WriteString(contents)
 		f.Close()
 		return path
+	}
+
+	// newApiClient is a helper function that creates an *api.Client
+	// with the 'Vault-Request' header intentionally missing.
+	newApiClient := func(addr string) *api.Client {
+		conf := api.DefaultConfig()
+		conf.Address = addr
+		cli, err := api.NewClient(conf)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		h := cli.Headers()
+		delete(h, "Vault-Request")
+		cli.SetHeaders(h)
+		return cli
 	}
 
 	//----------------------------------------------------
@@ -541,72 +557,45 @@ listener "tcp" {
 		t.Errorf("timeout")
 	}
 
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
 	//----------------------------------------------------
 	// Perform the tests
 	//----------------------------------------------------
 
 	// Test against a listener configuration that omits
-	// 'require_request_header'
-	apiConf := api.DefaultConfig()
-	apiConf.Address = "http://127.0.0.1:8101"
-	agentClient, err := api.NewClient(apiConf)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	// 'require_request_header', with the header missing from the request.
+	agentClient := newApiClient("http://127.0.0.1:8101")
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
 
-	// Test against a listener configuration that sets
-	// 'require_request_header' to 'false'
-	apiConf = api.DefaultConfig()
-	apiConf.Address = "http://127.0.0.1:8102"
-	agentClient, err = api.NewClient(apiConf)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'false', with the header missing from the request.
+	agentClient = newApiClient("http://127.0.0.1:8102")
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
 
-	// Test against a listener configuration that sets
-	// 'require_request_header' to 'true'
-	apiConf = api.DefaultConfig()
-	apiConf.Address = "http://127.0.0.1:8103"
-	agentClient, err = api.NewClient(apiConf)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with the header missing from the request.
+	agentClient = newApiClient("http://127.0.0.1:8103")
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	resp, err := agentClient.RawRequest(req)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	apiErr := err.(*api.ResponseError)
-	if apiErr.StatusCode != 412 {
-		t.Fatalf("expected status code %d, not %d", 412, apiErr.StatusCode)
-	}
 	if resp.StatusCode != 412 {
 		t.Fatalf("expected status code %d, not %d", 412, resp.StatusCode)
 	}
-	bytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	err = json.Unmarshal(bytes, &body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	expected := map[string]interface{}{
-		"errors": []string{"missing 'Vault-Request' header"},
-	}
-	if diff := deep.Equal(body, expected); diff == nil {
-		t.Fatal(diff)
-	}
 
-	//----------------------------------------------------
-	// Clean up
-	//----------------------------------------------------
-
-	cmd.ShutdownCh <- struct{}{}
-	wg.Wait()
-
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with the header present in the request.
+	h := agentClient.Headers()
+	h["Vault-Request"] = []string{"true"}
+	agentClient.SetHeaders(h)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	request(agentClient, req, 200)
 }
