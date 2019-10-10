@@ -1,4 +1,3 @@
-import { hash } from 'rsvp';
 import Base from '../../replication-base';
 
 export default Base.extend({

@@ -1,5 +1,5 @@
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
@@ -72,12 +72,15 @@ export default Component.extend({
       .compact();
   },
 
-  setAutoCompleteOptions: task(function*(term, powerSelect) {
+  setAutoCompleteOptions: task(function*(term) {
     let { namespaces, lastOptions } = this;
     let namespaceToFetch = namespaces.find(ns => ns === term);
     let secretList = [];
     let authList = [];
     let options = [];
+    if (term) {
+      yield timeout(200);
+    }
     if (!term || (term && namespaceToFetch)) {
       // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
       let result = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
