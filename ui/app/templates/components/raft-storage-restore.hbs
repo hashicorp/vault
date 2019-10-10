@@ -26,7 +26,7 @@
     <AlertBanner
       @type="warning"
       @title="Uploading your file..."
-      @message="Raft snapshots can be very large files. Be prepared for uploading the file to take some time."
+      @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
       />
     </div>
     <div class="box is-fullwidth is-shadowless">
@@ -39,7 +39,7 @@
       <AlertBanner
         @type="warning"
         @title="This might take a while"
-        @message="Raft snapshots can be very large files. Be prepared for uploading the file to take some time."
+        @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
         />
       <FileToArrayBuffer @onChange={{action (mut file)}} />
       <div class="b-checkbox">
