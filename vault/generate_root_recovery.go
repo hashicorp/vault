@@ -24,7 +24,7 @@ func (g *generateRecoveryToken) generate(ctx context.Context, c *Core) (string, 
 	if err != nil {
 		return "", nil, err
 	}
-	token := "s." + id
+	token := "r." + id
 	g.token.Store(token)
 
 	return token, func() { g.token.Store("") }, nil
