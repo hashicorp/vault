@@ -12,7 +12,10 @@ export default Component.extend({
     if (this.useServiceWorker === false) {
       return;
     }
+    // check to see if we support ServiceWorker
     if ('serviceWorker' in navigator) {
+      // this checks to see if there's an active service worker - if it failed to register
+      // for any reason, then this would be null
       let worker = await navigator.serviceWorker.getRegistration(config.serviceWorkerScope);
       if (worker) {
         this.set('useServiceWorker', true);
