@@ -39,6 +39,7 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
+	// TODO: remove donech?
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
