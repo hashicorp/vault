@@ -40,12 +40,13 @@ var (
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
-	Core                  *Core
-	MaxRequestSize        int64
-	MaxRequestDuration    time.Duration
-	DisablePrintableCheck bool
-	RecoveryMode          bool
-	RecoveryToken         *uberAtomic.String
+	Core                         *Core
+	MaxRequestSize               int64
+	MaxRequestDuration           time.Duration
+	DisablePrintableCheck        bool
+	RecoveryMode                 bool
+	RecoveryToken                *uberAtomic.String
+	UnauthenticatedMetricsAccess bool
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity

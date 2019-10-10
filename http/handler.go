@@ -152,6 +152,12 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			}
 			mux.Handle("/ui", handleUIRedirect())
 			mux.Handle("/", handleUIRedirect())
+
+		}
+
+		// Register metrics path without authentication if enabled
+		if props.UnauthenticatedMetricsAccess {
+			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		}
 
 		additionalRoutes(mux, core)

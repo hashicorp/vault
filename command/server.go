@@ -21,25 +21,22 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http/httpproxy"
-
-	"github.com/hashicorp/vault/helper/metricsutil"
-
 	monitoring "cloud.google.com/go/monitoring/apiv3"
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -55,8 +52,9 @@ import (
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
-	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"
 )
@@ -127,9 +125,10 @@ type ServerCommand struct {
 
 type ServerListener struct {
 	net.Listener
-	config             map[string]interface{}
-	maxRequestSize     int64
-	maxRequestDuration time.Duration
+	config                       map[string]interface{}
+	maxRequestSize               int64
+	maxRequestDuration           time.Duration
+	unauthenticatedMetricsAccess bool
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -980,6 +979,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
+		RawConfig:                 config,
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
@@ -1285,7 +1285,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
 
-		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		maxRequestDuration := vault.DefaultMaxRequestDuration
 		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
 			val, err := parseutil.ParseDurationSecond(valRaw)
 			if err != nil {
@@ -1299,11 +1299,31 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
 
+		var unauthenticatedMetricsAccess bool
+		if telemetryRaw, ok := lnConfig.Config["telemetry"]; ok {
+			telemetry, ok := telemetryRaw.([]map[string]interface{})
+			if !ok {
+				c.UI.Error(fmt.Sprintf("Could not parse telemetry sink value %v", telemetryRaw))
+				return 1
+			}
+
+			for _, item := range telemetry {
+				if valRaw, ok := item["unauthenticated_metrics_access"]; ok {
+					unauthenticatedMetricsAccess, err = parseutil.ParseBool(valRaw)
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Could not parse unauthenticated_metrics_access value %v", valRaw))
+						return 1
+					}
+				}
+			}
+		}
+
 		lns = append(lns, ServerListener{
-			Listener:           ln,
-			config:             lnConfig.Config,
-			maxRequestSize:     maxRequestSize,
-			maxRequestDuration: maxRequestDuration,
+			Listener:                     ln,
+			config:                       lnConfig.Config,
+			maxRequestSize:               maxRequestSize,
+			maxRequestDuration:           maxRequestDuration,
+			unauthenticatedMetricsAccess: unauthenticatedMetricsAccess,
 		})
 
 		// Store the listener props for output later
@@ -1547,6 +1567,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			MaxRequestSize:        ln.maxRequestSize,
 			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
+			UnauthenticatedMetricsAccess: ln.unauthenticatedMetricsAccess,
 			RecoveryMode:          c.flagRecovery,
 		})
 
@@ -1709,6 +1730,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.logger.Error("no config found at reload time")
 				goto RUNRELOADFUNCS
 			}
+
+			core.SetConfig(config)
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
