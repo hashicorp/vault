@@ -39,6 +39,16 @@ export default Component.extend({
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
   },
+  didRender() {
+    this._super(...arguments);
+    let { oldOptions, options, selectedOptions } = this;
+    let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
+    if (options && !oldOptions && !hasFormattedInput) {
+      // this is the first time they've been set, so we need to format them
+      this.formatOptions(options);
+    }
+    this.set('oldOptions', options);
+  },
   formatOptions: function(options) {
     options = options.toArray().map(option => {
       option.searchText = `${option.name} ${option.id}`;
