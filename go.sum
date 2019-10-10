@@ -357,6 +357,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93/go.mod h1:N9XpfMXjeLHBgUd8iy4avOC4mCSqUC7B/R8AtCYhcfE=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250 h1:+mm2cM5msg/USImbvnMS2yzCMBYMCO3CrvsATWGtHtY=
 github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250/go.mod h1:F8hKHqcB7stN2OhnqE3emwFYtKO0IDNxMBbPs2n8vr0=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.0 h1:N0AtdV3w6VCtU7rZiTbPxsxhluJXrzpYH9B1pLZhG6g=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.0/go.mod h1:qm2QDW9KNY+pFoxBEYGYvcHnVjdiOr3tXeO9DMeo3mI=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56 h1:PGE26//x1eiAbZ1ExffhKa4y9xgDKLd9BHDZRkOzbEY=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56/go.mod h1:hJ42zFd3bHyE8O2liBUG+VPY0JxdMrj51TOwVGViUIU=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae h1:LtRJy7H/9ftjHGo5SMLG8/7DI7CYL1Zur9jBJTyzXg8=
