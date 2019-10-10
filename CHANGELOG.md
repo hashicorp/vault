@@ -20,7 +20,8 @@ IMPROVEMENTS:
 
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
- * auth/jwt: Boolean values may now be specified as bound claims [JWT-73]
+ * auth/jwt: Bound claims may now contain boolean values [JWT-73]
+ * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
