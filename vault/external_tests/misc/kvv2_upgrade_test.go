@@ -1,4 +1,4 @@
-package token
+package misc
 
 import (
 	"bytes"
