@@ -21,26 +21,22 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const (
-	vaultRequestHeader = "Vault-Request"
-	preconditionFailed = "Precondition Failed"
-)
-
 func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, requireRequestHeader bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
 		// Check for the required request header
 		if requireRequestHeader {
-			val, ok := r.Header[vaultRequestHeader]
+			val, ok := r.Header["Vault-Request"]
 			if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+				w.Header()["Content-Type"] = []string{"application/json"}
 				w.WriteHeader(http.StatusPreconditionFailed)
-				w.Write([]byte(preconditionFailed))
+				w.Write([]byte(`{"errors":["missing 'Vault-Request' header"]}`))
 				return
 			}
 
 			// Remove the required request header
-			delete(r.Header, vaultRequestHeader)
+			delete(r.Header, "Vault-Request")
 		}
 
 		// Get token from the header

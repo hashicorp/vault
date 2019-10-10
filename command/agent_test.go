@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	"github.com/hashicorp/vault/api"
@@ -378,7 +379,7 @@ auto_auth {
 func TestAgent_RequireRequestHeader(t *testing.T) {
 
 	// request is a helper function that issues HTTP requests
-	request := func(client *api.Client, req *api.Request, expectedStatusCode int) []byte {
+	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
 		resp, err := client.RawRequest(req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
@@ -391,16 +392,12 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
-		return bytes
-	}
-
-	// decodeJson is a helper function that decodes JSON
-	decodeJson := func(bytes []byte) map[string]interface{} {
 		if len(bytes) == 0 {
 			return nil
 		}
+
 		var body map[string]interface{}
-		err := json.Unmarshal(bytes, &body)
+		err = json.Unmarshal(bytes, &body)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -461,22 +458,24 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
 	body := request(serverClient, req, 200)
-	data := decodeJson(body)["data"].(map[string]interface{})
+	data := body["data"].(map[string]interface{})
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
 	body = request(serverClient, req, 200)
-	data = decodeJson(body)["data"].(map[string]interface{})
+	data = body["data"].(map[string]interface{})
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
 
 	// Get a temp file path we can use for the sink
 	sinkPath := makeTempFile("sink.txt", "")
-	os.Remove(sinkPath)
+	defer os.Remove(sinkPath)
 
 	// Create a config file
 	config := `
@@ -517,6 +516,7 @@ listener "tcp" {
 `
 	config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
 	configPath := makeTempFile("config.hcl", config)
+	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -542,7 +542,7 @@ listener "tcp" {
 	}
 
 	//----------------------------------------------------
-	// Do the tests
+	// Perform the tests
 	//----------------------------------------------------
 
 	// Test against a listener configuration that omits
@@ -587,12 +587,20 @@ listener "tcp" {
 	if resp.StatusCode != 412 {
 		t.Fatalf("expected status code %d, not %d", 412, resp.StatusCode)
 	}
-	//// read the body
-	//bytes, err := ioutil.ReadAll(resp.Body)
-	//if err != nil {
-	//	t.Fatalf("err: %s", err)
-	//}
-	//fmt.Printf("body: %s\n", string(bytes))
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	expected := map[string]interface{}{
+		"errors": []string{"missing 'Vault-Request' header"},
+	}
+	if diff := deep.Equal(body, expected); diff == nil {
+		t.Fatal(diff)
+	}
 
 	//----------------------------------------------------
 	// Clean up
@@ -601,8 +609,4 @@ listener "tcp" {
 	cmd.ShutdownCh <- struct{}{}
 	wg.Wait()
 
-	os.Remove(roleIDPath)
-	os.Remove(secretIDPath)
-	os.Remove(sinkPath)
-	os.Remove(configPath)
 }
