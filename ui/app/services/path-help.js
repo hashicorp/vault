@@ -239,18 +239,18 @@ export default Service.extend({
 
       //urlForQuery if there is an id and we are listing, use the id to construct the path
       urlForUpdateRecord(id) {
-        let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
+        const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
         const { id } = snapshot;
-        let path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
+        const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
 
       urlForDeleteRecord(id) {
-        let path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
+        const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
     });
