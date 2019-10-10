@@ -112,7 +112,7 @@ export default Service.extend({
       pathInfo.itemTypes.push(itemType);
     }
 
-    let operations = [];
+    const operations = [];
     if (pathDetails.get) {
       operations.push('get');
     }
