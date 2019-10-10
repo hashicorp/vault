@@ -1,3 +1,7 @@
+# Set SHELL to 'strict mode' without using .SHELLFLAGS for max compatibility.
+# See https://fieldnotes.tech/how-to-shell-for-compatible-makefiles/
+SHELL := /usr/bin/env bash -euo pipefail -c
+
 # Determine this makefile's path.
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
@@ -111,9 +115,6 @@ ci-lint:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@go generate $(go list ./... | grep -v /vendor/)
-	@# Remove old (now broken) husky git hooks.
-	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
-	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 .PHONY: ci-config
 ci-config:
