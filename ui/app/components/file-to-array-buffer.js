@@ -1,29 +1,31 @@
 import Component from '@ember/component';
 import filesize from 'filesize';
 
+/**
+ * @module FileToArrayBuffer
+ * `FileToArrayBuffer` is a component that will allow you to pick a file from the local file system. Once
+ * loaded, this file will be emitted as a JS ArrayBuffer to the passed `onChange` callback.
+ *
+ * @example
+ * ```js
+ *   <FileToArrayBuffer @onChange={{action (mut file)}} />
+ * ```
+ * @param onChange=null {Function} - The function to call when the file read is complete. This function
+ * recieves the file as a JS ArrayBuffer
+ * @param [label=null {String}] - Text to use as the label for the file input If null, a default will be rendered
+ * @param [type=null {String} - Text to use as help under the file input
+ *
+ */
 export default Component.extend({
   classNames: ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'],
   onChange: () => {},
+  label: null,
+  fileHelpText: null,
+
   file: null,
   fileName: null,
   fileSize: null,
   fileLastModified: null,
-
-  /*
-   * @public
-   * @param String
-   * Text to use as the label for the file input
-   * If null, a default will be rendered
-   */
-  label: null,
-
-  /*
-   * @public
-   * @param String
-   * Text to use as help under the file input
-   * If null, a default will be rendered
-   */
-  fileHelpText: null,
 
   readFile(file) {
     const reader = new FileReader();
