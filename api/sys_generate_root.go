@@ -11,7 +11,7 @@ func (c *Sys) GenerateDROperationTokenStatus() (*GenerateRootStatusResponse, err
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenStatus() (*GenerateRootStatusResponse, error) {
-	return c.generateRootStatusCommon("/v1/sys/generate-root/attempt")
+	return c.generateRootStatusCommon("/v1/sys/generate-recovery-token/attempt")
 }
 
 func (c *Sys) generateRootStatusCommon(path string) (*GenerateRootStatusResponse, error) {
@@ -39,7 +39,7 @@ func (c *Sys) GenerateDROperationTokenInit(otp, pgpKey string) (*GenerateRootSta
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenInit(otp, pgpKey string) (*GenerateRootStatusResponse, error) {
-	return c.generateRootInitCommon("/v1/sys/generate-root/attempt", otp, pgpKey)
+	return c.generateRootInitCommon("/v1/sys/generate-recovery-token/attempt", otp, pgpKey)
 }
 
 func (c *Sys) generateRootInitCommon(path, otp, pgpKey string) (*GenerateRootStatusResponse, error) {
@@ -75,7 +75,7 @@ func (c *Sys) GenerateDROperationTokenCancel() error {
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenCancel() error {
-	return c.generateRootCancelCommon("/v1/sys/generate-root/attempt")
+	return c.generateRootCancelCommon("/v1/sys/generate-recovery-token/attempt")
 }
 
 func (c *Sys) generateRootCancelCommon(path string) error {
@@ -99,7 +99,7 @@ func (c *Sys) GenerateDROperationTokenUpdate(shard, nonce string) (*GenerateRoot
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenUpdate(shard, nonce string) (*GenerateRootStatusResponse, error) {
-	return c.generateRootUpdateCommon("/v1/sys/generate-root/update", shard, nonce)
+	return c.generateRootUpdateCommon("/v1/sys/generate-recovery-token/update", shard, nonce)
 }
 
 func (c *Sys) generateRootUpdateCommon(path, shard, nonce string) (*GenerateRootStatusResponse, error) {
