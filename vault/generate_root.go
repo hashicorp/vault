@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
@@ -145,6 +146,9 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	if c.Sealed() && !c.recoveryMode {
 		return consts.ErrSealed
 	}
+	if !c.Sealed() && c.recoveryMode {
+		return errors.New("attempt to generate recovery token when already unsealed")
+	}
 	if c.standby && !c.recoveryMode {
 		return consts.ErrStandby
 	}
@@ -175,6 +179,8 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 		switch strategy.(type) {
 		case generateStandardRootToken:
 			c.logger.Info("root generation initialized", "nonce", c.generateRootConfig.Nonce)
+		case *generateRecoveryToken:
+			c.logger.Info("recovery operation token generation initialized", "nonce", c.generateRootConfig.Nonce)
 		default:
 			c.logger.Info("dr operation token generation initialized", "nonce", c.generateRootConfig.Nonce)
 		}
@@ -220,6 +226,9 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	defer c.stateLock.RUnlock()
 	if c.Sealed() && !c.recoveryMode {
 		return nil, consts.ErrSealed
+	}
+	if !c.Sealed() && c.recoveryMode {
+		return nil, errors.New("attempt to generate recovery token when already unsealed")
 	}
 	if c.standby && !c.recoveryMode {
 		return nil, consts.ErrStandby
@@ -330,6 +339,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 			}
 		}
 	}
+	atomic.StoreUint32(c.sealed, 0)
 
 	// Run the generate strategy
 	token, cleanupFunc, err := strategy.generate(ctx, c)
@@ -376,13 +386,11 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 
 	switch strategy.(type) {
 	case generateStandardRootToken:
-		if c.logger.IsInfo() {
-			c.logger.Info("root generation finished", "nonce", c.generateRootConfig.Nonce)
-		}
+		c.logger.Info("root generation finished", "nonce", c.generateRootConfig.Nonce)
+	case *generateRecoveryToken:
+		c.logger.Info("recovery operation token generation finished", "nonce", c.generateRootConfig.Nonce)
 	default:
-		if c.logger.IsInfo() {
-			c.logger.Info("dr operation token generation finished", "nonce", c.generateRootConfig.Nonce)
-		}
+		c.logger.Info("dr operation token generation finished", "nonce", c.generateRootConfig.Nonce)
 	}
 
 	c.generateRootProgress = nil

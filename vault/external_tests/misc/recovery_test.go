@@ -88,7 +88,12 @@ func TestRecovery(t *testing.T) {
 		defer cluster.Cleanup()
 
 		client := cluster.Cores[0].Client
-		client.SetToken(testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRecovery))
+		recoveryToken := testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRecovery)
+		_, err = testhelpers.GenerateRootWithError(t, cluster, testhelpers.GenerateRecovery)
+		if err == nil {
+			t.Fatal("expected second generate-root to fail")
+		}
+		client.SetToken(recoveryToken)
 
 		secret, err := client.Logical().List(path.Join("sys/raw/logical", secretUUID))
 		if err != nil {
