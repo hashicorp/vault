@@ -80,7 +80,12 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		panic("incoming channel is nil")
 	}
 
-	// TODO: if there are no templates, close the unblock ch
+	// If there are no templates, close the unblockCh
+	if len(templates) == 0 {
+		// nothing to do
+		close(ts.unblockCh)
+		return
+	}
 
 	// construct a consul template vault config based the agents vault
 	// configuration
