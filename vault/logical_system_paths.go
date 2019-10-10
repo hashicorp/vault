@@ -49,6 +49,17 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/state/sanitized$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handleConfigStateSanitized,
+					Summary:     "Return a sanitized version of the Vault server configuration.",
+					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+				},
+			},
+		},
+
+		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
@@ -870,6 +881,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
+		},
+		{
+			Pattern: "internal/counters/tokens",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersTokens,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
+		},
+		{
+			Pattern: "internal/counters/entities",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersEntities,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
 	}
 }

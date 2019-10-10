@@ -20,6 +20,8 @@ IMPROVEMENTS:
 
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
+ * auth/jwt: Bound claims may now contain boolean values [JWT-73]
+ * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
@@ -33,6 +35,11 @@ IMPROVEMENTS:
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
    information to be extracted [GH-7473]
+ * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
+   returns the configuration state of the server. It excludes config values
+   from `storage`, `ha_storage`, and `seal` stanzas and some values
+   from `telemetry` due to potential sensitive entries in those fields.
+   
 
 BUG FIXES:
 
@@ -49,8 +56,16 @@ BUG FIXES:
    writes to static-roles endpoints timing out [GH-7518]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
- * ui: Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
+ 
+## 1.2.4 (Unreleased)
 
+BUG FIXES:
+
+  * cli: Fix panic when pgp keys list is empty [GH-7546]
+  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
+  * secrets/database: Fix bug in combined DB secrets engine that can result in
+    writes to static-roles endpoints timing out [GH-7518]
+   
 ## 1.2.3 (September 12, 2019)
 
 FEATURES:

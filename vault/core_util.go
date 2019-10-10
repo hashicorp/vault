@@ -91,6 +91,12 @@ func (c *Core) HasFeature(license.Features) bool {
 	return false
 }
 
+func (c *Core) collectNamespaces() []*namespace.Namespace {
+	return []*namespace.Namespace{
+		namespace.RootNamespace,
+	}
+}
+
 func (c *Core) namepaceByPath(string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
