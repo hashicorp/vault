@@ -30,21 +30,13 @@ type Server struct {
 	// methods
 	config *ServerConfig
 
-	// // lookup allows looking up the set of Nomad templates by their consul-template ID
-	// lookup map[string][]*structs.Template
-
 	// runner is the consul-template runner
 	runner *manager.Runner
-
-	// shutdownCh is used to signal the started goroutine to shutdown
-	// shutdownCh chan struct{}
 
 	// unblockCh is used to block until a template is rendered
 	unblockCh chan struct{}
 
-	// shutdown marks whether the manager has been shutdown
-	// shutdown     bool
-	// shutdownLock sync.Mutex
+	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
 	DoneCh        chan struct{}
@@ -106,7 +98,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.StopImmediately()
-			// TODO close ts.DoneCh
 			return
 
 		case token := <-incoming:
@@ -133,10 +124,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Info("template server error:", err.Error())
-			// TODO close ts.DoneCh
 			return
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, unblock
+			if ts.exitAfterAuth {
+				// if we want to exit after auth, go ahead and shut down the runner
+				ts.runner.Stop()
+			}
 			close(ts.unblockCh)
 		}
 	}
@@ -153,12 +147,21 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 	// Always set these to ensure nothing is picked up from the environment
 	emptyStr := ""
 	conf.Vault.RenewToken = boolPtr(false)
-	// TODO: need token here
 	conf.Vault.Token = &emptyStr
 	conf.Vault.Address = &sc.VaultConf.Address
 	// conf.Vault.Token = &config.VaultToken
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
+	}
+
+	conf.Vault.SSL = &ctconfig.SSLConfig{
+		Enabled:    boolPtr(false),
+		Verify:     boolPtr(false),
+		Cert:       &emptyStr,
+		Key:        &emptyStr,
+		CaCert:     &emptyStr,
+		CaPath:     &emptyStr,
+		ServerName: &emptyStr,
 	}
 
 	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
@@ -172,16 +175,6 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 			CaCert:  &sc.VaultConf.CACert,
 			CaPath:  &sc.VaultConf.CAPath,
 			// ServerName: &sc.VaultConf.TLSServerName,
-		}
-	} else {
-		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled:    boolPtr(false),
-			Verify:     boolPtr(false),
-			Cert:       &emptyStr,
-			Key:        &emptyStr,
-			CaCert:     &emptyStr,
-			CaPath:     &emptyStr,
-			ServerName: &emptyStr,
 		}
 	}
 

@@ -478,8 +478,8 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
-	// TODO: listen for SIGHUP
 	// Listen for signals
+	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
 	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
@@ -513,8 +513,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
-
-		// TODO: should this be conditional?
 		go ts.Run(ctx, ah.TemplateTokenCh, agentConfig.Templates)
 	}
 
@@ -556,10 +554,8 @@ func (c *AgentCommand) Run(args []string) int {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
-	case <-tsDoneCh:
-		c.logger.Info("template finished, exiting")
-		// TODO: implement reloading
 	// case <-c.SighupCh:
+	// TODO: implement reloading
 	// 	c.UI.Output("==> Vault Agent reload triggered")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
