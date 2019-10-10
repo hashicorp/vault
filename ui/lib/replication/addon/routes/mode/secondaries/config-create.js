@@ -25,6 +25,8 @@ export default Base.extend({
         if (e.httpStatus === 404) {
           return this.store.createRecord('path-filter-config', {
             id,
+            mode: null,
+            paths: [],
           });
         } else {
           throw e;

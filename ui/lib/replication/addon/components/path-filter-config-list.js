@@ -10,6 +10,7 @@ export default Component.extend({
   config: null,
   possiblePaths: null,
   namespaces: readOnly('namespace.accessibleNamespaces'),
+  lastOptions: null,
   autoCompleteOptions: null,
   namespacesFetched: null,
 

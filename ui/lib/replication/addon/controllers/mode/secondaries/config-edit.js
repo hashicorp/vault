@@ -10,7 +10,7 @@ export default Controller.extend({
     resetConfig(config) {
       if (config.get('isNew')) {
         config.setProperties({
-          mode: 'whitelist',
+          mode: null,
           paths: [],
         });
       } else {
@@ -18,7 +18,9 @@ export default Controller.extend({
       }
     },
 
-    saveConfig(config, isDelete) {
+    saveConfig(config) {
+      // if the mode is null, we want no filtering, so we should delete any existing config
+      let isDelete = config.mode === null;
       const flash = this.get('flashMessages');
       const id = config.id;
       const redirectArgs = isDelete

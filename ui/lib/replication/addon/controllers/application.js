@@ -3,13 +3,13 @@ import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
+import { resolve } from 'rsvp';
 
 const DEFAULTS = {
   token: null,
   id: null,
   loading: false,
   errors: [],
-  showFilterConfig: false,
   primary_api_addr: null,
   primary_cluster_addr: null,
   filterConfig: {
@@ -35,6 +35,10 @@ export default Controller.extend(copy(DEFAULTS, true), {
     const config = this.get('filterConfig');
     const id = this.get('id');
     config.id = id;
+    // if there is no mode, then they don't want to filter, so we don't save a filter config
+    if (!config.mode) {
+      return resolve();
+    }
     const configRecord = this.get('store').createRecord('path-filter-config', config);
     return configRecord.save().catch(e => this.submitError(e));
   },
@@ -67,13 +71,8 @@ export default Controller.extend(copy(DEFAULTS, true), {
 
   submitHandler(action, clusterMode, data, event) {
     const replicationMode = this.get('replicationMode');
-    let saveFilterConfig;
     if (event && event.preventDefault) {
       event.preventDefault();
-    }
-    if (data && isPresent(data.saveFilterConfig)) {
-      saveFilterConfig = data.saveFilterConfig;
-      delete data.saveFilterConfig;
     }
     this.setProperties({
       loading: true,
@@ -94,13 +93,9 @@ export default Controller.extend(copy(DEFAULTS, true), {
       .replicationAction(action, replicationMode, clusterMode, data)
       .then(
         resp => {
-          if (saveFilterConfig) {
-            return this.saveFilterConfig().then(() => {
-              return this.submitSuccess(resp, action, clusterMode);
-            });
-          } else {
+          return this.saveFilterConfig().then(() => {
             return this.submitSuccess(resp, action, clusterMode);
-          }
+          });
         },
         (...args) => this.submitError(...args)
       );
