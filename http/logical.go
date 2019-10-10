@@ -199,8 +199,11 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 			return
 		}
 
-		httpResp := logical.LogicalResponseToHTTPResponse(resp)
-		httpResp.RequestID = req.ID
+		var httpResp *logical.HTTPResponse
+		if resp != nil {
+			httpResp = logical.LogicalResponseToHTTPResponse(resp)
+			httpResp.RequestID = req.ID
+		}
 		respondOk(w, httpResp)
 	})
 }
