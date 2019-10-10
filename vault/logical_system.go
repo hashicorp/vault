@@ -183,7 +183,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 func (b *SystemBackend) rawPaths() []*framework.Path {
 	r := &RawBackend{
 		barrier: b.Core.barrier,
-		logger:  b.Core.logger,
+		logger:  b.logger,
 		checkRaw: func(path string) error {
 			return checkRaw(b, path)
 		},
@@ -194,10 +194,11 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 func NewRawBackend(core *Core) *RawBackend {
 	r := &RawBackend{
 		barrier: core.barrier,
-		logger:  core.logger,
+		logger:  core.logger.Named("raw"),
 		checkRaw: func(path string) error {
 			return nil
 		},
+		recoveryMode: core.recoveryMode,
 	}
 	r.Backend = &framework.Backend{
 		Paths: rawPaths("sys/", r),
@@ -2268,15 +2269,20 @@ func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *lo
 type (
 	RawBackend struct {
 		*framework.Backend
-		barrier  SecurityBarrier
-		logger   log.Logger
-		checkRaw func(path string) error
+		barrier      SecurityBarrier
+		logger       log.Logger
+		checkRaw     func(path string) error
+		recoveryMode bool
 	}
 )
 
 // handleRawRead is used to read directly from the barrier
 func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	if b.recoveryMode {
+		b.logger.Info("reading", "path", path)
+	}
 
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
@@ -2326,6 +2332,10 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
+	if b.recoveryMode {
+		b.logger.Info("writing", "path", path)
+	}
+
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
@@ -2349,6 +2359,10 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 func (b *RawBackend) handleRawDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
+	if b.recoveryMode {
+		b.logger.Info("deleting", "path", path)
+	}
+
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
@@ -2368,6 +2382,10 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	path := data.Get("path").(string)
 	if path != "" && !strings.HasSuffix(path, "/") {
 		path = path + "/"
+	}
+
+	if b.recoveryMode {
+		b.logger.Info("listing", "path", path)
 	}
 
 	// Prevent access of protected paths

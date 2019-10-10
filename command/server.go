@@ -204,7 +204,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:   "recovery",
 		Target: &c.flagRecovery,
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
-			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
+			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -440,7 +440,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
-	// Ensure that a backend is provided
 	if config.Storage == nil {
 		c.UI.Output("A storage backend must be specified")
 		return 1
@@ -450,24 +449,11 @@ func (c *ServerCommand) runRecoveryMode() int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
-	// log proxy settings
 	proxyCfg := httpproxy.FromEnvironment()
 	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
 		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
 
-	// If mlockall(2) isn't supported, show a warning. We disable this in dev
-	// because it is quite scary to see when first using Vault. We also disable
-	// this if the user has explicitly disabled mlock in configuration.
-	if !config.DisableMlock && !mlock.Supported() {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! mlock is not supported on this system! An mlockall(2)-like " +
-				"syscall to prevent memory from being swapped to disk is not " +
-				"supported on this system. For better security, only run Vault on " +
-				"systems where this call is supported. If you are running Vault " +
-				"in a Docker container, provide the IPC_LOCK cap to the container."))
-	}
-
-	// Initialize the backend
+	// Initialize the storage backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
 	if !exists {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
@@ -492,17 +478,10 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var barrierSeal vault.Seal
 	var sealConfigError error
 
-	// Handle the case where no seal is provided
-	switch len(config.Seals) {
-	case 0:
+	if len(config.Seals) == 0 {
 		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
-	case 1:
-		// If there's only one seal and it's disabled assume they want to
-		// migrate to a shamir seal and simply didn't provide it
-		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
-		}
 	}
+
 	for _, configSeal := range config.Seals {
 		sealType := vaultseal.Shamir
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
@@ -548,7 +527,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		RecoveryMode: c.flagRecovery,
 	}
 
-	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
 		if vault.IsFatalError(newCoreError) {
@@ -1027,7 +1005,6 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
-		RecoveryMode:              c.flagRecovery,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
