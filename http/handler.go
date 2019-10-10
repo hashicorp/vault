@@ -113,8 +113,9 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	switch {
 	case props.RecoveryMode:
+		raw := vault.NewRawBackend(core)
 		strategy := vault.GenerateRecoveryTokenStrategy(props.RecoveryToken)
-		mux.Handle("/v1/sys/raw/", handleLogicalRecovery(core.RecoveryModeRawBackend(), props.RecoveryToken))
+		mux.Handle("/v1/sys/raw/", handleLogicalRecovery(raw, props.RecoveryToken))
 		mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core, strategy))
 		mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core, strategy))
 	default:

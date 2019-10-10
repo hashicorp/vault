@@ -288,10 +288,6 @@ type Core struct {
 	// cubbyholeBackend is the backend which manages the per-token storage
 	cubbyholeBackend *CubbyholeBackend
 
-	// recoveryModeRawBackend is the backend which consumes sys/raw calls in
-	// recovery mode
-	recoveryModeRawBackend *RawBackend
-
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -740,7 +736,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// All the things happening below this are not required in
 	// recovery mode
 	if c.recoveryMode {
-		c.recoveryModeRawBackend = NewRawBackend(c)
 		return c, nil
 	}
 
@@ -808,12 +803,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	return c, nil
-}
-
-// RecoveryModeRawBackend returns the backend that consumes the sys/raw calls in
-// recovery mode
-func (c *Core) RecoveryModeRawBackend() *RawBackend {
-	return c.recoveryModeRawBackend
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
