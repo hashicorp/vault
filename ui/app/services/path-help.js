@@ -99,11 +99,6 @@ export default Service.extend({
       return pathInfo;
     }
 
-    if (pathName.includes('{')) {
-      //we need to know if there are url params
-      pathName.split('{')[1].split('}')[0];
-    }
-
     let itemType, itemName;
     if (displayAttrs.itemType) {
       itemType = displayAttrs.itemType;
