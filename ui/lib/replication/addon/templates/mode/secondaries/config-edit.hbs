@@ -1,16 +1,4 @@
-<Toolbar>
-  <ToolbarActions>
-    <ConfirmAction
-      @buttonClasses="toolbar-link"
-      @confirmMessage="This will affect which data gets replicated to this secondary."
-      @onConfirmAction={{action "saveConfig" model.config true}}
-      data-test-delete-path-config="true"
-    >
-      Delete config
-    </ConfirmAction>
-  </ToolbarActions>
-</Toolbar>
-
+<Toolbar/>
 <div class="box is-fullwidth is-shadowless is-marginless">
   <h4 class="title is-5 is-marginless">
     Edit path filter config for <code>{{model.config.id}}</code>
@@ -25,7 +13,7 @@
     <div class="field is-grouped">
       <div class="control">
         <button type="submit" class="button is-primary" >
-          Save
+          Update
         </button>
       </div>
       <div class="control">

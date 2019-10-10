@@ -1,8 +1,6 @@
 <h4 class="title is-5">
   Filtered paths
 </h4>
-
-
 <div class="radio-card-selector">
   <label
     for="no-filtering"
@@ -108,49 +106,20 @@
   </label>
 </div>
 {{#if (or (eq config.mode "whitelist") (eq config.mode "blacklist"))}}
+  <SearchSelect
+    @id="paths"
+    @labelClass="title is-7"
+    @onChange={{action "pathsChanged"}}
+    @inputValue={{config.paths}}
+    @label="Paths in this {{config.mode}}"
+    @options={{this.autoCompleteOptions}}
+    @search={{perform this.setAutoCompleteOptions}}
+    />
+{{/if}}
+{{#if (and (not config.mode) this.startedWithMode)}}
+  <AlertInline
+    @type="warning"
+    @message="Saving with 'Include everything' will remove any existing filter configuration"
+  />
+{{/if}}
 
-    <SearchSelect
-      @id="paths"
-      @onChange={{action "pathsChanged"}}
-      @inputValue={{config.paths}}
-      @label="Paths in this {{config.mode}}"
-      @options={{this.autoCompleteOptions}}
-      @search={{perform this.setAutoCompleteOptions}}
-      />
-    {{/if}}
-{{#each mounts as |mount|}}
-  {{#unless (or mount.local (contains mount.type singletonMountTypes))}}
-    {{!-- auth mounts have apiPath, secret mounts use path --}}
-    {{#with (or mount.apiPath mount.path) as |path| }}
-      <label for="filter-{{mount.accessor}}" class="columns is-mobile is-gapless is-marginless table">
-        <div class="column is-narrow td">
-          <div class="td is-borderless">
-            <div class="field">
-              <div class="b-checkbox no-label">
-              <input
-                id="filter-{{mount.accessor}}"
-                type="checkbox"
-                class="styled"
-                checked={{contains config.paths path}}
-                onChange={{action 'addOrRemovePath' path}}
-                data-test-mount-filter="{{mount.type}}"
-              />
-              <label for="filter-{{mount.accessor}}" class="is-label"></label>
-              </div>
-            </div>
-          </div>
-        </div>
-        <code class="column is-5 td">
-          <div class="td is-borderless" data-test-mount-filter-path-for-type="{{mount.type}}">
-            {{path}}
-          </div>
-        </code>
-        <div class="column td">
-          <div class="td is-borderless">
-            {{mount.type}}
-          </div>
-        </div>
-      </label>
-    {{/with}}
-  {{/unless}}
-{{/each}}

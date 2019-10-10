@@ -7,7 +7,7 @@
     helpText=helpText
   }}
 {{else}}
-  <label class="title is-4" data-test-field-label>
+<label class="{{if labelClass labelClass 'title is-4'}}" data-test-field-label>
     {{label}}
     {{#if helpText}}
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}

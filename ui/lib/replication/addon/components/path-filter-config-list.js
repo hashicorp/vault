@@ -13,10 +13,14 @@ export default Component.extend({
   lastOptions: null,
   autoCompleteOptions: null,
   namespacesFetched: null,
+  startedWithMode: false,
 
   init() {
     this._super(...arguments);
     this.setAutoCompleteOptions.perform();
+    if (this.config.mode) {
+      this.set('startedWithMode', true);
+    }
   },
 
   fetchMountsForNamespace: task(function*(ns) {
@@ -36,7 +40,6 @@ export default Component.extend({
           longId = ns ? `${ns}/${id}` : id;
         }
         info.path = longId;
-        longId = longId.replace(/\/$/, '');
 
         // don't add singleton mounts
         if (!this.singletonMountTypes.includes(info.type)) {
@@ -55,9 +58,15 @@ export default Component.extend({
   }),
 
   filterOptions(list, term) {
+    let paths = this.config.paths;
     return list
       .map(({ groupName, options }) => {
-        let trimmedOptions = term ? options.filter(op => op.searchText.includes(term)) : options;
+        let trimmedOptions = options.filter(op => {
+          if (term) {
+            return op.searchText.includes(term) && !paths.includes(op.id);
+          }
+          return !paths.includes(op.id);
+        });
         return trimmedOptions.length ? { groupName, options: trimmedOptions } : null;
       })
       .compact();
@@ -92,11 +101,10 @@ export default Component.extend({
     let authOptions = currentAuths ? [...currentAuths.options, ...authList] : authList;
 
     options.push({ groupName: 'Auth Methods', options: authOptions.uniqBy('id') });
+    let filtered = term ? this.filterOptions(options, term) : this.filterOptions(options);
     if (!term) {
-      this.set('autoCompleteOptions', this.filterOptions(options));
-      return;
+      this.set('autoCompleteOptions', filtered);
     }
-    let filtered = this.filterOptions(options, term);
     this.set('lastOptions', filtered);
     return filtered;
   }),
@@ -112,7 +120,16 @@ export default Component.extend({
 
   actions: {
     pathsChanged(paths) {
+      // set paths on the model
       set(this.config, 'paths', paths);
+      if (paths.length) {
+        // remove the selected item from the default list of options
+        let filtered = this.filterOptions(this.autoCompleteOptions);
+        this.set('autoCompleteOptions', filtered);
+      } else {
+        // if there's no paths, we need to re-fetch like on init
+        this.setAutoCompleteOptions.perform();
+      }
     },
   },
 });
