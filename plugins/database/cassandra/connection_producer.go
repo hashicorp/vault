@@ -249,6 +249,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	if c.Consistency != "" {
 		consistencyValue, err := gocql.ParseConsistencyWrapper(c.Consistency)
 		if err != nil {
+			session.Close()
 			return nil, err
 		}
 
@@ -263,9 +264,11 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 		})).Iter().NumRows()
 
 		if rowNum < 1 {
+			session.Close()
 			return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
 		}
 	} else if err != nil {
+		session.Close()
 		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 	}
 
