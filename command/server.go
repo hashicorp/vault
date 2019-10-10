@@ -582,11 +582,10 @@ func (c *ServerCommand) Run(args []string) int {
 
 
 	if config.Storage.Type == "raft" {
-		if config.ClusterAddr == "" {
-			if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-				config.ClusterAddr = envCA
-			}
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
 		}
+
 		if len(config.ClusterAddr) == 0 {
 			c.UI.Error("Cluster address must be set when using raft storage")
 			return 1
