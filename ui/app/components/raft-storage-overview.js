@@ -34,10 +34,19 @@ export default Component.extend({
     },
 
     downloadViaServiceWorker() {
+      // the actual download happens when the user clicks the anchor link, and then the ServiceWorker
+      // intercepts the request and adds auth headers.
+      // Here we just want to notify users that something is happening before the browser starts the download
       this.flashMessages.success('The snapshot download will begin shortly.');
     },
 
     async downloadSnapshot() {
+      // this entire method is the fallback behavior in case the browser either doesn't support ServiceWorker
+      // or the UI is not being run on https.
+      // here we're downloading the entire snapshot in memory, creating a dataurl with createObjectURL, and
+      // then forcing a download by clicking a link that has a download attribute
+      //
+      // this is not the default because
       let adapter = getOwner(this).lookup('adapter:application');
 
       this.flashMessages.success('The snapshot download has begun.');
@@ -57,11 +66,13 @@ export default Component.extend({
         return;
       }
       let a = document.createElement('a');
-      a.href = window.URL.createObjectURL(file);
+      let objectURL = window.URL.createObjectURL(file);
+      a.href = objectURL;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(objectURL);
     },
   },
 });
