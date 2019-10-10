@@ -404,7 +404,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	}
 
 	// makeTempFile is a helper function that creates a temp file and
-	// populates  it.
+	// populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
 		if err != nil {
@@ -416,9 +416,8 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return path
 	}
 
-	// newApiClient is a helper function that creates an *api.Client
-	// with the 'Vault-Request' header intentionally missing.
-	newApiClient := func(addr string) *api.Client {
+	// newApiClient is a helper function that creates an *api.Client.
+	newApiClient := func(addr string, includeVaultRequestHeader bool) *api.Client {
 		conf := api.DefaultConfig()
 		conf.Address = addr
 		cli, err := api.NewClient(conf)
@@ -426,9 +425,11 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 			t.Fatalf("err: %s", err)
 		}
 
-		h := cli.Headers()
-		delete(h, "Vault-Request")
-		cli.SetHeaders(h)
+		if !includeVaultRequestHeader {
+			h := cli.Headers()
+			delete(h, "Vault-Request")
+			cli.SetHeaders(h)
+		}
 		return cli
 	}
 
@@ -569,19 +570,19 @@ listener "tcp" {
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
-	agentClient := newApiClient("http://127.0.0.1:8101")
+	agentClient := newApiClient("http://127.0.0.1:8101", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'false', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8102")
+	agentClient = newApiClient("http://127.0.0.1:8102", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8103")
+	agentClient = newApiClient("http://127.0.0.1:8103", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	resp, err := agentClient.RawRequest(req)
 	if err == nil {
@@ -593,9 +594,7 @@ listener "tcp" {
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header present in the request.
-	h := agentClient.Headers()
-	h["Vault-Request"] = []string{"true"}
-	agentClient.SetHeaders(h)
+	agentClient = newApiClient("http://127.0.0.1:8103", true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
 }
