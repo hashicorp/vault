@@ -149,7 +149,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 	conf.Vault.RenewToken = boolPtr(false)
 	conf.Vault.Token = &emptyStr
 	conf.Vault.Address = &sc.VaultConf.Address
-	// conf.Vault.Token = &config.VaultToken
+
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
 	}
@@ -174,7 +174,6 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 			Key:     &sc.VaultConf.ClientKey,
 			CaCert:  &sc.VaultConf.CACert,
 			CaPath:  &sc.VaultConf.CAPath,
-			// ServerName: &sc.VaultConf.TLSServerName,
 		}
 	}
 
