@@ -20,6 +20,7 @@ IMPROVEMENTS:
 
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
+ * auth/jwt: Boolean values may now be specified as bound claims [JWT-73]
  * core: Exit ScanView if context has been cancelled [GH-7419]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
