@@ -21,6 +21,9 @@ import DS from 'ember-data';
 
 export default Component.extend({
   model: null,
+  name: computed('model', function() {
+    return this.model.id.split('/').pop();
+  }),
   itemType: null,
   flashMessages: service(),
   router: service(),
