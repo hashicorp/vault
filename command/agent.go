@@ -420,6 +420,9 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
+		// Create the request handler
+		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink)
+
 		var listeners []net.Listener
 		for i, lnConfig := range config.Listeners {
 			ln, tlsConf, err := cache.StartListener(lnConfig)
@@ -430,15 +433,13 @@ func (c *AgentCommand) Run(args []string) int {
 
 			listeners = append(listeners, ln)
 
-			// Create the request handler
-			handler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink)
-
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
+			muxHandler := cacheHandler
 			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
 				switch v {
 				case true:
-					handler = verifyRequestHeader(handler)
+					muxHandler = verifyRequestHeader(muxHandler)
 				case false /* noop */ :
 				default:
 					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
@@ -449,7 +450,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle("/", handler)
+			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
 			if tlsConf == nil {
