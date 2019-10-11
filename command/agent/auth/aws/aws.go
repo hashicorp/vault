@@ -45,6 +45,7 @@ type awsMethod struct {
 	mountPath   string
 	role        string
 	headerValue string
+	region      string
 
 	// These are used to share the latest creds safely across goroutines.
 	credLock  sync.Mutex
@@ -139,6 +140,14 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		a.nonce, ok = nonceRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'nonce' value into string")
+		}
+	}
+
+	regionRaw, ok := conf.Config["region"]
+	if ok {
+		a.region, ok = regionRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'region' value into string")
 		}
 	}
 
@@ -246,7 +255,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, "")
+		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, a.region)
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return
