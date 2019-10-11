@@ -1,5 +1,10 @@
 <div class="field">
   <div class="control is-expanded">
+    <label class="is-label">
+      {{#if label}}
+        {{label}}
+      {{/if}}
+    </label>
     <div class="file has-name is-fullwidth">
       <label class="file-label">
         <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input>
