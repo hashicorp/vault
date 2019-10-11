@@ -12,9 +12,7 @@ export default Route.extend({
     const { type } = methodModel;
     const modelType = `generated-${singularize(itemType)}-${type}`;
     const id = `${method}/${itemName}`;
-    return this.store.findRecord(modelType, id, {
-      adapterOptions: { path: `${method}/${itemType}` },
-    });
+    return this.store.findRecord(modelType, id);
   },
 
   setupController(controller) {

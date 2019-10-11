@@ -13,7 +13,7 @@ export default ApplicationAdapter.extend({
   },
 
   fetchByQuery(store, query) {
-    const { id, type, list } = query;
+    const { id, type } = query;
     return this.ajax(this.urlForItem(id, type), 'GET', this.optionsForQuery(id)).then(resp => {
       const data = {
         id,
