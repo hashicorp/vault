@@ -28,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	agentConfig "github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
@@ -192,59 +192,59 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
+	agentConfig, err := config.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
 	}
 
 	// Ensure at least one config was found.
-	if config == nil {
+	if agentConfig == nil {
 		c.UI.Output(wrapAtLength(
 			"No configuration read. Please provide the configuration with the " +
 				"-config flag."))
 		return 1
 	}
-	if config.AutoAuth == nil && config.Cache == nil {
+	if agentConfig.AutoAuth == nil && agentConfig.Cache == nil {
 		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
 	}
-	if config.AutoAuth == nil {
+	if agentConfig.AutoAuth == nil {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	if config.Vault != nil {
-		c.setStringFlag(f, config.Vault.Address, &StringVar{
+	if agentConfig.Vault != nil {
+		c.setStringFlag(f, agentConfig.Vault.Address, &StringVar{
 			Name:    flagNameAddress,
 			Target:  &c.flagAddress,
 			Default: "https://127.0.0.1:8200",
 			EnvVar:  api.EnvVaultAddress,
 		})
-		c.setStringFlag(f, config.Vault.CACert, &StringVar{
+		c.setStringFlag(f, agentConfig.Vault.CACert, &StringVar{
 			Name:    flagNameCACert,
 			Target:  &c.flagCACert,
 			Default: "",
 			EnvVar:  api.EnvVaultCACert,
 		})
-		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+		c.setStringFlag(f, agentConfig.Vault.CAPath, &StringVar{
 			Name:    flagNameCAPath,
 			Target:  &c.flagCAPath,
 			Default: "",
 			EnvVar:  api.EnvVaultCAPath,
 		})
-		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+		c.setStringFlag(f, agentConfig.Vault.ClientCert, &StringVar{
 			Name:    flagNameClientCert,
 			Target:  &c.flagClientCert,
 			Default: "",
 			EnvVar:  api.EnvVaultClientCert,
 		})
-		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+		c.setStringFlag(f, agentConfig.Vault.ClientKey, &StringVar{
 			Name:    flagNameClientKey,
 			Target:  &c.flagClientKey,
 			Default: "",
 			EnvVar:  api.EnvVaultClientKey,
 		})
-		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+		c.setBoolFlag(f, agentConfig.Vault.TLSSkipVerify, &BoolVar{
 			Name:    flagNameTLSSkipVerify,
 			Target:  &c.flagTLSSkipVerify,
 			Default: false,
@@ -276,7 +276,7 @@ func (c *AgentCommand) Run(args []string) int {
 		if os.Getenv("VAULT_TEST_VERIFY_ONLY_DUMP_CONFIG") != "" {
 			c.UI.Output(fmt.Sprintf(
 				"\nConfiguration:\n%s\n",
-				pretty.Sprint(*config)))
+				pretty.Sprint(*agentConfig)))
 		}
 		return 0
 	}
@@ -296,8 +296,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	if config.AutoAuth != nil {
-		for _, sc := range config.AutoAuth.Sinks {
+	if agentConfig.AutoAuth != nil {
+		for _, sc := range agentConfig.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
@@ -323,17 +323,17 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		// Check if a default namespace has been set
-		mountPath := config.AutoAuth.Method.MountPath
-		if config.AutoAuth.Method.Namespace != "" {
-			mountPath = path.Join(config.AutoAuth.Method.Namespace, mountPath)
+		mountPath := agentConfig.AutoAuth.Method.MountPath
+		if agentConfig.AutoAuth.Method.Namespace != "" {
+			mountPath = path.Join(agentConfig.AutoAuth.Method.Namespace, mountPath)
 		}
 
 		authConfig := &auth.AuthConfig{
-			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
+			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", agentConfig.AutoAuth.Method.Type)),
 			MountPath: mountPath,
-			Config:    config.AutoAuth.Method.Config,
+			Config:    agentConfig.AutoAuth.Method.Config,
 		}
-		switch config.AutoAuth.Method.Type {
+		switch agentConfig.AutoAuth.Method.Type {
 		case "alicloud":
 			method, err = alicloud.NewAliCloudAuthMethod(authConfig)
 		case "aws":
@@ -355,11 +355,11 @@ func (c *AgentCommand) Run(args []string) int {
 		case "pcf": // Deprecated.
 			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
-			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
+			c.UI.Error(fmt.Sprintf("Unknown auth method %q", agentConfig.AutoAuth.Method.Type))
 			return 1
 		}
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
+			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", agentConfig.AutoAuth.Method.Type), err).Error())
 			return 1
 		}
 	}
@@ -376,7 +376,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Listeners) != 0 {
+	if agentConfig.Cache != nil && len(agentConfig.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -403,7 +403,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		var inmemSink sink.Sink
-		if config.Cache.UseAutoAuthToken {
+		if agentConfig.Cache.UseAutoAuthToken {
 			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
 			inmemSink, err = inmem.New(&sink.SinkConfig{
 				Logger: cacheLogger,
@@ -419,7 +419,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		var listeners []net.Listener
-		for i, lnConfig := range config.Listeners {
+		for i, lnConfig := range agentConfig.Listeners {
 			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
@@ -430,7 +430,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 			// Parse 'require_request_header' listener config option
 			var requireRequestHeader bool
-			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
+			if v, ok := lnConfig.Config[config.RequireRequestHeader]; ok {
 				switch v {
 				case true:
 					requireRequestHeader = true
@@ -486,15 +486,15 @@ func (c *AgentCommand) Run(args []string) int {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       c.client,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+			WrapTTL:                      agentConfig.AutoAuth.Method.WrapTTL,
+			EnableReauthOnNewCredentials: agentConfig.AutoAuth.EnableReauthOnNewCredentials,
 		})
 		ahDoneCh = ah.DoneCh
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
-			ExitAfterAuth: config.ExitAfterAuth,
+			ExitAfterAuth: agentConfig.ExitAfterAuth,
 		})
 		ssDoneCh = ss.DoneCh
 
@@ -519,13 +519,13 @@ func (c *AgentCommand) Run(args []string) int {
 	c.logGate.Flush()
 
 	// Write out the PID to the file now that server has successfully started
-	if err := c.storePidFile(config.PidFile); err != nil {
+	if err := c.storePidFile(agentConfig.PidFile); err != nil {
 		c.UI.Error(fmt.Sprintf("Error storing PID: %s", err))
 		return 1
 	}
 
 	defer func() {
-		if err := c.removePidFile(config.PidFile); err != nil {
+		if err := c.removePidFile(agentConfig.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
 		}
 	}()
