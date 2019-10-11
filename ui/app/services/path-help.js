@@ -223,7 +223,7 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(id, modelName) {
+      urlForItem(id /* modelName */) {
         let url;
         id = encodePath(id);
         const mountType = apiPath.split('/')[0];

@@ -4,7 +4,7 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   urlForItem() {},
-  optionsForQuery(id) {
+  optionsForQuery(/* id */) {
     return {
       data: {
         list: true,
