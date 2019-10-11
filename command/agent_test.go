@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -377,7 +378,7 @@ auto_auth {
 
 func TestAgent_RequireRequestHeader(t *testing.T) {
 
-	// request is a helper function that issues HTTP requests.
+	// request issues HTTP requests.
 	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
 		resp, err := client.RawRequest(req)
 		if err != nil {
@@ -403,8 +404,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return body
 	}
 
-	// makeTempFile is a helper function that creates a temp file and
-	// populates it.
+	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
 		if err != nil {
@@ -416,7 +416,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return path
 	}
 
-	// newApiClient is a helper function that creates an *api.Client.
+	// newApiClient creates an *api.Client.
 	newApiClient := func(addr string, includeVaultRequestHeader bool) *api.Client {
 		conf := api.DefaultConfig()
 		conf.Address = addr
@@ -425,11 +425,16 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 			t.Fatalf("err: %s", err)
 		}
 
+		h := cli.Headers()
+		val, ok := h["Vault-Request"]
+		if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+			t.Fatal("invalid Vault-Request header")
+		}
 		if !includeVaultRequestHeader {
-			h := cli.Headers()
 			delete(h, "Vault-Request")
 			cli.SetHeaders(h)
 		}
+
 		return cli
 	}
 
