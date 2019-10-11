@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"reflect"
 	"sync"
@@ -594,12 +595,27 @@ listener "tcp" {
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if resp.StatusCode != 412 {
-		t.Fatalf("expected status code %d, not %d", 412, resp.StatusCode)
+	if resp.StatusCode != http.StatusPreconditionFailed {
+		t.Fatalf("expected status code %d, not %d", http.StatusPreconditionFailed, resp.StatusCode)
 	}
 
 	// Test against a listener configuration that sets 'require_request_header'
-	// to 'true', with the header present in the request.
+	// to 'true', with an invalid header present in the request.
+	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	h := agentClient.Headers()
+	h[consts.VaultRequestHeader] = []string{"bogus"}
+	agentClient.SetHeaders(h)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	resp, err = agentClient.RawRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if resp.StatusCode != http.StatusPreconditionFailed {
+		t.Fatalf("expected status code %d, not %d", http.StatusPreconditionFailed, resp.StatusCode)
+	}
+
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with the proper header present in the request.
 	agentClient = newApiClient("http://127.0.0.1:8103", true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
