@@ -30,9 +30,6 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 				logical.RespondError(w, http.StatusPreconditionFailed, errors.New("missing 'Vault-Request' header"))
 				return
 			}
-
-			// Remove the required request header
-			delete(r.Header, consts.VaultRequestHeader)
 		}
 
 		// Get token from the header
