@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/helper/awsutil"
 )
 
 const (
@@ -71,6 +72,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		mountPath:  conf.MountPath,
 		credsFound: make(chan struct{}),
 		stopCh:     make(chan struct{}),
+		region:     awsutil.DefaultRegion,
 	}
 
 	typeRaw, ok := conf.Config["type"]
