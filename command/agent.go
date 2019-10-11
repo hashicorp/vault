@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -39,7 +40,6 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
-	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
 
