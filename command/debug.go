@@ -578,15 +578,15 @@ POLLING:
 			c.pollingWg.Add(1)
 			go c.metricsIntervalCapture(client, mIdxCount, errCh)
 		case <-durationCh:
+			// Wait for polling requests to finish before breaking
+			c.pollingWg.Wait()
+
 			break POLLING
 		case <-c.ShutdownCh:
 			c.UI.Info("Caught interrupt signal, exiting...")
 			break POLLING
 		}
 	}
-
-	// Wait for any polling requests
-	c.pollingWg.Wait()
 
 	// Close the done channel to signal termination, make sure collection
 	// goroutine is terminated before proceeding to persisting the info.

@@ -526,3 +526,83 @@ func TestDebugCommand_NoConnection(t *testing.T) {
 		t.Fatalf("expected %d to be %d", code, exp)
 	}
 }
+
+func TestDebugCommand_OutputExists(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		compress      bool
+		outputFile    string
+		expectedError string
+	}{
+		{
+			"no-compress",
+			false,
+			"output-exists",
+			"output directory already exists",
+		},
+		{
+			"compress",
+			true,
+			"output-exist.tar.gz",
+			"output file already exists",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			testDir, err := ioutil.TempDir("", "vault-debug")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(testDir)
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testDebugCommand(t)
+			cmd.client = client
+			cmd.skipTimingChecks = true
+
+			outputPath := filepath.Join(testDir, tc.outputFile)
+
+			// Create a conflicting file/directory
+			if tc.compress {
+				_, err = os.Create(outputPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = os.Mkdir(outputPath, 0755)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			args := []string{
+				fmt.Sprintf("-compress=%t", tc.compress),
+				"-duration=1s",
+				"-interval=1s",
+				"-metrics-interval=1s",
+				fmt.Sprintf("-output=%s", outputPath),
+			}
+
+			code := cmd.Run(args)
+			if exp := 1; code != exp {
+				t.Log(ui.OutputWriter.String())
+				t.Log(ui.ErrorWriter.String())
+				t.Errorf("expected %d to be %d", code, exp)
+			}
+
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			if !strings.Contains(output, tc.expectedError) {
+				t.Fatalf("expected %s, got: %s", tc.expectedError, output)
+			}
+		})
+	}
+}
