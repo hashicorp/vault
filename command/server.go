@@ -579,10 +579,19 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	if config.Storage.Type == "raft" && len(config.ClusterAddr) == 0 {
-		c.UI.Error("Cluster address must be set when using raft storage")
-		return 1
+
+
+	if config.Storage.Type == "raft" {
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+
+		if len(config.ClusterAddr) == 0 {
+			c.UI.Error("Cluster address must be set when using raft storage")
+			return 1
+		}
 	}
+
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
 	allLoggers = append(allLoggers, namedStorageLogger)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
