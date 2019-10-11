@@ -369,10 +369,8 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 	recoveryModeConfig := &raft.Configuration{
 		Servers: []raft.Server{
 			{
-				ID: raft.ServerID(peer.ID),
-				// Use dummy address as there won't be any network interactions
-				// in recovery mode
-				Address: raft.ServerAddress(b.NodeID()),
+				ID:      raft.ServerID(peer.ID),
+				Address: raft.ServerAddress(peer.Address),
 			},
 		},
 	}

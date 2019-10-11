@@ -349,7 +349,20 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 			}
 		}
 	}
-	atomic.StoreUint32(c.sealed, 0)
+
+	// Authentication in recovery mode is successful
+	if c.recoveryMode {
+		// Mark a successful unseal, even though we won't to do any post unseal
+		// setups
+		atomic.StoreUint32(c.sealed, 0)
+
+		// Run any post unseal functions that are set
+		for _, v := range c.postRecoveryUnsealFuncs {
+			if err := v(); err != nil {
+				return nil, errwrap.Wrapf("failed to run post unseal func: {{err}}", err)
+			}
+		}
+	}
 
 	// Run the generate strategy
 	token, cleanupFunc, err := strategy.generate(ctx, c)
