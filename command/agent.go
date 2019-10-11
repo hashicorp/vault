@@ -482,7 +482,8 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var unblockCh <-chan struct{}
 	var ts *template.Server
 	// Start auto-auth and sink servers
 	if method != nil {

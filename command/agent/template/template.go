@@ -48,7 +48,7 @@ type Server struct {
 }
 
 // NewServer returns a new configured server
-func NewServer(conf *ServerConfig) (*Server, chan struct{}) {
+func NewServer(conf *ServerConfig) (*Server, <-chan struct{}) {
 	unblock := make(chan struct{})
 	ts := Server{
 		DoneCh:        make(chan struct{}),
