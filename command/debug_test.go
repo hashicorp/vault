@@ -349,6 +349,9 @@ func TestDebugCommand_Pprof(t *testing.T) {
 			t.Errorf("1 output file should exist for %s: got: %v", v, files)
 		}
 	}
+
+	t.Log(ui.OutputWriter.String())
+	t.Log(ui.ErrorWriter.String())
 }
 
 func TestDebugCommand_IndexFile(t *testing.T) {

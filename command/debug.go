@@ -642,32 +642,19 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 	}
 
 	if strutil.StrListContains(c.flagTargets, "pprof") {
-		// Wait until all other profile/trace requests are finished or until
-		// we're terminated.
-		contCh := make(chan struct{})
-		go func() {
-			c.pprofWg.Wait()
-			close(contCh)
-		}()
-		select {
-		case <-contCh:
-		case <-c.doneCh:
-			return
-		}
-
-		// Create a sub-directory for pprof data
-		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
-		dirName := filepath.Join(c.flagOutput, currentDir)
-		if err := os.MkdirAll(dirName, 0755); err != nil {
-			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
-			return
-		}
-
 		c.logger.Info("capturing pprof data", "count", idxCount)
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
+			// Create a sub-directory for pprof data
+			currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
+			dirName := filepath.Join(c.flagOutput, currentDir)
+			if err := os.MkdirAll(dirName, 0755); err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
+				return
+			}
 
 			// Capture goroutines
 			data, err := pprofGoroutine(client)
@@ -695,6 +682,19 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			// skip profile and trace.
 			runDuration := currentTimestamp.Sub(startTime)
 			if (c.flagDuration+debugDurationGrace)-runDuration < c.flagInterval {
+				return
+			}
+
+			// Wait until all other profile/trace requests are finished or until
+			// we're terminated.
+			contCh := make(chan struct{})
+			go func() {
+				c.pprofWg.Wait()
+				close(contCh)
+			}()
+			select {
+			case <-contCh:
+			case <-c.doneCh:
 				return
 			}
 
