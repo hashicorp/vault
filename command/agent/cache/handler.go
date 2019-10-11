@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -27,8 +26,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		// Check for the required request header
 		if requireRequestHeader {
-			val, ok := r.Header["Vault-Request"]
-			if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+			if val, ok := r.Header["Vault-Request"]; !ok || len(val) != 1 || val[0] != "true" {
 				logical.RespondError(w, http.StatusPreconditionFailed, errors.New("missing 'Vault-Request' header"))
 				return
 			}
