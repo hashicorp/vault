@@ -4,7 +4,7 @@ page_title: "Namespaces - Vault Enterprise"
 sidebar_title: "Namespaces"
 sidebar_current: "docs-vault-enterprise-namespaces"
 description: |-
-  Vault Enterprise has support for Namespaces, a feature to enable Secure Multi-tenancy (SMT) and self-management. 
+  Vault Enterprise has support for Namespaces, a feature to enable Secure Multi-tenancy (SMT) and self-management.
 
 ---
 
@@ -12,22 +12,22 @@ description: |-
 
 ## Overview
 
-Many organizations implement Vault as a "service", providing centralized 
+Many organizations implement Vault as a "service", providing centralized
 management for teams within an organization while ensuring that those teams
-operate within isolated environments known as *tenants*. 
+operate within isolated environments known as *tenants*.
 
 There are two common challenges when implementing this architecture in Vault:
 
 **Tenant Isolation**
 
 Frequently teams within a VaaS environment require strong isolation from other
-users in their policies, secrets, and identities. Tenant isolation is typically a 
-result of compliance regulations such as [GDPR](https://www.eugdpr.org/), though it may 
+users in their policies, secrets, and identities. Tenant isolation is typically a
+result of compliance regulations such as [GDPR](https://www.eugdpr.org/), though it may
 be necessitated by corporate or organizational infosec requirements.
 
 **Self-Management**
 
-As new tenants are added, there is an additional human cost in the management 
+As new tenants are added, there is an additional human cost in the management
 overhead for teams. Given that tenants will likely have different policies and
 request changes at a different rate, managing a multi-tenant environment can
 become very difficult for a single team as the number of tenants within that
@@ -62,7 +62,7 @@ For example, these three requests are equivalent:
 
 Namespaces are isolated environments that functionally exist as "Vaults within a Vault."
 They have separate login paths and support creating and managing data isolated to their
-namespace. This data includes the following: 
+namespace. This data includes the following:
 
 - Secret Engines
 - Auth Methods
@@ -72,17 +72,15 @@ namespace. This data includes the following:
 
 Rather than rely on Vault system admins, namespaces can be managed by delegated admins who
 can be prescribed administration rights for their namespace. These delegated admins can also
-create their own child namespaces, thereby prescribing admin rights on a subordinate group 
-of delegate admins. 
+create their own child namespaces, thereby prescribing admin rights on a subordinate group
+of delegate admins.
 
 Child namespaces can share policies from their parent namespaces. For example, a child namespace
 may refer to parent identities (entities and groups) when writing policies that function only
 within that child namespace. Similarly, a parent namespace can have policies asserted on child
-identities. 
+identities.
 
-## Setup and Best Practices
+## Learn
 
-A [deployment guide](/guides/operations/multi-tenant.html) is available to help guide you
-through the deployment and administration of namespaces, and contains examples on architecture
-for using namespaces to implement SMT across your organization. 
-
+Refer to the [Secure Multi-Tenancy with Namespaces](https://learn.hashicorp.com/vault/operations/namespaces)
+guide for a step-by-step tutorial.

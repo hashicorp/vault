@@ -116,3 +116,8 @@ path "<mount path>/decrypt/<key name>" {
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints.  See
 [doc](/api/secret/transit/index.html#rotate-key). Old keys must not be disabled or deleted and are
 used to decrypt older data.
+
+## Learn
+
+Refer to the [Auto-unseal using Transit Secrets Engine](https://learn.hashicorp.com/vault/operations/autounseal-transit)
+guide for a step-by-step tutorial.
