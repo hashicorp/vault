@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/physical/raft"
 	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
@@ -458,10 +459,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	if config.Storage.Type == "raft" && len(config.ClusterAddr) == 0 {
-		c.UI.Error("Cluster address must be set when using raft storage")
-		return 1
-	}
+
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
 	if err != nil {
@@ -530,6 +528,16 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if newCoreError != nil {
 		if vault.IsFatalError(newCoreError) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			return 1
+		}
+	}
+
+	raftStorage, ok := backend.(*raft.RaftBackend)
+	if ok {
+		if err := raftStorage.StartRecoveryCluster(context.Background(), raft.Peer{
+			ID: raftStorage.NodeID(),
+		}); err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing raft cluster: %s", err))
 			return 1
 		}
 	}
@@ -890,7 +898,6 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-
 
 	if config.Storage.Type == "raft" {
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
@@ -1572,12 +1579,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                  core,
-			MaxRequestSize:        ln.maxRequestSize,
-			MaxRequestDuration:    ln.maxRequestDuration,
-			DisablePrintableCheck: config.DisablePrintableCheck,
+			Core:                         core,
+			MaxRequestSize:               ln.maxRequestSize,
+			MaxRequestDuration:           ln.maxRequestDuration,
+			DisablePrintableCheck:        config.DisablePrintableCheck,
 			UnauthenticatedMetricsAccess: ln.unauthenticatedMetricsAccess,
-			RecoveryMode:          c.flagRecovery,
+			RecoveryMode:                 c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
