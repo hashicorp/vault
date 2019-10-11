@@ -502,7 +502,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		ssDoneCh = ss.DoneCh
 
-		// create an independant vault configuration for Consul Template to use
+		// create an independent vault configuration for Consul Template to use
 		vaultConfig := c.setupTemplateConfig()
 		ts, unblockCh = template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
