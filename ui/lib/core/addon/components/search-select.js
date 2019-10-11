@@ -19,6 +19,12 @@ import layout from '../templates/components/search-select';
  * @param label {String} - Label for this form field
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  *
+ * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
+ * power-select component. If doing this, `models` should not also be passed as that will overwrite the
+ * passed value.
+ * @param search {Func} - *Advanced usage* - Customizes how the power-select component searches for matches -
+ * see the power-select docs for more information.
+ *
  */
 export default Component.extend({
   layout,
@@ -27,7 +33,6 @@ export default Component.extend({
   store: service(),
 
   onChange: () => {},
-  onInput: () => {},
   inputValue: computed(function() {
     return [];
   }),
