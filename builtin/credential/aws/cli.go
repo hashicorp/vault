@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/awsutil"
 )
@@ -37,12 +38,8 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRegion string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
 
-	// Use the credentials and either the provided or default region to construct an STS session
-	region := awsutil.DefaultRegion
-	if configuredRegion != "" {
-		region = configuredRegion
-	}
-
+	// Use the credentials we've found to construct an STS session
+	region := awsutil.GetOrDefaultRegion(hclog.Default(), configuredRegion)
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials:      creds,
@@ -102,7 +99,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 
-	loginData, err := GenerateLoginData(creds, headerValue, m["region"])
+	region := m["region"]
+	if region == "" {
+		region = awsutil.DefaultRegion
+	}
+	loginData, err := GenerateLoginData(creds, headerValue, region)
 	if err != nil {
 		return nil, err
 	}
