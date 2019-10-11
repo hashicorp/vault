@@ -74,4 +74,4 @@ Following are the configuration options available for the backend.
 
 ## Log File Rotation
 
-To properly rotate Vault File Audit Device log files, it is important that you configure your log rotation software to send the `vault` process a signal hang up / `SIGHUP` after each rotation of the log file.
+To properly rotate Vault File Audit Device log files on BSD, Darwin, or Linux-based Vault servers, it is important that you configure your log rotation software to send the `vault` process a signal hang up / `SIGHUP` after each rotation of the log file.
