@@ -524,7 +524,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 	}
 }
 
-func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig *tls.Config, retry bool) (bool, error) {
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig *tls.Config, retry, nonVoter bool) (bool, error) {
 	if len(leaderAddr) == 0 {
 		return false, errors.New("No leader address provided")
 	}
@@ -535,7 +535,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 	}
 
 	if raftStorage.Initialized() {
-		return false, errors.New("raft is already initialized")
+		return false, errors.New("raft is alreay initialized")
 	}
 
 	init, err := c.Initialized(ctx)
@@ -603,17 +603,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 		if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
 		}
-
+		raftInfo := &raftInformation{
+			challenge:           eBlob,
+			leaderClient:        apiClient,
+			leaderBarrierConfig: &sealConfig,
+			nonVoter:            nonVoter,
+		}
 		if c.seal.BarrierType() == seal.Shamir {
-			c.raftUnseal = true
-			c.raftChallenge = eBlob
-			c.raftLeaderClient = apiClient
-			c.raftLeaderBarrierConfig = &sealConfig
+			c.raftInfo = raftInfo
 			c.seal.SetBarrierConfig(ctx, &sealConfig)
 			return nil
 		}
 
-		if err := c.joinRaftSendAnswer(ctx, apiClient, eBlob, c.seal.GetAccess()); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
 			return errwrap.Wrapf("failed to send answer to leader node: {{err}}", err)
 		}
 
@@ -649,8 +651,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 // This is used in tests to override the cluster address
 var UpdateClusterAddrForTests uint32
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client, challenge *physical.EncryptedBlobInfo, sealAccess seal.Access) error {
-	if challenge == nil {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
+	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
 
@@ -663,7 +665,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, challenge)
+	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge)
 	if err != nil {
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
@@ -683,16 +685,17 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 		}
 	}
 
-	answerReq := leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
+	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
 	if err := answerReq.SetJSONBody(map[string]interface{}{
 		"answer":       base64.StdEncoding.EncodeToString(plaintext),
 		"cluster_addr": clusterAddr,
 		"server_id":    raftStorage.NodeID(),
+		"non_voter":    raftInfo.nonVoter,
 	}); err != nil {
 		return err
 	}
 
-	answerRespJson, err := leaderClient.RawRequestWithContext(ctx, answerReq)
+	answerRespJson, err := raftInfo.leaderClient.RawRequestWithContext(ctx, answerReq)
 	if answerRespJson != nil {
 		defer answerRespJson.Body.Close()
 	}
@@ -725,7 +728,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, leaderClient *api.Client,
 }
 
 func (c *Core) isRaftUnseal() bool {
-	return c.raftUnseal
+	return c.raftInfo != nil
 }
 
 type answerRespData struct {
