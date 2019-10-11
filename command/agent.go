@@ -298,7 +298,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
-	// Server that periodically listen for ctx.Done() to fire and shut
+	// TemplateServer that periodically listen for ctx.Done() to fire and shut
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
