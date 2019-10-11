@@ -609,3 +609,80 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 		})
 	}
 }
+
+func TestDebugCommand_PartialPermissions(t *testing.T) {
+	t.Parallel()
+
+	testDir, err := ioutil.TempDir("", "vault-debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testDir)
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	// Create a new token with default policy
+	resp, err := client.Logical().Write("auth/token/create", map[string]interface{}{
+		"policies": "default",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.SetToken(resp.Auth.ClientToken)
+
+	ui, cmd := testDebugCommand(t)
+	cmd.client = client
+	cmd.skipTimingChecks = true
+
+	basePath := "with-default-policy-token"
+	args := []string{
+		"-duration=1s",
+		fmt.Sprintf("-output=%s/%s", testDir, basePath),
+	}
+
+	code := cmd.Run(args)
+	if exp := 0; code != exp {
+		t.Log(ui.ErrorWriter.String())
+		t.Fatalf("expected %d to be %d", code, exp)
+	}
+
+	bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
+	_, err = os.Open(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to open archive: %s", err)
+	}
+
+	tgz := archiver.NewTarGz()
+	err = tgz.Walk(bundlePath, func(f archiver.File) error {
+		fh, ok := f.Header.(*tar.Header)
+		if !ok {
+			t.Fatalf("invalid file header: %#v", f.Header)
+		}
+
+		// Ignore base directory and index file
+		if fh.Name == basePath+"/" {
+			return nil
+		}
+
+		// Ignore directories, which still get created by pprof but should
+		// otherwise be empty.
+		if fh.FileInfo().IsDir() {
+			return nil
+		}
+
+		switch {
+		case fh.Name == filepath.Join(basePath, "index.json"):
+		case fh.Name == filepath.Join(basePath, "replication_status.json"):
+		case fh.Name == filepath.Join(basePath, "server_status.json"):
+		default:
+			return fmt.Errorf("unexpected file: %s", fh.Name)
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}

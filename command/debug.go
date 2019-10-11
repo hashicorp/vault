@@ -660,22 +660,22 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			data, err := pprofGoroutine(client)
 			if err != nil {
 				errCh <- newCaptureError("pprof.goroutine", err)
-			}
-
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
-			if err != nil {
-				errCh <- newCaptureError("pprof.goroutine", err)
+			} else {
+				err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
+				if err != nil {
+					errCh <- newCaptureError("pprof.goroutine", err)
+				}
 			}
 
 			// Capture heap
 			data, err = pprofHeap(client)
 			if err != nil {
 				errCh <- newCaptureError("pprof.heap", err)
-			}
-
-			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
-			if err != nil {
-				errCh <- newCaptureError("pprof.heap", err)
+			} else {
+				err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
+				if err != nil {
+					errCh <- newCaptureError("pprof.heap", err)
+				}
 			}
 
 			// If the our remaining duration is less than the interval value
@@ -825,6 +825,7 @@ func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int,
 	resp, err := client.RawRequest(r)
 	if err != nil {
 		errCh <- newCaptureError("metrics", err)
+		return
 	}
 	if resp != nil {
 		defer resp.Body.Close()
