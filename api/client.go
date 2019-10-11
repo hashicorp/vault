@@ -433,7 +433,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	// Add the VaultRequest SSRF protection header
-	client.headers["Vault-Request"] = []string{"true"}
+	client.headers[consts.VaultRequestHeader] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token

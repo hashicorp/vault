@@ -16,6 +16,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -426,12 +427,12 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		}
 
 		h := cli.Headers()
-		val, ok := h["Vault-Request"]
+		val, ok := h[consts.VaultRequestHeader]
 		if !ok || !reflect.DeepEqual(val, []string{"true"}) {
 			t.Fatal("invalid Vault-Request header")
 		}
 		if !includeVaultRequestHeader {
-			delete(h, "Vault-Request")
+			delete(h, consts.VaultRequestHeader)
 			cli.SetHeaders(h)
 		}
 
