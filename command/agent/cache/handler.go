@@ -24,7 +24,6 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
-		// Get token from the header
 		token := r.Header.Get(consts.AuthHeaderName)
 		if token == "" && inmemSink != nil {
 			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
