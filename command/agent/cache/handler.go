@@ -20,19 +20,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, requireRequestHeader bool) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
-
-		// Check for the required request header
-		if requireRequestHeader {
-			if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
-				logical.RespondError(w,
-					http.StatusPreconditionFailed,
-					errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
-				return
-			}
-		}
 
 		// Get token from the header
 		token := r.Header.Get(consts.AuthHeaderName)

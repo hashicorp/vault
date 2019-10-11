@@ -35,9 +35,11 @@ import (
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
 
@@ -428,12 +430,15 @@ func (c *AgentCommand) Run(args []string) int {
 
 			listeners = append(listeners, ln)
 
-			// Parse 'require_request_header' listener config option
-			var requireRequestHeader bool
+			// Create the request handler
+			handler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink)
+
+			// Parse 'require_request_header' listener config option, and wrap
+			// the request handler if necessary
 			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
 				switch v {
 				case true:
-					requireRequestHeader = true
+					handler = verifyRequestHeader(handler)
 				case false /* noop */ :
 				default:
 					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
@@ -444,7 +449,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, requireRequestHeader))
+			mux.Handle("/", handler)
 
 			scheme := "https://"
 			if tlsConf == nil {
@@ -546,6 +551,22 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+// verifyRequestHeader wraps an http.Handler inside a Handler that checks for
+// the request header that is used for SSRF protection.
+func verifyRequestHeader(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
+			logical.RespondError(w,
+				http.StatusPreconditionFailed,
+				errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
