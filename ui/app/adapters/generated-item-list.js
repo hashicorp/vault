@@ -5,20 +5,20 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
   urlForItem() {},
   optionsForQuery(id) {
-    let data = {};
-    if (!id) {
-      data['list'] = true;
-    }
-    return { data };
+    return {
+      data: {
+        list: true,
+      },
+    };
   },
 
   fetchByQuery(store, query) {
-    const { id, method, type } = query;
-    return this.ajax(this.urlForItem(method, id, type), 'GET', this.optionsForQuery(id)).then(resp => {
+    const { id, type, list } = query;
+    return this.ajax(this.urlForItem(id, type), 'GET', this.optionsForQuery(id)).then(resp => {
       const data = {
         id,
         name: id,
-        method,
+        method: id,
       };
 
       return assign({}, resp, data);

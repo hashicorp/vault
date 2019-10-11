@@ -11,7 +11,8 @@ export default Route.extend({
     const methodModel = this.modelFor('vault.cluster.access.method');
     const { type } = methodModel;
     const modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.store.findRecord(modelType, itemName, {
+    const id = `${method}/${itemName}`;
+    return this.store.findRecord(modelType, id, {
       adapterOptions: { path: `${method}/${itemType}` },
     });
   },

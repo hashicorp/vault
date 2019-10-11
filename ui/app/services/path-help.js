@@ -220,18 +220,24 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(mountPath, id) {
-        const mountType = apiPath.split('/')[0];
-        let url = `${this.buildURL()}/${mountType}/${mountPath}/${getPath.path.slice(1)}/`;
+      urlForItem(id, modelName) {
+        // this is used for listing and showing
 
-        if (id) {
-          url = url + encodePath(id);
+        let url;
+        id = encodePath(id);
+        const mountType = apiPath.split('/')[0];
+        if (id.indexOf('/') !== -1) {
+          id = id.split('/').join(`/${getPath.path.slice(1)}/`);
+          url = `${this.buildURL()}/${mountType}/${id}`;
+        } else {
+          url = `${this.buildURL()}/${mountType}/${id}/${getPath.path.slice(1)}/`;
         }
+
         return url;
       },
 
       urlForFindRecord(id, modelName) {
-        return this.urlForItem(modelName, id);
+        return this.urlForItem(id, modelName);
       },
 
       //urlForQuery if there is an id and we are listing, use the id to construct the path
