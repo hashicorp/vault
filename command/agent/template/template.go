@@ -1,6 +1,8 @@
 // Package template is responsible for rendering user supplied templates to
-// disk. The Server type managing the lifecycle of an internal Consul Template
-// Runner
+// disk. The Server type accepts configuration to communicate to a Vault server
+// and a Vault token for authentication. Internally, the Server creates a Consul
+// Template Runner which manages reading secrets from Vault and rendering
+// templates to disk at configured locations
 package template
 
 import (
@@ -84,14 +86,16 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
-		ts.logger.Info("template server failed to generate runner config")
+		ts.logger.Error("template server failed to generate runner config")
+		close(ts.unblockCh)
 		return
 	}
 
 	var err error
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
-		ts.logger.Info("template server failed to create")
+		ts.logger.Error("template server failed to create", "error", err)
+		close(ts.unblockCh)
 		return
 	}
 
@@ -99,6 +103,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.StopImmediately()
+			close(ts.unblockCh)
 			return
 
 		case token := <-incoming:
@@ -116,7 +121,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
-					ts.logger.Info("template server failed with new Vault token")
+					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					// TODO: continue or fail here? Right now we just continue
 					continue
 				} else {
@@ -124,7 +129,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				}
 			}
 		case err := <-ts.runner.ErrCh:
-			ts.logger.Info("template server error:", err.Error())
+			ts.logger.Error("template server error", "error", err.Error())
+			close(ts.unblockCh)
 			return
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, unblock
