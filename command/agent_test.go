@@ -428,12 +428,12 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		}
 
 		h := cli.Headers()
-		val, ok := h[consts.VaultRequestHeader]
+		val, ok := h[consts.RequestHeaderName]
 		if !ok || !reflect.DeepEqual(val, []string{"true"}) {
-			t.Fatal("invalid Vault-Request header")
+			t.Fatalf("invalid %s header", consts.RequestHeaderName)
 		}
 		if !includeVaultRequestHeader {
-			delete(h, consts.VaultRequestHeader)
+			delete(h, consts.RequestHeaderName)
 			cli.SetHeaders(h)
 		}
 
@@ -603,7 +603,7 @@ listener "tcp" {
 	// to 'true', with an invalid header present in the request.
 	agentClient = newApiClient("http://127.0.0.1:8103", false)
 	h := agentClient.Headers()
-	h[consts.VaultRequestHeader] = []string{"bogus"}
+	h[consts.RequestHeaderName] = []string{"bogus"}
 	agentClient.SetHeaders(h)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	resp, err = agentClient.RawRequest(req)

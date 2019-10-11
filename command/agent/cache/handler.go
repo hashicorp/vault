@@ -26,8 +26,10 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		// Check for the required request header
 		if requireRequestHeader {
-			if val, ok := r.Header[consts.VaultRequestHeader]; !ok || len(val) != 1 || val[0] != "true" {
-				logical.RespondError(w, http.StatusPreconditionFailed, errors.New("missing 'Vault-Request' header"))
+			if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
+				logical.RespondError(w,
+					http.StatusPreconditionFailed,
+					errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
 				return
 			}
 		}
