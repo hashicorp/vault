@@ -735,6 +735,8 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // that generally won't need to be called externally.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	c.modifyLock.RLock()
+	// In some cases, the token may have an extra line character at end, so trim it
+	c.token = strings.TrimSuffix(c.token, "\n")
 	token := c.token
 
 	c.config.modifyLock.RLock()
