@@ -535,7 +535,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 	}
 
 	if raftStorage.Initialized() {
-		return false, errors.New("raft is alreay initialized")
+		return false, errors.New("raft is already initialized")
 	}
 
 	init, err := c.Initialized(ctx)
