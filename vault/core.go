@@ -420,6 +420,10 @@ type Core struct {
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
 
+	// Stores any funcs that should be run on successful barrier unseal in
+	// recovery mode
+	postRecoveryUnsealFuncs []func() error
+
 	// replicationFailure is used to mark when replication has entered an
 	// unrecoverable failure.
 	replicationFailure *uint32

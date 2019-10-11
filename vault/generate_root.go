@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"sync/atomic"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -349,7 +347,16 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 			}
 		}
 	}
-	atomic.StoreUint32(c.sealed, 0)
+
+	// Authentication in recovery mode is successful
+	if c.recoveryMode {
+		// Run any post unseal functions that are set
+		for _, v := range c.postRecoveryUnsealFuncs {
+			if err := v(); err != nil {
+				return nil, errwrap.Wrapf("failed to run post unseal func: {{err}}", err)
+			}
+		}
+	}
 
 	// Run the generate strategy
 	token, cleanupFunc, err := strategy.generate(ctx, c)

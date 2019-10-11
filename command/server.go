@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/hashicorp/vault/physical/raft"
 	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
@@ -459,6 +458,16 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
+	if config.Storage.Type == "raft" {
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+
+		if len(config.ClusterAddr) == 0 {
+			c.UI.Error("Cluster address must be set when using raft storage")
+			return 1
+		}
+	}
 
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
@@ -522,6 +531,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
+		ClusterAddr:  config.ClusterAddr,
 	}
 
 	core, newCoreError := vault.NewCore(coreConfig)
@@ -532,19 +542,19 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	raftStorage, ok := backend.(*raft.RaftBackend)
-	if ok {
-		if err := raftStorage.StartRecoveryCluster(context.Background(), raft.Peer{
-			ID: raftStorage.NodeID(),
-		}); err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing raft cluster: %s", err))
-			return 1
-		}
+	if err := core.InitializeRecovery(context.Background()); err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
+		return 1
 	}
 
 	// Compile server information for output later
 	infoKeys = append(infoKeys, "storage")
 	info["storage"] = config.Storage.Type
+
+	if coreConfig.ClusterAddr != "" {
+		info["cluster address"] = coreConfig.ClusterAddr
+		infoKeys = append(infoKeys, "cluster address")
+	}
 
 	// Initialize the listeners
 	lns := make([]ServerListener, 0, len(config.Listeners))
