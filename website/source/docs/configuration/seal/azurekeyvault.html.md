@@ -62,14 +62,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
-```text
 Azure authentication values:
 
 * `AZURE_TENANT_ID`
 * `AZURE_CLIENT_ID`
 * `AZURE_CLIENT_SECRET`
 * `AZURE_ENVIRONMENT`
-```
+
 
 ~> **Note:** If Vault is hosted on Azure, Vault can use Managed Service
 Identities (MSI) to access Azure instead of an environment and shared client id
@@ -87,12 +86,15 @@ for more best practices.
 Alternatively, the Azure Key Vault seal can be activated by providing the following
 environment variables:
 
-```text
 * `VAULT_AZUREKEYVAULT_VAULT_NAME`
 * `VAULT_AZUREKEYVAULT_KEY_NAME`
-```
 
 ## Key Rotation
 
 This seal supports rotating keys defined in Azure Key Vault.  Key metadata is stored with the
 encrypted data to ensure the correct key is used during decryption operations.
+
+## Learn
+
+Refer to the [Auto-unseal using Azure Key Vault](https://learn.hashicorp.com/vault/operations/autounseal-azure-keyvault)
+guide for a step-by-step tutorial.

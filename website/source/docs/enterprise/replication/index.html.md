@@ -133,11 +133,15 @@ generation until it is used.
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
 
-## Setup and Best Practices
 
-A [setup guide](/guides/operations/replication.html) is
-available to help you get started; this guide also contains best practices
-around operationalizing the replication feature.
+## Learn
+
+Refer to the following tutorials replication setup and best practices:
+
+- [Setting up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
+- [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
+- [Performance Replication with Mount Filters](https://learn.hashicorp.com/vault/operations/mount-filter)
+- [Monitoring Vault Replication](https://learn.hashicorp.com/vault/operations/monitor-replication)
 
 ## API
 

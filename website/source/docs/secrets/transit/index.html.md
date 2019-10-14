@@ -208,6 +208,12 @@ plaintext with the newest key in the keyring.
     data, since the process would not be able to get access to the plaintext
     data.
 
+## Learn
+
+Refer to the [Encryption as a Service: Transit Secrets
+Engine](https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit)
+guide for a step-by-step tutorial.
+
 ## API
 
 The Transit secrets engine has a full HTTP API. Please see the
