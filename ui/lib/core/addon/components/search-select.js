@@ -136,7 +136,10 @@ export default Component.extend({
     constructSuggestion(id) {
       return `Add new ${singularize(this.label)}: ${id}`;
     },
-    hideCreateOptionOnSameID(id) {
+    hideCreateOptionOnSameID(id, options) {
+      if (options.firstObject.groupName) {
+        return !options.some(group => group.options.findBy('id', id));
+      }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
       return !existingOption;
     },
