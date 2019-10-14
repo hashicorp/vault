@@ -62,25 +62,41 @@
           <hr/>
         {{/if}}
       {{/if}}
-      {{#if (has-permission 'status' routeParams='license')}}
+    {{/unless}}
+      {{#if (or
+        (and version.features (has-permission 'status' routeParams='license'))
+        (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
+        )
+      }}
         <nav class="menu">
           <div class="menu-label">
-            License
+            Server
           </div>
           <ul class="menu-list">
-            <li class="action">
-              {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
-                <div class="level is-mobile">
-                  <span class="level-left">See details</span>
-                  <Chevron class="has-text-grey-light level-right" />
-                </div>
-              {{/link-to}}
-            </li>
+            {{#if (and version.features (has-permission 'status' routeParams='license'))}}
+              <li class="action">
+                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
+                  <div class="level is-mobile">
+                    <span class="level-left">License</span>
+                    <Chevron class="has-text-grey-light level-right" />
+                  </div>
+                {{/link-to}}
+              </li>
+            {{/if}}
+            {{#if (and cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
+              <li class="action">
+                {{#link-to "vault.cluster.storage" activeCluster.name invokeAction=onLinkClick}}
+                  <div class="level is-mobile">
+                    <span class="level-left">Raft Storage</span>
+                    <Chevron class="has-text-grey-light level-right" />
+                  </div>
+                {{/link-to}}
+              </li>
+            {{/if}}
           </ul>
         </nav>
         <hr/>
       {{/if}}
-    {{/unless}}
       <nav class="menu">
         <div class="menu-label">
           Seal status
