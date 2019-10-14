@@ -4,17 +4,10 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   urlForItem() {},
-  optionsForQuery(/* id */) {
-    return {
-      data: {
-        list: true,
-      },
-    };
-  },
 
   fetchByQuery(store, query) {
     const { id, type } = query;
-    return this.ajax(this.urlForItem(id, type), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlForItem(id, type), 'GET', { data: { list: true } }).then(resp => {
       const data = {
         id,
         name: id,
@@ -26,10 +19,6 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    return this.fetchByQuery(store, query);
-  },
-
-  queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
   },
 });
