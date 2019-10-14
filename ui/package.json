@@ -22,7 +22,7 @@
     "test:oss": "yarn run test -f='!enterprise'",
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
-    "test:quick-oss": "yarn test-quick -f='!enterprise'",
+    "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
     "gen-story-md": "node scripts/gen-story-md.js"
