@@ -118,6 +118,7 @@
 {{/if}}
 {{#if (and (not config.mode) this.startedWithMode)}}
   <AlertInline
+    data-test-remove-warning
     @type="warning"
     @message="Saving with 'Include everything' will remove any existing filter configuration"
   />

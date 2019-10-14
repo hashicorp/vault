@@ -5,10 +5,10 @@ import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
 
 export default Component.extend({
+  'data-test-component': 'path-filter-config',
   namespace: service(),
   store: service(),
   config: null,
-  possiblePaths: null,
   namespaces: readOnly('namespace.accessibleNamespaces'),
   lastOptions: null,
   autoCompleteOptions: null,
@@ -114,7 +114,7 @@ export default Component.extend({
 
   // singleton mounts are not eligible for per-mount-filtering
   singletonMountTypes: computed(function() {
-    return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity'];
+    return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
   }),
 
   willDestroyElement() {
