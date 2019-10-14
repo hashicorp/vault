@@ -20,6 +20,7 @@ type RaftJoinRequest struct {
 	LeaderClientCert string `json:"leader_client_cert"`
 	LeaderClientKey  string `json:"leader_client_key"`
 	Retry            bool   `json:"retry"`
+	NonVoter         bool   `json:"non_voter"`
 }
 
 // RaftJoin adds the node from which this call is invoked from to the raft
