@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// debugIndexVersion is tracks the canonical version in the index file
+	// debugIndexVersion tracks the canonical version in the index file
 	// for compatibility with future format/layout changes on the bundle.
 	debugIndexVersion = 1
 
@@ -49,18 +49,18 @@ const (
 
 // debugIndex represents the data structure in the index file
 type debugIndex struct {
-	Version         int                    `json:"version"`
-	VaultAddress    string                 `json:"vault_address"`
-	ClientVersion   string                 `json:"client_version"`
-	Timestamp       time.Time              `json:"timestamp"`
-	Duration        int                    `json:"duration_seconds"`
-	Interval        int                    `json:"interval_seconds"`
-	MetricsInterval int                    `json:"metrics_interval_seconds"`
-	Compress        bool                   `json:"compress"`
-	RawArgs         []string               `json:"raw_args"`
-	Targets         []string               `json:"targets"`
-	Output          map[string]interface{} `json:"output"`
-	Errors          []*captureError        `json:"errors"`
+	Version                int                    `json:"version"`
+	VaultAddress           string                 `json:"vault_address"`
+	ClientVersion          string                 `json:"client_version"`
+	Timestamp              time.Time              `json:"timestamp"`
+	DurationSeconds        int                    `json:"duration_seconds"`
+	IntervalSeconds        int                    `json:"interval_seconds"`
+	MetricsIntervalSeconds int                    `json:"metrics_interval_seconds"`
+	Compress               bool                   `json:"compress"`
+	RawArgs                []string               `json:"raw_args"`
+	Targets                []string               `json:"targets"`
+	Output                 map[string]interface{} `json:"output"`
+	Errors                 []*captureError        `json:"errors"`
 }
 
 // captureError holds an error entry that can occur during polling capture.
@@ -157,8 +157,7 @@ func (c *DebugCommand) Flags() *FlagSets {
 		Target:     &c.flagInterval,
 		Completion: complete.PredictAnything,
 		Default:    30 * time.Second,
-		Usage: "The interval in which to perform profiling and server state " +
-			"capture, excluding metrics.",
+		Usage:      "The polling interval at which to collect profiling data and server state.",
 	})
 
 	f.DurationVar(&DurationVar{
@@ -166,7 +165,7 @@ func (c *DebugCommand) Flags() *FlagSets {
 		Target:     &c.flagMetricsInterval,
 		Completion: complete.PredictAnything,
 		Default:    10 * time.Second,
-		Usage:      "The interval in which to perform metrics capture.",
+		Usage:      "The polling interval at which to collect metrics data.",
 	})
 
 	f.StringVar(&StringVar{
@@ -196,7 +195,7 @@ Usage: vault debug [options]
   information about the node, its cluster, and its host environment. The
   information collected is packaged and written to the specified path.
 
-  Certain endpoints that this command issues require ACL permissions to access.
+  Certain endpoints that this command uses require ACL permissions to access.
   If not permitted, the information from these endpoints will not be part of the
   output. The command uses the Vault address and token as specified via
   the login command, environment variables, or CLI flags.
@@ -385,11 +384,11 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 			c.flagDuration = debugMinInterval
 		}
 		if c.flagInterval < debugMinInterval {
-			c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the minimum value of %q", c.flagInterval, debugMinInterval))
+			c.UI.Info(fmt.Sprintf("Overwriting interval value %q to the minimum value of %q", c.flagInterval, debugMinInterval))
 			c.flagInterval = debugMinInterval
 		}
 		if c.flagMetricsInterval < debugMinInterval {
-			c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the minimum value of %q", c.flagMetricsInterval, debugMinInterval))
+			c.UI.Info(fmt.Sprintf("Overwriting metrics interval value %q to the minimum value of %q", c.flagMetricsInterval, debugMinInterval))
 			c.flagMetricsInterval = debugMinInterval
 		}
 	}
@@ -397,11 +396,11 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 	// These timing checks are always applicable since interval shouldn't be
 	// greater than the duration
 	if c.flagInterval > c.flagDuration {
-		c.UI.Info(fmt.Sprintf("Overwriting inteval value %q to the duration value %q", c.flagInterval, c.flagDuration))
+		c.UI.Info(fmt.Sprintf("Overwriting interval value %q to the duration value %q", c.flagInterval, c.flagDuration))
 		c.flagInterval = c.flagDuration
 	}
 	if c.flagMetricsInterval > c.flagDuration {
-		c.UI.Info(fmt.Sprintf("Overwriting metrics inteval value %q to the duration value %q", c.flagMetricsInterval, c.flagDuration))
+		c.UI.Info(fmt.Sprintf("Overwriting metrics interval value %q to the duration value %q", c.flagMetricsInterval, c.flagDuration))
 		c.flagMetricsInterval = c.flagDuration
 	}
 
@@ -440,21 +439,29 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		// Ensure that the file doesn't already exist, and ensure that we always
 		// trim the extension from flagOutput since we'll be progressively
 		// writing to that.
-		if _, err := os.Stat(dstOutputFile); os.IsNotExist(err) {
+		_, err := os.Stat(dstOutputFile)
+		switch {
+		case os.IsNotExist(err):
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
-		} else {
+		case err != nil:
+			return nil, "", fmt.Errorf("unable to stat file: %s", err)
+		default:
 			return nil, "", fmt.Errorf("output file already exists: %s", dstOutputFile)
 		}
 	}
 
 	// Stat check the directory to ensure we don't override any existing data.
-	if _, err := os.Stat(c.flagOutput); os.IsNotExist(err) {
+	_, err = os.Stat(c.flagOutput)
+	switch {
+	case os.IsNotExist(err):
 		err := os.MkdirAll(c.flagOutput, 0755)
 		if err != nil {
 			return nil, "", fmt.Errorf("unable to create output directory: %s", err)
 		}
-	} else {
+	case err != nil:
+		return nil, "", fmt.Errorf("unable to stat directory: %s", err)
+	default:
 		return nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
 	}
 
@@ -466,17 +473,17 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 
 	// Populate initial index fields
 	c.debugIndex = &debugIndex{
-		VaultAddress:    client.Address(),
-		ClientVersion:   version.GetVersion().VersionNumber(),
-		Compress:        c.flagCompress,
-		Duration:        int(c.flagDuration.Seconds()),
-		Interval:        int(c.flagInterval.Seconds()),
-		MetricsInterval: int(c.flagMetricsInterval.Seconds()),
-		RawArgs:         rawArgs,
-		Version:         debugIndexVersion,
-		Targets:         c.flagTargets,
-		Timestamp:       captureTime,
-		Errors:          []*captureError{},
+		VaultAddress:           client.Address(),
+		ClientVersion:          version.GetVersion().VersionNumber(),
+		Compress:               c.flagCompress,
+		DurationSeconds:        int(c.flagDuration.Seconds()),
+		IntervalSeconds:        int(c.flagInterval.Seconds()),
+		MetricsIntervalSeconds: int(c.flagMetricsInterval.Seconds()),
+		RawArgs:                rawArgs,
+		Version:                debugIndexVersion,
+		Targets:                c.flagTargets,
+		Timestamp:              captureTime,
+		Errors:                 []*captureError{},
 	}
 
 	return client, dstOutputFile, nil
@@ -522,7 +529,6 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	durationCh := time.After(c.flagDuration + debugDurationGrace)
 
 	// Track current interval count to show progress.
-	// totalCount := int(c.flagDuration.Seconds()/c.flagInterval.Seconds()) + 1
 	var idxCount, mIdxCount int
 
 	// errCh is used to capture any polling errors and recorded in the index
@@ -561,9 +567,11 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	c.pollingWg.Add(1)
 	go c.metricsIntervalCapture(client, mIdxCount, errCh)
 
-	// Capture at each interval, until end of duration or interrupt.
 	intervalTicker := time.Tick(c.flagInterval)
 	metricsIntervalTicker := time.Tick(c.flagMetricsInterval)
+	interrupted := false
+
+	// Capture at each interval, until end of duration or interrupt.
 POLLING:
 	for {
 		select {
@@ -578,14 +586,17 @@ POLLING:
 			c.pollingWg.Add(1)
 			go c.metricsIntervalCapture(client, mIdxCount, errCh)
 		case <-durationCh:
-			// Wait for polling requests to finish before breaking
-			c.pollingWg.Wait()
-
 			break POLLING
 		case <-c.ShutdownCh:
 			c.UI.Info("Caught interrupt signal, exiting...")
+			interrupted = true
 			break POLLING
 		}
+	}
+
+	// Wait for polling requests to finish if it's not an interrupt
+	if !interrupted {
+		c.pollingWg.Wait()
 	}
 
 	// Close the done channel to signal termination, make sure collection
