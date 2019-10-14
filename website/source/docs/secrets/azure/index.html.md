@@ -229,6 +229,11 @@ Vault releases, but the code is managed separately.
 Please report issues, add feature requests, and submit contributions to the
 [vault-plugin-secrets-azure repo][repo] on GitHub.
 
+## Learn
+
+Refer to the [Azure Secrets
+Engine](https://learn.hashicorp.com/vault/secrets-management/azure-creds) guide
+for a step-by-step tutorial.
 
 ## API
 The Azure secrets engine has a full HTTP API. Please see the [Azure secrets engine API docs][api]
