@@ -65,7 +65,7 @@ func NewServer(conf *ServerConfig) (*Server, <-chan struct{}) {
 // the Runner and return
 func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
 	latestToken := new(string)
-	ts.logger.Info("starting sink server")
+	ts.logger.Info("starting template server")
 	defer func() {
 		ts.logger.Info("template server stopped")
 		close(ts.DoneCh)
@@ -78,6 +78,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// If there are no templates, close the unblockCh
 	if len(templates) == 0 {
 		// nothing to do
+		ts.logger.Info("no templates found")
 		close(ts.unblockCh)
 		return
 	}
@@ -103,7 +104,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.StopImmediately()
-			close(ts.unblockCh)
+			ts.runner = nil
 			return
 
 		case token := <-incoming:
