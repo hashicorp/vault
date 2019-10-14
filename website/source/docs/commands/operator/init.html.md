@@ -6,7 +6,7 @@ sidebar_current: "docs-commands-operator-init"
 description: |-
   The "operator init" command initializes a Vault server. Initialization is the
   process by which Vault's storage backend is prepared to receive data. Since
-  Vault server's share the same storage backend in HA mode, you only need to
+  Vault servers share the same storage backend in HA mode, you only need to
   initialize one Vault to initialize the storage backend.
 ---
 
@@ -14,7 +14,7 @@ description: |-
 
 The `operator init` command initializes a Vault server. Initialization is the
 process by which Vault's storage backend is prepared to receive data. Since
-Vault server's share the same storage backend in HA mode, you only need to
+Vault servers share the same storage backend in HA mode, you only need to
 initialize one Vault to initialize the storage backend.
 
 During initialization, Vault generates an in-memory master key and applies
