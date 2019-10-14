@@ -74,10 +74,13 @@ module('Integration | Component | path filter config list', function(hooks) {
     await typeInSearch('auth');
     await searchSelect.options.objectAt(1).click();
     assert.ok(this.config.paths.includes('auth/userpass/'), 'adds to paths');
+
+    await clickTrigger();
     await assert.equal(searchSelect.options.length, 1, 'has one option left');
 
     await searchSelect.deleteButtons.objectAt(0).click();
     assert.equal(this.config.paths.length, 0, 'removes from paths');
+    await clickTrigger();
     await assert.equal(searchSelect.options.length, 2, 'has both options');
   });
 
