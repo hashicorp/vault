@@ -9,14 +9,14 @@ export default Route.extend(ListRoute, {
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { path: id } = this.paramsFor('vault.cluster.access.method');
+    const { path: authMethodPath } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
     const { apiPath, type } = methodModel;
-    return { apiPath, type, id, itemType, methodModel };
+    return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
   model() {
-    const { type, id, itemType } = this.getMethodAndModelInfo();
+    const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
     let modelType = `generated-${singularize(itemType)}-${type}`;
 
@@ -26,7 +26,7 @@ export default Route.extend(ListRoute, {
         page: page,
         pageFilter: pageFilter,
         type: itemType,
-        id: id,
+        id: authMethodPath,
       })
       .catch(err => {
         if (err.httpStatus === 404) {
