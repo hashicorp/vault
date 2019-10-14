@@ -30,6 +30,7 @@ type AuthConfig struct {
 type AuthHandler struct {
 	DoneCh                       chan struct{}
 	OutputCh                     chan string
+	TemplateTokenCh              chan string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
@@ -50,6 +51,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
+		TemplateTokenCh:              make(chan string, 1),
 		logger:                       conf.Logger,
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
@@ -77,6 +79,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		am.Shutdown()
 		close(ah.OutputCh)
 		close(ah.DoneCh)
+		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
@@ -163,6 +166,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
 			ah.OutputCh <- string(wrappedResp)
+			ah.TemplateTokenCh <- string(wrappedResp)
 
 			am.CredSuccess()
 
@@ -189,6 +193,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
 			ah.OutputCh <- secret.Auth.ClientToken
+			ah.TemplateTokenCh <- secret.Auth.ClientToken
 
 			am.CredSuccess()
 		}

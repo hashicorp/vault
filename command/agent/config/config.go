@@ -29,6 +29,7 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
+// Vault contains configuration for connnecting to Vault servers
 type Vault struct {
 	Address          string      `hcl:"address"`
 	CACert           string      `hcl:"ca_cert"`
@@ -39,10 +40,12 @@ type Vault struct {
 	ClientKey        string      `hcl:"client_key"`
 }
 
+// Cache contains any configuration needed for Cache mode
 type Cache struct {
 	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
 }
 
+// Listener contains configuration for any Vault Agent listeners
 type Listener struct {
 	Type   string
 	Config map[string]interface{}
@@ -51,6 +54,7 @@ type Listener struct {
 // RequireRequestHeader is a listener configuration option
 const RequireRequestHeader = "require_request_header"
 
+// AutoAuth is the configured authentication method and sinks
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
@@ -60,6 +64,7 @@ type AutoAuth struct {
 	EnableReauthOnNewCredentials bool `hcl:"enable_reauth_on_new_credentials"`
 }
 
+// Method represents the configuration for the authentication backend
 type Method struct {
 	Type       string
 	MountPath  string        `hcl:"mount_path"`
@@ -69,6 +74,7 @@ type Method struct {
 	Config     map[string]interface{}
 }
 
+// Sink defines a location to write the authenticated token
 type Sink struct {
 	Type       string
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`

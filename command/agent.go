@@ -29,10 +29,12 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
+	"github.com/hashicorp/vault/command/agent/config"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
+	"github.com/hashicorp/vault/command/agent/template"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -215,44 +217,48 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
-	if config.Vault != nil {
-		c.setStringFlag(f, config.Vault.Address, &StringVar{
-			Name:    flagNameAddress,
-			Target:  &c.flagAddress,
-			Default: "https://127.0.0.1:8200",
-			EnvVar:  api.EnvVaultAddress,
-		})
-		c.setStringFlag(f, config.Vault.CACert, &StringVar{
-			Name:    flagNameCACert,
-			Target:  &c.flagCACert,
-			Default: "",
-			EnvVar:  api.EnvVaultCACert,
-		})
-		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
-			Name:    flagNameCAPath,
-			Target:  &c.flagCAPath,
-			Default: "",
-			EnvVar:  api.EnvVaultCAPath,
-		})
-		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
-			Name:    flagNameClientCert,
-			Target:  &c.flagClientCert,
-			Default: "",
-			EnvVar:  api.EnvVaultClientCert,
-		})
-		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
-			Name:    flagNameClientKey,
-			Target:  &c.flagClientKey,
-			Default: "",
-			EnvVar:  api.EnvVaultClientKey,
-		})
-		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
-			Name:    flagNameTLSSkipVerify,
-			Target:  &c.flagTLSSkipVerify,
-			Default: false,
-			EnvVar:  api.EnvVaultSkipVerify,
-		})
+	// create an empty Vault configuration if none was loaded from file. The
+	// follow-up setStringFlag calls will populate with defaults if otherwise
+	// omitted
+	if config.Vault == nil {
+		config.Vault = new(agentConfig.Vault)
 	}
+	c.setStringFlag(f, config.Vault.Address, &StringVar{
+		Name:    flagNameAddress,
+		Target:  &c.flagAddress,
+		Default: "https://127.0.0.1:8200",
+		EnvVar:  api.EnvVaultAddress,
+	})
+	c.setStringFlag(f, config.Vault.CACert, &StringVar{
+		Name:    flagNameCACert,
+		Target:  &c.flagCACert,
+		Default: "",
+		EnvVar:  api.EnvVaultCACert,
+	})
+	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+		Name:    flagNameCAPath,
+		Target:  &c.flagCAPath,
+		Default: "",
+		EnvVar:  api.EnvVaultCAPath,
+	})
+	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+		Name:    flagNameClientCert,
+		Target:  &c.flagClientCert,
+		Default: "",
+		EnvVar:  api.EnvVaultClientCert,
+	})
+	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+		Name:    flagNameClientKey,
+		Target:  &c.flagClientKey,
+		Default: "",
+		EnvVar:  api.EnvVaultClientKey,
+	})
+	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+		Name:    flagNameTLSSkipVerify,
+		Target:  &c.flagTLSSkipVerify,
+		Default: false,
+		EnvVar:  api.EnvVaultSkipVerify,
+	})
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -294,10 +300,14 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
+	// TemplateServer that periodically listen for ctx.Done() to fire and shut
+	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
+	var namespace string
 	if config.AutoAuth != nil {
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
@@ -327,7 +337,8 @@ func (c *AgentCommand) Run(args []string) int {
 		// Check if a default namespace has been set
 		mountPath := config.AutoAuth.Method.MountPath
 		if config.AutoAuth.Method.Namespace != "" {
-			mountPath = path.Join(config.AutoAuth.Method.Namespace, mountPath)
+			namespace = config.AutoAuth.Method.Namespace
+			mountPath = path.Join(namespace, mountPath)
 		}
 
 		authConfig := &auth.AuthConfig{
@@ -486,7 +497,13 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
-	var ssDoneCh, ahDoneCh chan struct{}
+	// Listen for signals
+	// TODO: implement support for SIGHUP reloading of configuration
+	// signal.Notify(c.signalCh)
+
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var unblockCh <-chan struct{}
+	var ts *template.Server
 	// Start auto-auth and sink servers
 	if method != nil {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
@@ -504,8 +521,19 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		ssDoneCh = ss.DoneCh
 
+		// create an independent vault configuration for Consul Template to use
+		vaultConfig := c.setupTemplateConfig()
+		ts, unblockCh = template.NewServer(&template.ServerConfig{
+			Logger:        c.logger.Named("template.server"),
+			VaultConf:     vaultConfig,
+			Namespace:     namespace,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
+		tsDoneCh = ts.DoneCh
+
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
+		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 	}
 
 	// Server configuration output
@@ -536,10 +564,19 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
+	// Wait for the template to render
+	select {
+	case <-ctx.Done():
+	case <-unblockCh:
+	}
+
 	select {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
+	// case <-c.SighupCh:
+	// TODO: implement reloading
+	// 	c.UI.Output("==> Vault Agent reload triggered")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -548,6 +585,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		if ssDoneCh != nil {
 			<-ssDoneCh
+		}
+
+		if tsDoneCh != nil {
+			<-tsDoneCh
 		}
 	}
 
@@ -647,4 +688,35 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+// setupTemplateConfig creates a config.Vault struct for use by Consul Template.
+// Consul Template does not currently allow us to pass in a configured API
+// client, unlike the AuthHandler and SinkServer that reuse the client creted in
+// this Run() method. Here we build a config.Vault struct for use by the
+// Template Server that matches the configuration used to create the client
+// (c.client), but in a struct of type config.Vault so that Consul Template can
+// create it's own api client internally.
+// TODO test setupTemplateConfig
+func (c *AgentCommand) setupTemplateConfig() *config.Vault {
+	cfg := new(config.Vault)
+
+	if c.flagAddress != "" {
+		cfg.Address = c.flagAddress
+	}
+	if c.flagCACert != "" {
+		cfg.CACert = c.flagCACert
+	}
+	if c.flagCAPath != "" {
+		cfg.CAPath = c.flagCAPath
+	}
+	if c.flagClientCert != "" {
+		cfg.ClientCert = c.flagClientCert
+	}
+	if c.flagClientKey != "" {
+		cfg.ClientKey = c.flagClientKey
+	}
+	cfg.TLSSkipVerify = c.flagTLSSkipVerify
+
+	return cfg
 }

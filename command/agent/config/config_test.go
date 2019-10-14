@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"github.com/hashicorp/vault/helper/testhelpers"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -287,7 +288,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 }
 
 // TestLoadConfigFile_Template tests template definitions in Vault Agent
-// configuration files
 func TestLoadConfigFile_Template(t *testing.T) {
 	testCases := map[string]struct {
 		fixturePath       string
@@ -297,8 +297,8 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-min.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Source:      strPtr("/path/on/disk/to/template.ctmpl"),
-					Destination: strPtr("/path/on/disk/where/template/will/render.txt"),
+					Source:      testhelpers.StrPtr("/path/on/disk/to/template.ctmpl"),
+					Destination: testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
 				},
 			},
 		},
@@ -306,21 +306,21 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-full.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Backup:         boolPtr(true),
-					Command:        strPtr("restart service foo"),
-					CommandTimeout: timeDurationPtr("60s"),
-					Contents:       strPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
-					CreateDestDirs: boolPtr(true),
-					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
-					ErrMissingKey:  boolPtr(true),
-					LeftDelim:      strPtr("<<"),
-					Perms:          fileMode(0655),
-					RightDelim:     strPtr(">>"),
-					SandboxPath:    strPtr("/path/on/disk/where"),
+					Backup:         testhelpers.BoolPtr(true),
+					Command:        testhelpers.StrPtr("restart service foo"),
+					CommandTimeout: testhelpers.TimeDurationPtr("60s"),
+					Contents:       testhelpers.StrPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
+					CreateDestDirs: testhelpers.BoolPtr(true),
+					Destination:    testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  testhelpers.BoolPtr(true),
+					LeftDelim:      testhelpers.StrPtr("<<"),
+					Perms:          testhelpers.FileModePtr(0655),
+					RightDelim:     testhelpers.StrPtr(">>"),
+					SandboxPath:    testhelpers.StrPtr("/path/on/disk/where"),
 
 					Wait: &ctconfig.WaitConfig{
-						Min: timeDurationPtr("10s"),
-						Max: timeDurationPtr("40s"),
+						Min: testhelpers.TimeDurationPtr("10s"),
+						Max: testhelpers.TimeDurationPtr("40s"),
 					},
 				},
 			},
@@ -329,21 +329,21 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-many.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Source:         strPtr("/path/on/disk/to/template.ctmpl"),
-					Destination:    strPtr("/path/on/disk/where/template/will/render.txt"),
-					ErrMissingKey:  boolPtr(false),
-					CreateDestDirs: boolPtr(true),
-					Command:        strPtr("restart service foo"),
-					Perms:          fileMode(0600),
+					Source:         testhelpers.StrPtr("/path/on/disk/to/template.ctmpl"),
+					Destination:    testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  testhelpers.BoolPtr(false),
+					CreateDestDirs: testhelpers.BoolPtr(true),
+					Command:        testhelpers.StrPtr("restart service foo"),
+					Perms:          testhelpers.FileModePtr(0600),
 				},
 				&ctconfig.TemplateConfig{
-					Source:      strPtr("/path/on/disk/to/template2.ctmpl"),
-					Destination: strPtr("/path/on/disk/where/template/will/render2.txt"),
-					Backup:      boolPtr(true),
-					Perms:       fileMode(0755),
+					Source:      testhelpers.StrPtr("/path/on/disk/to/template2.ctmpl"),
+					Destination: testhelpers.StrPtr("/path/on/disk/where/template/will/render2.txt"),
+					Backup:      testhelpers.BoolPtr(true),
+					Perms:       testhelpers.FileModePtr(0755),
 					Wait: &ctconfig.WaitConfig{
-						Min: timeDurationPtr("2s"),
-						Max: timeDurationPtr("10s"),
+						Min: testhelpers.TimeDurationPtr("2s"),
+						Max: testhelpers.TimeDurationPtr("10s"),
 					},
 				},
 			},
@@ -388,23 +388,4 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			}
 		})
 	}
-}
-
-func strPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-func timeDurationPtr(duration string) *time.Duration {
-	d, _ := time.ParseDuration(duration)
-
-	return &d
-}
-
-// FileMode returns a pointer to the given os.FileMode.
-func fileMode(o os.FileMode) *os.FileMode {
-	return &o
 }
