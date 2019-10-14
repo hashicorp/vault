@@ -17,7 +17,7 @@ import { singularize } from 'ember-inflector';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
-  //remove whitespace + remove trailing and leading slashes
+  // remove whitespace + remove trailing and leading slashes
   return path.trim().replace(/^\/+|\/+$/g, '');
 }
 
@@ -36,7 +36,7 @@ export default Service.extend({
     const modelName = `model:${modelType}`;
     const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
-    //if we have a factory, we need to take the existing model into account
+    // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
       debug(`Model factory found for ${modelType}`);
       newModel = modelFactory.class;
@@ -52,26 +52,26 @@ export default Service.extend({
       newModel = DS.Model.extend({});
     }
 
-    //we don't have an apiPath for dynamic secrets
-    //and we don't need paths for them yet
+    // we don't have an apiPath for dynamic secrets
+    // and we don't need paths for them yet
     if (!apiPath) {
       helpUrl = newModel.proto().getHelpUrl(backend);
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     }
 
-    //use paths to dynamically create our openapi help url
-    //if we have a brand new model
+    // use paths to dynamically create our openapi help url
+    // if we have a brand new model
     return this.getPaths(apiPath, backend, itemType)
       .then(pathInfo => {
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
-        //if we have an adapter already use that, otherwise create one
+        // if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
           debug(`Creating new adapter for ${modelType}`);
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
         let path, paths;
-        //if we have an item we want the create info for that itemType
+        // if we have an item we want the create info for that itemType
         paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find(path => path.operations.includes('post') && path.action !== 'Delete');
         path = createPath.path;
@@ -171,21 +171,21 @@ export default Service.extend({
     });
   },
 
-  //Makes a call to grab the OpenAPI document.
-  //Returns relevant information from OpenAPI
-  //as determined by the expandOpenApiProps util
+  // Makes a call to grab the OpenAPI document.
+  // Returns relevant information from OpenAPI
+  // as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
     return this.ajax(helpUrl, backend).then(help => {
-      //paths is an array but it will have a single entry
+      // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0];
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
       let paramProp = {};
 
-      //include url params
+      // include url params
       if (params) {
         const { name, schema, description } = params[0];
         let label = capitalize(name.split('_').join(' '));
@@ -201,24 +201,24 @@ export default Service.extend({
         };
       }
 
-      //TODO: handle post endpoints without requestBody
+      // TODO: handle post endpoints without requestBody
       const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
-      //put url params (e.g. {name}, {role})
-      //at the front of the props list
+      // put url params (e.g. {name}, {role})
+      // at the front of the props list
       const newProps = assign({}, paramProp, props);
       return expandOpenApiProps(newProps);
     });
   },
 
   getNewAdapter(pathInfo, itemType) {
-    //we need list and create paths to set the correct urls for actions
+    // we need list and create paths to set the correct urls for actions
     let paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find(path => path.operations.includes('get'));
 
-    //the action might be "Generate" or something like that so we'll grab the first post endpoint if there
-    //isn't one with "Create"
-    //TODO: look into a more sophisticated way to determine the create endpoint
+    // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
+    // isn't one with "Create"
+    // TODO: look into a more sophisticated way to determine the create endpoint
     const createPath = paths.find(path => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
@@ -246,7 +246,7 @@ export default Service.extend({
         return this.urlForItem(id, modelName);
       },
 
-      //urlForQuery if there is an id and we are listing, use the id to construct the path
+      // if there is an id and we are listing, use the id to construct the path
       urlForUpdateRecord(id) {
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
@@ -270,8 +270,8 @@ export default Service.extend({
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       let owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
-      //if our newModel doesn't have fieldGroups already
-      //we need to create them
+      // if our newModel doesn't have fieldGroups already
+      // we need to create them
       try {
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
@@ -280,7 +280,7 @@ export default Service.extend({
           newModel = newModel.extend({ fieldGroups });
         }
       } catch (err) {
-        //eat the error, fieldGroups is computed in the model definition
+        // eat the error, fieldGroups is computed in the model definition
       }
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
@@ -293,8 +293,8 @@ export default Service.extend({
     };
     let fieldGroups = [];
     newModel.attributes.forEach(attr => {
-      //if the attr comes in with a fieldGroup from OpenAPI,
-      //add it to that group
+      // if the attr comes in with a fieldGroup from OpenAPI,
+      // add it to that group
       if (attr.options.fieldGroup) {
         if (groups[attr.options.fieldGroup]) {
           groups[attr.options.fieldGroup].push(attr.name);
@@ -302,7 +302,7 @@ export default Service.extend({
           groups[attr.options.fieldGroup] = [attr.name];
         }
       } else {
-        //otherwise just add that attr to the default group
+        // otherwise just add that attr to the default group
         groups.default.push(attr.name);
       }
     });
