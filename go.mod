@@ -116,6 +116,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
+	go.uber.org/atomic v1.4.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
