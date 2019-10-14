@@ -52,6 +52,11 @@ engine allows for writing keys with arbitrary values.
     my-value    s3cr3t
     ```
 
+## Learn
+
+Refer to the [Cubbyhole Response Wrapping](https://learn.hashicorp.com/vault/secrets-management/sm-cubbyhole)
+guide for a step-by-step tutorial.
+
 ## API
 
 The Cubbyhole secrets engine has a full HTTP API. Please see the

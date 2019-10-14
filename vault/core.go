@@ -152,6 +152,13 @@ type unlockInformation struct {
 	Nonce string
 }
 
+type raftInformation struct {
+	challenge           *physical.EncryptedBlobInfo
+	leaderClient        *api.Client
+	leaderBarrierConfig *SealConfig
+	nonVoter            bool
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -189,13 +196,9 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
-	raftUnseal bool
-
-	raftChallenge *physical.EncryptedBlobInfo
-
-	raftLeaderClient *api.Client
-
-	raftLeaderBarrierConfig *SealConfig
+	// raftInfo will contain information required for this node to join as a
+	// peer to an existing raft cluster
+	raftInfo *raftInformation
 
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
@@ -923,14 +926,11 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		// If we are in the middle of a raft join send the answer and wait for
 		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
 			return false, err
 		}
 		// Reset the state
-		c.raftUnseal = false
-		c.raftChallenge = nil
-		c.raftLeaderBarrierConfig = nil
-		c.raftLeaderClient = nil
+		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false
@@ -1002,7 +1002,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftLeaderBarrierConfig
+		config = c.raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}

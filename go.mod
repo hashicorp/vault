@@ -56,7 +56,7 @@ require (
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-raftchunking v0.6.2
+	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -64,7 +64,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/raft v1.1.1
+	github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115
@@ -75,7 +75,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9
 	github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.3-0.20190814210122-0f2fd536b250
+	github.com/hashicorp/vault-plugin-secrets-ad v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04

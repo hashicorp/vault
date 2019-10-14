@@ -24,7 +24,7 @@ const (
 	defaultTLSVersion = "tls12"
 )
 
-func (b *backend) readConfig(ctx context.Context, storage logical.Storage) (*configuration, error) {
+func readConfig(ctx context.Context, storage logical.Storage) (*configuration, error) {
 	entry, err := storage.Get(ctx, configStorageKey)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) configReadOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	config, err := b.readConfig(ctx, req.Storage)
+	config, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
