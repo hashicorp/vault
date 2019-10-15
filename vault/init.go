@@ -38,6 +38,31 @@ var (
 	initInProgress uint32
 )
 
+func (c *Core) InitializeRecovery(ctx context.Context) error {
+	if !c.recoveryMode {
+		return nil
+	}
+
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return nil
+	}
+
+	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
+	if err != nil {
+		return err
+	}
+
+	c.postRecoveryUnsealFuncs = append(c.postRecoveryUnsealFuncs, func() error {
+		return raftStorage.StartRecoveryCluster(context.Background(), raft.Peer{
+			ID:      raftStorage.NodeID(),
+			Address: parsedClusterAddr.Host,
+		})
+	})
+
+	return nil
+}
+
 // Initialized checks if the Vault is already initialized
 func (c *Core) Initialized(ctx context.Context) (bool, error) {
 	// Check the barrier first
