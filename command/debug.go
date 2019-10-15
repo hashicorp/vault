@@ -642,7 +642,7 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 		c.logger.Info("capturing metrics", "count", idxCount)
 		idxCount++
 
-		healthStatus, err := c.client.Sys().Health()
+		healthStatus, err := c.cachedClient.Sys().Health()
 		if err != nil {
 			c.captureError("metrics", err)
 			continue
@@ -662,8 +662,8 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 		}
 
 		// Perform metrics request
-		r := c.client.NewRequest("GET", "/v1/sys/metrics")
-		resp, err := c.client.RawRequestWithContext(ctx, r)
+		r := c.cachedClient.NewRequest("GET", "/v1/sys/metrics")
+		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("metrics", err)
 			continue
@@ -709,7 +709,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		}
 
 		// Capture goroutines
-		data, err := pprofGoroutine(ctx, c.client)
+		data, err := pprofGoroutine(ctx, c.cachedClient)
 		if err != nil {
 			c.captureError("pprof.goroutine", err)
 		} else {
@@ -720,7 +720,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		}
 
 		// Capture heap
-		data, err = pprofHeap(ctx, c.client)
+		data, err = pprofHeap(ctx, c.cachedClient)
 		if err != nil {
 			c.captureError("pprof.heap", err)
 		} else {
@@ -744,7 +744,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		// Capture profile
 		go func() {
 			defer wg.Done()
-			data, err := pprofProfile(ctx, c.client, c.flagInterval)
+			data, err := pprofProfile(ctx, c.cachedClient, c.flagInterval)
 			if err != nil {
 				c.captureError("pprof.profile", err)
 				return
@@ -760,7 +760,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			data, err := pprofTrace(ctx, c.client, c.flagInterval)
+			data, err := pprofTrace(ctx, c.cachedClient, c.flagInterval)
 			if err != nil {
 				c.captureError("pprof.trace", err)
 				return
