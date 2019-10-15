@@ -688,6 +688,7 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 				err := json.NewDecoder(resp.Body).Decode(&metricsEntry)
 				if err != nil {
 					c.captureError("metrics", err)
+					continue
 				}
 				c.metricsCollection = append(c.metricsCollection, metricsEntry)
 			}
