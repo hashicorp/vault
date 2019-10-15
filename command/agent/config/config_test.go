@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -297,8 +297,8 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-min.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Source:      testhelpers.StrPtr("/path/on/disk/to/template.ctmpl"),
-					Destination: testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
+					Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 				},
 			},
 		},
@@ -306,21 +306,21 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-full.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Backup:         testhelpers.BoolPtr(true),
-					Command:        testhelpers.StrPtr("restart service foo"),
-					CommandTimeout: testhelpers.TimeDurationPtr("60s"),
-					Contents:       testhelpers.StrPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
-					CreateDestDirs: testhelpers.BoolPtr(true),
-					Destination:    testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
-					ErrMissingKey:  testhelpers.BoolPtr(true),
-					LeftDelim:      testhelpers.StrPtr("<<"),
-					Perms:          testhelpers.FileModePtr(0655),
-					RightDelim:     testhelpers.StrPtr(">>"),
-					SandboxPath:    testhelpers.StrPtr("/path/on/disk/where"),
+					Backup:         pointerutil.BoolPtr(true),
+					Command:        pointerutil.StringPtr("restart service foo"),
+					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
+					Contents:       pointerutil.StringPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
+					CreateDestDirs: pointerutil.BoolPtr(true),
+					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  pointerutil.BoolPtr(true),
+					LeftDelim:      pointerutil.StringPtr("<<"),
+					Perms:          pointerutil.FileModePtr(0655),
+					RightDelim:     pointerutil.StringPtr(">>"),
+					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
 
 					Wait: &ctconfig.WaitConfig{
-						Min: testhelpers.TimeDurationPtr("10s"),
-						Max: testhelpers.TimeDurationPtr("40s"),
+						Min: pointerutil.TimeDurationPtr("10s"),
+						Max: pointerutil.TimeDurationPtr("40s"),
 					},
 				},
 			},
@@ -329,21 +329,21 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			fixturePath: "./test-fixtures/config-template-many.hcl",
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Source:         testhelpers.StrPtr("/path/on/disk/to/template.ctmpl"),
-					Destination:    testhelpers.StrPtr("/path/on/disk/where/template/will/render.txt"),
-					ErrMissingKey:  testhelpers.BoolPtr(false),
-					CreateDestDirs: testhelpers.BoolPtr(true),
-					Command:        testhelpers.StrPtr("restart service foo"),
-					Perms:          testhelpers.FileModePtr(0600),
+					Source:         pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  pointerutil.BoolPtr(false),
+					CreateDestDirs: pointerutil.BoolPtr(true),
+					Command:        pointerutil.StringPtr("restart service foo"),
+					Perms:          pointerutil.FileModePtr(0600),
 				},
 				&ctconfig.TemplateConfig{
-					Source:      testhelpers.StrPtr("/path/on/disk/to/template2.ctmpl"),
-					Destination: testhelpers.StrPtr("/path/on/disk/where/template/will/render2.txt"),
-					Backup:      testhelpers.BoolPtr(true),
-					Perms:       testhelpers.FileModePtr(0755),
+					Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
+					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
+					Backup:      pointerutil.BoolPtr(true),
+					Perms:       pointerutil.FileModePtr(0755),
 					Wait: &ctconfig.WaitConfig{
-						Min: testhelpers.TimeDurationPtr("2s"),
-						Max: testhelpers.TimeDurationPtr("10s"),
+						Min: pointerutil.TimeDurationPtr("2s"),
+						Max: pointerutil.TimeDurationPtr("10s"),
 					},
 				},
 			},

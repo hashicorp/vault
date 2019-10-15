@@ -13,8 +13,8 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
@@ -45,7 +45,7 @@ func TestServerRun(t *testing.T) {
 		"basic": {
 			templates: []*ctconfig.TemplateConfig{
 				&ctconfig.TemplateConfig{
-					Contents: testhelpers.StrPtr(templateContents),
+					Contents: pointerutil.StringPtr(templateContents),
 				},
 			},
 		},
@@ -64,7 +64,7 @@ func TestServerRun(t *testing.T) {
 			templateTokenCh := make(chan string, 1)
 			for i, template := range tc.templates {
 				dstFile := fmt.Sprintf("%s/render_%d.txt", tmpDir, i)
-				template.Destination = testhelpers.StrPtr(dstFile)
+				template.Destination = pointerutil.StringPtr(dstFile)
 			}
 
 			ctx, cancelFunc := context.WithCancel(context.Background())
