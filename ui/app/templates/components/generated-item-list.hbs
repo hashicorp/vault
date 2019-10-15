@@ -84,11 +84,11 @@
                   Item.callMethod
                   "destroyRecord"
                   list.item
-                  (concat "Successfully deleted " (singularize itemType) " " list.item.id)
+                  (concat "Successfully deleted " (singularize itemType) " " list.item.id ".")
                   (concat "There was an error deleting this " (singularize itemType))
                   (action "refreshItemList")
                 )
-              }} @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+              }} @confirmMessage={{concat "Are you sure you want to delete " (singularize itemType) " " list.item.id "?"}}
             @cancelButtonText="Cancel" data-test-secret-delete="true">
             Delete
             {{singularize itemType}}
