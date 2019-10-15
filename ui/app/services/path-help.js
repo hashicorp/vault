@@ -224,14 +224,20 @@ export default Service.extend({
 
     return generatedItemAdapter.extend({
       urlForItem(id, isList) {
+        const itemType = getPath.path.slice(1);
         let url;
         id = encodePath(id);
 
+        // isList indicates whether we are viewing the list page
+        // of a top-level item such as userpass
         if (isList) {
-          url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/`;
+          url = `${this.buildURL()}/${apiPath}${itemType}/`;
         } else {
-          url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/${id}`;
+          // build the URL for the show page of a nested item
+          // such as a userpass group
+          url = `${this.buildURL()}/${apiPath}${itemType}/${id}`;
         }
+
         return url;
       },
 
