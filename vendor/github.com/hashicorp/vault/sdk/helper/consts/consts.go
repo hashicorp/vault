@@ -12,6 +12,10 @@ const (
 	// AuthHeaderName is the name of the header containing the token.
 	AuthHeaderName = "X-Vault-Token"
 
+	// RequestHeaderName is the name of the header used by the Agent for
+	// SSRF protection.
+	RequestHeaderName = "X-Vault-Request"
+
 	// PerformanceReplicationALPN is the negotiated protocol used for
 	// performance replication.
 	PerformanceReplicationALPN = "replication_v1"

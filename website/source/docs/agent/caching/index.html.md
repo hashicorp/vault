@@ -232,3 +232,9 @@ vault {
   address = "http://127.0.0.1:8200"
 }
 ```
+
+## Learn
+
+Refer to the [Vault Agent
+Caching](https://learn.hashicorp.com/vault/identity-access-management/agent-caching)
+guide for a step-by-step tutorial.

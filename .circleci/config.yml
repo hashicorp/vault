@@ -210,7 +210,7 @@ jobs:
             VAULT_ACC= \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=40m \
+              -timeout=60m \
               -parallel=20 \
                \
               ${package_names}
@@ -280,7 +280,7 @@ jobs:
             VAULT_ACC= \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=40m \
+              -timeout=60m \
               -parallel=20 \
               -race \
               ${package_names}
@@ -378,7 +378,7 @@ workflows:
 #             VAULT_ACC= \\
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
-#               -timeout=40m \\
+#               -timeout=60m \\
 #               -parallel=20 \\
 #               << parameters.extra_flags >> \\
 #               ${package_names}

@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { not, gte, alias, and, or } from '@ember/object/computed';
+import { alias, and, equal, gte, not, or } from '@ember/object/computed';
 import { get, computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
@@ -38,7 +38,9 @@ export default DS.Model.extend({
   sealThreshold: alias('leaderNode.sealThreshold'),
   sealProgress: alias('leaderNode.progress'),
   sealType: alias('leaderNode.type'),
+  storageType: alias('leaderNode.storageType'),
   hasProgress: gte('sealProgress', 1),
+  usingRaft: equal('storageType', 'raft'),
 
   //replication mode - will only ever be 'unsupported'
   //otherwise the particular mode will have the relevant mode attr through replication-attributes

@@ -2,6 +2,7 @@ package rafttests
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -20,7 +22,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t *testing.T) *vault.TestCluster {
+func raftCluster(t testing.TB) *vault.TestCluster {
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -730,4 +732,33 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 		testhelpers.WaitForNCoresSealed(t, cluster2, 3)
 	}
+}
+
+func BenchmarkRaft_SingleNode(b *testing.B) {
+	cluster := raftCluster(b)
+	defer cluster.Cleanup()
+
+	leaderClient := cluster.Cores[0].Client
+
+	bench := func(b *testing.B, dataSize int) {
+		data, err := uuid.GenerateRandomBytes(dataSize)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		testName := b.Name()
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("secret/%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
+			_, err := leaderClient.Logical().Write(key, map[string]interface{}{
+				"test": data,
+			})
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+
+	b.Run("256b", func(b *testing.B) { bench(b, 25) })
 }
