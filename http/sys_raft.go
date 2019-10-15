@@ -25,7 +25,7 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req JoinRequest
-	if _, err := parseRequest(core, r, w, &req); err != nil && err != io.EOF {
+	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
