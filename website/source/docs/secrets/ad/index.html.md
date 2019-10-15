@@ -288,6 +288,7 @@ check_ins    [fizz@example.com]
 ```
 
 Or, alternatively, revoking the secret's lease has the same effect.
+
 ```text
 $ vault lease revoke ad/library/accounting-team/check-out/PvBVG0m7pEg2940Cb3Jw3KpJ
 All revocation operations queued successfully!
