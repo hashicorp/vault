@@ -50,6 +50,8 @@ IMPROVEMENTS:
    returns the configuration state of the server. It excludes config values
    from `storage`, `ha_storage`, and `seal` stanzas and some values
    from `telemetry` due to potential sensitive entries in those fields.
+ * ui: when using raft storage, you can now join a raft cluster, download a
+   snapshot, and restore a snapshot from the UI [GH-7410]
    
 
 BUG FIXES:
@@ -63,6 +65,7 @@ BUG FIXES:
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
+ * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
  
 ## 1.2.4 (Unreleased)
 
