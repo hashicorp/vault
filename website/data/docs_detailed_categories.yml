@@ -106,6 +106,7 @@
     - docs/auth/kubernetes.html
     - docs/auth/github.html
     - docs/auth/ldap.html
+    - docs/auth/oci.html
     - docs/auth/okta.html
     - docs/auth/cf.html
     - docs/auth/radius.html

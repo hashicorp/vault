@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/awsutil"
 )
@@ -99,7 +99,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 
-	loginData, err := GenerateLoginData(creds, headerValue, m["region"])
+	region := m["region"]
+	if region == "" {
+		region = awsutil.DefaultRegion
+	}
+	loginData, err := GenerateLoginData(creds, headerValue, region)
 	if err != nil {
 		return nil, err
 	}

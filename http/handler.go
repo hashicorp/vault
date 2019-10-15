@@ -110,6 +110,12 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
+
+	// Handle non-forwarded paths
+	mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
+	mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
+	mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
@@ -140,6 +146,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		}
 		mux.Handle("/ui", handleUIRedirect())
 		mux.Handle("/", handleUIRedirect())
+	}
+
+	// Register metrics path without authentication if enabled
+	if props.UnauthenticatedMetricsAccess {
+		mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 	}
 
 	additionalRoutes(mux, core)

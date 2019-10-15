@@ -16,22 +16,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/physical/raft"
-
-	metrics "github.com/armon/go-metrics"
-	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
-	cache "github.com/patrickmn/go-cache"
-
-	"google.golang.org/grpc"
-
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -45,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
+	"github.com/patrickmn/go-cache"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -154,6 +152,13 @@ type unlockInformation struct {
 	Nonce string
 }
 
+type raftInformation struct {
+	challenge           *physical.EncryptedBlobInfo
+	leaderClient        *api.Client
+	leaderBarrierConfig *SealConfig
+	nonVoter            bool
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -172,6 +177,9 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
+	// storageType is the the storage type set in the storage configuration
+	storageType string
+
 	// redirectAddr is the address we advertise as leader if held
 	redirectAddr string
 
@@ -188,13 +196,9 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
-	raftUnseal bool
-
-	raftChallenge *physical.EncryptedBlobInfo
-
-	raftLeaderClient *api.Client
-
-	raftLeaderBarrierConfig *SealConfig
+	// raftInfo will contain information required for this node to join as a
+	// peer to an existing raft cluster
+	raftInfo *raftInformation
 
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
@@ -457,6 +461,9 @@ type Core struct {
 	// Stores the pending peers we are waiting to give answers
 	pendingRaftPeers map[string][]byte
 
+	// rawConfig stores the config as-is from the provided server configuration.
+	rawConfig *server.Config
+
 	coreNumber int
 }
 
@@ -473,6 +480,8 @@ type CoreConfig struct {
 	AuditBackends map[string]audit.Factory `json:"audit_backends" structs:"audit_backends" mapstructure:"audit_backends"`
 
 	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
+
+	StorageType string `json:"storage_type" structs:"storage_type" mapstructure:"storage_type"`
 
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
@@ -513,6 +522,8 @@ type CoreConfig struct {
 
 	DisableSealWrap bool `json:"disable_sealwrap" structs:"disable_sealwrap" mapstructure:"disable_sealwrap"`
 
+	RawConfig *server.Config
+
 	ReloadFuncs     *map[string][]reload.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 
@@ -546,6 +557,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisableCache:              c.DisableCache,
 		DisableMlock:              c.DisableMlock,
 		CacheSize:                 c.CacheSize,
+		StorageType:               c.StorageType,
 		RedirectAddr:              c.RedirectAddr,
 		ClusterAddr:               c.ClusterAddr,
 		DefaultLeaseTTL:           c.DefaultLeaseTTL,
@@ -602,6 +614,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
+	// Instantiate a non-nil raw config if none is provided
+	if conf.RawConfig == nil {
+		conf.RawConfig = new(server.Config)
+	}
+
 	syncInterval := conf.CounterSyncInterval
 	if syncInterval.Nanoseconds() == 0 {
 		syncInterval = 30 * time.Second
@@ -613,6 +630,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
 		underlyingPhysical:           conf.Physical,
+		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
 		clusterAddr:                  new(atomic.Value),
 		clusterListener:              new(atomic.Value),
@@ -645,6 +663,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		rawConfig:                    conf.RawConfig,
 		counters: counters{
 			requests:     new(uint64),
 			syncInterval: syncInterval,
@@ -907,14 +926,11 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		// If we are in the middle of a raft join send the answer and wait for
 		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
 			return false, err
 		}
 		// Reset the state
-		c.raftUnseal = false
-		c.raftChallenge = nil
-		c.raftLeaderBarrierConfig = nil
-		c.raftLeaderClient = nil
+		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false
@@ -986,7 +1002,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftLeaderBarrierConfig
+		config = c.raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
@@ -1647,7 +1663,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	return nil
 }
 
-// postUnseal is invoked after the barrier is unsealed, but before
+// postUnseal is invoked on the active node after the barrier is unsealed, but before
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
@@ -1683,6 +1699,18 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
+	}
+
+	// Automatically re-encrypt the keys used for auto unsealing when the
+	// seal's encryption key changes. The regular rotation of cryptographic
+	// keys is a NIST recommendation. Access to prior keys for decryption
+	// is normally supported for a configurable time period. Re-encrypting
+	// the keys used for auto unsealing ensures Vault and its data will
+	// continue to be accessible even after prior seal keys are destroyed.
+	if seal, ok := c.seal.(*autoSeal); ok {
+		if err := seal.UpgradeKeys(c.activeContext); err != nil {
+			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
+		}
 	}
 
 	c.metricsCh = make(chan struct{})
@@ -1820,6 +1848,11 @@ func (c *Core) SealAccess() *SealAccess {
 	return NewSealAccess(c.seal)
 }
 
+// StorageType returns a string equal to the storage configuration's type.
+func (c *Core) StorageType() string {
+	return c.storageType
+}
+
 func (c *Core) Logger() log.Logger {
 	return c.logger
 }
@@ -1953,6 +1986,27 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+// SetConfig sets core's config object to the newly provided config.
+func (c *Core) SetConfig(conf *server.Config) {
+	c.stateLock.Lock()
+	c.rawConfig = conf
+	c.stateLock.Unlock()
+}
+
+// SanitizedConfig returns a sanitized version of the current config.
+// See server.Config.Sanitized for specific values omitted.
+func (c *Core) SanitizedConfig() map[string]interface{} {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.rawConfig.Sanitized()
+}
+
+// MetricsHelper returns the global metrics helper which allows external
+// packages to access Vault's internal metrics.
+func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
+	return c.metricsHelper
 }
 
 // BuiltinRegistry is an interface that allows the "vault" package to use

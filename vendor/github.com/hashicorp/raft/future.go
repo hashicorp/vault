@@ -183,14 +183,13 @@ type userSnapshotFuture struct {
 func (u *userSnapshotFuture) Open() (*SnapshotMeta, io.ReadCloser, error) {
 	if u.opener == nil {
 		return nil, nil, fmt.Errorf("no snapshot available")
-	} else {
-		// Invalidate the opener so it can't get called multiple times,
-		// which isn't generally safe.
-		defer func() {
-			u.opener = nil
-		}()
-		return u.opener()
 	}
+	// Invalidate the opener so it can't get called multiple times,
+	// which isn't generally safe.
+	defer func() {
+		u.opener = nil
+	}()
+	return u.opener()
 }
 
 // userRestoreFuture is used for waiting on a user-triggered restore of an

@@ -16,7 +16,7 @@ The OCI Object Storage backend is used to persist Vault's data in OCI Object Sto
 - **Community Supported** – the OCI Object Storage backend is supported by the community. While it has undergone review by HashiCorp employees, they may not be as knowledgeable about the technology. If you encounter problems with them, you may be referred to the original author.
 
 ```hcl
-storage "oci_objectstorage" {
+storage "oci" {
    namespace_name = "<object_storage_namespace_name>"
    bucket_name = "<vault_data_bucket_name>"
    ha_enabled = "<boolean true/false>"
@@ -28,20 +28,20 @@ storage "oci_objectstorage" {
 For more information on OCI Object Storage, please see the Oracle's [OCI Object Storage documentation][ocios-docs].
 
 
-## `oci_objectstorage` Setup
+## `oci` Setup
 
 To use the OCI Object Storage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
 
 The OCI Object Storage backend does not support creating the buckets automatically at this time.
 
 
-## `oci_objectstorage` Authentication
+## `oci` Authentication
 
 The OCI Object Storage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
 
 For more information on service accounts, please see the [OCI Identity documentation] [oci-identity].
 
-## `oci_objectstorage` Parameters
+## `oci` Parameters
 
 - `namespace_name` `(string: <required>)` – Specifies the name of the OCI Object Storage namespaces containing the data bucket and the lock bucket.
 
@@ -56,15 +56,15 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 - `lock_bucket_name` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
 
-## `oci_objectstorage` Examples
+## `oci` Examples
 
 ### Standalone Vault instance
 
 This example shows configuring OCI Object Storage as a standalone instance.
 
 ```hcl
-storage "oci_objectstorage" {
-    namespace_name = "MyNamespace
+storage "oci" {
+    namespace_name = "MyNamespace"
     bucket_name = "DataBucket"
 }
 ```
@@ -74,11 +74,11 @@ storage "oci_objectstorage" {
 This example shows configuring OCI Object Storage with high availability enabled.
 
 ```hcl
-storage "oci_objectstorage" {
-   namespaceName = "MyNamespace
-   bucketName = "DataBucket"
+storage "oci" {
+   namespace_name = "MyNamespace"
+   bucket_name = "DataBucket"
    ha_enabled = "true"
-   lockBucketName = "LockBucket"
+   lock_bucket_name = "LockBucket"
 }
 ```
 

@@ -2,35 +2,107 @@
 
 FEATURES:
 
- * **Stackdriver Metrics Sync**: Vault can now send metrics to
+ * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+ * Transit: Signing and verification is now supported with the P-384
+   (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
+ * Transit: Encryption and decryption is now supported via AES128-GCM96
+   [GH-7555]
+
+CHANGES: 
+
+ * sys/seal-status now has a `storage_type` field denoting what type of storage
+   the cluster is configured to use
 
 IMPROVEMENTS:
 
+ * auth/jwt: The redirect callback host may now be specified for CLI logins
+   [JWT-71]
+ * auth/jwt: Bound claims may now contain boolean values [JWT-73]
+ * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
- * storage/cassandra: Improve storage efficiency by eliminating unnecessary copies
-   of value data [GH-7199]
-
-## 1.2.3 (Unreleased)
-
-IMPROVEMENTS:
-
- * auth/jwt: Groups claim matching now treats a string response as a single element list [JWT-63]
- * auth/kubernetes: enable better support for projected tokens API by allowing user to specify issuer ([GH-65](https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/65))
- * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining full backwards compatibility [GH-7346].
+ * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
+   access. [GH-7550]  
+ * replication (enterprise): Write-Ahead-Log entries will not duplicate the
+   data belonging to the encompassing physical entries of the transaction,
+   thereby improving the performance and storage capacity.
+ * secrets/aws: The root config can now be read [GH-7245]
+ * storage/azure: Add config parameter to Azure storage backend to allow
+   specifying the ARM endpoint [GH-7567]
+ * storage/cassandra: Improve storage efficiency by eliminating unnecessary
+   copies of value data [GH-7199]
+ * sys: Add a new `sys/host-info` endpoint for querying information about 
+   the host [GH-7330]
+ * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
+   information to be extracted [GH-7473]
+ * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
+   returns the configuration state of the server. It excludes config values
+   from `storage`, `ha_storage`, and `seal` stanzas and some values
+   from `telemetry` due to potential sensitive entries in those fields.
+   
 
 BUG FIXES:
 
- * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters were
-   not being applied to tokens generated using the OIDC login flow [JWT-67]
- * storage/couchdb: Fix a file descriptor leak [GH-7345]
- * ui: Fix a bug where the status menu would disappear when trying to revoke a token [GH-7337]
- * ui: Fix a regression that prevented input of custom items in search-select [GH-7338]
- * ui: Fix an issue with the namespace picker being unable to render nested
-   namespaces named with numbers and sorting of namespaces in the picker [GH-7333]
+ * agent: Fix handling of gzipped responses [GH-7470]
+ * auth/gcp: Fix a bug where region information in instance groups names could
+   cause an authorization attempt to fail [GCP-74]
+ * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
+   could cause confusing error messages during `vault login` [GH-7508]
+ * identity: Add required field `response_types_supported` to identity token
+   `.well-known/openid-configuration` response [GH-7533]
+ * identity (enterprise): Fixed identity case sensitive loading in secondary
+   cluster [GH-7327]
+ * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
+ * secrets/database: Fix bug in combined DB secrets engine that can result in
+   writes to static-roles endpoints timing out [GH-7518]
+ * ui: using the `wrapped_token` query param will work with `redirect_to` and
+   will automatically log in as intended [GH-7398]
+ 
+## 1.2.4 (Unreleased)
 
+BUG FIXES:
+
+  * cli: Fix panic when pgp keys list is empty [GH-7546]
+  * secrets/database: Fix bug in combined DB secrets engine that can result in
+    writes to static-roles endpoints timing out [GH-7518]
+  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
+   
+## 1.2.3 (September 12, 2019)
+
+FEATURES:
+
+* **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
+  storage, auto unseal, and authentication.  
+
+IMPROVEMENTS:
+
+ * auth/jwt: Groups claim matching now treats a string response as a single
+   element list [JWT-63]
+ * auth/kubernetes: enable better support for projected tokens API by allowing
+   user to specify issuer [GH-65]
+ * auth/pcf: The PCF auth plugin was renamed to the CF auth plugin, maintaining
+   full backwards compatibility [GH-7346]
+ * replication: Premium packages now come with unlimited performance standby
+   nodes
+
+BUG FIXES:
+
+ * agent: Allow batch tokens and other non-renewable tokens to be used for
+   agent operations [GH-7441]
+ * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters
+   were not being applied to tokens generated using the OIDC login flow
+   [JWT-67]
+ * seal/transit: Allow using Vault Agent for transit seal operations [GH-7441]
+ * storage/couchdb: Fix a file descriptor leak [GH-7345]
+ * ui: Fix a bug where the status menu would disappear when trying to revoke a
+   token [GH-7337]
+ * ui: Fix a regression that prevented input of custom items in search-select
+   [GH-7338]
+ * ui: Fix an issue with the namespace picker being unable to render nested
+   namespaces named with numbers and sorting of namespaces in the picker
+   [GH-7333]
 
 ## 1.2.2 (August 15, 2019)
 
@@ -234,13 +306,13 @@ BUG FIXES:
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * secrets/database: Escape username/password before using in connection URL
+   [GH-7089]
  * secrets/pki: Forward revocation requests to active node when on a
    performance standby [GH-7173]
  * ui: Fix timestamp on some transit keys [GH-6827]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
- * secret/database: Escape username/password before using in connection URL
-   [GH-7089]
 
 ## 1.1.4/1.1.5 (July 25th/30th, 2019)
 

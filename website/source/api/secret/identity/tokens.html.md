@@ -100,7 +100,7 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 ```json
 {
   "rotation_period":"12h",
-  "verification_ttl":43200,
+  "verification_ttl":43200
 }
 ```
 
@@ -359,7 +359,7 @@ Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `POST`   | `identity/oidc/token/:name`  |
+| `GET`   | `identity/oidc/token/:name`  |
 
 ### Parameters
 
@@ -441,7 +441,6 @@ Query this path to retrieve a set of claims about the identity tokens' configura
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/openid-configuration
 ```
@@ -474,7 +473,6 @@ Query this path to retrieve the public portion of named keys. Clients can use th
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/keys
 ```

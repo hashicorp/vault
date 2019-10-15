@@ -81,6 +81,36 @@ $ curl \
     http://127.0.0.1:8200/v1/aws/config/root
 ```
 
+## Read Root Configuration
+
+This endpoint allows you to read non-secure values that have been configured in the
+`config/root` endpoint. In particular, the `secret_key` parameter is never returned.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/aws/config/root`           |
+
+### Sample Request
+```
+$ curl
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/aws/config/root
+
+```
+
+### Sample Response
+```json
+{
+  "data": {
+    "access_key": "AKIAEXAMPLE",
+    "region": "us-west-2",
+    "iam_endpoint": "https://iam.amazonaws.com",
+    "sts_endpoint": "https://sts.us-west-2.amazonaws.com",
+    "max_retries": -1
+  }
+}
+```
+
 ## Rotate Root IAM Credentials
 
 When you have configured Vault with static credentials, you can use this
@@ -235,6 +265,12 @@ updated with the new attributes.
 
 - `user_path` `(string)` - The path for the user name. Valid only when
   `credential_type` is `iam_user`. Default is `/`
+
+- `permissions_boundary_arn` `(string)` - The ARN of the [AWS Permissions
+  Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+  to attach to IAM users created in the role. Valid only when `credential_type`
+  is `iam_user`. If not specified, then no permissions boundary policy will be
+  attached.
 
 Legacy parameters:
 

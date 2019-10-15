@@ -18,12 +18,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -164,8 +166,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.toolsPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
@@ -222,6 +226,17 @@ type SystemBackend struct {
 	mfaLock   *sync.RWMutex
 	mfaLogger log.Logger
 	logger    log.Logger
+}
+
+// handleConfigStateSanitized returns the current configuration state. The configuration
+// data that it returns is a sanitized version of the combined configuration
+// file(s) provided.
+func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.SanitizedConfig()
+	resp := &logical.Response{
+		Data: config,
+	}
+	return resp, nil
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -2606,7 +2621,60 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	if format == "" {
 		format = metricsutil.FormatFromRequest(req)
 	}
-	return b.Core.metricsHelper.ResponseForFormat(format)
+	return b.Core.metricsHelper.ResponseForFormat(format), nil
+}
+
+// handleHostInfo collects and returns host-related information, which includes
+// system information, cpu, disk, and memory usage. Any capture-related errors
+// returned by the collection method will be returned as response warnings.
+func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{}
+	info, err := hostutil.CollectHostInfo()
+	if err != nil {
+		// If the error is a HostInfoError, we return them as response warnings
+		if errs, ok := err.(*multierror.Error); ok {
+			var warnings []string
+			for _, mErr := range errs.Errors {
+				if errwrap.ContainsType(mErr, new(hostutil.HostInfoError)) {
+					warnings = append(warnings, mErr.Error())
+				} else {
+					// If the error is a multierror, it should only be for
+					// HostInfoError, but if it's not for any reason, we return
+					// it as an error to avoid it being swallowed.
+					return nil, err
+				}
+			}
+			resp.Warnings = warnings
+		} else {
+			return nil, err
+		}
+	}
+
+	if info == nil {
+		return nil, errors.New("unable to collect host information: nil HostInfo")
+	}
+
+	respData := map[string]interface{}{
+		"timestamp": info.Timestamp,
+	}
+	if info.CPU != nil {
+		respData["cpu"] = info.CPU
+	}
+	if info.CPUTimes != nil {
+		respData["cpu_times"] = info.CPUTimes
+	}
+	if info.Disk != nil {
+		respData["disk"] = info.Disk
+	}
+	if info.Host != nil {
+		respData["host"] = info.Host
+	}
+	if info.Memory != nil {
+		respData["memory"] = info.Memory
+	}
+	resp.Data = respData
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -3123,6 +3191,36 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeTokens, err := b.Core.countActiveTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeTokens,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeEntities, err := b.Core.countActiveEntities(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeEntities,
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		// 204 -- no ACL
@@ -3425,6 +3523,15 @@ This path responds to the following HTTP methods.
 
     POST /
         Initializes a new vault.
+		`,
+	},
+	"health": {
+		"Checks the health status of the Vault.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /
+		Returns health information about the Vault.
 		`,
 	},
 	"generate-root": {
@@ -4041,5 +4148,19 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"internal-counters-tokens": {
+		"Count of active tokens in this Vault cluster.",
+		"Count of active tokens in this Vault cluster.",
+	},
+	"internal-counters-entities": {
+		"Count of active entities in this Vault cluster.",
+		"Count of active entities in this Vault cluster.",
+	},
+	"host-info": {
+		"Information about the host instance that this Vault server is running on.",
+		`Information about the host instance that this Vault server is running on.
+		The information that gets collected includes host hardware information, and CPU,
+		disk, and memory utilization`,
 	},
 }

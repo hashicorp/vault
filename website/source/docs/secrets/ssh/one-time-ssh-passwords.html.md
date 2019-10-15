@@ -109,6 +109,12 @@ username@<IP of remote host>:~$
 Note: `sshpass` cannot handle host key checking. Host key checking can be
 disabled by setting `-strict-host-key-checking=no`.
 
+## Learn
+
+Refer to the [SSH Secrets Engine: One-Time SSH
+Password](https://learn.hashicorp.com/vault/secrets-management/sm-ssh-otp) guide
+for a step-by-step tutorial.
+
 ## API
 
 The SSH secrets engine has a full HTTP API. Please see the

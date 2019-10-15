@@ -112,12 +112,6 @@ $ stack install gothic
 $ npm install node-vault
 ```
 
-* [vaulted](https://github.com/chiefy/vaulted)
-
-```shell
-$ npm install vaulted
-```
-
 ### PHP
 
 * [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
