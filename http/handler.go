@@ -119,7 +119,9 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/generate-recovery-token/attempt", handleSysGenerateRootAttempt(core, strategy))
 		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
-		// Handle pprof paths
+		// Handle non-forwarded paths
+		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
