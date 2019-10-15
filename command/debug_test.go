@@ -78,7 +78,7 @@ func TestDebugCommand_Run(t *testing.T) {
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
-				t.Fatalf("expected %d to be %d", code, tc.code)
+				t.Errorf("expected %d to be %d", code, tc.code)
 			}
 
 			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()

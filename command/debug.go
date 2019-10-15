@@ -104,7 +104,8 @@ type DebugCommand struct {
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
 
-	client *api.Client
+	// cachedClient holds the client retrieved during preflight
+	cachedClient *api.Client
 
 	// errLock is used to lock error capture into the index file
 	errLock sync.Mutex
@@ -398,7 +399,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	if _, err := client.Sys().Health(); err != nil {
 		return "", fmt.Errorf("unable to connect to the server: %s", err)
 	}
-	c.client = client
+	c.cachedClient = client
 
 	captureTime := time.Now().UTC()
 	if len(c.flagOutput) == 0 {
@@ -475,7 +476,7 @@ func (c *DebugCommand) captureStaticTargets() error {
 	if strutil.StrListContains(c.flagTargets, "config") {
 		c.logger.Info("capturing configuration state")
 
-		resp, err := c.client.Logical().Read("sys/config/state/sanitized")
+		resp, err := c.cachedClient.Logical().Read("sys/config/state/sanitized")
 		if err != nil {
 			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
@@ -594,11 +595,19 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 	intervalTicker := time.Tick(c.flagInterval)
 
 	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
 		c.logger.Info("capturing host information", "count", idxCount)
 		idxCount++
 
-		r := c.client.NewRequest("GET", "/v1/sys/host-info")
-		resp, err := c.client.RawRequestWithContext(ctx, r)
+		r := c.cachedClient.NewRequest("GET", "/v1/sys/host-info")
+		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("host", err)
 		}
@@ -609,15 +618,10 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			if err != nil {
 				c.captureError("host", err)
 			}
-			if hostEntry := secret.Data; hostEntry != nil {
+			if secret != nil && secret.Data != nil {
+				hostEntry := secret.Data
 				c.hostInfoCollection = append(c.hostInfoCollection, hostEntry)
 			}
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-intervalTicker:
 		}
 	}
 }
@@ -627,6 +631,14 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 	intervalTicker := time.Tick(c.flagMetricsInterval)
 
 	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
 		c.logger.Info("capturing metrics", "count", idxCount)
 		idxCount++
 
@@ -667,12 +679,6 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 			}
 			c.metricsCollection = append(c.metricsCollection, metricsEntry)
 		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-intervalTicker:
-		}
 	}
 }
 
@@ -682,6 +688,14 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 	intervalTicker := time.Tick(c.flagInterval)
 
 	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
 		currentTimestamp := time.Now().UTC()
 		c.logger.Info("capturing pprof data", "count", idxCount)
 		idxCount++
@@ -691,7 +705,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		dirName := filepath.Join(c.flagOutput, currentDir)
 		if err := os.MkdirAll(dirName, 0755); err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
-			return
+			continue
 		}
 
 		// Capture goroutines
@@ -720,7 +734,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		// skip profile and trace.
 		runDuration := currentTimestamp.Sub(startTime)
 		if (c.flagDuration+debugDurationGrace)-runDuration < c.flagInterval {
-			return
+			continue
 		}
 
 		// We want to add 2 at a time to ensure that we capture both at the
@@ -759,12 +773,6 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		}()
 
 		wg.Wait()
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-intervalTicker:
-		}
 	}
 }
 
@@ -773,11 +781,19 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 	intervalTicker := time.Tick(c.flagInterval)
 
 	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
 		c.logger.Info("capturing replication status", "count", idxCount)
 		idxCount++
 
-		r := c.client.NewRequest("GET", "/v1/sys/replication/status")
-		resp, err := c.client.RawRequestWithContext(ctx, r)
+		r := c.cachedClient.NewRequest("GET", "/v1/sys/replication/status")
+		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("replication-status", err)
 		}
@@ -793,12 +809,6 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 				c.replicationStatusCollection = append(c.replicationStatusCollection, replicationEntry)
 			}
 		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-intervalTicker:
-		}
 	}
 }
 
@@ -807,14 +817,22 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 	intervalTicker := time.Tick(c.flagInterval)
 
 	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
 		c.logger.Info("capturing server status", "count", idxCount)
 		idxCount++
 
-		healthInfo, err := c.client.Sys().Health()
+		healthInfo, err := c.cachedClient.Sys().Health()
 		if err != nil {
 			c.captureError("server-status.health", err)
 		}
-		sealInfo, err := c.client.Sys().SealStatus()
+		sealInfo, err := c.cachedClient.Sys().SealStatus()
 		if err != nil {
 			c.captureError("server-status.seal", err)
 		}
@@ -825,12 +843,6 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 			"seal":      sealInfo,
 		}
 		c.serverStatusCollection = append(c.serverStatusCollection, statusEntry)
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-intervalTicker:
-		}
 	}
 }
 
