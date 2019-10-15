@@ -201,7 +201,7 @@ Usage: vault debug [options]
   To create a debug package in the current directory with a specific sub-set of
   targets:
 
-  $ vault debug -targets=host,metrics
+  $ vault debug -target=host -target=metrics
 
 ` + c.Flags().Help()
 
