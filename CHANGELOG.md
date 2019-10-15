@@ -2,6 +2,11 @@
 
 FEATURES:
 
+ * **Recovery Mode**: Vault server can be brought up in recovery mode to resolve
+   outages caused due to data store being in bad state. This is a privileged mode
+   that allows `sys/raw` API calls to perform surgical corrections to the data
+   store. Bad storage state can be caused by bugs. However, this is usually
+   observed when known (and fixed) bugs are hit by older versions of Vault.
  * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
