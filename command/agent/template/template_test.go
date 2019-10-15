@@ -61,44 +61,49 @@ func TestServerRun(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			templateTokenCh := make(chan string, 1)
 			for i, template := range tc.templates {
-				templateTokenCh := make(chan string, 1)
 				dstFile := fmt.Sprintf("%s/render_%d.txt", tmpDir, i)
 				template.Destination = testhelpers.StrPtr(dstFile)
+			}
 
-				ctx, cancelFunc := context.WithCancel(context.Background())
-				sc := ServerConfig{
-					Logger: logging.NewVaultLogger(hclog.Trace),
-					VaultConf: &config.Vault{
-						Address: ts.URL,
-					},
+			ctx, cancelFunc := context.WithCancel(context.Background())
+			sc := ServerConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+				VaultConf: &config.Vault{
+					Address: ts.URL,
+				},
+			}
+
+			var server *Server
+			server = NewServer(&sc)
+			if ts == nil {
+				t.Fatal("nil server returned")
+			}
+			if server.UnblockCh == nil {
+				t.Fatal("nil blocking channel returned")
+			}
+
+			go server.Run(ctx, templateTokenCh, tc.templates)
+
+			// send a dummy value to trigger the internal Runner to query for secret
+			// info
+			templateTokenCh <- "test"
+
+			select {
+			case <-ctx.Done():
+			case <-server.UnblockCh:
+			}
+
+			// cancel to clean things up
+			cancelFunc()
+
+			// verify test file exists and has the content we're looking for
+			for _, template := range tc.templates {
+				if template.Destination == nil {
+					t.Fatal("nil template destination")
 				}
-
-				var server *Server
-				server = NewServer(&sc)
-				if ts == nil {
-					t.Fatal("nil server returned")
-				}
-				if server.UnblockCh == nil {
-					t.Fatal("nil blocking channel returned")
-				}
-
-				go server.Run(ctx, templateTokenCh, tc.templates)
-
-				// send a dummy value to trigger the internal Runner to query for secret
-				// info
-				templateTokenCh <- "test"
-
-				select {
-				case <-ctx.Done():
-				case <-server.UnblockCh:
-				}
-
-				// cancel to clean things up
-				cancelFunc()
-
-				// verify test file exists and has the content we're looking for
-				content, err := ioutil.ReadFile(dstFile)
+				content, err := ioutil.ReadFile(*template.Destination)
 				if err != nil {
 					t.Fatal(err)
 				}
