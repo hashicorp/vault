@@ -591,10 +591,22 @@ func (c *DebugCommand) capturePollingTargets() error {
 
 func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 	idxCount := 0
-	intervalTicker := time.Tick(c.flagInterval)
+
+	// intervalTicker needs to be buffered first in order to trigger a run
+	// right away.
+	intervalTicker := make(chan time.Time, 1)
+	intervalTicker <- time.Now()
+	tick := time.NewTicker(c.flagInterval)
+	go func() {
+		for t := range tick.C {
+			intervalTicker <- t
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			tick.Stop()
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing host information", "count", idxCount)
@@ -622,10 +634,22 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 
 func (c *DebugCommand) collectMetrics(ctx context.Context) {
 	idxCount := 0
-	intervalTicker := time.Tick(c.flagInterval)
+
+	// intervalTicker needs to be buffered first in order to trigger a run
+	// right away.
+	intervalTicker := make(chan time.Time, 1)
+	intervalTicker <- time.Now()
+	tick := time.NewTicker(c.flagInterval)
+	go func() {
+		for t := range tick.C {
+			intervalTicker <- t
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			tick.Stop()
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing metrics", "count", idxCount)
@@ -673,18 +697,29 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 
 func (c *DebugCommand) collectPprof(ctx context.Context) {
 	idxCount := 0
-	intervalTicker := time.Tick(c.flagInterval)
 	startTime := time.Now()
+
+	// intervalTicker needs to be buffered first in order to trigger a run
+	// right away.
+	intervalTicker := make(chan time.Time, 1)
+	intervalTicker <- time.Now()
+	tick := time.NewTicker(c.flagInterval)
+	go func() {
+		for t := range tick.C {
+			intervalTicker <- t
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			tick.Stop()
 			return
-		case <-intervalTicker:
+		case currentTimestamp := <-intervalTicker:
 			c.logger.Info("capturing pprof data", "count", idxCount)
 			idxCount++
 
 			// Create a sub-directory for pprof data
-			currentTimestamp := time.Now().UTC()
 			currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 			dirName := filepath.Join(c.flagOutput, currentDir)
 			if err := os.MkdirAll(dirName, 0755); err != nil {
@@ -763,10 +798,22 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 
 func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 	idxCount := 0
-	intervalTicker := time.Tick(c.flagInterval)
+
+	// intervalTicker needs to be buffered first in order to trigger a run
+	// right away.
+	intervalTicker := make(chan time.Time, 1)
+	intervalTicker <- time.Now()
+	tick := time.NewTicker(c.flagInterval)
+	go func() {
+		for t := range tick.C {
+			intervalTicker <- t
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			tick.Stop()
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing replication status", "count", idxCount)
@@ -795,10 +842,22 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 
 func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 	idxCount := 0
-	intervalTicker := time.Tick(c.flagInterval)
+
+	// intervalTicker needs to be buffered first in order to trigger a run
+	// right away.
+	intervalTicker := make(chan time.Time, 1)
+	intervalTicker <- time.Now()
+	tick := time.NewTicker(c.flagInterval)
+	go func() {
+		for t := range tick.C {
+			intervalTicker <- t
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			tick.Stop()
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing server status", "count", idxCount)
