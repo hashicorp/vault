@@ -167,6 +167,7 @@ $ vault write ad/config \
 ```
 
 Our next step is to designate a set of service accounts for check-out.
+
 ```text
 $ vault write ad/library/accounting-team \
     service_account_names=fizz@example.com,buzz@example.com \
@@ -174,6 +175,7 @@ $ vault write ad/library/accounting-team \
     max_ttl=20h \
     disable_check_in_enforcement=false
 ```
+
 In this example, the service account names of `fizz@example.com` and `buzz@example.com` have
 already been created on the remote AD server. They've been set aside solely for Vault to handle. 
 The `ttl` is how long each check-out will last before Vault checks in a service account,
@@ -194,6 +196,7 @@ fizz@example.com    map[available:true]
 ```
 
 To check out any service account that's available, simply execute:
+
 ```text
 $ vault write -f ad/library/accounting-team/check-out
 Key                     Value
@@ -207,6 +210,7 @@ service_account_name    fizz@example.com
 
 If the default `ttl` for the check-out is higher than needed, set the check-out to last 
 for a shorter time by using:
+
 ```text
 $ vault write ad/library/accounting-team/check-out ttl=30m
 Key                     Value
@@ -217,20 +221,25 @@ lease_renewable         true
 password                ?@09AZerLLuJfEMbRqP+3yfQYDSq6laP48TCJRBJaJu/kDKLsq9WxL9szVAvL/E1
 service_account_name    buzz@example.com
 ```
+
 This can be a nice way to say, "Although I _can_ have a check-out for 24 hours, if I 
 haven't checked it in after 30 minutes, I forgot or I'm a dead instance, so you can just
 check it back in."
 
 If no service accounts are available for check-out, Vault will return a 400 Bad Request.
+
 ```text
-$ vault write ad/library/accounting-team/check-out
+$ vault write -f ad/library/accounting-team/check-out
 Error writing data to ad/library/accounting-team/check-out: Error making API request.
 
 URL: PUT http://localhost:8200/v1/ad/library/accounting-team/check-out
 Code: 400. Errors:
+
+* No service accounts available for check-out.
 ```
 
 To extend a check-out, renew its lease.
+
 ```text
 $ vault lease renew ad/library/accounting-team/check-out/0C2wmeaDmsToVFc0zDiX9cMq
 Key                Value
@@ -239,11 +248,13 @@ lease_id           ad/library/accounting-team/check-out/0C2wmeaDmsToVFc0zDiX9cMq
 lease_duration     10h
 lease_renewable    true
 ```
+
 Renewing a check-out means its current password will live longer, since passwords are rotated 
 anytime a password is _checked in_ either by a caller, or by Vault because the check-out `ttl`
 ends.
 
 To check a service account back in for others to use, call:
+
 ```text
 $ vault write -f ad/library/accounting-team/check-in
 Key          Value
@@ -253,6 +264,7 @@ check_ins    [fizz@example.com]
 
 Most of the time this will just work, but if multiple service accounts checked out by the same 
 caller, Vault will need to know which one(s) to check in.
+
 ```text
 $ vault write ad/library/accounting-team/check-in service_account_names=fizz@example.com
 Key          Value
