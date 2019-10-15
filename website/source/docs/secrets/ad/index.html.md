@@ -261,8 +261,8 @@ check_ins    [fizz@example.com]
 ```
 
 To perform a check-in, Vault verifies that the caller _should_ be able to check in a given service account.
-To do this, it looks for either the same [entity ID](https://learn.hashicorp.com/vault/identity-access-management/iam-identity) 
-as was used to check out the service account, or the same client token.
+To do this, Vault looks for either the same [entity ID](https://learn.hashicorp.com/vault/identity-access-management/iam-identity) 
+used to check out the service account, or the same client token.
 
 If a caller is unable to check in a service account, or simply doesn't try,
 Vault will check it back in automatically when the `ttl` expires. However, if that is too long, 

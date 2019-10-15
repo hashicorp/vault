@@ -270,7 +270,7 @@ Returns a `200` if a credential is available, and a `400` if no credential is av
 
 * `name` (string: "", <required>): The name of the set of service accounts.
 * `ttl` (duration: "", <optional>): The maximum amount of time a check-out lasts before Vault 
-automatically checks it back in. Defaults to 24 hours. Setting it to zero reflects an unlimited lending period.
+automatically checks it back in. Setting it to zero reflects an unlimited lending period.
 Defaults to the set's `ttl`. If the requested `ttl` is higher than the set's, the set's will be used.
 
 | Method   | Path                              |
@@ -314,7 +314,7 @@ $ curl \
 
 ### Check a credential in
 
-By default, check-in must be called by the same entity or client token as was used for check-out.
+By default, check-in must be called by the same entity or client token used for check-out.
 To disable this behavior, use the `disable_check_in_enforcement` toggle on the library set. Or, use
 the `ad/library/manage/:set_name/check-in` behavior to force check-in of the account. Access to the
 "manage" endpoint should only be granted to highly privileged Vault users, like Vault operators.
