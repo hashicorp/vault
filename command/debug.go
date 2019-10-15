@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -103,6 +104,9 @@ type DebugCommand struct {
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
 
+	client *api.Client
+
+	// errLock is used to lock error capture into the index file
 	errLock sync.Mutex
 }
 
@@ -223,7 +227,7 @@ func (c *DebugCommand) Run(args []string) int {
 		c.logger = logging.NewVaultLoggerWithWriter(logWriter, hclog.Trace)
 	}
 
-	client, dstOutputFile, err := c.preflight(args)
+	dstOutputFile, err := c.preflight(args)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error during validation: %s", err))
 		return 1
@@ -245,7 +249,7 @@ func (c *DebugCommand) Run(args []string) int {
 
 	// Capture static information
 	c.UI.Info("==> Capturing static information...")
-	if err := c.captureStaticTargets(client); err != nil {
+	if err := c.captureStaticTargets(); err != nil {
 		c.UI.Error(fmt.Sprintf("Error capturing static information: %s", err))
 		return 2
 	}
@@ -254,7 +258,7 @@ func (c *DebugCommand) Run(args []string) int {
 
 	// Capture polling information
 	c.UI.Info("==> Capturing dynamic information...")
-	if err := c.capturePollingTargets(client); err != nil {
+	if err := c.capturePollingTargets(); err != nil {
 		c.UI.Error(fmt.Sprintf("Error capturing dynamic information: %s", err))
 		return 2
 	}
@@ -354,7 +358,7 @@ func (c *DebugCommand) generateIndex() error {
 // preflight performs various checks against the provided flags to ensure they
 // are valid/reasonable values. It also takes care of instantiating a client and
 // index object for use by the command.
-func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) {
+func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	if !c.skipTimingChecks {
 		// Guard duration and interval values to acceptable values
 		if c.flagDuration < debugMinInterval {
@@ -389,11 +393,12 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 	// Make sure we can talk to the server
 	client, err := c.Client()
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
+		return "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
 	}
 	if _, err := client.Sys().Health(); err != nil {
-		return nil, "", fmt.Errorf("unable to connect to the server: %s", err)
+		return "", fmt.Errorf("unable to connect to the server: %s", err)
 	}
+	c.client = client
 
 	captureTime := time.Now().UTC()
 	if len(c.flagOutput) == 0 {
@@ -423,9 +428,9 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tar.gz")
 			c.flagOutput = strings.TrimSuffix(c.flagOutput, ".tgz")
 		case err != nil:
-			return nil, "", fmt.Errorf("unable to stat file: %s", err)
+			return "", fmt.Errorf("unable to stat file: %s", err)
 		default:
-			return nil, "", fmt.Errorf("output file already exists: %s", dstOutputFile)
+			return "", fmt.Errorf("output file already exists: %s", dstOutputFile)
 		}
 	}
 
@@ -435,12 +440,12 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 	case os.IsNotExist(err):
 		err := os.MkdirAll(c.flagOutput, 0755)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to create output directory: %s", err)
+			return "", fmt.Errorf("unable to create output directory: %s", err)
 		}
 	case err != nil:
-		return nil, "", fmt.Errorf("unable to stat directory: %s", err)
+		return "", fmt.Errorf("unable to stat directory: %s", err)
 	default:
-		return nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
+		return "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
 	}
 
 	// Populate initial index fields
@@ -458,19 +463,19 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		Errors:                 []*captureError{},
 	}
 
-	return client, dstOutputFile, nil
+	return dstOutputFile, nil
 }
 
 func (c *DebugCommand) defaultTargets() []string {
 	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status"}
 }
 
-func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
+func (c *DebugCommand) captureStaticTargets() error {
 	// Capture configuration state
 	if strutil.StrListContains(c.flagTargets, "config") {
 		c.logger.Info("capturing configuration state")
 
-		resp, err := client.Logical().Read("sys/config/state/sanitized")
+		resp, err := c.client.Logical().Read("sys/config/state/sanitized")
 		if err != nil {
 			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
@@ -494,63 +499,70 @@ func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
 
 // capturePollingTargets captures all dynamic targets over the specified
 // duration and interval.
-func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
+func (c *DebugCommand) capturePollingTargets() error {
 	var g run.Group
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), c.flagDuration+debugDurationGrace)
 
 	// This run group watches for interrupt or duration
 	g.Add(func() error {
-		durationCh := time.After(c.flagDuration + debugDurationGrace)
 		for {
 			select {
 			case <-c.ShutdownCh:
 				return nil
-			case <-durationCh:
+			case <-ctx.Done():
 				return nil
 			}
 		}
 	}, func(error) {})
 
+	// Collect host-info if target is specified
+	if strutil.StrListContains(c.flagTargets, "host") {
+		g.Add(func() error {
+			c.collectHostInfo(ctx)
+			return nil
+		}, func(error) {
+			cancelFunc()
+		})
+	}
+
 	// Collect metrics if target is specified
 	if strutil.StrListContains(c.flagTargets, "metrics") {
-		stopCh := make(chan struct{})
 		g.Add(func() error {
-			c.collectMetrics(client, stopCh)
+			c.collectMetrics(ctx)
 			return nil
 		}, func(error) {
-			close(stopCh)
+			cancelFunc()
 		})
 	}
 
-	// Collect host-info if target is specified
-	if strutil.StrListContains(c.flagTargets, "host-info") {
-		stopCh := make(chan struct{})
+	// Collect pprof data if target is specified
+	if strutil.StrListContains(c.flagTargets, "pprof") {
 		g.Add(func() error {
-			c.collectHostInfo(client, stopCh)
+			c.collectPprof(ctx)
 			return nil
 		}, func(error) {
-			close(stopCh)
+			cancelFunc()
 		})
 	}
 
-	// Collect replication status
+	// Collect replication status if target is specified
 	if strutil.StrListContains(c.flagTargets, "replication-status") {
-		stopCh := make(chan struct{})
 		g.Add(func() error {
-			c.collectReplicationStatus(client, stopCh)
+			c.collectReplicationStatus(ctx)
 			return nil
 		}, func(error) {
-			close(stopCh)
+			cancelFunc()
 		})
 	}
 
-	// Collect server status
+	// Collect server status if target is specified
 	if strutil.StrListContains(c.flagTargets, "server-status") {
-		stopCh := make(chan struct{})
 		g.Add(func() error {
-			c.collectServerStatus(client, stopCh)
+			c.collectServerStatus(ctx)
 			return nil
 		}, func(error) {
-			close(stopCh)
+			cancelFunc()
 		})
 	}
 
@@ -577,18 +589,19 @@ func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
 	return nil
 }
 
-func (c *DebugCommand) collectHostInfo(client *api.Client, stopCh chan struct{}) {
+func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 	for {
 		select {
-		case <-stopCh:
+		case <-ctx.Done():
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing host information", "count", idxCount)
+			idxCount++
 
-			r := client.NewRequest("GET", "/v1/sys/host-info")
-			resp, err := client.RawRequest(r)
+			r := c.client.NewRequest("GET", "/v1/sys/host-info")
+			resp, err := c.client.RawRequestWithContext(ctx, r)
 			if err != nil {
 				c.captureError("host", err)
 			}
@@ -607,18 +620,18 @@ func (c *DebugCommand) collectHostInfo(client *api.Client, stopCh chan struct{})
 	}
 }
 
-func (c *DebugCommand) collectMetrics(client *api.Client, stopCh chan struct{}) {
+func (c *DebugCommand) collectMetrics(ctx context.Context) {
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 	for {
 		select {
-		case <-stopCh:
+		case <-ctx.Done():
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing metrics", "count", idxCount)
 			idxCount++
 
-			healthStatus, err := client.Sys().Health()
+			healthStatus, err := c.client.Sys().Health()
 			if err != nil {
 				c.captureError("metrics", err)
 				continue
@@ -638,8 +651,8 @@ func (c *DebugCommand) collectMetrics(client *api.Client, stopCh chan struct{}) 
 			}
 
 			// Perform metrics request
-			r := client.NewRequest("GET", "/v1/sys/metrics")
-			resp, err := client.RawRequest(r)
+			r := c.client.NewRequest("GET", "/v1/sys/metrics")
+			resp, err := c.client.RawRequestWithContext(ctx, r)
 			if err != nil {
 				c.captureError("metrics", err)
 				continue
@@ -658,16 +671,17 @@ func (c *DebugCommand) collectMetrics(client *api.Client, stopCh chan struct{}) 
 	}
 }
 
-func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
+func (c *DebugCommand) collectPprof(ctx context.Context) {
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 	startTime := time.Now()
 	for {
 		select {
-		case <-stopCh:
+		case <-ctx.Done():
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing pprof data", "count", idxCount)
+			idxCount++
 
 			// Create a sub-directory for pprof data
 			currentTimestamp := time.Now().UTC()
@@ -679,7 +693,7 @@ func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
 			}
 
 			// Capture goroutines
-			data, err := pprofGoroutine(client)
+			data, err := pprofGoroutine(ctx, c.client)
 			if err != nil {
 				c.captureError("pprof.goroutine", err)
 			} else {
@@ -690,7 +704,7 @@ func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
 			}
 
 			// Capture heap
-			data, err = pprofHeap(client)
+			data, err = pprofHeap(ctx, c.client)
 			if err != nil {
 				c.captureError("pprof.heap", err)
 			} else {
@@ -710,11 +724,11 @@ func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
 			// We want to add 2 at a time to ensure that we capture both at the
 			// same interval slice.
 			var wg sync.WaitGroup
-			wg.Add(2)
+			wg.Add(1)
 			// Capture profile
 			go func() {
 				defer wg.Done()
-				data, err := pprofProfile(client, c.flagInterval)
+				data, err := pprofProfile(ctx, c.client, c.flagInterval)
 				if err != nil {
 					c.captureError("pprof.profile", err)
 					return
@@ -727,9 +741,10 @@ func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
 			}()
 
 			// Capture trace
+			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				data, err := pprofTrace(client, c.flagInterval)
+				data, err := pprofTrace(ctx, c.client, c.flagInterval)
 				if err != nil {
 					c.captureError("pprof.trace", err)
 					return
@@ -746,18 +761,19 @@ func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
 	}
 }
 
-func (c *DebugCommand) collectReplicationStatus(client *api.Client, stopCh chan struct{}) {
+func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 	for {
 		select {
-		case <-stopCh:
+		case <-ctx.Done():
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing replication status", "count", idxCount)
+			idxCount++
 
-			r := client.NewRequest("GET", "/v1/sys/replication/status")
-			resp, err := client.RawRequest(r)
+			r := c.client.NewRequest("GET", "/v1/sys/replication/status")
+			resp, err := c.client.RawRequestWithContext(ctx, r)
 			if err != nil {
 				c.captureError("replication-status", err)
 			}
@@ -777,21 +793,22 @@ func (c *DebugCommand) collectReplicationStatus(client *api.Client, stopCh chan 
 	}
 }
 
-func (c *DebugCommand) collectServerStatus(client *api.Client, stopCh chan struct{}) {
+func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 	for {
 		select {
-		case <-stopCh:
+		case <-ctx.Done():
 			return
 		case <-intervalTicker:
 			c.logger.Info("capturing server status", "count", idxCount)
+			idxCount++
 
-			healthInfo, err := client.Sys().Health()
+			healthInfo, err := c.client.Sys().Health()
 			if err != nil {
 				c.captureError("server-status.health", err)
 			}
-			sealInfo, err := client.Sys().SealStatus()
+			sealInfo, err := c.client.Sys().SealStatus()
 			if err != nil {
 				c.captureError("server-status.seal", err)
 			}
@@ -839,9 +856,9 @@ func (c *DebugCommand) compress(dst string) error {
 	return nil
 }
 
-func pprofGoroutine(client *api.Client) ([]byte, error) {
+func pprofGoroutine(ctx context.Context, client *api.Client) ([]byte, error) {
 	req := client.NewRequest("GET", "/v1/sys/pprof/goroutine")
-	resp, err := client.RawRequest(req)
+	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -855,9 +872,9 @@ func pprofGoroutine(client *api.Client) ([]byte, error) {
 	return data, nil
 }
 
-func pprofHeap(client *api.Client) ([]byte, error) {
+func pprofHeap(ctx context.Context, client *api.Client) ([]byte, error) {
 	req := client.NewRequest("GET", "/v1/sys/pprof/heap")
-	resp, err := client.RawRequest(req)
+	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -871,13 +888,13 @@ func pprofHeap(client *api.Client) ([]byte, error) {
 	return data, nil
 }
 
-func pprofProfile(client *api.Client, duration time.Duration) ([]byte, error) {
+func pprofProfile(ctx context.Context, client *api.Client, duration time.Duration) ([]byte, error) {
 	seconds := int(duration.Seconds())
 	secStr := strconv.Itoa(seconds)
 
 	req := client.NewRequest("GET", "/v1/sys/pprof/profile")
 	req.Params.Add("seconds", secStr)
-	resp, err := client.RawRequest(req)
+	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -891,13 +908,13 @@ func pprofProfile(client *api.Client, duration time.Duration) ([]byte, error) {
 	return data, nil
 }
 
-func pprofTrace(client *api.Client, duration time.Duration) ([]byte, error) {
+func pprofTrace(ctx context.Context, client *api.Client, duration time.Duration) ([]byte, error) {
 	seconds := int(duration.Seconds())
 	secStr := strconv.Itoa(seconds)
 
 	req := client.NewRequest("GET", "/v1/sys/pprof/trace")
 	req.Params.Add("seconds", secStr)
-	resp, err := client.RawRequest(req)
+	resp, err := client.RawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}
