@@ -639,7 +639,7 @@ func (c *DebugCommand) collectMetrics(ctx context.Context) {
 	// right away.
 	intervalTicker := make(chan time.Time, 1)
 	intervalTicker <- time.Now()
-	tick := time.NewTicker(c.flagInterval)
+	tick := time.NewTicker(c.flagMetricsInterval)
 	go func() {
 		for t := range tick.C {
 			intervalTicker <- t
