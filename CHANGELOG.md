@@ -70,7 +70,9 @@ BUG FIXES:
    `.well-known/openid-configuration` response [GH-7533]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
- * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
+ * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
+ * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
+   viewed in the UI [GH-7504]
    
 ## 1.2.3 (September 12, 2019)
 
