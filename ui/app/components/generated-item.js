@@ -48,7 +48,7 @@ export default Component.extend({
     deleteItem() {
       this.model.destroyRecord().then(() => {
         this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-        this.flashMessages.success(`${this.model.id} ${this.itemType} was deleted successfully.`);
+        this.flashMessages.success(`Successfully deleted ${this.itemType} ${this.name}.`);
       });
     },
   },
