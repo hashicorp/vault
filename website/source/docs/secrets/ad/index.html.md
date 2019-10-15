@@ -296,11 +296,11 @@ All revocation operations queued successfully!
 
 ### Troubleshooting
 
-#### Old passwords are still valid for 5 minutes.
+#### Old passwords are still valid for a period of time.
 
 During testing, we found that by default, many versions of Active Directory
-perpetuate old passwords for 5 minutes. After we discovered this behavior,
-we found articles discussing it by searching for "AD password caching". We 
+perpetuate old passwords for a short while. After we discovered this behavior,
+we found articles discussing it by searching for "AD password caching" and "OldPasswordAllowedPeriod". We 
 also found [an article from Microsoft](https://support.microsoft.com/en-us/help/906305/new-setting-modifies-ntlm-network-authentication-behavior)
 discussing how to configure this behavior. This behavior appears to vary by AD
 version. We recommend you test the behavior of your particular AD server,
