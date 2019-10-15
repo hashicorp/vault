@@ -246,10 +246,11 @@ export default Service.extend({
         return this.urlForItem(id, modelName);
       },
 
-      // if there is an id and we are listing, use the id to construct the path
       urlForUpdateRecord(id) {
-        const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
-        return `${this.buildURL()}/${apiPath}${path}/${id}`;
+        // nested items always have a '/' in the id
+        const itemName = id.split('/').slice(1);
+        const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
+        return `${this.buildURL()}/${apiPath}${itemType}/${itemName}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
