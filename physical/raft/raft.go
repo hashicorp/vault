@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/armon/go-metrics"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,12 +13,11 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
@@ -367,6 +367,26 @@ type SetupOpts struct {
 	// StartAsLeader is used to specify this node should start as leader and
 	// bypass the leader election. This should be used with caution.
 	StartAsLeader bool
+
+	// RecoveryModeConfig is the configuration for the raft cluster in recovery
+	// mode.
+	RecoveryModeConfig *raft.Configuration
+}
+
+func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
+	recoveryModeConfig := &raft.Configuration{
+		Servers: []raft.Server{
+			{
+				ID:      raft.ServerID(peer.ID),
+				Address: raft.ServerAddress(peer.Address),
+			},
+		},
+	}
+
+	return b.SetupCluster(context.Background(), SetupOpts{
+		StartAsLeader:      true,
+		RecoveryModeConfig: recoveryModeConfig,
+	})
 }
 
 // SetupCluster starts the raft cluster and enables the networking needed for
@@ -475,6 +495,13 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to delete peers.json; please delete manually: {{err}}", err)
 		}
 		b.logger.Info("raft recovery deleted peers.json")
+	}
+
+	if opts.RecoveryModeConfig != nil {
+		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *opts.RecoveryModeConfig)
+		if err != nil {
+			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
+		}
 	}
 
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)

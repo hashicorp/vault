@@ -2,6 +2,11 @@
 
 FEATURES:
 
+ * **Recovery Mode**: Vault server can be brought up in recovery mode to resolve
+   outages caused due to data store being in bad state. This is a privileged mode
+   that allows `sys/raw` API calls to perform surgical corrections to the data
+   store. Bad storage state can be caused by bugs. However, this is usually
+   observed when known (and fixed) bugs are hit by older versions of Vault.
  * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
@@ -13,6 +18,10 @@ FEATURES:
 
 CHANGES: 
 
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
 
@@ -41,33 +50,47 @@ IMPROVEMENTS:
    returns the configuration state of the server. It excludes config values
    from `storage`, `ha_storage`, and `seal` stanzas and some values
    from `telemetry` due to potential sensitive entries in those fields.
+ * ui: when using raft storage, you can now join a raft cluster, download a
+   snapshot, and restore a snapshot from the UI [GH-7410]
    
 
 BUG FIXES:
 
- * agent: Fix handling of gzipped responses [GH-7470]
  * auth/gcp: Fix a bug where region information in instance groups names could
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
- * identity: Add required field `response_types_supported` to identity token
-   `.well-known/openid-configuration` response [GH-7533]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
- * secrets/database: Fix bug in combined DB secrets engine that can result in
-   writes to static-roles endpoints timing out [GH-7518]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
+ * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
  
 ## 1.2.4 (Unreleased)
 
+CHANGES: 
+
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
+
+IMPROVEMENTS:
+  * cli: Ignore existing token during CLI login [GH-7508]
+  * core: Log proxy settings from environment on startup [GH-7528]
+
 BUG FIXES:
 
-  * cli: Fix panic when pgp keys list is empty [GH-7546]
-  * secrets/database: Fix bug in combined DB secrets engine that can result in
-    writes to static-roles endpoints timing out [GH-7518]
-  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
+ * agent: Fix handling of gzipped responses [GH-7470]
+ * cli: Fix panic when pgp keys list is empty [GH-7546]
+ * identity: Add required field `response_types_supported` to identity token
+   `.well-known/openid-configuration` response [GH-7533]
+ * secrets/database: Fix bug in combined DB secrets engine that can result in
+   writes to static-roles endpoints timing out [GH-7518]
+ * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
+ * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
+   viewed in the UI [GH-7504]
    
 ## 1.2.3 (September 12, 2019)
 
