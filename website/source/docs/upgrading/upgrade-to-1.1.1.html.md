@@ -36,6 +36,24 @@ config setting `use_pre111_group_cn_behavior` to allow reverting to the old
 matching behavior; we also attempt to upgrade exiting configs to have that
 defaulted to true.
 
+
+### Long WAL replay
+
+-> **NOTE:** This is a known issue applicable to _Vault Enterprise_.
+
+During upgrades to 1.1.0, 1.1.1 or 1.1.2, Vault replication secondaries may
+require an automatically-triggered reindex, either if upgrading from a pre-0.8
+version of Vault or if a previously-issued reindex operation has failed in the
+past. In these reindex scenarios, the secondary cluster will perform a complete
+WAL replay, which can take a long time and is a partially blocking operation.
+
+This is fixed in [Vault
+1.1.3](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#113-june-5th-2019),
+and we recommend upgrading to Vault 1.1.3+ rather than any prior 1.1.x version.
+We also strongly recommend upgrading your Vault cluster to 1.1.3 if you are
+running Vault Enterprise 1.1.0, 1.1.1 or 1.1.2.
+
+
 ## JWT/OIDC Plugin
 
 Logins of role_type "oidc" via the /login path are no longer allowed.
@@ -52,19 +70,3 @@ matched.
 Due to technical limitations, mounting and unmounting was not previously
 possible from a performance secondary. These have been resolved, and these
 operations may now be run from a performance secondary.
-
-## Known Issues
-
--> **NOTE:** This is a known issue applicable to _Vault Enterprise_.
-
-During upgrades to 1.1.0, 1.1.1 or 1.1.2, Vault replication secondaries may
-require an automatically-triggered reindex, either if upgrading from a pre-0.8
-version of Vault or if a previously-issued reindex operation has failed in the
-past. In these reindex scenarios, the secondary cluster will perform a complete
-WAL replay, which can take a long time and is a partially blocking operation.
-
-This is fixed in [Vault
-1.1.3](https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#113-june-5th-2019),
-and we recommend upgrading to Vault 1.1.3+ rather than any prior 1.1.x version.
-We also strongly recommend upgrading your Vault cluster to 1.1.3 if you are
-running Vault Enterprise 1.1.0, 1.1.1 or 1.1.2.
