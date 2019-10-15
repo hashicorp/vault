@@ -1963,6 +1963,7 @@ func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 		c.seal = newSeal
 		c.seal.SetCore(c)
 		c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationSeal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
+		c.initSealsForMigration()
 	}
 }
 
