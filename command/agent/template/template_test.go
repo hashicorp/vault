@@ -51,8 +51,6 @@ func TestServerRun(t *testing.T) {
 		},
 	}
 
-	templateTokenCh := make(chan string, 1)
-
 	// secretRender is a simple struct that represents the secret we render to
 	// disk. It's used to unmarshal the file contents and test against
 	type secretRender struct {
@@ -64,6 +62,7 @@ func TestServerRun(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			for i, template := range tc.templates {
+				templateTokenCh := make(chan string, 1)
 				dstFile := fmt.Sprintf("%s/render_%d.txt", tmpDir, i)
 				template.Destination = testhelpers.StrPtr(dstFile)
 
@@ -90,7 +89,6 @@ func TestServerRun(t *testing.T) {
 				// info
 				templateTokenCh <- "test"
 
-				// Unblock should close immediately b/c there are no templates to render
 				select {
 				case <-ctx.Done():
 				case <-server.UnblockCh:
@@ -107,7 +105,7 @@ func TestServerRun(t *testing.T) {
 
 				secret := secretRender{}
 				if err := json.Unmarshal(content, &secret); err != nil {
-					panic(err)
+					t.Fatal(err)
 				}
 				if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
 					t.Fatalf("secret didn't match: %#v", secret)
