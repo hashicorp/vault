@@ -11,6 +11,8 @@ export default Route.extend({
     const methodModel = this.modelFor('vault.cluster.access.method');
     const { type } = methodModel;
     const modelType = `generated-${singularize(itemType)}-${type}`;
+    // this is necessary to prevent name clashing in the case where there are 2 generated items
+    // with the same name under different auth backends. for example, userpass/bob and radius/bob
     const id = `${method}/${itemName}`;
     return this.store.findRecord(modelType, id);
   },
