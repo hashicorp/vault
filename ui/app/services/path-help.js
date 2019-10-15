@@ -248,7 +248,7 @@ export default Service.extend({
 
       urlForUpdateRecord(id) {
         // nested items always have a '/' in the id
-        const itemName = id.split('/').slice(1);
+        const itemName = id.split('/').pop();
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${itemType}/${itemName}`;
       },
