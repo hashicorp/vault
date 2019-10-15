@@ -649,9 +649,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	c.logGate.Flush()
 
-	shutdownTriggered := false
-
-	for !shutdownTriggered {
+	for {
 		select {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
@@ -662,7 +660,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 				c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
 			}
 
-			shutdownTriggered = true
+			return 0
 
 		case <-c.SigUSR2Ch:
 			buf := make([]byte, 32*1024*1024)

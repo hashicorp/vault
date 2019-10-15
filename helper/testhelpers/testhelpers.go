@@ -22,9 +22,9 @@ import (
 type GenerateRootKind int
 
 const (
-	GenerateRootRegular GenerateRootKind = 1
-	GenerateRootDR      GenerateRootKind = 2
-	GenerateRecovery    GenerateRootKind = 3
+	GenerateRootRegular GenerateRootKind = iota
+	GenerateRootDR
+	GenerateRecovery
 )
 
 // Generates a root token on the target cluster.

@@ -26,9 +26,9 @@ var _ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
 type generateRootKind int
 
 const (
-	generateRootRegular  generateRootKind = 1
-	generateRootDR       generateRootKind = 2
-	generateRootRecovery generateRootKind = 3
+	generateRootRegular generateRootKind = iota
+	generateRootDR
+	generateRootRecovery
 )
 
 type OperatorGenerateRootCommand struct {
