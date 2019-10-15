@@ -63,6 +63,7 @@ BUG FIXES:
 ## 1.2.4 (Unreleased)
 
 IMPROVEMENTS:
+  * cli: Ignore existing token during CLI login [GH-7508]
   * core: Log proxy settings from environment on startup [GH-7528]
 
 BUG FIXES:
