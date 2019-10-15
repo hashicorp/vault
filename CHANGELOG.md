@@ -62,6 +62,9 @@ BUG FIXES:
  
 ## 1.2.4 (Unreleased)
 
+IMPROVEMENTS:
+  * core: Log proxy settings from environment on startup [GH-7528]
+
 BUG FIXES:
 
  * agent: Fix handling of gzipped responses [GH-7470]
