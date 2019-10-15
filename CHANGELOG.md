@@ -18,6 +18,10 @@ FEATURES:
 
 CHANGES: 
 
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
 
@@ -61,6 +65,13 @@ BUG FIXES:
    will automatically log in as intended [GH-7398]
  
 ## 1.2.4 (Unreleased)
+
+CHANGES: 
+
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
 
 IMPROVEMENTS:
   * cli: Ignore existing token during CLI login [GH-7508]
