@@ -298,8 +298,6 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 }
 
 func TestDebugCommand_Pprof(t *testing.T) {
-	t.Parallel()
-
 	testDir, err := ioutil.TempDir("", "vault-debug")
 	if err != nil {
 		t.Fatal(err)
@@ -315,11 +313,12 @@ func TestDebugCommand_Pprof(t *testing.T) {
 
 	basePath := "pprof"
 	outputPath := filepath.Join(testDir, basePath)
-	// pprof requires a minimum interval of 1s
+	// pprof requires a minimum interval of 1s, we set it to 2 to ensure it
+	// runs through and reduce flakiness on slower systems.
 	args := []string{
 		"-compress=false",
-		"-duration=1s",
-		"-interval=1s",
+		"-duration=2s",
+		"-interval=2s",
 		fmt.Sprintf("-output=%s", outputPath),
 		"-target=pprof",
 	}

@@ -708,40 +708,50 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 			continue
 		}
 
+		var wg sync.WaitGroup
+
 		// Capture goroutines
-		data, err := pprofGoroutine(ctx, c.cachedClient)
-		if err != nil {
-			c.captureError("pprof.goroutine", err)
-		} else {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			data, err := pprofGoroutine(ctx, c.cachedClient)
+			if err != nil {
+				c.captureError("pprof.goroutine", err)
+				return
+			}
+
 			err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
 			if err != nil {
 				c.captureError("pprof.goroutine", err)
 			}
-		}
+		}()
 
 		// Capture heap
-		data, err = pprofHeap(ctx, c.cachedClient)
-		if err != nil {
-			c.captureError("pprof.heap", err)
-		} else {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			data, err := pprofHeap(ctx, c.cachedClient)
+			if err != nil {
+				c.captureError("pprof.heap", err)
+				return
+			}
+
 			err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
 			if err != nil {
 				c.captureError("pprof.heap", err)
 			}
-		}
+		}()
 
 		// If the our remaining duration is less than the interval value
 		// skip profile and trace.
 		runDuration := currentTimestamp.Sub(startTime)
 		if (c.flagDuration+debugDurationGrace)-runDuration < c.flagInterval {
+			wg.Wait()
 			continue
 		}
 
-		// We want to add 2 at a time to ensure that we capture both at the
-		// same interval slice.
-		var wg sync.WaitGroup
-		wg.Add(1)
 		// Capture profile
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			data, err := pprofProfile(ctx, c.cachedClient, c.flagInterval)
