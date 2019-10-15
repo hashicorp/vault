@@ -331,7 +331,7 @@ the end.
 
 Active Directory is eventually consistent, meaning that it can take some time for word
 of a new password to travel across all AD instances in a cluster. In larger clusters, we
-have observed the password taking over 10 seconds to propagate fully. The simplest way to 
+have seen the password taking over 10 seconds to propagate fully. The simplest way to 
 handle this is to simply wait and retry using the new password.
 
 ## API
