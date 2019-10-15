@@ -123,7 +123,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
-					// TODO: continue or fail here? Right now we just continue
 					continue
 				} else {
 					go ts.runner.Start()

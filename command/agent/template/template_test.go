@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
@@ -33,6 +34,7 @@ func TestServerRun(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(handleRequest))
 	defer ts.Close()
 	tmpDir, err := ioutil.TempDir("", "agent-tests")
+	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +65,6 @@ func TestServerRun(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			for i, template := range tc.templates {
-				// template.Destination = testhelpers.StrPtr(fmt.Sprintf("%s/render_%d.txt", tmpDir, i))
 				dstFile := fmt.Sprintf("%s/render_%d.txt", tmpDir, i)
 				template.Destination = testhelpers.StrPtr(dstFile)
 
