@@ -48,6 +48,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 	var existSeal vault.Seal
 	var newSeal vault.Seal
 
+	// TODO(mjg): this prevents migration from/to the same seal type
 	if existBarrierSealConfig.Type == barrierSeal.BarrierType() {
 		// In this case our migration seal is set so we are using it
 		// (potentially) for unwrapping. Set it on core for that purpose then
