@@ -5,13 +5,18 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
   urlForItem() {},
 
-  fetchByQuery(store, query) {
-    const { id, type } = query;
-    return this.ajax(this.urlForItem(id, type), 'GET', { data: { list: true } }).then(resp => {
+  fetchByQuery(store, query, isList) {
+    const { id, authMethodPath } = query;
+    let data = {};
+    if (isList) {
+      data.list = true;
+    }
+
+    return this.ajax(this.urlForItem(id, isList), 'GET', { data }).then(resp => {
       const data = {
         id,
         name: id,
-        method: id,
+        method: authMethodPath,
       };
 
       return assign({}, resp, data);
@@ -19,6 +24,10 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
+    return this.fetchByQuery(store, query, true);
+  },
+
+  queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
   },
 });

@@ -223,34 +223,25 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(id /* modelName */) {
+      urlForItem(id, isList) {
         let url;
         id = encodePath(id);
-        const mountType = apiPath.split('/')[0];
 
-        // if the id has a '/', we are getting the show page of a nested item
-        // e.g. userpass users or groups
-        if (id.indexOf('/') !== -1) {
-          id = id.split('/').join(`/${getPath.path.slice(1)}/`);
-          url = `${this.buildURL()}/${mountType}/${id}`;
+        if (isList) {
+          url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/`;
         } else {
-          // build the url for the list page of a top-level item
-          // e.g. userpass
-          url = `${this.buildURL()}/${mountType}/${id}/${getPath.path.slice(1)}/`;
+          url = `${this.buildURL()}/${apiPath}${getPath.path.slice(1)}/${id}`;
         }
-
         return url;
       },
 
-      urlForFindRecord(id, modelName) {
+      urlForQueryRecord(id, modelName) {
         return this.urlForItem(id, modelName);
       },
 
       urlForUpdateRecord(id) {
-        // nested items always have a '/' in the id
-        const itemName = id.split('/').pop();
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
-        return `${this.buildURL()}/${apiPath}${itemType}/${itemName}`;
+        return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
       },
 
       urlForCreateRecord(modelType, snapshot) {
