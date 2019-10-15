@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -151,9 +152,8 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 
 	// Setup the Vault config
 	// Always set these to ensure nothing is picked up from the environment
-	emptyStr := ""
-	conf.Vault.RenewToken = boolPtr(false)
-	conf.Vault.Token = &emptyStr
+	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
+	conf.Vault.Token = pointerutil.StringPtr("")
 	conf.Vault.Address = &sc.VaultConf.Address
 
 	if sc.Namespace != "" {
@@ -161,20 +161,20 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 	}
 
 	conf.Vault.SSL = &ctconfig.SSLConfig{
-		Enabled:    boolPtr(false),
-		Verify:     boolPtr(false),
-		Cert:       &emptyStr,
-		Key:        &emptyStr,
-		CaCert:     &emptyStr,
-		CaPath:     &emptyStr,
-		ServerName: &emptyStr,
+		Enabled:    pointerutil.BoolPtr(false),
+		Verify:     pointerutil.BoolPtr(false),
+		Cert:       pointerutil.StringPtr(""),
+		Key:        pointerutil.StringPtr(""),
+		CaCert:     pointerutil.StringPtr(""),
+		CaPath:     pointerutil.StringPtr(""),
+		ServerName: pointerutil.StringPtr(""),
 	}
 
 	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
 		skipVerify := sc.VaultConf.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled: boolPtr(true),
+			Enabled: pointerutil.BoolPtr(true),
 			Verify:  &verify,
 			Cert:    &sc.VaultConf.ClientCert,
 			Key:     &sc.VaultConf.ClientKey,
@@ -185,8 +185,4 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 
 	conf.Finalize()
 	return conf
-}
-
-func boolPtr(b bool) *bool {
-	return &b
 }
