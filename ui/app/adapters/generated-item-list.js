@@ -6,7 +6,7 @@ export default ApplicationAdapter.extend({
   urlForItem() {},
 
   fetchByQuery(store, query, isList) {
-    const { id, authMethodPath } = query;
+    const { id } = query;
     let data = {};
     if (isList) {
       data.list = true;
@@ -15,10 +15,8 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.urlForItem(id, isList), 'GET', { data }).then(resp => {
       const data = {
         id,
-        name: id,
-        method: authMethodPath,
+        method: id,
       };
-
       return assign({}, resp, data);
     });
   },
