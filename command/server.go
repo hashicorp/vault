@@ -488,41 +488,45 @@ func (c *ServerCommand) runRecoveryMode() int {
 		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
 	}
 
-	for _, configSeal := range config.Seals {
-		sealType := vaultseal.Shamir
-		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-			configSeal.Type = sealType
-		} else {
-			sealType = configSeal.Type
-		}
+	if len(config.Seals) > 1 {
+		c.UI.Error("Only one seal block is accepted in recovery mode")
+		return 1
+	}
 
-		var seal vault.Seal
-		sealLogger := c.logger.Named(sealType)
-		seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-				c.UI.Error(fmt.Sprintf(
-					"Error parsing Seal configuration: %s", sealConfigError))
-				return 1
-			}
-		}
-		if seal == nil {
+	configSeal := config.Seals[0]
+	sealType := vaultseal.Shamir
+	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+		sealType = os.Getenv("VAULT_SEAL_TYPE")
+		configSeal.Type = sealType
+	} else {
+		sealType = configSeal.Type
+	}
+
+	var seal vault.Seal
+	sealLogger := c.logger.Named(sealType)
+	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+	if sealConfigError != nil {
+		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 			c.UI.Error(fmt.Sprintf(
-				"After configuring seal nil returned, seal type was %s", sealType))
+				"Error parsing Seal configuration: %s", sealConfigError))
 			return 1
 		}
-
-		barrierSeal = seal
-
-		// Ensure that the seal finalizer is called, even if using verify-only
-		defer func() {
-			err = seal.Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}()
 	}
+	if seal == nil {
+		c.UI.Error(fmt.Sprintf(
+			"After configuring seal nil returned, seal type was %s", sealType))
+		return 1
+	}
+
+	barrierSeal = seal
+
+	// Ensure that the seal finalizer is called, even if using verify-only
+	defer func() {
+		err = seal.Finalize(context.Background())
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+		}
+	}()
 
 	coreConfig := &vault.CoreConfig{
 		Physical:     backend,
