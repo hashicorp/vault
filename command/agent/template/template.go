@@ -28,15 +28,15 @@ type ServerConfig struct {
 
 // Server manages the Consul Template Runner which renders templates
 type Server struct {
+	// UnblockCh is used to block until a template is rendered
+	UnblockCh chan struct{}
+
 	// config holds the ServerConfig used to create it. It's passed along in other
 	// methods
 	config *ServerConfig
 
 	// runner is the consul-template runner
 	runner *manager.Runner
-
-	// unblockCh is used to block until a template is rendered
-	unblockCh chan struct{}
 
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
@@ -48,16 +48,15 @@ type Server struct {
 }
 
 // NewServer returns a new configured server
-func NewServer(conf *ServerConfig) (*Server, <-chan struct{}) {
-	unblock := make(chan struct{})
+func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
-		unblockCh:     unblock,
+		UnblockCh:     make(chan struct{}),
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
 	}
-	return &ts, unblock
+	return &ts
 }
 
 // Run kicks off the internal Consul Template runner, and listens for changes to
@@ -75,11 +74,11 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		panic("incoming channel is nil")
 	}
 
-	// If there are no templates, close the unblockCh
+	// If there are no templates, close the UnblockCh
 	if len(templates) == 0 {
 		// nothing to do
 		ts.logger.Info("no templates found")
-		close(ts.unblockCh)
+		close(ts.UnblockCh)
 		return
 	}
 
@@ -88,7 +87,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
 		ts.logger.Error("template server failed to generate runner config")
-		close(ts.unblockCh)
+		close(ts.UnblockCh)
 		return
 	}
 
@@ -96,7 +95,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Error("template server failed to create", "error", err)
-		close(ts.unblockCh)
+		close(ts.UnblockCh)
 		return
 	}
 
@@ -130,7 +129,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
-			close(ts.unblockCh)
+			close(ts.UnblockCh)
 			return
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, unblock
@@ -138,7 +137,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// if we want to exit after auth, go ahead and shut down the runner
 				ts.runner.Stop()
 			}
-			close(ts.unblockCh)
+			close(ts.UnblockCh)
 		}
 	}
 }

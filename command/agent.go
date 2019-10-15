@@ -502,7 +502,6 @@ func (c *AgentCommand) Run(args []string) int {
 	// signal.Notify(c.signalCh)
 
 	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
-	var unblockCh <-chan struct{}
 	var ts *template.Server
 	// Start auto-auth and sink servers
 	if method != nil {
@@ -523,7 +522,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// create an independent vault configuration for Consul Template to use
 		vaultConfig := c.setupTemplateConfig()
-		ts, unblockCh = template.NewServer(&template.ServerConfig{
+		ts = template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
 			VaultConf:     vaultConfig,
 			Namespace:     namespace,
@@ -567,7 +566,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// Wait for the template to render
 	select {
 	case <-ctx.Done():
-	case <-unblockCh:
+	case <-ts.UnblockCh:
 	}
 
 	select {

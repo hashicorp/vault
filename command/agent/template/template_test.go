@@ -20,11 +20,11 @@ import (
 // TestNewServer is a simple test to make sure NewServer returns a Server and
 // channel
 func TestNewServer(t *testing.T) {
-	ts, ch := NewServer(&ServerConfig{})
-	if ts == nil {
+	server := NewServer(&ServerConfig{})
+	if server == nil {
 		t.Fatal("nil server returned")
 	}
-	if ch == nil {
+	if server.UnblockCh == nil {
 		t.Fatal("nil blocking channel returned")
 	}
 }
@@ -52,7 +52,6 @@ func TestServerRun(t *testing.T) {
 	}
 
 	templateTokenCh := make(chan string, 1)
-	var unblockCh <-chan struct{}
 
 	// secretRender is a simple struct that represents the secret we render to
 	// disk. It's used to unmarshal the file contents and test against
@@ -77,11 +76,11 @@ func TestServerRun(t *testing.T) {
 				}
 
 				var server *Server
-				server, unblockCh = NewServer(&sc)
+				server = NewServer(&sc)
 				if ts == nil {
 					t.Fatal("nil server returned")
 				}
-				if unblockCh == nil {
+				if server.UnblockCh == nil {
 					t.Fatal("nil blocking channel returned")
 				}
 
@@ -94,7 +93,7 @@ func TestServerRun(t *testing.T) {
 				// Unblock should close immediately b/c there are no templates to render
 				select {
 				case <-ctx.Done():
-				case <-unblockCh:
+				case <-server.UnblockCh:
 				}
 
 				// cancel to clean things up
