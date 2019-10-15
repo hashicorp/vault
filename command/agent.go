@@ -574,9 +574,6 @@ func (c *AgentCommand) Run(args []string) int {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
-	// case <-c.SighupCh:
-	// TODO: implement reloading
-	// 	c.UI.Output("==> Vault Agent reload triggered")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -692,31 +689,18 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 
 // setupTemplateConfig creates a config.Vault struct for use by Consul Template.
 // Consul Template does not currently allow us to pass in a configured API
-// client, unlike the AuthHandler and SinkServer that reuse the client creted in
-// this Run() method. Here we build a config.Vault struct for use by the
+// client, unlike the AuthHandler and SinkServer that reuse the client created
+// in this Run() method. Here we build a config.Vault struct for use by the
 // Template Server that matches the configuration used to create the client
 // (c.client), but in a struct of type config.Vault so that Consul Template can
 // create it's own api client internally.
-// TODO test setupTemplateConfig
 func (c *AgentCommand) setupTemplateConfig() *config.Vault {
-	cfg := new(config.Vault)
-
-	if c.flagAddress != "" {
-		cfg.Address = c.flagAddress
+	return &config.Vault{
+		Address:       c.flagAddress,
+		CACert:        c.flagCACert,
+		CAPath:        c.flagCAPath,
+		ClientCert:    c.flagClientCert,
+		ClientKey:     c.flagClientKey,
+		TLSSkipVerify: c.flagTLSSkipVerify,
 	}
-	if c.flagCACert != "" {
-		cfg.CACert = c.flagCACert
-	}
-	if c.flagCAPath != "" {
-		cfg.CAPath = c.flagCAPath
-	}
-	if c.flagClientCert != "" {
-		cfg.ClientCert = c.flagClientCert
-	}
-	if c.flagClientKey != "" {
-		cfg.ClientKey = c.flagClientKey
-	}
-	cfg.TLSSkipVerify = c.flagTLSSkipVerify
-
-	return cfg
 }
