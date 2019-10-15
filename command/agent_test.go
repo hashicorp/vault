@@ -1,16 +1,23 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	"github.com/hashicorp/vault/api"
+	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -369,4 +376,247 @@ auto_auth {
 	if string(sink1Bytes) != string(sink2Bytes) {
 		t.Fatal("sink 1/2 values don't match")
 	}
+}
+
+func TestAgent_RequireRequestHeader(t *testing.T) {
+
+	// request issues HTTP requests.
+	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
+		resp, err := client.RawRequest(req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.StatusCode != expectedStatusCode {
+			t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
+		}
+
+		bytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if len(bytes) == 0 {
+			return nil
+		}
+
+		var body map[string]interface{}
+		err = json.Unmarshal(bytes, &body)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		return body
+	}
+
+	// makeTempFile creates a temp file and populates it.
+	makeTempFile := func(name, contents string) string {
+		f, err := ioutil.TempFile("", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := f.Name()
+		f.WriteString(contents)
+		f.Close()
+		return path
+	}
+
+	// newApiClient creates an *api.Client.
+	newApiClient := func(addr string, includeVaultRequestHeader bool) *api.Client {
+		conf := api.DefaultConfig()
+		conf.Address = addr
+		cli, err := api.NewClient(conf)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		h := cli.Headers()
+		val, ok := h[consts.RequestHeaderName]
+		if !ok || !reflect.DeepEqual(val, []string{"true"}) {
+			t.Fatalf("invalid %s header", consts.RequestHeaderName)
+		}
+		if !includeVaultRequestHeader {
+			delete(h, consts.RequestHeaderName)
+			cli.SetHeaders(h)
+		}
+
+		return cli
+	}
+
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+
+	// Start a vault server
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "1m",
+	  "token_num_uses": "10",
+	  "token_ttl": "1m"
+	}`)
+	request(serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// Get a temp file path we can use for the sink
+	sinkPath := makeTempFile("sink.txt", "")
+	defer os.Remove(sinkPath)
+
+	// Create a config file
+	config := `
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+
+cache {
+    use_auto_auth_token = true
+}
+
+listener "tcp" {
+    address = "127.0.0.1:8101"
+    tls_disable = true
+}
+listener "tcp" {
+    address = "127.0.0.1:8102"
+    tls_disable = true
+    require_request_header = false
+}
+listener "tcp" {
+    address = "127.0.0.1:8103"
+    tls_disable = true
+    require_request_header = true
+}
+`
+	config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
+	configPath := makeTempFile("config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	//----------------------------------------------------
+	// Perform the tests
+	//----------------------------------------------------
+
+	// Test against a listener configuration that omits
+	// 'require_request_header', with the header missing from the request.
+	agentClient := newApiClient("http://127.0.0.1:8101", false)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	request(agentClient, req, 200)
+
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'false', with the header missing from the request.
+	agentClient = newApiClient("http://127.0.0.1:8102", false)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	request(agentClient, req, 200)
+
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with the header missing from the request.
+	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	resp, err := agentClient.RawRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if resp.StatusCode != http.StatusPreconditionFailed {
+		t.Fatalf("expected status code %d, not %d", http.StatusPreconditionFailed, resp.StatusCode)
+	}
+
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with an invalid header present in the request.
+	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	h := agentClient.Headers()
+	h[consts.RequestHeaderName] = []string{"bogus"}
+	agentClient.SetHeaders(h)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	resp, err = agentClient.RawRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if resp.StatusCode != http.StatusPreconditionFailed {
+		t.Fatalf("expected status code %d, not %d", http.StatusPreconditionFailed, resp.StatusCode)
+	}
+
+	// Test against a listener configuration that sets 'require_request_header'
+	// to 'true', with the proper header present in the request.
+	agentClient = newApiClient("http://127.0.0.1:8103", true)
+	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	request(agentClient, req, 200)
 }

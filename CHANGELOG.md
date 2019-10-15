@@ -23,6 +23,8 @@ IMPROVEMENTS:
  * auth/jwt: Bound claims may now contain boolean values [JWT-73]
  * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
+ * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
+   access. [GH-7550]  
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
@@ -63,9 +65,9 @@ BUG FIXES:
 BUG FIXES:
 
   * cli: Fix panic when pgp keys list is empty [GH-7546]
-  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
   * secrets/database: Fix bug in combined DB secrets engine that can result in
     writes to static-roles endpoints timing out [GH-7518]
+  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be viewed in the UI [GH-7504]
    
 ## 1.2.3 (September 12, 2019)
 

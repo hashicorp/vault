@@ -348,7 +348,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	{
 		core := cluster.Cores[1]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -360,7 +360,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	{
 		core := cluster.Cores[2]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}

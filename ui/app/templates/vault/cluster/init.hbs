@@ -1,5 +1,14 @@
 <SplashPage as |Page|>
-  {{#if keyData}}
+  {{#if (and this.model.usingRaft (not this.prefersInit))}}
+    <Page.header>
+      <h1 class="title is-4">
+        Raft Storage
+      </h1>
+    </Page.header>
+    <Page.content>
+      <RaftJoin @onDismiss={{action (mut prefersInit) true}} />
+    </Page.content>
+  {{else if keyData}}
     <Page.header>
       {{#let (or keyData.recovery_keys keyData.keys) as |keyArray|}}
         <h1 class="title is-4">

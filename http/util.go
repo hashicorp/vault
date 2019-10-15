@@ -19,4 +19,6 @@ var (
 	}
 
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
+
+	nonVotersAllowed = false
 )
