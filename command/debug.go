@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mholt/archiver"
 	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
 
@@ -71,15 +72,6 @@ type captureError struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-// newCaptureError instantiates a new captureError.
-func newCaptureError(target string, err error) *captureError {
-	return &captureError{
-		TargetError: err.Error(),
-		Target:      target,
-		Timestamp:   time.Now().UTC(),
-	}
-}
-
 var _ cli.Command = (*DebugCommand)(nil)
 var _ cli.CommandAutocomplete = (*DebugCommand)(nil)
 
@@ -97,15 +89,6 @@ type DebugCommand struct {
 	// to a file at the end.
 	debugIndex *debugIndex
 
-	// pprofWg ensures that we are only sending a single profile/trace request
-	// at a time since the server pprof handler cannot handle concurrent
-	// requests of these types.
-	pprofWg *sync.WaitGroup
-
-	// pollingWg ensures that polling capture goroutines are done before the
-	// bundle gets generated
-	pollingWg *sync.WaitGroup
-
 	// skipTimingChecks bypasses timing-related checks, used primarily for tests
 	skipTimingChecks bool
 	// logger is the logger used for outputting capture progress
@@ -113,14 +96,14 @@ type DebugCommand struct {
 
 	// ShutdownCh is used to capture interrupt signal and end polling capture
 	ShutdownCh chan struct{}
-	// doneCh is used to signal terminal
-	doneCh chan struct{}
 
-	// Various channels for receiving state during polling capture
-	metricsCh           chan map[string]interface{}
-	serverStatusCh      chan map[string]interface{}
-	replicationStatusCh chan map[string]interface{}
-	hostInfoCh          chan map[string]interface{}
+	// Collection slices to hold data
+	hostInfoCollection          []map[string]interface{}
+	metricsCollection           []map[string]interface{}
+	replicationStatusCollection []map[string]interface{}
+	serverStatusCollection      []map[string]interface{}
+
+	errLock sync.Mutex
 }
 
 func (c *DebugCommand) AutocompleteArgs() complete.Predictor {
@@ -259,11 +242,6 @@ func (c *DebugCommand) Run(args []string) int {
 
 	// Release the log gate.
 	logWriter.Flush()
-
-	// Setup variables
-	c.doneCh = make(chan struct{})
-	c.pprofWg = &sync.WaitGroup{}
-	c.pollingWg = &sync.WaitGroup{}
 
 	// Capture static information
 	c.UI.Info("==> Capturing static information...")
@@ -465,12 +443,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (*api.Client, string, error) 
 		return nil, "", fmt.Errorf("output directory already exists: %s", c.flagOutput)
 	}
 
-	// Instantiate the channels for polling
-	c.metricsCh = make(chan map[string]interface{})
-	c.serverStatusCh = make(chan map[string]interface{})
-	c.replicationStatusCh = make(chan map[string]interface{})
-	c.hostInfoCh = make(chan map[string]interface{})
-
 	// Populate initial index fields
 	c.debugIndex = &debugIndex{
 		VaultAddress:           client.Address(),
@@ -500,9 +472,7 @@ func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
 
 		resp, err := client.Logical().Read("sys/config/state/sanitized")
 		if err != nil {
-			captErr := newCaptureError("config", err)
-			c.debugIndex.Errors = append(c.debugIndex.Errors, captErr)
-
+			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
 		}
 
@@ -525,141 +495,182 @@ func (c *DebugCommand) captureStaticTargets(client *api.Client) error {
 // capturePollingTargets captures all dynamic targets over the specified
 // duration and interval.
 func (c *DebugCommand) capturePollingTargets(client *api.Client) error {
-	startTime := time.Now()
-	durationCh := time.After(c.flagDuration + debugDurationGrace)
+	var g run.Group
 
-	// Track current interval count to show progress.
-	var idxCount, mIdxCount int
-
-	// errCh is used to capture any polling errors and recorded in the index
-	errCh := make(chan *captureError)
-
-	var serverStatusCollection []map[string]interface{}
-	var replicationStatusCollection []map[string]interface{}
-	var metricsCollection []map[string]interface{}
-	var hostInfoCollection []map[string]interface{}
-
-	// Start a goroutine to collect data as soon as it's received
-	collectCh := make(chan struct{})
-	go func() {
+	// This run group watches for interrupt or duration
+	g.Add(func() error {
+		durationCh := time.After(c.flagDuration + debugDurationGrace)
 		for {
 			select {
-			case metricsEntry := <-c.metricsCh:
-				metricsCollection = append(metricsCollection, metricsEntry)
-			case serverStatusEntry := <-c.serverStatusCh:
-				serverStatusCollection = append(serverStatusCollection, serverStatusEntry)
-			case replicationStatusEntry := <-c.replicationStatusCh:
-				replicationStatusCollection = append(replicationStatusCollection, replicationStatusEntry)
-			case hostInfoEntry := <-c.hostInfoCh:
-				hostInfoCollection = append(hostInfoCollection, hostInfoEntry)
-			case <-c.doneCh:
-				close(collectCh)
-				return
+			case <-c.ShutdownCh:
+				return nil
+			case <-durationCh:
+				return nil
 			}
 		}
-	}()
+	}, func(error) {})
 
-	// Start capture by capturing the first interval before we hit the first
-	// ticker.
-	c.pollingWg.Add(1)
-	go c.intervalCapture(client, idxCount, startTime, errCh)
-
-	c.pollingWg.Add(1)
-	go c.metricsIntervalCapture(client, mIdxCount, errCh)
-
-	intervalTicker := time.Tick(c.flagInterval)
-	metricsIntervalTicker := time.Tick(c.flagMetricsInterval)
-	interrupted := false
-
-	// Capture at each interval, until end of duration or interrupt.
-POLLING:
-	for {
-		select {
-		case err := <-errCh:
-			c.debugIndex.Errors = append(c.debugIndex.Errors, err)
-		case <-intervalTicker:
-			idxCount++
-			c.pollingWg.Add(1)
-			go c.intervalCapture(client, idxCount, startTime, errCh)
-		case <-metricsIntervalTicker:
-			mIdxCount++
-			c.pollingWg.Add(1)
-			go c.metricsIntervalCapture(client, mIdxCount, errCh)
-		case <-durationCh:
-			break POLLING
-		case <-c.ShutdownCh:
-			c.UI.Info("Caught interrupt signal, exiting...")
-			interrupted = true
-			break POLLING
-		}
+	// Collect metrics if target is specified
+	if strutil.StrListContains(c.flagTargets, "metrics") {
+		stopCh := make(chan struct{})
+		g.Add(func() error {
+			c.collectMetrics(client, stopCh)
+			return nil
+		}, func(error) {
+			close(stopCh)
+		})
 	}
 
-	// Wait for polling requests to finish if it's not an interrupt
-	if !interrupted {
-		c.pollingWg.Wait()
+	// Collect host-info if target is specified
+	if strutil.StrListContains(c.flagTargets, "host-info") {
+		stopCh := make(chan struct{})
+		g.Add(func() error {
+			c.collectHostInfo(client, stopCh)
+			return nil
+		}, func(error) {
+			close(stopCh)
+		})
 	}
 
-	// Close the done channel to signal termination, make sure collection
-	// goroutine is terminated before proceeding to persisting the info.
-	close(c.doneCh)
-	<-collectCh
+	// Collect replication status
+	if strutil.StrListContains(c.flagTargets, "replication-status") {
+		stopCh := make(chan struct{})
+		g.Add(func() error {
+			c.collectReplicationStatus(client, stopCh)
+			return nil
+		}, func(error) {
+			close(stopCh)
+		})
+	}
+
+	// Collect server status
+	if strutil.StrListContains(c.flagTargets, "server-status") {
+		stopCh := make(chan struct{})
+		g.Add(func() error {
+			c.collectServerStatus(client, stopCh)
+			return nil
+		}, func(error) {
+			close(stopCh)
+		})
+	}
+
+	// We shouldn't bump across errors since none is returned by the interrupts,
+	// but we error check for sanity here.
+	if err := g.Run(); err != nil {
+		return err
+	}
 
 	// Write collected data to their corresponding files
-	if err := c.persistCollection(metricsCollection, "metrics.json"); err != nil {
+	if err := c.persistCollection(c.metricsCollection, "metrics.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "metrics.json", err))
 	}
-	if err := c.persistCollection(serverStatusCollection, "server_status.json"); err != nil {
+	if err := c.persistCollection(c.serverStatusCollection, "server_status.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "server_status.json", err))
 	}
-	if err := c.persistCollection(replicationStatusCollection, "replication_status.json"); err != nil {
+	if err := c.persistCollection(c.replicationStatusCollection, "replication_status.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "replication_status.json", err))
 	}
-	if err := c.persistCollection(hostInfoCollection, "host_info.json"); err != nil {
+	if err := c.persistCollection(c.hostInfoCollection, "host_info.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
 
 	return nil
 }
 
-func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTime time.Time, errCh chan<- *captureError) {
-	defer c.pollingWg.Done()
+func (c *DebugCommand) collectHostInfo(client *api.Client, stopCh chan struct{}) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-intervalTicker:
+			c.logger.Info("capturing host information", "count", idxCount)
 
-	var wg sync.WaitGroup
-	currentTimestamp := time.Now().UTC()
-
-	if strutil.StrListContains(c.flagTargets, "host") {
-		c.logger.Info("capturing host information", "count", idxCount)
-
-		wg.Add(1)
-		go func() {
 			r := client.NewRequest("GET", "/v1/sys/host-info")
 			resp, err := client.RawRequest(r)
 			if err != nil {
-				errCh <- newCaptureError("host", err)
+				c.captureError("host", err)
 			}
 			if resp != nil {
 				defer resp.Body.Close()
 
 				secret, err := api.ParseSecret(resp.Body)
 				if err != nil {
-					errCh <- newCaptureError("host", err)
+					c.captureError("host", err)
 				}
 				if hostEntry := secret.Data; hostEntry != nil {
-					c.hostInfoCh <- hostEntry
+					c.hostInfoCollection = append(c.hostInfoCollection, hostEntry)
 				}
 			}
-			wg.Done()
-		}()
+		}
 	}
+}
 
-	if strutil.StrListContains(c.flagTargets, "pprof") {
-		c.logger.Info("capturing pprof data", "count", idxCount)
+func (c *DebugCommand) collectMetrics(client *api.Client, stopCh chan struct{}) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-intervalTicker:
+			c.logger.Info("capturing metrics", "count", idxCount)
+			idxCount++
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+			healthStatus, err := client.Sys().Health()
+			if err != nil {
+				c.captureError("metrics", err)
+				continue
+			}
+
+			// Check replication status. We skip on processing metrics if we're one
+			// of the following (since the request will be forwarded):
+			// 1. Any type of DR Node
+			// 2. Non-DR, non-performance standby nodes
+			switch {
+			case healthStatus.ReplicationDRMode == "secondary":
+				c.logger.Info("skipping metrics capture on DR secondary node")
+				continue
+			case healthStatus.Standby && !healthStatus.PerformanceStandby:
+				c.logger.Info("skipping metrics on standby node")
+				continue
+			}
+
+			// Perform metrics request
+			r := client.NewRequest("GET", "/v1/sys/metrics")
+			resp, err := client.RawRequest(r)
+			if err != nil {
+				c.captureError("metrics", err)
+				continue
+			}
+			if resp != nil {
+				defer resp.Body.Close()
+
+				metricsEntry := make(map[string]interface{})
+				err := json.NewDecoder(resp.Body).Decode(&metricsEntry)
+				if err != nil {
+					c.captureError("metrics", err)
+				}
+				c.metricsCollection = append(c.metricsCollection, metricsEntry)
+			}
+		}
+	}
+}
+
+func (c *DebugCommand) collectPprof(client *api.Client, stopCh chan struct{}) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+	startTime := time.Now()
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-intervalTicker:
+			c.logger.Info("capturing pprof data", "count", idxCount)
 
 			// Create a sub-directory for pprof data
+			currentTimestamp := time.Now().UTC()
 			currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 			dirName := filepath.Join(c.flagOutput, currentDir)
 			if err := os.MkdirAll(dirName, 0755); err != nil {
@@ -670,22 +681,22 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 			// Capture goroutines
 			data, err := pprofGoroutine(client)
 			if err != nil {
-				errCh <- newCaptureError("pprof.goroutine", err)
+				c.captureError("pprof.goroutine", err)
 			} else {
 				err = ioutil.WriteFile(filepath.Join(dirName, "goroutine.prof"), data, 0644)
 				if err != nil {
-					errCh <- newCaptureError("pprof.goroutine", err)
+					c.captureError("pprof.goroutine", err)
 				}
 			}
 
 			// Capture heap
 			data, err = pprofHeap(client)
 			if err != nil {
-				errCh <- newCaptureError("pprof.heap", err)
+				c.captureError("pprof.heap", err)
 			} else {
 				err = ioutil.WriteFile(filepath.Join(dirName, "heap.prof"), data, 0644)
 				if err != nil {
-					errCh <- newCaptureError("pprof.heap", err)
+					c.captureError("pprof.heap", err)
 				}
 			}
 
@@ -696,157 +707,102 @@ func (c *DebugCommand) intervalCapture(client *api.Client, idxCount int, startTi
 				return
 			}
 
-			// Wait until all other profile/trace requests are finished or until
-			// we're terminated.
-			contCh := make(chan struct{})
-			go func() {
-				c.pprofWg.Wait()
-				close(contCh)
-			}()
-			select {
-			case <-contCh:
-			case <-c.doneCh:
-				return
-			}
-
 			// We want to add 2 at a time to ensure that we capture both at the
 			// same interval slice.
-			c.pprofWg.Add(2)
-
+			var wg sync.WaitGroup
+			wg.Add(2)
 			// Capture profile
 			go func() {
-				defer c.pprofWg.Done()
+				defer wg.Done()
 				data, err := pprofProfile(client, c.flagInterval)
 				if err != nil {
-					errCh <- newCaptureError("pprof.profile", err)
+					c.captureError("pprof.profile", err)
 					return
 				}
 
 				err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0644)
 				if err != nil {
-					errCh <- newCaptureError("pprof.profile", err)
+					c.captureError("pprof.profile", err)
 				}
 			}()
 
 			// Capture trace
 			go func() {
-				defer c.pprofWg.Done()
+				defer wg.Done()
 				data, err := pprofTrace(client, c.flagInterval)
 				if err != nil {
-					errCh <- newCaptureError("pprof.trace", err)
+					c.captureError("pprof.trace", err)
 					return
 				}
 
 				err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0644)
 				if err != nil {
-					errCh <- newCaptureError("pprof.trace", err)
+					c.captureError("pprof.trace", err)
 				}
 			}()
 
-			// Wait until profile/trace is done
-			c.pprofWg.Wait()
-		}()
+			wg.Wait()
+		}
 	}
+}
 
-	if strutil.StrListContains(c.flagTargets, "replication-status") {
-		c.logger.Info("capturing replication status", "count", idxCount)
+func (c *DebugCommand) collectReplicationStatus(client *api.Client, stopCh chan struct{}) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-intervalTicker:
+			c.logger.Info("capturing replication status", "count", idxCount)
 
-		wg.Add(1)
-		go func() {
 			r := client.NewRequest("GET", "/v1/sys/replication/status")
 			resp, err := client.RawRequest(r)
 			if err != nil {
-				errCh <- newCaptureError("replication-status", err)
+				c.captureError("replication-status", err)
 			}
 			if resp != nil {
 				defer resp.Body.Close()
 
 				secret, err := api.ParseSecret(resp.Body)
 				if err != nil {
-					errCh <- newCaptureError("replication-status", err)
+					c.captureError("replication-status", err)
 				}
 				if replicationEntry := secret.Data; replicationEntry != nil {
-					replicationEntry["timestamp"] = currentTimestamp
-					c.replicationStatusCh <- replicationEntry
+					replicationEntry["timestamp"] = time.Now().UTC()
+					c.replicationStatusCollection = append(c.replicationStatusCollection, replicationEntry)
 				}
 			}
-			wg.Done()
-		}()
+		}
 	}
+}
 
-	if strutil.StrListContains(c.flagTargets, "server-status") {
-		c.logger.Info("capturing server status", "count", idxCount)
+func (c *DebugCommand) collectServerStatus(client *api.Client, stopCh chan struct{}) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-intervalTicker:
+			c.logger.Info("capturing server status", "count", idxCount)
 
-		wg.Add(1)
-		go func() {
 			healthInfo, err := client.Sys().Health()
 			if err != nil {
-				errCh <- newCaptureError("server-status.health", err)
+				c.captureError("server-status.health", err)
 			}
 			sealInfo, err := client.Sys().SealStatus()
 			if err != nil {
-				errCh <- newCaptureError("server-status.seal", err)
+				c.captureError("server-status.seal", err)
 			}
 
 			statusEntry := map[string]interface{}{
-				"timestamp": currentTimestamp,
+				"timestamp": time.Now().UTC(),
 				"health":    healthInfo,
 				"seal":      sealInfo,
 			}
-			c.serverStatusCh <- statusEntry
-
-			wg.Done()
-		}()
-	}
-
-	// Wait for all dynamic information to be captured before returning
-	wg.Wait()
-}
-
-func (c *DebugCommand) metricsIntervalCapture(client *api.Client, mIdxCount int, errCh chan<- *captureError) {
-	defer c.pollingWg.Done()
-
-	if !strutil.StrListContains(c.flagTargets, "metrics") {
-		return
-	}
-
-	c.logger.Info("capturing metrics", "count", mIdxCount)
-
-	healthStatus, err := client.Sys().Health()
-	if err != nil {
-		errCh <- newCaptureError("metrics", err)
-		return
-	}
-
-	// Check replication status. We skip on processing metrics if we're one
-	// of the following (since the request will be forwarded):
-	// 1. Any type of DR Node
-	// 2. Non-DR, non-performance standby nodes
-	switch {
-	case healthStatus.ReplicationDRMode == "secondary":
-		c.logger.Info("skipping metrics capture on DR secondary node")
-		return
-	case healthStatus.Standby && !healthStatus.PerformanceStandby:
-		c.logger.Info("skipping metrics on standby node")
-		return
-	}
-
-	// Perform metrics request
-	r := client.NewRequest("GET", "/v1/sys/metrics")
-	resp, err := client.RawRequest(r)
-	if err != nil {
-		errCh <- newCaptureError("metrics", err)
-		return
-	}
-	if resp != nil {
-		defer resp.Body.Close()
-
-		metricsEntry := make(map[string]interface{})
-		err := json.NewDecoder(resp.Body).Decode(&metricsEntry)
-		if err != nil {
-			errCh <- newCaptureError("metrics", err)
+			c.serverStatusCollection = append(c.serverStatusCollection, statusEntry)
 		}
-		c.metricsCh <- metricsEntry
 	}
 }
 
@@ -953,4 +909,15 @@ func pprofTrace(client *api.Client, duration time.Duration) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// newCaptureError instantiates a new captureError.
+func (c *DebugCommand) captureError(target string, err error) {
+	c.errLock.Lock()
+	c.debugIndex.Errors = append(c.debugIndex.Errors, &captureError{
+		TargetError: err.Error(),
+		Target:      target,
+		Timestamp:   time.Now().UTC(),
+	})
+	c.errLock.Unlock()
 }
