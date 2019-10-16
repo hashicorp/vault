@@ -260,11 +260,19 @@ func (s *Secret) TokenTTL() (time.Duration, error) {
 		return time.Duration(s.Auth.LeaseDuration) * time.Second, nil
 	}
 
-	if s.Data == nil || s.Data["ttl"] == nil {
+	if s.Data == nil {
 		return 0, nil
 	}
 
-	ttl, err := parseutil.ParseDurationSecond(s.Data["ttl"])
+	var rawTTL interface{}
+	if s.Data["ttl"] != nil {
+		rawTTL = s.Data["ttl"]
+	} else if s.Data["token_ttl"] != nil {
+		rawTTL = s.Data["token_ttl"]
+	} else {
+		return 0, nil
+	}
+	ttl, err := parseutil.ParseDurationSecond(rawTTL)
 	if err != nil {
 		return 0, err
 	}
