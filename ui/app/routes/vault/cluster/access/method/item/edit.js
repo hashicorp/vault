@@ -15,11 +15,6 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { path: method } = this.paramsFor('vault.cluster.access.method');
-    const { item_id: itemName } = this.paramsFor(this.routeName);
     controller.set('itemType', singularize(itemType));
-    controller.set('mode', 'edit');
-    controller.set('method', method);
-    controller.set('itemName', itemName);
   },
 });
