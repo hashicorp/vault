@@ -150,12 +150,6 @@ listener "tcp" {
          address = "127.0.0.1:8100"
          tls_disable = true
 }
-
-listener "tcp" {
-         address = "127.0.0.1:8101"
-         tls_disable = true
-         require_request_header = true
-}
 ```
 
 [vault]: /docs/agent/index.html#vault-stanza

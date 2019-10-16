@@ -178,7 +178,8 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/baz
 ```
 
-The Vault CLI always adds this header to every request.
+The Vault CLI always adds this header to every request, regardless of whether
+the request is being sent to a Vault Agent or directly to a Vault Server.
 
 ## Help
 
