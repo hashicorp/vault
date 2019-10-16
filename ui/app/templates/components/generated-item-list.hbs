@@ -40,7 +40,9 @@
 {{/with}}
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array
+    <ToolbarLink
+      @type="add"
+      @params={{array
         "vault.cluster.access.method.item.create"
         itemType
       }}>
