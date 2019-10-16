@@ -198,15 +198,15 @@ The `library` endpoint configures the sets of service accounts that Vault will o
 
 ### Parameters
 
-* `name` (string: "", <required>): The name of the set of service accounts.
-* `service_account_names` (string: "", or list: [] <required>): The names of all the service accounts that can be 
+* `name` (string: "", required): The name of the set of service accounts.
+* `service_account_names` (string: "", or list: [] required): The names of all the service accounts that can be 
 checked out from this set. These service accounts must only be used by Vault, and may only be in one set. These 
 service accounts must already exist in Active Directory.
-* `ttl` (duration: "24h", <optional>): The maximum amount of time a single check-out lasts before Vault 
+* `ttl` (duration: "24h", optional): The maximum amount of time a single check-out lasts before Vault 
 automatically checks it back in. Defaults to 24 hours. Setting it to zero reflects an unlimited lending period.
-* `max_ttl` (duration: "24h", <optional>): The maximum amount of time a check-out last with renewal before Vault 
+* `max_ttl` (duration: "24h", optional): The maximum amount of time a check-out last with renewal before Vault 
 automatically checks it back in. Defaults to 24 hours. Setting it to zero reflects an unlimited lending period.
-* `disable_check_in_enforcement` (bool: false, <optional>): Disable enforcing that service accounts must be 
+* `disable_check_in_enforcement` (bool: false, optional): Disable enforcing that service accounts must be 
 checked in by the entity or client token that checked them out. Defaults to false.
 
 When adding a service account to the library, Vault verifies it already exists in Active Directory.
@@ -268,8 +268,8 @@ These endpoints help manage check-outs.
 
 Returns a `200` if a credential is available, and a `400` if no credential is available.
 
-* `name` (string: "", <required>): The name of the set of service accounts.
-* `ttl` (duration: "", <optional>): The maximum amount of time a check-out lasts before Vault 
+* `name` (string: "", required): The name of the set of service accounts.
+* `ttl` (duration: "", optional): The maximum amount of time a check-out lasts before Vault 
 automatically checks it back in. Setting it to zero reflects an unlimited lending period.
 Defaults to the set's `ttl`. If the requested `ttl` is higher than the set's, the set's will be used.
 
@@ -325,8 +325,8 @@ check in, but it's _already_ checked in, they will receive a successful response
 will not be included in the `check_ins` listed. `check_ins` shows which service accounts were checked
 in _by this particular call_.
 
-* `name` (string: "", <required>): The name of the set of service accounts.
-* `service_account_names` (string: "", or list: [] <optional>): The names of all the service accounts to be
+* `name` (string: "", required): The name of the set of service accounts.
+* `service_account_names` (string: "", or list: [] optional): The names of all the service accounts to be
 checked in. May be omitted if only one is checked out. 
 
 | Method   | Path                                    |
