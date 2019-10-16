@@ -1743,7 +1743,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 
 	if atomic.LoadUint32(c.sealMigrated) == 1 {
 		defer func() { atomic.StoreUint32(c.sealMigrated, 0) }()
-		c.postSealMigration(ctx)
+		if err := c.postSealMigration(ctx); err != nil {
+			c.logger.Warn("post-unseal post seal migration failed", "error", err)
+		}
 	}
 
 	c.logger.Info("post-unseal setup complete")
