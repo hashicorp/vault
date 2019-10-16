@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -69,10 +70,10 @@ type SecurityBarrier interface {
 
 	// Initialize works only if the barrier has not been initialized
 	// and makes use of the given master key.
-	Initialize(context.Context, []byte) error
+	Initialize(context.Context, []byte, io.Reader) error
 
 	// GenerateKey is used to generate a new key
-	GenerateKey() ([]byte, error)
+	GenerateKey(io.Reader) ([]byte, error)
 
 	// KeyLength is used to sanity check a key
 	KeyLength() (int, int)
@@ -109,7 +110,7 @@ type SecurityBarrier interface {
 
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
-	Rotate(ctx context.Context) (uint32, error)
+	Rotate(ctx context.Context, reader io.Reader) (uint32, error)
 
 	// CreateUpgrade creates an upgrade path key to the given term from the previous term
 	CreateUpgrade(ctx context.Context, term uint32) error

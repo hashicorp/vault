@@ -25,7 +25,6 @@ require (
 	github.com/aws/aws-sdk-go v1.19.39
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/boombuler/barcode v1.0.0 // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
@@ -60,7 +59,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-uuid v1.0.1
+	github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
@@ -80,7 +79,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191003164552-6600ec024c24
 	github.com/hashicorp/vault/api v1.0.5-0.20190919134245-4eefe0ebe1a1
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190919081434-645ac174deeb
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
@@ -110,7 +109,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/posener/complete v1.2.1
-	github.com/pquerna/otp v1.1.0
+	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 	github.com/prometheus/common v0.2.0
 	github.com/ryanuber/columnize v2.1.0+incompatible

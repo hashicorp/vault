@@ -1006,6 +1006,13 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// prepare a secure random reader for core
+	secureRandomReader, err := createSecureRandomReaderFunc(config, &barrierSeal)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                 config,
 		Physical:                  backend,
@@ -1033,6 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
+		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID

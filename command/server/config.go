@@ -29,7 +29,8 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	Seals []*Seal `hcl:"-"`
+	Seals   []*Seal  `hcl:"-"`
+	Entropy *Entropy `hcl:"-"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -123,6 +124,18 @@ type Listener struct {
 
 func (l *Listener) GoString() string {
 	return fmt.Sprintf("*%#v", *l)
+}
+
+// Entropy contains Entropy configuration for the server
+type EntropyMode int
+
+const (
+	Unknown EntropyMode = iota
+	Augmentation
+)
+
+type Entropy struct {
+	Mode EntropyMode
 }
 
 // Storage is the underlying storage configuration for the server.
@@ -277,6 +290,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.HAStorage = c.HAStorage
 	if c2.HAStorage != nil {
 		result.HAStorage = c2.HAStorage
+	}
+
+	result.Entropy = c.Entropy
+	if c2.Entropy != nil {
+		result.Entropy = c2.Entropy
 	}
 
 	for _, s := range c.Seals {
@@ -579,6 +597,12 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if o := list.Filter("entropy"); len(o.Items) > 0 {
+		if err := parseEntropy(&result, o, "entropy"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'entropy': {{err}}", err)
+		}
+	}
+
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		if err := parseListeners(&result, o); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'listener': {{err}}", err)
@@ -821,7 +845,6 @@ func parseSeals(result *Config, list *ast.ObjectList, blockName string) error {
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("seal.%s:", key))
 		}
-
 		var disabled bool
 		var err error
 		if v, ok := m["disabled"]; ok {

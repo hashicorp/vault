@@ -3,11 +3,13 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -470,6 +472,9 @@ type Core struct {
 
 	coreNumber int
 
+	// secureRandomReader is the reader used for CSP operations
+	secureRandomReader io.Reader
+
 	recoveryMode bool
 }
 
@@ -493,6 +498,8 @@ type CoreConfig struct {
 	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
 
 	Seal Seal `json:"seal" structs:"seal" mapstructure:"seal"`
+
+	SecureRandomReader io.Reader `json:"secure_random_reader" structs:"secure_random_reader" mapstructure:"secure_random_reader"`
 
 	Logger log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
 
@@ -632,6 +639,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		syncInterval = 30 * time.Second
 	}
 
+	// secureRandomReader cannot be nil
+	if conf.SecureRandomReader == nil {
+		conf.SecureRandomReader = rand.Reader
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:                      entCore{},
@@ -671,6 +683,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		secureRandomReader:           conf.SecureRandomReader,
 		rawConfig:                    conf.RawConfig,
 		counters: counters{
 			requests:     new(uint64),
@@ -1150,7 +1163,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 			}
 
 			// Generate a new master key
-			newMasterKey, err := c.barrier.GenerateKey()
+			newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 			if err != nil {
 				return nil, errwrap.Wrapf("error generating new master key: {{err}}", err)
 			}

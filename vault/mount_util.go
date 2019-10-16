@@ -41,3 +41,15 @@ func (e *MountEntry) ViewPath() string {
 }
 
 func verifyNamespace(*Core, *namespace.Namespace, *MountEntry) error { return nil }
+
+// mountEntrySysView creates a logical.SystemView from global and
+// mount-specific entries; because this should be called when setting
+// up a mountEntry, it doesn't check to ensure that me is not nil
+func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
+	return extendedSystemViewImpl{
+		dynamicSystemView{
+			core:       c,
+			mountEntry: entry,
+		},
+	}
+}

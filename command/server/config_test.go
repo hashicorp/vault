@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -68,6 +69,8 @@ func TestLoadConfigFile(t *testing.T) {
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 
+		Entropy: nil,
+
 		MaxLeaseTTL:        10 * time.Hour,
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
@@ -124,6 +127,10 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 			DogStatsDTags:              []string{"tag_1:val_1", "tag_2:val_2"},
 			PrometheusRetentionTime:    30 * time.Second,
 			PrometheusRetentionTimeRaw: "30s",
+		},
+
+		Entropy: &Entropy{
+			Mode: Augmentation,
 		},
 
 		DisableCache:    true,
@@ -215,6 +222,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 		EnableRawEndpointRaw: true,
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
+		Entropy:              nil,
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
@@ -288,6 +296,10 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			CirconusBrokerSelectTag:            "dc:sfo",
 			PrometheusRetentionTime:            30 * time.Second,
 			PrometheusRetentionTimeRaw:         "30s",
+		},
+
+		Entropy: &Entropy{
+			Mode: Augmentation,
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
@@ -484,4 +496,60 @@ listener "tcp" {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, *expected)
 	}
 
+}
+
+func TestParseEntropyOSS(t *testing.T) {
+	var tests = []struct {
+		inConfig   string
+		outErr     error
+		outEntropy Entropy
+	}{
+		{
+			inConfig: `entropy "seal" {
+				mode = "augmentation"
+				}`,
+			outErr: fmt.Errorf("%q is an enterprise feature", "entropy"),
+		},
+		{
+			inConfig: `entropy "seal" {
+				mode = "a_mode_that_is_not_supported"
+				}`,
+			outErr: fmt.Errorf("%q is an enterprise feature", "entropy"),
+		},
+		{
+			inConfig: `entropy "device_that_is_not_supported" {
+				mode = "augmentation"
+				}`,
+			outErr: fmt.Errorf("%q is an enterprise feature", "entropy"),
+		},
+		{
+			inConfig: `entropy "seal" {
+				mode = "augmentation"
+				}
+				entropy "seal" {
+				mode = "augmentation"
+				}`,
+			outErr: fmt.Errorf("%q is an enterprise feature", "entropy"),
+		},
+	}
+
+	var config Config
+
+	for _, test := range tests {
+		obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
+		list, _ := obj.Node.(*ast.ObjectList)
+		objList := list.Filter("entropy")
+		err := parseEntropy(&config, objList, "entropy")
+		// validate the error, both should be nil or have the same Error()
+		switch {
+		case err != nil && test.outErr != nil:
+			if err.Error() != test.outErr.Error() {
+				t.Fatalf("error mismatch: expected %#v got %#v", test.outErr, err)
+			}
+		case err != test.outErr:
+			t.Fatalf("error mismatch: expected %#v got %#v", test.outErr, err)
+		case err == nil && *config.Entropy != test.outEntropy:
+				t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
+		}
+	}
 }

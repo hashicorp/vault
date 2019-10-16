@@ -22,7 +22,7 @@ const (
 	HSMAutoDeprecated = "hsm-auto"
 )
 
-// Access is the embedded implemention of autoSeal that contains logic
+// Access is the embedded implementation of autoSeal that contains logic
 // specific to encrypting and decrypting data, or in this case keys.
 type Access interface {
 	SealType() string

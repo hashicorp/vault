@@ -785,7 +785,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.Random(TokenLength)
+			entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
 			if err != nil {
 				return err
 			}

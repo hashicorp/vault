@@ -105,7 +105,7 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 		// this state the unseal will fail and a cluster recovery will need to
 		// be done.
 		creating = true
-		raftTLSKey, err := raft.GenerateTLSKey()
+		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		logger.Info("creating new raft TLS config")
 
 		// Create a new key
-		raftTLSKey, err := raft.GenerateTLSKey()
+		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
 		if err != nil {
 			return time.Time{}, errwrap.Wrapf("failed to generate new raft TLS key: {{err}}", err)
 		}
@@ -399,7 +399,7 @@ func (c *Core) createRaftTLSKeyring(ctx context.Context) error {
 		return nil
 	}
 
-	raftTLS, err := raft.GenerateTLSKey()
+	raftTLS, err := raft.GenerateTLSKey(c.secureRandomReader)
 	if err != nil {
 		return err
 	}
