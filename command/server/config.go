@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
