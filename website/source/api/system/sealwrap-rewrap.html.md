@@ -33,16 +33,19 @@ $ curl \
 
 ```json
 {
-  "request_id": "4435a8e9-bc19-480e-c512-ad2031d4fe27",
+  "request_id": "a6a51003-2576-be0b-9a43-d3bdfeafc2f7",
   "lease_id": "",
-  "renewable": false,
   "lease_duration": 0,
+  "renewable": false,
   "data": {
+    "entries": {
+      "failed": 0,
+      "processed": 30,
+      "succeeded": 30
+    },
     "is_running": false
   },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+  "warnings": null
 }
 ```
 
