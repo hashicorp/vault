@@ -67,7 +67,7 @@
       <Item.content>
         <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
       </Item.content>
-      <Item.menu>
+      <Item.menu as |Menu|>
         <li class="action">
           {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
             View {{singularize itemType}}
@@ -79,20 +79,22 @@
           {{/link-to}}
         </li>
         <li>
-          <ConfirmAction @buttonClasses="link is-destroy" @onConfirmAction={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted " (singularize itemType) " " list.item.id ".")
-                  (concat "There was an error deleting this " (singularize itemType))
-                  (action "refreshItemList")
-                )
-              }} @confirmMessage={{concat "Are you sure you want to delete " (singularize itemType) " " list.item.id "?"}}
-            @cancelButtonText="Cancel" data-test-secret-delete="true">
-            Delete
-            {{singularize itemType}}
-          </ConfirmAction>
+          <Menu.Message
+            @id={{list.item.id}}
+            @buttonClasses="link is-destroy"
+            @onConfirm={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                list.item
+                (concat "Successfully deleted " (singularize itemType) " " list.item.id ".")
+                (concat "There was an error deleting this " (singularize itemType))
+                (action "refreshItemList")
+              )
+            }}
+            @message={{concat "Are you sure you want to delete " (singularize itemType) " " list.item.id "?"}}
+            data-test-secret-delete="true"
+            @triggerText={{concat "Delete " (singularize itemType)}}/>
         </li>
       </Item.menu>
     </ListItem>
