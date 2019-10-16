@@ -202,6 +202,13 @@ github.com/dimchansky/utfbom
 github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
+# github.com/dsnet/compress v0.0.1
+github.com/dsnet/compress/bzip2
+github.com/dsnet/compress/bzip2/internal/sais
+github.com/dsnet/compress/internal
+github.com/dsnet/compress/internal/errors
+github.com/dsnet/compress/internal/prefix
+github.com/dsnet/compress
 # github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
@@ -482,6 +489,8 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/mholt/archiver v3.1.1+incompatible
+github.com/mholt/archiver
 # github.com/michaelklishin/rabbit-hole v1.5.0
 github.com/michaelklishin/rabbit-hole
 # github.com/mitchellh/cli v1.0.0
@@ -504,6 +513,8 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
+# github.com/nwaples/rardecode v1.0.0
+github.com/nwaples/rardecode
 # github.com/oklog/run v1.0.0
 github.com/oklog/run
 # github.com/opencontainers/go-digest v1.0.0-rc1
@@ -606,6 +617,13 @@ github.com/stretchr/testify/require
 github.com/tv42/httpunix
 # github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43
 github.com/ugorji/go/codec
+# github.com/ulikunitz/xz v0.5.6
+github.com/ulikunitz/xz
+github.com/ulikunitz/xz/internal/xlog
+github.com/ulikunitz/xz/lzma
+github.com/ulikunitz/xz/internal/hash
+# github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
+github.com/xi2/xz
 # go.etcd.io/bbolt v1.3.2
 go.etcd.io/bbolt
 # go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
