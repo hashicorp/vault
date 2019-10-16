@@ -45,6 +45,9 @@ type Listener struct {
 	Config map[string]interface{}
 }
 
+// RequireRequestHeader is a listener configuration option
+const RequireRequestHeader = "require_request_header"
+
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`

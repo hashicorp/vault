@@ -91,6 +91,12 @@ func (c *Core) HasFeature(license.Features) bool {
 	return false
 }
 
+func (c *Core) collectNamespaces() []*namespace.Namespace {
+	return []*namespace.Namespace{
+		namespace.RootNamespace,
+	}
+}
+
 func (c *Core) namepaceByPath(string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
@@ -116,3 +122,5 @@ func (c *Core) removeAllPerfStandbySecondaries() {}
 func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
 	return nil, cache.New(2*cluster.HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
 }
+
+func (c *Core) initSealsForMigration() {}

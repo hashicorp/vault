@@ -7,7 +7,7 @@ description: |-
   Kubernetes Method for Vault Agent Auto-Auth
 ---
 
-# Vault Agent Auto-Auth Kubernetes Method 
+# Vault Agent Auto-Auth Kubernetes Method
 
 The `kubernetes` method reads in a Kubernetes service account token from the
 running pod (via `/var/run/secrets/kubernetes.io/serviceaccount/token`) and
@@ -19,3 +19,9 @@ method](https://www.vaultproject.io/docs/auth/kubernetes.html).
 - `role` `(string: required)` - The role to authenticate against on Vault
 - `token_path` `(string: optional)` - The file path to a custom JWT token to use
 for authentication. If omitted, the default service account token path is used.
+
+## Learn
+
+Refer to the [Vault Agent with
+Kubernetes](https://learn.hashicorp.com/vault/identity-access-management/vault-agent-k8s)
+guide for a step-by-step tutorial.

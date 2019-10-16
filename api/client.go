@@ -427,9 +427,13 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	client := &Client{
-		addr:   u,
-		config: c,
+		addr:    u,
+		config:  c,
+		headers: make(http.Header),
 	}
+
+	// Add the VaultRequest SSRF protection header
+	client.headers[consts.RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
