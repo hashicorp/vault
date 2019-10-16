@@ -39,7 +39,7 @@ export default Component.extend({
       return;
     }
     this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-    this.flashMessages.success(`The ${this.itemType} configuration was saved successfully.`);
+    this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
   }).withTestWaiter(),
   actions: {
     deleteItem() {
