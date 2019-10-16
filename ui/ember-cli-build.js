@@ -11,6 +11,10 @@ const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+    'ember-service-worker': {
+      serviceWorkerScope: config.serviceWorkerScope,
+      skipWaitingOnMessage: true,
+    },
     svgJar: {
       //optimize: false,
       //paths: [],

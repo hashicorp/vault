@@ -23,14 +23,13 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -38,16 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-)
-
-var (
-	// protectedPaths cannot be accessed via the raw APIs.
-	// This is both for security and to prevent disrupting Vault.
-	protectedPaths = []string{
-		keyringPath,
-		// Changing the cluster info path can change the cluster ID which can be disruptive
-		coreLocalClusterInfoPath,
-	}
 )
 
 const maxBytes = 128 * 1024
@@ -172,40 +161,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 
 	if core.rawEnabled {
-		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
-			Pattern: "(raw/?$|raw/(?P<path>.+))",
-
-			Fields: map[string]*framework.FieldSchema{
-				"path": &framework.FieldSchema{
-					Type: framework.TypeString,
-				},
-				"value": &framework.FieldSchema{
-					Type: framework.TypeString,
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleRawRead,
-					Summary:  "Read the value of the key at the given path.",
-				},
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRawWrite,
-					Summary:  "Update the value of the key at the given path.",
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: b.handleRawDelete,
-					Summary:  "Delete the key with given path.",
-				},
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handleRawList,
-					Summary:  "Return a list keys for a given path prefix.",
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
-		})
+		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
 
 	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
@@ -214,6 +170,17 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	b.Backend.Invalidate = sysInvalidate(b)
 	return b
+}
+
+func (b *SystemBackend) rawPaths() []*framework.Path {
+	r := &RawBackend{
+		barrier: b.Core.barrier,
+		logger:  b.logger,
+		checkRaw: func(path string) error {
+			return checkRaw(b, path)
+		},
+	}
+	return rawPaths("", r)
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
@@ -226,6 +193,17 @@ type SystemBackend struct {
 	mfaLock   *sync.RWMutex
 	mfaLogger log.Logger
 	logger    log.Logger
+}
+
+// handleConfigStateSanitized returns the current configuration state. The configuration
+// data that it returns is a sanitized version of the combined configuration
+// file(s) provided.
+func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.SanitizedConfig()
+	resp := &logical.Response{
+		Data: config,
+	}
+	return resp, nil
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -2237,123 +2215,6 @@ func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *lo
 	return nil, nil
 }
 
-// handleRawRead is used to read directly from the barrier
-func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	path := data.Get("path").(string)
-
-	// Prevent access of protected paths
-	for _, p := range protectedPaths {
-		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot read '%s'", path)
-			return logical.ErrorResponse(err), logical.ErrInvalidRequest
-		}
-	}
-
-	// Run additional checks if needed
-	if err := checkRaw(b, path); err != nil {
-		b.Core.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
-	}
-
-	entry, err := b.Core.barrier.Get(ctx, path)
-	if err != nil {
-		return handleErrorNoReadOnlyForward(err)
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	// Run this through the decompression helper to see if it's been compressed.
-	// If the input contained the compression canary, `outputBytes` will hold
-	// the decompressed data. If the input was not compressed, then `outputBytes`
-	// will be nil.
-	outputBytes, _, err := compressutil.Decompress(entry.Value)
-	if err != nil {
-		return handleErrorNoReadOnlyForward(err)
-	}
-
-	// `outputBytes` is nil if the input is uncompressed. In that case set it to the original input.
-	if outputBytes == nil {
-		outputBytes = entry.Value
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"value": string(outputBytes),
-		},
-	}
-	return resp, nil
-}
-
-// handleRawWrite is used to write directly to the barrier
-func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	path := data.Get("path").(string)
-
-	// Prevent access of protected paths
-	for _, p := range protectedPaths {
-		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot write '%s'", path)
-			return logical.ErrorResponse(err), logical.ErrInvalidRequest
-		}
-	}
-
-	value := data.Get("value").(string)
-	entry := &logical.StorageEntry{
-		Key:   path,
-		Value: []byte(value),
-	}
-	if err := b.Core.barrier.Put(ctx, entry); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-	return nil, nil
-}
-
-// handleRawDelete is used to delete directly from the barrier
-func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	path := data.Get("path").(string)
-
-	// Prevent access of protected paths
-	for _, p := range protectedPaths {
-		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot delete '%s'", path)
-			return logical.ErrorResponse(err), logical.ErrInvalidRequest
-		}
-	}
-
-	if err := b.Core.barrier.Delete(ctx, path); err != nil {
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return nil, nil
-}
-
-// handleRawList is used to list directly from the barrier
-func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	path := data.Get("path").(string)
-	if path != "" && !strings.HasSuffix(path, "/") {
-		path = path + "/"
-	}
-
-	// Prevent access of protected paths
-	for _, p := range protectedPaths {
-		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot list '%s'", path)
-			return logical.ErrorResponse(err), logical.ErrInvalidRequest
-		}
-	}
-
-	// Run additional checks if needed
-	if err := checkRaw(b, path); err != nil {
-		b.Core.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
-	}
-
-	keys, err := b.Core.barrier.List(ctx, path)
-	if err != nil {
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return logical.ListResponse(keys), nil
-}
-
 // handleKeyStatus returns status information about the backend key
 func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the key info
@@ -2610,7 +2471,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	if format == "" {
 		format = metricsutil.FormatFromRequest(req)
 	}
-	return b.Core.metricsHelper.ResponseForFormat(format)
+	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
 // handleHostInfo collects and returns host-related information, which includes
@@ -3174,6 +3035,36 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"counters": counters,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeTokens, err := b.Core.countActiveTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeTokens,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	activeEntities, err := b.Core.countActiveEntities(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"counters": activeEntities,
 		},
 	}
 
@@ -4107,6 +3998,14 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"internal-counters-tokens": {
+		"Count of active tokens in this Vault cluster.",
+		"Count of active tokens in this Vault cluster.",
+	},
+	"internal-counters-entities": {
+		"Count of active entities in this Vault cluster.",
+		"Count of active entities in this Vault cluster.",
 	},
 	"host-info": {
 		"Information about the host instance that this Vault server is running on.",

@@ -80,8 +80,8 @@ When users generate credentials, they are generated against this role. For Consu
     ```
 The policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/internals/acl.html).
 
-For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and proceed to link it 
-to the role:
+For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and proceed to link it to the role:
+
     ```text
     $ vault write consul/roles/my-role policies=readonly
     Success! Data written to: consul/roles/my-role

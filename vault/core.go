@@ -16,22 +16,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/physical/raft"
-
-	metrics "github.com/armon/go-metrics"
-	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
-	cache "github.com/patrickmn/go-cache"
-
-	"google.golang.org/grpc"
-
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -45,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
+	"github.com/patrickmn/go-cache"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -154,6 +152,13 @@ type unlockInformation struct {
 	Nonce string
 }
 
+type raftInformation struct {
+	challenge           *physical.EncryptedBlobInfo
+	leaderClient        *api.Client
+	leaderBarrierConfig *SealConfig
+	nonVoter            bool
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -191,13 +196,9 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
-	raftUnseal bool
-
-	raftChallenge *physical.EncryptedBlobInfo
-
-	raftLeaderClient *api.Client
-
-	raftLeaderBarrierConfig *SealConfig
+	// raftInfo will contain information required for this node to join as a
+	// peer to an existing raft cluster
+	raftInfo *raftInformation
 
 	// migrationSeal is the seal to use during a migration operation. It is the
 	// seal we're migrating *from*.
@@ -423,6 +424,10 @@ type Core struct {
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
 
+	// Stores any funcs that should be run on successful barrier unseal in
+	// recovery mode
+	postRecoveryUnsealFuncs []func() error
+
 	// replicationFailure is used to mark when replication has entered an
 	// unrecoverable failure.
 	replicationFailure *uint32
@@ -461,7 +466,12 @@ type Core struct {
 	// Stores the pending peers we are waiting to give answers
 	pendingRaftPeers map[string][]byte
 
+	// rawConfig stores the config as-is from the provided server configuration.
+	rawConfig *server.Config
+
 	coreNumber int
+
+	recoveryMode bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -519,6 +529,8 @@ type CoreConfig struct {
 
 	DisableSealWrap bool `json:"disable_sealwrap" structs:"disable_sealwrap" mapstructure:"disable_sealwrap"`
 
+	RawConfig *server.Config
+
 	ReloadFuncs     *map[string][]reload.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 
@@ -537,6 +549,8 @@ type CoreConfig struct {
 	MetricsHelper *metricsutil.MetricsHelper
 
 	CounterSyncInterval time.Duration
+
+	RecoveryMode bool
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -609,6 +623,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
+	// Instantiate a non-nil raw config if none is provided
+	if conf.RawConfig == nil {
+		conf.RawConfig = new(server.Config)
+	}
+
 	syncInterval := conf.CounterSyncInterval
 	if syncInterval.Nanoseconds() == 0 {
 		syncInterval = 30 * time.Second
@@ -654,10 +673,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		rawConfig:                    conf.RawConfig,
 		counters: counters{
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
+		recoveryMode: conf.RecoveryMode,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -716,23 +737,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	var err error
 
-	if conf.PluginDirectory != "" {
-		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
-		if err != nil {
-			return nil, errwrap.Wrapf("core setup failed, could not verify plugin directory: {{err}}", err)
-		}
-	}
-
 	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
-	}
-
-	createSecondaries(c, conf)
-
-	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
-		c.ha = conf.HAPhysical
 	}
 
 	// We create the funcs here, then populate the given config with it so that
@@ -742,6 +750,25 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
+
+	// All the things happening below this are not required in
+	// recovery mode
+	if c.recoveryMode {
+		return c, nil
+	}
+
+	if conf.PluginDirectory != "" {
+		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
+		if err != nil {
+			return nil, errwrap.Wrapf("core setup failed, could not verify plugin directory: {{err}}", err)
+		}
+	}
+
+	createSecondaries(c, conf)
+
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
+		c.ha = conf.HAPhysical
+	}
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -916,14 +943,11 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		// If we are in the middle of a raft join send the answer and wait for
 		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.raftLeaderClient, c.raftChallenge, c.seal.GetAccess()); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
 			return false, err
 		}
 		// Reset the state
-		c.raftUnseal = false
-		c.raftChallenge = nil
-		c.raftLeaderBarrierConfig = nil
-		c.raftLeaderClient = nil
+		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false
@@ -995,7 +1019,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftLeaderBarrierConfig
+		config = c.raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
@@ -1947,6 +1971,7 @@ func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 		c.seal = newSeal
 		c.seal.SetCore(c)
 		c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationSeal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
+		c.initSealsForMigration()
 	}
 }
 
@@ -1985,6 +2010,21 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+// SetConfig sets core's config object to the newly provided config.
+func (c *Core) SetConfig(conf *server.Config) {
+	c.stateLock.Lock()
+	c.rawConfig = conf
+	c.stateLock.Unlock()
+}
+
+// SanitizedConfig returns a sanitized version of the current config.
+// See server.Config.Sanitized for specific values omitted.
+func (c *Core) SanitizedConfig() map[string]interface{} {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.rawConfig.Sanitized()
 }
 
 // MetricsHelper returns the global metrics helper which allows external

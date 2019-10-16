@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -43,6 +44,8 @@ type HandlerProperties struct {
 	MaxRequestSize               int64
 	MaxRequestDuration           time.Duration
 	DisablePrintableCheck        bool
+	RecoveryMode                 bool
+	RecoveryToken                *uberAtomic.String
 	UnauthenticatedMetricsAccess bool
 }
 
