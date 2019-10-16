@@ -166,7 +166,7 @@ For more examples, please look at the Vault API client.
 
 Requests that are sent to a [Vault Agent][agent] that is configured to use the
 `require_request_header` option must include the `X-Vault-Request` header
-entry:
+entry, e.g.:
 
 ```shell
 $ curl \
