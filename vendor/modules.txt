@@ -145,7 +145,7 @@ github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
 github.com/beorn7/perks/quantile
 # github.com/bgentry/speakeasy v0.1.0
 github.com/bgentry/speakeasy
-# github.com/boombuler/barcode v1.0.0
+# github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc
 github.com/boombuler/barcode
 github.com/boombuler/barcode/qr
 github.com/boombuler/barcode/utils
@@ -309,7 +309,7 @@ github.com/hashicorp/go-rootcerts
 github.com/hashicorp/go-sockaddr
 # github.com/hashicorp/go-syslog v1.0.0
 github.com/hashicorp/go-syslog
-# github.com/hashicorp/go-uuid v1.0.1
+# github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.0
 github.com/hashicorp/go-version
@@ -376,7 +376,7 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190814210155-e060c2a001a8
+# github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191003164552-6600ec024c24
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20190919134245-4eefe0ebe1a1 => ./api
 github.com/hashicorp/vault/api
@@ -421,6 +421,7 @@ github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/pluginutil
+github.com/hashicorp/vault/sdk/helper/entropy
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
@@ -561,7 +562,7 @@ github.com/posener/complete/match
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
-# github.com/pquerna/otp v1.1.0
+# github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
 github.com/pquerna/otp
 github.com/pquerna/otp/totp
 github.com/pquerna/otp/hotp
