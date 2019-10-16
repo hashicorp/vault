@@ -122,10 +122,10 @@ entities attempting to login.
   that login is restricted to.
 - `bound_group_ids` `(array: [])` - The list of group ids that login is restricted 
   to.
-- `bound_location` `(array: [])` - The list of locations that login is restricted to.
+- `bound_locations` `(array: [])` - The list of locations that login is restricted to.
 - `bound_subscription_ids` `(array: [])` - The list of subscription IDs that login 
   is restricted to.
-- `bound_resource_group_names` `(array: [])` - The list of resource groups that 
+- `bound_resource_groups` `(array: [])` - The list of resource groups that
   login is restricted to. 
 - `bound_scale_sets` `(array: [])` - The list of scale set names that the 
   login is restricted to. 
@@ -136,7 +136,7 @@ entities attempting to login.
 
 ```json
 {
-  "policies": [
+  "token_policies": [
     "default",
     "dev",
     "prod"
@@ -186,7 +186,7 @@ $ curl \
 ```json
 {
   "data":{
-    "policies": [
+    "token_policies": [
         "default",
         "dev",
         "prod"
@@ -210,7 +210,7 @@ Lists all the roles that are registered with the plugin.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/azure/roles`          |
+| `LIST`   | `/auth/azure/role`          |
 
 ### Sample Request
 
@@ -218,7 +218,7 @@ Lists all the roles that are registered with the plugin.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://127.0.0.1:8200/v1/auth/azure/roles
+    https://127.0.0.1:8200/v1/auth/azure/role
 ```
 
 ### Sample Response
@@ -309,7 +309,7 @@ $ curl \
     "auth":{
         "client_token":"f33f8c72-924e-11f8-cb43-ac59d697597c",
         "accessor":"0e9e354a-520f-df04-6867-ee81cae3d42d",
-        "policies":[
+        "token_policies":[
             "default",
             "dev",
             "prod"

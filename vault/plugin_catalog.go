@@ -263,7 +263,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	}
 
 	if symAbs != c.directory {
-		return errors.New("can not execute files outside of configured plugin directory")
+		return errors.New("cannot execute files outside of configured plugin directory")
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type

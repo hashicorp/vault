@@ -822,7 +822,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 
 	if le.Secret == nil {
 		if le.Auth != nil {
-			return logical.ErrorResponse("tokens cannot be renewed through this endpoint"), logical.ErrPermissionDenied
+			return logical.ErrorResponse("tokens cannot be renewed through this endpoint"), nil
 		}
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}

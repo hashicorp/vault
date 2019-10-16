@@ -23,6 +23,8 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
+Note: Using replication requires a storage backend that supports transactional updates, such as Consul.
+
 ## Architecture
 
 The core unit of Vault replication is a **cluster**, which is comprised of a
@@ -133,11 +135,15 @@ generation until it is used.
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
 
-## Setup and Best Practices
 
-A [setup guide](/guides/operations/replication.html) is
-available to help you get started; this guide also contains best practices
-around operationalizing the replication feature.
+## Learn
+
+Refer to the following tutorials replication setup and best practices:
+
+- [Setting up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
+- [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
+- [Performance Replication with Mount Filters](https://learn.hashicorp.com/vault/operations/mount-filter)
+- [Monitoring Vault Replication](https://learn.hashicorp.com/vault/operations/monitor-replication)
 
 ## API
 

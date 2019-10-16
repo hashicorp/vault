@@ -27,6 +27,7 @@ const API_PATHS = {
     replication: 'sys/replication',
     license: 'sys/license',
     seal: 'sys/seal',
+    raft: 'sys/storage/raft/configuration',
   },
   metrics: {
     requests: 'sys/internal/counters/requests',

@@ -140,8 +140,8 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultPooledClient(),
+		Timeout:    time.Second * 60,
 	}
-	config.HttpClient.Timeout = time.Second * 60
 
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
@@ -427,9 +427,13 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	client := &Client{
-		addr:   u,
-		config: c,
+		addr:    u,
+		config:  c,
+		headers: make(http.Header),
 	}
+
+	// Add the VaultRequest SSRF protection header
+	client.headers[consts.RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token

@@ -6,6 +6,7 @@ module.exports = function(environment) {
     modulePrefix: 'vault',
     environment: environment,
     rootURL: '/ui/',
+    serviceWorkerScope: '/v1/sys/storage/raft/snapshot',
     locationType: 'auto',
     EmberENV: {
       FEATURES: {

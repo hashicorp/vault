@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/armon/go-metrics"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,15 +13,16 @@ import (
 	"sync"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 
@@ -93,6 +95,9 @@ type RaftBackend struct {
 
 	// serverAddressProvider is used to map server IDs to addresses.
 	serverAddressProvider raft.ServerAddressProvider
+
+	// permitPool is used to limit the number of concurrent storage calls.
+	permitPool *physical.PermitPool
 }
 
 // EnsurePath is used to make sure a path exists
@@ -200,6 +205,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snapStore:   snap,
 		dataDir:     path,
 		localID:     localID,
+		permitPool:  physical.NewPermitPool(physical.DefaultParallelOperations),
 	}, nil
 }
 
@@ -343,6 +349,9 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		config.TrailingLogs = uint64(trailingLogs)
 	}
 
+	config.NoSnapshotRestoreOnStart = true
+	config.MaxAppendEntries = 64
+
 	return nil
 }
 
@@ -358,6 +367,26 @@ type SetupOpts struct {
 	// StartAsLeader is used to specify this node should start as leader and
 	// bypass the leader election. This should be used with caution.
 	StartAsLeader bool
+
+	// RecoveryModeConfig is the configuration for the raft cluster in recovery
+	// mode.
+	RecoveryModeConfig *raft.Configuration
+}
+
+func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
+	recoveryModeConfig := &raft.Configuration{
+		Servers: []raft.Server{
+			{
+				ID:      raft.ServerID(peer.ID),
+				Address: raft.ServerAddress(peer.Address),
+			},
+		},
+	}
+
+	return b.SetupCluster(context.Background(), SetupOpts{
+		StartAsLeader:      true,
+		RecoveryModeConfig: recoveryModeConfig,
+	})
 }
 
 // SetupCluster starts the raft cluster and enables the networking needed for
@@ -468,6 +497,13 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		b.logger.Info("raft recovery deleted peers.json")
 	}
 
+	if opts.RecoveryModeConfig != nil {
+		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *opts.RecoveryModeConfig)
+		if err != nil {
+			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
+		}
+	}
+
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
@@ -574,7 +610,6 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
 
 	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-
 	return future.Error()
 }
 
@@ -606,7 +641,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -628,6 +663,14 @@ func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
 	}
 	defer snap.Close()
 
+	size, err := snap.Size()
+	if err != nil {
+		return err
+	}
+
+	out.Header().Add("Content-Disposition", "attachment")
+	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
+	out.Header().Add("Content-Type", "application/gzip")
 	_, err = io.Copy(out, snap)
 	if err != nil {
 		return err
@@ -700,6 +743,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 
 // Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
+	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
 			&LogOperation{
@@ -708,6 +752,8 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 			},
 		},
 	}
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
@@ -717,15 +763,20 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 
 // Get returns the value corresponding to the given path from the fsm
 func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, error) {
+	defer metrics.MeasureSince([]string{"raft-storage", "get"}, time.Now())
 	if b.fsm == nil {
 		return nil, errors.New("raft: fsm not configured")
 	}
+
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
 	return b.fsm.Get(ctx, path)
 }
 
 // Put inserts an entry in the log for the put operation
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
+	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
 		Operations: []*LogOperation{
 			&LogOperation{
@@ -736,6 +787,9 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		},
 	}
 
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
+
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
@@ -744,9 +798,13 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 // List enumerates all the items under the prefix from the fsm
 func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error) {
+	defer metrics.MeasureSince([]string{"raft-storage", "list"}, time.Now())
 	if b.fsm == nil {
 		return nil, errors.New("raft: fsm not configured")
 	}
+
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
 	return b.fsm.List(ctx, prefix)
 }
@@ -754,6 +812,7 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 // Transaction applies all the given operations into a single log and
 // applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
+	defer metrics.MeasureSince([]string{"raft-storage", "transaction"}, time.Now())
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
 	}
@@ -773,6 +832,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 
 		command.Operations[i] = op
 	}
+
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
 	b.l.RLock()
 	err := b.applyLog(ctx, command)

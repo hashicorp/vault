@@ -40,7 +40,7 @@ seal "awskms" {
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `region` `(string: "us-east-1")`: The AWS region where the encryption key
-  lives. If not provided, may be populated from the `AWS_REGION` or 
+  lives. If not provided, may be populated from the `AWS_REGION` or
   `AWS_DEFAULT_REGION` environment variables, from your `~/.aws/config` file,
    or from instance metadata.
 
@@ -74,13 +74,12 @@ variables or as configuration parameters.
 `AWS_ACCESS_KEY_ID` and `AWS_ACCESS_KEY_ID` as part of the seal's parameters, it
 is *strongly* recommended to set these values via environment variables.
 
-```text
 AWS authentication values:
 
 * `AWS_REGION` or `AWS_DEFAULT_REGION`
 * `AWS_ACCESS_KEY_ID`
 * `AWS_SECRET_ACCESS_KEY`
-```
+
 
 Note: The client uses the official AWS SDK and will use the specified
 credentials, environment credentials, shared file credentials, or IAM role/ECS
@@ -99,20 +98,24 @@ the KMS key policy for the KMS key, or via KMS Grants on the key.
 ## `awskms` Environment Variables
 
 Alternatively, the AWS KMS seal can be activated by providing the following
-environment variables:
+environment variables.
 
-```text
 Vault Seal specific values:
 
 * `VAULT_SEAL_TYPE`
 * `VAULT_AWSKMS_SEAL_KEY_ID`
-```
+
 
 ## Key Rotation
 
-This seal supports rotating the master keys defined in AWS KMS 
-[doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic 
-rotation and manual rotation is supported for KMS since the key information is stored with the 
-encrypted data.  Old keys must not be disabled or deleted and are used to decrypt older data. 
+This seal supports rotating the master keys defined in AWS KMS
+[doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic
+rotation and manual rotation is supported for KMS since the key information is stored with the
+encrypted data.  Old keys must not be disabled or deleted and are used to decrypt older data.
 Any new or updated data will be encrypted with the current key defined in the seal configuration
 or set to current under a key alias.
+
+## Learn
+
+Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)
+guide for a step-by-step tutorial.
