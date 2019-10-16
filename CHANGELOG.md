@@ -15,6 +15,12 @@ FEATURES:
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
  * Transit: Encryption and decryption is now supported via AES128-GCM96
    [GH-7555]
+ *  **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
+    operators to retrieve debugging information related to a particular Vault
+    node. Operators can use this simple workflow to capture triaging information,
+    which can then be consumed programmatically or by support and engineering teams.
+    It has the abilitity to probe for config, host, metrics, pprof, server status, 
+    and replication status.
 
 CHANGES: 
 
