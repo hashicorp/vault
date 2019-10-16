@@ -15,7 +15,7 @@ The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped entries.
 
 ## Read Rewrap Status
 
-This endpoint retrieves if a seal rewrap process is currently running.
+This endpoint reports whether a seal rewrap process is currently running.
 
 | Method   | Path                   |
 | :------- | :--------------------- |
@@ -33,10 +33,6 @@ $ curl \
 
 ```json
 {
-  "request_id": "a6a51003-2576-be0b-9a43-d3bdfeafc2f7",
-  "lease_id": "",
-  "lease_duration": 0,
-  "renewable": false,
   "data": {
     "entries": {
       "failed": 0,
@@ -44,8 +40,7 @@ $ curl \
       "succeeded": 30
     },
     "is_running": false
-  },
-  "warnings": null
+  }
 }
 ```
 
