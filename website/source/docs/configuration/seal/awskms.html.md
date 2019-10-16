@@ -115,15 +115,6 @@ encrypted data.  Old keys must not be disabled or deleted and are used to decryp
 Any new or updated data will be encrypted with the current key defined in the seal configuration
 or set to current under a key alias.
 
-
-## Recovery Key Rekeying
-
-During the `awskms` Seal initialization process, a set of Shamir keys called Recovery Keys are
-generated which are used for operations that still require a quorum of users.
-
-Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
-Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.
-
 ## Learn
 
 Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)
