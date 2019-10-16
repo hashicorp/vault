@@ -11,8 +11,10 @@ description: |-
 # operator generate-root
 
 The `operator generate-root` command generates a new root token by combining a
-quorum of share holders. One of the following must be provided to start the root
-token generation:
+quorum of share holders.  With the `-dr-token` or `-recovery-token` options,
+it can generate a DR operational token or a recovery token in the same way.
+
+One of the following must be provided to start the root token generation:
 
 - A base64-encoded one-time-password (OTP) provided via the `-otp` flag. Use the
   `-generate-otp` flag to generate a usable value. The resulting token is XORed
@@ -88,3 +90,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-status` `(bool: false)` - Print the status of the current attempt without
   providing an unseal key. The default is false.
+  
+- `-dr-token` `(bool: false)` - Generate DR operational token
+
+- `-recovery-token` `(bool: false)` - Generate recovery operational token
