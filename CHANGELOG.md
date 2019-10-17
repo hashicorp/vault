@@ -24,6 +24,7 @@ FEATURES:
  * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
    engine, users or applications can check out a service account for use, and its
    password will be rotated when it's checked back in.
+ * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
 
 CHANGES: 
 
