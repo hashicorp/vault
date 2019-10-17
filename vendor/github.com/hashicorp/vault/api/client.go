@@ -673,7 +673,6 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	token := c.token
 	mfaCreds := c.mfaCreds
 	wrappingLookupFunc := c.wrappingLookupFunc
-	headers := c.headers
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
@@ -718,10 +717,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
-	if headers != nil {
-		req.Headers = headers
-	}
-
+	req.Headers = c.Headers()
 	req.PolicyOverride = policyOverride
 
 	return req
