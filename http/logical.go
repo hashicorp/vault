@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"go.uber.org/atomic"
 	"io"
 	"net"
 	"net/http"
@@ -16,8 +14,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"go.uber.org/atomic"
 )
 
 func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
@@ -240,11 +240,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
 			// Get the token ns info; if we match the paths below we want to
 			// swap in the token context (but keep the relative path)
-			if err != nil {
-				core.Logger().Warn("error looking up just-set context", "error", err)
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
 			te := req.TokenEntry()
 			newCtx := r.Context()
 			if te != nil {
