@@ -501,7 +501,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
 	var ts *template.Server
 	// Start auto-auth and sink servers
 	if method != nil {
@@ -529,6 +529,7 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
+		unblockCh = ts.UnblockCh
 
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
@@ -563,10 +564,13 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	// Wait for the template to render
-	select {
-	case <-ctx.Done():
-	case <-ts.UnblockCh:
+	// If the template server is running and we've assinged the Unblock channel,
+	// wait for the template to render
+	if unblockCh != nil {
+		select {
+		case <-ctx.Done():
+		case <-ts.UnblockCh:
+		}
 	}
 
 	select {
