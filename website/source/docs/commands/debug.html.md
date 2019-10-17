@@ -52,6 +52,11 @@ information when debug is running. By default, it captures all information.
 | `replication-status` | Replication status.                                                               |
 | `server-status`      | Health and seal status.                                                           |
 
+Note that the `config`, `host`,`metrics`, and `pprof` targets are only queried 
+on active and performance standby nodes due to the the fact that the information
+pertains to the local node and the request should not be forwarded.
+
+
 ## Output Layout
 
 The output of the bundled information, once decompressed, is contained within a
