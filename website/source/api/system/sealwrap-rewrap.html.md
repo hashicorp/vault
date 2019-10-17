@@ -12,6 +12,8 @@ description: |-
 ~> **Enterprise Only** – These endpoints require Vault Enterprise.
 
 The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped entries.
+This is useful when you want to upgrade seal wrapped entries to use the latest
+key, for example, after a seal migration or after rotating the remote keyring.
 
 ## Read Rewrap Status
 
