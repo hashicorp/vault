@@ -35,7 +35,7 @@ jobs:
         command: make ci-verify
   install-ui-dependencies:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -54,7 +54,7 @@ jobs:
         - ui/node_modules
   go-mod-download:
     docker:
-    - image: golang:1.12.11-stretch
+    - image: golang:1.12.11-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -76,7 +76,7 @@ jobs:
         - /go/pkg/mod
   build-go-dev:
     docker:
-    - image: golang:1.12.11-stretch
+    - image: golang:1.12.11-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -100,7 +100,7 @@ jobs:
         root: .
   test-ui:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
@@ -138,7 +138,7 @@ jobs:
         path: ui/test-results
   test-ui-browserstack:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
@@ -407,7 +407,7 @@ workflows:
 # executors:
 #   go:
 #     docker:
-#     - image: golang:1.12.11-stretch
+#     - image: golang:1.12.11-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
@@ -421,7 +421,7 @@ workflows:
 #     working_directory: ~/src
 #   node:
 #     docker:
-#     - image: node:10-stretch
+#     - image: node:10-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 # jobs:
@@ -586,8 +586,8 @@ workflows:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
 #     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
 #   images:
-#     go: golang:1.12.11-stretch
-#     node: node:10-stretch
+#     go: golang:1.12.11-buster
+#     node: node:10-buster
 # version: 2.1
 # workflows:
 #   ci:
