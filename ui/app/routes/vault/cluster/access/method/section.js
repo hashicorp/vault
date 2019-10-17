@@ -1,22 +1,52 @@
-/* eslint-disable prettier/prettier */
-import { set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
+import { allSettled } from 'rsvp';
 
 export default Route.extend({
   wizard: service(),
+  pathHelp: service('path-help'),
 
-  model(params) {
-    const { section_name: section } = params;
-    if (section !== 'configuration') {
-      const error = new DS.AdapterError();
-      set(error, 'httpStatus', 404);
-      throw error;
+  configModels(backendType) {
+    const backends = ['azure', 'github', 'gcp', 'jwt', 'oidc', 'kubernetes', 'ldap', 'okta', 'radius'];
+    if (backendType === 'aws') {
+      return [
+        'auth-config/aws/client',
+        'auth-config/aws/identity-whitelist',
+        'auth-config/aws/roletag-blacklist',
+      ];
     }
-    let backend = this.modelFor('vault.cluster.access.method');
+    if (backends.includes(backendType)) {
+      return [`auth-config/${backendType}`];
+    }
+    return [];
+  },
+
+  beforeModel() {
+    const { apiPath, method, type } = this.getMethodAndModelInfo();
+    let configModelTypes = this.configModels(type);
+    let configModels = configModelTypes.map(config => {
+      return this.pathHelp.getNewModel(config, method, apiPath);
+    });
+    return allSettled(configModels);
+  },
+
+  getMethodAndModelInfo() {
+    const { path: method } = this.paramsFor('vault.cluster.access.method');
+    const methodModel = this.modelFor('vault.cluster.access.method');
+    const { apiPath, type } = methodModel;
+    return { apiPath, type, method };
+  },
+
+  model() {
+    const backend = this.modelFor('vault.cluster.access.method');
     this.wizard.transitionFeatureMachine(this.wizard.featureState, 'DETAILS', backend.type);
-    return backend;
+    let configModelTypes = this.configModels(backend.type);
+    let authConfigs = configModelTypes.map(config => this.store.findRecord(config, backend.id));
+
+    return allSettled(authConfigs).then(configs => {
+      backend.authConfigs.pushObjects(configs.filter(config => config.state === 'fulfilled').mapBy('value'));
+      return backend;
+    });
   },
 
   setupController(controller) {

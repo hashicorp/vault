@@ -5,6 +5,7 @@ import { inject as service } from '@ember/service';
 
 export default Route.extend({
   pathHelp: service('path-help'),
+
   model(params) {
     const { path } = params;
     return this.store.findAll('auth-method').then(modelArray => {
