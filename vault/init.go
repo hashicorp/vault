@@ -90,7 +90,7 @@ func (c *Core) Initialized(ctx context.Context) (bool, error) {
 
 func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// Generate a master key
-	masterKey, err := c.barrier.GenerateKey()
+	masterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		return nil, nil, errwrap.Wrapf("key generation failed: {{err}}", err)
 	}
@@ -213,7 +213,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// Initialize the barrier
-	if err := c.barrier.Initialize(ctx, barrierKey); err != nil {
+	if err := c.barrier.Initialize(ctx, barrierKey, c.secureRandomReader); err != nil {
 		c.logger.Error("failed to initialize barrier", "error", err)
 		return nil, errwrap.Wrapf("failed to initialize barrier: {{err}}", err)
 	}

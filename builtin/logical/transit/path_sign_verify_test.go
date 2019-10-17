@@ -58,7 +58,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,11 +274,11 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	signRequest(req, true, "")
 
 	// Rotate and set min decryption version
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	fooP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	barP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "bar",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -566,11 +566,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	sig = signRequest(req, true, "bar")
 
 	// Rotate and set min decryption version
-	err = fooP.Rotate(context.Background(), storage)
+	err = fooP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fooP.Rotate(context.Background(), storage)
+	err = fooP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -578,11 +578,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	if err = fooP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(context.Background(), storage)
+	err = barP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(context.Background(), storage)
+	err = barP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
