@@ -33,6 +33,9 @@ CHANGES:
    automatic region detection added to the CLI and Agent in 1.2 has been removed.
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
+ * Vault Agent now has a new optional `require_request_header` option per
+   listener.  If the option is set, each incoming request must have a
+   `X-Vault-Request: true` header entry.
 
 IMPROVEMENTS:
 
