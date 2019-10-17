@@ -1316,6 +1316,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
 				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
+				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
@@ -1605,6 +1610,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
 				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,

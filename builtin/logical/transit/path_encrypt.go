@@ -129,7 +129,7 @@ func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Re
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return false, err
 	}
@@ -244,7 +244,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Name:    name,
 		}
 	}
-	p, upserted, err = b.lm.GetPolicy(ctx, polReq)
+	p, upserted, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
