@@ -85,12 +85,17 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
     });
     return tabs;
   }
-  if (paths) {
-    tabs = paths.map(path => {
-      let itemName = path.slice(1); //get rid of leading slash
+  if (paths || model.paths) {
+    if (model.paths) {
+      paths = model.paths.paths.filter(path => path.navigation);
+    }
+
+    // TODO: we're unsure if we actually need compact here
+    // but are leaving it just in case OpenAPI ever returns an empty thing
+    tabs = paths.compact().map(path => {
       return {
-        label: capitalize(pluralize(itemName)),
-        routeParams: ['vault.cluster.access.method.item.list', itemName],
+        label: capitalize(pluralize(path.itemName)),
+        routeParams: ['vault.cluster.access.method.item.list', path.itemType],
       };
     });
   } else {
