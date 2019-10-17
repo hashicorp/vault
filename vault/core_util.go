@@ -124,3 +124,5 @@ func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, 
 }
 
 func (c *Core) initSealsForMigration() {}
+
+func (c *Core) postSealMigration(ctx context.Context) error { return nil }

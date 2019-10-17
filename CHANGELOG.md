@@ -11,10 +11,19 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
- * Transit: Signing and verification is now supported with the P-384
+ * **Transit**: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
- * Transit: Encryption and decryption is now supported via AES128-GCM96
+ * **Transit**: Encryption and decryption is now supported via AES128-GCM96
    [GH-7555]
+ * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
+   operators to retrieve debugging information related to a particular Vault
+   node. Operators can use this simple workflow to capture triaging information,
+   which can then be consumed programmatically or by support and engineering teams.
+   It has the abilitity to probe for config, host, metrics, pprof, server status, 
+   and replication status.
+ * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
+   engine, users or applications can check out a service account for use, and its
+   password will be rotated when it's checked back in.
 
 CHANGES: 
 
