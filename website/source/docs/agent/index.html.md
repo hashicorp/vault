@@ -45,6 +45,8 @@ These are the currently-available general configuration option:
 
 - `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies options used for Caching functionality.
 
+- `listener` <tt>([listener][listener]: \<optional\>)</tt> - Specifies the addresses and ports on which the Agent will respond to requests.
+
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
 
@@ -84,6 +86,19 @@ configuration entries:
   certificates. Using this option is highly discouraged as it decreases the
   security of data transmissions to and from the Vault server. This value can
   be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
+
+### listener Stanza
+
+Agent supports one or more [listener][listener_main] stanzas.  In addition to
+the standard listener configuration, an Agent's listener configuration also
+supports an additional optional entry:
+
+- `require_request_header (bool: false)` - Require that all incoming HTTP
+  requests on this listener must have an `X-Vault-Request: true` header entry.
+  Using this option offers an additional layer of protection from Service Side
+  Request Forgery attacks.  Requests on the listener that do not have the proper
+  `X-Vault-Request` header will fail, with a HTTP response status code of `412:
+  Precondition Failed`.
 
 ## Example Configuration
 
@@ -140,3 +155,5 @@ listener "tcp" {
 [vault]: /docs/agent/index.html#vault-stanza
 [autoauth]: /docs/agent/autoauth/index.html
 [caching]: /docs/agent/caching/index.html
+[listener]: /docs/agent/index.html#listener-stanza
+[listener_main]: /docs/configuration/listener/tcp.html
