@@ -93,12 +93,12 @@ Agent supports one or more [listener][listener_main] stanzas.  In addition to
 the standard listener configuration, an Agent's listener configuration also
 supports an additional optional entry:
 
-- `require_request_header (bool: optional)` - Require that all incoming HTTP
+- `require_request_header (bool: false)` - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
   Using this option offers an additional layer of protection from Service Side
-  Request Forgery attacks when the Agent has `auto-auth` turned on.  Requests on
-  the listener that do not have the proper `X-Vault-Request` header will fail,
-  with a HTTP response status code of `412: Precondition Failed`.
+  Request Forgery attacks.  Requests on the listener that do not have the proper
+  `X-Vault-Request` header will fail, with a HTTP response status code of `412:
+  Precondition Failed`.
 
 ## Example Configuration
 

@@ -179,7 +179,8 @@ $ curl \
 ```
 
 The Vault CLI always adds this header to every request, regardless of whether
-the request is being sent to a Vault Agent or directly to a Vault Server.
+the request is being sent to a Vault Agent or directly to a Vault Server. In
+addition, the Vauld SDK always adds this header to every request.
 
 ## Help
 
