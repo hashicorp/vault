@@ -35,7 +35,7 @@ CHANGES:
    the cluster is configured to use
  * Vault Agent now has a new optional `require_request_header` option per
    listener.  If the option is set, each incoming request must have a
-   `X-Vault-Request: true` header entry.
+   `X-Vault-Request: true` header entry.  [GH-7627]
 
 IMPROVEMENTS:
 
