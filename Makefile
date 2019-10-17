@@ -2,6 +2,8 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
+export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
+
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
@@ -236,6 +238,26 @@ hana-database-plugin:
 
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
+
+# GPG_KEY_VARS sets FPR to the fingerprint with no spaces and GIT_GPG_KEY_ID to a git compatible gpg key id.
+define GPG_KEY_VARS
+	FPR=$$(echo "$(RELEASE_GPG_KEY_FINGERPRINT)" | sed 's/ //g') && GIT_GPG_KEY_ID="0x$$(printf $$FPR | tail -c 16)"
+endef
+
+define FAIL_IF_GPG_KEY_MISSING
+	@$(GPG_KEY_VARS) && echo "Checking for key '$$FPR' (git key id: $$GIT_GPG_KEY_ID)"; \
+	gpg --list-secret-keys "$$FPR" >/dev/null 2>&1 || { \
+		echo "ERROR: Secret GPG key missing: $$FPR"; \
+		exit 1; \
+	}
+endef
+
+define FAIL_IF_UNCOMMITTED_CHANGES
+	@{ git diff --exit-code && git diff --cached --exit-code; } >/dev/null 2>&1 || { \
+		echo "ERROR: Uncommitted changes detected."; \
+		exit 1; \
+	}
+endef
 
 stage-commit:
 	$(FAIL_IF_GPG_KEY_MISSING)
