@@ -5,7 +5,6 @@ import (
 )
 
 var(
-	onEnterprise = false
 	parseEntropy = parseEntropyOSS
 )
 
