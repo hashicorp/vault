@@ -1124,7 +1124,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
 		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
-		if seal.StoredKeysSupported() != StoredKeysNotSupported {
+		if seal.StoredKeysSupported() == StoredKeysSupportedGeneric {
 			masterKeyShares, err := seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
@@ -1197,7 +1197,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 			}
 
 			// We have recovery keys; we're going to use them as the new
-			// barrier key.
+			// shamir KeK.
 			err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(recoveryKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
