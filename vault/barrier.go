@@ -55,6 +55,12 @@ const (
 	// keyring to discover the new master key. The new master key is then
 	// used to reload the keyring itself.
 	masterKeyPath = "core/master"
+
+	// shamirKekPath is used with Shamir in v1.3+ to store a copy of the
+	// unseal key behind the barrier.  As with masterKeyPath this is primarily
+	// used by standbys to handle rekeys.  It also comes into play when restoring
+	// raft snapshots.
+	shamirKekPath = "core/shamir-kek"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -69,8 +75,10 @@ type SecurityBarrier interface {
 	Initialized(ctx context.Context) (bool, error)
 
 	// Initialize works only if the barrier has not been initialized
-	// and makes use of the given master key.
-	Initialize(context.Context, []byte, io.Reader) error
+	// and makes use of the given master key.  When sealKey is provided
+	// it's because we're using a new-style Shamir seal, and masterKey
+	// is to be stored using sealKey to encrypt it.
+	Initialize(ctx context.Context, masterKey []byte, sealKey []byte, random io.Reader) error
 
 	// GenerateKey is used to generate a new key
 	GenerateKey(io.Reader) ([]byte, error)

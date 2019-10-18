@@ -70,12 +70,12 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Initialize the vault
-	if err := b.Initialize(context.Background(), key, rand.Reader); err != nil {
+	if err := b.Initialize(context.Background(), key, nil, rand.Reader); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Double Initialize should fail
-	if err := b.Initialize(context.Background(), key, rand.Reader); err != ErrBarrierAlreadyInit {
+	if err := b.Initialize(context.Background(), key, nil, rand.Reader); err != ErrBarrierAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -247,7 +247,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b.GenerateKey(rand.Reader)
-	b.Initialize(context.Background(), key, rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -353,7 +353,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b.GenerateKey(rand.Reader)
-	b.Initialize(context.Background(), key, rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -433,7 +433,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b1.GenerateKey(rand.Reader)
-	b1.Initialize(context.Background(), key, rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -504,7 +504,7 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 func testBarrier_Upgrade_Rekey(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b1.GenerateKey(rand.Reader)
-	b1.Initialize(context.Background(), key, rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)

@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -935,6 +934,8 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 		sealToUse = c.migrationSeal
 	}
 
+	// unsealPart returns either a master key (legacy shamir) or an unseal
+	// key (new-style shamir).
 	masterKey, err := c.unsealPart(ctx, sealToUse, key, useRecoveryKeys)
 	if err != nil {
 		return false, err
@@ -942,15 +943,39 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 	if masterKey != nil {
 		if c.seal.BarrierType() == seal.Shamir {
-			_, err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
-				"key": base64.StdEncoding.EncodeToString(masterKey),
-			})
+			// If this is a legacy shamir seal this serves no purpose but it
+			// doesn't hurt.
+			err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(masterKey)
 			if err != nil {
 				return false, err
 			}
 		}
 
 		if !c.isRaftUnseal() {
+			if c.seal.BarrierType() == seal.Shamir {
+				cfg, err := c.seal.BarrierConfig(ctx)
+				if err != nil {
+					return false, err
+				}
+
+				// If there is a stored key, retrieve it.
+				if cfg.StoredShares > 0 {
+					if err != nil {
+						return false, err
+					}
+					// Here's where we actually test that the provided unseal
+					// key is valid: can it decrypt the stored master key?
+					storedKeys, err := c.seal.GetStoredKeys(ctx)
+					if err != nil {
+						return false, err
+					}
+					if len(storedKeys) == 0 {
+						return false, fmt.Errorf("shamir seal with stored keys configured but no stored keys found")
+					}
+					masterKey = storedKeys[0]
+				}
+			}
+
 			return c.unsealInternal(ctx, masterKey)
 		}
 
@@ -964,8 +989,9 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		go func() {
 			keyringFound := false
+			haveMasterKey := c.seal.StoredKeysSupported() != StoredKeysSupportedShamirMaster
 			defer func() {
-				if keyringFound {
+				if keyringFound && haveMasterKey {
 					_, err := c.unsealInternal(ctx, masterKey)
 					if err != nil {
 						c.logger.Error("failed to unseal", "error", err)
@@ -976,18 +1002,31 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			// Wait until we at least have the keyring before we attempt to
 			// unseal the node.
 			for {
-				keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
-				if err != nil {
-					c.logger.Error("failed to list physical keys", "error", err)
+				if !keyringFound {
+					keys, err := c.underlyingPhysical.List(ctx, keyringPrefix)
+					if err != nil {
+						c.logger.Error("failed to list physical keys", "error", err)
+						return
+					}
+					if strutil.StrListContains(keys, "keyring") {
+						keyringFound = true
+					}
+				}
+				if !haveMasterKey {
+					keys, err := c.seal.GetStoredKeys(ctx)
+					if err != nil {
+						c.logger.Error("failed to read master key", "error", err)
+						return
+					}
+					if len(keys) > 0 {
+						haveMasterKey = true
+						masterKey = keys[0]
+					}
+				}
+				if keyringFound && haveMasterKey {
 					return
 				}
-				if strutil.StrListContains(keys, "keyring") {
-					keyringFound = true
-					return
-				}
-				select {
-				case <-time.After(1 * time.Second):
-				}
+				time.Sleep(1 * time.Second)
 			}
 		}()
 
@@ -1084,7 +1123,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
 		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
-		if seal.StoredKeysSupported() {
+		if seal.StoredKeysSupported() == StoredKeysSupportedGeneric {
 			masterKeyShares, err := seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)

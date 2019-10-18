@@ -115,7 +115,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 
 // Initialize works only if the barrier has not been initialized
 // and makes use of the given master key.
-func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, reader io.Reader) error {
+func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, reader io.Reader) error {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
@@ -146,7 +146,28 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, reader io.Re
 	if err != nil {
 		return errwrap.Wrapf("failed to create keyring: {{err}}", err)
 	}
-	return b.persistKeyring(ctx, keyring)
+
+	err = b.persistKeyring(ctx, keyring)
+	if err != nil {
+		return err
+	}
+
+	if len(sealKey) > 0 {
+		primary, err := b.aeadFromKey(encrypt)
+		if err != nil {
+			return err
+		}
+
+		err = b.putInternal(ctx, 1, primary, &logical.StorageEntry{
+			Key:   shamirKekPath,
+			Value: sealKey,
+		})
+		if err != nil {
+			return errwrap.Wrapf("failed to store new seal key: {{err}}", err)
+		}
+	}
+
+	return nil
 }
 
 // persistKeyring is used to write out the keyring using the
@@ -720,6 +741,10 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) er
 		return err
 	}
 
+	return b.putInternal(ctx, term, primary, entry)
+}
+
+func (b *AESGCMBarrier) putInternal(ctx context.Context, term uint32, primary cipher.AEAD, entry *logical.StorageEntry) error {
 	value, err := b.encrypt(entry.Key, term, primary, entry.Value)
 	if err != nil {
 		return err
