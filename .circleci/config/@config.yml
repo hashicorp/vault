@@ -21,16 +21,6 @@ commands:
           key: *YARN_LOCK_CACHE_KEY
           paths:
             - ui/node_modules
-  restore_go_cache:
-    steps:
-      - restore_cache:
-          key: *GO_SUM_CACHE_KEY
-  save_go_cache:
-    steps:
-      - save_cache:
-          key: *GO_SUM_CACHE_KEY
-          paths:
-            - /go/pkg/mod
 
 executors:
   go-machine:

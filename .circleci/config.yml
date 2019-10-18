@@ -70,8 +70,6 @@ jobs:
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
         name: Setup Go
     - checkout
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
     - attach_workspace:
         at: .
     - run:
@@ -170,13 +168,6 @@ jobs:
     - checkout
     - run:
         command: |
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
-        name: Allow circleci user to restore Go modules cache
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: |
           set -x
 
           # Install CircleCI CLI
@@ -243,13 +234,6 @@ jobs:
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
         name: Setup Go
     - checkout
-    - run:
-        command: |
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
-        name: Allow circleci user to restore Go modules cache
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
     - run:
         command: |
           set -x
@@ -378,20 +362,10 @@ workflows:
 #               ${package_names}
 #         name: Run Go tests
 #         no_output_timeout: 20m
-#   restore_go_cache:
-#     steps:
-#     - restore_cache:
-#         key: go-sum-v1-{{ checksum \"go.sum\" }}
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
 #         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
-#   save_go_cache:
-#     steps:
-#     - save_cache:
-#         key: go-sum-v1-{{ checksum \"go.sum\" }}
-#         paths:
-#         - /go/pkg/mod
 #   save_yarn_cache:
 #     steps:
 #     - save_cache:
@@ -446,7 +420,6 @@ workflows:
 #     steps:
 #     - setup-go
 #     - checkout
-#     - restore_go_cache
 #     - attach_workspace:
 #         at: .
 #     - run:
@@ -462,21 +435,6 @@ workflows:
 #         paths:
 #         - bin
 #         root: .
-#   go-mod-download:
-#     executor: go
-#     steps:
-#     - add_ssh_keys:
-#         fingerprints:
-#         - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-#     - checkout
-#     - restore_go_cache
-#     - run:
-#         command: go mod download
-#         name: Download Go modules
-#     - run:
-#         command: go mod verify
-#         name: Verify checksums of Go modules
-#     - save_go_cache
 #   install-ui-dependencies:
 #     executor: node
 #     steps:
@@ -524,12 +482,6 @@ workflows:
 #     steps:
 #     - setup-go
 #     - checkout
-#     - run:
-#         command: |
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
-#     - restore_go_cache
 #     - go_test
 #     - store_artifacts:
 #         path: test-results
@@ -540,12 +492,6 @@ workflows:
 #     steps:
 #     - setup-go
 #     - checkout
-#     - run:
-#         command: |
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
-#     - restore_go_cache
 #     - go_test:
 #         extra_flags: -race
 #     - store_artifacts:
