@@ -7,7 +7,7 @@ description: |-
   This section documents the official AWS Marketplace AMIs for Vault Open Source and Vault Enterprise.
 ---
 
-# Overview
+# AWS Marketplace 
 
 Vault can be deployed onto Amazon Web Services (AWS) using HashiCorp’s official AWS Marketplace offerings. HashiCorp packages the latest version of both Vault Open Source and Vault Enterprise as Amazon Machine Images (AMIs).
 
