@@ -223,7 +223,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.11
+    - GO_VERSION: 1.12.12
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
@@ -293,7 +293,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.11
+    - GO_VERSION: 1.12.12
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
   ci:
@@ -414,7 +414,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: null
-#       GO_VERSION: 1.12.11
+#       GO_VERSION: 1.12.12
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
