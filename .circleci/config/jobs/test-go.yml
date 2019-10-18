@@ -1,6 +1,7 @@
 executor: go-machine
 parallelism: 2
 steps:
+  - setup-go
   - checkout
   - run:
       name: Allow circleci user to restore Go modules cache
