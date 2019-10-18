@@ -11,7 +11,7 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
-	github.com/Azure/go-autorest v11.7.1+incompatible
+	github.com/Azure/go-autorest v13.2.0+incompatible
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af // indirect
