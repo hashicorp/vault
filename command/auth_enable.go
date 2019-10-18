@@ -32,6 +32,7 @@ type AuthEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
 }
@@ -176,6 +177,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "external-entropy-access",
+		Target:  &c.flagExternalEntropyAccess,
+		Default: false,
+		Usage:   "Enable auth method to access Vault's external entropy source.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:   flagNameTokenType,
 		Target: &c.flagTokenType,
@@ -255,6 +263,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Description: c.flagDescription,
 		Local:       c.flagLocal,
 		SealWrap:    c.flagSealWrap,
+		ExternalEntropyAccess: c.flagExternalEntropyAccess,
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),

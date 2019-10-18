@@ -1,8 +1,8 @@
 ---
 layout: "docs"
-page_title: "Running Vault - AWS Marketplace"
+page_title: "Running Vault"
 sidebar_current: "docs-platform-aws-mp-run"
-sidebar_title: "Running Vault - AWS Marketplace"
+sidebar_title: "Running Vault"
 description: |-
   Vault can be launched from within the AWS Marketplace from the official Vault Marketplace Listings.
 ---

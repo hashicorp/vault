@@ -247,7 +247,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +456,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

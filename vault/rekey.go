@@ -397,7 +397,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	}
 
 	// Generate a new master key
-	newMasterKey, err := c.barrier.GenerateKey()
+	newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate master key", "error", err)
 		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("master key generation failed: {{err}}", err).Error())
@@ -629,7 +629,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	// Generate a new master key
-	newMasterKey, err := c.barrier.GenerateKey()
+	newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate recovery key", "error", err)
 		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("recovery key generation failed: {{err}}", err).Error())

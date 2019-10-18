@@ -613,7 +613,7 @@ func (p *Policy) NeedsUpgrade() bool {
 	return false
 }
 
-func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr error) {
+func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
 	priorKey := p.Key
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
@@ -670,7 +670,7 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr e
 
 	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
 		entry := p.Keys[strconv.Itoa(p.LatestVersion)]
-		hmacKey, err := uuid.GenerateRandomBytes(32)
+		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
 			return err
 		}
@@ -1371,7 +1371,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	}
 }
 
-func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr error) {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	var priorKeys keyEntryMap
@@ -1405,7 +1405,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	hmacKey, err := uuid.GenerateRandomBytes(32)
+	hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 	if err != nil {
 		return err
 	}
@@ -1418,7 +1418,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
 		}
-		newKey, err := uuid.GenerateRandomBytes(numBytes)
+		newKey, err := uuid.GenerateRandomBytesWithReader(numBytes, randReader)
 		if err != nil {
 			return err
 		}
@@ -1457,7 +1457,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		entry.FormattedPublicKey = string(pemBytes)
 
 	case KeyType_ED25519:
-		pub, pri, err := ed25519.GenerateKey(rand.Reader)
+		pub, pri, err := ed25519.GenerateKey(randReader)
 		if err != nil {
 			return err
 		}
@@ -1470,7 +1470,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 			bitSize = 4096
 		}
 
-		entry.RSAKey, err = rsa.GenerateKey(rand.Reader, bitSize)
+		entry.RSAKey, err = rsa.GenerateKey(randReader, bitSize)
 		if err != nil {
 			return err
 		}
