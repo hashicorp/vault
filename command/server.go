@@ -1822,7 +1822,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() != vault.StoredKeysNotSupported {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -1836,7 +1836,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() == vault.StoredKeysSupportedGeneric {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err

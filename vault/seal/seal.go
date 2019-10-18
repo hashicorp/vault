@@ -22,6 +22,11 @@ const (
 	HSMAutoDeprecated = "hsm-auto"
 )
 
+type Encryptor interface {
+	Encrypt(context.Context, []byte) (*physical.EncryptedBlobInfo, error)
+	Decrypt(context.Context, *physical.EncryptedBlobInfo) ([]byte, error)
+}
+
 // Access is the embedded implementation of autoSeal that contains logic
 // specific to encrypting and decrypting data, or in this case keys.
 type Access interface {
@@ -31,6 +36,5 @@ type Access interface {
 	Init(context.Context) error
 	Finalize(context.Context) error
 
-	Encrypt(context.Context, []byte) (*physical.EncryptedBlobInfo, error)
-	Decrypt(context.Context, *physical.EncryptedBlobInfo) ([]byte, error)
+	Encryptor
 }

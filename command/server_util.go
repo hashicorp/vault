@@ -87,7 +87,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 			return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 		}
 
-		// If we're not cominng from Shamir we expect the previous seal to be
+		// If we're not coming from Shamir we expect the previous seal to be
 		// in the config and disabled.
 		existSeal = unwrapSeal
 		newSeal = barrierSeal
