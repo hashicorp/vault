@@ -3,7 +3,7 @@ version: 2.1
 
 references:
   images:
-    go: &GOLANG_IMAGE golang:1.12.11-buster # Pin Go to patch version (ex: 1.2.3)
+    go: &GOLANG_IMAGE golang:1.12.12-buster # Pin Go to patch version (ex: 1.2.3)
     node: &NODE_IMAGE node:10-buster # Pin Node.js to major version (ex: 10)
 
   cache:

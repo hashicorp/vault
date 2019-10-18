@@ -54,7 +54,7 @@ jobs:
         - ui/node_modules
   go-mod-download:
     docker:
-    - image: golang:1.12.11-buster
+    - image: golang:1.12.12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -76,7 +76,7 @@ jobs:
         - /go/pkg/mod
   build-go-dev:
     docker:
-    - image: golang:1.12.11-buster
+    - image: golang:1.12.12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -407,7 +407,7 @@ workflows:
 # executors:
 #   go:
 #     docker:
-#     - image: golang:1.12.11-buster
+#     - image: golang:1.12.12-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
@@ -586,7 +586,7 @@ workflows:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
 #     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
 #   images:
-#     go: golang:1.12.11-buster
+#     go: golang:1.12.12-buster
 #     node: node:10-buster
 # version: 2.1
 # workflows:
