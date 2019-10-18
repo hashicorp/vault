@@ -39,16 +39,10 @@ type GenerateRootStrategy interface {
 // charge of creating standard root tokens.
 type generateStandardRootToken struct{}
 
-func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, key []byte) error {
-	switch {
-	case c.seal.RecoveryKeySupported():
-		if err := c.seal.VerifyRecoveryKey(ctx, key); err != nil {
-			return errwrap.Wrapf("recovery key verification failed: {{err}}", err)
-		}
-	default:
-		if err := c.barrier.VerifyMaster(key); err != nil {
-			return errwrap.Wrapf("master key verification failed: {{err}}", err)
-		}
+func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
+	_, err := c.unsealKeyToMasterKey(ctx, combinedKey)
+	if err != nil {
+		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
 	}
 
 	return nil
