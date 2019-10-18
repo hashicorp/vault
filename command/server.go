@@ -1006,6 +1006,13 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// prepare a secure random reader for core
+	secureRandomReader, err := createSecureRandomReaderFunc(config, &barrierSeal)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                 config,
 		Physical:                  backend,
@@ -1033,6 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
+		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1814,7 +1822,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() != vault.StoredKeysNotSupported {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -1828,7 +1836,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() == vault.StoredKeysSupportedGeneric {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err

@@ -49,6 +49,11 @@ parameters unset in your configuration.
 
 - `secret_key` `(string: optional)` - When using static credentials, the secret key to use.
 
+- `region` `(string: "us-east-1")` - The region to use for signing the authentication request. The
+   region Agent uses should match that corresponding to
+   [`sts_endpoint`](https://www.vaultproject.io/api/auth/aws/index.html#sts_endpoint),
+   if a custom endpoint has been configured on the Vault server.
+
 - `session_token` `(string: optional)` - The session token to use for authentication, if needed.
 
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for

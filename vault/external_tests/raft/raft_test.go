@@ -373,7 +373,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 
 			if tCaseLocal.Rekey {
 				// Rekey
-				testhelpers.RekeyCluster(t, cluster)
+				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 			}
 
 			if tCaseLocal.Rekey {
@@ -520,7 +520,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			if tCaseLocal.Rekey {
 				// Rekey
-				testhelpers.RekeyCluster(t, cluster)
+				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 			}
 			if tCaseLocal.Rotate {
 				// Set the key clean up to 0 so it's cleaned immediately. This
@@ -588,8 +588,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				}
 				// Parse Response
 				apiResp := api.Response{Response: resp}
-				if !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
-					t.Fatal(apiResp.Error())
+				if apiResp.Error() == nil || !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
+					t.Fatalf("expected error verifying hash file, got %v", apiResp.Error())
 				}
 			}
 

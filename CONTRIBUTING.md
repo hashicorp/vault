@@ -70,3 +70,9 @@ following steps listed in the README, under the section [Developing Vault][1].
 
 [1]: https://github.com/hashicorp/vault#developing-vault
 [2]: https://groups.google.com/group/vault-tool
+
+## Contributor License Agreement
+
+We require that all contributors sign our Contributor License Agreement ("CLA") before we can accept the contribution. 
+
+[Learn more about why HashiCorp requires a CLA and what the CLA includes](https://www.hashicorp.com/cla)

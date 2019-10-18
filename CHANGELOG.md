@@ -11,10 +11,20 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
- * Transit: Signing and verification is now supported with the P-384
+ * **Transit**: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
- * Transit: Encryption and decryption is now supported via AES128-GCM96
+ * **Transit**: Encryption and decryption is now supported via AES128-GCM96
    [GH-7555]
+ * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
+   operators to retrieve debugging information related to a particular Vault
+   node. Operators can use this simple workflow to capture triaging information,
+   which can then be consumed programmatically or by support and engineering teams.
+   It has the abilitity to probe for config, host, metrics, pprof, server status, 
+   and replication status.
+ * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
+   engine, users or applications can check out a service account for use, and its
+   password will be rotated when it's checked back in.
+ * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
 
 CHANGES: 
 
@@ -24,6 +34,9 @@ CHANGES:
    automatic region detection added to the CLI and Agent in 1.2 has been removed.
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
+ * Vault Agent now has a new optional `require_request_header` option per
+   listener.  If the option is set, each incoming request must have a
+   `X-Vault-Request: true` header entry.  [GH-7627]
 
 IMPROVEMENTS:
 
@@ -32,6 +45,9 @@ IMPROVEMENTS:
  * auth/jwt: Bound claims may now contain boolean values [JWT-73]
  * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
+ * core: re-encrypt barrier and recovery keys if the unseal key is updated
+   [GH-7493]
+ * core (enterprise): Add background seal re-wrap
  * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
    access. [GH-7550]  
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
@@ -52,7 +68,11 @@ IMPROVEMENTS:
    from `telemetry` due to potential sensitive entries in those fields.
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
-   
+ * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
+   total number of active service token accessors in the shared token storage.
+   [GH-7541]
+ * sys: Add a new `sys/internal/counters/entities` endpoint, that counts the
+   total number of active identity entities.  [GH-7541]
 
 BUG FIXES:
 
@@ -66,6 +86,8 @@ BUG FIXES:
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  
 ## 1.2.4 (Unreleased)
 
@@ -84,6 +106,8 @@ BUG FIXES:
 
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix panic when pgp keys list is empty [GH-7546]
+ * core: add hook for initializing seals for migration [GH-7666]
+ * core (enterprise): Fix seal migration in enterprise
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
@@ -91,6 +115,8 @@ BUG FIXES:
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
    viewed in the UI [GH-7504]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
    
 ## 1.2.3 (September 12, 2019)
 
