@@ -36,6 +36,7 @@ type AuthHandler struct {
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	enableReauthOnNewCredentials bool
+	enableTemplateTokenCh        bool
 }
 
 type AuthHandlerConfig struct {
@@ -43,6 +44,7 @@ type AuthHandlerConfig struct {
 	Client                       *api.Client
 	WrapTTL                      time.Duration
 	EnableReauthOnNewCredentials bool
+	EnableTemplateTokenCh        bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -57,6 +59,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
+		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
 
 	return ah
@@ -166,7 +169,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
 			ah.OutputCh <- string(wrappedResp)
-			ah.TemplateTokenCh <- string(wrappedResp)
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- string(wrappedResp)
+			}
 
 			am.CredSuccess()
 
@@ -193,7 +198,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
 			ah.OutputCh <- secret.Auth.ClientToken
-			ah.TemplateTokenCh <- secret.Auth.ClientToken
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- secret.Auth.ClientToken
+			}
 
 			am.CredSuccess()
 		}
