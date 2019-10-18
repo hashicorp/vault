@@ -10,14 +10,6 @@ steps:
       command: |
         set -x
 
-        # Install Go
-        curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-        sudo rm -rf /usr/local/go
-        sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-        rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-        export GOPATH=/go
-        export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
-
         # Install CircleCI CLI
         curl -sSL \
             "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
