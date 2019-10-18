@@ -116,7 +116,7 @@ This endpoint creates or updates the role definition.
 ```json
 {
   "tags": "tag1,tag2",
-  "vhost": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+  "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
 }
 ```
 
