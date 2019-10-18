@@ -131,18 +131,32 @@ func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
 
 func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	t.Helper()
-	for _, core := range c.Cores {
-		EnsureCoreUnsealed(t, c, core)
+	for i, core := range c.Cores {
+		err := AttemptUnsealCore(c, core)
+		if err != nil {
+			t.Fatalf("failed to unseal core %d: %v", i, err)
+		}
 	}
 }
-func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+
+func AttemptUnsealCores(c *vault.TestCluster) error {
+	for i, core := range c.Cores {
+		err := AttemptUnsealCore(c, core)
+		if err != nil {
+			return fmt.Errorf("failed to unseal core %d: %v", i, err)
+		}
+	}
+	return nil
+}
+
+func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error {
 	if !core.Sealed() {
-		return
+		return nil
 	}
 
 	core.SealAccess().ClearCaches(context.Background())
 	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	client := core.Client
@@ -153,20 +167,22 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 			// Sometimes when we get here it's already unsealed on its own
 			// and then this fails for DR secondaries so check again
 			if core.Sealed() {
-				t.Fatal(err)
+				return err
+			} else {
+				return nil
 			}
-			break
 		}
 		if statusResp == nil {
-			t.Fatal("nil status response during unseal")
+			return fmt.Errorf("nil status response during unseal")
 		}
 		if !statusResp.Sealed {
 			break
 		}
 	}
 	if core.Sealed() {
-		t.Fatal("core is still sealed")
+		return fmt.Errorf("core is still sealed")
 	}
+	return nil
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
@@ -270,10 +286,16 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 	return nil
 }
 
-func RekeyCluster(t testing.T, cluster *vault.TestCluster) {
+func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
+	t.Helper()
+	cluster.Logger.Info("rekeying cluster", "recovery", recovery)
 	client := cluster.Cores[0].Client
 
-	init, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+	initFunc := client.Sys().RekeyInit
+	if recovery {
+		initFunc = client.Sys().RekeyRecoveryKeyInit
+	}
+	init, err := initFunc(&api.RekeyInitRequest{
 		SecretShares:    5,
 		SecretThreshold: 3,
 	})
@@ -282,8 +304,17 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	var statusResp *api.RekeyUpdateResponse
-	for j := 0; j < len(cluster.BarrierKeys); j++ {
-		statusResp, err = client.Sys().RekeyUpdate(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[j]), init.Nonce)
+	var keys = cluster.BarrierKeys
+	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() {
+		keys = cluster.RecoveryKeys
+	}
+
+	updateFunc := client.Sys().RekeyUpdate
+	if recovery {
+		updateFunc = client.Sys().RekeyRecoveryKeyUpdate
+	}
+	for j := 0; j < len(keys); j++ {
+		statusResp, err = updateFunc(base64.StdEncoding.EncodeToString(keys[j]), init.Nonce)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -294,20 +325,23 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster) {
 			break
 		}
 	}
+	cluster.Logger.Info("cluster rekeyed", "recovery", recovery)
 
+	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() && !recovery {
+		return nil
+	}
 	if len(statusResp.KeysB64) != 5 {
 		t.Fatal("wrong number of keys")
 	}
 
-	newBarrierKeys := make([][]byte, 5)
+	newKeys := make([][]byte, 5)
 	for i, key := range statusResp.KeysB64 {
-		newBarrierKeys[i], err = base64.StdEncoding.DecodeString(key)
+		newKeys[i], err = base64.StdEncoding.DecodeString(key)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-
-	cluster.BarrierKeys = newBarrierKeys
+	return newKeys
 }
 
 type TestRaftServerAddressProvider struct {
