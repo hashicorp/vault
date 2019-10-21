@@ -87,7 +87,7 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: enterprise ent
+    - GO_TAGS: ''
     - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
@@ -212,7 +212,7 @@ jobs:
         path: test-results
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: enterprise ent
+    - GO_TAGS: ''
     - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
@@ -280,7 +280,7 @@ jobs:
         path: test-results
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: enterprise ent
+    - GO_TAGS: ''
     - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
@@ -397,7 +397,7 @@ workflows:
 #   go-machine:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
-#       GO_TAGS: enterprise ent
+#       GO_TAGS: \"\"
 #       GO_VERSION: 1.12.12
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
