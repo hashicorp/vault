@@ -1,0 +1,16 @@
+---
+description: >
+  Ensure the right version of Go is installed and set GOPATH to $HOME/go.
+steps:
+  - run:
+      name: Setup Go
+      command: |
+        [ -n "$GO_VERSION" ] || GO_VERSION=1.12.9
+        # Install Go
+        curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+        rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+        GOPATH="$HOME/go"
+        echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+        echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
