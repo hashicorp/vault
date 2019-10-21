@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/shamir"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 const coreDROperationTokenPath = "core/dr-operation-token"
@@ -43,6 +42,9 @@ func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, co
 	_, err := c.unsealKeyToMasterKey(ctx, combinedKey)
 	if err != nil {
 		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
+	}
+	if err := c.barrier.VerifyMaster(combinedKey); err != nil {
+		return errwrap.Wrapf("master key verification failed: {{err}}", err)
 	}
 
 	return nil

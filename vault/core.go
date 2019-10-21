@@ -2083,9 +2083,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 		return storedKeys[0], nil
 
 	case StoredKeysNotSupported:
-		if err := c.barrier.VerifyMaster(combinedKey); err != nil {
-			return nil, errwrap.Wrapf("shared key verification failed: {{err}}", err)
-		}
+		return combinedKey, nil
 	}
 	return nil, fmt.Errorf("invalid seal")
 }
