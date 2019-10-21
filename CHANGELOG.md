@@ -81,6 +81,8 @@ BUG FIXES:
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
+ * cli: Fix a bug where the `namespace list` command with JSON formatting 
+   always returned an empty object [GH-7705]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
