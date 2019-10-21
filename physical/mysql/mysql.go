@@ -112,7 +112,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Create the required table if it doesn't exists.
 	if !tableExist {
 		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
-			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
+			" (vault_key varbinary(1024), vault_value mediumblob, PRIMARY KEY (vault_key))"
 		if _, err := db.Exec(create_query); err != nil {
 			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 		}
