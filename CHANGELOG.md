@@ -2,28 +2,123 @@
 
 FEATURES:
 
- * **Stackdriver Metrics Sync**: Vault can now send metrics to
+ * **Recovery Mode**: Vault server can be brought up in recovery mode to resolve
+   outages caused due to data store being in bad state. This is a privileged mode
+   that allows `sys/raw` API calls to perform surgical corrections to the data
+   store. Bad storage state can be caused by bugs. However, this is usually
+   observed when known (and fixed) bugs are hit by older versions of Vault.
+ * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
-   
+ * **Transit**: Signing and verification is now supported with the P-384
+   (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
+ * **Transit**: Encryption and decryption is now supported via AES128-GCM96
+   [GH-7555]
+ * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
+   operators to retrieve debugging information related to a particular Vault
+   node. Operators can use this simple workflow to capture triaging information,
+   which can then be consumed programmatically or by support and engineering teams.
+   It has the abilitity to probe for config, host, metrics, pprof, server status, 
+   and replication status.
+ * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
+   engine, users or applications can check out a service account for use, and its
+   password will be rotated when it's checked back in.
+ * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
+ * **Vault Agent Template** Vault Agent now supports rendering templates containing Vault secrets to disk, similar to Consul Template [GH-7652]
+
 CHANGES: 
+
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
  * sys/seal-status now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
+ * Vault Agent now has a new optional `require_request_header` option per
+   listener.  If the option is set, each incoming request must have a
+   `X-Vault-Request: true` header entry.  [GH-7627]
 
 IMPROVEMENTS:
 
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
+ * auth/jwt: Bound claims may now contain boolean values [JWT-73]
+ * auth/jwt: CLI logins can now open the browser when running in WSL [JWT-77]
  * core: Exit ScanView if context has been cancelled [GH-7419]
+ * core: re-encrypt barrier and recovery keys if the unseal key is updated
+   [GH-7493]
+ * core (enterprise): Add background seal re-wrap
+ * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
+   access. [GH-7550]  
+ * replication (enterprise): Write-Ahead-Log entries will not duplicate the
+   data belonging to the encompassing physical entries of the transaction,
+   thereby improving the performance and storage capacity.
  * secrets/aws: The root config can now be read [GH-7245]
+ * storage/azure: Add config parameter to Azure storage backend to allow
+   specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
-   
+ * sys: Add a new `sys/host-info` endpoint for querying information about 
+   the host [GH-7330]
+ * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
+   information to be extracted [GH-7473]
+ * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
+   returns the configuration state of the server. It excludes config values
+   from `storage`, `ha_storage`, and `seal` stanzas and some values
+   from `telemetry` due to potential sensitive entries in those fields.
+ * ui: when using raft storage, you can now join a raft cluster, download a
+   snapshot, and restore a snapshot from the UI [GH-7410]
+ * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
+   total number of active service token accessors in the shared token storage.
+   [GH-7541]
+ * sys: Add a new `sys/internal/counters/entities` endpoint, that counts the
+   total number of active identity entities.  [GH-7541]
+
 BUG FIXES:
+
+ * auth/gcp: Fix a bug where region information in instance groups names could
+   cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
+ * identity (enterprise): Fixed identity case sensitive loading in secondary
+   cluster [GH-7327]
+ * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
+ * ui: using the `wrapped_token` query param will work with `redirect_to` and
+   will automatically log in as intended [GH-7398]
+ * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
+ 
+## 1.2.4 (Unreleased)
 
+CHANGES: 
+
+ * auth/aws: If a custom `sts_endpoint` is configured, Vault Agent and the CLI
+   should provide the corresponding region via the `region` parameter (which
+   already existed as a CLI parameter, and has now been added to Agent). The
+   automatic region detection added to the CLI and Agent in 1.2 has been removed.
+
+IMPROVEMENTS:
+  * cli: Ignore existing token during CLI login [GH-7508]
+  * core: Log proxy settings from environment on startup [GH-7528]
+
+BUG FIXES:
+
+ * agent: Fix handling of gzipped responses [GH-7470]
+ * cli: Fix panic when pgp keys list is empty [GH-7546]
+ * core: add hook for initializing seals for migration [GH-7666]
+ * core (enterprise): Fix seal migration in enterprise
+ * identity: Add required field `response_types_supported` to identity token
+   `.well-known/openid-configuration` response [GH-7533]
+ * secrets/database: Fix bug in combined DB secrets engine that can result in
+   writes to static-roles endpoints timing out [GH-7518]
+ * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
+ * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
+   viewed in the UI [GH-7504]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
+   
 ## 1.2.3 (September 12, 2019)
 
 FEATURES:
@@ -261,13 +356,13 @@ BUG FIXES:
  * namespaces: Fix a behavior (currently only known to be benign) where we
    wouldn't delete policies through the official functions before wiping the
    namespaces on deletion
+ * secrets/database: Escape username/password before using in connection URL
+   [GH-7089]
  * secrets/pki: Forward revocation requests to active node when on a
    performance standby [GH-7173]
  * ui: Fix timestamp on some transit keys [GH-6827]
  * ui: Show Entities and Groups in Side Navigation [GH-7138]
  * ui: Ensure dropdown updates selected item on HTTP Request Metrics page
- * secret/database: Escape username/password before using in connection URL
-   [GH-7089]
 
 ## 1.1.4/1.1.5 (July 25th/30th, 2019)
 

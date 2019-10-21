@@ -40,6 +40,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
@@ -156,6 +157,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
+	conf.MetricsHelper = opts.MetricsHelper
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -264,9 +266,11 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 		SecretThreshold: 3,
 	}
 
-	// If we support storing barrier keys, then set that to equal the min threshold to unseal
-	if core.seal.StoredKeysSupported() {
-		barrierConfig.StoredShares = barrierConfig.SecretThreshold
+	switch core.seal.StoredKeysSupported() {
+	case StoredKeysNotSupported:
+		barrierConfig.StoredShares = 0
+	default:
+		barrierConfig.StoredShares = 1
 	}
 
 	recoveryConfig := &SealConfig{
@@ -274,10 +278,14 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 		SecretThreshold: 3,
 	}
 
-	result, err := core.Initialize(context.Background(), &InitParams{
+	initParams := &InitParams{
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
-	})
+	}
+	if core.seal.StoredKeysSupported() == StoredKeysNotSupported {
+		initParams.LegacyShamirSeal = true
+	}
+	result, err := core.Initialize(context.Background(), initParams)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -820,6 +828,7 @@ func (c *TestCluster) Start() {
 
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
+	t.Helper()
 	if err := c.UnsealCoresWithError(); err != nil {
 		t.Fatal(err)
 	}
@@ -831,7 +840,7 @@ func (c *TestCluster) UnsealCoresWithError() error {
 	// Unseal first core
 	for _, key := range c.BarrierKeys {
 		if _, err := c.Cores[0].Unseal(TestKeyCopy(key)); err != nil {
-			return fmt.Errorf("unseal err: %s", err)
+			return fmt.Errorf("unseal core %d err: %s", 0, err)
 		}
 	}
 
@@ -848,7 +857,7 @@ func (c *TestCluster) UnsealCoresWithError() error {
 	for i := 1; i < numCores; i++ {
 		for _, key := range c.BarrierKeys {
 			if _, err := c.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
-				return fmt.Errorf("unseal err: %s", err)
+				return fmt.Errorf("unseal core %d err: %s", i, err)
 			}
 		}
 	}
@@ -1037,16 +1046,17 @@ type PhysicalBackendBundle struct {
 }
 
 type TestClusterOptions struct {
-	KeepStandbysSealed bool
-	SkipInit           bool
-	HandlerFunc        func(*HandlerProperties) http.Handler
-	BaseListenAddress  string
-	NumCores           int
-	SealFunc           func() Seal
-	Logger             log.Logger
-	TempDir            string
-	CACert             []byte
-	CAKey              *ecdsa.PrivateKey
+	KeepStandbysSealed       bool
+	SkipInit                 bool
+	HandlerFunc              func(*HandlerProperties) http.Handler
+	DefaultHandlerProperties HandlerProperties
+	BaseListenAddress        string
+	NumCores                 int
+	SealFunc                 func() Seal
+	Logger                   log.Logger
+	TempDir                  string
+	CACert                   []byte
+	CAKey                    *ecdsa.PrivateKey
 	// PhysicalFactory is used to create backends.
 	// The int argument is the index of the core within the cluster, i.e. first
 	// core in cluster will have 0, second 1, etc.
@@ -1349,6 +1359,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if base != nil {
+		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.EnableUI = base.EnableUI
 		coreConfig.DefaultLeaseTTL = base.DefaultLeaseTTL
@@ -1364,6 +1375,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.LicensingConfig = base.LicensingConfig
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
+		coreConfig.SecureRandomReader = base.SecureRandomReader
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}
@@ -1414,7 +1426,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
+		coreConfig.RecoveryMode = base.RecoveryMode
+	}
 
+	if coreConfig.RawConfig == nil {
+		coreConfig.RawConfig = new(server.Config)
 	}
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
@@ -1504,10 +1520,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
-			handlers[i] = opts.HandlerFunc(&HandlerProperties{
-				Core:               c,
-				MaxRequestDuration: DefaultMaxRequestDuration,
-			})
+			props := opts.DefaultHandlerProperties
+			props.Core = c
+			if props.MaxRequestDuration == 0 {
+				props.MaxRequestDuration = DefaultMaxRequestDuration
+			}
+			handlers[i] = opts.HandlerFunc(&props)
 			servers[i].Handler = handlers[i]
 		}
 
@@ -1619,9 +1637,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatal(err)
 		}
 
+		cfg, err := cores[0].seal.BarrierConfig(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// Unseal other cores unless otherwise specified
 		if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
 			for i := 1; i < numCores; i++ {
+				cores[i].seal.SetCachedBarrierConfig(cfg)
 				for _, key := range bKeys {
 					if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
 						t.Fatalf("unseal err: %s", err)
