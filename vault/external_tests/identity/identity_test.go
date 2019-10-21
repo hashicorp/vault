@@ -229,6 +229,11 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 		defer conn.Close()
 
+		err = conn.Bind(cfg.BindDN, cfg.BindPassword)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		hermesDn := "cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com"
 		shipCrewDn := "cn=ship_crew,ou=people,dc=planetexpress,dc=com"
 		ldapreq := ldap.ModifyRequest{DN: shipCrewDn}

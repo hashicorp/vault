@@ -19,6 +19,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg, cf
 		Repository: "rroemhild/test-openldap",
 		Tag:        version,
 		Privileged: true,
+		//Env:        []string{"LDAP_DEBUG_LEVEL=384"},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {
