@@ -270,7 +270,7 @@ func (b *versionedKVBackend) policy(ctx context.Context, s logical.Storage) (*ke
 		VersionTemplate:      keysutil.EncryptedKeyPolicyVersionTpl,
 	})
 
-	err = policy.Rotate(ctx, s)
+	err = policy.Rotate(ctx, s, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

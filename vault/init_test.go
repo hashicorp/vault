@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"github.com/hashicorp/vault/vault/seal"
 	"reflect"
 	"testing"
 
@@ -80,7 +81,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(res.SecretShares) != (barrierConf.SecretShares - barrierConf.StoredShares) {
+	if c.seal.BarrierType() == seal.Shamir && len(res.SecretShares) != barrierConf.SecretShares {
 		t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *barrierConf)
 	}
 	if recoveryConf != nil {

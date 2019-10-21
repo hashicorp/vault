@@ -115,7 +115,6 @@ encrypted data.  Old keys must not be disabled or deleted and are used to decryp
 Any new or updated data will be encrypted with the current key defined in the seal configuration
 or set to current under a key alias.
 
-
 ## Learn
 
 Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)

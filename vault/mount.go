@@ -209,19 +209,20 @@ func (t *MountTable) sortEntriesByPathDepth() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Table            string            `json:"table"`              // The table it belongs to
-	Path             string            `json:"path"`               // Mount Path
-	Type             string            `json:"type"`               // Logical backend Type
-	Description      string            `json:"description"`        // User-provided description
-	UUID             string            `json:"uuid"`               // Barrier view UUID
-	BackendAwareUUID string            `json:"backend_aware_uuid"` // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
-	Accessor         string            `json:"accessor"`           // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
-	Config           MountConfig       `json:"config"`             // Configuration related to this mount (but not backend-derived)
-	Options          map[string]string `json:"options"`            // Backend options
-	Local            bool              `json:"local"`              // Local mounts are not replicated or affected by replication
-	SealWrap         bool              `json:"seal_wrap"`          // Whether to wrap CSPs
-	Tainted          bool              `json:"tainted,omitempty"`  // Set as a Write-Ahead flag for unmount/remount
-	NamespaceID      string            `json:"namespace_id"`
+	Table                 string            `json:"table"`                   // The table it belongs to
+	Path                  string            `json:"path"`                    // Mount Path
+	Type                  string            `json:"type"`                    // Logical backend Type
+	Description           string            `json:"description"`             // User-provided description
+	UUID                  string            `json:"uuid"`                    // Barrier view UUID
+	BackendAwareUUID      string            `json:"backend_aware_uuid"`      // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
+	Accessor              string            `json:"accessor"`                // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
+	Config                MountConfig       `json:"config"`                  // Configuration related to this mount (but not backend-derived)
+	Options               map[string]string `json:"options"`                 // Backend options
+	Local                 bool              `json:"local"`                   // Local mounts are not replicated or affected by replication
+	SealWrap              bool              `json:"seal_wrap"`               // Whether to wrap CSPs
+	ExternalEntropyAccess bool              `json:"external_entropy_access"` // Whether to allow external entropy source access
+	Tainted               bool              `json:"tainted,omitempty"`       // Set as a Write-Ahead flag for unmount/remount
+	NamespaceID           string            `json:"namespace_id"`
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -1247,18 +1248,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	addLicenseCallback(c, b)
 
 	return b, nil
-}
-
-// mountEntrySysView creates a logical.SystemView from global and
-// mount-specific entries; because this should be called when setting
-// up a mountEntry, it doesn't check to ensure that me is not nil
-func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
-	return extendedSystemViewImpl{
-		dynamicSystemView{
-			core:       c,
-			mountEntry: entry,
-		},
-	}
 }
 
 // defaultMountTable creates a default mount table

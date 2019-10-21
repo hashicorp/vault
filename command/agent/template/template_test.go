@@ -107,12 +107,8 @@ func TestServerRun(t *testing.T) {
 			templateTokenCh <- "test"
 
 			select {
-			case <-server.UnblockCh:
+			case <-ctx.Done():
 			}
-
-			// cancel to clean things up
-			cancelFunc()
-
 			// verify test file exists and has the content we're looking for
 			// for _, template := range tc.templates {
 			// 	if template.Destination == nil {

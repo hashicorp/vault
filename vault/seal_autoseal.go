@@ -42,6 +42,10 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	return ret
 }
 
+func (d *autoSeal) SealWrapable() bool {
+	return true
+}
+
 func (d *autoSeal) GetAccess() seal.Access {
 	return d.Access
 }
@@ -73,8 +77,8 @@ func (d *autoSeal) BarrierType() string {
 	return d.SealType()
 }
 
-func (d *autoSeal) StoredKeysSupported() bool {
-	return true
+func (d *autoSeal) StoredKeysSupported() StoredKeysSupport {
+	return StoredKeysSupportedGeneric
 }
 
 func (d *autoSeal) RecoveryKeySupported() bool {
@@ -84,73 +88,13 @@ func (d *autoSeal) RecoveryKeySupported() bool {
 // SetStoredKeys uses the autoSeal.Access.Encrypts method to wrap the keys. The stored entry
 // does not need to be seal wrapped in this case.
 func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	if keys == nil {
-		return fmt.Errorf("keys were nil")
-	}
-	if len(keys) == 0 {
-		return fmt.Errorf("no keys provided")
-	}
-
-	buf, err := json.Marshal(keys)
-	if err != nil {
-		return errwrap.Wrapf("failed to encode keys for storage: {{err}}", err)
-	}
-
-	// Encrypt and marshal the keys
-	blobInfo, err := d.Encrypt(ctx, buf)
-	if err != nil {
-		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
-	}
-
-	value, err := proto.Marshal(blobInfo)
-	if err != nil {
-		return errwrap.Wrapf("failed to marshal value for storage: {{err}}", err)
-	}
-
-	// Store the seal configuration.
-	pe := &physical.Entry{
-		Key:   StoredBarrierKeysPath,
-		Value: value,
-	}
-
-	if err := d.core.physical.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to write keys to storage: {{err}}", err)
-	}
-
-	return nil
+	return writeStoredKeys(ctx, d.core.physical, d, keys)
 }
 
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	pe, err := d.core.physical.Get(ctx, StoredBarrierKeysPath)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
-	}
-
-	// This is not strictly an error; we may not have any stored keys, for
-	// instance, if we're not initialized
-	if pe == nil {
-		return nil, nil
-	}
-
-	blobInfo := &physical.EncryptedBlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
-	}
-
-	pt, err := d.Decrypt(ctx, blobInfo)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
-	}
-
-	// Decode the barrier entry
-	var keys [][]byte
-	if err := json.Unmarshal(pt, &keys); err != nil {
-		return nil, fmt.Errorf("failed to decode stored keys: %v", err)
-	}
-
-	return keys, nil
+	return readStoredKeys(ctx, d.core.physical, d)
 }
 
 func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {

@@ -660,13 +660,14 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 
 func mountInfo(entry *MountEntry) map[string]interface{} {
 	info := map[string]interface{}{
-		"type":        entry.Type,
-		"description": entry.Description,
-		"accessor":    entry.Accessor,
-		"local":       entry.Local,
-		"seal_wrap":   entry.SealWrap,
-		"options":     entry.Options,
-		"uuid":        entry.UUID,
+		"type":                    entry.Type,
+		"description":             entry.Description,
+		"accessor":                entry.Accessor,
+		"local":                   entry.Local,
+		"seal_wrap":               entry.SealWrap,
+		"external_entropy_access": entry.ExternalEntropyAccess,
+		"options":                 entry.Options,
+		"uuid":                    entry.UUID,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -755,6 +756,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 
 	var config MountConfig
@@ -879,14 +881,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Create the mount entry
 	me := &MountEntry{
-		Table:       mountTableType,
-		Path:        path,
-		Type:        logicalType,
-		Description: description,
-		Config:      config,
-		Local:       local,
-		SealWrap:    sealWrap,
-		Options:     options,
+		Table:                 mountTableType,
+		Path:                  path,
+		Type:                  logicalType,
+		Description:           description,
+		Config:                config,
+		Local:                 local,
+		SealWrap:              sealWrap,
+		ExternalEntropyAccess: externalEntropyAccess,
+		Options:               options,
 	}
 
 	// Attempt mount
@@ -1053,6 +1056,11 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
 			"force_no_cache":    mountEntry.Config.ForceNoCache,
 		},
+	}
+
+	// not tunable so doesn't need to be stored/loaded through synthesizedConfigCache
+	if mountEntry.ExternalEntropyAccess {
+		resp.Data["external_entropy_access"] = true
 	}
 
 	if mountEntry.Table == credentialTableType {
@@ -1688,6 +1696,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 
 	var config MountConfig
@@ -1801,14 +1810,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Create the mount entry
 	me := &MountEntry{
-		Table:       credentialTableType,
-		Path:        path,
-		Type:        logicalType,
-		Description: description,
-		Config:      config,
-		Local:       local,
-		SealWrap:    sealWrap,
-		Options:     options,
+		Table:                 credentialTableType,
+		Path:                  path,
+		Type:                  logicalType,
+		Description:           description,
+		Config:                config,
+		Local:                 local,
+		SealWrap:              sealWrap,
+		ExternalEntropyAccess: externalEntropyAccess,
+		Options:               options,
 	}
 
 	// Attempt enabling
@@ -2240,7 +2250,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	}
 
 	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate(ctx)
+	newTerm, err := b.Core.barrier.Rotate(ctx, b.Core.secureRandomReader)
 	if err != nil {
 		b.Backend.Logger().Error("failed to create new encryption key", "error", err)
 		return handleError(err)
@@ -3501,6 +3511,10 @@ in the plugin catalog.`,
 
 	"seal_wrap": {
 		`Whether to turn on seal wrapping for the mount.`,
+	},
+
+	"external_entropy_access": {
+		`Whether to give the mount access to Vault's external entropy.`,
 	},
 
 	"tune_default_lease_ttl": {

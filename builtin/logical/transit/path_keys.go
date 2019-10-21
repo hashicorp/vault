@@ -161,7 +161,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, upserted, err := b.lm.GetPolicy(ctx, polReq)
+	p, upserted, err := b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
