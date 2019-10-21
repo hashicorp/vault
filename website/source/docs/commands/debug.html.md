@@ -54,7 +54,10 @@ information when debug is running. By default, it captures all information.
 
 Note that the `config`, `host`,`metrics`, and `pprof` targets are only queried 
 on active and performance standby nodes due to the the fact that the information
-pertains to the local node and the request should not be forwarded.
+pertains to the local node and the request should not be forwarded. 
+
+Additionally, host information is not available on the OpenBSD platform due to
+library limitations in fetching the data without enabling `cgo`.
 
 
 ## Output Layout
