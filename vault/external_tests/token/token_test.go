@@ -128,7 +128,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure LDAP auth

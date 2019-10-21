@@ -129,7 +129,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg, cfgtls := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -223,7 +223,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		// isn't the default config returned by PrepareTestContainer because
 		// the Vault LDAP backend won't work with it, even with InsecureTLS,
 		// because the ServerName should be planetexpress.com and not localhost.
-		conn, err := ldapClient.DialLDAP(cfgtls)
+		conn, err := ldapClient.DialLDAP(cfg)
 		if err != nil {
 			t.Fatal(err)
 		}

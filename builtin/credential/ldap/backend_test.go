@@ -261,7 +261,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -307,7 +307,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -412,7 +412,7 @@ func factory(t *testing.T) logical.Backend {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -442,7 +442,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -460,7 +460,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -481,7 +481,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -498,7 +498,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -515,7 +515,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -877,7 +877,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg, _ := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,

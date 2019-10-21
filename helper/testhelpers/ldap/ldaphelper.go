@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg, cfgtls *ldaputil.ConfigEntry) {
+func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
@@ -60,8 +60,5 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg, cf
 		t.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	cfgcopy := *cfg
-	cfgcopy.InsecureTLS = true
-	cfgcopy.Url = fmt.Sprintf("ldaps://localhost:%s", resource.GetPort("636/tcp"))
-	return cleanup, cfg, &cfgcopy
+	return cleanup, cfg
 }
