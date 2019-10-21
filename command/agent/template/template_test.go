@@ -106,9 +106,7 @@ func TestServerRun(t *testing.T) {
 			// info
 			templateTokenCh <- "test"
 
-			select {
-			case <-ctx.Done():
-			}
+			<-server.UnblockCh
 			// verify test file exists and has the content we're looking for
 			// for _, template := range tc.templates {
 			// 	if template.Destination == nil {
@@ -127,6 +125,7 @@ func TestServerRun(t *testing.T) {
 			// 		t.Fatalf("secret didn't match: %#v", secret)
 			// 	}
 			// }
+			cancelFunc()
 		})
 	}
 }
