@@ -53,8 +53,10 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		}
 		defer conn.Close()
 
-		_, err = client.GetUserBindDN(cfg, conn, "Philip J. Fry")
-		return err
+		if _, err := client.GetUserBindDN(cfg, conn, "Philip J. Fry"); err != nil {
+			return err
+		}
+		return nil
 	}); err != nil {
 		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)

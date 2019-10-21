@@ -893,8 +893,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 		},
-		Storage: storage,
-		// TODO remove?
+		Storage:    storage,
 		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(ctx, configReq)
