@@ -388,11 +388,10 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
  *    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
  *
  * Querying the server from the command line:
- *  TODO
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub \
-         '(&(objectClass=groupOfUniqueNames)(uniqueMember=uid=tesla,dc=example,dc=com))'
- *
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub uid=tesla
+ *   $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+ *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+ *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+         'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
 */
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
