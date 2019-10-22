@@ -2,19 +2,18 @@ package inmem
 
 import (
 	"errors"
-	"sync"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/sink"
+	"go.uber.org/atomic"
 )
 
 // inmemSink retains the auto-auth token in memory and exposes it via
 // sink.SinkReader interface.
 type inmemSink struct {
-	l          sync.RWMutex
 	logger     hclog.Logger
-	token      string
+	token      *atomic.String
 	leaseCache *cache.LeaseCache
 }
 
@@ -27,14 +26,12 @@ func New(conf *sink.SinkConfig, leaseCache *cache.LeaseCache) (sink.Sink, error)
 	return &inmemSink{
 		logger:     conf.Logger,
 		leaseCache: leaseCache,
+		token:      atomic.NewString(""),
 	}, nil
 }
 
 func (s *inmemSink) WriteToken(token string) error {
-	s.l.Lock()
-	defer s.l.Unlock()
-
-	s.token = token
+	s.token.Store(token)
 
 	if s.leaseCache != nil {
 		s.leaseCache.RegisterAutoAuthToken(token)
@@ -44,8 +41,5 @@ func (s *inmemSink) WriteToken(token string) error {
 }
 
 func (s *inmemSink) Token() string {
-	s.l.RLock()
-	defer s.l.RUnlock()
-
-	return s.token
+	return s.token.Load()
 }
