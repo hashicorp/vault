@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/y0ssar1an/q"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -108,6 +109,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			return
 
 		case token := <-incoming:
+			q.Q("incoming token:", token)
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
 				ts.runner.Stop()

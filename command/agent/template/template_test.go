@@ -2,6 +2,7 @@ package template
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/y0ssar1an/q"
 )
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
@@ -49,22 +49,56 @@ func TestServerRun(t *testing.T) {
 
 	type templateTest struct {
 		template *ctconfig.TemplateConfig
-		secret   *secretRender
+		// secret   *secretRender
 	}
 
 	testCases := map[string]struct {
 		templateMap map[string]*templateTest
 	}{
-		"basic": {
+		"simple": {
 			templateMap: map[string]*templateTest{
-				"single": &templateTest{
+				"render_01": &templateTest{
 					template: &ctconfig.TemplateConfig{
 						Contents: pointerutil.StringPtr(templateContents),
 					},
-					secret: &secretRender{
-						Password: "password",
-						Username: "appuser",
-						Version:  "3",
+				},
+			},
+		},
+		"multiple": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_02": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_03": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_04": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_05": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_06": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_07": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
 					},
 				},
 			},
@@ -73,7 +107,6 @@ func TestServerRun(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			q.Q("Test: ", name)
 			templateTokenCh := make(chan string, 1)
 			var templatesToRender []*ctconfig.TemplateConfig
 			for fileName, templateTest := range tc.templateMap {
@@ -81,7 +114,6 @@ func TestServerRun(t *testing.T) {
 				templateTest.template.Destination = pointerutil.StringPtr(dstFile)
 				templatesToRender = append(templatesToRender, templateTest.template)
 			}
-			q.Q(templatesToRender)
 
 			ctx, cancelFunc := context.WithCancel(context.Background())
 			sc := ServerConfig{
@@ -89,6 +121,7 @@ func TestServerRun(t *testing.T) {
 				VaultConf: &config.Vault{
 					Address: ts.URL,
 				},
+				ExitAfterAuth: true,
 			}
 
 			var server *Server
@@ -107,24 +140,30 @@ func TestServerRun(t *testing.T) {
 			templateTokenCh <- "test"
 
 			<-server.UnblockCh
-			// verify test file exists and has the content we're looking for
-			// for _, template := range tc.templates {
-			// 	if template.Destination == nil {
-			// 		t.Fatal("nil template destination")
-			// 	}
-			// 	content, err := ioutil.ReadFile(*template.Destination)
-			// 	if err != nil {
-			// 		t.Fatal(err)
-			// 	}
 
-			// 	secret := secretRender{}
-			// 	if err := json.Unmarshal(content, &secret); err != nil {
-			// 		t.Fatal(err)
-			// 	}
-			// 	if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
-			// 		t.Fatalf("secret didn't match: %#v", secret)
-			// 	}
-			// }
+			// verify test file exists and has the content we're looking for
+			var fileCount int
+			for _, template := range templatesToRender {
+				if template.Destination == nil {
+					t.Fatal("nil template destination")
+				}
+				content, err := ioutil.ReadFile(*template.Destination)
+				if err != nil {
+					t.Fatal(err)
+				}
+				fileCount++
+
+				secret := secretRender{}
+				if err := json.Unmarshal(content, &secret); err != nil {
+					t.Fatal(err)
+				}
+				if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
+					t.Fatalf("secret didn't match: %#v", secret)
+				}
+			}
+			if fileCount != len(templatesToRender) {
+				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
+			}
 			cancelFunc()
 		})
 	}

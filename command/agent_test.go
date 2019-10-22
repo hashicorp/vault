@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
@@ -22,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/y0ssar1an/q"
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -619,4 +622,257 @@ listener "tcp" {
 	agentClient = newApiClient("http://127.0.0.1:8103", true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(agentClient, req, 200)
+}
+
+// TestAgent_Template tests rendering templates
+func TestAgent_Template(t *testing.T) {
+	q.Q("---------")
+	q.Q("starting")
+	q.Q("---------")
+	defer func() {
+		q.Q("---------")
+		q.Q("end")
+		q.Q("---------")
+		q.Q("")
+	}()
+
+	// makeTempFile creates a temp file and populates it.
+	makeTempFile := func(name, contents string) string {
+		f, err := ioutil.TempFile("", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := f.Name()
+		f.WriteString(contents)
+		f.Close()
+		return path
+	}
+
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+
+	logicalBackends := map[string]logical.Factory{
+		"kv": logicalKv.Factory,
+	}
+
+	// Start a vault server
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: logicalBackends,
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+	q.Q(serverClient.Address())
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "1m",
+	  "token_num_uses": "10",
+	  "token_ttl": "1m"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// setup the kv secrets
+	kvReq := serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	kvReq.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	q.Q("kv tune")
+	request(t, serverClient, kvReq, 200)
+	q.Q("post kv tune")
+
+	// populate a secret
+	kvSecretReq := serverClient.NewRequest("POST", "/v1/secret/data/myapp/config")
+	kvSecretReq.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	q.Q("secret post")
+	request(t, serverClient, kvSecretReq, 200)
+	q.Q("post secret post")
+	req = serverClient.NewRequest("GET", "/v1/secret/data/myapp/config")
+	q.Q("secret read")
+	body = request(t, serverClient, req, 200)
+	q.Q("post secret read")
+	data = body["data"].(map[string]interface{})
+	q.Q(data)
+
+	// Get a temp file path we can use for the sink
+	sinkPath := makeTempFile("sink.txt", "")
+	defer os.Remove(sinkPath)
+
+	// make some template files
+	var templatePaths []string
+	for i := 0; i < 1; i++ {
+		path := makeTempFile("render_01", templateContents)
+		templatePaths = append(templatePaths, path)
+	}
+
+	// make a temp directory to render too
+	tmpDir, err := ioutil.TempDir("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// defer os.RemoveAll(tmpDir)
+
+	// build up the template config
+	var templateConfigStrings []string
+	for i, t := range templatePaths {
+		index := fmt.Sprintf("render_%d.json", i)
+		s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
+		templateConfigStrings = append(templateConfigStrings, s)
+	}
+
+	// Create a config file
+	config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+
+%s
+`
+	// flatten the template configs
+	templateConfig := strings.Join(templateConfigStrings, " ")
+
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig)
+	q.Q(serverClient.Address())
+	q.Q(config)
+	configPath := makeTempFile("config.hcl", config)
+	defer os.Remove(configPath)
+	q.Q("got here")
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	//----------------------------------------------------
+	// Perform the tests
+	//----------------------------------------------------
+
+}
+
+// TODO: policy and permissions
+
+var templateContents = `{{ with secret "secret/myapp/config"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}`
+
+var templateConfigString = `
+template {
+  source      = "%s"
+  destination = "%s/%s"
+}
+`
+
+// request issues HTTP requests.
+func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.StatusCode != expectedStatusCode {
+		t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
+	}
+
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(bytes) == 0 {
+		return nil
+	}
+
+	var body map[string]interface{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	return body
 }
