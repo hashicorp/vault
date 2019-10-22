@@ -88,6 +88,7 @@ BUG FIXES:
    always returned an empty object [GH-7705]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
+ * identity: Fixed nil pointer panic when merging entities [GH-7711]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
