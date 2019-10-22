@@ -829,19 +829,29 @@ func (c *TestCluster) Start() {
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
 	t.Helper()
-	if err := c.UnsealCoresWithError(); err != nil {
+	if err := c.UnsealCoresWithError(false); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) UnsealCoresWithError() error {
-	numCores := len(c.Cores)
+func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
+	unseal := func(core *Core) error {
+		for _, key := range c.BarrierKeys {
+			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if useStoredKeys {
+		unseal = func(core *Core) error {
+			return core.UnsealWithStoredKeys(context.Background())
+		}
+	}
 
 	// Unseal first core
-	for _, key := range c.BarrierKeys {
-		if _, err := c.Cores[0].Unseal(TestKeyCopy(key)); err != nil {
-			return fmt.Errorf("unseal core %d err: %s", 0, err)
-		}
+	if err := unseal(c.Cores[0].Core); err != nil {
+		return fmt.Errorf("unseal core %d err: %s", 0, err)
 	}
 
 	// Verify unsealed
@@ -854,11 +864,9 @@ func (c *TestCluster) UnsealCoresWithError() error {
 	}
 
 	// Unseal other cores
-	for i := 1; i < numCores; i++ {
-		for _, key := range c.BarrierKeys {
-			if _, err := c.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
-				return fmt.Errorf("unseal core %d err: %s", i, err)
-			}
+	for i := 1; i < len(c.Cores); i++ {
+		if err := unseal(c.Cores[i].Core); err != nil {
+			return fmt.Errorf("unseal core %d err: %s", i, err)
 		}
 	}
 
@@ -867,7 +875,7 @@ func (c *TestCluster) UnsealCoresWithError() error {
 
 	// Ensure cluster connection info is populated.
 	// Other cores should not come up as leaders.
-	for i := 1; i < numCores; i++ {
+	for i := 1; i < len(c.Cores); i++ {
 		isLeader, _, _, err := c.Cores[i].Leader()
 		if err != nil {
 			return err
@@ -981,26 +989,6 @@ func (c *TestCluster) ensureCoresSealed() error {
 				return fmt.Errorf("timeout waiting for core to seal")
 			}
 			if core.Sealed() {
-				break
-			}
-			time.Sleep(250 * time.Millisecond)
-		}
-	}
-	return nil
-}
-
-// UnsealWithStoredKeys uses stored keys to unseal the test cluster cores
-func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
-	for _, core := range c.Cores {
-		if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-			return err
-		}
-		timeout := time.Now().Add(60 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				return fmt.Errorf("timeout waiting for core to unseal")
-			}
-			if !core.Sealed() {
 				break
 			}
 			time.Sleep(250 * time.Millisecond)
