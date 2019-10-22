@@ -208,6 +208,9 @@ plaintext with the newest key in the keyring.
     data, since the process would not be able to get access to the plaintext
     data.
 
+## Entropy Augmentation
+
+
 ## Learn
 
 Refer to the [Encryption as a Service: Transit Secrets
