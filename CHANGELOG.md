@@ -26,6 +26,9 @@ FEATURES:
    password will be rotated when it's checked back in.
  * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
  * **Vault Agent Template** Vault Agent now supports rendering templates containing Vault secrets to disk, similar to Consul Template [GH-7652]
+ * **Shamir with Stored Master Key** The on disk format for Shamir seals has changed,
+   allowing for a secondary cluster using Shamir downstream from a primary cluster
+   using AutoUnseal. [GH-7694]
 
 CHANGES: 
 
