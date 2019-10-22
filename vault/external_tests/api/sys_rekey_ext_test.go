@@ -139,12 +139,9 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 	// Sealing should clear state, so after this we should be able to perform
 	// the above again
 	cluster.EnsureCoresSealed(t)
-	if recovery {
-		cluster.UnsealWithStoredKeys(t)
-	} else {
-		cluster.UnsealCores(t)
+	if err := cluster.UnsealCoresWithError(recovery); err != nil {
+		t.Fatal(err)
 	}
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	doRekeyInitialSteps()
 
 	doStartVerify := func() {
@@ -258,7 +255,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		cluster.Start()
 		defer cluster.Cleanup()
 
-		if err := cluster.UnsealCoresWithError(); err == nil {
+		if err := cluster.UnsealCoresWithError(false); err == nil {
 			t.Fatal("expected error")
 		}
 
@@ -272,7 +269,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 			newKeyBytes = append(newKeyBytes, val)
 		}
 		cluster.BarrierKeys = newKeyBytes
-		if err := cluster.UnsealCoresWithError(); err != nil {
+		if err := cluster.UnsealCoresWithError(false); err != nil {
 			t.Fatal(err)
 		}
 	} else {
