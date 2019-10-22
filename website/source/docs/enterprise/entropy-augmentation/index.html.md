@@ -17,7 +17,7 @@ operating in most threat models, there are some situations where additional
 entropy from hardware-based random number generators is desirable.
 
 To use this feature, you must have an active or trial license for Vault
-Enterprise (HSMs). To start a trial, contact [HashiCorpsales](mailto:sales@hashicorp.com).
+Enterprise. To start a trial, contact [HashiCorpsales](mailto:sales@hashicorp.com).
 
 # Critical Security Parameters (CSPs)
 
