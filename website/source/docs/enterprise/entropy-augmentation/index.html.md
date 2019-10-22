@@ -34,7 +34,7 @@ FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-ass
 and include the following: 
 
 
-- Vault’s master key
+- Vault’s master key 
 - Keyring encryption keys
 - Auto Unseal recovery keys
 - TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
