@@ -74,7 +74,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 
 	_, ok := extractListData(secret)
 	if Format(c.UI) != "table" {
-		if secret == nil || secret.Data != nil || !ok {
+		if secret == nil || secret.Data == nil || !ok {
 			OutputData(c.UI, map[string]interface{}{})
 			return 2
 		}

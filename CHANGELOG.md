@@ -26,6 +26,9 @@ FEATURES:
    password will be rotated when it's checked back in.
  * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
  * **Vault Agent Template** Vault Agent now supports rendering templates containing Vault secrets to disk, similar to Consul Template [GH-7652]
+ * **Shamir with Stored Master Key** The on disk format for Shamir seals has changed,
+   allowing for a secondary cluster using Shamir downstream from a primary cluster
+   using AutoUnseal. [GH-7694]
 
 CHANGES: 
 
@@ -77,12 +80,16 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * agent: Fix a data race on the token value for inmemsink [GH-7707]
  * auth/gcp: Fix a bug where region information in instance groups names could
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
    could cause confusing error messages during `vault login` [GH-7508]
+ * cli: Fix a bug where the `namespace list` command with JSON formatting 
+   always returned an empty object [GH-7705]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
+ * identity: Fixed nil pointer panic when merging entities [GH-7711]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
