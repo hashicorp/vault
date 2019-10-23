@@ -143,6 +143,9 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
   values stored by the mount to be wrapped by the seal's encryption capability.
+  
+- `external_entropy_access` `(bool: false)` - Enable the secrets engine to access
+  Vault's external entropy source.
 
 ### Sample Payload
 
