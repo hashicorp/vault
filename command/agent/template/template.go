@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/y0ssar1an/q"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -109,7 +108,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			return
 
 		case token := <-incoming:
-			q.Q("incoming token:", token)
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
 				ts.runner.Stop()
@@ -119,16 +117,16 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
-				runnerConfig.Merge(&ctv)
-				runnerConfig.Finalize()
+				runnerConfig = runnerConfig.Merge(&ctv)
+				// TODO: remove?
+				// runnerConfig.Finalize()
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
-				} else {
-					go ts.runner.Start()
 				}
+				go ts.runner.Start()
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())

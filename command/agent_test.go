@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
-	"github.com/y0ssar1an/q"
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -626,16 +625,6 @@ listener "tcp" {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template(t *testing.T) {
-	q.Q("---------")
-	q.Q("starting")
-	q.Q("---------")
-	defer func() {
-		q.Q("---------")
-		q.Q("end")
-		q.Q("---------")
-		q.Q("")
-	}()
-
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -651,12 +640,6 @@ func TestAgent_Template(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-
-	logicalBackends := map[string]logical.Factory{
-		"kv": logicalKv.Factory,
-	}
-
-	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -664,16 +647,18 @@ func TestAgent_Template(t *testing.T) {
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
-			LogicalBackends: logicalBackends,
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
 		},
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
+
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
-	q.Q(serverClient.Address())
 
 	// Enable the approle auth method
 	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
@@ -682,21 +667,31 @@ func TestAgent_Template(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 204)
 
-	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	// give test-role permissions to read the kv secret
+	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
 	req.BodyBytes = []byte(`{
-	  "secret_id_num_uses": "10",
-	  "secret_id_ttl": "1m",
-	  "token_max_ttl": "1m",
-	  "token_num_uses": "10",
-	  "token_ttl": "1m"
+	  "policy": "path \"secret/*\" { capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"] }"
 	}`)
 	request(t, serverClient, req, 204)
 
-	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// TODO remove this
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role")
 	body := request(t, serverClient, req, 200)
 	data := body["data"].(map[string]interface{})
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
@@ -716,27 +711,21 @@ func TestAgent_Template(t *testing.T) {
 	kvReq.BodyBytes = []byte(`{
 	"options": {"version": "2"}
 	}`)
-	q.Q("kv tune")
 	request(t, serverClient, kvReq, 200)
-	q.Q("post kv tune")
 
 	// populate a secret
-	kvSecretReq := serverClient.NewRequest("POST", "/v1/secret/data/myapp/config")
+	kvSecretReq := serverClient.NewRequest("POST", "/v1/secret/data/myapp")
 	kvSecretReq.BodyBytes = []byte(`{
 	  "data": {
       "username": "bar",
       "password": "zap"
     }
 	}`)
-	q.Q("secret post")
 	request(t, serverClient, kvSecretReq, 200)
-	q.Q("post secret post")
-	req = serverClient.NewRequest("GET", "/v1/secret/data/myapp/config")
-	q.Q("secret read")
+
+	req = serverClient.NewRequest("GET", "/v1/secret/data/myapp")
 	body = request(t, serverClient, req, 200)
-	q.Q("post secret read")
 	data = body["data"].(map[string]interface{})
-	q.Q(data)
 
 	// Get a temp file path we can use for the sink
 	sinkPath := makeTempFile("sink.txt", "")
@@ -754,6 +743,7 @@ func TestAgent_Template(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// TODO: restore
 	// defer os.RemoveAll(tmpDir)
 
 	// build up the template config
@@ -793,11 +783,8 @@ auto_auth {
 	templateConfig := strings.Join(templateConfigStrings, " ")
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig)
-	q.Q(serverClient.Address())
-	q.Q(config)
 	configPath := makeTempFile("config.hcl", config)
 	defer os.Remove(configPath)
-	q.Q("got here")
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -836,7 +823,7 @@ auto_auth {
 
 // TODO: policy and permissions
 
-var templateContents = `{{ with secret "secret/myapp/config"}}
+var templateContents = `{{ with secret "secret/myapp"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}

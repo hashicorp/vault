@@ -43,7 +43,6 @@ import (
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"github.com/y0ssar1an/q"
 )
 
 var _ cli.Command = (*AgentCommand)(nil)
@@ -224,7 +223,7 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Vault == nil {
 		config.Vault = new(agentConfig.Vault)
 	}
-	q.Q("pre-vault config:", config.Vault)
+
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
 		Target:  &c.flagAddress,
@@ -527,7 +526,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// create an independent vault configuration for Consul Template to use
 		// vaultConfig := c.setupTemplateConfig()
-		// q.Q("ts vault config:", vaultConfig)
 		ts = template.NewServer(&template.ServerConfig{
 			Logger: c.logger.Named("template.server"),
 			// VaultConf:     vaultConfig,
