@@ -211,7 +211,6 @@ plaintext with the newest key in the keyring.
 ## Entropy Augmentation
 
 
-
 ## Learn
 
 Refer to the [Encryption as a Service: Transit Secrets
