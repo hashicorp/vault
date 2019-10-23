@@ -49,3 +49,5 @@ and include the following:
 Entropy augmentation is disabled by default. To enable entropy augmentation Vault's
 [configuration file][configuration] must include a properly configured [PKCS#11 seal and
 entropy stanza](/docs/configuration/entropy-augmentation/index.html).
+
+[configuration]: /docs/configuration/index.html

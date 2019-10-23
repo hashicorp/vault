@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Entropy Augmentation - Configuration"
-sidebar_title: "Entropy Augmentation <sup>ENT</sup>"
+sidebar_title: "<code>Entropy Augmentation</code> <sup>ENT</sup>"
 sidebar_current: "docs-configuration-entropy-augmentation"
 description: |-
   Entropy augmentation enables Vault to sample entropy from external cryptographic modules.
