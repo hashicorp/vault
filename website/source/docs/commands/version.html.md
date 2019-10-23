@@ -16,7 +16,7 @@ $ vault version
 Vault v1.2.3
 ```
 
-It can also be printed by using the flags `--version` or `-v` to the `vault` command:
+It can also be printed by adding the flags `--version` or `-v` to the `vault` command:
 
 ```
 $ vault -v
