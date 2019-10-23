@@ -80,6 +80,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * agent: Fix a data race on the token value for inmemsink [GH-7707]
  * auth/gcp: Fix a bug where region information in instance groups names could
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
