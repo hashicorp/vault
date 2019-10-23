@@ -109,6 +109,7 @@ CHANGES:
 IMPROVEMENTS:
   * cli: Ignore existing token during CLI login [GH-7508]
   * core: Log proxy settings from environment on startup [GH-7528]
+  * core: Cache whether we've been initialized to reduce load on storage [GH-7549]
 
 BUG FIXES:
 
