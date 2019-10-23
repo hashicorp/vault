@@ -90,7 +90,6 @@ BUG FIXES:
    always returned an empty object [GH-7705]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
- * identity: Fixed nil pointer panic when merging entities [GH-7711]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
@@ -122,6 +121,7 @@ BUG FIXES:
    worked on enterprise, now it does.
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
+ * identity: Fixed nil pointer panic when merging entities [GH-7712]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
