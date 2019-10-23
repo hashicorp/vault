@@ -116,7 +116,8 @@ BUG FIXES:
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix panic when pgp keys list is empty [GH-7546]
  * core: add hook for initializing seals for migration [GH-7666]
- * core (enterprise): Fix seal migration in enterprise
+ * core (enterprise): Migrating from one auto unseal method to another never
+   worked on enterprise, now it does.
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
