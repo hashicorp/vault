@@ -72,6 +72,7 @@ IMPROVEMENTS:
    from `telemetry` due to potential sensitive entries in those fields.
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
+ * ui: clarify when secret version is deleted in the secret version history dropdown [GH-7714]
  * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
    total number of active service token accessors in the shared token storage.
    [GH-7541]
@@ -94,6 +95,7 @@ BUG FIXES:
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
+ * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685] 
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  
