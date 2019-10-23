@@ -2041,6 +2041,53 @@ func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 	}
 }
 
+// unsealKeyToMasterKey takes a key provided by the user, either a recovery key
+// if using an autoseal or an unseal key with Shamir.  It returns a nil error
+// if the key is valid and an error otherwise. It also returns the master key
+// that can be used to unseal the barrier.
+func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]byte, error) {
+	switch c.seal.StoredKeysSupported() {
+	case StoredKeysSupportedGeneric:
+		if err := c.seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
+			return nil, errwrap.Wrapf("recovery key verification failed: {{err}}", err)
+		}
+
+		storedKeys, err := c.seal.GetStoredKeys(ctx)
+		if err == nil && len(storedKeys) != 1 {
+			err = fmt.Errorf("expected exactly one stored key, got %d", len(storedKeys))
+		}
+		if err != nil {
+			return nil, errwrap.Wrapf("unable to retrieve stored keys", err)
+		}
+		return storedKeys[0], nil
+
+	case StoredKeysSupportedShamirMaster:
+		testseal := NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("testseal")))
+		testseal.SetCore(c)
+		cfg, err := c.seal.BarrierConfig(ctx)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err)
+		}
+		testseal.SetCachedBarrierConfig(cfg)
+		err = testseal.GetAccess().(*shamirseal.ShamirSeal).SetKey(combinedKey)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to setup unseal key: {{err}}", err)
+		}
+		storedKeys, err := testseal.GetStoredKeys(ctx)
+		if err == nil && len(storedKeys) != 1 {
+			err = fmt.Errorf("expected exactly one stored key, got %d", len(storedKeys))
+		}
+		if err != nil {
+			return nil, errwrap.Wrapf("unable to retrieve stored keys", err)
+		}
+		return storedKeys[0], nil
+
+	case StoredKeysNotSupported:
+		return combinedKey, nil
+	}
+	return nil, fmt.Errorf("invalid seal")
+}
+
 func (c *Core) IsInSealMigration() bool {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()

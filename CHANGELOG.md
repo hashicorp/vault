@@ -72,6 +72,7 @@ IMPROVEMENTS:
    from `telemetry` due to potential sensitive entries in those fields.
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
+ * ui: clarify when secret version is deleted in the secret version history dropdown [GH-7714]
  * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
    total number of active service token accessors in the shared token storage.
    [GH-7541]
@@ -89,11 +90,11 @@ BUG FIXES:
    always returned an empty object [GH-7705]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
- * identity: Fixed nil pointer panic when merging entities [GH-7711]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
+ * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685] 
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  
@@ -109,15 +110,18 @@ CHANGES:
 IMPROVEMENTS:
   * cli: Ignore existing token during CLI login [GH-7508]
   * core: Log proxy settings from environment on startup [GH-7528]
+  * core: Cache whether we've been initialized to reduce load on storage [GH-7549]
 
 BUG FIXES:
 
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix panic when pgp keys list is empty [GH-7546]
  * core: add hook for initializing seals for migration [GH-7666]
- * core (enterprise): Fix seal migration in enterprise
+ * core (enterprise): Migrating from one auto unseal method to another never
+   worked on enterprise, now it does.
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
+ * identity: Fixed nil pointer panic when merging entities [GH-7712]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
