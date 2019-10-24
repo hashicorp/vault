@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/y0ssar1an/q"
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -314,8 +315,6 @@ func TestExitAfterAuth(t *testing.T) {
 	}
 
 	config := `
-exit_after_auth = true
-
 auto_auth {
         method {
                 type = "jwt"
@@ -625,6 +624,15 @@ listener "tcp" {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template(t *testing.T) {
+	q.Q("---------")
+	q.Q("starting")
+	q.Q("---------")
+	defer func() {
+		q.Q("---------")
+		q.Q("end")
+		q.Q("---------")
+		q.Q("")
+	}()
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -670,7 +678,7 @@ func TestAgent_Template(t *testing.T) {
 	// give test-role permissions to read the kv secret
 	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
 	req.BodyBytes = []byte(`{
-	  "policy": "path \"secret/*\" { capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"] }"
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
 	}`)
 	request(t, serverClient, req, 204)
 
@@ -683,15 +691,10 @@ func TestAgent_Template(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 204)
 
-	// TODO remove this
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
@@ -707,25 +710,21 @@ func TestAgent_Template(t *testing.T) {
 	defer os.Remove(secretIDPath)
 
 	// setup the kv secrets
-	kvReq := serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
-	kvReq.BodyBytes = []byte(`{
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
 	"options": {"version": "2"}
 	}`)
-	request(t, serverClient, kvReq, 200)
+	request(t, serverClient, req, 200)
 
 	// populate a secret
-	kvSecretReq := serverClient.NewRequest("POST", "/v1/secret/data/myapp")
-	kvSecretReq.BodyBytes = []byte(`{
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
 	  "data": {
       "username": "bar",
       "password": "zap"
     }
 	}`)
-	request(t, serverClient, kvSecretReq, 200)
-
-	req = serverClient.NewRequest("GET", "/v1/secret/data/myapp")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
+	request(t, serverClient, req, 200)
 
 	// Get a temp file path we can use for the sink
 	sinkPath := makeTempFile("sink.txt", "")
@@ -733,8 +732,8 @@ func TestAgent_Template(t *testing.T) {
 
 	// make some template files
 	var templatePaths []string
-	for i := 0; i < 1; i++ {
-		path := makeTempFile("render_01", templateContents)
+	for i := 0; i < 15; i++ {
+		path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents)
 		templatePaths = append(templatePaths, path)
 	}
 
@@ -743,10 +742,10 @@ func TestAgent_Template(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TODO: restore
+	// TODO enable this
 	// defer os.RemoveAll(tmpDir)
 
-	// build up the template config
+	// build up the template config to be added to the Agent config.hcl file
 	var templateConfigStrings []string
 	for i, t := range templatePaths {
 		index := fmt.Sprintf("render_%d.json", i)
@@ -756,6 +755,7 @@ func TestAgent_Template(t *testing.T) {
 
 	// Create a config file
 	config := `
+exit_after_auth = true
 vault {
   address = "%s"
 	tls_skip_verify = true
@@ -799,16 +799,19 @@ auto_auth {
 			t.Errorf("non-zero return code when running agent: %d", code)
 			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
 			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			q.Q("AGENT_TEST: non zero code from run")
 		}
 		wg.Done()
 	}()
 
+	q.Q("waiting for started")
 	select {
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
 
+	q.Q("post-waiting for started")
 	// defer agent shutdown
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
@@ -819,6 +822,19 @@ auto_auth {
 	// Perform the tests
 	//----------------------------------------------------
 
+	// q.Q("sleep for templates")
+	time.Sleep(3 * time.Second)
+	files, err := ioutil.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	q.Q("TEST: checking len...")
+	if len(files) != len(templatePaths) {
+		t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+	}
+	q.Q("TEST: tmpDir")
+	q.Q(tmpDir)
 }
 
 // TODO: policy and permissions
