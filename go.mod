@@ -40,6 +40,7 @@ require (
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
+	github.com/go-ldap/ldap v3.0.2+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
@@ -48,7 +49,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/hashicorp/consul/api v1.0.1
+	github.com/hashicorp/consul-template v0.22.0
+	github.com/hashicorp/consul/api v1.1.0
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
