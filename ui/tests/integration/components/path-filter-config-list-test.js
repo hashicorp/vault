@@ -66,7 +66,7 @@ module('Integration | Component | path filter config list', function(hooks) {
   });
 
   test('it sets config.paths', async function(assert) {
-    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
 
@@ -85,23 +85,23 @@ module('Integration | Component | path filter config list', function(hooks) {
   });
 
   test('it sets config.mode', async function(assert) {
-    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('config', { mode: 'allow', paths: [] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
-    await click('#blacklist');
-    assert.equal(this.config.mode, 'blacklist');
+    await click('#deny');
+    assert.equal(this.config.mode, 'deny');
     await click('#no-filtering');
     assert.equal(this.config.mode, null);
   });
 
   test('it shows a warning when going from a mode to allow all', async function(assert) {
-    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('config', { mode: 'allow', paths: [] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
     await click('#no-filtering');
     assert.dom('[data-test-remove-warning]').exists('shows removal warning');
   });
 
   test('it fetches mounts from a namespace when namespace name is entered', async function(assert) {
-    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
 
