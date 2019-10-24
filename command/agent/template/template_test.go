@@ -132,9 +132,7 @@ func TestServerRun(t *testing.T) {
 			// send a dummy value to trigger the internal Runner to query for secret
 			// info
 			templateTokenCh <- "test"
-
-			// using ExitAfterAuth, we can block until rendering is done
-			<-ts.DoneCh
+			<-server.DoneCh
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int
