@@ -57,6 +57,7 @@ IMPROVEMENTS:
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
+ * replication (enterprise): added more replication metrics
  * secrets/aws: The root config can now be read [GH-7245]
  * storage/azure: Add config parameter to Azure storage backend to allow
    specifying the ARM endpoint [GH-7567]
@@ -66,6 +67,7 @@ IMPROVEMENTS:
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
    information to be extracted [GH-7473]
+ * sys: Add endpoint that counts the total number of active identity entities [GH-7541]
  * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
    returns the configuration state of the server. It excludes config values
    from `storage`, `ha_storage`, and `seal` stanzas and some values
@@ -76,9 +78,6 @@ IMPROVEMENTS:
  * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
    total number of active service token accessors in the shared token storage.
    [GH-7541]
- * sys: Add a new `sys/internal/counters/entities` endpoint, that counts the
-   total number of active identity entities.  [GH-7541]
- * replication (enterprise): added more replication metrics
 
 BUG FIXES:
 
