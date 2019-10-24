@@ -99,11 +99,6 @@ export default Service.extend({
       return path.split('/').lastObject;
     }
 
-    if (navItem === 'access') {
-      // return the route param for the first path they have access to
-      // we will need to do the same thing for policies
-    }
-
     return API_PATHS_TO_ROUTE_PARAMS[path];
   },
 
