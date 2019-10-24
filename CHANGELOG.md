@@ -2,33 +2,34 @@
 
 FEATURES:
 
- * **Recovery Mode**: Vault server can be brought up in recovery mode to resolve
-   outages caused due to data store being in bad state. This is a privileged mode
-   that allows `sys/raw` API calls to perform surgical corrections to the data
-   store. Bad storage state can be caused by bugs. However, this is usually
-   observed when known (and fixed) bugs are hit by older versions of Vault.
- * **Stackdriver Metrics Sink**: Vault can now send metrics to
-   [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
-   documentation](https://www.vaultproject.io/docs/config/index.html) for
-   details. [GH-6957]
- * **Transit**: Signing and verification is now supported with the P-384
-   (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551]
- * **Transit**: Encryption and decryption is now supported via AES128-GCM96
-   [GH-7555]
  * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
    operators to retrieve debugging information related to a particular Vault
    node. Operators can use this simple workflow to capture triaging information,
    which can then be consumed programmatically or by support and engineering teams.
    It has the abilitity to probe for config, host, metrics, pprof, server status, 
    and replication status.
+ * **Recovery Mode**: Vault server can be brought up in recovery mode to resolve
+   outages caused due to data store being in bad state. This is a privileged mode
+   that allows `sys/raw` API calls to perform surgical corrections to the data
+   store. Bad storage state can be caused by bugs. However, this is usually
+   observed when known (and fixed) bugs are hit by older versions of Vault.
  * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
    engine, users or applications can check out a service account for use, and its
    password will be rotated when it's checked back in.
- * **New UI Features** The UI now supports managing users and groups for the Userpass, Cert, Okta, and Radius auth methods.
- * **Vault Agent Template** Vault Agent now supports rendering templates containing Vault secrets to disk, similar to Consul Template [GH-7652]
+ * **Vault Agent Template** Vault Agent now supports rendering templates containing 
+   Vault secrets to disk, similar to Consul Template [GH-7652]
+ * **Transit Key Type Support**: Signing and verification is now supported with the P-384
+   (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551] and encryption and 
+   decryption is now supported via AES128-GCM96 [GH-7555]
+ * **New UI Features** The UI now supports managing users and groups for the 
+   Userpass, Cert, Okta, and Radius auth methods.
  * **Shamir with Stored Master Key** The on disk format for Shamir seals has changed,
    allowing for a secondary cluster using Shamir downstream from a primary cluster
-   using AutoUnseal. [GH-7694]
+   using Auto Unseal. [GH-7694]
+ * **Stackdriver Metrics Sink**: Vault can now send metrics to
+   [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-6957]
 
 CHANGES: 
 
