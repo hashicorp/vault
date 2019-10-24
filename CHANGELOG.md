@@ -78,6 +78,7 @@ IMPROVEMENTS:
    [GH-7541]
  * sys: Add a new `sys/internal/counters/entities` endpoint, that counts the
    total number of active identity entities.  [GH-7541]
+ * replication (enterprise): added more replication metrics
 
 BUG FIXES:
 
