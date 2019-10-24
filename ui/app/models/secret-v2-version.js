@@ -1,6 +1,6 @@
 import Secret from './secret';
 import DS from 'ember-data';
-import { bool } from '@ember/object/computed';
+import { computed } from '@ember/object';
 
 const { attr, belongsTo } = DS;
 
@@ -12,7 +12,11 @@ export default Secret.extend({
   path: attr('string'),
   deletionTime: attr('string'),
   createdTime: attr('string'),
-  deleted: bool('deletionTime'),
+  deleted: computed('deletionTime', function() {
+    const deletionTime = new Date(this.get('deletionTime'));
+    const now = new Date();
+    return deletionTime <= now;
+  }),
   destroyed: attr('boolean'),
   currentVersion: attr('number'),
 });
