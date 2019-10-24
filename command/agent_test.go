@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
-	"github.com/y0ssar1an/q"
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -624,15 +623,6 @@ listener "tcp" {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template(t *testing.T) {
-	q.Q("---------")
-	q.Q("starting")
-	q.Q("---------")
-	defer func() {
-		q.Q("---------")
-		q.Q("end")
-		q.Q("---------")
-		q.Q("")
-	}()
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -799,45 +789,42 @@ auto_auth {
 			t.Errorf("non-zero return code when running agent: %d", code)
 			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
 			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-			q.Q("AGENT_TEST: non zero code from run")
 		}
 		wg.Done()
 	}()
 
-	q.Q("waiting for started")
 	select {
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
 
-	q.Q("post-waiting for started")
+	// We need to sleep to give Agent time to render the templates. Without this
+	// sleep, the test will attempt to read the temp dir before Agent has had time
+	// to render and will likely fail the test
+	time.Sleep(5 * time.Second)
+
+	// Not needed if using exit on auth, as agent will have already returned and
+	// cmd.ShutdownCh isn't available
 	// defer agent shutdown
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
-	}()
+	// defer func() {
+	// 	cmd.ShutdownCh <- struct{}{}
+	// 	wg.Wait()
+	// }()
 
 	//----------------------------------------------------
 	// Perform the tests
 	//----------------------------------------------------
 
-	// q.Q("sleep for templates")
-	time.Sleep(3 * time.Second)
 	files, err := ioutil.ReadDir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	q.Q("TEST: checking len...")
 	if len(files) != len(templatePaths) {
 		t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
 	}
-	q.Q("TEST: tmpDir")
-	q.Q(tmpDir)
 }
-
-// TODO: policy and permissions
 
 var templateContents = `{{ with secret "secret/myapp"}}
 {

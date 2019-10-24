@@ -24,9 +24,6 @@ func TestNewServer(t *testing.T) {
 	if server == nil {
 		t.Fatal("nil server returned")
 	}
-	if server.UnblockCh == nil {
-		t.Fatal("nil blocking channel returned")
-	}
 }
 
 func TestServerRun(t *testing.T) {
@@ -129,9 +126,6 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			if server.UnblockCh == nil {
-				t.Fatal("nil blocking channel returned")
-			}
 
 			go server.Run(ctx, templateTokenCh, templatesToRender)
 
@@ -139,7 +133,8 @@ func TestServerRun(t *testing.T) {
 			// info
 			templateTokenCh <- "test"
 
-			<-server.UnblockCh
+			// using ExitAfterAuth, we can block until rendering is done
+			<-ts.DoneCh
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int

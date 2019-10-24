@@ -8,14 +8,12 @@ package template
 import (
 	"context"
 	"strings"
-	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/y0ssar1an/q"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -31,9 +29,6 @@ type ServerConfig struct {
 
 // Server manages the Consul Template Runner which renders templates
 type Server struct {
-	// UnblockCh is used to block until a template is rendered
-	UnblockCh chan struct{}
-
 	// config holds the ServerConfig used to create it. It's passed along in other
 	// methods
 	config *ServerConfig
@@ -55,7 +50,6 @@ func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
-		UnblockCh:     make(chan struct{}),
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
 	}
@@ -68,6 +62,7 @@ func NewServer(conf *ServerConfig) *Server {
 func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
 	latestToken := new(string)
 	ts.logger.Info("starting template server")
+	// defer the closing of the DoneCh
 	defer func() {
 		ts.logger.Info("template server stopped")
 		close(ts.DoneCh)
@@ -77,12 +72,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		panic("incoming channel is nil")
 	}
 
-	// If there are no templates, close the UnblockCh
+	// If there are no templates, return
 	if len(templates) == 0 {
-		// nothing to do
 		ts.logger.Info("no templates found")
-		q.Q("TEMPLATE: close unblock in zero templates")
-		close(ts.UnblockCh)
 		return
 	}
 
@@ -91,7 +83,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
 		ts.logger.Error("template server failed to generate runner config")
-		close(ts.UnblockCh)
 		return
 	}
 
@@ -99,58 +90,16 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Error("template server failed to create", "error", err)
-		close(ts.UnblockCh)
 		return
 	}
 
-	ticker1 := time.NewTicker(time.Second)
-	defer ticker1.Stop()
-WAIT_TOKEN:
 	for {
 		select {
-		case <-ticker1.C:
-			q.Q("TEMPLATE: first token... tick")
 		case <-ctx.Done():
-			q.Q("TEMPLATE: got ctx.Done before first token")
-			return
-		case token := <-incoming:
-			q.Q("got first token:", token)
-			ctv := ctconfig.Config{
-				Vault: &ctconfig.VaultConfig{
-					Token: latestToken,
-				},
-			}
-			runnerConfig = runnerConfig.Merge(&ctv)
-			// TODO: remove?
-			// runnerConfig.Finalize()
-			var runnerErr error
-			ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
-			if runnerErr != nil {
-				ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
-				continue
-			}
-			go ts.runner.Start()
-			q.Q("breaking wait token")
-			break WAIT_TOKEN
-		}
-	}
-
-	// TODO: handle first render
-
-	ticker2 := time.NewTicker(time.Second)
-	defer ticker2.Stop()
-	for {
-		select {
-		case <-ticker2.C:
-			q.Q("TEMPLATE: ... tick")
-		case <-ctx.Done():
-			q.Q("TEMPLATE: got ctx.Done")
 			ts.runner.Stop()
-			// ts.runner = nil
 			return
 
 		case token := <-incoming:
-			q.Q("TEMPLATE: recieve token")
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
 				ts.runner.Stop()
@@ -173,18 +122,15 @@ WAIT_TOKEN:
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
-			q.Q("TEMPLATE: close unblock template server error")
-			close(ts.UnblockCh)
 			return
 		case <-ts.runner.TemplateRenderedCh():
-			q.q("ts - recieved on runner renderch")
-			// A template has been rendered, unblock
 			if ts.exitAfterAuth {
-				// if we want to exit after auth, go ahead and shut down the runner
+				// if we want to exit after auth, go ahead and shut down the runner and
+				// return. The deferred closing of the DoneCh will allow agent to
+				// continue with closing down
 				ts.runner.Stop()
+				return
 			}
-			q.Q("TEMPLATE: close unblock in rendered ch case")
-			close(ts.UnblockCh)
 		}
 	}
 }

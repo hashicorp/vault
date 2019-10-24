@@ -43,7 +43,6 @@ import (
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"github.com/y0ssar1an/q"
 )
 
 var _ cli.Command = (*AgentCommand)(nil)
@@ -504,8 +503,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
-	var ts *template.Server
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -527,7 +525,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// create an independent vault configuration for Consul Template to use
 		// vaultConfig := c.setupTemplateConfig()
-		ts = template.NewServer(&template.ServerConfig{
+		ts := template.NewServer(&template.ServerConfig{
 			Logger: c.logger.Named("template.server"),
 			// VaultConf:     vaultConfig,
 			VaultConf:     config.Vault,
@@ -535,7 +533,6 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
-		unblockCh = ts.UnblockCh
 
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
@@ -570,27 +567,15 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	// If the template server is running and we've assinged the Unblock channel,
-	// wait for the template to render
-	if unblockCh != nil {
-		q.Q("Agent: waiting for unblock")
-		select {
-		case <-ctx.Done():
-		case <-ts.UnblockCh:
-			q.Q("AGENT: got ts unblockch")
-		}
-	}
-	q.Q("Agent: past unblock")
-
 	select {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
-		q.Q("Agent: here in ssDoneCh case")
 		c.logger.Info("sinks finished, exiting")
-		q.Q("Agent: calling cancelFunc in ssDone")
-		cancelFunc()
+		// allow any templates to be rendered
+		if tsDoneCh != nil {
+			<-tsDoneCh
+		}
 	case <-c.ShutdownCh:
-		q.Q("AGENT: shutdown triggered")
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
 		if ahDoneCh != nil {
@@ -604,8 +589,6 @@ func (c *AgentCommand) Run(args []string) int {
 			<-tsDoneCh
 		}
 	}
-
-	q.Q("Agent: returning")
 
 	return 0
 }
