@@ -623,6 +623,9 @@ listener "tcp" {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template(t *testing.T) {
+	//----------------------------------------------------
+	// Pre-test setup
+	//----------------------------------------------------
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -720,32 +723,64 @@ func TestAgent_Template(t *testing.T) {
 	sinkPath := makeTempFile("sink.txt", "")
 	defer os.Remove(sinkPath)
 
-	// make some template files
-	var templatePaths []string
-	for i := 0; i < 15; i++ {
-		path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents)
-		templatePaths = append(templatePaths, path)
-	}
-
-	// make a temp directory to render too
-	tmpDir, err := ioutil.TempDir("", "agent-test-renders")
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TODO enable this
-	// defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDirRoot)
 
-	// build up the template config to be added to the Agent config.hcl file
-	var templateConfigStrings []string
-	for i, t := range templatePaths {
-		index := fmt.Sprintf("render_%d.json", i)
-		s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
-		templateConfigStrings = append(templateConfigStrings, s)
+	// start test cases here
+	testCases := map[string]struct {
+		templateCount int
+		exitAfterAuth bool
+	}{
+		"zero": {},
+		"zero-with-exit": {
+			exitAfterAuth: true,
+		},
+		"one": {
+			templateCount: 1,
+		},
+		"one_exit": {
+			templateCount: 1,
+			exitAfterAuth: true,
+		},
+		"many": {
+			templateCount: 15,
+		},
+		"many_exit": {
+			templateCount: 15,
+			exitAfterAuth: true,
+		},
 	}
 
-	// Create a config file
-	config := `
-exit_after_auth = true
+	for tcname, tc := range testCases {
+		t.Run(tcname, func(t *testing.T) {
+			// make some template files
+			var templatePaths []string
+			for i := 0; i < tc.templateCount; i++ {
+				path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents)
+				templatePaths = append(templatePaths, path)
+			}
+
+			// create temp dir for this test run
+			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// build up the template config to be added to the Agent config.hcl file
+			var templateConfigStrings []string
+			for i, t := range templatePaths {
+				index := fmt.Sprintf("render_%d.json", i)
+				s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
+				templateConfigStrings = append(templateConfigStrings, s)
+			}
+
+			// Create a config file
+			config := `
 vault {
   address = "%s"
 	tls_skip_verify = true
@@ -757,6 +792,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
+						remove_secret_id_file_after_reading = false
         }
     }
 
@@ -768,61 +804,72 @@ auto_auth {
 }
 
 %s
+
+%s
 `
-	// flatten the template configs
-	templateConfig := strings.Join(templateConfigStrings, " ")
 
-	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig)
-	configPath := makeTempFile("config.hcl", config)
-	defer os.Remove(configPath)
+			// conditionally set the exit_after_auth flag
+			exitAfterAuth := ""
+			if tc.exitAfterAuth {
+				exitAfterAuth = "exit_after_auth = true"
+			}
 
-	// Start the agent
-	ui, cmd := testAgentCommand(t, logger)
-	cmd.client = serverClient
-	cmd.startedCh = make(chan struct{})
+			// flatten the template configs
+			templateConfig := strings.Join(templateConfigStrings, " ")
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
-		wg.Done()
-	}()
+			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig, exitAfterAuth)
+			configPath := makeTempFile("config.hcl", config)
+			defer os.Remove(configPath)
 
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
-	}
+			// Start the agent
+			ui, cmd := testAgentCommand(t, logger)
+			cmd.client = serverClient
+			cmd.startedCh = make(chan struct{})
 
-	// We need to sleep to give Agent time to render the templates. Without this
-	// sleep, the test will attempt to read the temp dir before Agent has had time
-	// to render and will likely fail the test
-	time.Sleep(5 * time.Second)
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			go func() {
+				code := cmd.Run([]string{"-config", configPath})
+				if code != 0 {
+					t.Errorf("non-zero return code when running agent: %d", code)
+					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+				}
+				wg.Done()
+			}()
 
-	// Not needed if using exit on auth, as agent will have already returned and
-	// cmd.ShutdownCh isn't available
-	// defer agent shutdown
-	// defer func() {
-	// 	cmd.ShutdownCh <- struct{}{}
-	// 	wg.Wait()
-	// }()
+			select {
+			case <-cmd.startedCh:
+			case <-time.After(5 * time.Second):
+				t.Errorf("timeout")
+			}
 
-	//----------------------------------------------------
-	// Perform the tests
-	//----------------------------------------------------
+			// We need to sleep to give Agent time to render the templates. Without this
+			// sleep, the test will attempt to read the temp dir before Agent has had time
+			// to render and will likely fail the test
+			time.Sleep(5 * time.Second)
 
-	files, err := ioutil.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+			// if using exit_after_auth, then the command will have returned at the
+			// end and no longer be running. If we are not using exit_after_auth, then
+			// we need to shut down the command
+			if !tc.exitAfterAuth {
+				cmd.ShutdownCh <- struct{}{}
+				wg.Wait()
+			}
 
-	if len(files) != len(templatePaths) {
-		t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+			//----------------------------------------------------
+			// Perform the tests
+			//----------------------------------------------------
+
+			files, err := ioutil.ReadDir(tmpDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(files) != len(templatePaths) {
+				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+			}
+		})
 	}
 }
 
