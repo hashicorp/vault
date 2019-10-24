@@ -14,7 +14,7 @@
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="groups")}}
+    {{#if (has-permission "access" routeParams="groups" capabilities=(array "list"))}}
       <li>
         {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
           Groups
