@@ -169,8 +169,8 @@ func (c *Client) NewLifetimeWatcher(i *LifetimeWatcherInput) (*LifetimeWatcher, 
 	}, nil
 }
 
-// Deprecated: exists only for backwards compatibility. Identical to
-// NewLifetimeWatcher with the exception of some error cases.
+// Deprecated: exists only for backwards compatibility. Calls
+// NewLifetimeWatcher, and sets compatibility flags.
 func (c *Client) NewRenewer(i *LifetimeWatcherInput) (*LifetimeWatcher, error) {
 	if i == nil {
 		return nil, ErrRenewerMissingInput
@@ -181,7 +181,15 @@ func (c *Client) NewRenewer(i *LifetimeWatcherInput) (*LifetimeWatcher, error) {
 		return nil, ErrRenewerMissingSecret
 	}
 
-	return c.NewLifetimeWatcher(i)
+	renewer, err := c.NewLifetimeWatcher(i)
+	if err != nil {
+		return nil, err
+	}
+
+	renewer.renewBehavior = RenewBehaviorErrorOnErrors
+	renewer.errLifetimeWatcherNotRenewable = ErrRenewerNotRenewable
+	renewer.errLifetimeWatcherNoSecretData = ErrRenewerNoSecretData
+	return renewer, err
 }
 
 // DoneCh returns the channel where the renewer will publish when renewal stops.
@@ -215,13 +223,9 @@ func (r *LifetimeWatcher) Start() {
 	r.doneCh <- r.doRenew()
 }
 
-// Renew is for comnpatibility with the legacy api.Renewer. Calling Renew will
-// automatically set the renew behavior to RenewBehaviorErrorOnErrors, then
-// call Start.
+// Renew is for comnpatibility with the legacy api.Renewer. Calling Renew
+// simply chains to Start.
 func (r *LifetimeWatcher) Renew() {
-	r.renewBehavior = RenewBehaviorErrorOnErrors
-	r.errLifetimeWatcherNotRenewable = ErrRenewerNotRenewable
-	r.errLifetimeWatcherNoSecretData = ErrRenewerNoSecretData
 	r.Start()
 }
 
