@@ -44,11 +44,12 @@ const API_PATHS_TO_ROUTE_PARAMS = {
 };
 
 /*
-  The Permissions service is used to gate top navigation and sidebar items. It fetches
-  a users' policy from the resultant-acl endpoint and stores their allowed exact and glob
-  paths as state. It also has methods for checking whether a user has permission for a given
-  path.
+  The Permissions service is used to gate top navigation and sidebar items.
+  It fetches a users' policy from the resultant-acl endpoint and stores their
+  allowed exact and glob paths as state. It also has methods for checking whether
+  a user has permission for a given path.
 */
+
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
