@@ -3,7 +3,9 @@
 package base62
 
 import (
+	"crypto/rand"
 	uuid "github.com/hashicorp/go-uuid"
+	"io"
 )
 
 const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -12,6 +14,12 @@ const csLen = byte(len(charset))
 // Random generates a random string using base-62 characters.
 // Resulting entropy is ~5.95 bits/character.
 func Random(length int) (string, error) {
+	return RandomWithReader(length, rand.Reader)
+}
+
+// RandomWithReader generates a random string using base-62 characters and a given reader.
+// Resulting entropy is ~5.95 bits/character.
+func RandomWithReader(length int, reader io.Reader) (string, error) {
 	if length == 0 {
 		return "", nil
 	}
@@ -22,7 +30,7 @@ func Random(length int) (string, error) {
 	batchSize := length + length/4
 
 	for {
-		buf, err := uuid.GenerateRandomBytes(batchSize)
+		buf, err := uuid.GenerateRandomBytesWithReader(batchSize, reader)
 		if err != nil {
 			return "", err
 		}

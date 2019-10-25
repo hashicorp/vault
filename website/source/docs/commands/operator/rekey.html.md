@@ -135,7 +135,7 @@ flags](/docs/commands/index.html) included on all commands.
   providing an unseal key. The default is false.
 
 - `-target` `(string: "barrier")` - Target for rekeying. "recovery" only applies
-  when HSM support is enabled.
+  when HSM support is enabled or using [Auto Unseal](/docs/concepts/seal.html#auto-unseal).
 
 - `-verify` `(bool: false)` - Indicate during the phase `-init` that the
   verification process is activated for the rekey. Along with `-nonce` option

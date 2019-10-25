@@ -2,9 +2,12 @@ package command
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"io"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
@@ -12,8 +15,13 @@ import (
 )
 
 var (
-	onEnterprise = false
+	onEnterprise                 = false
+	createSecureRandomReaderFunc = createSecureRandomReader
 )
+
+func createSecureRandomReader(config *server.Config, seal *vault.Seal) (io.Reader, error) {
+	return rand.Reader, nil
+}
 
 func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := core.PhysicalSealConfigs(context.Background())
@@ -79,7 +87,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 			return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 		}
 
-		// If we're not cominng from Shamir we expect the previous seal to be
+		// If we're not coming from Shamir we expect the previous seal to be
 		// in the config and disabled.
 		existSeal = unwrapSeal
 		newSeal = barrierSeal

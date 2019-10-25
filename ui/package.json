@@ -22,7 +22,7 @@
     "test:oss": "yarn run test -f='!enterprise'",
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
-    "test:quick-oss": "yarn test-quick -f='!enterprise'",
+    "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
     "gen-story-md": "node scripts/gen-story-md.js"
@@ -107,6 +107,7 @@
     "ember-resolver": "^5.0.1",
     "ember-responsive": "^3.0.0-beta.3",
     "ember-router-helpers": "^0.2.0",
+    "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
     "ember-source": "~3.8.0",
     "ember-svg-jar": "^2.1.0",
@@ -117,6 +118,7 @@
     "eslint-config-prettier": "^6.0.0",
     "eslint-plugin-ember": "^6.7.0",
     "eslint-plugin-prettier": "^3.1.0",
+    "filesize": "^4.2.1",
     "flat": "^4.1.0",
     "ivy-codemirror": "IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374",
     "jsonlint": "^1.6.3",
@@ -154,7 +156,7 @@
   },
   "engines": {
     "node": " >= 10.* <11",
-    "yarn": "1.17.3"
+    "yarn": "1.19.1"
   },
   "private": true,
   "ember-addon": {
@@ -163,7 +165,8 @@
       "lib/css",
       "lib/kmip",
       "lib/open-api-explorer",
-      "lib/replication"
+      "lib/replication",
+      "lib/service-worker-authenticated-download"
     ]
   }
 }
