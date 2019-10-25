@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/internal/ini"
 )
 
@@ -40,12 +39,6 @@ const (
 
 	// Web Identity Token File
 	webIdentityTokenFileKey = `web_identity_token_file` // optional
-
-	// Additional config fields for regional or legacy endpoints
-	stsRegionalEndpointSharedKey = `sts_regional_endpoints`
-
-	// Additional config fields for regional or legacy endpoints
-	s3UsEast1RegionalSharedKey = `s3_us_east_1_regional_endpoint`
 
 	// DefaultSharedConfigProfile is the default profile to be used when
 	// loading configuration from the config files if another profile name
@@ -89,23 +82,12 @@ type sharedConfig struct {
 	//
 	//	endpoint_discovery_enabled = true
 	EnableEndpointDiscovery *bool
+
 	// CSM Options
 	CSMEnabled  *bool
 	CSMHost     string
 	CSMPort     string
 	CSMClientID string
-
-	// Specifies the Regional Endpoint flag for the SDK to resolve the endpoint for a service
-	//
-	// sts_regional_endpoints = regional
-	// This can take value as `LegacySTSEndpoint` or `RegionalSTSEndpoint`
-	STSRegionalEndpoint endpoints.STSRegionalEndpoint
-
-	// Specifies the Regional Endpoint flag for the SDK to resolve the endpoint for a service
-	//
-	// s3_us_east_1_regional_endpoint = regional
-	// This can take value as `LegacyS3UsEast1Endpoint` or `RegionalS3UsEast1Endpoint`
-	S3UsEast1RegionalEndpoint endpoints.S3UsEast1RegionalEndpoint
 }
 
 type sharedConfigFile struct {
@@ -262,25 +244,8 @@ func (cfg *sharedConfig) setFromIniFile(profile string, file sharedConfigFile, e
 		updateString(&cfg.RoleSessionName, section, roleSessionNameKey)
 		updateString(&cfg.SourceProfileName, section, sourceProfileKey)
 		updateString(&cfg.CredentialSource, section, credentialSourceKey)
+
 		updateString(&cfg.Region, section, regionKey)
-
-		if v := section.String(stsRegionalEndpointSharedKey); len(v) != 0 {
-			sre, err := endpoints.GetSTSRegionalEndpoint(v)
-			if err != nil {
-				return fmt.Errorf("failed to load %s from shared config, %s, %v",
-					stsRegionalEndpointSharedKey, file.Filename, err)
-			}
-			cfg.STSRegionalEndpoint = sre
-		}
-
-		if v := section.String(s3UsEast1RegionalSharedKey); len(v) != 0 {
-			sre, err := endpoints.GetS3UsEast1RegionalEndpoint(v)
-			if err != nil {
-				return fmt.Errorf("failed to load %s from shared config, %s, %v",
-					s3UsEast1RegionalSharedKey, file.Filename, err)
-			}
-			cfg.S3UsEast1RegionalEndpoint = sre
-		}
 	}
 
 	updateString(&cfg.CredentialProcess, section, credentialProcessKey)
@@ -329,6 +294,83 @@ func (cfg *sharedConfig) validateCredentialsRequireARN(profile string) error {
 	}
 
 	return nil
+}
+
+func (cfg *sharedConfig) validateCredentialType() error {
+	// Only one or no credential type can be defined.
+	if !oneOrNone(
+		len(cfg.SourceProfileName) != 0,
+		len(cfg.CredentialSource) != 0,
+		len(cfg.CredentialProcess) != 0,
+		len(cfg.WebIdentityTokenFile) != 0,
+	) {
+		return ErrSharedConfigSourceCollision
+	}
+
+	return nil
+}
+
+func (cfg *sharedConfig) hasCredentials() bool {
+	switch {
+	case len(cfg.SourceProfileName) != 0:
+	case len(cfg.CredentialSource) != 0:
+	case len(cfg.CredentialProcess) != 0:
+	case len(cfg.WebIdentityTokenFile) != 0:
+	case cfg.Creds.HasKeys():
+	default:
+		return false
+	}
+
+	return true
+}
+
+func (cfg *sharedConfig) clearCredentialOptions() {
+	cfg.CredentialSource = ""
+	cfg.CredentialProcess = ""
+	cfg.WebIdentityTokenFile = ""
+	cfg.Creds = credentials.Value{}
+}
+
+func (cfg *sharedConfig) clearAssumeRoleOptions() {
+	cfg.RoleARN = ""
+	cfg.ExternalID = ""
+	cfg.MFASerial = ""
+	cfg.RoleSessionName = ""
+	cfg.SourceProfileName = ""
+}
+
+func oneOrNone(bs ...bool) bool {
+	var count int
+
+	for _, b := range bs {
+		if b {
+			count++
+			if count > 1 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// updateString will only update the dst with the value in the section key, key
+// is present in the section.
+func updateString(dst *string, section ini.Section, key string) {
+	if !section.Has(key) {
+		return
+	}
+	*dst = section.String(key)
+}
+
+// updateBoolPtr will only update the dst with the value in the section key,
+// key is present in the section.
+func updateBoolPtr(dst **bool, section ini.Section, key string) {
+	if !section.Has(key) {
+		return
+	}
+	*dst = new(bool)
+	**dst = section.Bool(key)
 }
 
 func (cfg *sharedConfig) validateCredentialType() error {

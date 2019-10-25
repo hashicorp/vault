@@ -5619,7 +5619,7 @@ func (c *EC2) CreateSnapshotsRequest(input *CreateSnapshotsInput) (req *request.
 // Creates crash-consistent snapshots of multiple EBS volumes and stores the
 // data in S3. Volumes are chosen by specifying an instance. Any attached volumes
 // will produce one snapshot each that is crash-consistent across the instance.
-// Boot volumes can be excluded by changing the parameters.
+// Boot volumes can be excluded by changing the paramaters.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -5958,10 +5958,8 @@ func (c *EC2) CreateTrafficMirrorFilterRequest(input *CreateTrafficMirrorFilterI
 // A Traffic Mirror filter is a set of rules that defines the traffic to mirror.
 //
 // By default, no traffic is mirrored. To mirror traffic, use CreateTrafficMirrorFilterRule
-// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTrafficMirrorFilterRule.htm)
 // to add Traffic Mirror rules to the filter. The rules you add define what
 // traffic gets mirrored. You can also use ModifyTrafficMirrorFilterNetworkServices
-// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyTrafficMirrorFilterNetworkServices.html)
 // to mirror supported network services.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -6036,7 +6034,7 @@ func (c *EC2) CreateTrafficMirrorFilterRuleRequest(input *CreateTrafficMirrorFil
 
 // CreateTrafficMirrorFilterRule API operation for Amazon Elastic Compute Cloud.
 //
-// Creates a Traffic Mirror filter rule.
+// Creates a Traffic Mirror rule.
 //
 // A Traffic Mirror rule defines the Traffic Mirror source traffic to mirror.
 //
@@ -6124,8 +6122,8 @@ func (c *EC2) CreateTrafficMirrorSessionRequest(input *CreateTrafficMirrorSessio
 // can be in the same VPC, or in a different VPC connected via VPC peering or
 // a transit gateway.
 //
-// By default, no traffic is mirrored. Use CreateTrafficMirrorFilter (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTrafficMirrorFilter.htm)
-// to create filter rules that specify the traffic to mirror.
+// By default, no traffic is mirrored. Use CreateTrafficMirrorFilter to create
+// filter rules that specify the traffic to mirror.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -6208,8 +6206,7 @@ func (c *EC2) CreateTrafficMirrorTargetRequest(input *CreateTrafficMirrorTargetI
 //
 // A Traffic Mirror target can be a network interface, or a Network Load Balancer.
 //
-// To use the target in a Traffic Mirror session, use CreateTrafficMirrorSession
-// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTrafficMirrorSession.htm).
+// To use the target in a Traffic Mirror session, use CreateTrafficMirrorSession.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -12813,12 +12810,6 @@ func (c *EC2) DescribeExportImageTasksRequest(input *DescribeExportImageTasksInp
 		Name:       opDescribeExportImageTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &request.Paginator{
-			InputTokens:     []string{"NextToken"},
-			OutputTokens:    []string{"NextToken"},
-			LimitToken:      "MaxResults",
-			TruncationToken: "",
-		},
 	}
 
 	if input == nil {
@@ -12860,58 +12851,6 @@ func (c *EC2) DescribeExportImageTasksWithContext(ctx aws.Context, input *Descri
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
-}
-
-// DescribeExportImageTasksPages iterates over the pages of a DescribeExportImageTasks operation,
-// calling the "fn" function with the response data for each page. To stop
-// iterating, return false from the fn function.
-//
-// See DescribeExportImageTasks method for more information on how to use this operation.
-//
-// Note: This operation can generate multiple requests to a service.
-//
-//    // Example iterating over at most 3 pages of a DescribeExportImageTasks operation.
-//    pageNum := 0
-//    err := client.DescribeExportImageTasksPages(params,
-//        func(page *ec2.DescribeExportImageTasksOutput, lastPage bool) bool {
-//            pageNum++
-//            fmt.Println(page)
-//            return pageNum <= 3
-//        })
-//
-func (c *EC2) DescribeExportImageTasksPages(input *DescribeExportImageTasksInput, fn func(*DescribeExportImageTasksOutput, bool) bool) error {
-	return c.DescribeExportImageTasksPagesWithContext(aws.BackgroundContext(), input, fn)
-}
-
-// DescribeExportImageTasksPagesWithContext same as DescribeExportImageTasksPages except
-// it takes a Context and allows setting request options on the pages.
-//
-// The context must be non-nil and will be used for request cancellation. If
-// the context is nil a panic will occur. In the future the SDK may create
-// sub-contexts for http.Requests. See https://golang.org/pkg/context/
-// for more information on using Contexts.
-func (c *EC2) DescribeExportImageTasksPagesWithContext(ctx aws.Context, input *DescribeExportImageTasksInput, fn func(*DescribeExportImageTasksOutput, bool) bool, opts ...request.Option) error {
-	p := request.Pagination{
-		NewRequest: func() (*request.Request, error) {
-			var inCpy *DescribeExportImageTasksInput
-			if input != nil {
-				tmp := *input
-				inCpy = &tmp
-			}
-			req, _ := c.DescribeExportImageTasksRequest(inCpy)
-			req.SetContext(ctx)
-			req.ApplyOptions(opts...)
-			return req, nil
-		},
-	}
-
-	for p.Next() {
-		if !fn(p.Page().(*DescribeExportImageTasksOutput), !p.HasNextPage()) {
-			break
-		}
-	}
-
-	return p.Err()
 }
 
 const opDescribeExportTasks = "DescribeExportTasks"
@@ -20152,6 +20091,397 @@ func (c *EC2) DescribeTrafficMirrorTargetsPagesWithContext(ctx aws.Context, inpu
 	return p.Err()
 }
 
+const opDescribeTrafficMirrorFilters = "DescribeTrafficMirrorFilters"
+
+// DescribeTrafficMirrorFiltersRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeTrafficMirrorFilters operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeTrafficMirrorFilters for more information on using the DescribeTrafficMirrorFilters
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeTrafficMirrorFiltersRequest method.
+//    req, resp := client.DescribeTrafficMirrorFiltersRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorFilters
+func (c *EC2) DescribeTrafficMirrorFiltersRequest(input *DescribeTrafficMirrorFiltersInput) (req *request.Request, output *DescribeTrafficMirrorFiltersOutput) {
+	op := &request.Operation{
+		Name:       opDescribeTrafficMirrorFilters,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &DescribeTrafficMirrorFiltersInput{}
+	}
+
+	output = &DescribeTrafficMirrorFiltersOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeTrafficMirrorFilters API operation for Amazon Elastic Compute Cloud.
+//
+// Describes one or more Traffic Mirror filters.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Elastic Compute Cloud's
+// API operation DescribeTrafficMirrorFilters for usage and error information.
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorFilters
+func (c *EC2) DescribeTrafficMirrorFilters(input *DescribeTrafficMirrorFiltersInput) (*DescribeTrafficMirrorFiltersOutput, error) {
+	req, out := c.DescribeTrafficMirrorFiltersRequest(input)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorFiltersWithContext is the same as DescribeTrafficMirrorFilters with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeTrafficMirrorFilters for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorFiltersWithContext(ctx aws.Context, input *DescribeTrafficMirrorFiltersInput, opts ...request.Option) (*DescribeTrafficMirrorFiltersOutput, error) {
+	req, out := c.DescribeTrafficMirrorFiltersRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorFiltersPages iterates over the pages of a DescribeTrafficMirrorFilters operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See DescribeTrafficMirrorFilters method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a DescribeTrafficMirrorFilters operation.
+//    pageNum := 0
+//    err := client.DescribeTrafficMirrorFiltersPages(params,
+//        func(page *ec2.DescribeTrafficMirrorFiltersOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *EC2) DescribeTrafficMirrorFiltersPages(input *DescribeTrafficMirrorFiltersInput, fn func(*DescribeTrafficMirrorFiltersOutput, bool) bool) error {
+	return c.DescribeTrafficMirrorFiltersPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// DescribeTrafficMirrorFiltersPagesWithContext same as DescribeTrafficMirrorFiltersPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorFiltersPagesWithContext(ctx aws.Context, input *DescribeTrafficMirrorFiltersInput, fn func(*DescribeTrafficMirrorFiltersOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *DescribeTrafficMirrorFiltersInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeTrafficMirrorFiltersRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*DescribeTrafficMirrorFiltersOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
+const opDescribeTrafficMirrorSessions = "DescribeTrafficMirrorSessions"
+
+// DescribeTrafficMirrorSessionsRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeTrafficMirrorSessions operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeTrafficMirrorSessions for more information on using the DescribeTrafficMirrorSessions
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeTrafficMirrorSessionsRequest method.
+//    req, resp := client.DescribeTrafficMirrorSessionsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorSessions
+func (c *EC2) DescribeTrafficMirrorSessionsRequest(input *DescribeTrafficMirrorSessionsInput) (req *request.Request, output *DescribeTrafficMirrorSessionsOutput) {
+	op := &request.Operation{
+		Name:       opDescribeTrafficMirrorSessions,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &DescribeTrafficMirrorSessionsInput{}
+	}
+
+	output = &DescribeTrafficMirrorSessionsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeTrafficMirrorSessions API operation for Amazon Elastic Compute Cloud.
+//
+// Describes one or more Traffic Mirror sessions. By default, all Traffic Mirror
+// sessions are described. Alternatively, you can filter the results.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Elastic Compute Cloud's
+// API operation DescribeTrafficMirrorSessions for usage and error information.
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorSessions
+func (c *EC2) DescribeTrafficMirrorSessions(input *DescribeTrafficMirrorSessionsInput) (*DescribeTrafficMirrorSessionsOutput, error) {
+	req, out := c.DescribeTrafficMirrorSessionsRequest(input)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorSessionsWithContext is the same as DescribeTrafficMirrorSessions with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeTrafficMirrorSessions for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorSessionsWithContext(ctx aws.Context, input *DescribeTrafficMirrorSessionsInput, opts ...request.Option) (*DescribeTrafficMirrorSessionsOutput, error) {
+	req, out := c.DescribeTrafficMirrorSessionsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorSessionsPages iterates over the pages of a DescribeTrafficMirrorSessions operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See DescribeTrafficMirrorSessions method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a DescribeTrafficMirrorSessions operation.
+//    pageNum := 0
+//    err := client.DescribeTrafficMirrorSessionsPages(params,
+//        func(page *ec2.DescribeTrafficMirrorSessionsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *EC2) DescribeTrafficMirrorSessionsPages(input *DescribeTrafficMirrorSessionsInput, fn func(*DescribeTrafficMirrorSessionsOutput, bool) bool) error {
+	return c.DescribeTrafficMirrorSessionsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// DescribeTrafficMirrorSessionsPagesWithContext same as DescribeTrafficMirrorSessionsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorSessionsPagesWithContext(ctx aws.Context, input *DescribeTrafficMirrorSessionsInput, fn func(*DescribeTrafficMirrorSessionsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *DescribeTrafficMirrorSessionsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeTrafficMirrorSessionsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*DescribeTrafficMirrorSessionsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
+const opDescribeTrafficMirrorTargets = "DescribeTrafficMirrorTargets"
+
+// DescribeTrafficMirrorTargetsRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeTrafficMirrorTargets operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeTrafficMirrorTargets for more information on using the DescribeTrafficMirrorTargets
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the DescribeTrafficMirrorTargetsRequest method.
+//    req, resp := client.DescribeTrafficMirrorTargetsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorTargets
+func (c *EC2) DescribeTrafficMirrorTargetsRequest(input *DescribeTrafficMirrorTargetsInput) (req *request.Request, output *DescribeTrafficMirrorTargetsOutput) {
+	op := &request.Operation{
+		Name:       opDescribeTrafficMirrorTargets,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &DescribeTrafficMirrorTargetsInput{}
+	}
+
+	output = &DescribeTrafficMirrorTargetsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeTrafficMirrorTargets API operation for Amazon Elastic Compute Cloud.
+//
+// Information about one or more Traffic Mirror targets.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Elastic Compute Cloud's
+// API operation DescribeTrafficMirrorTargets for usage and error information.
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeTrafficMirrorTargets
+func (c *EC2) DescribeTrafficMirrorTargets(input *DescribeTrafficMirrorTargetsInput) (*DescribeTrafficMirrorTargetsOutput, error) {
+	req, out := c.DescribeTrafficMirrorTargetsRequest(input)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorTargetsWithContext is the same as DescribeTrafficMirrorTargets with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeTrafficMirrorTargets for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorTargetsWithContext(ctx aws.Context, input *DescribeTrafficMirrorTargetsInput, opts ...request.Option) (*DescribeTrafficMirrorTargetsOutput, error) {
+	req, out := c.DescribeTrafficMirrorTargetsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// DescribeTrafficMirrorTargetsPages iterates over the pages of a DescribeTrafficMirrorTargets operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See DescribeTrafficMirrorTargets method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a DescribeTrafficMirrorTargets operation.
+//    pageNum := 0
+//    err := client.DescribeTrafficMirrorTargetsPages(params,
+//        func(page *ec2.DescribeTrafficMirrorTargetsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *EC2) DescribeTrafficMirrorTargetsPages(input *DescribeTrafficMirrorTargetsInput, fn func(*DescribeTrafficMirrorTargetsOutput, bool) bool) error {
+	return c.DescribeTrafficMirrorTargetsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// DescribeTrafficMirrorTargetsPagesWithContext same as DescribeTrafficMirrorTargetsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeTrafficMirrorTargetsPagesWithContext(ctx aws.Context, input *DescribeTrafficMirrorTargetsInput, fn func(*DescribeTrafficMirrorTargetsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *DescribeTrafficMirrorTargetsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeTrafficMirrorTargetsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*DescribeTrafficMirrorTargetsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opDescribeTransitGatewayAttachments = "DescribeTransitGatewayAttachments"
 
 // DescribeTransitGatewayAttachmentsRequest generates a "aws/request.Request" representing the
@@ -26816,10 +27146,10 @@ func (c *EC2) ModifyFleetRequest(input *ModifyFleetInput) (req *request.Request,
 //
 // To scale up your EC2 Fleet, increase its target capacity. The EC2 Fleet launches
 // the additional Spot Instances according to the allocation strategy for the
-// EC2 Fleet request. If the allocation strategy is lowest-price, the EC2 Fleet
+// EC2 Fleet request. If the allocation strategy is lowestPrice, the EC2 Fleet
 // launches instances using the Spot Instance pool with the lowest price. If
 // the allocation strategy is diversified, the EC2 Fleet distributes the instances
-// across the Spot Instance pools. If the allocation strategy is capacity-optimized,
+// across the Spot Instance pools. If the allocation strategy is capacityOptimized,
 // EC2 Fleet launches instances from Spot Instance pools with optimal capacity
 // for the number of instances that are launching.
 //
@@ -26827,11 +27157,11 @@ func (c *EC2) ModifyFleetRequest(input *ModifyFleetInput) (req *request.Request,
 // Fleet cancels any open requests that exceed the new target capacity. You
 // can request that the EC2 Fleet terminate Spot Instances until the size of
 // the fleet no longer exceeds the new target capacity. If the allocation strategy
-// is lowest-price, the EC2 Fleet terminates the instances with the highest
-// price per unit. If the allocation strategy is capacity-optimized, the EC2
-// Fleet terminates the instances in the Spot Instance pools that have the least
-// available Spot Instance capacity. If the allocation strategy is diversified,
-// the EC2 Fleet terminates instances across the Spot Instance pools. Alternatively,
+// is lowestPrice, the EC2 Fleet terminates the instances with the highest price
+// per unit. If the allocation strategy is capacityOptimized, the EC2 Fleet
+// terminates the instances in the Spot Instance pools that have the least available
+// Spot Instance capacity. If the allocation strategy is diversified, the EC2
+// Fleet terminates instances across the Spot Instance pools. Alternatively,
 // you can request that the EC2 Fleet keep the fleet at its current size, but
 // not replace any Spot Instances that are interrupted or that you terminate
 // manually.
@@ -28344,7 +28674,7 @@ func (c *EC2) ModifyTrafficMirrorFilterNetworkServicesRequest(input *ModifyTraff
 // to mirror network services, use RemoveNetworkServices to remove the network
 // services from the Traffic Mirror filter.
 //
-// For information about filter rule properties, see Network Services (https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-considerations.html)
+// FFor information about filter rule properties, see Network Services (https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-considerations.html#traffic-mirroring-network-services)
 // in the Traffic Mirroring User Guide .
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -34221,6 +34551,13 @@ type AllocateHostsInput struct {
 	// Default: off
 	HostRecovery *string `type:"string" enum:"HostRecovery"`
 
+	// Specifies the instance type for which to configure your Dedicated Hosts.
+	// When you specify the instance type, that is the only instance type that you
+	// can launch onto that host.
+	//
+	// Default: off
+	HostRecovery *string `type:"string" enum:"HostRecovery"`
+
 	// Specifies the instance family to be supported by the Dedicated Hosts. If
 	// you specify an instance family, the Dedicated Hosts support multiple instance
 	// types within that instance family.
@@ -34295,12 +34632,6 @@ func (s *AllocateHostsInput) SetClientToken(v string) *AllocateHostsInput {
 // SetHostRecovery sets the HostRecovery field's value.
 func (s *AllocateHostsInput) SetHostRecovery(v string) *AllocateHostsInput {
 	s.HostRecovery = &v
-	return s
-}
-
-// SetInstanceFamily sets the InstanceFamily field's value.
-func (s *AllocateHostsInput) SetInstanceFamily(v string) *AllocateHostsInput {
-	s.InstanceFamily = &v
 	return s
 }
 
@@ -40551,11 +40882,6 @@ type CreateCustomerGatewayInput struct {
 	// The Amazon Resource Name (ARN) for the customer gateway certificate.
 	CertificateArn *string `type:"string"`
 
-	// A name for the customer gateway device.
-	//
-	// Length Constraints: Up to 255 characters.
-	DeviceName *string `type:"string"`
-
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have
 	// the required permissions, the error response is DryRunOperation. Otherwise,
@@ -40607,12 +40933,6 @@ func (s *CreateCustomerGatewayInput) SetBgpAsn(v int64) *CreateCustomerGatewayIn
 // SetCertificateArn sets the CertificateArn field's value.
 func (s *CreateCustomerGatewayInput) SetCertificateArn(v string) *CreateCustomerGatewayInput {
 	s.CertificateArn = &v
-	return s
-}
-
-// SetDeviceName sets the DeviceName field's value.
-func (s *CreateCustomerGatewayInput) SetDeviceName(v string) *CreateCustomerGatewayInput {
-	s.DeviceName = &v
 	return s
 }
 
@@ -43466,10 +43786,9 @@ type CreateSnapshotsInput struct {
 	// A description propagated to every snapshot specified by the instance.
 	Description *string `type:"string"`
 
-	// Checks whether you have the required permissions for the action, without
-	// actually making the request, and provides an error response. If you have
-	// the required permissions, the error response is DryRunOperation. Otherwise,
-	// it is UnauthorizedOperation.
+	// Checks whether you have the required permissions for the action without actually
+	// making the request. Provides an error response. If you have the required
+	// permissions, the error response is DryRunOperation. Otherwise, it is UnauthorizedOperation.
 	DryRun *bool `type:"boolean"`
 
 	// The instance to specify which volumes should be included in the snapshots.
@@ -44157,8 +44476,9 @@ type CreateTrafficMirrorSessionInput struct {
 	// The number of bytes in each packet to mirror. These are bytes after the VXLAN
 	// header. Do not specify this parameter when you want to mirror the entire
 	// packet. To mirror a subset of the packet, set this to the length (in bytes)
-	// that you want to mirror. For example, if you set this value to 100, then
-	// the first 100 bytes that meet the filter criteria are copied to the target.
+	// that you want to mirror. For example, if you set this value to 1network0,
+	// then the first 100 bytes that meet the filter criteria are copied to the
+	// target.
 	//
 	// If you do not want to mirror the entire packet, use the PacketLength parameter
 	// to specify the number of bytes in each packet to mirror.
@@ -67651,39 +67971,6 @@ func (s *FpgaImageState) SetMessage(v string) *FpgaImageState {
 	return s
 }
 
-// Describes the FPGAs for the instance type.
-type FpgaInfo struct {
-	_ struct{} `type:"structure"`
-
-	// Describes the FPGAs for the instance type.
-	Fpgas []*FpgaDeviceInfo `locationName:"fpgas" locationNameList:"item" type:"list"`
-
-	// The total memory of all FPGA accelerators for the instance type.
-	TotalFpgaMemoryInMiB *int64 `locationName:"totalFpgaMemoryInMiB" type:"integer"`
-}
-
-// String returns the string representation
-func (s FpgaInfo) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s FpgaInfo) GoString() string {
-	return s.String()
-}
-
-// SetFpgas sets the Fpgas field's value.
-func (s *FpgaInfo) SetFpgas(v []*FpgaDeviceInfo) *FpgaInfo {
-	s.Fpgas = v
-	return s
-}
-
-// SetTotalFpgaMemoryInMiB sets the TotalFpgaMemoryInMiB field's value.
-func (s *FpgaInfo) SetTotalFpgaMemoryInMiB(v int64) *FpgaInfo {
-	s.TotalFpgaMemoryInMiB = &v
-	return s
-}
-
 type GetCapacityReservationUsageInput struct {
 	_ struct{} `type:"structure"`
 
@@ -70555,54 +70842,6 @@ func (s *ImportImageInput) SetPlatform(v string) *ImportImageInput {
 // SetRoleName sets the RoleName field's value.
 func (s *ImportImageInput) SetRoleName(v string) *ImportImageInput {
 	s.RoleName = &v
-	return s
-}
-
-// The request information of license configurations.
-type ImportImageLicenseConfigurationRequest struct {
-	_ struct{} `type:"structure"`
-
-	// The ARN of a license configuration.
-	LicenseConfigurationArn *string `type:"string"`
-}
-
-// String returns the string representation
-func (s ImportImageLicenseConfigurationRequest) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ImportImageLicenseConfigurationRequest) GoString() string {
-	return s.String()
-}
-
-// SetLicenseConfigurationArn sets the LicenseConfigurationArn field's value.
-func (s *ImportImageLicenseConfigurationRequest) SetLicenseConfigurationArn(v string) *ImportImageLicenseConfigurationRequest {
-	s.LicenseConfigurationArn = &v
-	return s
-}
-
-// The response information of license configurations.
-type ImportImageLicenseConfigurationResponse struct {
-	_ struct{} `type:"structure"`
-
-	// The ARN of a license configuration.
-	LicenseConfigurationArn *string `locationName:"licenseConfigurationArn" type:"string"`
-}
-
-// String returns the string representation
-func (s ImportImageLicenseConfigurationResponse) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ImportImageLicenseConfigurationResponse) GoString() string {
-	return s.String()
-}
-
-// SetLicenseConfigurationArn sets the LicenseConfigurationArn field's value.
-func (s *ImportImageLicenseConfigurationResponse) SetLicenseConfigurationArn(v string) *ImportImageLicenseConfigurationResponse {
-	s.LicenseConfigurationArn = &v
 	return s
 }
 
@@ -73538,289 +73777,6 @@ func (s *InstanceStatusSummary) SetDetails(v []*InstanceStatusDetails) *Instance
 // SetStatus sets the Status field's value.
 func (s *InstanceStatusSummary) SetStatus(v string) *InstanceStatusSummary {
 	s.Status = &v
-	return s
-}
-
-// Describes the disks that are available for the instance type.
-type InstanceStorageInfo struct {
-	_ struct{} `type:"structure"`
-
-	// Array describing the disks that are available for the instance type.
-	Disks []*DiskInfo `locationName:"disks" locationNameList:"item" type:"list"`
-
-	// The total size of the disks, in GiB.
-	TotalSizeInGB *int64 `locationName:"totalSizeInGB" type:"long"`
-}
-
-// String returns the string representation
-func (s InstanceStorageInfo) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s InstanceStorageInfo) GoString() string {
-	return s.String()
-}
-
-// SetDisks sets the Disks field's value.
-func (s *InstanceStorageInfo) SetDisks(v []*DiskInfo) *InstanceStorageInfo {
-	s.Disks = v
-	return s
-}
-
-// SetTotalSizeInGB sets the TotalSizeInGB field's value.
-func (s *InstanceStorageInfo) SetTotalSizeInGB(v int64) *InstanceStorageInfo {
-	s.TotalSizeInGB = &v
-	return s
-}
-
-// Describes the instance type.
-type InstanceTypeInfo struct {
-	_ struct{} `type:"structure"`
-
-	// Indicates whether auto recovery is supported.
-	AutoRecoverySupported *bool `locationName:"autoRecoverySupported" type:"boolean"`
-
-	// Indicates whether the instance is bare metal.
-	BareMetal *bool `locationName:"bareMetal" type:"boolean"`
-
-	// Indicates whether the instance type is a burstable performance instance type.
-	BurstablePerformanceSupported *bool `locationName:"burstablePerformanceSupported" type:"boolean"`
-
-	// Indicates whether the instance type is a current generation.
-	CurrentGeneration *bool `locationName:"currentGeneration" type:"boolean"`
-
-	// Indicates whether Dedicated Hosts are supported on the instance type.
-	DedicatedHostsSupported *bool `locationName:"dedicatedHostsSupported" type:"boolean"`
-
-	// Describes the Amazon EBS settings for the instance type.
-	EbsInfo *EbsInfo `locationName:"ebsInfo" type:"structure"`
-
-	// Describes the FPGA accelerator settings for the instance type.
-	FpgaInfo *FpgaInfo `locationName:"fpgaInfo" type:"structure"`
-
-	// Indicates whether the instance type is eligible for the free tier.
-	FreeTierEligible *bool `locationName:"freeTierEligible" type:"boolean"`
-
-	// Describes the GPU accelerator settings for the instance type.
-	GpuInfo *GpuInfo `locationName:"gpuInfo" type:"structure"`
-
-	// Indicates whether On-Demand hibernation is supported.
-	HibernationSupported *bool `locationName:"hibernationSupported" type:"boolean"`
-
-	// Indicates the hypervisor used for the instance type.
-	Hypervisor *string `locationName:"hypervisor" type:"string" enum:"InstanceTypeHypervisor"`
-
-	// Describes the disks for the instance type.
-	InstanceStorageInfo *InstanceStorageInfo `locationName:"instanceStorageInfo" type:"structure"`
-
-	// Indicates whether instance storage is supported.
-	InstanceStorageSupported *bool `locationName:"instanceStorageSupported" type:"boolean"`
-
-	// The instance type. For more information, see Instance Types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html)
-	// in the Amazon Elastic Compute Cloud User Guide.
-	InstanceType *string `locationName:"instanceType" type:"string" enum:"InstanceType"`
-
-	// Describes the memory for the instance type.
-	MemoryInfo *MemoryInfo `locationName:"memoryInfo" type:"structure"`
-
-	// Describes the network settings for the instance type.
-	NetworkInfo *NetworkInfo `locationName:"networkInfo" type:"structure"`
-
-	// Describes the placement group settings for the instance type.
-	PlacementGroupInfo *PlacementGroupInfo `locationName:"placementGroupInfo" type:"structure"`
-
-	// Describes the processor.
-	ProcessorInfo *ProcessorInfo `locationName:"processorInfo" type:"structure"`
-
-	// Indicates the supported root devices.
-	SupportedRootDevices []*string `locationName:"supportedRootDevices" locationNameList:"item" type:"list"`
-
-	// Indicates whether the instance type is offered for spot or On-Demand.
-	SupportedUsageClasses []*string `locationName:"supportedUsageClasses" locationNameList:"item" type:"list"`
-
-	// Describes the vCPU configurations for the instance type.
-	VCpuInfo *VCpuInfo `locationName:"vCpuInfo" type:"structure"`
-}
-
-// String returns the string representation
-func (s InstanceTypeInfo) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s InstanceTypeInfo) GoString() string {
-	return s.String()
-}
-
-// SetAutoRecoverySupported sets the AutoRecoverySupported field's value.
-func (s *InstanceTypeInfo) SetAutoRecoverySupported(v bool) *InstanceTypeInfo {
-	s.AutoRecoverySupported = &v
-	return s
-}
-
-// SetBareMetal sets the BareMetal field's value.
-func (s *InstanceTypeInfo) SetBareMetal(v bool) *InstanceTypeInfo {
-	s.BareMetal = &v
-	return s
-}
-
-// SetBurstablePerformanceSupported sets the BurstablePerformanceSupported field's value.
-func (s *InstanceTypeInfo) SetBurstablePerformanceSupported(v bool) *InstanceTypeInfo {
-	s.BurstablePerformanceSupported = &v
-	return s
-}
-
-// SetCurrentGeneration sets the CurrentGeneration field's value.
-func (s *InstanceTypeInfo) SetCurrentGeneration(v bool) *InstanceTypeInfo {
-	s.CurrentGeneration = &v
-	return s
-}
-
-// SetDedicatedHostsSupported sets the DedicatedHostsSupported field's value.
-func (s *InstanceTypeInfo) SetDedicatedHostsSupported(v bool) *InstanceTypeInfo {
-	s.DedicatedHostsSupported = &v
-	return s
-}
-
-// SetEbsInfo sets the EbsInfo field's value.
-func (s *InstanceTypeInfo) SetEbsInfo(v *EbsInfo) *InstanceTypeInfo {
-	s.EbsInfo = v
-	return s
-}
-
-// SetFpgaInfo sets the FpgaInfo field's value.
-func (s *InstanceTypeInfo) SetFpgaInfo(v *FpgaInfo) *InstanceTypeInfo {
-	s.FpgaInfo = v
-	return s
-}
-
-// SetFreeTierEligible sets the FreeTierEligible field's value.
-func (s *InstanceTypeInfo) SetFreeTierEligible(v bool) *InstanceTypeInfo {
-	s.FreeTierEligible = &v
-	return s
-}
-
-// SetGpuInfo sets the GpuInfo field's value.
-func (s *InstanceTypeInfo) SetGpuInfo(v *GpuInfo) *InstanceTypeInfo {
-	s.GpuInfo = v
-	return s
-}
-
-// SetHibernationSupported sets the HibernationSupported field's value.
-func (s *InstanceTypeInfo) SetHibernationSupported(v bool) *InstanceTypeInfo {
-	s.HibernationSupported = &v
-	return s
-}
-
-// SetHypervisor sets the Hypervisor field's value.
-func (s *InstanceTypeInfo) SetHypervisor(v string) *InstanceTypeInfo {
-	s.Hypervisor = &v
-	return s
-}
-
-// SetInstanceStorageInfo sets the InstanceStorageInfo field's value.
-func (s *InstanceTypeInfo) SetInstanceStorageInfo(v *InstanceStorageInfo) *InstanceTypeInfo {
-	s.InstanceStorageInfo = v
-	return s
-}
-
-// SetInstanceStorageSupported sets the InstanceStorageSupported field's value.
-func (s *InstanceTypeInfo) SetInstanceStorageSupported(v bool) *InstanceTypeInfo {
-	s.InstanceStorageSupported = &v
-	return s
-}
-
-// SetInstanceType sets the InstanceType field's value.
-func (s *InstanceTypeInfo) SetInstanceType(v string) *InstanceTypeInfo {
-	s.InstanceType = &v
-	return s
-}
-
-// SetMemoryInfo sets the MemoryInfo field's value.
-func (s *InstanceTypeInfo) SetMemoryInfo(v *MemoryInfo) *InstanceTypeInfo {
-	s.MemoryInfo = v
-	return s
-}
-
-// SetNetworkInfo sets the NetworkInfo field's value.
-func (s *InstanceTypeInfo) SetNetworkInfo(v *NetworkInfo) *InstanceTypeInfo {
-	s.NetworkInfo = v
-	return s
-}
-
-// SetPlacementGroupInfo sets the PlacementGroupInfo field's value.
-func (s *InstanceTypeInfo) SetPlacementGroupInfo(v *PlacementGroupInfo) *InstanceTypeInfo {
-	s.PlacementGroupInfo = v
-	return s
-}
-
-// SetProcessorInfo sets the ProcessorInfo field's value.
-func (s *InstanceTypeInfo) SetProcessorInfo(v *ProcessorInfo) *InstanceTypeInfo {
-	s.ProcessorInfo = v
-	return s
-}
-
-// SetSupportedRootDevices sets the SupportedRootDevices field's value.
-func (s *InstanceTypeInfo) SetSupportedRootDevices(v []*string) *InstanceTypeInfo {
-	s.SupportedRootDevices = v
-	return s
-}
-
-// SetSupportedUsageClasses sets the SupportedUsageClasses field's value.
-func (s *InstanceTypeInfo) SetSupportedUsageClasses(v []*string) *InstanceTypeInfo {
-	s.SupportedUsageClasses = v
-	return s
-}
-
-// SetVCpuInfo sets the VCpuInfo field's value.
-func (s *InstanceTypeInfo) SetVCpuInfo(v *VCpuInfo) *InstanceTypeInfo {
-	s.VCpuInfo = v
-	return s
-}
-
-// The instance types offered.
-type InstanceTypeOffering struct {
-	_ struct{} `type:"structure"`
-
-	// The instance type. For more information, see Instance Types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html)
-	// in the Amazon Elastic Compute Cloud User Guide.
-	InstanceType *string `locationName:"instanceType" type:"string" enum:"InstanceType"`
-
-	// The identifier for the location. This depends on the location type. For example,
-	// if the location type is region, the location is the Region code (for example,
-	// us-east-2.)
-	Location *string `locationName:"location" type:"string"`
-
-	// The location type.
-	LocationType *string `locationName:"locationType" type:"string" enum:"LocationType"`
-}
-
-// String returns the string representation
-func (s InstanceTypeOffering) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s InstanceTypeOffering) GoString() string {
-	return s.String()
-}
-
-// SetInstanceType sets the InstanceType field's value.
-func (s *InstanceTypeOffering) SetInstanceType(v string) *InstanceTypeOffering {
-	s.InstanceType = &v
-	return s
-}
-
-// SetLocation sets the Location field's value.
-func (s *InstanceTypeOffering) SetLocation(v string) *InstanceTypeOffering {
-	s.Location = &v
-	return s
-}
-
-// SetLocationType sets the LocationType field's value.
-func (s *InstanceTypeOffering) SetLocationType(v string) *InstanceTypeOffering {
-	s.LocationType = &v
 	return s
 }
 
@@ -76989,24 +76945,6 @@ type ModifyHostsInput struct {
 	// For more information, see Host Recovery (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-hosts-recovery.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	HostRecovery *string `type:"string" enum:"HostRecovery"`
-
-	// Specifies the instance family to be supported by the Dedicated Host. Specify
-	// this parameter to modify a Dedicated Host to support multiple instance types
-	// within its current instance family.
-	//
-	// If you want to modify a Dedicated Host to support a specific instance type
-	// only, omit this parameter and specify InstanceType instead. You cannot specify
-	// InstanceFamily and InstanceType in the same request.
-	InstanceFamily *string `type:"string"`
-
-	// Specifies the instance type to be supported by the Dedicated Host. Specify
-	// this parameter to modify a Dedicated Host to support only a specific instance
-	// type.
-	//
-	// If you want to modify a Dedicated Host to support multiple instance types
-	// in its current instance family, omit this parameter and specify InstanceFamily
-	// instead. You cannot specify InstanceType and InstanceFamily in the same request.
-	InstanceType *string `type:"string"`
 }
 
 // String returns the string representation
@@ -77047,18 +76985,6 @@ func (s *ModifyHostsInput) SetHostIds(v []*string) *ModifyHostsInput {
 // SetHostRecovery sets the HostRecovery field's value.
 func (s *ModifyHostsInput) SetHostRecovery(v string) *ModifyHostsInput {
 	s.HostRecovery = &v
-	return s
-}
-
-// SetInstanceFamily sets the InstanceFamily field's value.
-func (s *ModifyHostsInput) SetInstanceFamily(v string) *ModifyHostsInput {
-	s.InstanceFamily = &v
-	return s
-}
-
-// SetInstanceType sets the InstanceType field's value.
-func (s *ModifyHostsInput) SetInstanceType(v string) *ModifyHostsInput {
-	s.InstanceType = &v
 	return s
 }
 
@@ -92565,14 +92491,14 @@ type SpotOptions struct {
 	// Indicates how to allocate the target Spot Instance capacity across the Spot
 	// Instance pools specified by the EC2 Fleet.
 	//
-	// If the allocation strategy is lowest-price, EC2 Fleet launches instances
-	// from the Spot Instance pools with the lowest price. This is the default allocation
+	// If the allocation strategy is lowestPrice, EC2 Fleet launches instances from
+	// the Spot Instance pools with the lowest price. This is the default allocation
 	// strategy.
 	//
 	// If the allocation strategy is diversified, EC2 Fleet launches instances from
 	// all the Spot Instance pools that you specify.
 	//
-	// If the allocation strategy is capacity-optimized, EC2 Fleet launches instances
+	// If the allocation strategy is capacityOptimized, EC2 Fleet launches instances
 	// from Spot Instance pools with optimal capacity for the number of instances
 	// that are launching.
 	AllocationStrategy *string `locationName:"allocationStrategy" type:"string" enum:"SpotAllocationStrategy"`
@@ -92661,14 +92587,14 @@ type SpotOptionsRequest struct {
 	// Indicates how to allocate the target Spot Instance capacity across the Spot
 	// Instance pools specified by the EC2 Fleet.
 	//
-	// If the allocation strategy is lowest-price, EC2 Fleet launches instances
-	// from the Spot Instance pools with the lowest price. This is the default allocation
+	// If the allocation strategy is lowestPrice, EC2 Fleet launches instances from
+	// the Spot Instance pools with the lowest price. This is the default allocation
 	// strategy.
 	//
 	// If the allocation strategy is diversified, EC2 Fleet launches instances from
 	// all the Spot Instance pools that you specify.
 	//
-	// If the allocation strategy is capacity-optimized, EC2 Fleet launches instances
+	// If the allocation strategy is capacityOptimized, EC2 Fleet launches instances
 	// from Spot Instance pools with optimal capacity for the number of instances
 	// that are launching.
 	AllocationStrategy *string `type:"string" enum:"SpotAllocationStrategy"`
@@ -93676,11 +93602,10 @@ type TagSpecification struct {
 
 	// The type of resource to tag. Currently, the resource types that support tagging
 	// on creation are: capacity-reservation | client-vpn-endpoint | dedicated-host
-	// | fleet | fpga-image | instance | launch-template | snapshot | traffic-mirror-filter
-	// | traffic-mirror-session | traffic-mirror-target | transit-gateway | transit-gateway-attachment
+	// | fleet | instance | launch-template | snapshot | transit-gateway | transit-gateway-attachment
 	// | transit-gateway-route-table | volume.
 	//
-	// To tag a resource after it has been created, see CreateTags (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html).
+	// To tag a resource after it has been created, see CreateTags.
 	ResourceType *string `locationName:"resourceType" type:"string" enum:"ResourceType"`
 
 	// The tags to apply to the resource.
@@ -98817,25 +98742,6 @@ const (
 
 	// AllocationStrategyCapacityOptimized is a AllocationStrategy enum value
 	AllocationStrategyCapacityOptimized = "capacityOptimized"
-)
-
-const (
-	// AllowsMultipleInstanceTypesOn is a AllowsMultipleInstanceTypes enum value
-	AllowsMultipleInstanceTypesOn = "on"
-
-	// AllowsMultipleInstanceTypesOff is a AllowsMultipleInstanceTypes enum value
-	AllowsMultipleInstanceTypesOff = "off"
-)
-
-const (
-	// ArchitectureTypeI386 is a ArchitectureType enum value
-	ArchitectureTypeI386 = "i386"
-
-	// ArchitectureTypeX8664 is a ArchitectureType enum value
-	ArchitectureTypeX8664 = "x86_64"
-
-	// ArchitectureTypeArm64 is a ArchitectureType enum value
-	ArchitectureTypeArm64 = "arm64"
 )
 
 const (

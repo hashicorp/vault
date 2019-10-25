@@ -20311,6 +20311,87 @@ func (s *GenerateOrganizationsAccessReportOutput) SetJobId(v string) *GenerateOr
 	return s
 }
 
+type GenerateOrganizationsAccessReportInput struct {
+	_ struct{} `type:"structure"`
+
+	// The path of the AWS Organizations entity (root, OU, or account). You can
+	// build an entity path using the known structure of your organization. For
+	// example, assume that your account ID is 123456789012 and its parent OU ID
+	// is ou-rge0-awsabcde. The organization root ID is r-f6g7h8i9j0example and
+	// your organization ID is o-a1b2c3d4e5. Your entity path is o-a1b2c3d4e5/r-f6g7h8i9j0example/ou-rge0-awsabcde/123456789012.
+	//
+	// EntityPath is a required field
+	EntityPath *string `min:"19" type:"string" required:"true"`
+
+	// The identifier of the AWS Organizations service control policy (SCP). This
+	// parameter is optional.
+	//
+	// This ID is used to generate information about when an account principal that
+	// is limited by the SCP attempted to access an AWS service.
+	OrganizationsPolicyId *string `type:"string"`
+}
+
+// String returns the string representation
+func (s GenerateOrganizationsAccessReportInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GenerateOrganizationsAccessReportInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *GenerateOrganizationsAccessReportInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "GenerateOrganizationsAccessReportInput"}
+	if s.EntityPath == nil {
+		invalidParams.Add(request.NewErrParamRequired("EntityPath"))
+	}
+	if s.EntityPath != nil && len(*s.EntityPath) < 19 {
+		invalidParams.Add(request.NewErrParamMinLen("EntityPath", 19))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntityPath sets the EntityPath field's value.
+func (s *GenerateOrganizationsAccessReportInput) SetEntityPath(v string) *GenerateOrganizationsAccessReportInput {
+	s.EntityPath = &v
+	return s
+}
+
+// SetOrganizationsPolicyId sets the OrganizationsPolicyId field's value.
+func (s *GenerateOrganizationsAccessReportInput) SetOrganizationsPolicyId(v string) *GenerateOrganizationsAccessReportInput {
+	s.OrganizationsPolicyId = &v
+	return s
+}
+
+type GenerateOrganizationsAccessReportOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The job identifier that you can use in the GetOrganizationsAccessReport operation.
+	JobId *string `min:"36" type:"string"`
+}
+
+// String returns the string representation
+func (s GenerateOrganizationsAccessReportOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GenerateOrganizationsAccessReportOutput) GoString() string {
+	return s.String()
+}
+
+// SetJobId sets the JobId field's value.
+func (s *GenerateOrganizationsAccessReportOutput) SetJobId(v string) *GenerateOrganizationsAccessReportOutput {
+	s.JobId = &v
+	return s
+}
+
 type GenerateServiceLastAccessedDetailsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -26857,7 +26938,7 @@ type ManagedPolicyDetail struct {
 	// The path to the policy.
 	//
 	// For more information about paths, see IAM Identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the IAM User Guide.
+	// in the Using IAM guide.
 	Path *string `min:"1" type:"string"`
 
 	// The number of entities (users and roles) for which the policy is used as
@@ -27179,7 +27260,7 @@ type Policy struct {
 	// The path to the policy.
 	//
 	// For more information about paths, see IAM Identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the IAM User Guide.
+	// in the Using IAM guide.
 	Path *string `min:"1" type:"string"`
 
 	// The number of entities (users and roles) for which the policy is used to
@@ -32648,7 +32729,7 @@ type User struct {
 	//    information on October 20, 2014.
 	//
 	// A null value does not mean that the user never had a password. Also, if the
-	// user does not currently have a password but had one in the past, then this
+	// user does not currently have a password, but had one in the past, then this
 	// field contains the date and time the most recent password was used.
 	//
 	// This value is returned only in the GetUser and ListUsers operations.

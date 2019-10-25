@@ -1005,20 +1005,7 @@ func (c *S3) DeleteBucketAnalyticsConfigurationRequest(input *DeleteBucketAnalyt
 //
 // To use this operation, you must have permissions to perform the s3:PutAnalyticsConfiguration
 // action. The bucket owner has this permission by default. The bucket owner
-// can grant this permission to others. For more information about permissions,
-// see Permissions Related to Bucket Subresource Operations (https://docs.aws.amazon.com/AmazonS3/latest/dev//using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-access-control.html).
-//
-// For information about Amazon S3 analytics feature, see Amazon S3 Analytics
-// – Storage Class Analysis (https://docs.aws.amazon.com/AmazonS3/latest/dev/analytics-storage-class.html).
-//
-// The following operations are related to DeleteBucketAnalyticsConfiguration:
-//
-//    *
-//
-//    *
-//
-//    *
+// can grant this permission to others.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4501,10 +4488,9 @@ func (c *S3) GetObjectLockConfigurationRequest(input *GetObjectLockConfiguration
 
 // GetObjectLockConfiguration API operation for Amazon Simple Storage Service.
 //
-// Gets the Object Lock configuration for a bucket. The rule specified in the
-// Object Lock configuration will be applied by default to every new object
-// placed in the specified bucket. For more information, see Locking Objects
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html).
+// Gets the object lock configuration for a bucket. The rule specified in the
+// object lock configuration will be applied by default to every new object
+// placed in the specified bucket.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -7736,28 +7722,7 @@ func (c *S3) PutBucketPolicyRequest(input *PutBucketPolicyInput) (req *request.R
 
 // PutBucketPolicy API operation for Amazon Simple Storage Service.
 //
-// Applies an Amazon S3 bucket policy to an Amazon S3 bucket. If you are using
-// an identity other than the root user of the AWS account that owns the bucket,
-// the calling identity must have the PutBucketPolicy permissions on the specified
-// bucket and belong to the bucket owner's account in order to use this operation.
-//
-// If you don't have PutBucketPolicy permissions, Amazon S3 returns a 403 Access
-// Denied error. If you have the correct permissions, but you're not using an
-// identity that belongs to the bucket owner's account, Amazon S3 returns a
-// 405 Method Not Allowed error.
-//
-// As a security precaution, the root user of the AWS account that owns a bucket
-// can always use this operation, even if the policy explicitly denies the root
-// user the ability to perform this action.
-//
-// For more information about bucket policies, see Using Bucket Policies and
-// User Policies (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html).
-//
-// The following operations are related to PutBucketPolicy:
-//
-//    * CreateBucket
-//
-//    * DeleteBucket
+// Applies an Amazon S3 bucket policy to an Amazon S3 bucket.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -8867,8 +8832,8 @@ func (c *S3) PutObjectLockConfigurationRequest(input *PutObjectLockConfiguration
 
 // PutObjectLockConfiguration API operation for Amazon Simple Storage Service.
 //
-// Places an Object Lock configuration on the specified bucket. The rule specified
-// in the Object Lock configuration will be applied by default to every new
+// Places an object lock configuration on the specified bucket. The rule specified
+// in the object lock configuration will be applied by default to every new
 // object placed in the specified bucket.
 //
 // DefaultRetention requires either Days or Years. You can't specify both at
@@ -9963,7 +9928,7 @@ func (s *AbortIncompleteMultipartUpload) SetDaysAfterInitiation(v int64) *AbortI
 type AbortMultipartUploadInput struct {
 	_ struct{} `locationName:"AbortMultipartUploadRequest" type:"structure"`
 
-	// The bucket to which the upload was taking place.
+	// Name of the bucket to which the multipart upload was initiated.
 	//
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
@@ -10253,6 +10218,9 @@ func (s *AnalyticsAndOperator) SetTags(v []*Tag) *AnalyticsAndOperator {
 
 // Specifies the configuration and any analyses for the analytics filter of
 // an Amazon S3 bucket.
+//
+// For more information, see GET Bucket analytics (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGETAnalyticsConfig.html)
+// in the Amazon Simple Storage Service API Reference.
 type AnalyticsConfiguration struct {
 	_ struct{} `type:"structure"`
 
@@ -10649,8 +10617,7 @@ func (s *BucketLoggingStatus) SetLoggingEnabled(v *LoggingEnabled) *BucketLoggin
 type CORSConfiguration struct {
 	_ struct{} `type:"structure"`
 
-	// A set of origins and methods (cross-origin access that you want to allow).
-	// You can add up to 100 rules to the configuration.
+	// A set of allowed origins and methods.
 	//
 	// CORSRules is a required field
 	CORSRules []*CORSRule `locationName:"CORSRule" type:"list" flattened:"true" required:"true"`
@@ -11320,10 +11287,7 @@ func (s *CompletedPart) SetPartNumber(v int64) *CompletedPart {
 	return s
 }
 
-// A container for describing a condition that must be met for the specified
-// redirect to apply. For example, 1. If request is for pages in the /docs folder,
-// redirect to the /documents folder. 2. If request results in HTTP error 4xx,
-// redirect request to another host where you might process the error.
+// Specifies a condition that must be met for a redirect to apply.
 type Condition struct {
 	_ struct{} `type:"structure"`
 
@@ -11482,10 +11446,10 @@ type CopyObjectInput struct {
 	// Specifies whether you want to apply a Legal Hold to the copied object.
 	ObjectLockLegalHoldStatus *string `location:"header" locationName:"x-amz-object-lock-legal-hold" type:"string" enum:"ObjectLockLegalHoldStatus"`
 
-	// The Object Lock mode that you want to apply to the copied object.
+	// The object lock mode that you want to apply to the copied object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// The date and time when you want the copied object's Object Lock to expire.
+	// The date and time when you want the copied object's object lock to expire.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// Confirms that the requester knows that she or he will be charged for the
@@ -11851,8 +11815,8 @@ type CopyObjectOutput struct {
 	// the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string `location:"header" locationName:"x-amz-server-side-encryption-context" type:"string" sensitive:"true"`
 
-	// If present, specifies the ID of the AWS Key Management Service (KMS) customer
-	// master key (CMK) that was used for the object.
+	// If present, specifies the ID of the AWS Key Management Service (KMS) master
+	// encryption key that was used for the object.
 	SSEKMSKeyId *string `location:"header" locationName:"x-amz-server-side-encryption-aws-kms-key-id" type:"string" sensitive:"true"`
 
 	// The Server-side encryption algorithm used when storing this object in S3
@@ -12056,7 +12020,8 @@ type CreateBucketInput struct {
 	// Allows grantee to write the ACL for the applicable bucket.
 	GrantWriteACP *string `location:"header" locationName:"x-amz-grant-write-acp" type:"string"`
 
-	// Specifies whether you want S3 Object Lock to be enabled for the new bucket.
+	// Specifies whether you want Amazon S3 object lock to be enabled for the new
+	// bucket.
 	ObjectLockEnabledForBucket *bool `location:"header" locationName:"x-amz-bucket-object-lock-enabled" type:"boolean"`
 }
 
@@ -12226,10 +12191,10 @@ type CreateMultipartUploadInput struct {
 	// Specifies whether you want to apply a Legal Hold to the uploaded object.
 	ObjectLockLegalHoldStatus *string `location:"header" locationName:"x-amz-object-lock-legal-hold" type:"string" enum:"ObjectLockLegalHoldStatus"`
 
-	// Specifies the Object Lock mode that you want to apply to the uploaded object.
+	// Specifies the object lock mode that you want to apply to the uploaded object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// Specifies the date and time when you want the Object Lock to expire.
+	// Specifies the date and time when you want the object lock to expire.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// Confirms that the requester knows that she or he will be charged for the
@@ -12532,8 +12497,8 @@ type CreateMultipartUploadOutput struct {
 	// the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string `location:"header" locationName:"x-amz-server-side-encryption-context" type:"string" sensitive:"true"`
 
-	// If present, specifies the ID of the AWS Key Management Service (KMS) customer
-	// master key (CMK) that was used for the object.
+	// If present, specifies the ID of the AWS Key Management Service (KMS) master
+	// encryption key that was used for the object.
 	SSEKMSKeyId *string `location:"header" locationName:"x-amz-server-side-encryption-aws-kms-key-id" type:"string" sensitive:"true"`
 
 	// The Server-side encryption algorithm used when storing this object in S3
@@ -12627,7 +12592,7 @@ func (s *CreateMultipartUploadOutput) SetUploadId(v string) *CreateMultipartUplo
 	return s
 }
 
-// The container element for specifying the default Object Lock retention settings
+// The container element for specifying the default object lock retention settings
 // for new objects placed in the specified bucket.
 type DefaultRetention struct {
 	_ struct{} `type:"structure"`
@@ -12635,7 +12600,7 @@ type DefaultRetention struct {
 	// The number of days that you want to specify for the default retention period.
 	Days *int64 `type:"integer"`
 
-	// The default Object Lock retention mode you want to apply to new objects placed
+	// The default object lock retention mode you want to apply to new objects placed
 	// in the specified bucket.
 	Mode *string `type:"string" enum:"ObjectLockRetentionMode"`
 
@@ -13561,7 +13526,7 @@ type DeleteObjectInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	// Indicates whether S3 Object Lock should bypass Governance-mode restrictions
+	// Indicates whether Amazon S3 object lock should bypass governance-mode restrictions
 	// to process this operation.
 	BypassGovernanceRetention *bool `location:"header" locationName:"x-amz-bypass-governance-retention" type:"boolean"`
 
@@ -13811,7 +13776,7 @@ type DeleteObjectsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// Specifies whether you want to delete this object even if it has a Governance-type
-	// Object Lock in place. You must have sufficient permissions to perform this
+	// object lock in place. You must have sufficient permissions to perform this
 	// operation.
 	BypassGovernanceRetention *bool `location:"header" locationName:"x-amz-bypass-governance-retention" type:"boolean"`
 
@@ -14081,12 +14046,17 @@ type Destination struct {
 	// direct Amazon S3 to change replica ownership to the AWS account that owns
 	// the destination bucket by specifying the AccessControlTranslation property,
 	// this is the account ID of the destination bucket owner. For more information,
-	// see Replication Additional Configuration: Change Replica Owner (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-change-owner.html)
-	// in the Amazon Simple Storage Service Developer Guide.
+	// see Cross-Region Replication Additional Configuration: Change Replica Owner
+	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/crr-change-owner.html) in
+	// the Amazon Simple Storage Service Developer Guide.
 	Account *string `type:"string"`
 
 	// The Amazon Resource Name (ARN) of the bucket where you want Amazon S3 to
-	// store the results.
+	// store replicas of the object identified by the rule.
+	//
+	// A replication configuration can replicate objects to only one destination
+	// bucket. If there are multiple rules in your replication configuration, all
+	// rules must specify the same destination bucket.
 	//
 	// Bucket is a required field
 	Bucket *string `type:"string" required:"true"`
@@ -14094,16 +14064,6 @@ type Destination struct {
 	// A container that provides information about encryption. If SourceSelectionCriteria
 	// is specified, you must specify this element.
 	EncryptionConfiguration *EncryptionConfiguration `type:"structure"`
-
-	// A container specifying replication metrics-related information, including
-	// whether emitting metrics and Amazon S3 events for replication are enabled.
-	// In addition, contains configurations related to specific metrics or events.
-	// Must be specified together with a ReplicationTime block.
-	Metrics *Metrics `type:"structure"`
-
-	// A container specifying the time when all objects and operations on objects
-	// are replicated. Must be specified together with a Metrics block.
-	ReplicationTime *ReplicationTime `type:"structure"`
 
 	// The storage class to use when replicating objects, such as standard or reduced
 	// redundancy. By default, Amazon S3 uses the storage class of the source object
@@ -14762,46 +14722,6 @@ func (s *ErrorDocument) Validate() error {
 // SetKey sets the Key field's value.
 func (s *ErrorDocument) SetKey(v string) *ErrorDocument {
 	s.Key = &v
-	return s
-}
-
-// A container that specifies information about existing object replication.
-// You can choose whether to enable or disable the replication of existing objects.
-type ExistingObjectReplication struct {
-	_ struct{} `type:"structure"`
-
-	// Specifies whether existing object replication is enabled.
-	//
-	// Status is a required field
-	Status *string `type:"string" required:"true" enum:"ExistingObjectReplicationStatus"`
-}
-
-// String returns the string representation
-func (s ExistingObjectReplication) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ExistingObjectReplication) GoString() string {
-	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *ExistingObjectReplication) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "ExistingObjectReplication"}
-	if s.Status == nil {
-		invalidParams.Add(request.NewErrParamRequired("Status"))
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
-// SetStatus sets the Status field's value.
-func (s *ExistingObjectReplication) SetStatus(v string) *ExistingObjectReplication {
-	s.Status = &v
 	return s
 }
 
@@ -16749,7 +16669,7 @@ func (s *GetObjectLegalHoldOutput) SetLegalHold(v *ObjectLockLegalHold) *GetObje
 type GetObjectLockConfigurationInput struct {
 	_ struct{} `locationName:"GetObjectLockConfigurationRequest" type:"structure"`
 
-	// The bucket whose Object Lock configuration you want to retrieve.
+	// The bucket whose object lock configuration you want to retrieve.
 	//
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
@@ -16797,7 +16717,7 @@ func (s *GetObjectLockConfigurationInput) getBucket() (v string) {
 type GetObjectLockConfigurationOutput struct {
 	_ struct{} `type:"structure" payload:"ObjectLockConfiguration"`
 
-	// The specified bucket's Object Lock configuration.
+	// The specified bucket's object lock configuration.
 	ObjectLockConfiguration *ObjectLockConfiguration `type:"structure"`
 }
 
@@ -16882,10 +16802,10 @@ type GetObjectOutput struct {
 	// returned if you have permission to view an object's legal hold status.
 	ObjectLockLegalHoldStatus *string `location:"header" locationName:"x-amz-object-lock-legal-hold" type:"string" enum:"ObjectLockLegalHoldStatus"`
 
-	// The Object Lock mode currently in place for this object.
+	// The object lock mode currently in place for this object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// The date and time when this object's Object Lock will expire.
+	// The date and time when this object's object lock will expire.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// The count of parts this object has.
@@ -18008,13 +17928,10 @@ type HeadObjectOutput struct {
 	// Object Lock (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html).
 	ObjectLockLegalHoldStatus *string `location:"header" locationName:"x-amz-object-lock-legal-hold" type:"string" enum:"ObjectLockLegalHoldStatus"`
 
-	// The Object Lock mode, if any, that's in effect for this object. This header
-	// is only returned if the requester has the s3:GetObjectRetention permission.
-	// For more information about S3 Object Lock, see Object Lock (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html).
+	// The object lock mode currently in place for this object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// The date and time when the Object Lock retention period expires. This header
-	// is only returned if the requester has the s3:GetObjectRetention permission.
+	// The date and time when this object's object lock expires.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// The count of parts this object has.
@@ -21956,14 +21873,14 @@ func (s *ObjectIdentifier) SetVersionId(v string) *ObjectIdentifier {
 	return s
 }
 
-// The container element for Object Lock configuration parameters.
+// The container element for object lock configuration parameters.
 type ObjectLockConfiguration struct {
 	_ struct{} `type:"structure"`
 
-	// Indicates whether this bucket has an Object Lock configuration enabled.
+	// Indicates whether this bucket has an object lock configuration enabled.
 	ObjectLockEnabled *string `type:"string" enum:"ObjectLockEnabled"`
 
-	// The Object Lock rule in place for the specified object.
+	// The object lock rule in place for the specified object.
 	Rule *ObjectLockRule `type:"structure"`
 }
 
@@ -22020,7 +21937,7 @@ type ObjectLockRetention struct {
 	// Indicates the Retention mode for the specified object.
 	Mode *string `type:"string" enum:"ObjectLockRetentionMode"`
 
-	// The date on which this Object Lock Retention will expire.
+	// The date on which this object lock retention expires.
 	RetainUntilDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 }
 
@@ -22046,7 +21963,7 @@ func (s *ObjectLockRetention) SetRetainUntilDate(v time.Time) *ObjectLockRetenti
 	return s
 }
 
-// The container element for an Object Lock rule.
+// The container element for an object lock rule.
 type ObjectLockRule struct {
 	_ struct{} `type:"structure"`
 
@@ -22439,11 +22356,7 @@ func (s *ProgressEvent) UnmarshalEvent(
 	return nil
 }
 
-// The PublicAccessBlock configuration that you want to apply to this Amazon
-// S3 bucket. You can enable the configuration options in any combination. For
-// more information about when Amazon S3 considers a bucket or object public,
-// see The Meaning of "Public" (https://docs.aws.amazon.com/AmazonS3/latest/dev//access-control-block-public-access.html#access-control-block-public-access-policy-status)
-// in the Amazon Simple Storage Service Developer Guide.
+// Specifies the Block Public Access configuration for an Amazon S3 bucket.
 type PublicAccessBlockConfiguration struct {
 	_ struct{} `type:"structure"`
 
@@ -22833,7 +22746,7 @@ type PutBucketCorsInput struct {
 
 	// Describes the cross-origin access configuration for objects in an Amazon
 	// S3 bucket. For more information, see Enabling Cross-Origin Resource Sharing
-	// (https://docs.aws.amazon.com/AmazonS3/latest/dev//cors.html) in the Amazon
+	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/cors.html) in the Amazon
 	// Simple Storage Service Developer Guide.
 	//
 	// CORSConfiguration is a required field
@@ -22911,9 +22824,9 @@ type PutBucketEncryptionInput struct {
 	_ struct{} `locationName:"PutBucketEncryptionRequest" type:"structure" payload:"ServerSideEncryptionConfiguration"`
 
 	// Specifies default encryption for a bucket using server-side encryption with
-	// Amazon S3-managed keys (SSE-S3) or customer master keys stored in AWS KMS
-	// (SSE-KMS). For information about the Amazon S3 default encryption feature,
-	// see Amazon S3 Default Bucket Encryption (https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
+	// Amazon S3-managed keys (SSE-S3) or AWS KMS-managed keys (SSE-KMS). For information
+	// about the Amazon S3 default encryption feature, see Amazon S3 Default Bucket
+	// Encryption (https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
 	// in the Amazon Simple Storage Service Developer Guide.
 	//
 	// Bucket is a required field
@@ -23095,7 +23008,9 @@ type PutBucketLifecycleConfigurationInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	// Container for lifecycle rules. You can add as many as 1,000 rules.
+	// Specifies the lifecycle configuration for objects in an Amazon S3 bucket.
+	// For more information, see Object Lifecycle Management (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html)
+	// in the Amazon Simple Storage Service Developer Guide.
 	LifecycleConfiguration *BucketLifecycleConfiguration `locationName:"LifecycleConfiguration" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
@@ -23671,6 +23586,7 @@ type PutBucketReplicationInput struct {
 	// ReplicationConfiguration is a required field
 	ReplicationConfiguration *ReplicationConfiguration `locationName:"ReplicationConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
+	// A token that allows Amazon S3 object lock to be enabled for an existing bucket.
 	Token *string `location:"header" locationName:"x-amz-bucket-object-lock-token" type:"string"`
 }
 
@@ -23921,7 +23837,9 @@ type PutBucketVersioningInput struct {
 	// and the value that is displayed on your authentication device.
 	MFA *string `location:"header" locationName:"x-amz-mfa" type:"string"`
 
-	// Container for setting the versioning state.
+	// Describes the versioning state of an Amazon S3 bucket. For more information,
+	// see PUT Bucket versioning (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTVersioningStatus.html)
+	// in the Amazon Simple Storage Service API Reference.
 	//
 	// VersioningConfiguration is a required field
 	VersioningConfiguration *VersioningConfiguration `locationName:"VersioningConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
@@ -24003,7 +23921,7 @@ type PutBucketWebsiteInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	// Container for the request.
+	// Specifies website configuration parameters for an Amazon S3 bucket.
 	//
 	// WebsiteConfiguration is a required field
 	WebsiteConfiguration *WebsiteConfiguration `locationName:"WebsiteConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
@@ -24294,12 +24212,9 @@ type PutObjectInput struct {
 	// (http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.13).
 	ContentLength *int64 `location:"header" locationName:"Content-Length" type:"long"`
 
-	// The base64-encoded 128-bit MD5 digest of the message (without the headers)
-	// according to RFC 1864. This header can be used as a message integrity check
-	// to verify that the data is the same data that was originally sent. Although
-	// it is optional, we recommend using the Content-MD5 mechanism as an end-to-end
-	// integrity check. For more information about REST request authentication,
-	// see REST Authentication (https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html).
+	// The base64-encoded 128-bit MD5 digest of the part data. This parameter is
+	// auto-populated when using the command from the CLI. This parameted is required
+	// if object lock parameters are specified.
 	ContentMD5 *string `location:"header" locationName:"Content-MD5" type:"string"`
 
 	// A standard MIME type describing the format of the contents. For more information,
@@ -24334,10 +24249,10 @@ type PutObjectInput struct {
 	// about S3 Object Lock, see Object Lock (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html).
 	ObjectLockLegalHoldStatus *string `location:"header" locationName:"x-amz-object-lock-legal-hold" type:"string" enum:"ObjectLockLegalHoldStatus"`
 
-	// The Object Lock mode that you want to apply to this object.
+	// The object lock mode that you want to apply to this object.
 	ObjectLockMode *string `location:"header" locationName:"x-amz-object-lock-mode" type:"string" enum:"ObjectLockMode"`
 
-	// The date and time when you want this object's Object Lock to expire.
+	// The date and time when you want this object's object lock to expire.
 	ObjectLockRetainUntilDate *time.Time `location:"header" locationName:"x-amz-object-lock-retain-until-date" type:"timestamp" timestampFormat:"iso8601"`
 
 	// Confirms that the requester knows that she or he will be charged for the
@@ -24366,14 +24281,10 @@ type PutObjectInput struct {
 	// encryption context key-value pairs.
 	SSEKMSEncryptionContext *string `location:"header" locationName:"x-amz-server-side-encryption-context" type:"string" sensitive:"true"`
 
-	// If the x-amz-server-side-encryption is present and has the value of aws:kms,
-	// this header specifies the ID of the AWS Key Management Service (AWS KMS)
-	// customer master key (CMK) that was used for the object.
-	//
-	// If the value of x-amz-server-side-encryption is aws:kms, this header specifies
-	// the ID of the AWS KMS CMK that will be used for the object. If you specify
-	// x-amz-server-side-encryption:aws:kms, but do not provide x-amz-server-side-encryption-aws-kms-key-id,
-	// Amazon S3 uses the AWS managed CMK in AWS to protect the data.
+	// Specifies the AWS KMS key ID to use for object encryption. All GET and PUT
+	// requests for an object protected by AWS KMS will fail if not made via SSL
+	// or using SigV4. Documentation on configuring any of the officially supported
+	// AWS SDKs and CLI can be found at http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingAWSSDK.html#specify-signature-version
 	SSEKMSKeyId *string `location:"header" locationName:"x-amz-server-side-encryption-aws-kms-key-id" type:"string" sensitive:"true"`
 
 	// The Server-side encryption algorithm used when storing this object in S3
@@ -24758,12 +24669,12 @@ func (s *PutObjectLegalHoldOutput) SetRequestCharged(v string) *PutObjectLegalHo
 type PutObjectLockConfigurationInput struct {
 	_ struct{} `locationName:"PutObjectLockConfigurationRequest" type:"structure" payload:"ObjectLockConfiguration"`
 
-	// The bucket whose Object Lock configuration you want to create or replace.
+	// The bucket whose object lock configuration you want to create or replace.
 	//
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	// The Object Lock configuration that you want to apply to the specified bucket.
+	// The object lock configuration that you want to apply to the specified bucket.
 	ObjectLockConfiguration *ObjectLockConfiguration `locationName:"ObjectLockConfiguration" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Confirms that the requester knows that she or he will be charged for the
@@ -24772,7 +24683,7 @@ type PutObjectLockConfigurationInput struct {
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
 	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// A token to allow Object Lock to be enabled for an existing bucket.
+	// A token to allow Amazon S3 object lock to be enabled for an existing bucket.
 	Token *string `location:"header" locationName:"x-amz-bucket-object-lock-token" type:"string"`
 }
 
@@ -24888,9 +24799,8 @@ type PutObjectOutput struct {
 	// the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string `location:"header" locationName:"x-amz-server-side-encryption-context" type:"string" sensitive:"true"`
 
-	// If the x-amz-server-side-encryption is present and has the value of aws:kms,
-	// this header specifies the ID of the AWS Key Management Service (KMS) customer
-	// master key (CMK) that was used for the object.
+	// If present, specifies the ID of the AWS Key Management Service (KMS) master
+	// encryption key that was used for the object.
 	SSEKMSKeyId *string `location:"header" locationName:"x-amz-server-side-encryption-aws-kms-key-id" type:"string" sensitive:"true"`
 
 	// If you specified server-side encryption either with an AWS KMS customer master
@@ -25596,7 +25506,7 @@ type ReplicationConfiguration struct {
 
 	// The Amazon Resource Name (ARN) of the AWS Identity and Access Management
 	// (IAM) role that Amazon S3 assumes when replicating objects. For more information,
-	// see How to Set Up Replication (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-how-setup.html)
+	// see How to Set Up Cross-Region Replication (https://docs.aws.amazon.com/AmazonS3/latest/dev/crr-how-setup.html)
 	// in the Amazon Simple Storage Service Developer Guide.
 	//
 	// Role is a required field
@@ -25716,7 +25626,7 @@ type ReplicationRule struct {
 	// objects that you want to replicate. You can choose to enable or disable the
 	// replication of these objects. Currently, Amazon S3 supports only the filter
 	// that you can specify for objects created with server-side encryption using
-	// a customer master key (CMK) stored in AWS Key Management Service (SSE-KMS).
+	// an AWS KMS-Managed Key (SSE-KMS).
 	SourceSelectionCriteria *SourceSelectionCriteria `type:"structure"`
 
 	// Specifies whether the rule is enabled.
@@ -27306,7 +27216,7 @@ func (s *ServerSideEncryptionRule) SetApplyServerSideEncryptionByDefault(v *Serv
 // objects that you want to replicate. You can choose to enable or disable the
 // replication of these objects. Currently, Amazon S3 supports only the filter
 // that you can specify for objects created with server-side encryption using
-// a customer master key (CMK) stored in AWS Key Management Service (SSE-KMS).
+// an AWS KMS-Managed Key (SSE-KMS).
 type SourceSelectionCriteria struct {
 	_ struct{} `type:"structure"`
 
@@ -27353,7 +27263,7 @@ type SseKmsEncryptedObjects struct {
 	_ struct{} `type:"structure"`
 
 	// Specifies whether Amazon S3 replicates objects created with server-side encryption
-	// using a customer master key (CMK) stored in AWS Key Management Service.
+	// using an AWS KMS-managed key.
 	//
 	// Status is a required field
 	Status *string `type:"string" required:"true" enum:"SseKmsEncryptedObjectsStatus"`

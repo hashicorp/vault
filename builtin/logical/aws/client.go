@@ -74,6 +74,7 @@ func nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error
 	if err != nil {
 		return nil, err
 	}
+
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return nil, err

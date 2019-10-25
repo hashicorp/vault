@@ -892,8 +892,7 @@ func (c *STS) GetAccessKeyInfoRequest(input *GetAccessKeyInfoInput) (req *reques
 // pull a credentials report (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html)
 // to learn which IAM user owns the keys. To learn who requested the temporary
 // credentials for an ASIA access key, view the STS events in your CloudTrail
-// logs (https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html)
-// in the IAM User Guide.
+// logs (https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html).
 //
 // This operation does not indicate the state of the access key. The key might
 // be active, inactive, or deleted. Active keys might not have permissions to
@@ -980,8 +979,7 @@ func (c *STS) GetCallerIdentityRequest(input *GetCallerIdentityInput) (req *requ
 // sts:GetCallerIdentity action, you can still perform this operation. Permissions
 // are not required because the same information is returned when an IAM user
 // or role is denied access. To view an example response, see I Am Not Authorized
-// to Perform: iam:DeleteVirtualMFADevice (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_access-denied-delete-mfa)
-// in the IAM User Guide.
+// to Perform: iam:DeleteVirtualMFADevice (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_access-denied-delete-mfa).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1402,7 +1400,7 @@ type AssumeRoleInput struct {
 	//
 	// This parameter is optional. You can provide up to 10 managed policy ARNs.
 	// However, the plain text that you use for both inline and managed session
-	// policies can't exceed 2,048 characters. For more information about ARNs,
+	// policies shouldn't exceed 2048 characters. For more information about ARNs,
 	// see Amazon Resource Names (ARNs) and AWS Service Namespaces (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	//
@@ -1751,7 +1749,7 @@ type AssumeRoleWithSAMLInput struct {
 	//
 	// This parameter is optional. You can provide up to 10 managed policy ARNs.
 	// However, the plain text that you use for both inline and managed session
-	// policies can't exceed 2,048 characters. For more information about ARNs,
+	// policies shouldn't exceed 2048 characters. For more information about ARNs,
 	// see Amazon Resource Names (ARNs) and AWS Service Namespaces (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	//
@@ -2047,7 +2045,7 @@ type AssumeRoleWithWebIdentityInput struct {
 	//
 	// This parameter is optional. You can provide up to 10 managed policy ARNs.
 	// However, the plain text that you use for both inline and managed session
-	// policies can't exceed 2,048 characters. For more information about ARNs,
+	// policies shouldn't exceed 2048 characters. For more information about ARNs,
 	// see Amazon Resource Names (ARNs) and AWS Service Namespaces (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	//
@@ -2509,7 +2507,7 @@ type GetAccessKeyInfoInput struct {
 	// The identifier of an access key.
 	//
 	// This parameter allows (through its regex pattern) a string of characters
-	// that can consist of any upper- or lowercase letter or digit.
+	// that can consist of any upper- or lowercased letter or digit.
 	//
 	// AccessKeyId is a required field
 	AccessKeyId *string `min:"16" type:"string" required:"true"`

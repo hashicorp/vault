@@ -16,11 +16,11 @@ import (
 type DefaultRetryer struct {
 	// Num max Retries is the number of max retries that will be performed.
 	// By default, this is zero.
-	NumMaxRetries int
+	NumMaxRetries    int
 
 	// MinRetryDelay is the minimum retry delay after which retry will be performed.
 	// If not set, the value is 0ns.
-	MinRetryDelay time.Duration
+	MinRetryDelay    time.Duration
 
 	// MinThrottleRetryDelay is the minimum retry delay when throttled.
 	// If not set, the value is 0ns.
@@ -28,7 +28,7 @@ type DefaultRetryer struct {
 
 	// MaxRetryDelay is the maximum retry delay before which retry must be performed.
 	// If not set, the value is 0ns.
-	MaxRetryDelay time.Duration
+	MaxRetryDelay    time.Duration
 
 	// MaxThrottleDelay is the maximum retry delay when throttled.
 	// If not set, the value is 0ns.
@@ -106,6 +106,8 @@ func (d DefaultRetryer) RetryRules(r *request.Request) time.Duration {
 	if isThrottle {
 		maxDelay = d.MaxThrottleDelay
 	}
+	return delay + initialDelay
+}
 
 	var delay time.Duration
 
@@ -140,6 +142,11 @@ func (d DefaultRetryer) ShouldRetry(r *request.Request) bool {
 	if r.Retryable != nil {
 		return *r.Retryable
 	}
+
+	if r.HTTPResponse.StatusCode >= 500 && r.HTTPResponse.StatusCode != 501 {
+		return true
+	}
+
 	return r.IsErrorRetryable() || r.IsErrorThrottle()
 }
 

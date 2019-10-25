@@ -149,10 +149,13 @@ type metadataOutput struct {
 	Content string
 }
 
-type tokenOutput struct {
-	Token string
-	TTL   time.Duration
-}
+func unmarshalHandler(r *request.Request) {
+	defer r.HTTPResponse.Body.Close()
+	b := &bytes.Buffer{}
+	if _, err := io.Copy(b, r.HTTPResponse.Body); err != nil {
+		r.Error = awserr.New(request.ErrCodeSerialization, "unable to unmarshal EC2 metadata response", err)
+		return
+	}
 
 // unmarshal token handler is used to parse the response of a getToken operation
 var unmarshalTokenHandler = request.NamedHandler{
@@ -204,12 +207,9 @@ var unmarshalHandler = request.NamedHandler{
 
 func unmarshalError(r *request.Request) {
 	defer r.HTTPResponse.Body.Close()
-	var b bytes.Buffer
-
-	if _, err := io.Copy(&b, r.HTTPResponse.Body); err != nil {
-		r.Error = awserr.NewRequestFailure(
-			awserr.New(request.ErrCodeSerialization, "unable to unmarshal EC2 metadata error response", err),
-			r.HTTPResponse.StatusCode, r.RequestID)
+	b := &bytes.Buffer{}
+	if _, err := io.Copy(b, r.HTTPResponse.Body); err != nil {
+		r.Error = awserr.New(request.ErrCodeSerialization, "unable to unmarshal EC2 metadata error response", err)
 		return
 	}
 
