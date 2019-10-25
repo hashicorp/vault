@@ -157,7 +157,7 @@ module('Unit | Service | permissions', function(hooks) {
     assert.deepEqual(service.navPathParams('access'), expected);
   });
 
-  test('hasNavPermission returns true if a policy includes access to at least one path', function(assert) {
+  test('hasNavPermission returns true if a policy includes the required capabilities for at least one path', function(assert) {
     let service = this.owner.lookup('service:permissions');
     const accessPaths = {
       'sys/auth': {
@@ -168,7 +168,20 @@ module('Unit | Service | permissions', function(hooks) {
       },
     };
     service.set('exactPaths', accessPaths);
-    assert.equal(service.hasNavPermission('access', 'groups', ['list', 'read']), true);
+    assert.equal(
+      service.hasNavPermission(
+        'access',
+        'groups',
+        ['list', 'read'],
+        'checks permission when multiple capabilities are specified'
+      ),
+      true
+    );
+    assert.equal(
+      service.hasNavPermission('access', 'groups'),
+      true,
+      'checks permission when capabilities are not specified'
+    );
   });
 
   test('hasNavPermission returns false if a policy does not include access to any paths', function(assert) {
