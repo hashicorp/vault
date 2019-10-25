@@ -41,7 +41,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v4-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
           cd ui
@@ -49,7 +49,7 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v4-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
   build-go-dev:
@@ -100,7 +100,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v4-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -139,7 +139,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v4-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -366,11 +366,11 @@ workflows:
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#         key: yarn-lock-v4-{{ checksum \"ui/yarn.lock\" }}
 #   save_yarn_cache:
 #     steps:
 #     - save_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#         key: yarn-lock-v4-{{ checksum \"ui/yarn.lock\" }}
 #         paths:
 #         - ui/node_modules
 #   setup-go:
@@ -551,7 +551,7 @@ workflows:
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
-#     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#     yarn-lock: yarn-lock-v4-{{ checksum \"ui/yarn.lock\" }}
 #   images:
 #     node: node:10-buster
 # version: 2.1
