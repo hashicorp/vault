@@ -43,10 +43,7 @@ jobs:
     - restore_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
-        command: |
-          cd ui
-          yarn install --ignore-optional
-          npm rebuild node-sass
+        command: "cd ui\nyarn install \nnpm rebuild node-sass\n"
         name: Install UI dependencies
     - save_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
@@ -441,10 +438,7 @@ workflows:
 #     - checkout
 #     - restore_yarn_cache
 #     - run:
-#         command: |
-#           cd ui
-#           yarn install --ignore-optional
-#           npm rebuild node-sass
+#         command: \"cd ui\\nyarn install \\nnpm rebuild node-sass\\n\"
 #         name: Install UI dependencies
 #     - save_yarn_cache
 #   pre-flight-checks:
