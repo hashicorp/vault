@@ -39,7 +39,6 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// TODO: remove donech?
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
@@ -110,8 +109,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					},
 				}
 				runnerConfig = runnerConfig.Merge(&ctv)
-				// TODO: remove?
-				// runnerConfig.Finalize()
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {

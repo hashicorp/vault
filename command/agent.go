@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/config"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -523,11 +522,8 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		ssDoneCh = ss.DoneCh
 
-		// create an independent vault configuration for Consul Template to use
-		// vaultConfig := c.setupTemplateConfig()
 		ts := template.NewServer(&template.ServerConfig{
-			Logger: c.logger.Named("template.server"),
-			// VaultConf:     vaultConfig,
+			Logger:        c.logger.Named("template.server"),
 			VaultConf:     config.Vault,
 			Namespace:     namespace,
 			ExitAfterAuth: config.ExitAfterAuth,
@@ -686,22 +682,4 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
-}
-
-// setupTemplateConfig creates a config.Vault struct for use by Consul Template.
-// Consul Template does not currently allow us to pass in a configured API
-// client, unlike the AuthHandler and SinkServer that reuse the client created
-// in this Run() method. Here we build a config.Vault struct for use by the
-// Template Server that matches the configuration used to create the client
-// (c.client), but in a struct of type config.Vault so that Consul Template can
-// create it's own api client internally.
-func (c *AgentCommand) setupTemplateConfig() *config.Vault {
-	return &config.Vault{
-		Address:       c.flagAddress,
-		CACert:        c.flagCACert,
-		CAPath:        c.flagCAPath,
-		ClientCert:    c.flagClientCert,
-		ClientKey:     c.flagClientKey,
-		TLSSkipVerify: c.flagTLSSkipVerify,
-	}
 }
