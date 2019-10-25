@@ -70,6 +70,8 @@ IMPROVEMENTS:
    specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
+ * storage/raft: Improve raft write performance by utilizing FSM Batching [GH-7527]
+ * storage/raft: Add support for non-voter nodes [GH-7634]
  * sys: Add a new `sys/host-info` endpoint for querying information about 
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
