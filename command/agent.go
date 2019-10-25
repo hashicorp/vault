@@ -223,50 +223,6 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Vault == nil {
 		config.Vault = new(agentConfig.Vault)
 	}
-	if config.Vault != nil {
-		c.setStringFlag(f, config.Vault.Address, &StringVar{
-			Name:    flagNameAddress,
-			Target:  &c.flagAddress,
-			Default: "https://127.0.0.1:8200",
-			EnvVar:  api.EnvVaultAddress,
-		})
-		c.setStringFlag(f, config.Vault.CACert, &StringVar{
-			Name:    flagNameCACert,
-			Target:  &c.flagCACert,
-			Default: "",
-			EnvVar:  api.EnvVaultCACert,
-		})
-		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
-			Name:    flagNameCAPath,
-			Target:  &c.flagCAPath,
-			Default: "",
-			EnvVar:  api.EnvVaultCAPath,
-		})
-		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
-			Name:    flagNameClientCert,
-			Target:  &c.flagClientCert,
-			Default: "",
-			EnvVar:  api.EnvVaultClientCert,
-		})
-		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
-			Name:    flagNameClientKey,
-			Target:  &c.flagClientKey,
-			Default: "",
-			EnvVar:  api.EnvVaultClientKey,
-		})
-		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
-			Name:    flagNameTLSSkipVerify,
-			Target:  &c.flagTLSSkipVerify,
-			Default: false,
-			EnvVar:  api.EnvVaultSkipVerify,
-		})
-		c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
-			Name:    flagTLSServerName,
-			Target:  &c.flagTLSServerName,
-			Default: "",
-			EnvVar:  api.EnvVaultTLSServerName,
-		})
-	}
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
 		Target:  &c.flagAddress,
@@ -302,6 +258,12 @@ func (c *AgentCommand) Run(args []string) int {
 		Target:  &c.flagTLSSkipVerify,
 		Default: false,
 		EnvVar:  api.EnvVaultSkipVerify,
+	})
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
 	})
 
 	infoKeys := make([]string, 0, 10)
