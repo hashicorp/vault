@@ -14,7 +14,8 @@ FEATURES:
    store. Bad storage state can be caused by bugs. However, this is usually
    observed when known (and fixed) bugs are hit by older versions of Vault.
  * **Entropy Augmentation (Enterprise)**: Vault now supports sourcing entropy from 
-   external source for critical security parameters. The 
+   external source for critical security parameters. Currently an HSM that
+   supports PKCS#11 is the only supported source.
  * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
    engine, users or applications can check out a service account for use, and its
    password will be rotated when it's checked back in.
