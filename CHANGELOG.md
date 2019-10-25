@@ -24,6 +24,8 @@ FEATURES:
  * **Transit Key Type Support**: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551] and encryption and 
    decryption is now supported via AES128-GCM96 [GH-7555]
+ * **SSRF Protection for Vault Agent**: Vault Agent has a configuration option to 
+   require a specific header beffore allowing requests.
  * **New UI Features** The UI now supports managing users and groups for the 
    Userpass, Cert, Okta, and Radius auth methods.
  * **Shamir with Stored Master Key** The on disk format for Shamir seals has changed,
