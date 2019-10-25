@@ -32,7 +32,7 @@ executors:
       GO_VERSION: 1.12.12  # Pin Go to patch version (ex: 1.2.3)
       GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
       GO_TAGS: ""
-    working_directory: ~/go/src/github.com/hashicorp/vault
+    working_directory: /go/src/github.com/hashicorp/vault
   node:
     docker:
       - image: *NODE_IMAGE

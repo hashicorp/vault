@@ -55,20 +55,25 @@ jobs:
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: ~/go/src/github.com/hashicorp/vault
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
-          [ -n "$GO_VERSION" ] || GO_VERSION=1.12.9
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="$HOME/go"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
         name: Setup Go
+        working_directory: ~/
     - checkout
     - attach_workspace:
         at: .
@@ -150,21 +155,26 @@ jobs:
   test-go:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: ~/go/src/github.com/hashicorp/vault
+    working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 2
     steps:
     - run:
         command: |
-          [ -n "$GO_VERSION" ] || GO_VERSION=1.12.9
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="$HOME/go"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
         name: Setup Go
+        working_directory: ~/
     - checkout
     - run:
         command: |
@@ -219,20 +229,25 @@ jobs:
   test-go-race:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: ~/go/src/github.com/hashicorp/vault
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
-          [ -n "$GO_VERSION" ] || GO_VERSION=1.12.9
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="$HOME/go"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
         name: Setup Go
+        working_directory: ~/
     - checkout
     - run:
         command: |
@@ -378,16 +393,21 @@ workflows:
 #     steps:
 #     - run:
 #         command: |
-#           [ -n \"$GO_VERSION\" ] || GO_VERSION=1.12.9
+#           [ -n \"$GO_VERSION\" ] || { echo \"You must set GO_VERSION\"; exit 1; }
 #           # Install Go
 #           curl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"
 #           sudo rm -rf /usr/local/go
 #           sudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"
 #           rm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"
-#           GOPATH=\"$HOME/go\"
+#           GOPATH=\"/go\"
+#           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
 #           echo \"export GOPATH='$GOPATH'\" >> \"$BASH_ENV\"
 #           echo \"export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'\" >> \"$BASH_ENV\"
+# 
+#           echo \"$ go version\"
+#           go version
 #         name: Setup Go
+#         working_directory: ~/
 # executors:
 #   alpine:
 #     docker:
@@ -403,7 +423,7 @@ workflows:
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
-#     working_directory: ~/go/src/github.com/hashicorp/vault
+#     working_directory: /go/src/github.com/hashicorp/vault
 #   node:
 #     docker:
 #     - image: node:10-buster
