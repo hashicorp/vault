@@ -43,7 +43,10 @@ jobs:
     - restore_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
-        command: "cd ui\nyarn install \nnpm rebuild node-sass\n"
+        command: |
+          cd ui
+          yarn install
+          npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
@@ -120,6 +123,7 @@ jobs:
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
+          yarn install
           yarn run test-oss
         name: Test UI
     - store_artifacts:
@@ -438,7 +442,10 @@ workflows:
 #     - checkout
 #     - restore_yarn_cache
 #     - run:
-#         command: \"cd ui\\nyarn install \\nnpm rebuild node-sass\\n\"
+#         command: |
+#           cd ui
+#           yarn install
+#           npm rebuild node-sass
 #         name: Install UI dependencies
 #     - save_yarn_cache
 #   pre-flight-checks:
@@ -520,6 +527,7 @@ workflows:
 #           # Run Ember tests
 #           cd ui
 #           mkdir -p test-results/qunit
+#           yarn install
 #           yarn run test-oss
 #         name: Test UI
 #     - store_artifacts:
