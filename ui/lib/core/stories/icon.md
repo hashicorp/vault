@@ -3,10 +3,12 @@
 ## Icon
 `Icon` components are glyphs used to indicate important information.
 
+**Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | glyph | <code>String</code> | <code></code> | The name of the SVG to render inline. |
+| [size] | <code>String</code> | <code>&#x27;m&#x27;</code> | The size of the Icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'. |
 
 **Example**
   

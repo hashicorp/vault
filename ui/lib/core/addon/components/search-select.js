@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { computed } from '@ember/object';
 import { singularize } from 'ember-inflector';
+import layout from '../templates/components/search-select';
 
 /**
  * @module SearchSelect
@@ -13,34 +14,25 @@ import { singularize } from 'ember-inflector';
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
- * @param inputValue {String} -  A comma-separated string or an array of strings.
+ * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param label {String} - Label for this form field
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  *
+ * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
+ * power-select component. If doing this, `models` should not also be passed as that will overwrite the
+ * passed value.
+ * @param search {Func} - *Advanced usage* - Customizes how the power-select component searches for matches -
+ * see the power-select docs for more information.
+ *
  */
 export default Component.extend({
+  layout,
   'data-test-component': 'search-select',
   classNames: ['field', 'search-select'],
   store: service(),
 
-  /*
-   * @public
-   * @param Function
-   *
-   * Function called when any of the inputs change
-   * accepts a single param `value`
-   *
-   */
   onChange: () => {},
-
-  /*
-   * @public
-   * @param String | Array
-   * A comma-separated string or an array of strings.
-   * Defaults to an empty array.
-   *
-   */
   inputValue: computed(function() {
     return [];
   }),
@@ -51,6 +43,16 @@ export default Component.extend({
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
+  },
+  didRender() {
+    this._super(...arguments);
+    let { oldOptions, options, selectedOptions } = this;
+    let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
+    if (options && !oldOptions && !hasFormattedInput) {
+      // this is the first time they've been set, so we need to format them
+      this.formatOptions(options);
+    }
+    this.set('oldOptions', options);
   },
   formatOptions: function(options) {
     options = options.toArray().map(option => {
@@ -68,11 +70,17 @@ export default Component.extend({
     });
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
-      options = this.options.concat(options);
+      options = this.options.concat(options).uniq();
     }
     this.set('options', options);
   },
   fetchOptions: task(function*() {
+    if (!this.models) {
+      if (this.options) {
+        this.formatOptions(this.options);
+      }
+      return;
+    }
     for (let modelType of this.models) {
       if (modelType.includes('identity')) {
         this.set('shouldRenderName', true);
@@ -128,7 +136,10 @@ export default Component.extend({
     constructSuggestion(id) {
       return `Add new ${singularize(this.label)}: ${id}`;
     },
-    hideCreateOptionOnSameID(id) {
+    hideCreateOptionOnSameID(id, options) {
+      if (options && options.length && options.firstObject.groupName) {
+        return !options.some(group => group.options.findBy('id', id));
+      }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
       return !existingOption;
     },
