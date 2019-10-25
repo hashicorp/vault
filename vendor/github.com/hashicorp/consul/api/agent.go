@@ -84,11 +84,11 @@ type AgentService struct {
 	Address           string
 	Weights           AgentWeights
 	EnableTagOverride bool
-	CreateIndex       uint64 `json:",omitempty"`
-	ModifyIndex       uint64 `json:",omitempty"`
-	ContentHash       string `json:",omitempty"`
+	CreateIndex       uint64 `json:",omitempty" bexpr:"-"`
+	ModifyIndex       uint64 `json:",omitempty" bexpr:"-"`
+	ContentHash       string `json:",omitempty" bexpr:"-"`
 	// DEPRECATED (ProxyDestination) - remove this field
-	ProxyDestination string                          `json:",omitempty"`
+	ProxyDestination string                          `json:",omitempty" bexpr:"-"`
 	Proxy            *AgentServiceConnectProxyConfig `json:",omitempty"`
 	Connect          *AgentServiceConnect            `json:",omitempty"`
 }
@@ -103,8 +103,8 @@ type AgentServiceChecksInfo struct {
 // AgentServiceConnect represents the Connect configuration of a service.
 type AgentServiceConnect struct {
 	Native         bool                      `json:",omitempty"`
-	Proxy          *AgentServiceConnectProxy `json:",omitempty"`
-	SidecarService *AgentServiceRegistration `json:",omitempty"`
+	Proxy          *AgentServiceConnectProxy `json:",omitempty" bexpr:"-"`
+	SidecarService *AgentServiceRegistration `json:",omitempty" bexpr:"-"`
 }
 
 // AgentServiceConnectProxy represents the Connect Proxy configuration of a
@@ -112,7 +112,7 @@ type AgentServiceConnect struct {
 type AgentServiceConnectProxy struct {
 	ExecMode  ProxyExecMode          `json:",omitempty"`
 	Command   []string               `json:",omitempty"`
-	Config    map[string]interface{} `json:",omitempty"`
+	Config    map[string]interface{} `json:",omitempty" bexpr:"-"`
 	Upstreams []Upstream             `json:",omitempty"`
 }
 
@@ -123,7 +123,7 @@ type AgentServiceConnectProxyConfig struct {
 	DestinationServiceID   string                 `json:",omitempty"`
 	LocalServiceAddress    string                 `json:",omitempty"`
 	LocalServicePort       int                    `json:",omitempty"`
-	Config                 map[string]interface{} `json:",omitempty"`
+	Config                 map[string]interface{} `json:",omitempty" bexpr:"-"`
 	Upstreams              []Upstream
 }
 
@@ -278,9 +278,9 @@ type ConnectProxyConfig struct {
 	ContentHash       string
 	// DEPRECATED(managed-proxies) - this struct is re-used for sidecar configs
 	// but they don't need ExecMode or Command
-	ExecMode  ProxyExecMode `json:",omitempty"`
-	Command   []string      `json:",omitempty"`
-	Config    map[string]interface{}
+	ExecMode  ProxyExecMode          `json:",omitempty"`
+	Command   []string               `json:",omitempty"`
+	Config    map[string]interface{} `bexpr:"-"`
 	Upstreams []Upstream
 }
 
@@ -292,7 +292,7 @@ type Upstream struct {
 	Datacenter           string                 `json:",omitempty"`
 	LocalBindAddress     string                 `json:",omitempty"`
 	LocalBindPort        int                    `json:",omitempty"`
-	Config               map[string]interface{} `json:",omitempty"`
+	Config               map[string]interface{} `json:",omitempty" bexpr:"-"`
 }
 
 // Agent can be used to query the Agent endpoints
@@ -387,7 +387,14 @@ func (a *Agent) NodeName() (string, error) {
 
 // Checks returns the locally registered checks
 func (a *Agent) Checks() (map[string]*AgentCheck, error) {
+	return a.ChecksWithFilter("")
+}
+
+// ChecksWithFilter returns a subset of the locally registered checks that match
+// the given filter expression
+func (a *Agent) ChecksWithFilter(filter string) (map[string]*AgentCheck, error) {
 	r := a.c.newRequest("GET", "/v1/agent/checks")
+	r.filterQuery(filter)
 	_, resp, err := requireOK(a.c.doRequest(r))
 	if err != nil {
 		return nil, err
@@ -403,7 +410,14 @@ func (a *Agent) Checks() (map[string]*AgentCheck, error) {
 
 // Services returns the locally registered services
 func (a *Agent) Services() (map[string]*AgentService, error) {
+	return a.ServicesWithFilter("")
+}
+
+// ServicesWithFilter returns a subset of the locally registered services that match
+// the given filter expression
+func (a *Agent) ServicesWithFilter(filter string) (map[string]*AgentService, error) {
 	r := a.c.newRequest("GET", "/v1/agent/services")
+	r.filterQuery(filter)
 	_, resp, err := requireOK(a.c.doRequest(r))
 	if err != nil {
 		return nil, err
