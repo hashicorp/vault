@@ -55,6 +55,7 @@ IMPROVEMENTS:
    thereby improving the performance and storage capacity.
  * replication (enterprise): added more replication metrics
  * secrets/aws: The root config can now be read [GH-7245]
+ * secrets/aws: Role paths may now contain the '@' character [GH-7553]
  * secrets/database/cassandra: Add ability to skip verfication of connection [GH-7614]
  * storage/azure: Add config parameter to Azure storage backend to allow
    specifying the ARM endpoint [GH-7567]
