@@ -138,8 +138,20 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
 	switch {
 	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		session, err := m.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
+		if err != nil {
+			return "", "", err
+		}
+	case strings.Contains(err.Error(), "not master"):
+		if err := m.Close(); err != nil {
+			return "", "", errwrap.Wrapf("error closing non-master mongo connection: {{err}}", err)
+		}
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
@@ -188,8 +200,20 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 
 	switch {
 	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		session, err := m.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
+		if err != nil {
+			return "", "", err
+		}
+	case strings.Contains(err.Error(), "not master"):
+		if err := m.Close(); err != nil {
+			return "", "", errwrap.Wrapf("error closing non-master mongo connection: {{err}}", err)
+		}
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
