@@ -149,9 +149,11 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 			return "", "", err
 		}
 	case strings.Contains(err.Error(), "not master"):
-		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing non-master mongo connection: {{err}}", err)
+		// Close connection and reconnect if connected node is not primary.
+		if m.mongoDBConnectionProducer.session != nil {
+			m.mongoDBConnectionProducer.session.Close()
 		}
+		m.mongoDBConnectionProducer.session = nil;
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
@@ -211,9 +213,12 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 			return "", "", err
 		}
 	case strings.Contains(err.Error(), "not master"):
-		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing non-master mongo connection: {{err}}", err)
+		// Close connection and reconnect if connected node is not primary.
+		if m.mongoDBConnectionProducer.session != nil {
+			m.mongoDBConnectionProducer.session.Close()
 		}
+		m.mongoDBConnectionProducer.session = nil;
+
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
