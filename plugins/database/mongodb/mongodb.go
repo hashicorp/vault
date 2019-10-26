@@ -150,10 +150,10 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		}
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
-		if m.mongoDBConnectionProducer.session != nil {
-			m.mongoDBConnectionProducer.session.Close()
+		if err := m.Close(); err != nil {
+			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
-		m.mongoDBConnectionProducer.session = nil;
+
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
@@ -214,10 +214,9 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		}
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
-		if m.mongoDBConnectionProducer.session != nil {
-			m.mongoDBConnectionProducer.session.Close()
+		if err := m.Close(); err != nil {
+			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
-		m.mongoDBConnectionProducer.session = nil;
 
 		session, err := m.getConnection(ctx)
 		if err != nil {

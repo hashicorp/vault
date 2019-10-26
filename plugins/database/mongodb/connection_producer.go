@@ -138,10 +138,7 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 	return c.session, nil
 }
 
-// Close terminates the database connection.
 func (c *mongoDBConnectionProducer) Close() error {
-	c.Lock()
-	defer c.Unlock()
 
 	if c.session != nil {
 		c.session.Close()
