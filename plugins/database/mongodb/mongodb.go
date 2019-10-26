@@ -138,7 +138,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
 	switch {
 	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
@@ -188,7 +188,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 
 	switch {
 	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
@@ -251,7 +251,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	err = session.DB(db).RemoveUser(username)
 	switch {
 	case err == nil, err == mgo.ErrNotFound:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
 		if err := m.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
