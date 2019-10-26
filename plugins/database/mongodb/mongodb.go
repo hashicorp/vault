@@ -151,7 +151,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
 		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
+			return "", "", errwrap.Wrapf("error closing non-primary mongo connection: {{err}}", err)
 		}
 
 		session, err := m.getConnection(ctx)
@@ -215,7 +215,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
 		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
+			return "", "", errwrap.Wrapf("error closing non-primary mongo connection: {{err}}", err)
 		}
 
 		session, err := m.getConnection(ctx)
