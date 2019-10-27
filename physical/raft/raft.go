@@ -29,6 +29,9 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
+// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
+const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
+
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
@@ -179,8 +182,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 		}
+		// If not set in the config or the "node-id" file try to fetch it from the environment.
+		if len(localID) == 0 {
+			if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
+				localID = raftNodeID
+			}
+		}
 
-		// If the file didn't exist generate a UUID and persist it to tne
+		// If all of the above fails generate a UUID and persist it to the
 		// "node-id" file.
 		if len(localID) == 0 {
 			id, err := uuid.GenerateUUID()

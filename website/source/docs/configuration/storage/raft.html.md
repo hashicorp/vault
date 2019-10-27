@@ -46,5 +46,6 @@ cluster_addr = "http://127.0.0.1:8201"
   stored.
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
+  This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
 
 [raft]: https://raft.github.io/ "The Raft Consensus Algorithm"
