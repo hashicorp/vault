@@ -32,6 +32,9 @@ import (
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
 const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 
+// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
+const EnvVaultRaftPath = "VAULT_RAFT_PATH"
+
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
@@ -121,7 +124,11 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	path, ok := conf["path"]
 	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
+		if pathFromEnv := os.Getenv(EnvVaultRaftPath); pathFromEnv != "" {
+			path = pathFromEnv
+		} else {
+			return nil, fmt.Errorf("'path' must be set")
+		}
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
