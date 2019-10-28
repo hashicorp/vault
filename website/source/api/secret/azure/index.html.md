@@ -127,6 +127,9 @@ information about roles.
 - `azure_roles` (`string: ""`) - List of Azure roles to be assigned to the generated service
    principal. The array must be in JSON format, properly escaped as a string. See [roles docs][roles]
    for details on role definition.
+- `azure_groups` (`string: ""`) - List of Azure groups that the generated service principal will be
+   assigned to. The array must be in JSON format, properly escaped as a string. See [groups docs][groups]
+   for more details.
 - `application_object_id` (`string: ""`) - Application Object ID for an existing service principal that will
    be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored. See
    [roles docs][roles] for details on role definition.
@@ -235,3 +238,4 @@ See docs on how to [renew](/api/system/leases.html#renew-lease) and [revoke](/ap
 
 [docs]: /docs/secrets/azure/index.html
 [roles]: /docs/secrets/azure/index.html#roles
+[groups]: /docs/secrets/azure/index.html#azure-groups

@@ -35,7 +35,7 @@ jobs:
         command: make ci-verify
   install-ui-dependencies:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -54,7 +54,7 @@ jobs:
         - ui/node_modules
   go-mod-download:
     docker:
-    - image: golang:1.12.7-stretch
+    - image: golang:1.12.12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -76,7 +76,7 @@ jobs:
         - /go/pkg/mod
   build-go-dev:
     docker:
-    - image: golang:1.12.7-stretch
+    - image: golang:1.12.12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     steps:
@@ -100,7 +100,7 @@ jobs:
         root: .
   test-ui:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
@@ -138,7 +138,7 @@ jobs:
         path: ui/test-results
   test-ui-browserstack:
     docker:
-    - image: node:10-stretch
+    - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /src
     resource_class: medium+
@@ -210,7 +210,7 @@ jobs:
             VAULT_ACC= \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=40m \
+              -timeout=60m \
               -parallel=20 \
                \
               ${package_names}
@@ -223,7 +223,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.7
+    - GO_VERSION: 1.12.12
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
@@ -280,7 +280,7 @@ jobs:
             VAULT_ACC= \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=40m \
+              -timeout=60m \
               -parallel=20 \
               -race \
               ${package_names}
@@ -293,7 +293,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: null
-    - GO_VERSION: 1.12.7
+    - GO_VERSION: 1.12.12
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
   ci:
@@ -378,7 +378,7 @@ workflows:
 #             VAULT_ACC= \\
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
-#               -timeout=40m \\
+#               -timeout=60m \\
 #               -parallel=20 \\
 #               << parameters.extra_flags >> \\
 #               ${package_names}
@@ -407,21 +407,21 @@ workflows:
 # executors:
 #   go:
 #     docker:
-#     - image: golang:1.12.7-stretch
+#     - image: golang:1.12.12-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 #   go-machine:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: null
-#       GO_VERSION: 1.12.7
+#       GO_VERSION: 1.12.12
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: ~/src
 #   node:
 #     docker:
-#     - image: node:10-stretch
+#     - image: node:10-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /src
 # jobs:
@@ -586,8 +586,8 @@ workflows:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
 #     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
 #   images:
-#     go: golang:1.12.7-stretch
-#     node: node:10-stretch
+#     go: golang:1.12.12-buster
+#     node: node:10-buster
 # version: 2.1
 # workflows:
 #   ci:

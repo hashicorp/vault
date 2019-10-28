@@ -29,6 +29,7 @@ func TestSysAuth(t *testing.T) {
 			"token/": map[string]interface{}{
 				"description": "token based credentials",
 				"type":        "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -43,6 +44,7 @@ func TestSysAuth(t *testing.T) {
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -103,6 +105,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"foo/": map[string]interface{}{
 				"description": "foo",
 				"type":        "noop",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -116,6 +119,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"token/": map[string]interface{}{
 				"description": "token based credentials",
 				"type":        "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -130,6 +134,7 @@ func TestSysEnableAuth(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "noop",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -143,6 +148,7 @@ func TestSysEnableAuth(t *testing.T) {
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -212,6 +218,7 @@ func TestSysDisableAuth(t *testing.T) {
 				},
 				"description": "token based credentials",
 				"type":        "token",
+				"external_entropy_access": false,
 				"local":       false,
 				"seal_wrap":   false,
 				"options":     interface{}(nil),
@@ -226,6 +233,7 @@ func TestSysDisableAuth(t *testing.T) {
 			},
 			"description": "token based credentials",
 			"type":        "token",
+			"external_entropy_access": false,
 			"local":       false,
 			"seal_wrap":   false,
 			"options":     interface{}(nil),
