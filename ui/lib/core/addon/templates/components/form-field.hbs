@@ -89,6 +89,7 @@
 {{else if (eq attr.options.editType "file")}}
   {{text-file
     index=""
+    helpText=attr.options.helpText
     file=file
     onChange=(action "setFile")
     warning=attr.options.warning

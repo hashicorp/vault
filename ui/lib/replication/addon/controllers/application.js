@@ -2,22 +2,23 @@ import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
+import { copy } from 'ember-copy';
+import { resolve } from 'rsvp';
 
 const DEFAULTS = {
   token: null,
   id: null,
   loading: false,
   errors: [],
-  showFilterConfig: false,
   primary_api_addr: null,
   primary_cluster_addr: null,
   filterConfig: {
-    mode: 'whitelist',
+    mode: null,
     paths: [],
   },
 };
 
-export default Controller.extend(DEFAULTS, {
+export default Controller.extend(copy(DEFAULTS, true), {
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
@@ -34,12 +35,16 @@ export default Controller.extend(DEFAULTS, {
     const config = this.get('filterConfig');
     const id = this.get('id');
     config.id = id;
-    const configRecord = this.get('store').createRecord('mount-filter-config', config);
+    // if there is no mode, then they don't want to filter, so we don't save a filter config
+    if (!config.mode) {
+      return resolve();
+    }
+    const configRecord = this.get('store').createRecord('path-filter-config', config);
     return configRecord.save().catch(e => this.submitError(e));
   },
 
   reset() {
-    this.setProperties(DEFAULTS);
+    this.setProperties(copy(DEFAULTS, true));
   },
 
   submitSuccess(resp, action) {
@@ -66,13 +71,8 @@ export default Controller.extend(DEFAULTS, {
 
   submitHandler(action, clusterMode, data, event) {
     const replicationMode = this.get('replicationMode');
-    let saveFilterConfig;
     if (event && event.preventDefault) {
       event.preventDefault();
-    }
-    if (data && isPresent(data.saveFilterConfig)) {
-      saveFilterConfig = data.saveFilterConfig;
-      delete data.saveFilterConfig;
     }
     this.setProperties({
       loading: true,
@@ -93,13 +93,9 @@ export default Controller.extend(DEFAULTS, {
       .replicationAction(action, replicationMode, clusterMode, data)
       .then(
         resp => {
-          if (saveFilterConfig) {
-            return this.saveFilterConfig().then(() => {
-              return this.submitSuccess(resp, action, clusterMode);
-            });
-          } else {
+          return this.saveFilterConfig().then(() => {
             return this.submitSuccess(resp, action, clusterMode);
-          }
+          });
         },
         (...args) => this.submitError(...args)
       );

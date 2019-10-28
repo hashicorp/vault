@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	jose "gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2"
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -35,7 +34,7 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 	var keyParams certutil.ClusterKeyParams
 
 	if entry == nil {
-		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		key, err := ecdsa.GenerateKey(elliptic.P521(), c.secureRandomReader)
 		if err != nil {
 			return errwrap.Wrapf("failed to generate wrapping key: {{err}}", err)
 		}

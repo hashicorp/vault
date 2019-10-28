@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/NYTimes/gziphandler"
 	"io"
 	"io/ioutil"
 	"net"
@@ -16,11 +17,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -110,39 +110,60 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
-	mux.Handle("/v1/sys/init", handleSysInit(core))
-	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
-	mux.Handle("/v1/sys/seal", handleSysSeal(core))
-	mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
-	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/leader", handleSysLeader(core))
-	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy)))
-	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
-	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-	mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
-	mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
-	for _, path := range injectDataIntoTopRoutes {
-		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
-	}
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
-	if core.UIEnabled() == true {
-		if uiBuiltIn {
-			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
-			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
-		} else {
-			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
-		}
-		mux.Handle("/ui", handleUIRedirect())
-		mux.Handle("/", handleUIRedirect())
-	}
 
-	additionalRoutes(mux, core)
+	switch {
+	case props.RecoveryMode:
+		raw := vault.NewRawBackend(core)
+		strategy := vault.GenerateRecoveryTokenStrategy(props.RecoveryToken)
+		mux.Handle("/v1/sys/raw/", handleLogicalRecovery(raw, props.RecoveryToken))
+		mux.Handle("/v1/sys/generate-recovery-token/attempt", handleSysGenerateRootAttempt(core, strategy))
+		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
+	default:
+		// Handle non-forwarded paths
+		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+
+		mux.Handle("/v1/sys/init", handleSysInit(core))
+		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal", handleSysSeal(core))
+		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
+		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
+		mux.Handle("/v1/sys/leader", handleSysLeader(core))
+		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy)))
+		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
+		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
+		for _, path := range injectDataIntoTopRoutes {
+			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
+		}
+		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
+		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
+		if core.UIEnabled() == true {
+			if uiBuiltIn {
+				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			} else {
+				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
+			}
+			mux.Handle("/ui", handleUIRedirect())
+			mux.Handle("/", handleUIRedirect())
+
+		}
+
+		// Register metrics path without authentication if enabled
+		if props.UnauthenticatedMetricsAccess {
+			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
+		}
+
+		additionalRoutes(mux, core)
+	}
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
@@ -478,7 +499,7 @@ func parseQuery(values url.Values) map[string]interface{} {
 	return nil
 }
 
-func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
+func parseRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -494,7 +515,7 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 		}
 	}
 	var origBody io.ReadWriter
-	if core.PerfStandby() {
+	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)

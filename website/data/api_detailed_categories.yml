@@ -57,6 +57,7 @@
     - api/system/control-group.html
     - api/system/generate-root.html
     - api/system/health.html
+    - api/system/host-info.html
     - api/system/init.html
     - api/system/internal-specs-openapi.html
     - api/system/internal-ui-mounts.html
@@ -71,6 +72,7 @@
     - api/system/plugins-catalog.html
     - api/system/policy.html
     - api/system/policies.html
+    - api/system/pprof.html
     - api/system/raw.html
     - api/system/rekey.html
     - api/system/rekey-recovery-key.html
