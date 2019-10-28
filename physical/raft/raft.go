@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/armon/go-metrics"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -28,6 +28,12 @@ import (
 
 	"github.com/hashicorp/vault/sdk/physical"
 )
+
+// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
+const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
+
+// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
+const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
@@ -116,9 +122,13 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
+	path := os.Getenv(EnvVaultRaftPath)
+	if path == "" {
+		pathFromConfig, ok := conf["path"]
+		if !ok {
+			return nil, fmt.Errorf("'path' must be set")
+		}
+		path = pathFromConfig
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
@@ -163,8 +173,15 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var localID string
 	{
-		// Determine the local node ID
-		localID = conf["node_id"]
+		// Determine the local node ID from the environment.
+		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
+			localID = raftNodeID
+		}
+
+		// If not set in the environment check the configuration file.
+		if len(localID) == 0 {
+			localID = conf["node_id"]
+		}
 
 		// If not set in the config check the "node-id" file.
 		if len(localID) == 0 {
@@ -180,7 +197,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			}
 		}
 
-		// If the file didn't exist generate a UUID and persist it to tne
+		// If all of the above fails generate a UUID and persist it to the
 		// "node-id" file.
 		if len(localID) == 0 {
 			id, err := uuid.GenerateUUID()
