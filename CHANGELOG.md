@@ -49,6 +49,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api: Allow setting a function to control retry behavior [GH-7331]
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * auth/jwt: Bound claims may now contain boolean values [JWT-73]
