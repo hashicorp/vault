@@ -47,7 +47,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   test('replication', async function(assert) {
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
-    const mountType = 'kv';
     let mountPath;
 
     await visit('/vault/replication');
