@@ -39,11 +39,11 @@ type GenerateRootStrategy interface {
 type generateStandardRootToken struct{}
 
 func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	_, err := c.unsealKeyToMasterKey(ctx, combinedKey)
+	masterKey, err := c.unsealKeyToMasterKey(ctx, combinedKey)
 	if err != nil {
 		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
 	}
-	if err := c.barrier.VerifyMaster(combinedKey); err != nil {
+	if err := c.barrier.VerifyMaster(masterKey); err != nil {
 		return errwrap.Wrapf("master key verification failed: {{err}}", err)
 	}
 

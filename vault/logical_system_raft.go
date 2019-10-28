@@ -96,15 +96,15 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-configuration"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-configuration"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleStorageRaftSnapshotRead(),
-					Summary:  "Retruns a snapshot of the current state of vault.",
+					Summary:  "Returns a snapshot of the current state of vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleStorageRaftSnapshotWrite(false),
@@ -112,8 +112,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot-force",
@@ -124,8 +124,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
 		},
 	}
 }
@@ -436,8 +436,20 @@ var sysRaftHelp = map[string][2]string{
 		"Accepts an answer from the peer to be joined to the fact cluster.",
 		"",
 	},
+	"raft-configuration": {
+		"Returns the raft cluster configuration.",
+		"",
+	},
 	"raft-remove-peer": {
 		"Removes a peer from the raft cluster.",
+		"",
+	},
+	"raft-snapshot": {
+		"Restores and saves snapshots from the raft cluster.",
+		"",
+	},
+	"raft-snapshot-force": {
+		"Force restore a raft cluster snapshot",
 		"",
 	},
 }

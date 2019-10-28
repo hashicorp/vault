@@ -124,6 +124,8 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 }
 
 func testCountActiveTokens(t *testing.T, c *Core, root string, expectedServiceTokens int) {
+	t.Helper()
+
 	rootCtx := namespace.RootContext(nil)
 	resp, err := c.HandleRequest(rootCtx, &logical.Request{
 		ClientToken: root,
@@ -157,6 +159,9 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 		ClientToken: root,
 		Operation:   logical.UpdateOperation,
 		Path:        "create",
+		Data: map[string]interface{}{
+			"ttl": "1h",
+		},
 	}
 	tokens := make([]string, 10)
 	for i := 0; i < 10; i++ {
@@ -184,6 +189,8 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 }
 
 func testCountActiveEntities(t *testing.T, c *Core, root string, expectedEntities int) {
+	t.Helper()
+
 	rootCtx := namespace.RootContext(nil)
 	resp, err := c.HandleRequest(rootCtx, &logical.Request{
 		ClientToken: root,

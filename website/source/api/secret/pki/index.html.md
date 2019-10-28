@@ -523,7 +523,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/pki/intermediate/generate/internal
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/exported
 ```
 
 ```json
