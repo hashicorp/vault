@@ -38,6 +38,8 @@ github.com/Azure/go-autorest/autorest/validation
 github.com/Azure/go-autorest/autorest/adal
 github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/autorest/azure/cli
+# github.com/BurntSushi/toml v0.3.1
+github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v2.2.0+incompatible
 github.com/DataDog/datadog-go/statsd
 # github.com/Jeffail/gabs v1.1.1
@@ -284,7 +286,17 @@ github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/consul/api v1.0.1
+# github.com/hashicorp/consul-template v0.22.0
+github.com/hashicorp/consul-template/config
+github.com/hashicorp/consul-template/manager
+github.com/hashicorp/consul-template/signals
+github.com/hashicorp/consul-template/child
+github.com/hashicorp/consul-template/dependency
+github.com/hashicorp/consul-template/renderer
+github.com/hashicorp/consul-template/template
+github.com/hashicorp/consul-template/version
+github.com/hashicorp/consul-template/watch
+# github.com/hashicorp/consul/api v1.1.0
 github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -314,6 +326,7 @@ github.com/hashicorp/go-retryablehttp
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-sockaddr v1.0.2
 github.com/hashicorp/go-sockaddr
+github.com/hashicorp/go-sockaddr/template
 # github.com/hashicorp/go-syslog v1.0.0
 github.com/hashicorp/go-syslog
 # github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
@@ -341,7 +354,7 @@ github.com/hashicorp/nomad/api/contexts
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 github.com/hashicorp/raft-snapshot
-# github.com/hashicorp/serf v0.8.2
+# github.com/hashicorp/serf v0.8.3
 github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
 github.com/hashicorp/vault-plugin-auth-alicloud
@@ -420,6 +433,7 @@ github.com/hashicorp/vault/sdk/physical/file
 github.com/hashicorp/vault/sdk/physical/inmem
 github.com/hashicorp/vault/sdk/version
 github.com/hashicorp/vault/sdk/helper/cryptoutil
+github.com/hashicorp/vault/sdk/helper/pointerutil
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/helper/compressutil
@@ -488,6 +502,8 @@ github.com/lib/pq/scram
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.8
 github.com/mattn/go-isatty
+# github.com/mattn/go-shellwords v1.0.5
+github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
@@ -502,6 +518,8 @@ github.com/mitchellh/copystructure
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.0.0
 github.com/mitchellh/go-testing-interface
+# github.com/mitchellh/hashstructure v1.0.0
+github.com/mitchellh/hashstructure
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8

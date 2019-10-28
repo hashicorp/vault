@@ -105,7 +105,7 @@ func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { retur
 
 func (c *Core) perfStandbyCount() int { return 0 }
 
-func (c *Core) removePrefixFromFilteredPaths(context.Context, string) error {
+func (c *Core) removePathFromFilteredPaths(context.Context, string, string) error {
 	return nil
 }
 

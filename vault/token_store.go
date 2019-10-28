@@ -774,6 +774,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		metrics.IncrCounter([]string{"token", "create_root"}, 1)
+	}
 
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
