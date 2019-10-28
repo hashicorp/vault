@@ -1,5 +1,14 @@
 ## 1.3 (Unreleased)
 
+CHANGES:
+ * Cluster cipher suites: On its cluster port, Vault will no longer advertise
+   the full TLS 1.2 cipher suite list by default. Although this port is only
+   used for Vault-to-Vault communication and would always pick a strong cipher,
+   it could cause false flags on port scanners and other security utilities
+   that assumed insecure ciphers were being used. The previous behavior can be
+   achieved by setting the value of the (undocumented) `cluster_cipher_suites`
+   config flag to `tls12`.
+
 FEATURES:
 
  * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
@@ -47,9 +56,11 @@ IMPROVEMENTS:
  * core: Exit ScanView if context has been cancelled [GH-7419]
  * core: re-encrypt barrier and recovery keys if the unseal key is updated
    [GH-7493]
+ * core: Don't advertise the full set of TLS 1.2 cipher suites on the cluster
+   port, even though only strong ciphers were used [GH-7487]
  * core (enterprise): Add background seal re-wrap
  * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
-   access. [GH-7550]  
+   access. [GH-7550] 
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
@@ -97,6 +108,7 @@ BUG FIXES:
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
+ * secret/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
@@ -114,6 +126,7 @@ CHANGES:
    automatic region detection added to the CLI and Agent in 1.2 has been removed.
 
 IMPROVEMENTS:
+
   * cli: Ignore existing token during CLI login [GH-7508]
   * core: Log proxy settings from environment on startup [GH-7528]
   * core: Cache whether we've been initialized to reduce load on storage [GH-7549]
@@ -135,13 +148,13 @@ BUG FIXES:
    viewed in the UI [GH-7504]
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
-   
+
 ## 1.2.3 (September 12, 2019)
 
 FEATURES:
 
 * **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
-  storage, auto unseal, and authentication.  
+  storage, auto unseal, and authentication.
 
 IMPROVEMENTS:
 

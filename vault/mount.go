@@ -771,7 +771,7 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 }
 
 // Remount is used to remount a path at a new mount point.
-func (c *Core) remount(ctx context.Context, src, dst string) error {
+func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -810,7 +810,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, src, true); err != nil {
+	if err := c.taintMountEntry(ctx, src, updateStorage); err != nil {
 		return err
 	}
 
@@ -822,12 +822,13 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	if !c.IsDRSecondary() {
 		// Invoke the rollback manager a final time
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-		if err := c.rollback.Rollback(rCtx, src); err != nil {
-			return err
+		if c.rollback != nil {
+			if err := c.rollback.Rollback(rCtx, src); err != nil {
+				return err
+			}
 		}
 
-		entry := c.router.MatchingMountEntry(ctx, src)
-		if entry == nil {
+		if entry := c.router.MatchingMountEntry(ctx, src); entry == nil {
 			return fmt.Errorf("no matching mount at %q", src)
 		}
 
