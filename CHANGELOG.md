@@ -55,7 +55,7 @@ IMPROVEMENTS:
    thereby improving the performance and storage capacity.
  * replication (enterprise): Added more replication metrics
  * replication (enterprise): Reindex process now compares subpages for a more
-   accurate diffing process.
+   accurate indexing process.
  * replication (enterprise): Reindex API now accepts a new `skip_flush` parameter
    indicating all the changes should not be flushed while the tree is locked.
  * secrets/aws: The root config can now be read [GH-7245]
