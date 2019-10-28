@@ -105,7 +105,7 @@ func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { retur
 
 func (c *Core) perfStandbyCount() int { return 0 }
 
-func (c *Core) removePrefixFromFilteredPaths(context.Context, string) error {
+func (c *Core) removePathFromFilteredPaths(context.Context, string, string) error {
 	return nil
 }
 
@@ -122,3 +122,7 @@ func (c *Core) removeAllPerfStandbySecondaries() {}
 func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
 	return nil, cache.New(2*cluster.HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
 }
+
+func (c *Core) initSealsForMigration() {}
+
+func (c *Core) postSealMigration(ctx context.Context) error { return nil }

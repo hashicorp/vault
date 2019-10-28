@@ -1,0 +1,70 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="key-value-header breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          {{#link-to "vault.cluster.storage"}}
+            Raft Storage
+          {{/link-to}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Restore Snapshot
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<form {{action (perform this.restore this.file) on="submit"}}>
+  <MessageError @errors={{this.errors}} />
+
+  {{#if this.isUploading}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+    <AlertBanner
+      @type="warning"
+      @title="Uploading your file..."
+      @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
+      />
+    </div>
+    <div class="box is-fullwidth is-shadowless">
+    <button type="button" class="button" onclick={{action "cancelUpload"}}>
+      Cancel upload
+    </button>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <AlertBanner
+        @type="warning"
+        @title="This might take a while"
+        @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
+        />
+      <FileToArrayBuffer @onChange={{action (mut file)}} />
+      <div class="b-checkbox">
+        <input
+          type="checkbox"
+          id="force-restore"
+          class="styled"
+          checked={{this.forceRestore}}
+          onchange={{action
+            (mut this.forceRestore)
+            value="target.checked"
+          }}
+        />
+        <label for="force-restore" class="is-label">
+          Force restore
+        </label>
+        <p class="checkbox-help-text">
+        Bypass checks to ensure the AutoUnseal or Shamir keys are consistent with the snapshot data.
+        </p>
+      </div>
+    </div>
+    <FormSaveButtons
+      @saveButtonText="Restore"
+      @isSaving={{this.restore.isRunning}}
+      @cancelLinkParams={{array "vault.cluster.storage"}}
+    />
+  {{/if}}
+</form>

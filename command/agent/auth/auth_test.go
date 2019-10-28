@@ -87,7 +87,8 @@ consumption:
 	for {
 		select {
 		case <-ah.OutputCh:
-			// Nothing
+		case <-ah.TemplateTokenCh:
+		// Nothing
 		case <-time.After(stopTime.Sub(time.Now())):
 			if !closed {
 				cancelFunc()

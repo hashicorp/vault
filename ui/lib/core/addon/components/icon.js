@@ -7,7 +7,7 @@
  * <Icon @glyph="cancel-square-outline" />
  * ```
  * @param glyph=null {String} - The name of the SVG to render inline.
- * @param [size='m'] {String} - The size of the Icon, can be one of 's', 'm', 'l', 'xl', 'xxl'. The default is 'm'.
+ * @param [size='m'] {String} - The size of the Icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'.
  *
  */
 import Component from '@ember/component';
@@ -15,7 +15,7 @@ import { computed } from '@ember/object';
 import { assert } from '@ember/debug';
 import layout from '../templates/components/icon';
 
-const SIZES = ['s', 'm', 'l', 'xl', 'xxl'];
+const SIZES = ['s', 'm', 'l', 'xlm', 'xl', 'xxl'];
 
 export default Component.extend({
   tagName: '',

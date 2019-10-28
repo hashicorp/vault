@@ -21,6 +21,7 @@ func pathGroupsList(b *backend) *framework.Path {
 		HelpDescription: pathGroupHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Navigation: true,
+			ItemType:   "Group",
 		},
 	}
 }
@@ -49,7 +50,8 @@ func pathGroups(b *backend) *framework.Path {
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Create",
+			Action:   "Create",
+			ItemType: "Group",
 		},
 	}
 }

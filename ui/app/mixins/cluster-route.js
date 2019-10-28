@@ -38,9 +38,6 @@ export default Mixin.create({
       return this.transitionTo(targetRoute);
     }
 
-    if (transition.abort && targetRoute === this.router.currentRouteName) {
-      transition.abort();
-    }
     return RSVP.resolve();
   },
 

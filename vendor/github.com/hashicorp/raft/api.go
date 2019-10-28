@@ -234,7 +234,7 @@ func BootstrapCluster(conf *Config, logs LogStore, stable StableStore,
 		entry.Data = encodePeers(configuration, trans)
 	} else {
 		entry.Type = LogConfiguration
-		entry.Data = encodeConfiguration(configuration)
+		entry.Data = EncodeConfiguration(configuration)
 	}
 	if err := logs.StoreLog(entry); err != nil {
 		return fmt.Errorf("failed to append configuration entry to log: %v", err)
@@ -528,13 +528,14 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	for index := snapshotIndex + 1; index <= lastLog.Index; index++ {
 		var entry Log
 		if err := r.logs.GetLog(index, &entry); err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to get log at %d: %v", index, err))
+			r.logger.Error("failed to get log", "index", index, "error", err)
 			panic(err)
 		}
 		r.processConfigurationLogEntry(&entry)
 	}
-	r.logger.Info(fmt.Sprintf("Initial configuration (index=%d): %+v",
-		r.configurations.latestIndex, r.configurations.latest.Servers))
+	r.logger.Info("initial configuration",
+		"index", r.configurations.latestIndex,
+		"servers", hclog.Fmt("%+v", r.configurations.latest.Servers))
 
 	// Setup a heartbeat fast-path to avoid head-of-line
 	// blocking where possible. It MUST be safe for this
@@ -554,7 +555,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 func (r *Raft) restoreSnapshot() error {
 	snapshots, err := r.snapshots.List()
 	if err != nil {
-		r.logger.Error(fmt.Sprintf("Failed to list snapshots: %v", err))
+		r.logger.Error("failed to list snapshots", "error", err)
 		return err
 	}
 
@@ -563,7 +564,7 @@ func (r *Raft) restoreSnapshot() error {
 		if !r.conf.NoSnapshotRestoreOnStart {
 			_, source, err := r.snapshots.Open(snapshot.ID)
 			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
+				r.logger.Error("failed to open snapshot", "id", snapshot.ID, "error", err)
 				continue
 			}
 
@@ -571,11 +572,11 @@ func (r *Raft) restoreSnapshot() error {
 			// Close the source after the restore has completed
 			source.Close()
 			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
+				r.logger.Error("failed to restore snapshot", "id", snapshot.ID, "error", err)
 				continue
 			}
 
-			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
+			r.logger.Info("restored from snapshot", "id", snapshot.ID)
 		}
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
@@ -1013,7 +1014,7 @@ func (r *Raft) Stats() map[string]string {
 
 	future := r.GetConfiguration()
 	if err := future.Error(); err != nil {
-		r.logger.Warn(fmt.Sprintf("could not get configuration for Stats: %v", err))
+		r.logger.Warn("could not get configuration for stats", "error", err)
 	} else {
 		configuration := future.Configuration()
 		s["latest_configuration_index"] = toString(future.Index())
