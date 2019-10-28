@@ -53,7 +53,11 @@ IMPROVEMENTS:
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
- * replication (enterprise): added more replication metrics
+ * replication (enterprise): Added more replication metrics
+ * replication (enterprise): Reindex process now compares subpages for a more
+   accurate diffing process.
+ * replication (enterprise): Reindex API now accepts a new `skip_flush` parameter
+   indicating all the changes should not be flushed while the tree is locked.
  * secrets/aws: The root config can now be read [GH-7245]
  * secrets/aws: Role paths may now contain the '@' character [GH-7553]
  * secrets/database/cassandra: Add ability to skip verfication of connection [GH-7614]
