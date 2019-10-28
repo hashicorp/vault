@@ -1,5 +1,14 @@
 ## 1.3 (Unreleased)
 
+CHANGES:
+ * Cluster cipher suites: On its cluster port, Vault will no longer advertise
+   the full TLS 1.2 cipher suite list by default. Although this port is only
+   used for Vault-to-Vault communication and would always pick a strong cipher,
+   it could cause false flags on port scanners and other security utilities
+   that assumed insecure ciphers were being used. The previous behavior can be
+   achieved by setting the value of the (undocumented) `cluster_cipher_suites`
+   config flag to `tls12`.
+
 FEATURES:
 
  * **Vault Debug**: A new top-level subcommand, `debug`, is added that allows 
