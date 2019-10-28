@@ -374,7 +374,19 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 			return logical.CodedError(403, fmt.Sprintf("mount type of %q is not mountable", entry.Type))
 		}
 	}
-	return c.mountInternal(ctx, entry, MountTableUpdateStorage)
+
+	// Mount internally
+	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
@@ -443,8 +455,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
 
-	// Singleton mounts cannot be filtered on a per-secondary basis
-	// from replication
+	// Singleton mounts cannot be filtered manually on a per-secondary basis
+	// from replication.
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
 	}
@@ -725,6 +737,37 @@ func (c *Core) remountForce(ctx context.Context, path string) error {
 		return err
 	}
 	return c.mount(ctx, me)
+}
+
+// remountForceInternal takes a copy of the mount entry for the path and fully unmounts
+// and remounts the backend to pick up any changes, such as filtered paths.
+// Should be only used for internal usage.
+func (c *Core) remountForceInternal(ctx context.Context, path string, updateStorage bool) error {
+	me := c.router.MatchingMountEntry(ctx, path)
+	if me == nil {
+		return fmt.Errorf("cannot find mount for path %q", path)
+	}
+
+	me, err := me.Clone()
+	if err != nil {
+		return err
+	}
+
+	if err := c.unmountInternal(ctx, path, updateStorage); err != nil {
+		return err
+	}
+
+	// Mount internally
+	if err := c.mountInternal(ctx, me, updateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+		return err
+	}
+	return nil
 }
 
 // Remount is used to remount a path at a new mount point.
@@ -1068,7 +1111,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		view := NewBarrierView(c.barrier, barrierPath)
 
-		// Singleton mounts cannot be filtered on a per-secondary basis
+		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			addFilterablePath(c, barrierPath)

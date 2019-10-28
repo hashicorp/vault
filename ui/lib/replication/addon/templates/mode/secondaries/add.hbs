@@ -1,4 +1,4 @@
-<form {{action "onSubmit" "secondary-token" "primary" (hash ttl=ttl id=id saveFilterConfig=showFilterConfig) on="submit"}}>
+<form {{action "onSubmit" "secondary-token" "primary" (hash ttl=ttl id=id) on="submit"}}>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <h4 class="title is-5">
       Generate a secondary token
@@ -51,24 +51,11 @@
       </p>
     </div>
     {{#if (eq replicationMode "performance")}}
-      <div class="field">
-        {{toggle-button
-        toggleTarget=this
-        toggleAttr='showFilterConfig'
-        closedLabel='Configure performance mount filtering'
-        openLabel='Hide performance mount filtering config'
-        data-test-replication-secondary-token-options=true
-        }}
-        {{#if showFilterConfig}}
-          <div class="box">
-            {{mount-filter-config-list
-              config=filterConfig
-              mounts=mounts
-              id=id
-            }}
-          </div>
-        {{/if}}
-      </div>
+      <PathFilterConfigList
+        @paths={{paths}}
+        @config={{filterConfig}}
+        @id={{id}}
+      />
     {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">

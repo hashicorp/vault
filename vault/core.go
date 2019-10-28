@@ -17,11 +17,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-uuid"
+	multierror "github.com/hashicorp/go-multierror"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -42,7 +42,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 )
 
@@ -92,16 +92,17 @@ var (
 	manualStepDownSleepPeriod = 10 * time.Second
 
 	// Functions only in the Enterprise version
-	enterprisePostUnseal  = enterprisePostUnsealImpl
-	enterprisePreSeal     = enterprisePreSealImpl
-	startReplication      = startReplicationImpl
-	stopReplication       = stopReplicationImpl
-	LastWAL               = lastWALImpl
-	LastPerformanceWAL    = lastPerformanceWALImpl
-	PerformanceMerkleRoot = merkleRootImpl
-	DRMerkleRoot          = merkleRootImpl
-	LastRemoteWAL         = lastRemoteWALImpl
-	WaitUntilWALShipped   = waitUntilWALShippedImpl
+	enterprisePostUnseal         = enterprisePostUnsealImpl
+	enterprisePreSeal            = enterprisePreSealImpl
+	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
+	startReplication             = startReplicationImpl
+	stopReplication              = stopReplicationImpl
+	LastWAL                      = lastWALImpl
+	LastPerformanceWAL           = lastPerformanceWALImpl
+	PerformanceMerkleRoot        = merkleRootImpl
+	DRMerkleRoot                 = merkleRootImpl
+	LastRemoteWAL                = lastRemoteWALImpl
+	WaitUntilWALShipped          = waitUntilWALShippedImpl
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -1681,6 +1682,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadMounts(ctx); err != nil {
 		return err
 	}
+	if err := enterpriseSetupFilteredPaths(c); err != nil {
+		return err
+	}
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
@@ -1694,6 +1698,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 	if err := c.loadCredentials(ctx); err != nil {
+		return err
+	}
+	if err := enterpriseSetupFilteredPaths(c); err != nil {
 		return err
 	}
 	if err := c.setupCredentials(ctx); err != nil {
@@ -1878,6 +1885,10 @@ func enterprisePostUnsealImpl(c *Core) error {
 }
 
 func enterprisePreSealImpl(c *Core) error {
+	return nil
+}
+
+func enterpriseSetupFilteredPathsImpl(c *Core) error {
 	return nil
 }
 
