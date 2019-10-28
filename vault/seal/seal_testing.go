@@ -10,7 +10,7 @@ import (
 type TestSeal struct {
 	Type   string
 	secret []byte
-	keyId string
+	keyId  string
 }
 
 var _ Access = (*TestSeal)(nil)
@@ -19,7 +19,7 @@ func NewTestSeal(secret []byte) *TestSeal {
 	return &TestSeal{
 		Type:   Test,
 		secret: secret,
-		keyId: "static-key",
+		keyId:  "static-key",
 	}
 }
 
