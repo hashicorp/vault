@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"math/rand"
 	"time"
 
 	"github.com/hashicorp/vault-plugin-secrets-alicloud/clients"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathCreds() *framework.Path {
@@ -60,7 +60,7 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 		if err != nil {
 			return nil, err
 		}
-		assumeRoleResp, err := client.AssumeRole(generateUsername(req.DisplayName, roleName), role.RoleARN)
+		assumeRoleResp, err := client.AssumeRole(generateRoleSessionName(req.DisplayName, roleName), role.RoleARN)
 		if err != nil {
 			return nil, err
 		}
@@ -243,15 +243,24 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 
 // The max length of a username per AliCloud is 64.
 func generateUsername(displayName, roleName string) string {
-	username := fmt.Sprintf("%s-%s-", displayName, roleName)
+	return generateName(displayName, roleName, 64)
+}
 
-	// The time and random number take up to 15 more in length, so if the username
+// The max length of a role session name per AliCloud is 32.
+func generateRoleSessionName(displayName, roleName string) string {
+	return generateName(displayName, roleName, 32)
+}
+
+func generateName(displayName, roleName string, maxLength int) string {
+	name := fmt.Sprintf("%s-%s-", displayName, roleName)
+
+	// The time and random number take up to 15 more in length, so if the name
 	// is too long we need to trim it.
-	if len(username) > 49 {
-		username = username[:49]
+	if len(name) > maxLength-15 {
+		name = name[:maxLength-15]
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return fmt.Sprintf("%s%d-%d", username, time.Now().Unix(), r.Intn(10000))
+	return fmt.Sprintf("%s%d-%d", name, time.Now().Unix(), r.Intn(10000))
 }
 
 const pathCredsHelpSyn = `

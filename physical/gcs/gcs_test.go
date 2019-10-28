@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/storage"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/googleapi"
 )
 
@@ -55,6 +56,17 @@ func TestBackend(t *testing.T) {
 	}, logging.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Verify chunkSize is set correctly on the Backend
+	be := backend.(*Backend)
+	expectedChunkSize, err := strconv.Atoi(defaultChunkSize)
+	if err != nil {
+		t.Fatalf("failed to convert defaultChunkSize to int: %s", err)
+	}
+	expectedChunkSize = expectedChunkSize * 1024
+	if be.chunkSize != expectedChunkSize {
+		t.Fatalf("expected chunkSize to be %d. got=%d", expectedChunkSize, be.chunkSize)
 	}
 
 	physical.ExerciseBackend(t, backend)

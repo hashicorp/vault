@@ -14,12 +14,12 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical"
-	backendplugin "github.com/hashicorp/vault/logical/plugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 )
 
 var (
@@ -180,8 +180,12 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 // It returns a PluginRunner or an error if no plugin was found.
 func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
-	defer c.lock.RUnlock()
+	runner, err := c.get(ctx, name, pluginType)
+	c.lock.RUnlock()
+	return runner, err
+}
 
+func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
@@ -259,7 +263,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	}
 
 	if symAbs != c.directory {
-		return errors.New("can not execute files outside of configured plugin directory")
+		return errors.New("cannot execute files outside of configured plugin directory")
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type
@@ -348,7 +352,7 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	for _, plugin := range keys {
 
 		// Only list user-added plugins if they're of the given type.
-		if entry, err := c.Get(ctx, plugin, pluginType); err == nil && entry != nil {
+		if entry, err := c.get(ctx, plugin, pluginType); err == nil && entry != nil {
 
 			// Some keys will be prepended with the plugin type, but other ones won't.
 			// Users don't expect to see the plugin type, so we need to strip that here.

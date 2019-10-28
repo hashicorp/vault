@@ -10,10 +10,10 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/hclutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/hclutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -112,11 +112,12 @@ func (p *Policy) ShallowClone() *Policy {
 
 // PathRules represents a policy for a path in the namespace.
 type PathRules struct {
-	Path         string
-	Policy       string
-	Permissions  *ACLPermissions
-	IsPrefix     bool
-	Capabilities []string
+	Path                string
+	Policy              string
+	Permissions         *ACLPermissions
+	IsPrefix            bool
+	HasSegmentWildcards bool
+	Capabilities        []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
@@ -280,7 +281,8 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		// Check the path
 		if performTemplating {
-			_, templated, err := identity.PopulateString(&identity.PopulateStringInput{
+			_, templated, err := identity.PopulateString(identity.PopulateStringInput{
+				Mode:      identity.ACLTemplating,
 				String:    key,
 				Entity:    entity,
 				Groups:    groups,
@@ -291,7 +293,8 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			}
 			key = templated
 		} else {
-			hasTemplating, _, err := identity.PopulateString(&identity.PopulateStringInput{
+			hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
+				Mode:              identity.ACLTemplating,
 				ValidityCheckOnly: true,
 				String:            key,
 			})
@@ -338,10 +341,22 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Ensure we are using the full request path internally
 		pc.Path = result.namespace.Path + pc.Path
 
-		// Strip the glob character if found
+		if strings.Contains(pc.Path, "+*") {
+			return fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", pc.Path)
+		}
+
+		if pc.Path == "+" || strings.Count(pc.Path, "/+") > 0 || strings.HasPrefix(pc.Path, "+/") {
+			pc.HasSegmentWildcards = true
+		}
+
 		if strings.HasSuffix(pc.Path, "*") {
-			pc.Path = strings.TrimSuffix(pc.Path, "*")
-			pc.IsPrefix = true
+			// If there are segment wildcards, don't actually strip the
+			// trailing asterisk, but don't want to hit the default case
+			if !pc.HasSegmentWildcards {
+				// Strip the glob character if found
+				pc.Path = strings.TrimSuffix(pc.Path, "*")
+				pc.IsPrefix = true
+			}
 		}
 
 		// Map old-style policies into capabilities

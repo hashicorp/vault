@@ -11,9 +11,9 @@ description: |-
 
 This endpoint creates or updates an Entity.
 
-| Method   | Path                | Produces               |
-| :------- | :------------------ | :----------------------|
-| `POST`   | `/identity/entity`  | `200 application/json` |
+| Method   | Path                |
+| :------------------ | :----------------------|
+| `POST`   | `/identity/entity`  |
 
 ### Parameters
 
@@ -35,7 +35,7 @@ This endpoint creates or updates an Entity.
 ```json
 {
   "metadata": {
-  "organization": "hashicorp",
+    "organization": "hashicorp",
     "team": "vault"
   },
   "policies": ["eng-dev", "infra-dev"]
@@ -67,9 +67,9 @@ $ curl \
 
 This endpoint queries the entity by its identifier.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/identity/entity/id/:id`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/identity/entity/id/:id`    |
 
 ### Parameters
 
@@ -111,9 +111,9 @@ $ curl \
 
 This endpoint is used to update an existing entity.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/identity/entity/id/:id`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/identity/entity/id/:id`    |
 
 ### Parameters
 
@@ -134,7 +134,7 @@ This endpoint is used to update an existing entity.
 {
   "name":"updatedEntityName",
   "metadata": {
-  "organization": "hashi",
+    "organization": "hashicorp",
     "team": "nomad"
   },
   "policies": ["eng-developers", "infra-developers"]
@@ -166,9 +166,9 @@ $ curl \
 
 This endpoint deletes an entity and all its associated aliases.
 
-| Method     | Path                        | Produces               |
-| :--------- | :-------------------------- | :----------------------|
-| `DELETE`   | `/identity/entity/id/:id`   | `204 (empty body)`     |
+| Method     | Path                        |
+| :-------------------------- | :----------------------|
+| `DELETE`   | `/identity/entity/id/:id`   |
 
 ### Parameters
 
@@ -187,10 +187,10 @@ $ curl \
 
 This endpoint returns a list of available entities by their identifiers.
 
-| Method   | Path                            | Produces               |
-| :------- | :------------------------------ | :--------------------- |
-| `LIST`   | `/identity/entity/id`           | `200 application/json` |
-| `GET`    | `/identity/entity/id?list=true` | `200 application/json` |
+| Method   | Path                            |
+| :------------------------------ | :--------------------- |
+| `LIST`   | `/identity/entity/id`           |
+| `GET`    | `/identity/entity/id?list=true` |
 
 ### Sample Request
 
@@ -223,9 +223,9 @@ $ curl \
 
 This endpoint is used to create or update an entity by a given name.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `POST`   | `/identity/entity/name/:name`    | `200 application/json` |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `POST`   | `/identity/entity/name/:name`    |
 
 ### Parameters
 
@@ -243,7 +243,7 @@ This endpoint is used to create or update an entity by a given name.
 ```json
 {
   "metadata": {
-  "organization": "hashi",
+    "organization": "hashicorp",
     "team": "nomad"
   },
   "policies": ["eng-developers", "infra-developers"]
@@ -275,9 +275,9 @@ $ curl \
 
 This endpoint queries the entity by its name.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `GET`    | `/identity/entity/name/:name`    | `200 application/json` |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `GET`    | `/identity/entity/name/:name`    |
 
 ### Parameters
 
@@ -306,7 +306,7 @@ $ curl \
     "last_update_time": "2018-09-19T17:20:27.705389973Z",
     "merged_entity_ids": null,
     "metadata": {
-      "organization": "hashi",
+      "organization": "hashicorp",
       "team": "nomad"
     },
     "name": "testentityname",
@@ -323,9 +323,9 @@ $ curl \
 This endpoint deletes an entity and all its associated aliases, given the
 entity name.
 
-| Method     | Path                            | Produces               |
-| :--------- | :------------------------------ | :----------------------|
-| `DELETE`   | `/identity/entity/name/:name`   | `204 (empty body)`     |
+| Method     | Path                            |
+| :------------------------------ | :----------------------|
+| `DELETE`   | `/identity/entity/name/:name`   |
 
 ### Parameters
 
@@ -344,10 +344,10 @@ $ curl \
 
 This endpoint returns a list of available entities by their names.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `LIST`   | `/identity/entity/name`           | `200 application/json` |
-| `GET`    | `/identity/entity/name?list=true` | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `LIST`   | `/identity/entity/name`           |
+| `GET`    | `/identity/entity/name?list=true` |
 
 
 ### Sample Request
@@ -375,9 +375,9 @@ $ curl \
 
 This endpoint merges many entities into one entity.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/identity/entity/merge`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/identity/entity/merge`     |
 
 ### Parameters
 

@@ -1,0 +1,16 @@
+<PageHeader as |p|>
+  <p.top>
+    <KmipBreadcrumb @scope={{this.scope}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Create a role
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<EditFormKmipRole
+  @model={{model}}
+  @mode="create"
+  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
+  @cancelLinkParams={{array "scope.roles" this.scope}}
+/>

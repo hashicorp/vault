@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -163,19 +165,19 @@ func TestClientEnvSettings(t *testing.T) {
 	oldCAPath := os.Getenv(EnvVaultCAPath)
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
-	oldSkipVerify := os.Getenv(EnvVaultInsecure)
+	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
 	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
-	os.Setenv(EnvVaultInsecure, "true")
+	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
 	defer os.Setenv(EnvVaultCACert, oldCACert)
 	defer os.Setenv(EnvVaultCAPath, oldCAPath)
 	defer os.Setenv(EnvVaultClientCert, oldClientCert)
 	defer os.Setenv(EnvVaultClientKey, oldClientKey)
-	defer os.Setenv(EnvVaultInsecure, oldSkipVerify)
+	defer os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
 	defer os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
 
 	config := DefaultConfig()
@@ -195,6 +197,49 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 }
 
+func TestClientDeprecatedEnvSettings(t *testing.T) {
+	oldInsecure := os.Getenv(EnvVaultInsecure)
+	os.Setenv(EnvVaultInsecure, "true")
+	defer os.Setenv(EnvVaultInsecure, oldInsecure)
+
+	config := DefaultConfig()
+	if err := config.ReadEnvironment(); err != nil {
+		t.Fatalf("error reading environment: %v", err)
+	}
+
+	tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	if tlsConfig.InsecureSkipVerify != true {
+		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+}
+
+func TestClientEnvNamespace(t *testing.T) {
+	var seenNamespace string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	oldVaultNamespace := os.Getenv(EnvVaultNamespace)
+	defer os.Setenv(EnvVaultNamespace, oldVaultNamespace)
+	os.Setenv(EnvVaultNamespace, "test")
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if seenNamespace != "test" {
+		t.Fatalf("Bad: %s", seenNamespace)
+	}
+}
+
 func TestParsingRateAndBurst(t *testing.T) {
 	var (
 		correctFormat                    = "400:400"
@@ -208,7 +253,7 @@ func TestParsingRateAndBurst(t *testing.T) {
 		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
 	}
 	if expectedBurst != observedBurst {
-		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+		t.Errorf("Expected burst %v but found %v", expectedBurst, observedBurst)
 	}
 }
 
@@ -225,7 +270,7 @@ func TestParsingRateOnly(t *testing.T) {
 		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
 	}
 	if expectedBurst != observedBurst {
-		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+		t.Errorf("Expected burst %v but found %v", expectedBurst, observedBurst)
 	}
 }
 

@@ -1,4 +1,14 @@
-package yaml
+// Package yaml provides a wrapper around go-yaml designed to enable a better
+// way of handling YAML when marshaling to and from structs.
+//
+// In short, this package first converts YAML to JSON using go-yaml and then
+// uses json.Marshal and json.Unmarshal to convert to or from the struct. This
+// means that it effectively reuses the JSON struct tags as well as the custom
+// JSON methods MarshalJSON and UnmarshalJSON unlike go-yaml.
+//
+// See also http://ghodss.com/2014/the-right-way-to-handle-yaml-in-golang
+//
+package yaml  // import "github.com/ghodss/yaml"
 
 import (
 	"bytes"
@@ -33,8 +43,19 @@ type JSONOpt func(*json.Decoder) *json.Decoder
 // Unmarshal converts YAML to JSON then uses JSON to unmarshal into an object,
 // optionally configuring the behavior of the JSON unmarshal.
 func Unmarshal(y []byte, o interface{}, opts ...JSONOpt) error {
+	return unmarshal(yaml.Unmarshal, y, o, opts)
+}
+
+// UnmarshalStrict is like Unmarshal except that any mapping keys that are
+// duplicates will result in an error.
+// To also be strict about unknown fields, add the DisallowUnknownFields option.
+func UnmarshalStrict(y []byte, o interface{}, opts ...JSONOpt) error {
+	return unmarshal(yaml.UnmarshalStrict, y, o, opts)
+}
+
+func unmarshal(f func(in []byte, out interface{}) (err error), y []byte, o interface{}, opts []JSONOpt) error {
 	vo := reflect.ValueOf(o)
-	j, err := yamlToJSON(y, &vo, yaml.Unmarshal)
+	j, err := yamlToJSON(y, &vo, f)
 	if err != nil {
 		return fmt.Errorf("error converting YAML to JSON: %v", err)
 	}
@@ -113,7 +134,7 @@ func yamlToJSON(y []byte, jsonTarget *reflect.Value, yamlUnmarshal func([]byte, 
 	// YAML objects are not completely compatible with JSON objects (e.g. you
 	// can have non-string keys in YAML). So, convert the YAML-compatible object
 	// to a JSON-compatible object, failing with an error if irrecoverable
-	// incompatibilties happen along the way.
+	// incompatibilities happen along the way.
 	jsonObj, err := convertToJSONableObject(yamlObj, jsonTarget)
 	if err != nil {
 		return nil, err

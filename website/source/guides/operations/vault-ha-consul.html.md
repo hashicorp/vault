@@ -230,7 +230,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir -p /var/run/consul
 ExecStartPre=/bin/chown -R consul:consul /var/run/consul
 ExecStart=/usr/local/bin/consul agent \
-    -config-file=/usr/local/etc/consul/server_agent.json \
+    -config-file=/usr/local/etc/consul/client_agent.json \
     -pid-file=/var/run/consul/consul.pid
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
@@ -268,7 +268,7 @@ system and verify the status:
        Memory: 13.6M
           CPU: 0m 52.784s
        CGroup: /system.slice/consul.service
-               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/server_agent.json -pid-file=/var/run/consul/consul.pid
+               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
 
 After starting all Consul server agents, let’s check the Consul cluster status:
 
@@ -500,7 +500,7 @@ We're setting the following parameters for our `tcp` listener:
 This configuration allows for listening on all interfaces (such that a Vault
 command against the loopback address would succeed, for example).
 
-We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accesing Vault through a load balancer, for example).
+We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
 
 For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha.html#client-redirection) documentation for more information on client access patterns and their implications.
 

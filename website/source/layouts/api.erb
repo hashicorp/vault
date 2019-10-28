@@ -25,6 +25,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'elasticdb',
                   'influxdb',
                   'hanadb',
                   'mongodb',
@@ -36,6 +37,7 @@
               },
               { category: 'gcp' },
               { category: 'gcpkms' },
+              { category: 'kmip' },
               {
                 category: 'kv',
                 content: ['kv-v1', 'kv-v2']
@@ -46,6 +48,7 @@
                   'entity-alias',
                   'group',
                   'group-alias',
+                  'tokens',
                   'lookup'
                 ]
               },
@@ -65,15 +68,17 @@
           }, {
             category: 'auth',
             content: [
-            { category: 'approle' },
             { category: 'alicloud' },
+            { category: 'approle' },
             { category: 'aws' },
             { category: 'azure' },
+            { category: 'cf' },
             { category: 'github' },
             { category: 'gcp' },
             { category: 'jwt' },
             { category: 'kubernetes' },
             { category: 'ldap' },
+            { category: 'oci' },
             { category: 'okta' },
             { category: 'radius' },
             { category: 'cert' },
@@ -97,6 +102,7 @@
               'control-group',
               'generate-root',
               'health',
+              'host-info',
               'init',
               'internal-specs-openapi',
               'internal-ui-mounts',
@@ -104,7 +110,7 @@
               'leader',
               'leases',
               'license',
-              'namespaces',
+              'metrics',
               {
                 category: 'mfa',
                 content: [
@@ -115,10 +121,12 @@
                 ]
               },
               'mounts',
+              'namespaces',
               'plugins-reload-backend',
               'plugins-catalog',
               'policy',
               'policies',
+              'pprof',
               'raw',
               'rekey',
               'rekey-recovery-key',
@@ -133,7 +141,14 @@
               'rotate',
               'seal',
               'seal-status',
+              'sealwrap-rewrap',
               'step-down',
+              {
+                category: 'storage',
+                content: [
+                  'raft'
+                ]
+              },
               'tools',
               'unseal',
               'wrapping-lookup',

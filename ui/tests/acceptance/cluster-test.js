@@ -9,7 +9,7 @@ const consoleComponent = create(consoleClass);
 
 const tokenWithPolicy = async function(name, policy) {
   await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${policy}`,
+    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
     `write -field=client_token auth/token/create policies=${name}`,
   ]);
 
@@ -25,11 +25,11 @@ module('Acceptance | cluster', function(hooks) {
   });
 
   test('hides nav item if user does not have permission', async function(assert) {
-    const deny_policies_policy = `'
+    const deny_policies_policy = `
       path "sys/policies/*" {
         capabilities = ["deny"]
       },
-    '`;
+    `;
 
     const userToken = await tokenWithPolicy('hide-policies-nav', deny_policies_policy);
     await logout.visit();
@@ -39,27 +39,12 @@ module('Acceptance | cluster', function(hooks) {
     await logout.visit();
   });
 
-  test('shows nav item if user does have permission', async function(assert) {
-    const read_secrets_policy = `'
-      path "cubbyhole/" {
-        capabilities = ["read"]
-      },
-    '`;
-
-    const userToken = await tokenWithPolicy('show-secrets-nav', read_secrets_policy);
-    await logout.visit();
-    await authPage.login(userToken);
-
-    assert.dom('[data-test-navbar-item=secrets]').exists();
-    await logout.visit();
-  });
-
-  test('nav item links to first route that user has access to', async function(assert) {
-    const read_rgp_policy = `'
+  test('enterprise nav item links to first route that user has access to', async function(assert) {
+    const read_rgp_policy = `
       path "sys/policies/rgp" {
         capabilities = ["read"]
       },
-    '`;
+    `;
 
     const userToken = await tokenWithPolicy('show-policies-nav', read_rgp_policy);
     await logout.visit();

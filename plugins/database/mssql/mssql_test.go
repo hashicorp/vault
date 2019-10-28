@@ -9,58 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/ory/dockertest"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
-func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
-	if os.Getenv("MSSQL_URL") != "" {
-		return func() {}, os.Getenv("MSSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	ro := &dockertest.RunOptions{
-		Repository: "mcr.microsoft.com/mssql/server",
-		Tag:        "latest",
-		Env:        []string{"ACCEPT_EULA=Y", "SA_PASSWORD=pa$$w0rd!"},
-	}
-	resource, err := pool.RunWithOptions(ro)
-	if err != nil {
-		t.Fatalf("Could not start local mssql docker container: %s", err)
-	}
-
-	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
-	}
-
-	retURL = fmt.Sprintf("sqlserver://SA:pa$$w0rd!@localhost:%s", resource.GetPort("1433/tcp"))
-
-	// exponential backoff-retry
-	if retryErr := pool.Retry(func() error {
-		db, err := sql.Open("sqlserver", retURL)
-		if err != nil {
-			return err
-		}
-		return db.Ping()
-
-	}); retryErr != nil {
-		cleanup()
-		t.Fatalf("Could not connect to mssql docker container: %s", err)
-	}
-
-	return
-}
-
 func TestMSSQL_Initialize(t *testing.T) {
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -73,7 +29,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -94,8 +50,10 @@ func TestMSSQL_Initialize(t *testing.T) {
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -133,8 +91,10 @@ func TestMSSQL_CreateUser(t *testing.T) {
 }
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -152,7 +112,7 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !connProducer.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)
@@ -170,8 +130,10 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 }
 
 func TestMSSQL_RevokeUser(t *testing.T) {
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,

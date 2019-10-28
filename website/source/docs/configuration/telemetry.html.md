@@ -135,3 +135,70 @@ These `telemetry` parameters apply to
 - `dogstatsd_tags` `(string array: [])` - This provides a list of global tags
   that will be added to all telemetry packets sent to DogStatsD. It is a list
   of strings, where each string looks like "my_tag_name:my_tag_value".
+
+### `prometheus`
+
+These `telemetry` parameters apply to
+[prometheus](https://prometheus.io).
+
+* `prometheus_retention_time` `(string: "24h")` - Specifies the amount of time that
+  prometheus metrics are retained in memory. It is recommended to also enable the option
+  `disable_hostname` to avoid having prefixed metrics with hostname. Vault does not use the
+  default Prometheus path, so Prometheus must be configured as follows. Note that using
+  `?format=prometheus` in the path won't work as "?" will be escaped, so it must be specified
+  as a parameter. Additionally a Vault token is required to access /v1/sys/metrics. The prometheus
+  `bearer_token` or `bearer_token_file` options must be added to the scrape job.
+
+```
+metrics_path: "/v1/sys/metrics"
+params:
+  format: ['prometheus']
+bearer_token: your_vault_token_here
+
+```
+
+```hcl
+telemetry {
+  prometheus_retention_time = "30s",
+  disable_hostname = true
+}
+```
+
+### `stackdriver`
+
+These `telemetry` parameters apply to [Stackdriver Monitoring](https://cloud.google.com/monitoring/).
+
+The Stackdriver telemetry provider uses the official Google Cloud Golang SDK. This means
+it supports the common ways of
+[providing credentials to Google Cloud](https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application).
+
+To use this telemetry provider, the service account must have the following
+minimum scope(s):
+
+```text
+https://www.googleapis.com/auth/cloud-platform
+https://www.googleapis.com/auth/monitoring
+https://www.googleapis.com/auth/monitoring.write
+```
+
+And the following IAM role(s):
+
+```text
+roles/monitoring.metricWriter
+```
+
+*  `stackdriver_project_id` the Google Cloud ProjectID to send telemetry data to.
+*  `stackdriver_location` the GCP or AWS region of the monitored resource.
+*  `stackdriver_namespace` a namespace identifier for the telemetry data.
+
+It is recommended to also enable the option `disable_hostname` to avoid having prefixed
+metrics with hostname.
+
+```hcl
+telemetry {
+  stackdriver_project_id = "my-test-project"
+  stackdriver_location = "us-east1-a"
+  stackdriver_namespace = "vault-cluster-a"
+  disable_hostname = true
+}
+```

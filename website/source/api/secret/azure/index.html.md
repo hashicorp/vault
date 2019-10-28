@@ -23,9 +23,9 @@ Configures the credentials required for the plugin to perform API calls
 to Azure. These credentials will be used to query roles and create/delete
 service principals. Environment variables will override any parameters set in the config.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/azure/config`            | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/azure/config`            |
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
   This value can also be provided with the AZURE_SUBSCRIPTION_ID environment variable.
@@ -64,9 +64,9 @@ $ curl \
 
 Return the stored configuration, omitting `client_secret`.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/azure/config`            | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/azure/config`            |
 
 
 ### Sample Request
@@ -96,9 +96,9 @@ $ curl \
 
 Deletes the stored Azure configuration and credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/azure/config`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/azure/config`         |
 
 ### Sample Request
 
@@ -117,9 +117,9 @@ Create or update a Vault role. Either `application_object_id` or
 call to succeed. See the Azure secrets [roles docs][roles] for more
 information about roles.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/azure/roles/:name`     | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/azure/roles/:name`     |
 
 
 ### Parameters
@@ -127,6 +127,9 @@ information about roles.
 - `azure_roles` (`string: ""`) - List of Azure roles to be assigned to the generated service
    principal. The array must be in JSON format, properly escaped as a string. See [roles docs][roles]
    for details on role definition.
+- `azure_groups` (`string: ""`) - List of Azure groups that the generated service principal will be
+   assigned to. The array must be in JSON format, properly escaped as a string. See [groups docs][groups]
+   for more details.
 - `application_object_id` (`string: ""`) - Application Object ID for an existing service principal that will
    be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored. See
    [roles docs][roles] for details on role definition.
@@ -169,9 +172,9 @@ $ curl \
 
 Lists all of the roles that are registered with the plugin.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `LIST`   | `/azure/roles`           | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `LIST`   | `/azure/roles`           |
 
 
 ### Sample Request
@@ -200,9 +203,9 @@ $ curl \
 
 This endpoint generates a new service principal based on the named role.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/azure/creds/:name`     | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/azure/creds/:name`     |
 
 ### Parameters
 
@@ -235,3 +238,4 @@ See docs on how to [renew](/api/system/leases.html#renew-lease) and [revoke](/ap
 
 [docs]: /docs/secrets/azure/index.html
 [roles]: /docs/secrets/azure/index.html#roles
+[groups]: /docs/secrets/azure/index.html#azure-groups

@@ -12,8 +12,102 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, unsealKey, root := TestCoreUnsealed(t)
+
+	meGH := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(namespace.RootContext(nil), meGH)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alias := &identity.Alias{
+		ID:            "alias1",
+		CanonicalID:   "entity1",
+		MountType:     "github",
+		MountAccessor: meGH.Accessor,
+		Name:          "githubuser",
+	}
+	entity := &identity.Entity{
+		ID:       "entity1",
+		Name:     "name1",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias,
+		},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
+
+	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alias2 := &identity.Alias{
+		ID:            "alias2",
+		CanonicalID:   "entity2",
+		MountType:     "github",
+		MountAccessor: meGH.Accessor,
+		Name:          "GITHUBUSER",
+	}
+	entity2 := &identity.Entity{
+		ID:       "entity2",
+		Name:     "name2",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias2,
+		},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
+
+	// Persist the second entity directly without the regular flow. This will skip
+	// merging of these enties.
+	entity2Any, err := ptypes.MarshalAny(entity2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := &storagepacker.Item{
+		ID:      entity2.ID,
+		Message: entity2Any,
+	}
+
+	ctx := namespace.RootContext(nil)
+	if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal and ensure that unseal works
+	if err = c.Seal(root); err != nil {
+		t.Fatal(err)
+	}
+
+	var unsealed bool
+	for i := 0; i < 3; i++ {
+		unsealed, err = c.Unseal(unsealKey[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !unsealed {
+		t.Fatal("still sealed")
+	}
+}
 
 func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	// Enable GitHub auth and initialize
@@ -381,7 +475,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	c, unsealKey, root := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -409,54 +503,36 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		Aliases: []*identity.Alias{
 			alias,
 		},
+		NamespaceID: namespace.RootNamespaceID,
 	}
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
-	// Now add the alias to two entities, skipping all existing checking by
-	// writing directly
-	entityAny, err := ptypes.MarshalAny(entity)
+	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
+	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	item := &storagepacker.Item{
-		ID:      entity.ID,
-		Message: entityAny,
+
+	alias2 := &identity.Alias{
+		ID:            "alias2",
+		CanonicalID:   "entity2",
+		MountType:     "github",
+		MountAccessor: meGH.Accessor,
+		Name:          "githubuser",
 	}
-	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
-		t.Fatal(err)
+	entity2 := &identity.Entity{
+		ID:       "entity2",
+		Name:     "name2",
+		Policies: []string{"bar", "baz"},
+		Aliases: []*identity.Alias{
+			alias2,
+		},
+		NamespaceID: namespace.RootNamespaceID,
 	}
 
-	entity.ID = "entity2"
-	entity.Name = "name2"
-	entity.Policies = []string{"bar", "baz"}
-	alias.ID = "alias2"
-	alias.CanonicalID = "entity2"
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
-	entityAny, err = ptypes.MarshalAny(entity)
+	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
+
+	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity2, nil, true)
 	if err != nil {
 		t.Fatal(err)
-	}
-	item = &storagepacker.Item{
-		ID:      entity.ID,
-		Message: entityAny,
-	}
-	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
-		t.Fatal(err)
-	}
-
-	// Seal and unseal. If things are broken, we will now fail to unseal.
-	if err = c.Seal(root); err != nil {
-		t.Fatal(err)
-	}
-
-	var unsealed bool
-	for i := 0; i < 3; i++ {
-		unsealed, err = c.Unseal(unsealKey[i])
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	if !unsealed {
-		t.Fatal("still sealed")
 	}
 
 	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{

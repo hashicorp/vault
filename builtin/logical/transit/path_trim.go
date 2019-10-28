@@ -3,9 +3,9 @@ package transit
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathTrim() *framework.Path {
@@ -43,7 +43,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 			Storage: req.Storage,
 			Name:    name,
-		})
+		}, b.GetRandomReader())
 		if err != nil {
 			return nil, err
 		}

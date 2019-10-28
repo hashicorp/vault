@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -33,6 +33,7 @@ type UIConfig struct {
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
 	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'")
+	defaultHeaders.Set("Service-Worker-Allowed", "/")
 
 	return &UIConfig{
 		physicalStorage: physicalStorage,

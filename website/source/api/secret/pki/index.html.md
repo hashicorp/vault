@@ -55,8 +55,8 @@ endpoint, the CA certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/ca(/pem)`              | `200 application/binary` |
 
 ### Sample Request
@@ -80,8 +80,8 @@ structure and cannot be read by the Vault CLI; use `/pki/cert` for that.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/ca_chain`              | `200 application/binary` |
 
 ### Sample Request
@@ -104,9 +104,9 @@ This endpoint retrieves one of a selection of certificates. This endpoint return
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/cert/:serial`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/cert/:serial`          |
 
 ### Parameters
 
@@ -139,9 +139,9 @@ $ curl \
 
 This endpoint returns a list of the current certificates by serial number only.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/pki/certs`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/pki/certs`                 |
 
 ### Sample Request
 
@@ -185,9 +185,9 @@ if you have a signed intermediate CA certificate with a generated key (use the
 `/pki/intermediate/set-signed` endpoint for that). _If you have already set a
 certificate and key, they will be overridden._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/ca`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/ca`             |
 
 ### Parameters
 
@@ -217,9 +217,9 @@ JSON-formatted, with newlines replaced with `\n`, like so:
 This endpoint allows getting the duration for which the generated CRL should be
 marked valid.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/config/crl`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/config/crl`            |
 
 ### Sample Request
 
@@ -257,9 +257,9 @@ CRL for any request. If enabled, it will re-build the CRL.
   CRL generation will then result in all such certificates becoming a part of
   the CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/crl`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/crl`            |
 
 ### Parameters
 
@@ -288,9 +288,9 @@ $ curl \
 
 This endpoint fetches the URLs to be encoded in generated certificates.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/config/urls`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/config/urls`           |
 
 ### Sample Request
 
@@ -324,9 +324,9 @@ You can update any of the values at any time without affecting the other
 existing values. To remove the values, simply use a blank string as the
 parameter.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/urls`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/urls`           |
 
 ### Parameters
 
@@ -369,8 +369,8 @@ If `/pem` is added to the endpoint, the CRL is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/crl(/pem)`             | `200 application/binary` |
 
 ### Sample Request
@@ -393,9 +393,9 @@ to cut the size of the CRL if it contains a number of certificates
 that have now expired, but has not been rotated due to no further
 certificates being revoked.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/crl/rotate`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/crl/rotate`            |
 
 ### Sample Request
 
@@ -425,9 +425,9 @@ here. _This will overwrite any previously existing CA private key._
 This is mostly meant as a helper function, and not all possible parameters that
 can be set in a CSR are supported.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/intermediate/generate/:type` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/intermediate/generate/:type` |
 
 ### Parameters
 
@@ -455,12 +455,12 @@ can be set in a CSR are supported.
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
-- `format` `(string: "")` – Specifies the format for returned data. This can be
+- `format` `(string: "pem")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
   (if exported) and CSR, concatenated.
 
-- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+- `private_key_format` `(string: "der")` – Specifies the format for marshaling the
   private key. Defaults to `der` which will return either base64-encoded DER or
   PEM-encoded DER, depending on the value of `format`. The other option is
   `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
@@ -469,7 +469,7 @@ can be set in a CSR are supported.
   or `ec`.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
-  changed to a valid value if the `key_type` is `ec`.
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -504,6 +504,10 @@ can be set in a CSR are supported.
   subject field of the resulting CSR. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
+
 ### Sample Payload
 
 ```json
@@ -519,7 +523,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/pki/intermediate/generate/internal
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/exported
 ```
 
 ```json
@@ -541,12 +545,13 @@ $ curl \
 
 This endpoint allows submitting the signed CA certificate corresponding to a
 private key generated via `/pki/intermediate/generate`. The certificate should
-be submitted in PEM format; see the documentation for `/pki/config/ca` for some
+be submitted in PEM format; see the documentation for
+[/pki/config/ca](/api/secret/pki/index.html#submit-ca-information) for some
 hints on submitting.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/intermediate/set-signed` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/intermediate/set-signed` |
 
 ## Parameters
 
@@ -582,9 +587,9 @@ as well, so that only the root CA need be in a client's trust store.
 **The private key is _not_ stored. If you do not save the private key, you will
 need to request a new certificate.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/issue/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/issue/:name`           |
 
 ### Parameters
 
@@ -678,9 +683,9 @@ This endpoint revokes a certificate using its serial number. This is an
 alternative option to the standard method of revoking using Vault lease IDs. A
 successful revocation will rotate the CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/revoke`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/revoke`                |
 
 ### Parameters
 
@@ -725,9 +730,9 @@ multiple roles nearly any issuing policy can be accommodated. `server_flag`,
 requests a certificate that is not allowed by the CN policy in the role, the
 request is denied.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -812,9 +817,7 @@ request is denied.
   1024 bits for RSA keys).
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use for the
-  generated keys. This will need to be changed for `ec` keys. See
-  https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
-  lengths for `ec`.
+  generated keys. This will need to be changed for `ec` keys, e.g., 224 or 521.
 
 - `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
   Specifies the allowed key usage constraint on issued certificates. Valid 
@@ -827,6 +830,8 @@ request is denied.
   values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
@@ -865,6 +870,10 @@ request is denied.
 - `postal_code` `(string: "")` – Specifies the Postal Code values in the
   subject field of issued certificates. This is a comma-separated string or
   JSON array.
+
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
 
 - `generate_lease` `(bool: false)` – Specifies  if certificates issued/signed
   against this role will have Vault leases attached to them. Certificates can be
@@ -915,9 +924,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/roles/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -942,7 +951,7 @@ $ curl \
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
-    "allow_uri_sans": ["example.com","spiffe://*"],
+    "allowed_uri_sans": ["example.com","spiffe://*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -959,9 +968,9 @@ $ curl \
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/pki/roles`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/pki/roles`                 |
 
 ### Sample Request
 
@@ -991,9 +1000,9 @@ $ curl \
 This endpoint deletes the role definition. Deleting a role **does not**
 revoke certificates previously issued under this role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/pki/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -1024,9 +1033,9 @@ As of Vault 0.8.1, if a CA cert/key already exists, this function will not
 overwrite it; it must be deleted first. Previous versions of Vault would
 overwrite the existing cert/key with new values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/generate/:type`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/generate/:type`   |
 
 
 ### Parameters
@@ -1073,8 +1082,8 @@ overwrite the existing cert/key with new values.
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
 
-- `key_bits` `(int: 2048)` – Specifies the number of bits to use. Must be
-  changed to a valid value if the `key_type` is `ec`.
+- `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `max_path_length` `(int: -1)` – Specifies the maximum path length to encode in
   the generated certificate. `-1` means no limit. Unless the signing certificate
@@ -1120,6 +1129,10 @@ overwrite the existing cert/key with new values.
   subject field of the resulting certificate. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
+
 ### Sample Payload
 
 ```json
@@ -1160,9 +1173,9 @@ This endpoint deletes the current CA key (the old CA certificate will still be
 accessible for reading until a new certificate/key are generated or uploaded).
 _This endpoint requires sudo/root privileges._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/pki/root`   | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/pki/root`   |
 
 
 ### Sample Request
@@ -1182,9 +1195,9 @@ values set via `config/urls`. Values set in the CSR are ignored unless
 `use_csr_values` is set to true, in which case the values from the CSR are used
 verbatim.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/sign-intermediate` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/sign-intermediate` |
 
 ### Parameters
 
@@ -1273,6 +1286,9 @@ verbatim.
   subject field of the resulting certificate. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
 
 ### Sample Payload
 
@@ -1327,9 +1343,9 @@ endpoint, you most likely should be using a different endpoint (such as
 
 This endpoint requires `sudo` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/sign-self-issued` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/sign-self-issued` |
 
 ### Parameters
 
@@ -1376,9 +1392,9 @@ supplied parameters, subject to the restrictions contained in the role named in
 the endpoint. The issuing CA certificate is returned as well, so that only the
 root CA need be in a client's trust store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/sign/:name`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/sign/:name`            |
 
 ### Parameters
 
@@ -1458,9 +1474,9 @@ refuse to issue an intermediate CA certificate (see the
 **This is a potentially dangerous endpoint and only highly trusted users should
 have access.**
 
-| Method   | Path                                 | Produces               |
-| :------- | :----------------------------------- | :--------------------- |
-| `POST`   | `/pki/sign-verbatim(/:name)`         | `200 application/json` |
+| Method   | Path                                 |
+| :----------------------------------- | :--------------------- |
+| `POST`   | `/pki/sign-verbatim(/:name)`         |
 
 ### Parameters
 
@@ -1481,6 +1497,8 @@ have access.**
   values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.  
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
@@ -1533,9 +1551,9 @@ This endpoint allows tidying up the storage backend and/or CRL by removing
 certificates that have expired and are past a certain buffer period beyond their
 expiration time.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/tidy`                  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/tidy`                  |
 
 ### Parameters
 

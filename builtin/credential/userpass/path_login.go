@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -104,27 +104,29 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
-		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	if len(user.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: user.Policies,
-			Metadata: map[string]string{
-				"username": username,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       user.TTL,
-				MaxTTL:    user.MaxTTL,
-				Renewable: true,
-			},
-			Alias: &logical.Alias{
-				Name: username,
-			},
-			BoundCIDRs: user.BoundCIDRs,
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"username": username,
 		},
+		DisplayName: username,
+		Alias: &logical.Alias{
+			Name: username,
+		},
+	}
+	user.PopulateTokenAuth(auth)
+
+	return &logical.Response{
+		Auth: auth,
 	}, nil
 }
 
@@ -139,13 +141,14 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(user.TokenPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = user.TTL
-	resp.Auth.MaxTTL = user.MaxTTL
+	resp.Auth.Period = user.TokenPeriod
+	resp.Auth.TTL = user.TokenTTL
+	resp.Auth.MaxTTL = user.TokenMaxTTL
 	return resp, nil
 }
 

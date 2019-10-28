@@ -9,7 +9,8 @@ import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
+import listPage from 'vault/tests/pages/secrets/backend/list';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -23,11 +24,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
-    return logout.visit();
-  });
-
-  const POLICY = `'
+  const POLICY = `
     path "kv/foo" {
       capabilities = ["create", "read", "update", "delete", "list"]
       control_group = {
@@ -40,9 +37,26 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
          }
       }
     }
-  '`;
 
-  const AUTHORIZER_POLICY = `'
+    path "kv-v2-mount/data/foo" {
+      capabilities = ["create", "read", "update", "list"]
+      control_group = {
+        max_ttl = "24h"
+        factor "ops_manager" {
+            identity {
+                group_names = ["managers"]
+                approvals = 1
+            }
+         }
+      }
+    }
+
+    path "kv-v2-mount/*" {
+      capabilities = ["list"]
+    }
+  `;
+
+  const AUTHORIZER_POLICY = `
     path "sys/control-group/authorize" {
       capabilities = ["update"]
     }
@@ -50,7 +64,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     path "sys/control-group/request" {
       capabilities = ["update"]
     }
-  '`;
+  `;
 
   const ADMIN_USER = 'authorizer';
   const ADMIN_PASSWORD = 'test';
@@ -59,20 +73,23 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await visit('/vault/secrets');
     await consoleComponent.toggle();
     await consoleComponent.runCommands([
-      //enable kv mount and write some data
+      //enable kv-v1 mount and write a secret
       'write sys/mounts/kv type=kv',
       'write kv/foo bar=baz',
+
       //enable userpass, create user and associated entity
       'write sys/auth/userpass type=userpass',
       `write auth/userpass/users/${ADMIN_USER} password=${ADMIN_PASSWORD} policies=default`,
       `write identity/entity name=${ADMIN_USER} policies=test`,
       // write policies for control group + authorization
-      `write sys/policies/acl/kv-control-group policy=${POLICY}`,
-      `write sys/policies/acl/authorizer policy=${AUTHORIZER_POLICY}`,
+      `write sys/policies/acl/kv-control-group policy=${btoa(POLICY)}`,
+      `write sys/policies/acl/authorizer policy=${btoa(AUTHORIZER_POLICY)}`,
       // read out mount to get the accessor
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
+
     userpassAccessor = consoleComponent.lastTextOutput;
+
     await consoleComponent.runCommands([
       // lookup entity id for our authorizer
       `write -field=id identity/lookup/entity name=${ADMIN_USER}`,
@@ -86,14 +103,25 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       'write -field=client_token auth/token/create policies=kv-control-group',
     ]);
     context.userToken = consoleComponent.lastLogOutput;
-    await logout.visit();
+
     await authPage.login(context.userToken);
     return this;
   };
 
-  test('it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
+  const writeSecret = async function(backend, path, key, val) {
+    await listPage.visitRoot({ backend });
+    await listPage.create();
+    await editPage.createSecret(path, key, val);
+  };
+
+  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
+    await consoleComponent.runCommands([
+      'write sys/mounts/kv-v2-mount type=kv-v2',
+      'delete kv-v2-mount/metadata/foo',
+    ]);
+    await writeSecret('kv-v2-mount', 'foo', 'bar', 'baz');
     await setupControlGroup(this);
-    await visit('/vault/secrets/kv/show/foo');
+    await visit('/vault/secrets/kv-v2-mount/show/foo');
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.control-group-accessor',
@@ -112,7 +140,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await visit(url);
     accessor = controlGroupComponent.accessor;
     controlGroupToken = controlGroupComponent.token;
-    await logout.visit();
+    await authPage.logout();
 
     // log in as the admin, navigate to the accessor page,
     // and authorize the control group request
@@ -123,7 +151,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await visit(`/vault/access/control-groups/${accessor}`);
     await controlGroupComponent.authorize();
     assert.equal(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
-    await logout.visit();
+    await authPage.logout();
 
     await authPage.login(context.userToken);
 

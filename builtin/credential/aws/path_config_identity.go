@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathConfigIdentity(b *backend) *framework.Path {
+func (b *backend) pathConfigIdentity() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
 		Fields: map[string]*framework.FieldSchema{
@@ -25,9 +25,13 @@ func pathConfigIdentity(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathConfigIdentityRead,
-			logical.UpdateOperation: pathConfigIdentityUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathConfigIdentityHelpSyn,
@@ -59,7 +63,7 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 	return &entry, nil
 }
 
-func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := identityConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err

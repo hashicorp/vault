@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -581,4 +581,25 @@ func TestHTTP_Forwarding_HelpOperation(t *testing.T) {
 
 	testHelp(cores[0].Client)
 	testHelp(cores[1].Client)
+}
+
+func TestHTTP_Forwarding_LocalOnly(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+
+	vault.TestWaitActive(t, cores[0].Core)
+
+	testLocalOnly := func(client *api.Client) {
+		_, err := client.Logical().Read("sys/config/state/sanitized")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	}
+
+	testLocalOnly(cores[1].Client)
+	testLocalOnly(cores[2].Client)
 }

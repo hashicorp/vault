@@ -1,14 +1,15 @@
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   revokePrefix(prefix) {
-    let url = this.buildURL() + '/leases/revoke-prefix/' + prefix;
+    let url = this.buildURL() + '/leases/revoke-prefix/' + encodePath(prefix);
     url = url.replace(/\/$/, '');
     return this.ajax(url, 'PUT');
   },
 
   forceRevokePrefix(prefix) {
-    let url = this.buildURL() + '/leases/revoke-prefix/' + prefix;
+    let url = this.buildURL() + '/leases/revoke-prefix/' + encodePath(prefix);
     url = url.replace(/\/$/, '');
     return this.ajax(url, 'PUT');
   },
@@ -43,7 +44,7 @@ export default ApplicationAdapter.extend({
 
   query(store, type, query) {
     const prefix = query.prefix || '';
-    return this.ajax(this.buildURL() + '/leases/lookup/' + prefix, 'GET', {
+    return this.ajax(this.buildURL() + '/leases/lookup/' + encodePath(prefix), 'GET', {
       data: {
         list: true,
       },

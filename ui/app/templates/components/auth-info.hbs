@@ -1,3 +1,4 @@
+<Confirm as |c|>
 <div class="popup-menu-content">
   <div class="box">
     <div class="menu-label">
@@ -12,6 +13,16 @@
                 on {{date-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}" />
           </li>
         {{/if}}
+        <li class="action">
+          <button type="button" class="link" onclick={{action "restartGuide"}}>
+            Restart guide
+          </button>
+        </li>
+        <li class="action">
+          <CopyButton @clipboardText={{auth.currentToken}} class="link" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
+            Copy token
+          </CopyButton>
+        </li>
         {{#if (is-before (now interval=1000) auth.tokenExpirationDate)}}
           {{#if auth.authData.renewable}}
             <li class="action">
@@ -20,50 +31,30 @@
               </button>
             </li>
             <li class="action">
-              {{#confirm-action
-                onConfirmAction=(action "revokeToken")
-                confirmMessage=(concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?")
-                confirmButtonText="Revoke"
-                confirmButtonClasses="button is-primary"
-                buttonClasses="button link"
-                showConfirm=shouldRevoke
-                class=(if shouldRevoke "message is-block is-warning is-outline")
-                containerClasses="message-body is-block"
-                messageClasses="is-block"
-              }}
-                Revoke token
-              {{/confirm-action}}
+              <c.Message
+                @id={{get auth 'authData.displayName'}}
+                @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
+                @onConfirm={{action "revokeToken"}}
+                @message="You will not be able to log in again with this token."
+                @triggerText="Revoke token"
+                @confirmButtonText='Revoke'
+                />
             </li>
           {{else}}
             <li class="action text-right">
-              {{#confirm-action
-                onConfirmAction=(action "revokeToken")
-                confirmMessage=(concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?")
-                confirmButtonText="Revoke"
-                confirmButtonClasses="button is-primary"
-                buttonClasses="button link"
-                showConfirm=shouldRevoke
-                class=(if shouldRevoke "message is-block is-warning is-outline")
-                containerClasses="message-body is-block"
-                messageClasses="is-block"
-              }}
-                Revoke token
-              {{/confirm-action}}
+              <c.Message
+                @id={{get auth 'authData.displayName'}}
+                @title={{concat "Revoke " (get auth 'authData.displayName') "?"}}
+                @onConfirm={{action "revokeToken"}}
+                @message="You will not be able to log in again with this token."
+                @triggerText="Revoke token"
+                @confirmButtonText='Revoke'
+                />
             </li>
           {{/if}}
         {{/if}}
         <li class="action">
-          <CopyButton @clipboardText={{auth.currentToken}} class="link button" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
-            Copy token
-          </CopyButton>
-        </li>
-        <li class="action">
-          <button type="button" class="button link" onclick={{action "restartGuide"}}>
-            Restart guide
-          </button>
-        </li>
-        <li class="action">
-          {{#link-to "vault.cluster.logout" activeClusterName id="logout" invokeAction=onLinkClick}}
+          {{#link-to "vault.cluster.logout" activeClusterName id="logout" class="is-destroy" invokeAction=onLinkClick}}
             Sign out
           {{/link-to}}
         </li>
@@ -71,3 +62,4 @@
     </nav>
   </div>
 </div>
+</Confirm>

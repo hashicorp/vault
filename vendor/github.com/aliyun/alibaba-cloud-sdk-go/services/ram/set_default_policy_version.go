@@ -76,8 +76,8 @@ func (client *Client) SetDefaultPolicyVersionWithCallback(request *SetDefaultPol
 // SetDefaultPolicyVersionRequest is the request struct for api SetDefaultPolicyVersion
 type SetDefaultPolicyVersionRequest struct {
 	*requests.RpcRequest
-	PolicyName string `position:"Query" name:"PolicyName"`
 	VersionId  string `position:"Query" name:"VersionId"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // SetDefaultPolicyVersionResponse is the response struct for api SetDefaultPolicyVersion

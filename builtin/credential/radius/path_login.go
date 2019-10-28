@@ -11,9 +11,10 @@ import (
 	"layeh.com/radius"
 	. "layeh.com/radius/rfc2865"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -62,6 +63,25 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("radius backend not configured"), nil
+	}
+
+	// Check for a CIDR match.
+	if len(cfg.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
+	}
+
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
@@ -88,8 +108,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		}
 	}
 
-	resp.Auth = &logical.Auth{
-		Policies: policies,
+	auth := &logical.Auth{
 		Metadata: map[string]string{
 			"username": username,
 			"policies": strings.Join(policies, ","),
@@ -98,18 +117,28 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
 	}
+	cfg.PopulateTokenAuth(auth)
+
+	resp.Auth = auth
+	if policies != nil {
+		resp.Auth.Policies = append(resp.Auth.Policies, policies...)
+	}
+
 	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var err error
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("radius backend not configured"), nil
+	}
 
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
@@ -121,16 +150,22 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
+	finalPolicies := cfg.TokenPolicies
+	if loginPolicies != nil {
+		finalPolicies = append(finalPolicies, loginPolicies...)
+	}
 
-	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(finalPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
+	req.Auth.Period = cfg.TokenPeriod
+	req.Auth.TTL = cfg.TokenTTL
+	req.Auth.MaxTTL = cfg.TokenMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 
 func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
-
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, nil, err

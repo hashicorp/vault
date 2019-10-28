@@ -56,7 +56,7 @@
   padding-left: $spacing-xxs + $spacing-l;
 }
 
-.ember-power-select-options {
+div > .ember-power-select-options {
   background: $white;
   border: $base-border;
   box-shadow: $box-shadow-middle;
@@ -121,4 +121,10 @@
   .ember-power-select-options {
     animation: drop-fade-above 0.15s;
   }
+}
+
+.search-select .search-icon {
+  position: absolute;
+  width: 20px;
+  top: 5px;
 }

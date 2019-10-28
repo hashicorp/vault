@@ -1,0 +1,20 @@
+<form {{action (perform save model) on="submit"}}>
+  <MessageError @model={{model}} data-test-edit-form-error />
+  <div class="{{if this.includeBox 'box is-sideless is-fullwidth is-marginless'}}">
+    <NamespaceReminder @mode="save" />
+    {{#if (or model.fields model.attrs)}}
+      {{#each (or model.fields model.attrs) as |attr|}}
+        <FormField data-test-field @attr={{attr}} @model={{model}} @mode={{@mode}} />
+      {{/each}}
+    {{else if model.fieldGroups}}
+      <FormFieldGroups @model={{model}} @mode={{@mode}} />
+    {{/if}}
+  </div>
+  <FormSaveButtons
+    @isSaving={{this.save.isRunning}}
+    @saveButtonText={{this.saveButtonText}}
+    @canceLinkParams={{@canceLinkParams}}
+    @includeBox={{this.includeBox}}
+    @onCancel={{@onCancel}}
+    />
+</form>

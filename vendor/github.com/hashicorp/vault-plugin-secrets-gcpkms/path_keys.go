@@ -13,8 +13,8 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iterator"
 	"google.golang.org/genproto/protobuf/field_mask"
 
@@ -61,8 +61,9 @@ current primary key version, read from the path:
     $ vault read gcpkms/keys/my-key
 
 To delete a key from both Vault and Google Cloud KMS, perform a delete operation
-on the name of the key. This will disable all crypto key versions for this
-crypto key in Google Cloud KMS and delete Vault's reference to the crypto key.
+on the name of the key. This will disable automatic rotation of the key in
+Google Cloud KMS, disable all crypto key versions for this crypto key in Google
+Cloud KMS, and delete Vault's reference to the crypto key.
 
     $ vault delete gcpkms/keys/my-key
 
@@ -429,6 +430,20 @@ func (b *backend) pathKeysDelete(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
 		return nil, err
+	}
+
+	// Disable automatic key rotation
+	if _, err := kmsClient.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
+		CryptoKey: &kmspb.CryptoKey{
+			Name:             k.CryptoKeyID,
+			NextRotationTime: nil,
+			RotationSchedule: nil,
+		},
+		UpdateMask: &field_mask.FieldMask{
+			Paths: []string{"next_rotation_time", "rotation_period"},
+		},
+	}); err != nil {
+		return nil, errwrap.Wrapf("failed to disable rotation on crypto key: {{err}}", err)
 	}
 
 	// Collect the list of all key versions

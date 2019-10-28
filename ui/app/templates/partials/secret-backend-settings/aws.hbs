@@ -1,9 +1,9 @@
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') tagName="li"}}
         {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') data-test-aws-link="root-creds"}}
-          Dynamic IAM Root Credentials
+          Dynamic IAM root credentials
         {{/link-to}}
       {{/link-to}}
 
@@ -15,6 +15,7 @@
     </ul>
   </nav>
 </div>
+
 {{#if (eq tab "leases")}}
   <form
     {{action "save" "saveAWSLease" (hash lease=model.lease lease_max=model.leaseMax) on="submit"}}
@@ -49,16 +50,16 @@
 
     <div class="field">
       <label for="access" class="is-label">
-        Access Key
+        Access key
       </label>
       <div class="control">
-        {{input type="text" id="access" name="access" class="input" autocomplete="off" value=accessKey data-test-aws-input="accessKey"}}
+        {{input type="text" id="access" name="access" class="input" autocomplete="off" spellcheck="false" value=accessKey data-test-aws-input="accessKey"}}
       </div>
     </div>
 
     <div class="field">
       <label for="secret" class="is-label">
-        Secret Key
+        Secret key
       </label>
       <div class="control">
         {{input type="password" id="secret" name="secret" class="input" value=secretKey data-test-aws-input="secretKey"}}
@@ -95,7 +96,7 @@
         </div>
         <div class="field">
           <label for="iam" class="is-label">
-            IAM Endpoint
+            IAM endpoint
           </label>
           <div class="control">
             {{input type="text" id="iam" name="iam" class="input" value=iamEndpoint}}
@@ -103,7 +104,7 @@
         </div>
         <div class="field">
           <label for="sts" class="is-label">
-            STS Endpoint
+            STS endpoint
           </label>
           <div class="control">
             {{input type="text" id="sts" name="sts" class="input" value=stsEndpoint}}

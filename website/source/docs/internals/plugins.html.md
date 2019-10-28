@@ -33,9 +33,9 @@ share the same memory space as Vault and therefore can only access the
 interfaces and arguments given to it. This also means a crash in a plugin can not
 crash the entirety of Vault.
 
-It is possible to enable a custom plugin with a name that's identical to a 
+It is possible to enable a custom plugin with a name that's identical to a
 built-in plugin. In such a situation, Vault will always choose the custom plugin
-when enabling it. 
+when enabling it.
 
 ## Plugin Communication
 Vault creates a mutually authenticated TLS connection for communication with the
@@ -62,7 +62,8 @@ plugin directory and the plugin catalog entry.
 ### Plugin Directory
 The plugin directory is a configuration option of Vault, and can be specified in
 the [configuration file](https://www.vaultproject.io/docs/configuration/index.html).
-This setting specifies a directory that all plugin binaries must live. A plugin
+This setting specifies a directory in which all plugin binaries must live;
+_this value cannot be a symbolic link_. A plugin
 can not be added to Vault unless it exists in the plugin directory. There is no
 default for this configuration option, and if it is not set plugins can not be
 added to Vault.
@@ -128,20 +129,33 @@ package main
 import (
 	"os"
 
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/plugins"
+	myPlugin "your/plugin/import/path"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func main() {
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
-	flags.Parse(os.Args)
+	flags.Parse(os.Args[1:])
 
-	plugins.Serve(New().(MyPlugin), apiClientMeta.GetTLSConfig())
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
+	err := plugin.Serve(&plugin.ServeOpts{
+		BackendFactoryFunc: myPlugin.Factory,
+		TLSProviderFunc:    tlsProviderFunc,
+	})
+	if err != nil {
+		logger := hclog.New(&hclog.LoggerOptions{})
+
+		logger.Error("plugin shutting down", "error", err)
+		os.Exit(1)
+	}
 }
 ```
 
-And that's basically it! You would just need to change MyPlugin to your actual
-plugin.
+And that's basically it! You would just need to change `myPlugin` to your actual
+plugin. For more information on how to register and enable your plugin, check out the [Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends) tutorial.
 
 [api_addr]: /docs/configuration/index.html#api_addr

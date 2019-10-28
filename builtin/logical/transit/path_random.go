@@ -8,9 +8,11 @@ import (
 	"strconv"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const maxBytes = 128 * 1024
 
 func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
@@ -59,6 +61,10 @@ func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *
 
 	if bytes < 1 {
 		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
+	}
+
+	if bytes > maxBytes {
+		return logical.ErrorResponse(`"bytes" should be less than %s`, maxBytes), nil
 	}
 
 	switch format {

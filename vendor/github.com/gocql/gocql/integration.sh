@@ -74,6 +74,7 @@ function run_tests() {
 		go test -run=TestAuthentication -tags "integration gocql_debug" -timeout=15s -runauth $args
 	else
 		sleep 1s
+		go test -tags "cassandra gocql_debug" -timeout=5m -race $args
 		go test -tags "integration gocql_debug" -timeout=5m -race $args
 
 		ccm clear

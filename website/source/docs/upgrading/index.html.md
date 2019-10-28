@@ -14,10 +14,23 @@ These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
 found in the sidebar._
 
-**Always** back up your data before upgrading! Vault does not make
-backwards-compatibility guarantees for its data store. If you need to roll back
-to a previous version of Vault, it is always a good idea to roll back your data
-store as well.
+!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+make backward-compatibility guarantees for its data store. Simply replacing the
+newly-installed Vault binary with the previous version will not cleanly
+downgrade Vault, as upgrades may perform changes to the underlying data
+structure that make the data incompatible with a downgrade. If you need to roll
+back to a previous version of Vault, you should roll back your data store as
+well.
+
+## Testing the Upgrade
+
+It's always a good idea to try to ensure that the upgrade will be successful in
+your environment. The ideal way to do this is to take a snapshot of your data
+and load it into a test cluster. However, if you are issuing secrets to third
+party resources (cloud credentials, database credentials, etc.) ensure that you
+do not allow external network connectivity during testing, in case credentials
+expire. This prevents the test cluster from trying to revoke these resources
+along with the non-test cluster.
 
 ## Non-HA Installations
 
@@ -81,6 +94,9 @@ upgrade notes which are found in the navigation menu for this documentation.
 
 Upgrading installations of Vault which participate in [Enterprise Replication](/docs/enterprise/replication/index.html) requires the following basic order of operations:
 
-- **Upgrade the replication secondary instances first** using appropriate guidance from the previous sections depending on whether each secondary instance is Non-HA or HA
+- **Upgrade the replication secondary instances first** using appropriate
+  guidance from the previous sections depending on whether each secondary
+  instance is Non-HA or HA
 - Verify functionality of each secondary instance after upgrading
-- When satisfied with functionality of upgraded secondary instances, upgrade the primary instance
+- When satisfied with functionality of upgraded secondary instances, upgrade
+  the primary instance

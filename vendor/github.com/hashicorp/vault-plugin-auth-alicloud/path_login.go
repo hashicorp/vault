@@ -13,9 +13,9 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -84,7 +84,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	roleNameIfc, ok := data.GetOk("role")
 	if ok {
 		roleName = roleNameIfc.(string)
-	} else {
+	}
+	if roleName == "" {
 		roleName = parsedARN.RoleName
 	}
 
@@ -96,37 +97,41 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		return nil, fmt.Errorf("entry for role %s not found", parsedARN.RoleName)
 	}
 
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
-		return nil, errors.New("login request originated from invalid CIDR")
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
+
 	if !parsedARN.IsMemberOf(role.ARN) {
 		return nil, errors.New("the caller's arn does not match the role's arn")
 	}
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Period:   role.Period,
-			Policies: role.Policies,
-			Metadata: map[string]string{
-				"account_id":    callerIdentity.AccountId,
-				"user_id":       callerIdentity.UserId,
-				"role_id":       callerIdentity.RoleId,
-				"arn":           callerIdentity.Arn,
-				"identity_type": callerIdentity.IdentityType,
-				"principal_id":  callerIdentity.PrincipalId,
-				"request_id":    callerIdentity.RequestId,
-				"role_name":     roleName,
-			},
-			DisplayName: callerIdentity.PrincipalId,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: callerIdentity.PrincipalId,
-			},
-			BoundCIDRs: role.BoundCIDRs,
+
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"account_id":    callerIdentity.AccountId,
+			"user_id":       callerIdentity.UserId,
+			"role_id":       callerIdentity.RoleId,
+			"arn":           callerIdentity.Arn,
+			"identity_type": callerIdentity.IdentityType,
+			"principal_id":  callerIdentity.PrincipalId,
+			"request_id":    callerIdentity.RequestId,
+			"role_name":     roleName,
 		},
+		DisplayName: callerIdentity.PrincipalId,
+		Alias: &logical.Alias{
+			Name: callerIdentity.PrincipalId,
+		},
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	return &logical.Response{
+		Auth: auth,
 	}, nil
 }
 
@@ -159,9 +164,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

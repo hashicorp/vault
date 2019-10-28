@@ -1,0 +1,27 @@
+sudo: required
+dist: xenial
+
+language: go
+
+go:
+  - "1.11"
+  - "1.10"
+  - "1.9"
+  - tip
+
+services:
+  - rabbitmq
+
+before_script:
+  - ./bin/ci/install_on_debian.sh
+  - ./bin/ci/before_build.sh
+
+script: make
+
+matrix:
+  allow_failures:
+    - go: tip
+
+notifications:
+  email:
+    - michael@rabbitmq.com

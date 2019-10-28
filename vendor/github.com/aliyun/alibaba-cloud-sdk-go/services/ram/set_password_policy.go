@@ -76,15 +76,15 @@ func (client *Client) SetPasswordPolicyWithCallback(request *SetPasswordPolicyRe
 // SetPasswordPolicyRequest is the request struct for api SetPasswordPolicy
 type SetPasswordPolicyRequest struct {
 	*requests.RpcRequest
+	RequireNumbers             requests.Boolean `position:"Query" name:"RequireNumbers"`
+	PasswordReusePrevention    requests.Integer `position:"Query" name:"PasswordReusePrevention"`
+	RequireUppercaseCharacters requests.Boolean `position:"Query" name:"RequireUppercaseCharacters"`
+	MaxPasswordAge             requests.Integer `position:"Query" name:"MaxPasswordAge"`
+	MaxLoginAttemps            requests.Integer `position:"Query" name:"MaxLoginAttemps"`
+	HardExpiry                 requests.Boolean `position:"Query" name:"HardExpiry"`
 	MinimumPasswordLength      requests.Integer `position:"Query" name:"MinimumPasswordLength"`
 	RequireLowercaseCharacters requests.Boolean `position:"Query" name:"RequireLowercaseCharacters"`
-	RequireUppercaseCharacters requests.Boolean `position:"Query" name:"RequireUppercaseCharacters"`
-	RequireNumbers             requests.Boolean `position:"Query" name:"RequireNumbers"`
 	RequireSymbols             requests.Boolean `position:"Query" name:"RequireSymbols"`
-	HardExpiry                 requests.Boolean `position:"Query" name:"HardExpiry"`
-	MaxPasswordAge             requests.Integer `position:"Query" name:"MaxPasswordAge"`
-	PasswordReusePrevention    requests.Integer `position:"Query" name:"PasswordReusePrevention"`
-	MaxLoginAttemps            requests.Integer `position:"Query" name:"MaxLoginAttemps"`
 }
 
 // SetPasswordPolicyResponse is the response struct for api SetPasswordPolicy

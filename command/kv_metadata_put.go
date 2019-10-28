@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -15,9 +16,10 @@ var _ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
 type KVMetadataPutCommand struct {
 	*BaseCommand
 
-	flagMaxVersions int
-	flagCASRequired bool
-	testStdin       io.Reader // for tests
+	flagMaxVersions        int
+	flagCASRequired        bool
+	flagDeleteVersionAfter time.Duration
+	testStdin              io.Reader // for tests
 }
 
 func (c *KVMetadataPutCommand) Synopsis() string {
@@ -30,16 +32,20 @@ Usage: vault metadata kv put [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
-  
-  Create a key in the key-value store with no data: 
+
+  Create a key in the key-value store with no data:
 
       $ vault kv metadata put secret/foo
 
-  Set a max versions setting on the key: 
+  Set a max versions setting on the key:
 
       $ vault kv metadata put -max-versions=5 secret/foo
 
-  Require Check-and-Set for this key: 
+  Set delete-version-after on the key:
+
+      $ vault kv metadata put -delete-version-after=3h25m19s secret/foo
+
+  Require Check-and-Set for this key:
 
       $ vault kv metadata put -cas-required secret/foo
 
@@ -67,6 +73,19 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 		Target:  &c.flagCASRequired,
 		Default: false,
 		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "delete-version-after",
+		Target:     &c.flagDeleteVersionAfter,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: `Specifies the length of time before a version is deleted.
+		If not set, the backend's configured delete-version-after is used. Cannot be
+		greater than the backend's delete-version-after. The delete-version-after is
+		specified as a numeric string with a suffix like "30s" or
+		"3h25m19s".`,
 	})
 
 	return set
@@ -120,6 +139,10 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	data := map[string]interface{}{
 		"max_versions": c.flagMaxVersions,
 		"cas_required": c.flagCASRequired,
+	}
+
+	if c.flagDeleteVersionAfter > 0 {
+		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
 	secret, err := client.Logical().Write(path, data)

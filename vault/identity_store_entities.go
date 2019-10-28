@@ -10,11 +10,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -64,7 +66,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity"][1]),
 		},
 		{
-			Pattern: "entity/name/" + framework.GenericNameRegex("name"),
+			Pattern: "entity/name/(?P<name>.+)",
 			Fields:  entityPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleEntityUpdateCommon(),
@@ -155,7 +157,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false, true)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
@@ -261,7 +263,8 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 
 		// Prepare the response
 		respData := map[string]interface{}{
-			"id": entity.ID,
+			"id":   entity.ID,
+			"name": entity.Name,
 		}
 
 		var aliasIDs []string
@@ -335,6 +338,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	respData["merged_entity_ids"] = entity.MergedEntityIDs
 	respData["policies"] = entity.Policies
 	respData["disabled"] = entity.Disabled
+	respData["namespace_id"] = entity.NamespaceID
 
 	// Convert protobuf timestamp into RFC3339 format
 	respData["creation_time"] = ptypes.TimestampString(entity.CreationTime)
@@ -489,7 +493,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 
 	for _, group := range groups {
 		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entity.ID)
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return err
 		}
@@ -508,7 +512,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	}
 
 	// Delete the entity from storage
-	err = i.entityPacker.DeleteItem(entity.ID)
+	err = i.entityPacker.DeleteItem(ctx, entity.ID)
 	if err != nil {
 		return err
 	}
@@ -604,7 +608,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
-func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies bool) (error, error) {
+func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies, persist bool) (error, error) {
 	if grabLock {
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -646,11 +650,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if ok && !force {
 				return nil, fmt.Errorf("conflicting MFA config ID %q in entity ID %q", configID, fromEntity.ID)
 			} else {
+				if toEntity.MFASecrets == nil {
+					toEntity.MFASecrets = make(map[string]*mfa.Secret)
+				}
 				toEntity.MFASecrets[configID] = configSecret
 			}
 		}
 	}
 
+	isPerfSecondaryOrStandby := i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -704,10 +712,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return nil, err
 		}
 
-		// Delete the entity which we are merging from in storage
-		err = i.entityPacker.DeleteItem(fromEntity.ID)
-		if err != nil {
-			return nil, err
+		if persist && !isPerfSecondaryOrStandby {
+			// Delete the entity which we are merging from in storage
+			err = i.entityPacker.DeleteItem(ctx, fromEntity.ID)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -717,19 +727,21 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return nil, err
 	}
 
-	// Persist the entity which we are merging to
-	toEntityAsAny, err := ptypes.MarshalAny(toEntity)
-	if err != nil {
-		return nil, err
-	}
-	item := &storagepacker.Item{
-		ID:      toEntity.ID,
-		Message: toEntityAsAny,
-	}
+	if persist && !isPerfSecondaryOrStandby {
+		// Persist the entity which we are merging to
+		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		if err != nil {
+			return nil, err
+		}
+		item := &storagepacker.Item{
+			ID:      toEntity.ID,
+			Message: toEntityAsAny,
+		}
 
-	err = i.entityPacker.PutItem(item)
-	if err != nil {
-		return nil, err
+		err = i.entityPacker.PutItem(ctx, item)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

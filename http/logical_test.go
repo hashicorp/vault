@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -16,12 +17,13 @@ import (
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -217,6 +219,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"renewable":      false,
 			"entity_id":      "",
 			"token_type":     "service",
+			"orphan":         false,
 		},
 		"warnings": nilWarnings,
 	}
@@ -276,7 +279,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
-	lreq, status, err := buildLogicalRequest(core, nil, req)
+	lreq, _, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +293,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
-	lreq, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +307,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
-	lreq, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,5 +347,93 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
 		t.Fatalf("bad response: %s", string(bodyRaw[:]))
+	}
+}
+
+func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
+	// Create a noop audit backend
+	var noop *vault.NoopAudit
+	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+				noop = &vault.NoopAudit{
+					Config: config,
+				}
+				return noop, nil
+			},
+		},
+	})
+	ln, addr := TestServer(t, c)
+	defer ln.Close()
+
+	// Enable the audit backend
+
+	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
+		"type": "noop",
+	})
+	testResponseStatus(t, resp, 204)
+
+	{
+		// Make a wrapping/unwrap request with an invalid token
+		resp := testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+			"token": "foo",
+		})
+		testResponseStatus(t, resp, 400)
+		body := map[string][]string{}
+		testResponseBody(t, resp, &body)
+		if body["errors"][0] != "wrapping token is not valid or does not exist" {
+			t.Fatal(body)
+		}
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 1 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[0]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 1 || noop.Req[0].Path != "sys/wrapping/unwrap" {
+			t.Fatalf("bad:\ngot:\n%#v", noop.Req[0])
+		}
+
+		if len(noop.ReqErrs) != 1 {
+			t.Fatalf("bad: %#v", noop.RespErrs)
+		}
+		if noop.ReqErrs[0] != consts.ErrInvalidWrappingToken {
+			t.Fatalf("bad: %#v", noop.ReqErrs)
+		}
+	}
+
+	{
+		resp := testHttpPostWrapped(t, root, addr+"/v1/auth/token/create", nil, 10*time.Second)
+		testResponseStatus(t, resp, 200)
+		body := map[string]interface{}{}
+		testResponseBody(t, resp, &body)
+
+		wrapToken := body["wrap_info"].(map[string]interface{})["token"].(string)
+
+		// Make a wrapping/unwrap request with an invalid token
+		resp = testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+			"token": wrapToken,
+		})
+		testResponseStatus(t, resp, 200)
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 3 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[2]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 3 || noop.Req[2].Path != "sys/wrapping/unwrap" {
+			t.Fatalf("bad:\ngot:\n%#v", noop.Req[2])
+		}
+
+		// Make sure there is only one error in the logs
+		if noop.ReqErrs[1] != nil || noop.ReqErrs[2] != nil {
+			t.Fatalf("bad: %#v", noop.RespErrs)
+		}
 	}
 }

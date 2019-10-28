@@ -18,9 +18,9 @@ The `/sys/config/cors` endpoint is used to configure CORS settings.
 
 This endpoint returns the current CORS configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/cors` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/cors` |
 
 ### Sample Request
 
@@ -54,9 +54,9 @@ $ curl \
 This endpoint allows configuring the origins that are permitted to make
 cross-origin requests, as well as headers that are allowed on cross-origin requests.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/config/cors` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/config/cors` |
 
 ### Parameters
 
@@ -87,9 +87,9 @@ $ curl \
 
 This endpoint removes any CORS configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/config/cors` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/config/cors` |
 
 ### Sample Request
 

@@ -4,16 +4,22 @@ package vault
 
 import (
 	"context"
+	"time"
 
-	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/license"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/replication"
+	cache "github.com/patrickmn/go-cache"
 )
 
 type entCore struct{}
 
-type LicensingConfig struct{}
+type LicensingConfig struct {
+	AdditionalPublicKeys []interface{}
+}
 
 func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical
@@ -85,15 +91,21 @@ func (c *Core) HasFeature(license.Features) bool {
 	return false
 }
 
+func (c *Core) collectNamespaces() []*namespace.Namespace {
+	return []*namespace.Namespace{
+		namespace.RootNamespace,
+	}
+}
+
 func (c *Core) namepaceByPath(string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
 
-func (c *Core) setupReplicatedClusterPrimary(*ReplicatedCluster) error { return nil }
+func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { return nil }
 
 func (c *Core) perfStandbyCount() int { return 0 }
 
-func (c *Core) removePrefixFromFilteredPaths(context.Context, string) error {
+func (c *Core) removePathFromFilteredPaths(context.Context, string, string) error {
 	return nil
 }
 
@@ -104,3 +116,13 @@ func (c *Core) checkReplicatedFiltering(context.Context, *MountEntry, string) (b
 func (c *Core) invalidateSentinelPolicy(PolicyType, string) {}
 
 func (c *Core) removePerfStandbySecondary(context.Context, string) {}
+
+func (c *Core) removeAllPerfStandbySecondaries() {}
+
+func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
+	return nil, cache.New(2*cluster.HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
+}
+
+func (c *Core) initSealsForMigration() {}
+
+func (c *Core) postSealMigration(ctx context.Context) error { return nil }

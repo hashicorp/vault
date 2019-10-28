@@ -18,9 +18,9 @@ current leader of Vault.
 This endpoint returns the high availability status and current leader instance
 of Vault.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/leader`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/leader`                |
 
 ### Sample Request
 

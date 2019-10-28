@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -88,7 +89,7 @@ func Run(args []string) int {
 }
 
 // RunCustom allows passing in a base command template to pass to other
-// commands. Currenty, this is only used for setting a custom token helper.
+// commands. Currently, this is only used for setting a custom token helper.
 func RunCustom(args []string, runOpts *RunOptions) int {
 	if runOpts == nil {
 		runOpts = &RunOptions{}
@@ -134,6 +135,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,
 			Ui: &cli.BasicUi{
+				Reader:      bufio.NewReader(os.Stdin),
 				Writer:      runOpts.Stdout,
 				ErrorWriter: uiErrWriter,
 			},
@@ -146,6 +148,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,
 			Ui: &cli.BasicUi{
+				Reader: bufio.NewReader(os.Stdin),
 				Writer: runOpts.Stdout,
 			},
 		},
@@ -159,12 +162,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	initCommands(ui, serverCmdUi, runOpts)
 
-	// Calculate hidden commands from the deprecated ones
-	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)
-	for k := range DeprecatedCommands {
-		hiddenCommands = append(hiddenCommands, k)
-	}
-	hiddenCommands = append(hiddenCommands, "version")
+	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",

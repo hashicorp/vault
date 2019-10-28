@@ -12,16 +12,16 @@ import (
 	"github.com/briankassouf/jose/jwt"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 var (
-	// expectedJWTIssuer is used to verify the iss header on the JWT.
-	expectedJWTIssuer = "kubernetes/serviceaccount"
+	// defaultJWTIssuer is used to verify the iss header on the JWT if the config doesn't specify an issuer.
+	defaultJWTIssuer = "kubernetes/serviceaccount"
 
 	uidJWTClaimKey = "kubernetes.io/serviceaccount/service-account.uid"
 
@@ -80,8 +80,14 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 		}
 
 		// Check for a CIDR match.
-		if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
-			return logical.ErrorResponse("request originated from invalid CIDR"), nil
+		if len(role.TokenBoundCIDRs) > 0 {
+			if req.Connection == nil {
+				b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+				return nil, logical.ErrPermissionDenied
+			}
+			if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+				return nil, logical.ErrPermissionDenied
+			}
 		}
 
 		config, err := b.config(ctx, req.Storage)
@@ -103,41 +109,34 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 			return nil, err
 		}
 
-		resp := &logical.Response{
-			Auth: &logical.Auth{
-				NumUses: role.NumUses,
-				Period:  role.Period,
-				Alias: &logical.Alias{
-					Name: serviceAccount.uid(),
-					Metadata: map[string]string{
-						"service_account_uid":         serviceAccount.uid(),
-						"service_account_name":        serviceAccount.name(),
-						"service_account_namespace":   serviceAccount.namespace(),
-						"service_account_secret_name": serviceAccount.SecretName,
-					},
-				},
-				InternalData: map[string]interface{}{
-					"role": roleName,
-				},
-				Policies: role.Policies,
+		auth := &logical.Auth{
+			Alias: &logical.Alias{
+				Name: serviceAccount.uid(),
 				Metadata: map[string]string{
 					"service_account_uid":         serviceAccount.uid(),
 					"service_account_name":        serviceAccount.name(),
 					"service_account_namespace":   serviceAccount.namespace(),
 					"service_account_secret_name": serviceAccount.SecretName,
-					"role":                        roleName,
 				},
-				DisplayName: fmt.Sprintf("%s-%s", serviceAccount.namespace(), serviceAccount.name()),
-				LeaseOptions: logical.LeaseOptions{
-					Renewable: true,
-					TTL:       role.TTL,
-					MaxTTL:    role.MaxTTL,
-				},
-				BoundCIDRs: role.BoundCIDRs,
 			},
+			InternalData: map[string]interface{}{
+				"role": roleName,
+			},
+			Metadata: map[string]string{
+				"service_account_uid":         serviceAccount.uid(),
+				"service_account_name":        serviceAccount.name(),
+				"service_account_namespace":   serviceAccount.namespace(),
+				"service_account_secret_name": serviceAccount.SecretName,
+				"role":                        roleName,
+			},
+			DisplayName: fmt.Sprintf("%s-%s", serviceAccount.namespace(), serviceAccount.name()),
 		}
 
-		return resp, nil
+		role.PopulateTokenAuth(auth)
+
+		return &logical.Response{
+			Auth: auth,
+		}, nil
 	}
 }
 
@@ -180,10 +179,8 @@ func (b *kubeAuthBackend) parseAndValidateJWT(jwtStr string, role *roleStorageEn
 	}
 
 	sa := &serviceAccount{}
+
 	validator := &jwt.Validator{
-		Expected: jwt.Claims{
-			"iss": expectedJWTIssuer,
-		},
 		Fn: func(c jwt.Claims) error {
 			// Decode claims into a service account object
 			err := mapstructure.Decode(c, sa)
@@ -193,20 +190,32 @@ func (b *kubeAuthBackend) parseAndValidateJWT(jwtStr string, role *roleStorageEn
 
 			// verify the namespace is allowed
 			if len(role.ServiceAccountNamespaces) > 1 || role.ServiceAccountNamespaces[0] != "*" {
-				if !strutil.StrListContains(role.ServiceAccountNamespaces, sa.namespace()) {
+				if !strutil.StrListContainsGlob(role.ServiceAccountNamespaces, sa.namespace()) {
 					return errors.New("namespace not authorized")
 				}
 			}
 
 			// verify the service account name is allowed
 			if len(role.ServiceAccountNames) > 1 || role.ServiceAccountNames[0] != "*" {
-				if !strutil.StrListContains(role.ServiceAccountNames, sa.name()) {
+				if !strutil.StrListContainsGlob(role.ServiceAccountNames, sa.name()) {
 					return errors.New("service account name not authorized")
 				}
 			}
 
 			return nil
 		},
+	}
+
+	// set the expected issuer to the default kubernetes issuer if the config doesn't specify it
+	if config.Issuer != "" {
+		validator.SetIssuer(config.Issuer)
+	} else {
+		validator.SetIssuer(defaultJWTIssuer)
+	}
+
+	// validate the audience if the role expects it
+	if role.Audience != "" {
+		validator.SetAudience(role.Audience)
 	}
 
 	if err := validator.Validate(parsedJWT); err != nil {
@@ -290,7 +299,7 @@ type serviceAccount struct {
 	UID        string   `mapstructure:"kubernetes.io/serviceaccount/service-account.uid"`
 	SecretName string   `mapstructure:"kubernetes.io/serviceaccount/secret.name"`
 	Namespace  string   `mapstructure:"kubernetes.io/serviceaccount/namespace"`
-	Aud        []string `mapstructure:"aud"`
+	Audience   []string `mapstructure:"aud"`
 
 	// the JSON returned from reviewing a Projected Service account has a
 	// different structure, where the information is in a sub-structure instead of
@@ -383,9 +392,9 @@ func (b *kubeAuthBackend) pathLoginRenew() framework.OperationFunc {
 		}
 
 		resp := &logical.Response{Auth: req.Auth}
-		resp.Auth.TTL = role.TTL
-		resp.Auth.MaxTTL = role.MaxTTL
-		resp.Auth.Period = role.Period
+		resp.Auth.TTL = role.TokenTTL
+		resp.Auth.MaxTTL = role.TokenMaxTTL
+		resp.Auth.Period = role.TokenPeriod
 		return resp, nil
 	}
 }

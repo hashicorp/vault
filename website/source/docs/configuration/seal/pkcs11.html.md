@@ -63,11 +63,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Vault binary is currently running on (e.g.: a Linux system may require other
   libraries to interpret Windows .dll files).
 
-- `slot` `(string: <slot or token label required>)`: The slot number to use, 
+- `slot` `(string: <slot or token label required>)`: The slot number to use,
   specified as a string (e.g. `"0"`). May also be specified by the `VAULT_HSM_SLOT`
   environment variable.
 
-- `token_label` `(string: <slot or token label required>)`: The slot token label to 
+- `token_label` `(string: <slot or token label required>)`: The slot token label to
   use. May also be specified by the `VAULT_HSM_TOKEN_LABEL` environment variable.
 
 - `pin` `(string: <required>)`: The PIN for login. May also be specified by the
@@ -83,8 +83,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `default_key_label` `(string: "")`: This is the default key label for decryption
   operations.  Prior to 0.10.1, key labels were not stored with the ciphertext.
   Seal entries now track the label used in encryption operations.  The default value
-  for this field is the `key_label`.  If `key_label` is rotated and this value is not 
-  set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL` 
+  for this field is the `key_label`.  If `key_label` is rotated and this value is not
+  set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL`
   environment variable.  This value is ignored in new installations.
 
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
@@ -97,13 +97,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `default_hmac_key_label` `(string: "")`: This is the default HMAC key label for signing
   operations.  Prior to 0.10.1, HMAC key labels were not stored with the signature.
   Seal entries now track the label used in signing operations.  The default value
-  for this field is the `hmac_key_label`.  If `hmac_key_label` is rotated and this 
-  value is not set, signature verification may fail. May also be specified by the 
-  `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable.  This value is ignored in 
+  for this field is the `hmac_key_label`.  If `hmac_key_label` is rotated and this
+  value is not set, signature verification may fail. May also be specified by the
+  `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable.  This value is ignored in
   new installations.
- 
+
 - `mechanism` `(string: <best available>)`: The encryption/decryption mechanism to use,
-  specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be 
+  specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be
   specified by the `VAULT_HSM_MECHANISM` environment variable.  
   Currently supported mechanisms (in order of precedence):
 
@@ -132,12 +132,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
   for RSA keys, perform encryption locally.  Available for mechanisms
-  `CKM_RSA_PKCS_OAEP` and `CKM_RSA_PKCS`.  May also be specified by the 
+  `CKM_RSA_PKCS_OAEP` and `CKM_RSA_PKCS`.  May also be specified by the
   `VAULT_HSM_RSA_ENCRYPT_LOCAL` environment variable.
 
-- `rsa_oaep_hash` `(string: "sha256")`: Specifiy the hash algorithm to use for RSA
-  with OAEP padding.  Valid values are sha1, sha224, sha256, sha384, and sha512. 
-  Available for mechanism `CKM_RSA_PKCS_OAEP`.  May also be specified by the 
+- `rsa_oaep_hash` `(string: "sha256")`: Specify the hash algorithm to use for RSA
+  with OAEP padding.  Valid values are sha1, sha224, sha256, sha384, and sha512.
+  Available for mechanism `CKM_RSA_PKCS_OAEP`.  May also be specified by the
   `VAULT_HSM_RSA_OAEP_HASH` environment variable.
 
 ~> **Note:** Although the configuration file allows you to pass in
@@ -235,9 +235,15 @@ _Private Key_
 This seal supports rotating keys by using different key labels to track key versions. To rotate
 the key value, generate a new key in a different key label in the HSM and update Vault's
 configuration with the new key label value.  Restart your vault instance to pick up the new key
-label and all new encryption operations will use the updated key label. Old keys must not be disabled 
+label and all new encryption operations will use the updated key label. Old keys must not be disabled
 or deleted and are used to decrypt older data.
 
-**NOTE**: Prior to version 0.10.1, key information was not tracked with the ciphertext. If 
-rotation is desired for data that was seal wrapped prior to this version must also set 
+**NOTE**: Prior to version 0.10.1, key information was not tracked with the ciphertext. If
+rotation is desired for data that was seal wrapped prior to this version must also set
 `default_key_label` and `hmac_default_key_label` to allow for decryption of older values.
+
+
+## Learn
+
+Refer to the [HSM Integration - Seal Wrap](https://learn.hashicorp.com/vault/operations/ops-seal-wrap)
+guide for a step-by-step tutorial.

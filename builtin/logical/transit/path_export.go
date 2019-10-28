@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -67,7 +67,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	case exportTypeEncryptionKey:
 		switch policy.Type {
-		case keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
@@ -164,8 +164,17 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	case exportTypeSigningKey:
 		switch policy.Type {
-		case keysutil.KeyType_ECDSA_P256:
-			ecKey, err := keyEntryToECPrivateKey(key, elliptic.P256())
+		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+			var curve elliptic.Curve
+			switch policy.Type {
+			case keysutil.KeyType_ECDSA_P384:
+				curve = elliptic.P384()
+			case keysutil.KeyType_ECDSA_P521:
+				curve = elliptic.P521()
+			default:
+				curve = elliptic.P256()
+			}
+			ecKey, err := keyEntryToECPrivateKey(key, curve)
 			if err != nil {
 				return "", err
 			}

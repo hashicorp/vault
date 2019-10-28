@@ -7,7 +7,8 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/command/agent/agentint"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 type AuthMethod interface {
@@ -29,11 +30,13 @@ type AuthConfig struct {
 type AuthHandler struct {
 	DoneCh                       chan struct{}
 	OutputCh                     chan string
+	TemplateTokenCh              chan string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	enableReauthOnNewCredentials bool
+	enableTemplateTokenCh        bool
 }
 
 type AuthHandlerConfig struct {
@@ -41,6 +44,7 @@ type AuthHandlerConfig struct {
 	Client                       *api.Client
 	WrapTTL                      time.Duration
 	EnableReauthOnNewCredentials bool
+	EnableTemplateTokenCh        bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -49,11 +53,13 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
+		TemplateTokenCh:              make(chan string, 1),
 		logger:                       conf.Logger,
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
+		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
 
 	return ah
@@ -76,6 +82,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		am.Shutdown()
 		close(ah.OutputCh)
 		close(ah.DoneCh)
+		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
@@ -99,7 +106,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		credCh = make(chan struct{})
 	}
 
-	var renewer *api.Renewer
+	var renewer *agentint.Renewer
 
 	for {
 		select {
@@ -162,6 +169,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
 			ah.OutputCh <- string(wrappedResp)
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- string(wrappedResp)
+			}
 
 			am.CredSuccess()
 
@@ -188,6 +198,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
 			ah.OutputCh <- secret.Auth.ClientToken
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- secret.Auth.ClientToken
+			}
 
 			am.CredSuccess()
 		}
@@ -196,7 +209,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			renewer.Stop()
 		}
 
-		renewer, err = ah.client.NewRenewer(&api.RenewerInput{
+		renewer, err = agentint.NewRenewer(ah.client, &agentint.RenewerInput{
 			Secret: secret,
 		})
 		if err != nil {

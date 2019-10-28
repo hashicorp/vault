@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
-	radix "github.com/armon/go-radix"
+	"github.com/armon/go-radix"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -24,6 +25,8 @@ type ACL struct {
 
 	// prefixRules contains the path policies that are a prefix
 	prefixRules *radix.Tree
+
+	segmentWildcardPaths map[string]interface{}
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -58,9 +61,10 @@ type ACLResults struct {
 func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
-		exactRules:  radix.New(),
-		prefixRules: radix.New(),
-		root:        false,
+		exactRules:           radix.New(),
+		prefixRules:          radix.New(),
+		segmentWildcardPaths: make(map[string]interface{}, len(policies)),
+		root:                 false,
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -100,20 +104,35 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		}
 
 		for _, pc := range policy.Paths {
-			// Check which tree to use
-			tree := a.exactRules
-			if pc.IsPrefix {
-				tree = a.prefixRules
+			var raw interface{}
+			var ok bool
+			var tree *radix.Tree
+
+			switch {
+			case pc.HasSegmentWildcards:
+				raw, ok = a.segmentWildcardPaths[pc.Path]
+			default:
+				// Check which tree to use
+				tree = a.exactRules
+				if pc.IsPrefix {
+					tree = a.prefixRules
+				}
+
+				// Check for an existing policy
+				raw, ok = tree.Get(pc.Path)
 			}
 
-			// Check for an existing policy
-			raw, ok := tree.Get(pc.Path)
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
 					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
 				}
-				tree.Insert(pc.Path, clonedPerms)
+				switch {
+				case pc.HasSegmentWildcards:
+					a.segmentWildcardPaths[pc.Path] = clonedPerms
+				default:
+					tree.Insert(pc.Path, clonedPerms)
+				}
 				continue
 			}
 
@@ -242,7 +261,12 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 
 		INSERT:
-			tree.Insert(pc.Path, existingPerms)
+			switch {
+			case pc.HasSegmentWildcards:
+				a.segmentWildcardPaths[pc.Path] = existingPerms
+			default:
+				tree.Insert(pc.Path, existingPerms)
+			}
 		}
 	}
 	return a, nil
@@ -317,7 +341,17 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 	path := ns.Path + req.Path
 
-	// Find an exact matching rule, look for glob if no match
+	// The request path should take care of this already but this is useful for
+	// tests and as defense in depth
+	for {
+		if len(path) > 0 && path[0] == '/' {
+			path = path[1:]
+		} else {
+			break
+		}
+	}
+
+	// Find an exact matching rule, look for prefix if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
@@ -334,13 +368,15 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
-	// Find a glob rule, default deny if no match
-	_, raw, ok = a.prefixRules.LongestPrefix(path)
-	if !ok {
-		return
+	permissions = a.CheckAllowedFromNonExactPaths(path, false)
+	if permissions != nil {
+		capabilities = permissions.CapabilitiesBitmap
+		goto CHECK
 	}
-	permissions = raw.(*ACLPermissions)
-	capabilities = permissions.CapabilitiesBitmap
+
+	// No exact, prefix, or segment wildcard paths found, return without
+	// setting allowed
+	return
 
 CHECK:
 	// Check if the minimum permissions are met
@@ -468,6 +504,172 @@ CHECK:
 	return
 }
 
+type wcPathDescr struct {
+	firstWCOrGlob int
+	wildcards     int
+	isPrefix      bool
+	wcPath        string
+	perms         *ACLPermissions
+}
+
+// CheckAllowedFromNonExactPaths returns permissions corresponding to a
+// matching path with wildcards/globs. If bareMount is true, the path should
+// correspond to a mount prefix, and what is returned is either a non-nil set
+// of permissions from some allowed path underneath the mount (for use in mount
+// access checks), or nil indicating no non-deny permissions were found.
+func (a *ACL) CheckAllowedFromNonExactPaths(path string, bareMount bool) *ACLPermissions {
+	wcPathDescrs := make([]wcPathDescr, 0, len(a.segmentWildcardPaths)+1)
+
+	less := func(i, j int) bool {
+		// In the case of multiple matches, we use this priority order,
+		// which tries to most closely match longest-prefix:
+		//
+		// * First glob or wildcard position (prefer foo/a* over foo/+,
+		//   foo/bar/+/baz over foo/+/bar/baz)
+		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*,
+		//   foo/+ over foo/*)
+		// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
+		// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
+		// * Lexicographical ordering (preferring less, arbitrarily)
+		//
+		// That final case (lexigraphical) should never really come up. It's more
+		// of a throwing-up-hands scenario akin to panic("should not be here")
+		// statements, but less panicky.
+
+		pdi, pdj := wcPathDescrs[i], wcPathDescrs[j]
+
+		// If the first wildcard (+) or glob (*) occurs earlier in pdi,
+		// pdi is lower priority
+		if pdi.firstWCOrGlob < pdj.firstWCOrGlob {
+			return true
+		} else if pdi.firstWCOrGlob > pdj.firstWCOrGlob {
+			return false
+		}
+
+		// If pdi ends in * and pdj doesn't, pdi is lower priority
+		if pdi.isPrefix && !pdj.isPrefix {
+			return true
+		} else if !pdi.isPrefix && pdj.isPrefix {
+			return false
+		}
+
+		// If pdi has more wc segs, pdi is lower priority
+		if pdi.wildcards > pdj.wildcards {
+			return true
+		} else if pdi.wildcards < pdj.wildcards {
+			return false
+		}
+
+		// If pdi is shorter, it is lower priority
+		if len(pdi.wcPath) < len(pdj.wcPath) {
+			return true
+		} else if len(pdi.wcPath) > len(pdj.wcPath) {
+			return false
+		}
+
+		// If pdi is smaller lexicographically, it is lower priority
+		if pdi.wcPath < pdj.wcPath {
+			return true
+		} else if pdi.wcPath > pdj.wcPath {
+			return false
+		}
+		return false
+	}
+
+	// Find a prefix rule if any.
+	{
+		prefix, raw, ok := a.prefixRules.LongestPrefix(path)
+		if ok {
+			if len(a.segmentWildcardPaths) == 0 {
+				return raw.(*ACLPermissions)
+			}
+			wcPathDescrs = append(wcPathDescrs, wcPathDescr{
+				firstWCOrGlob: len(prefix),
+				wcPath:        prefix,
+				isPrefix:      true,
+				perms:         raw.(*ACLPermissions),
+			})
+		}
+	}
+
+	if len(a.segmentWildcardPaths) == 0 {
+		return nil
+	}
+
+	pathParts := strings.Split(path, "/")
+
+SWCPATH:
+	for fullWCPath := range a.segmentWildcardPaths {
+		if fullWCPath == "" {
+			continue
+		}
+		pd := wcPathDescr{firstWCOrGlob: strings.Index(fullWCPath, "+")}
+
+		currWCPath := fullWCPath
+		if currWCPath[len(currWCPath)-1] == '*' {
+			pd.isPrefix = true
+			currWCPath = currWCPath[0 : len(currWCPath)-1]
+		}
+		pd.wcPath = currWCPath
+
+		splitCurrWCPath := strings.Split(currWCPath, "/")
+
+		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
+			// check if the path coming in is shorter; if so it can't match
+			continue
+		}
+		if !bareMount && !pd.isPrefix && len(splitCurrWCPath) != len(pathParts) {
+			// If it's not a prefix we expect the same number of segments
+			continue
+		}
+
+		segments := make([]string, 0, len(splitCurrWCPath))
+		for i, aclPart := range splitCurrWCPath {
+			switch {
+			case aclPart == "+":
+				pd.wildcards++
+				segments = append(segments, pathParts[i])
+
+			case aclPart == pathParts[i]:
+				segments = append(segments, pathParts[i])
+
+			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
+				segments = append(segments, pathParts[i:]...)
+
+			case !bareMount:
+				// Found a mismatch, give up on this segmentWildcardPath
+				continue SWCPATH
+			}
+
+			// -2 because we're always invoked with a trailing "/" in case bareMount.
+			if bareMount && i == len(pathParts)-2 {
+				joinedPath := strings.Join(segments, "/") + "/"
+				// Check the current joined path so far. If we find a prefix,
+				// check permissions. If they're defined but not deny, success.
+				if strings.HasPrefix(joinedPath, path) {
+					permissions := a.segmentWildcardPaths[fullWCPath].(*ACLPermissions)
+					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
+						return permissions
+					}
+				}
+				continue SWCPATH
+			}
+		}
+		pd.perms = a.segmentWildcardPaths[fullWCPath].(*ACLPermissions)
+		wcPathDescrs = append(wcPathDescrs, pd)
+	}
+
+	if bareMount || len(wcPathDescrs) == 0 {
+		return nil
+	}
+
+	// We don't do this in the bare mount check because we don't care about
+	// priority, we only care about any capability at all.
+	sort.Slice(wcPathDescrs, less)
+
+	return wcPathDescrs[len(wcPathDescrs)-1].perms
+}
+
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
 	ret := new(AuthResults)
 
@@ -507,7 +709,14 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 
 func valueInSlice(v interface{}, list []interface{}) bool {
 	for _, el := range list {
-		if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
+		if el == nil || v == nil {
+			// It doesn't seem possible to set up a nil entry in the list, but it is possible
+			// to pass in a null entry in the API request being checked. Just in case,
+			// nil will match nil.
+			if el == v {
+				return true
+			}
+		} else if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
 			item := el.(string)
 			val := v.(string)
 

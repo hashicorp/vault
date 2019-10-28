@@ -1,3 +1,75 @@
+.confirm-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: $box-shadow, $box-shadow-middle;
+}
+
+.confirm {
+  transition: transform $speed;
+  padding-top: 2px;
+}
+
+.show-confirm {
+  transform: translateX(-100%);
+  transition: transform $speed;
+}
+
+.confirm.show-confirm {
+  visibility: hidden;
+}
+
+.confirm-overlay {
+  position: absolute;
+  background-color: white;
+  top: 0;
+  left: 100%;
+  width: 100%;
+}
+
+.confirm,
+.confirm-overlay {
+  button.link,
+  a {
+    background-color: $white;
+    color: $menu-item-color;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
+    }
+
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+
+    &.is-destroy {
+      color: $red;
+
+      &:hover {
+        background-color: $red;
+        color: $white;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.5;
+
+      &:hover {
+        background: transparent;
+        cursor: default;
+      }
+    }
+  }
+}
+
+.confirm-action span .button {
+  display: block;
+  margin: 0.25rem auto;
+  width: 95%;
+}
+
 .confirm-action > span {
   @include from($tablet) {
     align-items: center;
@@ -19,5 +91,44 @@
   }
   .confirm-action-text.is-block {
     text-align: left;
+  }
+}
+
+.confirm-action-message {
+  margin: 0;
+
+  .message {
+    border: 0;
+    font-size: $size-8;
+    line-height: 1.33;
+    margin: 0;
+  }
+
+  .message-title {
+    font-size: 1rem;
+  }
+
+  .hs-icon {
+    color: $yellow;
+  }
+
+  p {
+    font-weight: $font-weight-semibold;
+    margin-left: $spacing-l;
+    padding-left: $spacing-xxs;
+    padding-top: 0;
+  }
+
+  .confirm-action-options {
+    border-top: $light-border;
+    display: flex;
+    padding: $spacing-xxs;
+
+    .link {
+      flex: 1;
+      text-align: center;
+      width: auto;
+      padding: $spacing-xs;
+    }
   }
 }

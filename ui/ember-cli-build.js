@@ -2,22 +2,40 @@
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+const config = require('./config/environment')();
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
+const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+    'ember-service-worker': {
+      serviceWorkerScope: config.serviceWorkerScope,
+      skipWaitingOnMessage: true,
+    },
+    svgJar: {
+      //optimize: false,
+      //paths: [],
+      optimizer: {},
+      sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+      rootURL: '/ui/',
+    },
+    assetLoader: {
+      generateURI: function(filePath) {
+        return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
+      },
+    },
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
     },
     babel: {
-      plugins: ['transform-object-rest-spread'],
+      plugins: ['@babel/plugin-proposal-object-rest-spread'],
     },
     'ember-cli-babel': {
-      includePolyfill: isTest || isProd,
+      includePolyfill: isTest || isProd || isCI,
     },
     hinting: isTest,
     tests: isTest,
@@ -35,15 +53,17 @@ module.exports = function(defaults) {
       browsers: ['defaults', 'ie 11'],
     },
     autoImport: {
-      webpack: {
-        // this makes `unsafe-eval` CSP unnecessary
-        // see https://github.com/ef4/ember-auto-import/issues/50
-        // and https://github.com/webpack/webpack/issues/5627
-        devtool: 'inline-source-map',
-      },
+      forbidEval: true,
     },
     'ember-test-selectors': {
       strip: isProd,
+    },
+    // https://github.com/ember-cli/ember-fetch/issues/204
+    'ember-fetch': {
+      preferNative: true,
+    },
+    'ember-composable-helpers': {
+      except: ['array'],
     },
   });
 
@@ -55,9 +75,13 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/lint.css');
   app.import('node_modules/codemirror/addon/lint/lint.js');
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
-  app.import('node_modules/text-encoder-lite/index.js');
+  app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
+
+  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
+  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
+
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

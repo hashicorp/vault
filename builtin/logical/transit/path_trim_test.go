@@ -3,9 +3,9 @@ package transit
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Trim(t *testing.T) {
@@ -39,7 +39,7 @@ func TestTransit_Trim(t *testing.T) {
 	p, _, err := b.lm.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "aes",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}

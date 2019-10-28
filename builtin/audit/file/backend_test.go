@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAuditFile_fileModeNew(t *testing.T) {
@@ -89,4 +91,53 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	if info.Mode() != os.FileMode(0600) {
 		t.Fatalf("File mode does not match.")
 	}
+}
+
+func BenchmarkAuditFile_request(b *testing.B) {
+	config := map[string]string{
+		"path": "/dev/null",
+	}
+	sink, err := Factory(context.Background(), &audit.BackendConfig{
+		Config:     config,
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": []string{"bar"},
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := sink.LogRequest(ctx, in); err != nil {
+				panic(err)
+			}
+		}
+	})
 }

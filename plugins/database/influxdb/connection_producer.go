@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	influx "github.com/influxdata/influxdb/client/v2"
 	"github.com/mitchellh/mapstructure"
 )
@@ -260,4 +262,14 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 		}
 	}
 	return false, fmt.Errorf("the provided username is not a valid user in the influxdb")
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	return "", "", dbutil.Unimplemented()
 }

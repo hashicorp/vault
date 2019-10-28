@@ -3,9 +3,9 @@ package transit
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathRotate() *framework.Path {
@@ -34,7 +34,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	// Rotate the policy
-	err = p.Rotate(ctx, req.Storage)
+	err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 
 	p.Unlock()
 	return nil, err

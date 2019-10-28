@@ -12,7 +12,7 @@ import (
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestIdentityStore_EntityDeleteGroupMembershipUpdate(t *testing.T) {
@@ -479,7 +479,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -733,7 +733,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -764,7 +764,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	txn = is.db.Txn(false)
-	entitiesFetched, err := is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
+	entitiesFetched, err := is.MemDBEntitiesByBucketKeyInTxn(txn, entity.BucketKey)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -31,10 +31,10 @@ export default Controller.extend({
     const { engineType, path } = engine;
     try {
       yield engine.destroyRecord();
-      this.get('flashMessages').success(`The ${engineType} secrets engine at ${path} has been disabled.`);
+      this.get('flashMessages').success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
     } catch (err) {
       this.get('flashMessages').danger(
-        `There was an error disabling the ${engineType} secrets engine at ${path}: ${err.errors.join(' ')}.`
+        `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
       );
     }
   }).drop(),

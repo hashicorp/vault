@@ -37,6 +37,16 @@ $ vault operator rekey \
     -key-threshold=9
 ```
 
+Initialize a rekey and activate the verification process:
+
+```text
+$ vault operator rekey \
+    -init \
+    -key-shares=15 \
+    -key-threshold=9 \
+    -verify
+```
+
 Rekey and encrypt the resulting unseal keys with PGP:
 
 ```text
@@ -79,6 +89,12 @@ Delete backed-up unseal keys:
 $ vault operator rekey -backup-delete
 ```
 
+Perform the verification of the rekey using the verification nonce:
+
+```text
+$ vault operator rekey -verify -nonce="..."
+```
+
 ## Usage
 
 The following flags are available in addition to the [standard set of
@@ -119,7 +135,11 @@ flags](/docs/commands/index.html) included on all commands.
   providing an unseal key. The default is false.
 
 - `-target` `(string: "barrier")` - Target for rekeying. "recovery" only applies
-  when HSM support is enabled.
+  when HSM support is enabled or using [Auto Unseal](/docs/concepts/seal.html#auto-unseal).
+
+- `-verify` `(bool: false)` - Indicate during the phase `-init` that the
+  verification process is activated for the rekey. Along with `-nonce` option
+  it indicates that the nonce given is for the verification process.
 
 ### Backup Options
 

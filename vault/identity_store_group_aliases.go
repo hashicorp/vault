@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func groupAliasPaths(i *IdentityStore) []*framework.Path {
@@ -117,33 +118,36 @@ func (i *IdentityStore) pathGroupAliasIDUpdate() framework.OperationFunc {
 	}
 }
 
+// NOTE: Currently we don't allow by-factors modification of group aliases the
+// way we do with entities. As a result if a groupAlias is defined here we know
+// that this is an update, where they provided an ID parameter.
 func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, groupAlias *identity.Alias) (*logical.Response, error) {
-	var newGroupAlias bool
-	var group *identity.Group
-	var err error
+	var newGroup, previousGroup *identity.Group
 
-	if groupAlias == nil {
-		groupAlias = &identity.Alias{}
-		newGroupAlias = true
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	groupID := d.Get("canonical_id").(string)
-	if groupID != "" {
-		group, err = i.MemDBGroupByID(groupID, true)
-		if err != nil {
-			return nil, err
+	if groupAlias == nil {
+		groupAlias = &identity.Alias{
+			CreationTime: ptypes.TimestampNow(),
+			NamespaceID:  ns.ID,
 		}
-		if group == nil {
-			return logical.ErrorResponse("invalid group ID"), nil
+		groupAlias.LastUpdateTime = groupAlias.CreationTime
+	} else {
+		if ns.ID != groupAlias.NamespaceID {
+			return logical.ErrorResponse("existing alias not in the same namespace as request"), logical.ErrPermissionDenied
 		}
-		if group.Type != groupTypeExternal {
-			return logical.ErrorResponse("alias can't be set on an internal group"), nil
+		groupAlias.LastUpdateTime = ptypes.TimestampNow()
+		if groupAlias.CreationTime == nil {
+			groupAlias.CreationTime = groupAlias.LastUpdateTime
 		}
 	}
 
 	// Get group alias name
-	groupAliasName := d.Get("name").(string)
-	if groupAliasName == "" {
+	name := d.Get("name").(string)
+	if name == "" {
 		return logical.ErrorResponse("missing alias name"), nil
 	}
 
@@ -152,78 +156,112 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		return logical.ErrorResponse("missing mount_accessor"), nil
 	}
 
-	mountValidationResp := i.core.router.validateMountByAccessor(mountAccessor)
-	if mountValidationResp == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
+	canonicalID := d.Get("canonical_id").(string)
+
+	if groupAlias.Name == name && groupAlias.MountAccessor == mountAccessor && (canonicalID == "" || groupAlias.CanonicalID == canonicalID) {
+		// Nothing to do, be idempotent
+		return nil, nil
 	}
 
-	if mountValidationResp.MountLocal {
-		return logical.ErrorResponse(fmt.Sprintf("mount_accessor %q is of a local mount", mountAccessor)), nil
-	}
+	// Explicitly correct for previous versions that persisted this
+	groupAlias.MountType = ""
 
-	groupAliasByFactors, err := i.MemDBAliasByFactors(mountValidationResp.MountAccessor, groupAliasName, false, true)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &logical.Response{}
-
-	if newGroupAlias {
-		if groupAliasByFactors != nil {
-			return logical.ErrorResponse("combination of mount and group alias name is already in use"), nil
-		}
-
-		// If this is an alias being tied to a non-existent group, create
-		// a new group for it.
-		if group == nil {
-			group = &identity.Group{
-				Type:  groupTypeExternal,
-				Alias: groupAlias,
+	// Canonical ID handling
+	{
+		if canonicalID != "" {
+			newGroup, err = i.MemDBGroupByID(canonicalID, true)
+			if err != nil {
+				return nil, err
 			}
-		} else {
-			group.Alias = groupAlias
+			if newGroup == nil {
+				return logical.ErrorResponse("invalid group ID given in 'canonical_id'"), nil
+			}
+			if newGroup.Type != groupTypeExternal {
+				return logical.ErrorResponse("alias can't be set on an internal group"), nil
+			}
+			if newGroup.NamespaceID != groupAlias.NamespaceID {
+				return logical.ErrorResponse("group referenced with 'canonical_id' not in the same namespace as alias"), logical.ErrPermissionDenied
+			}
+			groupAlias.CanonicalID = canonicalID
 		}
-	} else {
-		// Verify that the combination of group alias name and mount is not
-		// already tied to a different alias
+	}
+
+	// Validate name/accessor whether new or update
+	{
+		mountEntry := i.core.router.MatchingMountByAccessor(mountAccessor)
+		if mountEntry == nil {
+			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
+		}
+		if mountEntry.Local {
+			return logical.ErrorResponse(fmt.Sprintf("mount accessor %q is a local mount", mountAccessor)), nil
+		}
+		if mountEntry.NamespaceID != groupAlias.NamespaceID {
+			return logical.ErrorResponse("mount referenced via 'mount_accessor' not in the same namespace as alias"), logical.ErrPermissionDenied
+		}
+
+		groupAliasByFactors, err := i.MemDBAliasByFactors(mountEntry.Accessor, name, false, true)
+		if err != nil {
+			return nil, err
+		}
+		// This check will still work for the new case too since it won't have
+		// an ID yet
 		if groupAliasByFactors != nil && groupAliasByFactors.ID != groupAlias.ID {
 			return logical.ErrorResponse("combination of mount and group alias name is already in use"), nil
 		}
 
-		// Fetch the group to which the alias is tied to
-		existingGroup, err := i.MemDBGroupByAliasID(groupAlias.ID, true)
+		groupAlias.Name = name
+		groupAlias.MountAccessor = mountAccessor
+	}
+
+	switch groupAlias.ID {
+	case "":
+		// It's a new alias
+		if newGroup == nil {
+			// If this is a new alias being tied to a non-existent group,
+			// create a new group for it
+			newGroup = &identity.Group{
+				Type: groupTypeExternal,
+			}
+		}
+
+	default:
+		// Fetch the group, if any, to which the alias is tied to
+		previousGroup, err = i.MemDBGroupByAliasID(groupAlias.ID, true)
 		if err != nil {
 			return nil, err
 		}
-
-		if existingGroup == nil {
+		if previousGroup == nil {
 			return nil, fmt.Errorf("group alias is not associated with a group")
 		}
-
-		if group != nil && group.ID != existingGroup.ID {
-			return logical.ErrorResponse("alias is already tied to a different group"), nil
+		if previousGroup.NamespaceID != groupAlias.NamespaceID {
+			return logical.ErrorResponse("previous group found for alias not in the same namespace as alias"), logical.ErrPermissionDenied
 		}
 
-		group = existingGroup
-		group.Alias = groupAlias
+		if newGroup == nil || newGroup.ID == previousGroup.ID {
+			// If newGroup is nil they didn't specify a canonical ID, so they
+			// aren't trying to update it; set the existing group as the "new"
+			// one. If it's the same ID they specified the same canonical ID,
+			// so follow the same behavior.
+			newGroup = previousGroup
+			previousGroup = nil
+		} else {
+			// The alias is moving, so nil out the previous group alias
+			previousGroup.Alias = nil
+		}
 	}
 
-	group.Alias.Name = groupAliasName
-	group.Alias.MountAccessor = mountValidationResp.MountAccessor
-	// Explicitly correct for previous versions that persisted this
-	group.Alias.MountType = ""
-
-	err = i.sanitizeAndUpsertGroup(ctx, group, nil)
+	newGroup.Alias = groupAlias
+	err = i.sanitizeAndUpsertGroup(ctx, newGroup, previousGroup, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp.Data = map[string]interface{}{
-		"id":           groupAlias.ID,
-		"canonical_id": group.ID,
-	}
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"id":           groupAlias.ID,
+			"canonical_id": newGroup.ID,
+		},
+	}, nil
 }
 
 // pathGroupAliasIDRead returns the properties of an alias for a given
@@ -272,7 +310,7 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 		if ns.ID != alias.NamespaceID {
-			return nil, logical.ErrUnsupportedOperation
+			return logical.ErrorResponse("request namespace is not the same as the group alias namespace"), logical.ErrPermissionDenied
 		}
 
 		group, err := i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
@@ -294,7 +332,7 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 		// Delete the alias
 		group.Alias = nil
 
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return nil, err
 		}

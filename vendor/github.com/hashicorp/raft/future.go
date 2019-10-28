@@ -58,6 +58,12 @@ type SnapshotFuture interface {
 	Open() (*SnapshotMeta, io.ReadCloser, error)
 }
 
+// LeadershipTransferFuture is used for waiting on a user-triggered leadership
+// transfer to complete.
+type LeadershipTransferFuture interface {
+	Future
+}
+
 // errorFuture is used to return a static error.
 type errorFuture struct {
 	err error
@@ -177,14 +183,13 @@ type userSnapshotFuture struct {
 func (u *userSnapshotFuture) Open() (*SnapshotMeta, io.ReadCloser, error) {
 	if u.opener == nil {
 		return nil, nil, fmt.Errorf("no snapshot available")
-	} else {
-		// Invalidate the opener so it can't get called multiple times,
-		// which isn't generally safe.
-		defer func() {
-			u.opener = nil
-		}()
-		return u.opener()
 	}
+	// Invalidate the opener so it can't get called multiple times,
+	// which isn't generally safe.
+	defer func() {
+		u.opener = nil
+	}()
+	return u.opener()
 }
 
 // userRestoreFuture is used for waiting on a user-triggered restore of an
@@ -225,6 +230,15 @@ type verifyFuture struct {
 	quorumSize int
 	votes      int
 	voteLock   sync.Mutex
+}
+
+// leadershipTransferFuture is used to track the progress of a leadership
+// transfer internally.
+type leadershipTransferFuture struct {
+	deferError
+
+	ID      *ServerID
+	Address *ServerAddress
 }
 
 // configurationsFuture is used to retrieve the current configurations. This is

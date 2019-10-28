@@ -20,31 +20,38 @@ possible to enable secrets engines at any location, please update your API calls
 accordingly.
 
 
-## Configure the KV Engine 
+## Configure the KV Engine
 
 This path configures backend level settings that are applied to every key in the
 key-value store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/config`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/config`             |
 
 ### Parameters
 
 - `max_versions` `(int: 0)` – The number of versions to keep per key. This value
   applies to all keys, but a key's metadata setting can overwrite this value.
   Once a key has more than the configured allowed versions the oldest version
-  will be permanently deleted. Defaults to 10. 
+  will be permanently deleted. Defaults to 10.
 
 - `cas_required` `(bool: false)` – If true all keys will require the cas
   parameter to be set on all write requests.
+
+- `delete_version_after` `(string:"0s")` – If set, specifies the length
+  of time before a version is deleted.
+  Accepts [Go duration format string][duration-godoc].
+
+[duration-godoc]: https://golang.org/pkg/time/#ParseDuration
 
 ### Sample Payload
 
 ```json
 {
   "max_versions": 5,
-  "cas_required": false
+  "cas_required": false,
+  "delete_version_after": "3h25m19s"
 }
 ```
 
@@ -63,9 +70,9 @@ $ curl \
 This path retrieves the current configuration for the secrets backend at the
 given path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/secret/config`             | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/secret/config`             |
 
 
 ### Sample Request
@@ -82,7 +89,8 @@ $ curl \
 {
   "data": {
     "cas_required": false,
-    "max_versions": 0
+    "max_versions": 0,
+    "delete_version_after": "3h25m19s"
   }
 }
 ```
@@ -92,9 +100,9 @@ $ curl \
 
 This endpoint retrieves the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/data/:path`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/data/:path`         |
 
 ### Parameters
 
@@ -136,18 +144,19 @@ the value does not yet exist, the calling token must have an ACL policy granting
 the `create` capability. If the value already exists, the calling token must
 have an ACL policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/data/:path`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/data/:path`         |
 
 ### Parameters
 
 - `options` `(Map: <optional>)` – An object that holds option settings.
+
     - `cas` `(int: <optional>)` - Set the "cas" value to use a Check-And-Set
       operation. If not set the write will be allowed. If set to 0 a write will
       only be allowed if the key doesn’t exist. If the index is non-zero the
       write will only be allowed if the key’s current version matches the
-      version specified in the cas parameter.  
+      version specified in the cas parameter.
 
 - `data` `(Map: <required>)` – The contents of the data map will be stored and
   returned on read.
@@ -196,9 +205,9 @@ specified location. This marks the version as deleted and will stop it from
 being returned from reads, but the underlying data will not be removed. A
 delete can be undone using the `undelete` path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/secret/data/:path`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/secret/data/:path`         |
 
 ### Parameters
 
@@ -221,9 +230,9 @@ marks the versions as deleted and will stop them from being returned from reads,
 but the underlying data will not be removed. A delete can be undone using the
 `undelete` path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/delete/:path`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/delete/:path`       |
 
 ### Parameters
 
@@ -256,14 +265,15 @@ $ curl \
 Undeletes the data for the provided version and path in the key-value store.
 This restores the data, allowing it to be returned on get requests.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/undelete/:path`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/undelete/:path`     |
 
 ### Parameters
 
 - `path` `(string: <required>)` – Specifies the path of the secret to undelete.
   This is specified as part of the URL.
+
 - `versions` `([]int: <required>)` - The versions to undelete. The versions will
   be restored and their data will be returned on normal get requests.
 
@@ -290,16 +300,17 @@ $ curl \
 Permanently removes the specified version data for the provided key and version
 numbers from the key-value store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/destroy/:path`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/destroy/:path`      |
 
 ### Parameters
 
 - `path` `(string: <required>)` – Specifies the path of the secret to destroy.
   This is specified as part of the URL.
+
 - `versions` `([]int: <required>)` - The versions to destroy. Their data will be
-  permanently deleted. 
+  permanently deleted.
 
 ### Sample Payload
 
@@ -327,9 +338,9 @@ value. Note that no policy-based filtering is performed on keys; do not encode
 sensitive information in key names. The values themselves are not accessible via
 this command.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/secret/metadata/:path`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/secret/metadata/:path`     |
 
 ### Parameters
 
@@ -364,9 +375,9 @@ entries.
 This endpoint retrieves the metadata and versions for the secret at the
 specified path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/metadata/:path`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/metadata/:path`     |
 
 ### Parameters
 
@@ -420,27 +431,35 @@ the value does not yet exist, the calling token must have an ACL policy granting
 the `create` capability. If the value already exists, the calling token must
 have an ACL policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/metadata/:path`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/metadata/:path`     |
 
 ### Parameters
 
 - `max_versions` `(int: 0)` – The number of versions to keep per key. If not
   set, the backend’s configured max version is used. Once a key has more than
   the configured allowed versions the oldest version will be permanently
-  deleted. 
+  deleted.
 
 - `cas_required` `(bool: false)` – If true the key will require the cas
   parameter to be set on all write requests. If false, the backend’s
-  configuration will be used. 
+  configuration will be used.
+
+- `delete_version_after` `(string:"0s")` – Set the `delete_version_after` value
+  to a duration to specify the `deletion_time` for all new versions
+  written to this key. If not set, the backend's `delete_version_after` will be
+  used. If the value is greater than the backend's `delete_version_after`, the
+  backend's `delete_version_after` will be used. Accepts [Go duration
+  format string][duration-godoc].
 
 ### Sample Payload
 
 ```json
 {
   "max_versions": 5,
-  "cas_required": false	
+  "cas_required": false,
+  "delete_version_after": "3h25m19s"
 }
 ```
 
@@ -457,11 +476,11 @@ $ curl \
 ## Delete Metadata and All Versions
 
 This endpoint permanently deletes the key metadata and all version data for the
-specified key. All version history will be removed.  
+specified key. All version history will be removed.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/secret/metadata/:path`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/secret/metadata/:path`   |
 
 ### Parameters
 

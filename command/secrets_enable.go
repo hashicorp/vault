@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -27,11 +27,13 @@ type SecretsEnableCommand struct {
 	flagAuditNonHMACResponseKeys  []string
 	flagListingVisibility         string
 	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
 	flagForceNoCache              bool
 	flagPluginName                string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagExternalEntropyAccess     bool
 	flagVersion                   int
 }
 
@@ -120,14 +122,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the request data object.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the response data object.",
 	})
 
@@ -141,7 +143,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
 		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the backend",
+			"will be sent to the plugins",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Comma-separated string or list of response header values that " +
+			"plugins will be allowed to set",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -182,6 +191,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagSealWrap,
 		Default: false,
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "external-entropy-access",
+		Target:  &c.flagExternalEntropyAccess,
+		Default: false,
+		Usage:   "Enable secrets engine to access Vault's external entropy source.",
 	})
 
 	f.IntVar(&IntVar{
@@ -255,10 +271,11 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 	// Build mount input
 	mountInput := &api.MountInput{
-		Type:        engineType,
-		Description: c.flagDescription,
-		Local:       c.flagLocal,
-		SealWrap:    c.flagSealWrap,
+		Type:                  engineType,
+		Description:           c.flagDescription,
+		Local:                 c.flagLocal,
+		SealWrap:              c.flagSealWrap,
+		ExternalEntropyAccess: c.flagExternalEntropyAccess,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
@@ -283,6 +300,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
 			mountInput.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
 	})
 

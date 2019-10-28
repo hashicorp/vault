@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-errors/errors"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -89,7 +89,7 @@ func (b *backend) readRole(ctx context.Context, storage logical.Storage, roleNam
 	}
 
 	// Always check when ActiveDirectory shows the password as last set on the fly.
-	engineConf, err := b.readConfig(ctx, storage)
+	engineConf, err := readConfig(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (b *backend) readRole(ctx context.Context, storage logical.Storage, roleNam
 	return role, nil
 }
 
-func (b *backend) writeRole(ctx context.Context, storage logical.Storage, roleName string, role *backendRole) error {
+func (b *backend) writeRoleToStorage(ctx context.Context, storage logical.Storage, roleName string, role *backendRole) error {
 	entry, err := logical.StorageEntryJSON(roleStorageKey+"/"+roleName, role)
 	if err != nil {
 		return err
@@ -116,7 +116,8 @@ func (b *backend) writeRole(ctx context.Context, storage logical.Storage, roleNa
 	if err := storage.Put(ctx, entry); err != nil {
 		return err
 	}
-	b.roleCache.SetDefault(roleName, role)
+	// Invalidate the cache.
+	b.roleCache.Delete(roleName)
 	return nil
 }
 
@@ -124,7 +125,7 @@ func (b *backend) roleUpdateOperation(ctx context.Context, req *logical.Request,
 	// Get everything we need to construct the role.
 	roleName := fieldData.Get("name").(string)
 
-	engineConf, err := b.readConfig(ctx, req.Storage)
+	engineConf, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +164,9 @@ func (b *backend) roleUpdateOperation(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	// writeRole it to storage and the roleCache.
-	if err := b.writeRole(ctx, req.Storage, roleName, role); err != nil {
+	// writeRoleToStorage it to storage, but not to the role cache because its
+	// last updated time from AD is only grabbed on reads.
+	if err := b.writeRoleToStorage(ctx, req.Storage, roleName, role); err != nil {
 		return nil, err
 	}
 

@@ -35,7 +35,7 @@ type AppendEntriesRequest struct {
 	LeaderCommitIndex uint64
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *AppendEntriesRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -59,7 +59,7 @@ type AppendEntriesResponse struct {
 	NoRetryBackoff bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *AppendEntriesResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -76,9 +76,14 @@ type RequestVoteRequest struct {
 	// Used to ensure safety
 	LastLogIndex uint64
 	LastLogTerm  uint64
+
+	// Used to indicate to peers if this vote was triggered by a leadership
+	// transfer. It is required for leadership transfer to work, because servers
+	// wouldn't vote otherwise if they are aware of an existing leader.
+	LeadershipTransfer bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *RequestVoteRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -99,7 +104,7 @@ type RequestVoteResponse struct {
 	Granted bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *RequestVoteResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -131,7 +136,7 @@ type InstallSnapshotRequest struct {
 	Size int64
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *InstallSnapshotRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -145,7 +150,28 @@ type InstallSnapshotResponse struct {
 	Success bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *InstallSnapshotResponse) GetRPCHeader() RPCHeader {
+	return r.RPCHeader
+}
+
+// TimeoutNowRequest is the command used by a leader to signal another server to
+// start an election.
+type TimeoutNowRequest struct {
+	RPCHeader
+}
+
+// GetRPCHeader - See WithRPCHeader.
+func (r *TimeoutNowRequest) GetRPCHeader() RPCHeader {
+	return r.RPCHeader
+}
+
+// TimeoutNowResponse is the response to TimeoutNowRequest.
+type TimeoutNowResponse struct {
+	RPCHeader
+}
+
+// GetRPCHeader - See WithRPCHeader.
+func (r *TimeoutNowResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -58,6 +58,13 @@ func TestTransit_Issue_2958(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = client.Logical().Write("transit/keys/foobar", map[string]interface{}{
+		"type": "ecdsa-p384",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	_, err = client.Logical().Write("transit/keys/bar", map[string]interface{}{
 		"type": "ed25519",
 	})
@@ -66,6 +73,11 @@ func TestTransit_Issue_2958(t *testing.T) {
 	}
 
 	_, err = client.Logical().Read("transit/keys/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Read("transit/keys/foobar")
 	if err != nil {
 		t.Fatal(err)
 	}

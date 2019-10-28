@@ -80,7 +80,7 @@ token_meta_username    my-username
 ~> Notice that the command option (`-method=userpass`) precedes the command
 argument (`username=my-username`).
 
-If a github auth method was enabled at the path "github-ent":
+If a github auth method was enabled at the path "github-prod":
 
 ```text
 $ vault login -method=github -path=github-prod
@@ -121,6 +121,9 @@ flags](/docs/commands/index.html) included on all commands.
 - `-method` `(string "token")` - Type of authentication to use such as
   "userpass" or "ldap". Note this corresponds to the TYPE, not the enabled path.
   Use -path to specify the path where the authentication is enabled.
+
+- `-no-print` `(bool: false)` - Do not display the token. The token will be
+  still be stored to the configured token helper. The default is false.
 
 - `-no-store` `(bool: false)` - Do not persist the token to the token helper
   (usually the local filesystem) after authentication for use in future

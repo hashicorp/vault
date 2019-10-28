@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUsersList(b *backend) *framework.Path {
@@ -20,6 +20,10 @@ func pathUsersList(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "User",
+		},
 	}
 }
 
@@ -49,6 +53,10 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "User",
+		},
 	}
 }
 

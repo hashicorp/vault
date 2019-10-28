@@ -79,6 +79,13 @@ storage "etcd" {
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for Etcd
   communication.
 
+- `request_timeout` `(string: "5s")` – Specifies timeout for requests
+  to etcd. 5 seconds should be long enough for most cases, even with internal
+  retry.
+
+- `lock_timeout` `(string: "15s")` – Specifies lock timeout for master
+  Vault instance. Set bigger value if you don't need faster recovery.
+
 ## `etcd` Examples
 
 ### DNS Discovery of cluster members
@@ -116,7 +123,7 @@ storage "etcd" {
 
 ### Enabling High Availability
 
-This example show enabling high availability for the Etcd storage backend.
+This example shows enabling high availability for the Etcd storage backend.
 
 ```hcl
 api_addr = "https://vault-leader.my-company.internal"

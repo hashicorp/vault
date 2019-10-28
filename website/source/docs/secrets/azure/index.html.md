@@ -10,10 +10,10 @@ description: |-
 
 # Azure Secrets Engine
 
-The Azure secrets engine dynamically generates Azure service principals and role
-assignments.  Vault roles can be mapped to one or more Azure roles, providing a
-simple, flexible way to manage the permissions granted to generated service
-principals.
+The Azure secrets engine dynamically generates Azure service principals along
+with role and group assignments.  Vault roles can be mapped to one or more Azure
+roles, and optionally group assignments, providing a simple, flexible way to
+manage the permissions granted to generated service principals.
 
 Each service principal is associated with a Vault lease. When the lease expires
 (either during normal revocation or through early revocation), the service
@@ -63,7 +63,7 @@ To configure a role called "my-role" with an existing service principal:
     $ vault write azure/roles/my-role application_object_id=<existing_app_obj_id> ttl=1h
     ```
 
-    Alternatively, to configure the role to create a new service principal with Azure roles:
+Alternatively, to configure the role to create a new service principal with Azure roles:
 
     ```text
     $ vault write azure/roles/my-role ttl=1h azure_roles=-<<EOF
@@ -126,32 +126,50 @@ Azure roles may be specified using the `role_name` parameter ("Owner"), or `role
 `role_id` is the definitive ID that's used during Vault operation; `role_name` is a convenience during
 role management operations. All roles *must exist* when the configuration is written or the operation will fail. The role lookup priority is:
 
-1. If `role_id` is provided, it validated and the corresponding `role_name` updated.
+1. If `role_id` is provided, it is validated and the corresponding `role_name` updated.
 1. If only `role_name` is provided, a case-insensitive search-by-name is made, succeeding
 only if *exactly one* matching role is found. The `role_id` field will updated with the matching role ID.
 
 The `scope` must be provided for every role assignment.
 
+### Azure Groups
+If dynamic service principals are used, a list of Azure groups may be configured on the Vault role.
+When the service principal is created, it will be assigned to these groups. Similar to the format used
+for specifying Azure roles, Azure groups may be referenced by either their `group_name` or `object_id`.
+Group specification by name must yield a single matching group.
+
 Example of role configuration:
 
 ```text
-$ vault write azure/roles/my-role ttl=1h max_ttl=24h azure_roles=-<<EOF
-  [
-    {
-        "role_name": "Contributor",
-    	"scope":  "/subscriptions/<uuid>/resourceGroups/Website"
-    },
-    {
-        "role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
-    	"scope":  "/subscriptions/<uuid>"
-    },
-    {
-   	    "role_name": "This won't matter as it will be overwritten",
-   	    "role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
-   	    "scope":  "/subscriptions/<uuid>/resourceGroups/Database"
-    }
-  ]
-EOF
+$ vault write azure/roles/my-role ttl=1h max_ttl=24h azure_roles=@az_roles.json azure_groups=@az_groups.json
+
+$ cat az_roles.json
+[
+  {
+    "role_name": "Contributor",
+    "scope":  "/subscriptions/<uuid>/resourceGroups/Website"
+  },
+  {
+    "role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
+    "scope":  "/subscriptions/<uuid>"
+  },
+  {
+    "role_name": "This won't matter as it will be overwritten",
+    "role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
+    "scope":  "/subscriptions/<uuid>/resourceGroups/Database"
+  }
+]
+
+$ cat az_groups.json
+[
+  {
+    "group_name": "foo",
+  },
+  {
+    "group_name": "This won't matter as it will be overwritten",
+    "object_id": "a6a834a6-36c3-4575-8e2b-05095963d603"
+  }
+]
 ```
 
 
@@ -170,6 +188,11 @@ The following Azure roles and Azure Active Directory (AAD) permissions are requi
 - "Read and write all applications" permission in AAD
 
 These permissions can be configured through the Azure Portal, CLI tool, or PowerShell.
+In your Azure subscription, your account must have `Microsoft.Authorization/*/Write`
+access to assign an AD app to a role. This action is granted through the [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner) role or
+[User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) role. If your account is assigned to the Contributor role, you
+don't have adequate permission. You will receive an error when attempting to assign the service
+principal to a role.
 
 ## Choosing between dynamic or existing service principals
 
@@ -224,6 +247,11 @@ Vault releases, but the code is managed separately.
 Please report issues, add feature requests, and submit contributions to the
 [vault-plugin-secrets-azure repo][repo] on GitHub.
 
+## Learn
+
+Refer to the [Azure Secrets
+Engine](https://learn.hashicorp.com/vault/secrets-management/azure-creds) guide
+for a step-by-step tutorial.
 
 ## API
 The Azure secrets engine has a full HTTP API. Please see the [Azure secrets engine API docs][api]

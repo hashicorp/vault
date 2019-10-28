@@ -6,8 +6,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
+)
+
+var (
+	logicalBackendAdjustmentFactor = 1
 )
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
@@ -193,19 +197,25 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		modFile, err := ioutil.ReadFile("../go.mod")
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, p := range plugins {
-			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-secrets-") {
-				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-secrets-"))
+		modLines := strings.Split(string(modFile), "\n")
+		for _, p := range modLines {
+			splitLine := strings.Split(strings.TrimSpace(p), " ")
+			if len(splitLine) == 0 {
+				continue
+			}
+			potPlug := strings.TrimPrefix(splitLine[0], "github.com/hashicorp/")
+			if strings.HasPrefix(potPlug, "vault-plugin-secrets-") {
+				backends = append(backends, strings.TrimPrefix(potPlug, "vault-plugin-secrets-"))
 			}
 		}
 
 		// backends are found by walking the directory, which includes the database backend,
 		// however, the plugins registry omits that one
-		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1 {
+		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+logicalBackendAdjustmentFactor {
 			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1, len(backends))
 		}
 

@@ -12,11 +12,11 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -174,6 +174,21 @@ func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, erro
 	return nil, nil
 }
 
+func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error) {
+	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < n; i++ {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
+			return entry, nil
+		}
+	}
+	return nil, nil
+}
+
 // sortEntriesByPath sorts the entries in the table by path and returns the
 // table; this is useful for tests
 func (t *MountTable) sortEntriesByPath() *MountTable {
@@ -194,19 +209,20 @@ func (t *MountTable) sortEntriesByPathDepth() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Table            string            `json:"table"`              // The table it belongs to
-	Path             string            `json:"path"`               // Mount Path
-	Type             string            `json:"type"`               // Logical backend Type
-	Description      string            `json:"description"`        // User-provided description
-	UUID             string            `json:"uuid"`               // Barrier view UUID
-	BackendAwareUUID string            `json:"backend_aware_uuid"` // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
-	Accessor         string            `json:"accessor"`           // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
-	Config           MountConfig       `json:"config"`             // Configuration related to this mount (but not backend-derived)
-	Options          map[string]string `json:"options"`            // Backend options
-	Local            bool              `json:"local"`              // Local mounts are not replicated or affected by replication
-	SealWrap         bool              `json:"seal_wrap"`          // Whether to wrap CSPs
-	Tainted          bool              `json:"tainted,omitempty"`  // Set as a Write-Ahead flag for unmount/remount
-	NamespaceID      string            `json:"namespace_id"`
+	Table                 string            `json:"table"`                   // The table it belongs to
+	Path                  string            `json:"path"`                    // Mount Path
+	Type                  string            `json:"type"`                    // Logical backend Type
+	Description           string            `json:"description"`             // User-provided description
+	UUID                  string            `json:"uuid"`                    // Barrier view UUID
+	BackendAwareUUID      string            `json:"backend_aware_uuid"`      // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
+	Accessor              string            `json:"accessor"`                // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
+	Config                MountConfig       `json:"config"`                  // Configuration related to this mount (but not backend-derived)
+	Options               map[string]string `json:"options"`                 // Backend options
+	Local                 bool              `json:"local"`                   // Local mounts are not replicated or affected by replication
+	SealWrap              bool              `json:"seal_wrap"`               // Whether to wrap CSPs
+	ExternalEntropyAccess bool              `json:"external_entropy_access"` // Whether to allow external entropy source access
+	Tainted               bool              `json:"tainted,omitempty"`       // Set as a Write-Ahead flag for unmount/remount
+	NamespaceID           string            `json:"namespace_id"`
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -227,6 +243,7 @@ type MountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -244,6 +261,7 @@ type APIMountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -295,6 +313,12 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("passthrough_request_headers")
 	} else {
 		e.synthesizedConfigCache.Store("passthrough_request_headers", e.Config.PassthroughRequestHeaders)
+	}
+
+	if len(e.Config.AllowedResponseHeaders) == 0 {
+		e.synthesizedConfigCache.Delete("allowed_response_headers")
+	} else {
+		e.synthesizedConfigCache.Store("allowed_response_headers", e.Config.AllowedResponseHeaders)
 	}
 }
 
@@ -350,7 +374,19 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 			return logical.CodedError(403, fmt.Sprintf("mount type of %q is not mountable", entry.Type))
 		}
 	}
-	return c.mountInternal(ctx, entry, MountTableUpdateStorage)
+
+	// Mount internally
+	if err := c.mountInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
@@ -372,7 +408,21 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Ensure the cache is populated, don't need the result
 	NamespaceByID(ctx, ns.ID, c)
 
-	// Verify there are no conflicting mounts
+	// Basic check for matching names
+	for _, ent := range c.mounts.Entries {
+		if ns.ID == ent.NamespaceID {
+			switch {
+			// Existing is oauth/github/ new is oauth/ or
+			// existing is oauth/ and new is oauth/github/
+			case strings.HasPrefix(ent.Path, entry.Path):
+				fallthrough
+			case strings.HasPrefix(entry.Path, ent.Path):
+				return logical.CodedError(409, fmt.Sprintf("path is already in use at %s", ent.Path))
+			}
+		}
+	}
+
+	// Verify there are no conflicting mounts in the router
 	if match := c.router.MountConflict(ctx, entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
@@ -405,8 +455,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
 
-	// Singleton mounts cannot be filtered on a per-secondary basis
-	// from replication
+	// Singleton mounts cannot be filtered manually on a per-secondary basis
+	// from replication.
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
 	}
@@ -472,6 +522,17 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
+	}
+
+	if !nilMount {
+		// restore the original readOnlyErr, so we can write to the view in
+		// Initialize() if necessary
+		view.setReadOnlyErr(origReadOnlyErr)
+		// initialize, using the core's active context.
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.logger.IsInfo() {
@@ -548,18 +609,22 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		backend.Cleanup(ctx)
 	}
 
-	// Unmount the backend entirely
-	if err := c.router.Unmount(ctx, path); err != nil {
-		return err
-	}
-
 	viewPath := entry.ViewPath()
 	switch {
 	case !updateStorage:
 		// Don't attempt to clear data, replication will handle this
-	case c.IsDRSecondary(), entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case c.IsDRSecondary():
+		// If we are a dr secondary we want to clear the view, but the provided
+		// view is marked as read only. We use the barrier here to get around
+		// it.
+		if err := logical.ClearViewWithLogging(ctx, NewBarrierView(c.barrier, viewPath), c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
+			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
+			return err
+		}
+
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
-		if err := logical.ClearView(ctx, view); err != nil {
+		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
@@ -569,9 +634,15 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			return err
 		}
 	}
+
 	// Remove the mount table entry
 	if err := c.removeMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to remove mount entry for path being unmounted", "error", err, "path", path)
+		return err
+	}
+
+	// Unmount the backend entirely
+	if err := c.router.Unmount(ctx, path); err != nil {
 		return err
 	}
 
@@ -666,6 +737,37 @@ func (c *Core) remountForce(ctx context.Context, path string) error {
 		return err
 	}
 	return c.mount(ctx, me)
+}
+
+// remountForceInternal takes a copy of the mount entry for the path and fully unmounts
+// and remounts the backend to pick up any changes, such as filtered paths.
+// Should be only used for internal usage.
+func (c *Core) remountForceInternal(ctx context.Context, path string, updateStorage bool) error {
+	me := c.router.MatchingMountEntry(ctx, path)
+	if me == nil {
+		return fmt.Errorf("cannot find mount for path %q", path)
+	}
+
+	me, err := me.Clone()
+	if err != nil {
+		return err
+	}
+
+	if err := c.unmountInternal(ctx, path, updateStorage); err != nil {
+		return err
+	}
+
+	// Mount internally
+	if err := c.mountInternal(ctx, me, updateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+		return err
+	}
+	return nil
 }
 
 // Remount is used to remount a path at a new mount point.
@@ -843,6 +945,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		for _, coreMount := range c.mounts.Entries {
 			if coreMount.Type == requiredMount.Type {
 				foundRequired = true
+				coreMount.Config = requiredMount.Config
 				break
 			}
 		}
@@ -1008,7 +1111,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		view := NewBarrierView(c.barrier, barrierPath)
 
-		// Singleton mounts cannot be filtered on a per-secondary basis
+		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			addFilterablePath(c, barrierPath)
@@ -1083,6 +1186,23 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			return errLoadMountsFailed
 		}
 
+		// Initialize
+		if !nilMount {
+			// Bind locally
+			localEntry := entry
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if backend == nil {
+					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					return
+				}
+
+				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				if err != nil {
+					c.logger.Error("failed to initialize mount entry", "path", localEntry.Path, "error", err)
+				}
+			})
+		}
+
 		if c.logger.IsInfo() {
 			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
 		}
@@ -1118,7 +1238,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	}
 
 	c.mounts = nil
-	c.router = NewRouter()
+	c.router.reset()
 	c.systemBarrierView = nil
 	return nil
 }
@@ -1160,6 +1280,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		BackendUUID: entry.BackendAwareUUID,
 	}
 
+	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {
 		return nil, err
@@ -1167,17 +1288,9 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if b == nil {
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
-	return b, nil
-}
+	addLicenseCallback(c, b)
 
-// mountEntrySysView creates a logical.SystemView from global and
-// mount-specific entries; because this should be called when setting
-// up a mountEntry, it doesn't check to ensure that me is not nil
-func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
-	return dynamicSystemView{
-		core:       c,
-		mountEntry: entry,
-	}
+	return b, nil
 }
 
 // defaultMountTable creates a default mount table
@@ -1185,36 +1298,37 @@ func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
 		Type: mountTableType,
 	}
-	mountUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
-	}
-	mountAccessor, err := c.generateMountAccessor("kv")
-	if err != nil {
-		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
-	}
-	bUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
+
+	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
+		mountUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
+		}
+		mountAccessor, err := c.generateMountAccessor("kv")
+		if err != nil {
+			panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
+		}
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+		}
+
+		kvMount := &MountEntry{
+			Table:            mountTableType,
+			Path:             "secret/",
+			Type:             "kv",
+			Description:      "key/value secret storage",
+			UUID:             mountUUID,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: bUUID,
+			Options: map[string]string{
+				"version": "2",
+			},
+		}
+		table.Entries = append(table.Entries, kvMount)
 	}
 
-	kvMount := &MountEntry{
-		Table:            mountTableType,
-		Path:             "secret/",
-		Type:             "kv",
-		Description:      "key/value secret storage",
-		UUID:             mountUUID,
-		Accessor:         mountAccessor,
-		BackendAwareUUID: bUUID,
-		Options: map[string]string{
-			"version": "1",
-		},
-	}
-	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
-		kvMount.Options["version"] = "2"
-	}
-	table.Entries = append(table.Entries, kvMount)
-	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }
 
@@ -1267,6 +1381,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
 		BackendAwareUUID: sysBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Accept"},
+		},
 	}
 
 	identityUUID, err := uuid.GenerateUUID()

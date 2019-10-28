@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/version"
 )
 
 func handleSysHealth(core *vault.Core) http.Handler {
@@ -146,10 +146,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = sealedCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
-	case !perfStandbyOK && perfStandby:
-		code = perfStandbyCode
-	case !standbyOK && standby:
-		code = standbyCode
+	case perfStandby:
+		if !perfStandbyOK {
+			code = perfStandbyCode
+		}
+	case standby:
+		if !standbyOK {
+			code = standbyCode
+		}
 	}
 
 	// Fetch the local cluster name and identifier

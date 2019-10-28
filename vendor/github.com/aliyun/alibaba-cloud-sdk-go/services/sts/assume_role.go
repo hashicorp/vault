@@ -76,10 +76,10 @@ func (client *Client) AssumeRoleWithCallback(request *AssumeRoleRequest, callbac
 // AssumeRoleRequest is the request struct for api AssumeRole
 type AssumeRoleRequest struct {
 	*requests.RpcRequest
-	DurationSeconds requests.Integer `position:"Query" name:"DurationSeconds"`
+	RoleSessionName string           `position:"Query" name:"RoleSessionName"`
 	Policy          string           `position:"Query" name:"Policy"`
 	RoleArn         string           `position:"Query" name:"RoleArn"`
-	RoleSessionName string           `position:"Query" name:"RoleSessionName"`
+	DurationSeconds requests.Integer `position:"Query" name:"DurationSeconds"`
 }
 
 // AssumeRoleResponse is the response struct for api AssumeRole
@@ -95,7 +95,7 @@ func CreateAssumeRoleRequest() (request *AssumeRoleRequest) {
 	request = &AssumeRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Sts", "2015-04-01", "AssumeRole", "", "")
+	request.InitWithApiInfo("Sts", "2015-04-01", "AssumeRole", "sts", "openAPI")
 	return
 }
 

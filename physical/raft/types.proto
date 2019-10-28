@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/physical/raft";
+
+package raft;
+
+message LogOperation {
+    // OpType is the Operation type
+	uint32 op_type = 1;
+
+	// Flags is an opaque value, currently unused. Reserved.
+	uint64 flags = 2;
+
+	// Key that is being affected
+	string key = 3;
+
+	// Value is optional, corresponds to the key
+	bytes value = 4;
+}
+
+message LogData {
+	repeated LogOperation operations = 1;
+}
+
+message IndexValue {
+    uint64 term = 1;
+    uint64 index = 2;
+}
+
+message Server {
+    int32 suffrage = 1;
+    string id = 2;
+    string address = 3;
+}
+
+message ConfigurationValue {
+    uint64 index = 1;
+    repeated Server servers = 2;
+}

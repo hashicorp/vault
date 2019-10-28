@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+
+# READ THIS BEFORE MAKING CHANGES:
+#
+# If you want to add a new pre-commit check, here are the rules:
+#
+#   1. Create a bash function for your check (see e.g. ui_lint below).
+#      NOTE: Each function will be called in a sub-shell so you can freely
+#      change directory without worrying about interference.
+#   2. Add the name of the function to the CHECKS variable.
+#   3. If no changes relevant to your new check are staged, then
+#      do not output anything at all - this would be annoying noise.
+#      In this case, call 'return 0' from your check function to return
+#      early without blocking the commit.
+#   4. If any non-trivial check-specific thing has to be invoked,
+#      then output '==> [check description]' as the first line of
+#      output. Each sub-check should output '--> [subcheck description]'
+#      after it has run, indicating success or failure.
+#   5. Call 'block [reason]' to block the commit. This ensures the last
+#      line of output calls out that the commit was blocked - which may not
+#      be obvious from random error messages generated in 4.
+#
+# At the moment, there are no automated tests for this hook, so please run it
+# locally to check you have not broken anything - breaking this will interfere
+# with other peoples' workflows significantly, so be sure, check everything twice.
+
+set -euo pipefail
+
+# Call block to block the commit with a message.
+block() {
+  echo "$@"
+  echo "Commit blocked - see errors above."
+  exit 1
+}
+
+# Add all check functions to this space separated list.
+# They are executed in this order (see end of file).
+CHECKS="ui_lint circleci_verify"
+
+MIN_CIRCLECI_VERSION=0.1.5575
+
+# Run ui linter if changes in that dir detected.
+ui_lint() {
+  local DIR=ui LINTER=node_modules/.bin/lint-staged
+
+  # Silently succeed if no changes staged for $DIR
+  if git diff --name-only --cached --exit-code -- $DIR/; then
+    return 0
+  fi
+
+  # Silently succeed if the linter has not been installed.
+  # We assume that if you're doing UI dev, you will have installed the linter
+  # by running yarn.
+  if [ ! -x $DIR/$LINTER ]; then
+    return 0
+  fi
+
+  echo "==> Changes detected in $DIR/: Running linter..."
+
+  # Run the linter from the UI dir.
+  cd $DIR
+  $LINTER || block "UI lint failed"
+}
+
+# Check .circleci/config.yml is up to date and valid, and that all changes are
+# included together in this commit.
+circleci_verify() {
+  # Change to the root dir of the repo.
+  cd "$(git rev-parse --show-toplevel)"
+
+  # Fail early if we accidentally used '.yaml' instead of '.yml'
+  if ! git diff --name-only --cached --exit-code -- '.circleci/***.yaml'; then
+    # This is just for consistency, as I keep making this mistake - Sam.
+    block "ERROR: File(s) with .yaml extension detected. Please rename them .yml instead."
+  fi
+
+  # Succeed early if no changes to yml files in .circleci/ are currently staged.
+  # make ci-verify is slow so we really don't want to run it unnecessarily.
+  if git diff --name-only --cached --exit-code -- '.circleci/***.yml'; then
+    return 0
+  fi
+  # Make sure to add no explicit output before this line, as it would just be noise
+  # for those making non-circleci changes.
+  echo "==> Verifying config changes in .circleci/"
+  echo "--> OK: All files are .yml not .yaml"
+
+  # Ensure commit includes _all_ files in .circleci/
+  # So not only are the files up to date, but we are also committing them in one go.
+  if ! git diff --name-only --exit-code -- '.circleci/***.yml'; then
+    echo "ERROR: Some .yml diffs in .circleci/ are staged, others not."
+    block "Please commit the entire .circleci/ directory together, or omit it altogether."
+  fi
+
+  echo "--> OK: All .yml files in .circleci are staged."
+
+  if ! REASON=$(check_circleci_cli_version); then
+    echo "*** WARNING: Unable to verify changes in .circleci/:"
+    echo "--> $REASON"
+    # We let this pass if there is no valid circleci version installed.
+    return 0
+  fi
+
+  if ! make -C .circleci ci-verify; then
+    block "ERROR: make ci-verify failed"
+  fi
+
+  echo "--> OK: make ci-verify succeeded."
+}
+
+check_circleci_cli_version() {
+  if ! command -v circleci > /dev/null 2>&1; then
+    echo "circleci cli not installed." 
+    return 1
+  fi
+
+  CCI="circleci --skip-update-check"
+
+  if ! THIS_VERSION=$($CCI version) > /dev/null 2>&1; then
+    # Guards against very old versions that do not have --skip-update-check.
+    echo "The installed circleci cli is too old. Please upgrade to at least $MIN_CIRCLECI_VERSION." 
+    return 1
+  fi
+
+  # SORTED_MIN is the lower of the THIS_VERSION and MIN_CIRCLECI_VERSION.
+  if ! SORTED_MIN="$(printf "%s\n%s" "$MIN_CIRCLECI_VERSION" "$THIS_VERSION" | sort -V | head -n1)"; then
+    echo "Failed to sort versions. Please open an issue to report this."
+    return 1
+  fi
+
+  if [ "$THIS_VERSION" != "${THIS_VERSION#$MIN_CIRCLECI_VERSION}" ]; then
+    return 0 # OK - Versions have the same prefix, so we consider them equal.
+  elif [ "$SORTED_MIN" = "$MIN_CIRCLECI_VERSION" ]; then
+    return 0 # OK - MIN_CIRCLECI_VERSION is lower than THIS_VERSION.
+  fi
+
+  # Version too low.
+  echo "The installed circleci cli v$THIS_VERSION is too old. Please upgrade to at least $MIN_CIRCLECI_VERSION"
+  return 1
+}
+
+for CHECK in $CHECKS; do
+  # Force each check into a subshell to avoid crosstalk.
+  ( $CHECK ) || exit $?
+done

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"net"
@@ -20,33 +21,41 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	monitoring "cloud.google.com/go/monitoring/apiv3"
+	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
+	"github.com/armon/go-metrics/prometheus"
+	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	"github.com/hashicorp/vault/version"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
-	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"golang.org/x/net/http/httpproxy"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -54,6 +63,11 @@ var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
 var memProfilerEnabled = false
+
+var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
+	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
+	return 1
+}
 
 const storageMigrationLock = "core/migration"
 
@@ -67,6 +81,7 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	WaitGroup *sync.WaitGroup
 
@@ -82,12 +97,14 @@ type ServerCommand struct {
 	reloadedCh      chan (struct{}) // for tests
 
 	// new stuff
-	flagConfigs        []string
-	flagLogLevel       string
-	flagDev            bool
-	flagDevRootTokenID string
-	flagDevListenAddr  string
-
+	flagConfigs          []string
+	flagLogLevel         string
+	flagLogFormat        string
+	flagRecovery         bool
+	flagDev              bool
+	flagDevRootTokenID   string
+	flagDevListenAddr    string
+	flagDevNoStoreToken  bool
 	flagDevPluginDir     string
 	flagDevPluginInit    bool
 	flagDevHA            bool
@@ -102,13 +119,16 @@ type ServerCommand struct {
 	flagDevAutoSeal      bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
+	flagTestServerConfig bool
+	flagDevConsul        bool
 }
 
 type ServerListener struct {
 	net.Listener
-	config             map[string]interface{}
-	maxRequestSize     int64
-	maxRequestDuration time.Duration
+	config                       map[string]interface{}
+	maxRequestSize               int64
+	maxRequestDuration           time.Duration
+	unauthenticatedMetricsAccess bool
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -168,6 +188,24 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.flagLogFormat,
+		Default: notSetValue,
+		// EnvVar can't be just "VAULT_LOG_FORMAT", because more than one env var name is supported
+		// for backwards compatibility reasons.
+		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
+		Completion: complete.PredictSet("standard", "json"),
+		Usage:      `Log format. Supported values are "standard" and "json".`,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "recovery",
+		Target: &c.flagRecovery,
+		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
+			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
+	})
+
 	f = set.NewFlagSet("Dev Options")
 
 	f.BoolVar(&BoolVar{
@@ -194,12 +232,20 @@ func (c *ServerCommand) Flags() *FlagSets {
 		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
 		Usage:   "Address to bind to in \"dev\" mode.",
 	})
+	f.BoolVar(&BoolVar{
+		Name:    "dev-no-store-token",
+		Target:  &c.flagDevNoStoreToken,
+		Default: false,
+		Usage: "Do not persist the dev root token to the token helper " +
+			"(usually the local filesystem) for use in future requests. " +
+			"The token will only be displayed in the command output.",
+	})
 
 	// Internal-only flags to follow.
 	//
 	// Why hello there little source code reader! Welcome to the Vault source
 	// code. The remaining options are intentionally undocumented and come with
-	// no warranty or backwards-compatability promise. Do not use these flags
+	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
 
@@ -286,6 +332,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "dev-consul",
+		Target:  &c.flagDevConsul,
+		Default: false,
+		Hidden:  true,
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "combine-logs",
@@ -297,6 +350,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "test-server-config",
+		Target:  &c.flagTestServerConfig,
 		Default: false,
 		Hidden:  true,
 	})
@@ -314,14 +374,332 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *ServerCommand) Run(args []string) int {
-	f := c.Flags()
+func (c *ServerCommand) parseConfig() (*server.Config, error) {
+	// Load the configuration
+	var config *server.Config
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("error loading configuration from %s: {{err}}", path), err)
+		}
 
-	if err := f.Parse(args); err != nil {
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+	return config, nil
+}
+
+func (c *ServerCommand) runRecoveryMode() int {
+	config, err := c.parseConfig()
+	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
+	// Ensure at least one config was found.
+	if config == nil {
+		c.UI.Output(wrapAtLength(
+			"No configuration files found. Please provide configurations with the " +
+				"-config flag. If you are supplying the path to a directory, please " +
+				"ensure the directory contains files with the .hcl or .json " +
+				"extension."))
+		return 1
+	}
+
+	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	c.logger = log.New(&log.LoggerOptions{
+		Output: c.logWriter,
+		Level:  level,
+		// Note that if logFormat is either unspecified or standard, then
+		// the resulting logger's format will be standard.
+		JSONFormat: logFormat == logging.JSONFormat,
+	})
+
+	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if logLevelStr != "" {
+		logLevelString = logLevelStr
+	}
+
+	// create GRPC logger
+	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
+	grpclog.SetLogger(&grpclogFaker{
+		logger: namedGRPCLogFaker,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
+	})
+
+	if config.Storage == nil {
+		c.UI.Output("A storage backend must be specified")
+		return 1
+	}
+
+	if config.DefaultMaxRequestDuration != 0 {
+		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
+	}
+
+	proxyCfg := httpproxy.FromEnvironment()
+	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
+		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+
+	// Initialize the storage backend
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
+		return 1
+	}
+	if config.Storage.Type == "raft" {
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+
+		if len(config.ClusterAddr) == 0 {
+			c.UI.Error("Cluster address must be set when using raft storage")
+			return 1
+		}
+	}
+
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		return 1
+	}
+
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+	info["log level"] = logLevelString
+	infoKeys = append(infoKeys, "log level")
+
+	var barrierSeal vault.Seal
+	var sealConfigError error
+
+	if len(config.Seals) == 0 {
+		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+	}
+
+	if len(config.Seals) > 1 {
+		c.UI.Error("Only one seal block is accepted in recovery mode")
+		return 1
+	}
+
+	configSeal := config.Seals[0]
+	sealType := vaultseal.Shamir
+	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+		sealType = os.Getenv("VAULT_SEAL_TYPE")
+		configSeal.Type = sealType
+	} else {
+		sealType = configSeal.Type
+	}
+
+	var seal vault.Seal
+	sealLogger := c.logger.Named(sealType)
+	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+	if sealConfigError != nil {
+		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+			c.UI.Error(fmt.Sprintf(
+				"Error parsing Seal configuration: %s", sealConfigError))
+			return 1
+		}
+	}
+	if seal == nil {
+		c.UI.Error(fmt.Sprintf(
+			"After configuring seal nil returned, seal type was %s", sealType))
+		return 1
+	}
+
+	barrierSeal = seal
+
+	// Ensure that the seal finalizer is called, even if using verify-only
+	defer func() {
+		err = seal.Finalize(context.Background())
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+		}
+	}()
+
+	coreConfig := &vault.CoreConfig{
+		Physical:     backend,
+		StorageType:  config.Storage.Type,
+		Seal:         barrierSeal,
+		Logger:       c.logger,
+		DisableMlock: config.DisableMlock,
+		RecoveryMode: c.flagRecovery,
+		ClusterAddr:  config.ClusterAddr,
+	}
+
+	core, newCoreError := vault.NewCore(coreConfig)
+	if newCoreError != nil {
+		if vault.IsFatalError(newCoreError) {
+			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			return 1
+		}
+	}
+
+	if err := core.InitializeRecovery(context.Background()); err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
+		return 1
+	}
+
+	// Compile server information for output later
+	infoKeys = append(infoKeys, "storage")
+	info["storage"] = config.Storage.Type
+
+	if coreConfig.ClusterAddr != "" {
+		info["cluster address"] = coreConfig.ClusterAddr
+		infoKeys = append(infoKeys, "cluster address")
+	}
+
+	// Initialize the listeners
+	lns := make([]ServerListener, 0, len(config.Listeners))
+	for _, lnConfig := range config.Listeners {
+		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logWriter, c.UI)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
+			return 1
+		}
+
+		lns = append(lns, ServerListener{
+			Listener: ln,
+			config:   lnConfig.Config,
+		})
+	}
+
+	listenerCloseFunc := func() {
+		for _, ln := range lns {
+			ln.Listener.Close()
+		}
+	}
+
+	defer c.cleanupGuard.Do(listenerCloseFunc)
+
+	infoKeys = append(infoKeys, "version")
+	verInfo := version.GetVersion()
+	info["version"] = verInfo.FullVersionNumber(false)
+	if verInfo.Revision != "" {
+		info["version sha"] = strings.Trim(verInfo.Revision, "'")
+		infoKeys = append(infoKeys, "version sha")
+	}
+
+	infoKeys = append(infoKeys, "recovery mode")
+	info["recovery mode"] = "true"
+
+	// Server configuration output
+	padding := 24
+	sort.Strings(infoKeys)
+	c.UI.Output("==> Vault server configuration:\n")
+	for _, k := range infoKeys {
+		c.UI.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.UI.Output("")
+
+	for _, ln := range lns {
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:                  core,
+			MaxRequestSize:        ln.maxRequestSize,
+			MaxRequestDuration:    ln.maxRequestDuration,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+			RecoveryMode:          c.flagRecovery,
+			RecoveryToken:         atomic.NewString(""),
+		})
+
+		server := &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          c.logger.StandardLogger(nil),
+		}
+
+		go server.Serve(ln.Listener)
+	}
+
+	if sealConfigError != nil {
+		init, err := core.Initialized(context.Background())
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
+			return 1
+		}
+		if init {
+			c.UI.Error("Vault is initialized but no Seal key could be loaded")
+			return 1
+		}
+	}
+
+	if newCoreError != nil {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! A non-fatal error occurred during initialization. Please " +
+				"check the logs for more information."))
+		c.UI.Warn("")
+	}
+
+	if !c.flagCombineLogs {
+		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+	}
+
+	c.logGate.Flush()
+
+	for {
+		select {
+		case <-c.ShutdownCh:
+			c.UI.Output("==> Vault shutdown triggered")
+
+			c.cleanupGuard.Do(listenerCloseFunc)
+
+			if err := core.Shutdown(); err != nil {
+				c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+			}
+
+			return 0
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+		}
+	}
+
+	return 0
+}
+
+func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
+	var logLevelString string
+	if config.LogLevel != "" && logLevelWasNotSet {
+		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
+		switch configLogLevel {
+		case "trace":
+			c.logger.SetLevel(log.Trace)
+		case "debug":
+			c.logger.SetLevel(log.Debug)
+		case "notice", "info", "":
+			c.logger.SetLevel(log.Info)
+		case "warn", "warning":
+			c.logger.SetLevel(log.Warn)
+		case "err", "error":
+			c.logger.SetLevel(log.Error)
+		default:
+			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
+		}
+	}
+	return logLevelString, nil
+}
+
+func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
@@ -331,37 +709,60 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	var level log.Level
 	var logLevelWasNotSet bool
+	logFormat := logging.UnspecifiedFormat
+	logLevelString := c.flagLogLevel
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
-	case notSetValue:
+	case notSetValue, "":
 		logLevelWasNotSet = true
+		logLevelString = "info"
 		level = log.Info
 	case "trace":
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "notice", "info", "":
+	case "notice", "info":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn
 	case "err", "error":
 		level = log.Error
 	default:
-		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
+		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
+	}
+
+	if c.flagLogFormat != notSetValue {
+		var err error
+		logFormat, err = logging.ParseLogFormat(c.flagLogFormat)
+		if err != nil {
+			return level, logLevelString, logLevelWasNotSet, logFormat, err
+		}
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		logFormat = logging.ParseEnvLogFormat()
+	}
+	if logFormat == logging.UnspecifiedFormat {
+		var err error
+		logFormat, err = logging.ParseLogFormat(config.LogFormat)
+		if err != nil {
+			return level, logLevelString, logLevelWasNotSet, logFormat, err
+		}
+	}
+
+	return level, logLevelString, logLevelWasNotSet, logFormat, nil
+}
+
+func (c *ServerCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.New(&log.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.logWriter,
-			Level:  log.Trace,
-		})
-	} else {
-		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+	if c.flagRecovery {
+		return c.runRecoveryMode()
 	}
-
-	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
 	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
@@ -385,54 +786,80 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if c.flagDev {
-		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
+		var devStorageType string
+		switch {
+		case c.flagDevConsul:
+			devStorageType = "consul"
+		case c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional_ha"
+		case !c.flagDevHA && c.flagDevTransactional:
+			devStorageType = "inmem_transactional"
+		case c.flagDevHA && !c.flagDevTransactional:
+			devStorageType = "inmem_ha"
+		default:
+			devStorageType = "inmem"
+		}
+		config = server.DevConfig(devStorageType)
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Config["address"] = c.flagDevListenAddr
 		}
 	}
-	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path, c.logger)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
-			return 1
-		}
 
-		if config == nil {
-			config = current
-		} else {
-			config = config.Merge(current)
-		}
+	parsedConfig, err := c.parseConfig()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if config == nil {
+		config = parsedConfig
+	} else {
+		config = config.Merge(parsedConfig)
 	}
 
 	// Ensure at least one config was found.
 	if config == nil {
 		c.UI.Output(wrapAtLength(
 			"No configuration files found. Please provide configurations with the " +
-				"-config flag. If you are supply the path to a directory, please " +
+				"-config flag. If you are supplying the path to a directory, please " +
 				"ensure the directory contains files with the .hcl or .json " +
 				"extension."))
 		return 1
 	}
 
-	if config.LogLevel != "" && logLevelWasNotSet {
-		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
-		switch configLogLevel {
-		case "trace":
-			c.logger.SetLevel(log.Trace)
-		case "debug":
-			c.logger.SetLevel(log.Debug)
-		case "notice", "info", "":
-			c.logger.SetLevel(log.Info)
-		case "warn", "warning":
-			c.logger.SetLevel(log.Warn)
-		case "err", "error":
-			c.logger.SetLevel(log.Error)
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown log level: %s", config.LogLevel))
-			return 1
-		}
+	level, logLevelString, logLevelWasNotSet, logFormat, err := c.processLogLevelAndFormat(config)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
+	if c.flagDevThreeNode || c.flagDevFourCluster {
+		c.logger = log.New(&log.LoggerOptions{
+			Mutex:  &sync.Mutex{},
+			Output: c.logWriter,
+			Level:  log.Trace,
+		})
+	} else {
+		c.logger = log.New(&log.LoggerOptions{
+			Output: c.logWriter,
+			Level:  level,
+			// Note that if logFormat is either unspecified or standard, then
+			// the resulting logger's format will be standard.
+			JSONFormat: logFormat == logging.JSONFormat,
+		})
+	}
+
+	allLoggers := []log.Logger{c.logger}
+
+	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	if logLevelStr != "" {
+		logLevelString = logLevelStr
+	}
+
+	// create GRPC logger
 	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
 	allLoggers = append(allLoggers, namedGRPCLogFaker)
 	grpclog.SetLogger(&grpclogFaker{
@@ -454,6 +881,11 @@ func (c *ServerCommand) Run(args []string) int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
+	// log proxy settings
+	proxyCfg := httpproxy.FromEnvironment()
+	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
+		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -466,7 +898,8 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	if err := c.setupTelemetry(config); err != nil {
+	metricsHelper, err := c.setupTelemetry(config)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
@@ -477,6 +910,18 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
+
+	if config.Storage.Type == "raft" {
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+
+		if len(config.ClusterAddr) == 0 {
+			c.UI.Error("Cluster address must be set when using raft storage")
+			return 1
+		}
+	}
+
 	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
 	allLoggers = append(allLoggers, namedStorageLogger)
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
@@ -492,55 +937,89 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := vaultseal.Shamir
-	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
-		if config.Seal == nil {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-		} else {
-			sealType = config.Seal.Type
-		}
-	}
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
 
-	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
-		sealLogger := c.logger.Named(sealType)
-		allLoggers = append(allLoggers, sealLogger)
-		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+		// Handle the case where no seal is provided
+		switch len(config.Seals) {
+		case 0:
+			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		case 1:
+			// If there's only one seal and it's disabled assume they want to
+			// migrate to a shamir seal and simply didn't provide it
+			if config.Seals[0].Disabled {
+				config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+			}
+		}
+		for _, configSeal := range config.Seals {
+			sealType := vaultseal.Shamir
+			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+				sealType = os.Getenv("VAULT_SEAL_TYPE")
+				configSeal.Type = sealType
+			} else {
+				sealType = configSeal.Type
+			}
+
+			var seal vault.Seal
+			sealLogger := c.logger.Named(sealType)
+			allLoggers = append(allLoggers, sealLogger)
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+			if sealConfigError != nil {
+				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+					c.UI.Error(fmt.Sprintf(
+						"Error parsing Seal configuration: %s", sealConfigError))
+					return 1
+				}
+			}
+			if seal == nil {
 				c.UI.Error(fmt.Sprintf(
-					"Error parsing Seal configuration: %s", sealConfigError))
+					"After configuring seal nil returned, seal type was %s", sealType))
 				return 1
 			}
+
+			if configSeal.Disabled {
+				unwrapSeal = seal
+			} else {
+				barrierSeal = seal
+			}
+
+			// Ensure that the seal finalizer is called, even if using verify-only
+			defer func() {
+				err = seal.Finalize(context.Background())
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				}
+			}()
+
 		}
 	}
 
-	// Ensure that the seal finalizer is called, even if using verify-only
-	defer func() {
-		if seal != nil {
-			err = seal.Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}
-	}()
+	if barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+		return 1
+	}
 
-	if seal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+	// prepare a secure random reader for core
+	secureRandomReader, err := createSecureRandomReaderFunc(config, &barrierSeal)
+	if err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
 	coreConfig := &vault.CoreConfig{
+		RawConfig:                 config,
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
+		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
-		Seal:                      seal,
+		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -560,6 +1039,8 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
+		MetricsHelper:             metricsHelper,
+		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -584,7 +1065,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if c.flagDevFourCluster {
-		return c.enableFourClusterDev(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -752,7 +1233,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = c.flagLogLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
@@ -841,7 +1321,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
 
-		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		maxRequestDuration := vault.DefaultMaxRequestDuration
 		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
 			val, err := parseutil.ParseDurationSecond(valRaw)
 			if err != nil {
@@ -855,11 +1335,31 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
 
+		var unauthenticatedMetricsAccess bool
+		if telemetryRaw, ok := lnConfig.Config["telemetry"]; ok {
+			telemetry, ok := telemetryRaw.([]map[string]interface{})
+			if !ok {
+				c.UI.Error(fmt.Sprintf("Could not parse telemetry sink value %v", telemetryRaw))
+				return 1
+			}
+
+			for _, item := range telemetry {
+				if valRaw, ok := item["unauthenticated_metrics_access"]; ok {
+					unauthenticatedMetricsAccess, err = parseutil.ParseBool(valRaw)
+					if err != nil {
+						c.UI.Error(fmt.Sprintf("Could not parse unauthenticated_metrics_access value %v", valRaw))
+						return 1
+					}
+				}
+			}
+		}
+
 		lns = append(lns, ServerListener{
-			Listener:           ln,
-			config:             lnConfig.Config,
-			maxRequestSize:     maxRequestSize,
-			maxRequestDuration: maxRequestDuration,
+			Listener:                     ln,
+			config:                       lnConfig.Config,
+			maxRequestSize:               maxRequestSize,
+			maxRequestDuration:           maxRequestDuration,
+			unauthenticatedMetricsAccess: unauthenticatedMetricsAccess,
 		})
 
 		// Store the listener props for output later
@@ -904,6 +1404,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		info["cgo"] = "enabled"
 	}
 
+	infoKeys = append(infoKeys, "recovery mode")
+	info["recovery mode"] = "false"
+
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
@@ -931,7 +1434,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+	if err := adjustCoreForSealMigration(c.logger, core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -940,27 +1443,29 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	go func() {
-		for {
-			err := core.UnsealWithStoredKeys(context.Background())
-			if err == nil {
-				return
-			}
+	if !core.IsInSealMigration() {
+		go func() {
+			for {
+				err := core.UnsealWithStoredKeys(context.Background())
+				if err == nil {
+					return
+				}
 
-			if vault.IsFatalError(err) {
-				c.logger.Error("error unsealing core", "error", err)
-				return
-			} else {
-				c.logger.Warn("failed to unseal core", "error", err)
-			}
+				if vault.IsFatalError(err) {
+					c.logger.Error("error unsealing core", "error", err)
+					return
+				} else {
+					c.logger.Warn("failed to unseal core", "error", err)
+				}
 
-			select {
-			case <-c.ShutdownCh:
-				return
-			case <-time.After(5 * time.Second):
+				select {
+				case <-c.ShutdownCh:
+					return
+				case <-time.After(5 * time.Second):
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
@@ -1094,10 +1599,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                  core,
-			MaxRequestSize:        ln.maxRequestSize,
-			MaxRequestDuration:    ln.maxRequestDuration,
-			DisablePrintableCheck: config.DisablePrintableCheck,
+			Core:                         core,
+			MaxRequestSize:               ln.maxRequestSize,
+			MaxRequestDuration:           ln.maxRequestDuration,
+			DisablePrintableCheck:        config.DisablePrintableCheck,
+			UnauthenticatedMetricsAccess: ln.unauthenticatedMetricsAccess,
+			RecoveryMode:                 c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
@@ -1111,6 +1618,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 		}
 
+		// server defaults
 		server := &http.Server{
 			Handler:           handler,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -1118,7 +1626,54 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}
+
+		// override server defaults with config values for read/write/idle timeouts if configured
+		if readHeaderTimeoutInterface, ok := ln.config["http_read_header_timeout"]; ok {
+			readHeaderTimeout, err := parseutil.ParseDurationSecond(readHeaderTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_header_timeout %v", readHeaderTimeout))
+				return 1
+			}
+			server.ReadHeaderTimeout = readHeaderTimeout
+		}
+
+		if readTimeoutInterface, ok := ln.config["http_read_timeout"]; ok {
+			readTimeout, err := parseutil.ParseDurationSecond(readTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_timeout %v", readTimeout))
+				return 1
+			}
+			server.ReadTimeout = readTimeout
+		}
+
+		if writeTimeoutInterface, ok := ln.config["http_write_timeout"]; ok {
+			writeTimeout, err := parseutil.ParseDurationSecond(writeTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_write_timeout %v", writeTimeout))
+				return 1
+			}
+			server.WriteTimeout = writeTimeout
+		}
+
+		if idleTimeoutInterface, ok := ln.config["http_idle_timeout"]; ok {
+			idleTimeout, err := parseutil.ParseDurationSecond(idleTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_idle_timeout %v", idleTimeout))
+				return 1
+			}
+			server.IdleTimeout = idleTimeout
+		}
+
+		// server config tests can exit now
+		if c.flagTestServerConfig {
+			continue
+		}
+
 		go server.Serve(ln.Listener)
+	}
+
+	if c.flagTestServerConfig {
+		return 0
 	}
 
 	if sealConfigError != nil {
@@ -1193,7 +1748,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			var config *server.Config
 			var level log.Level
 			for _, path := range c.flagConfigs {
-				current, err := server.LoadConfig(path, c.logger)
+				current, err := server.LoadConfig(path)
 				if err != nil {
 					c.logger.Error("could not reload config", "path", path, "error", err)
 					goto RUNRELOADFUNCS
@@ -1211,6 +1766,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.logger.Error("no config found at reload time")
 				goto RUNRELOADFUNCS
 			}
+
+			core.SetConfig(config)
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
@@ -1236,6 +1793,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
 
@@ -1260,7 +1822,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() != vault.StoredKeysNotSupported {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -1274,7 +1836,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported() == vault.StoredKeysSupportedGeneric {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err
@@ -1352,33 +1914,39 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Set the token
-	tokenHelper, err := c.TokenHelper()
-	if err != nil {
-		return nil, err
-	}
-	if err := tokenHelper.Store(init.RootToken); err != nil {
-		return nil, err
+	if !c.flagDevNoStoreToken {
+		tokenHelper, err := c.TokenHelper()
+		if err != nil {
+			return nil, err
+		}
+		if err := tokenHelper.Store(init.RootToken); err != nil {
+			return nil, err
+		}
 	}
 
-	// Upgrade the default K/V store
-	if !c.flagDevLeasedKV && !c.flagDevKVV1 {
-		req := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: init.RootToken,
-			Path:        "sys/mounts/secret/tune",
-			Data: map[string]interface{}{
-				"options": map[string]string{
-					"version": "2",
-				},
+	kvVer := "2"
+	if c.flagDevKVV1 || c.flagDevLeasedKV {
+		kvVer = "1"
+	}
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": kvVer,
 			},
-		}
-		resp, err := core.HandleRequest(ctx, req)
-		if err != nil {
-			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
-		}
-		if resp.IsError() {
-			return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
-		}
+		},
+	}
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
+	}
+	if resp.IsError() {
+		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
 	}
 
 	return init, nil
@@ -1684,8 +2252,8 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-// setupTelemetry is used to setup the telemetry sub-systems
-func (c *ServerCommand) setupTelemetry(config *server.Config) error {
+// setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -1694,10 +2262,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	metrics.DefaultInmemSignal(inm)
 
 	var telConfig *server.Telemetry
-	if config.Telemetry == nil {
-		telConfig = &server.Telemetry{}
-	} else {
+	if config.Telemetry != nil {
 		telConfig = config.Telemetry
+	} else {
+		telConfig = &server.Telemetry{}
 	}
 
 	metricsConf := metrics.DefaultConfig("vault")
@@ -1705,10 +2273,28 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+	var prometheusEnabled bool
+
+	// Configure the Prometheus sink
+	if telConfig.PrometheusRetentionTime != 0 {
+		prometheusEnabled = true
+		prometheusOpts := prometheus.PrometheusOpts{
+			Expiration: telConfig.PrometheusRetentionTime,
+		}
+
+		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+		if err != nil {
+			return nil, err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
+
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1717,7 +2303,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1753,7 +2339,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
@@ -1768,21 +2354,43 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 
+	// Configure the stackdriver sink
+	if telConfig.StackdriverProjectID != "" {
+		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent.String()))
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
+		}
+		sink := stackdriver.NewSink(client, &stackdriver.Config{
+			ProjectID: telConfig.StackdriverProjectID,
+			Location:  telConfig.StackdriverLocation,
+			Namespace: telConfig.StackdriverNamespace,
+		})
+		fanout = append(fanout, sink)
+	}
+
 	// Initialize the global sink
-	if len(fanout) > 0 {
-		fanout = append(fanout, inm)
-		metrics.NewGlobal(metricsConf, fanout)
+	if len(fanout) > 1 {
+		// Hostname enabled will create poor quality metrics name for prometheus
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		}
 	} else {
 		metricsConf.EnableHostname = false
-		metrics.NewGlobal(metricsConf, inm)
 	}
-	return nil
+	fanout = append(fanout, inm)
+	_, err := metrics.NewGlobal(metricsConf, fanout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {
