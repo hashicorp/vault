@@ -56,6 +56,8 @@ IMPROVEMENTS:
  * core: Exit ScanView if context has been cancelled [GH-7419]
  * core: re-encrypt barrier and recovery keys if the unseal key is updated
    [GH-7493]
+ * core: Don't advertise the full set of TLS 1.2 cipher suites on the cluster
+   port, even though only strong ciphers were used [GH-7487]
  * core (enterprise): Add background seal re-wrap
  * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
    access. [GH-7550] 
