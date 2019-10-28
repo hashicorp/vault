@@ -122,13 +122,13 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
-	path, ok := conf["path"]
-	if !ok {
-		if pathFromEnv := os.Getenv(EnvVaultRaftPath); pathFromEnv != "" {
-			path = pathFromEnv
-		} else {
+	path := os.Getenv(EnvVaultRaftPath)
+	if path == "" {
+		pathFromConfig, ok := conf["path"]
+		if !ok {
 			return nil, fmt.Errorf("'path' must be set")
 		}
+		path = pathFromConfig
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
@@ -173,8 +173,15 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var localID string
 	{
-		// Determine the local node ID
-		localID = conf["node_id"]
+		// Determine the local node ID from the environment.
+		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
+			localID = raftNodeID
+		}
+
+		// If not set in the environment check the configuration file.
+		if len(localID) == 0 {
+			localID = conf["node_id"]
+		}
 
 		// If not set in the config check the "node-id" file.
 		if len(localID) == 0 {
@@ -187,12 +194,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			case os.IsNotExist(err):
 			default:
 				return nil, err
-			}
-		}
-		// If not set in the config or the "node-id" file try to fetch it from the environment.
-		if len(localID) == 0 {
-			if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
-				localID = raftNodeID
 			}
 		}
 
