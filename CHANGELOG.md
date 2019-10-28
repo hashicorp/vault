@@ -49,7 +49,7 @@ IMPROVEMENTS:
    [GH-7493]
  * core (enterprise): Add background seal re-wrap
  * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
-   access. [GH-7550]  
+   access. [GH-7550] 
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
@@ -114,6 +114,7 @@ CHANGES:
    automatic region detection added to the CLI and Agent in 1.2 has been removed.
 
 IMPROVEMENTS:
+
   * cli: Ignore existing token during CLI login [GH-7508]
   * core: Log proxy settings from environment on startup [GH-7528]
   * core: Cache whether we've been initialized to reduce load on storage [GH-7549]
@@ -135,13 +136,13 @@ BUG FIXES:
    viewed in the UI [GH-7504]
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
-   
+
 ## 1.2.3 (September 12, 2019)
 
 FEATURES:
 
 * **Oracle Cloud (OCI) Integration**: Vault now support using Oracle Cloud for
-  storage, auto unseal, and authentication.  
+  storage, auto unseal, and authentication.
 
 IMPROVEMENTS:
 
