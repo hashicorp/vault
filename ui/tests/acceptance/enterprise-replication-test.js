@@ -1,4 +1,4 @@
-import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
