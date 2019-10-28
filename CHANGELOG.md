@@ -97,6 +97,7 @@ BUG FIXES:
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
+ * secret/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
