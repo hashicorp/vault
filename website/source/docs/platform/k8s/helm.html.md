@@ -247,7 +247,7 @@ and consider if they're appropriate for your deployment.
 
     - `targetPort` (`int: 8200`) - Port on which the service is listening.
 
-    - `annotations` (`string`) - This value defines additional annotations for the service. This should be a formatted as a multi-line string.
+    - `annotations` (`string`) - This value defines additional annotations for the service. This should be formatted as a multi-line string.
 
         ```yaml
         annotations: |
