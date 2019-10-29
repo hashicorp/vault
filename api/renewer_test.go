@@ -1,8 +1,9 @@
 package api
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func TestRenewer_NewRenewer(t *testing.T) {
@@ -63,8 +64,8 @@ func TestRenewer_NewRenewer(t *testing.T) {
 			v.renewCh = nil
 			v.stopCh = nil
 
-			if !reflect.DeepEqual(tc.e, v) {
-				t.Errorf("not equal\nexp: %#v\nact: %#v", tc.e, v)
+			if diff := deep.Equal(tc.e, v); diff != nil {
+				t.Error(diff)
 			}
 		})
 	}
