@@ -111,12 +111,16 @@ This endpoint creates or updates the role definition.
 - `vhosts` `(string: "")` – Specifies a map of virtual hosts to
   permissions.
 
+- `vhost_topics` `(string: "")` – Specifies a map of virtual hosts and exchanges
+  to topic permissions. This option requires RabbitMQ 3.7.0 or later.
+
 ### Sample Payload
 
 ```json
 {
   "tags": "tag1,tag2",
-  "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+  "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}",
+  "vhost_topics": "{\"/\": {\"amq.topic\": {\"write\":\".*\", \"read\": \".*\"}}}"
 }
 ```
 
@@ -157,7 +161,8 @@ $ curl \
 {
   "data": {
     "tags": "",
-    "vhost": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+    "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}",
+    "vhost_topics": "{\"/\": {\"amq.topic\": {\"write\":\".*\", \"read\": \".*\"}}}"
   }
 }
 ```
