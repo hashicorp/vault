@@ -750,7 +750,7 @@ func (t *TemplateError) Error() string {
 
 // ACL is used to return an ACL which is built using the
 // named policies.
-func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string) (*ACL, error) {
+func (ps *PolicyStore) ACL(ctx context.Context, token *logical.TokenEntry, entity *identity.Entity, policyNames map[string][]string) (*ACL, error) {
 	var policies []*Policy
 	// Fetch the policies
 	for nsID, nsPolicyNames := range policyNames {
@@ -787,7 +787,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, token, entity, groups)
 			if err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("error parsing templated policy %q: {{err}}", policy.Name), err)
 			}

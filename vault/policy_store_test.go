@@ -293,7 +293,7 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 	}
 
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	acl, err := ps.ACL(ctx, nil, map[string][]string{ns.ID: []string{"dev", "ops"}})
+	acl, err := ps.ACL(ctx, nil, nil, map[string][]string{ns.ID: []string{"dev", "ops"}})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
