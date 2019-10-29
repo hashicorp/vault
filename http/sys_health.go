@@ -63,7 +63,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 }
 
 func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	code, body, err := getSysHealth(core, r)
+	code, body, _ := getSysHealth(core, r)
 
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
