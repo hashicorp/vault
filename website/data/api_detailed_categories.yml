@@ -55,6 +55,7 @@
     - api/system/config-cors.html
     - api/system/config-ui.html
     - api/system/control-group.html
+    - api/system/generate-recovery-token.html
     - api/system/generate-root.html
     - api/system/health.html
     - api/system/host-info.html
