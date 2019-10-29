@@ -88,6 +88,9 @@ const (
 	// flagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
 	flagNameTLSSkipVerify = "tls-skip-verify"
+	// flagTLSServerName is the flag used in the base command to read in
+	// the TLS server name.
+	flagTLSServerName = "tls-server-name"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
