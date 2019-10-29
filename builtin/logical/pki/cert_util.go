@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
+	"golang.org/x/crypto/cryptobyte"
+	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
 )
 
@@ -38,7 +41,7 @@ var (
 	// when doing the idna conversion, this appears to only affect output, not
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
-	hostnameRegex = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
@@ -853,10 +856,10 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	if sans := data.apiData.Get("other_sans").([]string); len(sans) > 0 {
 		otherSANsInput = sans
 	}
-	if data.role.UseCSRSANs && data.csr != nil && len(data.csr.Extensions) > 0 {
-		others, err := getOtherSANsFromX509Extensions(data.csr.Extensions)
+	if data.role.UseCSRSANs && csr != nil && len(csr.Extensions) > 0 {
+		others, err := getOtherSANsFromX509Extensions(csr.Extensions)
 		if err != nil {
-			return errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
 		}
 		for _, other := range others {
 			otherSANsInput = append(otherSANsInput, other.String())
