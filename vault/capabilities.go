@@ -79,7 +79,7 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
 	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
+	acl, err := c.policyStore.ACL(tokenCtx, te, entity, policyNames, policies...)
 	if err != nil {
 		return nil, err
 	}

@@ -31,6 +31,7 @@ const (
 type PopulateStringInput struct {
 	String            string
 	ValidityCheckOnly bool
+	Token             *logical.TokenEntry
 	Entity            *logical.Entity
 	Groups            []*logical.Group
 	NamespaceID       string
@@ -349,6 +350,22 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		return strconv.FormatInt(result.Unix(), 10), nil
 	}
 
+	performTokenTemplating := func(trimmed string) (string, error) {
+		switch {
+		case trimmed == "display_name":
+			return p.templateHandler(p.Token.DisplayName)
+
+		case trimmed == "metadata":
+			return p.templateHandler(p.Token.Meta)
+
+		case strings.HasPrefix(trimmed, "metadata."):
+			split := strings.SplitN(trimmed, ".", 2)
+			return p.templateHandler(p.Token.Meta, split[1])
+		}
+
+		return "", ErrTemplateValueNotFound
+	}
+
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
 		if p.Entity == nil {
@@ -364,6 +381,9 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 
 	case strings.HasPrefix(input, "time."):
 		return performTimeTemplating(strings.TrimPrefix(input, "time."))
+
+	case strings.HasPrefix(input, "token."):
+		return performTokenTemplating(strings.TrimPrefix(input, "token."))
 	}
 
 	return "", ErrTemplateValueNotFound

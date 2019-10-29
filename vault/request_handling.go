@@ -255,7 +255,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
+	acl, err := c.policyStore.ACL(tokenCtx, te, entity, policyNames, policies...)
 	if err != nil {
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
