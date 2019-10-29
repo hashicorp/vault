@@ -64,9 +64,10 @@ generate credentials:
     By writing to the `roles/my-role` path we are defining the `my-role` role.
     This role will be created by evaluating the given `vhosts`, `vhost_topics`
     and `tags` statements. By default, no tags, no virtual hosts or topic
-    permissions are assigned to a role. If no topic permissions are defined,
-    publishing to a topic exchange or consuming from a topic is always
-    authorised. You can read more about [RabbitMQ management tags][rmq-perms]
+    permissions are assigned to a role. If no topic permissions are defined
+    and the default authorisation backend is used, publishing to a topic
+    exchange or consuming from a topic is always authorised. You can read
+    more about [RabbitMQ management tags][rmq-perms]
     and [RabbitMQ topic authorization][rmq-topics].
 
  

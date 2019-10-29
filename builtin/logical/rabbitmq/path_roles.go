@@ -39,7 +39,7 @@ func pathRoles(b *backend) *framework.Path {
 			},
 			"vhost_topics": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "A map of virtual hosts and exchanges to topic permissions.",
+				Description: "A nested map of virtual hosts and exchanges to topic permissions.",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -156,7 +156,11 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	return nil, nil
 }
 
-// Role that defines the capabilities of the credentials issued against it
+// Role that defines the capabilities of the credentials issued against it.
+// Maps are used because the names of vhosts and exchanges will vary widely.
+// VHosts is a map with a vhost name as key and the permissions as value.
+// VHostTopics is a nested map with vhost name and exchange name as keys and
+// the topic permissions as value.
 type roleEntry struct {
 	Tags        string                                     `json:"tags" structs:"tags" mapstructure:"tags"`
 	VHosts      map[string]vhostPermission                 `json:"vhosts" structs:"vhosts" mapstructure:"vhosts"`
@@ -170,6 +174,7 @@ type vhostPermission struct {
 	Read      string `json:"read" structs:"read" mapstructure:"read"`
 }
 
+// Structure representing the topic permissions of an exchange
 type vhostTopicPermission struct {
 	Write string `json:"write" structs:"write" mapstructure:"write"`
 	Read  string `json:"read" structs:"read" mapstructure:"read"`
