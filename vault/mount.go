@@ -383,6 +383,11 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
+			c.logger.Error("failed to unmount", "error", unmountInternalErr)
+		}
 		return err
 	}
 
