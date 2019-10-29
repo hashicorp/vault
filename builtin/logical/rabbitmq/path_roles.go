@@ -37,6 +37,10 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "A map of virtual hosts to permissions.",
 			},
+			"vhost_topics": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "A map of virtual hosts and exchanges to topic permissions.",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
@@ -115,7 +119,9 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 
 	tags := d.Get("tags").(string)
 	rawVHosts := d.Get("vhosts").(string)
+	rawVHostTopics := d.Get("vhost_topics").(string)
 
+	// Either tags or VHost permissions are always required, but topic permissions are always optional.
 	if tags == "" && rawVHosts == "" {
 		return logical.ErrorResponse("both tags and vhosts not specified"), nil
 	}
@@ -127,10 +133,18 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 		}
 	}
 
+	var vhostTopics map[string]map[string]vhostTopicPermission
+	if len(rawVHostTopics) > 0 {
+		if err := jsonutil.DecodeJSON([]byte(rawVHostTopics), &vhostTopics); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to unmarshal vhost_topics: %s", err)), nil
+		}
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		Tags:   tags,
-		VHosts: vhosts,
+		Tags:        tags,
+		VHosts:      vhosts,
+		VHostTopics: vhostTopics,
 	})
 	if err != nil {
 		return nil, err
@@ -144,8 +158,9 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 
 // Role that defines the capabilities of the credentials issued against it
 type roleEntry struct {
-	Tags   string                     `json:"tags" structs:"tags" mapstructure:"tags"`
-	VHosts map[string]vhostPermission `json:"vhosts" structs:"vhosts" mapstructure:"vhosts"`
+	Tags        string                                     `json:"tags" structs:"tags" mapstructure:"tags"`
+	VHosts      map[string]vhostPermission                 `json:"vhosts" structs:"vhosts" mapstructure:"vhosts"`
+	VHostTopics map[string]map[string]vhostTopicPermission `json:"vhost_topics" structs:"vhost_topics" mapstructure:"vhost_topics"`
 }
 
 // Structure representing the permissions of a vhost
@@ -153,6 +168,11 @@ type vhostPermission struct {
 	Configure string `json:"configure" structs:"configure" mapstructure:"configure"`
 	Write     string `json:"write" structs:"write" mapstructure:"write"`
 	Read      string `json:"read" structs:"read" mapstructure:"read"`
+}
+
+type vhostTopicPermission struct {
+	Write string `json:"write" structs:"write" mapstructure:"write"`
+	Read  string `json:"read" structs:"read" mapstructure:"read"`
 }
 
 const pathRoleHelpSyn = `
@@ -176,6 +196,26 @@ passed as a string in the form:
 		"configure": ".*",
 		"write": ".*",
 		"read": ".*"
+	}
+}
+The "vhost_topics" parameter customizes the topic permissions that this user
+will be granted. This is a JSON object passed as a string in the form:
+{
+	"vhostOne": {
+		"exchangeOneOne": {
+			"write": ".*",
+			"read": ".*"
+		},
+		"exchangeOneTwo": {
+			"write": ".*",
+			"read": ".*"
+		}
+	},
+	"vhostTwo": {
+		"exchangeTwoOne": {
+			"write": ".*",
+			"read": ".*"
+		}
 	}
 }
 `
