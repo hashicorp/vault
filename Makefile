@@ -30,7 +30,7 @@ default: dev
 
 # bin generates the releasable binaries for Vault
 bin: prep
-	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) LD_FLAGS="-s -w" BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
