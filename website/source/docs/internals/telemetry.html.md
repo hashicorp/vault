@@ -152,7 +152,7 @@ Additionally, per audit log device metrics such as those for a specific backend 
   <tr>
     <td>`vault.barrier.put`</td>
     <td>Duration of time taken by PUT operations at the barrier</td>
-    <td>(Milliseconds)): </td>
+    <td>ms</td>
     <td>summary</td>
   </tr>
 
@@ -180,7 +180,7 @@ Additionally, per audit log device metrics such as those for a specific backend 
   <tr>
     <td>`vault.core.handle_request`</td>
     <td>Duration of time taken by requests handled by Vault core</td>
-    <td>(Milliseconds) </td>
+    <td>ms</td>
     <td>summary</td>
   </tr>
 
@@ -672,35 +672,35 @@ These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.
   <tr>
     <td>`replication.merkle.commit_index`</td>
     <td>The last committed index in the Merkle Tree.</td>
-    <td>(Logical Sequence Number): </td>
+    <td>sequence number</td>
     <td>gauge</td>
   </tr>
 
   <tr>
     <td>`replication.wal.last_wal`</td>
     <td>The index of the last WAL</td>
-    <td>(Logical Sequence Number): </td>
+    <td>sequence number</td>
     <td>gauge</td>
   </tr>
 
   <tr>
     <td>`replication.wal.last_dr_wal`</td>
     <td>The index of the last DR WAL</td>
-    <td>(Logical Sequence Number): </td>
+    <td>sequence number</td>
     <td>gauge</td>
   </tr>
 
   <tr>
     <td>`replication.wal.last_performance_wal`</td>
     <td>The index of the last Performance WAL</td>
-    <td>(Logical Sequence Number): </td>
+    <td>sequence number</td>
     <td>gauge</td>
   </tr>
 
   <tr>
     <td>`replication.fsm.last_remote_wal`</td>
     <td>The index of the last remote WAL</td>
-    <td>(Logical Sequence Number): </td>
+    <td>sequence number</td>
     <td>gauge</td>
   </tr>
 </table>
@@ -796,7 +796,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
   <tr>
     <td>`database.&lt;name&gt;.CreateUser.error`</td>
     <td>Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`</td>
-    <td>operations</td>
+    <td>errors</td>
     <td>counter</td>
   </tr>
 
