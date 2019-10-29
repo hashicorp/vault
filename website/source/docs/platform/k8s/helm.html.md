@@ -221,7 +221,7 @@ and consider if they're appropriate for your deployment.
           disktype: ssd
         ```
 
-  * `extraLabels` (`string`) - This value defines additional labels for server pods. This should be a formatted as a multi-line string.
+  * `extraLabels` (`string`) - This value defines additional labels for server pods. This should be formatted as a multi-line string.
 
         ```yaml
         extraLabels: |
