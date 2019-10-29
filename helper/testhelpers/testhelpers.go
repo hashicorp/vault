@@ -274,7 +274,8 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		for _, core := range cluster.Cores {
-			if standby, _ := core.Core.Standby(); !standby {
+			leaderResp, err := core.Client.Sys().Leader()
+			if err == nil && leaderResp.IsSelf {
 				return core
 			}
 		}
