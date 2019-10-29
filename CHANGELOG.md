@@ -49,6 +49,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * agent: Add ability to set the TLS SNI name used by Agent [GH-7519]
  * api: Allow setting a function to control retry behavior [GH-7331]
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]

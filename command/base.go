@@ -296,7 +296,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "tls-server-name",
+				Name:       flagTLSServerName,
 				Target:     &c.flagTLSServerName,
 				Default:    "",
 				EnvVar:     api.EnvVaultTLSServerName,
