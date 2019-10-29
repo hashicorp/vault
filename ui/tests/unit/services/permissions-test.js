@@ -168,23 +168,10 @@ module('Unit | Service | permissions', function(hooks) {
       },
     };
     service.set('exactPaths', accessPaths);
-    assert.equal(
-      service.hasNavPermission(
-        'access',
-        'groups',
-        ['list', 'read'],
-        'checks permission when multiple capabilities are specified'
-      ),
-      true
-    );
-    assert.equal(
-      service.hasNavPermission('access', 'groups'),
-      true,
-      'checks permission when capabilities are not specified'
-    );
+    assert.equal(service.hasNavPermission('access', 'groups'), true);
   });
 
-  test('hasNavPermission returns false if a policy does not include access to any paths', function(assert) {
+  test('hasNavPermission returns false if a policy does not include the required capabilities for at least one path', function(assert) {
     let service = this.owner.lookup('service:permissions');
     const accessPaths = {
       'sys/auth': {
@@ -195,7 +182,7 @@ module('Unit | Service | permissions', function(hooks) {
       },
     };
     service.set('exactPaths', accessPaths);
-    assert.equal(service.hasNavPermission('access', 'groups', ['list', 'read']), false);
+    assert.equal(service.hasNavPermission('access', 'groups'), false);
   });
 
   test('appends the namespace to the path if there is one', function(assert) {

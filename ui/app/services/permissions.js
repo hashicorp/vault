@@ -87,11 +87,14 @@ export default Service.extend({
     this.set('canViewAll', null);
   },
 
-  hasNavPermission(navItem, routeParams, capabilities = [null]) {
+  hasNavPermission(navItem, routeParams) {
     if (routeParams) {
-      return this.hasPermission(API_PATHS[navItem][routeParams], capabilities);
+      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+      let capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
+
+      return this.hasPermission(API_PATHS[navItem][routeParams], capability);
     }
-    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path, capabilities));
+    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
   },
 
   navPathParams(navItem) {

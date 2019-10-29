@@ -7,14 +7,14 @@
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="entities" capabilities=(array "list"))}}
+    {{#if (has-permission "access" routeParams="entities")}}
       <li>
         {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
           Entities
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" routeParams="groups" capabilities=(array "list"))}}
+    {{#if (has-permission "access" routeParams="groups")}}
       <li>
         {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
           Groups
