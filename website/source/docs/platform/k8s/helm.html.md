@@ -257,7 +257,7 @@ and consider if they're appropriate for your deployment.
 
  * `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
 
-    - `annotations` (`string`) - This value defines additional annotations for the service account. This should be a formatted as a multi-line string.
+    - `annotations` (`string`) - This value defines additional annotations for the service account. This should be formatted as a multi-line string.
 
         ```yaml
         annotations: |
