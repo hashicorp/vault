@@ -1,4 +1,4 @@
-## 1.3 (Unreleased)
+## 1.3-beta1 (October 30th, 2019)
 
 CHANGES:
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
