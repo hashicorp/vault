@@ -1,4 +1,4 @@
-// +build !race,!hsm
+// +build !race !hsm
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -24,23 +23,6 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRandomPort(tb testing.TB) int {
-	tb.Helper()
-
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	if err != nil {
-		tb.Fatal(err)
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	defer l.Close()
-
-	return l.Addr().(*net.TCPAddr).Port
-}
-
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
 
@@ -51,7 +33,7 @@ func testBaseHCL(tb testing.TB, listenerExtras string) string {
 			tls_disable = "true"
 			%s
 		}
-	`, testRandomPort(tb), listenerExtras))
+	`, 0, listenerExtras))
 }
 
 const (
