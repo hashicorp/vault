@@ -1,3 +1,9 @@
+## 1.3 (unreleased)
+
+BUG FIXES:
+
+* ui: Ensure that items in the top navigation link to pages that users have access to. [GH-7590]
+
 ## 1.3-beta1 (October 30th, 2019)
 
 CHANGES:
