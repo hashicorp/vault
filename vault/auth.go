@@ -56,6 +56,11 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
+			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
+		}
 		return err
 	}
 	return nil
