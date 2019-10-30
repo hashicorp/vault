@@ -144,8 +144,8 @@ and consider if they're appropriate for your deployment.
     ```yaml
     # Extra Environment Variables are defined as key/value strings.
      extraEnvironmentVars:
-       GOOGLE_REGION: global,
-       GOOGLE_PROJECT: myproject,
+       GOOGLE_REGION: global
+       GOOGLE_PROJECT: myproject
        GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
