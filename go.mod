@@ -98,7 +98,7 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/michaelklishin/rabbit-hole v1.5.0
+	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.0.0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -108,7 +108,6 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.0.0 // indirect
 	github.com/oklog/run v1.0.0
-	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -122,7 +121,6 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/shirou/gopsutil v0.0.0-20190731134726-d80c43f9c984
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
-	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/bbolt v1.3.2
