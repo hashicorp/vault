@@ -14,8 +14,9 @@ func TestCollectHostInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Get all the possible HostInfoError errors and check for result if
-	// the package is able to fetch it for the platform we're testing on.
+	// Get all the possible HostInfoError errors and check for the resulting
+	// stat if the package is able to fetch it for the platform we're testing
+	// on.
 	errs := errwrap.GetAllType(err, new(HostInfoError))
 
 	if info.Timestamp.IsZero() {
