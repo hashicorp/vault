@@ -703,6 +703,188 @@ These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.
     <td>sequence number</td>
     <td>gauge</td>
   </tr>
+
+  <tr>
+    <td>`replication.rpc.server.auth_request`</td>
+    <td>Duration of time taken by auth request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.bootstrap_request`</td>
+    <td>Duration of time taken by bootstrap request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.conflicting_pages_request`</td>
+    <td>Duration of time taken by conflicting pages request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.echo`</td>
+    <td>Duration of time taken by echo</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.forwarding_request`</td>
+    <td>Duration of time taken by forwarding request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.guard_hash_request`</td>
+    <td>Duration of time taken by guard hash request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.persist_alias_request`</td>
+    <td>Duration of time taken by persist alias request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.persist_persona_request`</td>
+    <td>Duration of time taken by persist persona request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.stream_wals_request`</td>
+    <td>Duration of time taken by stream wals request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.sub_page_hashes_request`</td>
+    <td>Duration of time taken by sub page hashes request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.sync_counter_request`</td>
+    <td>Duration of time taken by sync counter request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.server.upsert_group_request`</td>
+    <td>Duration of time taken by upsert group request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.conflicting_pages`</td>
+    <td>Duration of time taken by client conflicting pages request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.fetch_keys`</td>
+    <td>Duration of time taken by client fetch keys request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.forward`</td>
+    <td>Duration of time taken by client forward request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.guard_hash`</td>
+    <td>Duration of time taken by client guard hash request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.persist_alias`</td>
+    <td>Duration of time taken by</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.register_auth`</td>
+    <td>Duration of time taken by client register auth request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.register_lease`</td>
+    <td>Duration of time taken by client register lease request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.stream_wals`</td>
+    <td>Duration of time taken by client s</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.sub_page_hashes`</td>
+    <td>Duration of time taken by client sub page hashes request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.sync_counter`</td>
+    <td>Duration of time taken by client sync counter request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.upsert_group`</td>
+    <td>Duration of time taken by client upstert group request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.client.wrap_in_cubbyhole`</td>
+    <td>Duration of time taken by client wrap in cubbyhole request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.dr.server.echo`</td>
+    <td>Duration of time taken by DR echo request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.dr.server.fetch_keys_request`</td>
+    <td>Duration of time taken by DR fetch keys request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.standby.server.echo`</td>
+    <td>Duration of time taken by standby echo request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.standby.server.register_auth_request`</td>
+    <td>Duration of time taken by standby register auth request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.standby.server.register_lease_request`</td>
+    <td>Duration of time taken by standby register lease request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+  <tr>
+    <td>`replication.rpc.standby.server.wrap_token_request`</td>
+    <td>Duration of time taken by standby wrap token request</td>
+    <td>ms</td>
+    <td>summary</td>
+  </tr>
+
 </table>
 
 ## Secrets Engines Metrics
