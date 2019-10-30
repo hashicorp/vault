@@ -50,6 +50,13 @@ The following is an example telemetry dump snippet:
 [2017-12-19 20:38:00 +0000 UTC][S] 'vault.merkle.flushDirty': Count: 100 Min: 0.006 Mean: 0.024 Max: 0.098 Stddev: 0.019 Sum: 2.386 LastUpdated: 2017-12-19 20:38:09.848158309 +0000 UTC m=+10473.691527099
 ```
 
+You'll note that log entries are prefixed with the metric type as follows:
+
+**[C]** is a counter	
+**[G]** is a gauge	
+**[S]** is a summary	
+
+
 The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals.
 
 ## Internal Metrics
