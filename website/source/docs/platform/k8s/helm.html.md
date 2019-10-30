@@ -563,8 +563,8 @@ global:
 
 server:
   extraEnvironmentVars:
-    GOOGLE_REGION: global,
-    GOOGLE_PROJECT: myproject,
+    GOOGLE_REGION: global
+    GOOGLE_PROJECT: myproject
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
   extraVolumes: []
