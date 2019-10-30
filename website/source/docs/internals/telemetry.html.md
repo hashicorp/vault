@@ -52,9 +52,9 @@ The following is an example telemetry dump snippet:
 
 You'll note that log entries are prefixed with the metric type as follows:
 
-**[C]** is a counter	
-**[G]** is a gauge	
-**[S]** is a summary	
+**[C]** is a counter
+**[G]** is a gauge
+**[S]** is a summary
 
 
 The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals.
