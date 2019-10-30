@@ -14,6 +14,7 @@ require (
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
+	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
@@ -41,6 +42,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap v3.0.2+incompatible
+	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
@@ -120,7 +122,8 @@ require (
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
-	github.com/shirou/gopsutil v0.0.0-20190731134726-d80c43f9c984
+	github.com/shirou/gopsutil v2.19.9+incompatible
+	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.3.0
