@@ -18,6 +18,9 @@ func genericMarshal(i interface{}) ([]byte, error) {
 	}
 
 	v := reflect.ValueOf(i)
+	if v.Kind() == reflect.Ptr {
+		v = reflect.Indirect(v)
+	}
 	if v.Kind() == reflect.Struct {
 		s := structs.Map(i)
 
@@ -25,7 +28,7 @@ func genericMarshal(i interface{}) ([]byte, error) {
 		if !ef.IsZero() {
 			ext := ef.Interface()
 			if ext != nil {
-				extMap, ok := ext.(map[string]interface{})
+				extMap, ok := ext.(Extensions)
 				if !ok {
 					panic(fmt.Sprintf("Extensions field has incorrect type %T", ext))
 				}
@@ -50,17 +53,7 @@ type OpenAPI struct {
 }
 
 func (o *OpenAPI) MarshalJSON() ([]byte, error) {
-	if o == nil {
-		return []byte("null"), nil
-	}
-
-	s := structs.Map(o)
-
-	for k, v := range o.Extensions {
-		s[k] = v
-	}
-
-	return json.Marshal(s)
+	return genericMarshal(o)
 }
 
 type Info struct {
