@@ -342,9 +342,6 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 
 	performTokenTemplating := func(trimmed string) (string, error) {
 		switch {
-		case trimmed == "display_name":
-			return p.templateHandler(p.Token.DisplayName)
-
 		case trimmed == "metadata":
 			return p.templateHandler(p.Token.Meta)
 
