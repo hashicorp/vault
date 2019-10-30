@@ -44,11 +44,7 @@ type MemoryInfoExStat struct {
 type MemoryMapsStat struct {
 }
 
-func Pids() ([]int32, error) {
-	return PidsWithContext(context.Background())
-}
-
-func PidsWithContext(ctx context.Context) ([]int32, error) {
+func pidsWithContext(ctx context.Context) ([]int32, error) {
 	var ret []int32
 
 	pids, err := callPsWithContext(ctx, "pid", 0, false)
@@ -103,28 +99,6 @@ func (p *Process) Exe() (string, error) {
 	return p.ExeWithContext(context.Background())
 }
 
-func (p *Process) ExeWithContext(ctx context.Context) (string, error) {
-	lsof_bin, err := exec.LookPath("lsof")
-	if err != nil {
-		return "", err
-	}
-	out, err := invoke.CommandWithContext(ctx, lsof_bin, "-p", strconv.Itoa(int(p.Pid)), "-Fpfn")
-	if err != nil {
-		return "", fmt.Errorf("bad call to lsof: %s", err)
-	}
-	txtFound := 0
-	lines := strings.Split(string(out), "\n")
-	for i := 1; i < len(lines); i += 2 {
-		if lines[i] == "ftxt" {
-			txtFound++
-			if txtFound == 2 {
-				return lines[i-1][1:], nil
-			}
-		}
-	}
-	return "", fmt.Errorf("missing txt data returned by lsof")
-}
-
 // Cmdline returns the command line arguments of the process as a string with
 // each argument separated by 0x20 ascii character.
 func (p *Process) Cmdline() (string, error) {
@@ -155,11 +129,8 @@ func (p *Process) CmdlineSliceWithContext(ctx context.Context) ([]string, error)
 	}
 	return r[0], err
 }
-func (p *Process) CreateTime() (int64, error) {
-	return p.CreateTimeWithContext(context.Background())
-}
 
-func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
+func (p *Process) createTimeWithContext(ctx context.Context) (int64, error) {
 	r, err := callPsWithContext(ctx, "etime", p.Pid, false)
 	if err != nil {
 		return 0, err
@@ -553,13 +524,6 @@ func (p *Process) NetIOCountersWithContext(ctx context.Context, pernic bool) ([]
 	return nil, common.ErrNotImplementedError
 }
 
-func (p *Process) IsRunning() (bool, error) {
-	return p.IsRunningWithContext(context.Background())
-}
-
-func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
-	return true, common.ErrNotImplementedError
-}
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	return p.MemoryMapsWithContext(context.Background(), grouped)
 }
@@ -632,12 +596,6 @@ func (p *Process) getKProcWithContext(ctx context.Context) (*KinfoProc, error) {
 	}
 
 	return &k, nil
-}
-
-func NewProcess(pid int32) (*Process, error) {
-	p := &Process{Pid: pid}
-
-	return p, nil
 }
 
 // call ps command.
