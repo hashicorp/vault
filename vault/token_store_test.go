@@ -647,10 +647,6 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
 }
 
-func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
-}
-
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
