@@ -11,7 +11,6 @@ import (
 
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
@@ -150,8 +149,8 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		}
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
-		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing non-primary mongo connection: {{err}}", err)
+		if m.mongoDBConnectionProducer.session != nil {
+			m.mongoDBConnectionProducer.session.Close();
 		}
 
 		session, err := m.getConnection(ctx)
@@ -214,9 +213,10 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		}
 	case strings.Contains(err.Error(), "not master"):
 		// Close connection and reconnect if connected node is not primary.
-		if err := m.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing non-primary mongo connection: {{err}}", err)
+		if m.mongoDBConnectionProducer.session != nil {
+			m.mongoDBConnectionProducer.session.Close();
 		}
+		m.mongoDBConnectionProducer.session = nil
 
 		session, err := m.getConnection(ctx)
 		if err != nil {
@@ -280,8 +280,8 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	switch {
 	case err == nil, err == mgo.ErrNotFound:
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"), strings.Contains(err.Error(), "not master"):
-		if err := m.Close(); err != nil {
-			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
+		if m.mongoDBConnectionProducer.session != nil {
+			m.mongoDBConnectionProducer.session.Close();
 		}
 		session, err := m.getConnection(ctx)
 		if err != nil {
