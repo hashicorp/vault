@@ -27,6 +27,7 @@
     - docs/concepts/policies.html
     - docs/concepts/ha.html
     - docs/concepts/pgp-gpg-keybase.html
+    - docs/concepts/recovery-mode.html
 -
   title: Configuration
   docs:
