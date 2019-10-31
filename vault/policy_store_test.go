@@ -21,18 +21,6 @@ func mockPolicyStore(t *testing.T) *PolicyStore {
 	return p
 }
 
-func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
-	sysView := logical.TestSystemView()
-	sysView.CachingDisabledVal = true
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, sysView, logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
 		DisableCache: disableCache,
