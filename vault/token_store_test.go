@@ -540,10 +540,6 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
-	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
-}
-
 func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
 	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
 }
