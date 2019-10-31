@@ -29,11 +29,13 @@ func TestGenericMarshal(t *testing.T) {
 		assert.NoError(t, err)
 		t.Log(string(j))
 	})
+
 }
 
 func TestResponseHeaderMarshal(t *testing.T) {
 	t.Run("content-type-header", func(t *testing.T) {
 		o := &Response{
+			Description: "nothin",
 			Headers: map[string]interface{}{
 				"conTent-TYpe": Reference{Ref: "foo"},
 				"Ref-Val":      Reference{Ref: "bar"},
@@ -48,6 +50,7 @@ func TestResponseHeaderMarshal(t *testing.T) {
 
 	t.Run("dup-header", func(t *testing.T) {
 		o := &Response{
+			Description: "nothin",
 			Headers: map[string]interface{}{
 				"Ref-val": Reference{Ref: "foo"},
 				"rEf-VaL": Reference{Ref: "bar"},
@@ -60,6 +63,7 @@ func TestResponseHeaderMarshal(t *testing.T) {
 
 	t.Run("invalid-header-target", func(t *testing.T) {
 		o := &Response{
+			Description: "nothin",
 			Headers: map[string]interface{}{
 				"Ref-val": true,
 			},
@@ -68,15 +72,37 @@ func TestResponseHeaderMarshal(t *testing.T) {
 		assert.Error(t, err)
 		assert.True(t, errors.Is(err, ErrInvalidHeaderTarget))
 	})
+}
 
-	t.Run("invalid-content-target", func(t *testing.T) {
-		o := &Response{
-			Content: map[string]interface{}{
-				"application/json": true,
+func TestPathsMarshal(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		o := &OpenAPI{
+			OpenAPI: "3.0.2",
+			Paths: Paths{
+				Slugs: map[string]PathItem{
+					"/foo": PathItem{},
+				},
+				Extensions: Extensions{
+					"x-foo-var": true,
+				},
+			},
+		}
+		j, err := json.Marshal(o)
+		assert.NoError(t, err)
+		t.Log(string(j))
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		o := &OpenAPI{
+			OpenAPI: "3.0.2",
+			Paths: Paths{
+				Slugs: map[string]PathItem{
+					"foo": PathItem{},
+				},
 			},
 		}
 		_, err := json.Marshal(o)
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, ErrInvalidContentTarget))
+		assert.True(t, errors.Is(err, ErrInvalidPath))
 	})
 }
