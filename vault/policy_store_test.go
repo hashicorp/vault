@@ -11,16 +11,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func mockPolicyStore(t *testing.T) *PolicyStore {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
 		DisableCache: disableCache,
