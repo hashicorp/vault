@@ -5,10 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
