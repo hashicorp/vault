@@ -2,11 +2,19 @@ package openapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/textproto"
 	"reflect"
 	"regexp"
 
 	"github.com/fatih/structs"
+)
+
+var (
+	ErrDuplicateHeader      = errors.New("duplicate header encountered in header definition map")
+	ErrInvalidHeaderTarget  = errors.New("target in headers map not header object or reference object")
+	ErrInvalidContentTarget = errors.New("target in content map not media type object")
 )
 
 type Extensions map[string]interface{}
@@ -25,7 +33,7 @@ func genericMarshal(i interface{}) ([]byte, error) {
 		s := structs.Map(i)
 
 		ef := v.FieldByName("Extensions")
-		if !ef.IsZero() {
+		if ef.IsValid() && !ef.IsZero() {
 			ext := ef.Interface()
 			if ext != nil {
 				extMap, ok := ext.(Extensions)
@@ -52,26 +60,101 @@ type OpenAPI struct {
 	Extensions Extensions `structs:"-"`
 }
 
-func (o *OpenAPI) MarshalJSON() ([]byte, error) {
+func (o OpenAPI) MarshalJSON() ([]byte, error) {
 	return genericMarshal(o)
 }
 
 type Info struct {
-	Title          string   `structs:"title"`
-	Description    *string  `structs:"description,omitempty"`
-	TermsOfService *string  `structs:"termsOfService,omitempty"`
-	License        *License `structs:"license,omitempty"`
-	Version        string   `structs:"version"`
+	Title          string     `structs:"title"`
+	Description    *string    `structs:"description,omitempty"`
+	TermsOfService *string    `structs:"termsOfService,omitempty"`
+	License        *License   `structs:"license,omitempty"`
+	Version        string     `structs:"version"`
+	Extensions     Extensions `structs:"-"`
 }
 
-type Server struct {
-	URL         string `structs:"url"`
-	Description string `structs:"description,omitempty"`
+func (i Info) MarshalJSON() ([]byte, error) {
+	return genericMarshal(i)
 }
 
 type License struct {
 	Name string  `structs:"name"`
 	URL  *string `structs:"url,omitempty"`
+}
+
+func (l License) MarshalJSON() ([]byte, error) {
+	return genericMarshal(l)
+}
+
+type Server struct {
+	URL         string     `structs:"url"`
+	Description *string    `structs:"description,omitempty"`
+	Extensions  Extensions `structs:"-"`
+}
+
+func (s Server) MarshalJSON() ([]byte, error) {
+	return genericMarshal(s)
+}
+
+type ExternalDocumentation struct {
+	Description *string    `structs:"description,omitempty"`
+	URL         string     `structs:"url"`
+	Extensions  Extensions `structs:"-"`
+}
+
+func (e ExternalDocumentation) MarshalJSON() ([]byte, error) {
+	return genericMarshal(e)
+}
+
+type Response struct {
+	Description string                 `structs:"description"`
+	Headers     map[string]interface{} `structs:"headers,omitempty"`
+	Content     map[string]interface{} `structs:"content,omitempty"`
+	Extensions  Extensions             `structs:"-"`
+}
+
+// MarshalJSON marshals a response. Note that it can perform
+// transormations on the Response object as required by the
+// spec. For instance, it will elide response headers of
+// "Content-Type".
+func (r *Response) MarshalJSON() ([]byte, error) {
+	dupMap := make(map[string]interface{}, len(r.Headers))
+	for k, v := range r.Headers {
+		canonKey := textproto.CanonicalMIMEHeaderKey(k)
+		if canonKey == "Content-Type" {
+			continue
+		}
+		if _, ok := dupMap[canonKey]; ok {
+			return nil, ErrDuplicateHeader
+		}
+		switch v.(type) {
+		case Reference, *Reference, Header, *Header:
+		default:
+			return nil, ErrInvalidHeaderTarget
+		}
+		dupMap[canonKey] = v
+	}
+	r.Headers = dupMap
+
+	for k, v := range r.Content {
+		switch v.(type) {
+		case MediaType, *MediaType:
+		default:
+			return nil, ErrInvalidContentTarget
+		}
+	}
+
+	return genericMarshal(r)
+}
+
+type Reference struct {
+	Ref string `json:"$ref" structs:"$ref"`
+}
+
+type MediaType struct {
+}
+
+type Header struct {
 }
 
 type Paths map[string]OASPathItem
