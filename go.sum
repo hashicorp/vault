@@ -365,6 +365,8 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102 
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102/go.mod h1:j0hMnnTD44zXGQhLM1jarYDaTmSp6OPiOzgFQ6mNgzc=
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190815164639-5fa0eef3a023 h1:RMGN5WLZ6QnTGNsDT5jmTf3RO54lOV7JMeveLMngOuk=
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190815164639-5fa0eef3a023/go.mod h1:Ti2NPndKhSGpSL6gWg11n7TkmuI7318BIPeojayIVRU=
+github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2 h1:Oi9HO9/JItId2XYLEoTIW9Wcfg5sblxxO5Nr7ln1jnk=
+github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2/go.mod h1:Ti2NPndKhSGpSL6gWg11n7TkmuI7318BIPeojayIVRU=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9 h1:PjbIf3mlPBJopQSJstQAhVbdGTVZ/W35RZtm/GCOTUs=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9/go.mod h1:qkrONCr71ckSCTItJQ1j9uet/faieZJ5c7+GZugTm7s=
 github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c h1:z6LQZvs1OtoVy2XgbgNhiDgp0U62Xbstn7/cgNZvh6g=
