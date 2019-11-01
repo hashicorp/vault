@@ -6,7 +6,7 @@ require (
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310
 	github.com/fatih/structs v1.1.0
-	github.com/go-ldap/ldap v3.0.2+incompatible
+	github.com/go-ldap/ldap v0.0.0-20191031180355-c135faacbf0f
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/golang/protobuf v1.3.1
 	github.com/golang/snappy v0.0.1
@@ -34,5 +34,4 @@ require (
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
 	google.golang.org/grpc v1.22.0
-	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 )

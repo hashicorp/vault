@@ -170,6 +170,8 @@ github.com/gliderlabs/ssh v0.1.1/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aev
 github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6w=
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+github.com/go-ldap/ldap v0.0.0-20191031180355-c135faacbf0f h1:teOlxu7yrP8UkZ6YQ8OWvo0gasDXT/eMhwEz3sxcvrA=
+github.com/go-ldap/ldap v0.0.0-20191031180355-c135faacbf0f/go.mod h1:2fTnekvmL1wn8krWBHs/5UADrZiKFUSjQNHPs2Bm9Zo=
 github.com/go-ldap/ldap v3.0.2+incompatible h1:kD5HQcAzlQ7yrhfn+h+MSABeAy/jAJhvIJ/QDllP44g=
 github.com/go-ldap/ldap v3.0.2+incompatible/go.mod h1:qfd9rJvER9Q0/D/Sqn1DfHRoBp40uXYvFoEVrNEPqRc=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
@@ -373,6 +375,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c h1
 github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c/go.mod h1:YAl51RsYRihPbSdnug1NsvutzbRVfrZ12FjEIvSiOTs=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93 h1:kXTV1ImOPgDGZxAlbEQfiXgnZY/34vfgnZVhI/tscmg=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93/go.mod h1:N9XpfMXjeLHBgUd8iy4avOC4mCSqUC7B/R8AtCYhcfE=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.1/go.mod h1:EH9CI8+0aWRBz8eIgGth0QjttmHWlGvn+8ZmX/ZUetE=
+github.com/hashicorp/vault-plugin-secrets-ad v0.5.2/go.mod h1:pRJAA/Gl+UaSYeULx9ecXZ3f1oxIRATRfmLZKP3HUiM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.0 h1:N0AtdV3w6VCtU7rZiTbPxsxhluJXrzpYH9B1pLZhG6g=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.0/go.mod h1:qm2QDW9KNY+pFoxBEYGYvcHnVjdiOr3tXeO9DMeo3mI=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56 h1:PGE26//x1eiAbZ1ExffhKa4y9xgDKLd9BHDZRkOzbEY=
