@@ -28,11 +28,7 @@ type MemoryMapsStat struct {
 type MemoryInfoExStat struct {
 }
 
-func Pids() ([]int32, error) {
-	return PidsWithContext(context.Background())
-}
-
-func PidsWithContext(ctx context.Context) ([]int32, error) {
+func pidsWithContext(ctx context.Context) ([]int32, error) {
 	return []int32{}, common.ErrNotImplementedError
 }
 
@@ -41,10 +37,6 @@ func Processes() ([]*Process, error) {
 }
 
 func ProcessesWithContext(ctx context.Context) ([]*Process, error) {
-	return nil, common.ErrNotImplementedError
-}
-
-func NewProcess(pid int32) (*Process, error) {
 	return nil, common.ErrNotImplementedError
 }
 
@@ -101,11 +93,8 @@ func (p *Process) CmdlineSlice() ([]string, error) {
 func (p *Process) CmdlineSliceWithContext(ctx context.Context) ([]string, error) {
 	return []string{}, common.ErrNotImplementedError
 }
-func (p *Process) CreateTime() (int64, error) {
-	return p.CreateTimeWithContext(context.Background())
-}
 
-func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
+func (p *Process) createTimeWithContext(ctx context.Context) (int64, error) {
 	return 0, common.ErrNotImplementedError
 }
 func (p *Process) Cwd() (string, error) {
@@ -291,13 +280,7 @@ func (p *Process) NetIOCounters(pernic bool) ([]net.IOCountersStat, error) {
 func (p *Process) NetIOCountersWithContext(ctx context.Context, pernic bool) ([]net.IOCountersStat, error) {
 	return []net.IOCountersStat{}, common.ErrNotImplementedError
 }
-func (p *Process) IsRunning() (bool, error) {
-	return p.IsRunningWithContext(context.Background())
-}
 
-func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
-	return true, common.ErrNotImplementedError
-}
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	return p.MemoryMapsWithContext(context.Background(), grouped)
 }

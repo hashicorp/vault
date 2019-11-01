@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"runtime"
+	"sort"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -14,8 +15,9 @@ import (
 )
 
 var (
-	invoke          common.Invoker = common.Invoke{}
-	ErrorNoChildren                = errors.New("process does not have children")
+	invoke                 common.Invoker = common.Invoke{}
+	ErrorNoChildren                       = errors.New("process does not have children")
+	ErrorProcessNotRunning                = errors.New("process does not exist")
 )
 
 type Process struct {
@@ -29,6 +31,7 @@ type Process struct {
 	numThreads     int32
 	memInfo        *MemoryInfoStat
 	sigInfo        *SignalInfoStat
+	createTime     int64
 
 	lastCPUTimes *cpu.TimesStat
 	lastCPUTime  time.Time
@@ -136,6 +139,35 @@ func (p NumCtxSwitchesStat) String() string {
 	return string(s)
 }
 
+// Pids returns a slice of process ID list which are running now.
+func Pids() ([]int32, error) {
+	return PidsWithContext(context.Background())
+}
+
+func PidsWithContext(ctx context.Context) ([]int32, error) {
+	pids, err := pidsWithContext(ctx)
+	sort.Slice(pids, func(i, j int) bool { return pids[i] < pids[j] })
+	return pids, err
+}
+
+// NewProcess creates a new Process instance, it only stores the pid and
+// checks that the process exists. Other method on Process can be used
+// to get more information about the process. An error will be returned
+// if the process does not exist.
+func NewProcess(pid int32) (*Process, error) {
+	p := &Process{Pid: pid}
+
+	exists, err := PidExists(pid)
+	if err != nil {
+		return p, err
+	}
+	if !exists {
+		return p, ErrorProcessNotRunning
+	}
+	go p.CreateTime()
+	return p, nil
+}
+
 func PidExists(pid int32) (bool, error) {
 	return PidExistsWithContext(context.Background(), pid)
 }
@@ -190,6 +222,41 @@ func (p *Process) PercentWithContext(ctx context.Context, interval time.Duration
 	p.lastCPUTimes = cpuTimes
 	p.lastCPUTime = now
 	return ret, nil
+}
+
+// IsRunning returns whether the process is still running or not.
+func (p *Process) IsRunning() (bool, error) {
+	return p.IsRunningWithContext(context.Background())
+}
+
+func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
+	createTime, err := p.CreateTimeWithContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	p2, err := NewProcess(p.Pid)
+	if err == ErrorProcessNotRunning {
+		return false, nil
+	}
+	createTime2, err := p2.CreateTimeWithContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	return createTime == createTime2, nil
+}
+
+// CreateTime returns created time of the process in milliseconds since the epoch, in UTC.
+func (p *Process) CreateTime() (int64, error) {
+	return p.CreateTimeWithContext(context.Background())
+}
+
+func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
+	if p.createTime != 0 {
+		return p.createTime, nil
+	}
+	createTime, err := p.createTimeWithContext(ctx)
+	p.createTime = createTime
+	return p.createTime, err
 }
 
 func calculatePercent(t1, t2 *cpu.TimesStat, delta float64, numcpu int) float64 {
