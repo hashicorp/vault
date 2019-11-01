@@ -618,7 +618,7 @@ github.com/ryanuber/go-glob
 github.com/samuel/go-zookeeper/zk
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/shirou/gopsutil v0.0.0-20190731134726-d80c43f9c984
+# github.com/shirou/gopsutil v2.19.9+incompatible
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
 github.com/shirou/gopsutil/host
