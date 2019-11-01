@@ -373,7 +373,7 @@ github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 # github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190815164639-5fa0eef3a023
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9
 github.com/hashicorp/vault-plugin-auth-kubernetes
@@ -508,7 +508,7 @@ github.com/mattn/go-shellwords
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
 github.com/mholt/archiver
-# github.com/michaelklishin/rabbit-hole v1.5.0
+# github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 github.com/michaelklishin/rabbit-hole
 # github.com/mitchellh/cli v1.0.0
 github.com/mitchellh/cli
