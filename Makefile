@@ -39,7 +39,7 @@ dev-dynamic-mem: dev-dynamic
 # test runs the unit tests and vets the code
 test: prep
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir test; \
 	done
 	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
@@ -50,7 +50,7 @@ test: prep
 
 testcompile: prep
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir testcompile; \
 	done
 	@for pkg in $(TEST) ; do \
 		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
@@ -59,7 +59,7 @@ testcompile: prep
 # testacc runs acceptance tests
 testacc: prep
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir testacc; \
 	done
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
@@ -70,7 +70,7 @@ testacc: prep
 # testrace runs the race checker
 testrace: prep
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir testrace; \
 	done
 	@CGO_ENABLED=1 \
 	VAULT_ADDR= \
@@ -81,7 +81,7 @@ testrace: prep
 
 cover:
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir cover; \
 	done
 	./scripts/coverage.sh --html
 
@@ -89,7 +89,7 @@ cover:
 # any common errors.
 vet:
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir vet; \
 	done
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
@@ -102,7 +102,7 @@ vet:
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir lint; \
 	done
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
@@ -118,7 +118,7 @@ ci-lint:
 # source files.
 prep: fmtcheck
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir; \
+		$(MAKE) -C $$dir prep; \
 	done
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@go generate $(go list ./... | grep -v /vendor/)
