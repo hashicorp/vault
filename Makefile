@@ -2,29 +2,14 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
+include Makefile.defs
+
 export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
 
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
-TEST_TIMEOUT?=45m
-EXTENDED_TEST_TIMEOUT=60m
-INTEG_TEST_TIMEOUT=120m
-VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
-EXTERNAL_TOOLS=\
-	golang.org/x/tools/cmd/goimports \
-	github.com/elazarl/go-bindata-assetfs/... \
-	github.com/hashicorp/go-bindata/... \
-	github.com/mitchellh/gox \
-	github.com/kardianos/govendor \
-	github.com/client9/misspell/cmd/misspell \
-	github.com/golangci/golangci-lint/cmd/golangci-lint
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
-GO_VERSION_MIN=1.12.7
-CGO_ENABLED?=0
-ifneq ($(FDB_ENABLED), )
-	CGO_ENABLED=1
-	BUILD_TAGS+=foundationdb
-endif
+SUBDIRS = api
 
 default: dev
 
@@ -53,6 +38,9 @@ dev-dynamic-mem: dev-dynamic
 
 # test runs the unit tests and vets the code
 test: prep
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -61,12 +49,18 @@ test: prep
 	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
 
 testcompile: prep
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@for pkg in $(TEST) ; do \
 		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
 testacc: prep
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
@@ -75,6 +69,9 @@ testacc: prep
 
 # testrace runs the race checker
 testrace: prep
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@CGO_ENABLED=1 \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -83,11 +80,17 @@ testrace: prep
 	go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT) -parallel=20
 
 cover:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	./scripts/coverage.sh --html
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
 		| xargs go vet ; if [ $$? -eq 1 ]; then \
@@ -98,6 +101,9 @@ vet:
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
 			echo ""; \
@@ -111,6 +117,9 @@ ci-lint:
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep: fmtcheck
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@go generate $(go list ./... | grep -v /vendor/)
 	@# Remove old (now broken) husky git hooks.
