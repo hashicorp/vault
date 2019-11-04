@@ -540,10 +540,6 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
-	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
-}
-
 func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
 	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
 }
@@ -645,10 +641,6 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 
 func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
 	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
-}
-
-func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
 }
 
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
