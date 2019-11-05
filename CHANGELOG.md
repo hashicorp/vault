@@ -1,7 +1,14 @@
 ## 1.3 (unreleased)
 
+IMPROVEMENTS:
+
+* metrics: Upgrade DataDog library to improve performance [GH-7794]
+
 BUG FIXES:
 
+* core: Don't allow registering a non-root zero TTL token lease. This is purely
+  defense in depth as the lease would be revoked immediately anyways, but
+  there's no real reason to allow registration. [GH-7524]
 * ui: Ensure that items in the top navigation link to pages that users have access to. [GH-7590]
 
 ## 1.3-beta1 (October 30th, 2019)
