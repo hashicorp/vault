@@ -1,0 +1,142 @@
+---
+layout: "api"
+page_title: "/sys/pprof - HTTP API"
+sidebar_title: "<code>/sys/pprof</code>"
+sidebar_current: "api-http-system-pprof"
+description: |-
+  The `/sys/pprof` endpoint is used to query profiling information.
+---
+
+# `/sys/pprof`
+
+The `/sys/pprof` endpoint is used to query. The response returned by
+these endpoints are equivalent to those returned by the `http/pprof`
+package.
+
+## Index
+
+This endpoint returns an HTML page listing the available profiles.
+
+| Method | Path          |
+|:-------|:--------------|
+| `GET`  | `/sys/pprof/` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/
+```
+
+## Cmdline
+
+This endpoint returns the running program's command line, with arguments
+separated by NUL bytes.
+
+| Method | Path                 |
+|:-------|:---------------------|
+| `GET`  | `/sys/pprof/cmdline` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/cmdline
+```
+
+## Goroutine
+
+This endpoint returns stack traces of all current goroutines.
+
+| Method | Path                   |
+|:-------|:-----------------------|
+| `GET`  | `/sys/pprof/goroutine` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/goroutine
+```
+
+## Heap
+
+This endpoint returns a sampling of memory allocations of live object.
+
+| Method | Path              |
+|:-------|:------------------|
+| `GET`  | `/sys/pprof/heap` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/heap
+```
+
+## Profile
+
+This endpoint returns a pprof-formatted cpu profile payload. Profiling
+lasts for duration specified in seconds GET parameter, or for 30 seconds
+if not specified.
+
+| Method | Path                 |
+|:-------|:---------------------|
+| `GET`  | `/sys/pprof/profile` |
+
+### Parameters
+
+- `seconds` `(int: 30)` - Specifies the duration to run the profiling 
+  command. This value is specified as a query parameter.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/profile
+```
+
+## Symbol
+
+This endpoint returns the program counters listed in the request.
+
+| Method | Path                |
+|:-------|:--------------------|
+| `GET`  | `/sys/pprof/symbol` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/symbol
+```
+
+
+## Trace
+
+This endpoint returns the execution trace in binary form. Tracing lasts
+for duration specified in seconds GET parameter, or for 1 second if not
+specified.
+
+| Method | Path               |
+|:-------|:-------------------|
+| `GET`  | `/sys/pprof/trace` |
+
+### Parameters
+
+- `seconds` `(int: 1)` - Specifies the duration to run the tracing 
+  command. This value is specified as a query parameter.
+  
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/pprof/trace
+```

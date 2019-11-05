@@ -97,6 +97,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	b, err := NewS3Backend(map[string]string{
 		"bucket":   bucket,
 		"kmsKeyId": kmsKeyId,
+		"path":     "test/vault",
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)

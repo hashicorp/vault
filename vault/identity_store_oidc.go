@@ -78,10 +78,11 @@ type idToken struct {
 //
 // https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 type discovery struct {
-	Issuer      string   `json:"issuer"`
-	Keys        string   `json:"jwks_uri"`
-	Subjects    []string `json:"subject_types_supported"`
-	IDTokenAlgs []string `json:"id_token_signing_alg_values_supported"`
+	Issuer        string   `json:"issuer"`
+	Keys          string   `json:"jwks_uri"`
+	ResponseTypes []string `json:"response_types_supported"`
+	Subjects      []string `json:"subject_types_supported"`
+	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
 
 // oidcCache is a thin wrapper around go-cache to partition by namespace
@@ -202,7 +203,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.ReadOperation: i.pathOIDCDiscovery,
 			},
 			HelpSynopsis:    "Query OIDC configurations",
-			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, Subjects, and signing algorithms used by the OIDC backend.",
+			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
 			Pattern: "oidc/.well-known/keys/?$",
@@ -518,7 +519,7 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("no named key found at %q", name), nil
+		return nil, nil
 	}
 
 	var storedNamedKey namedKey
@@ -1002,10 +1003,11 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		}
 
 		disc := discovery{
-			Issuer:      c.effectiveIssuer,
-			Keys:        c.effectiveIssuer + "/.well-known/keys",
-			Subjects:    []string{"public"},
-			IDTokenAlgs: supportedAlgs,
+			Issuer:        c.effectiveIssuer,
+			Keys:          c.effectiveIssuer + "/.well-known/keys",
+			ResponseTypes: []string{"id_token"},
+			Subjects:      []string{"public"},
+			IDTokenAlgs:   supportedAlgs,
 		}
 
 		data, err = json.Marshal(disc)
@@ -1563,6 +1565,16 @@ func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interfac
 }
 
 func (c *oidcCache) Flush(ns *namespace.Namespace) {
-	// TODO iterate and delete by ns
-	c.c.Flush()
+	for itemKey := range c.c.Items() {
+		if isTargetNamespacedKey(itemKey, []string{nilNamespace.ID, ns.ID}) {
+			c.c.Delete(itemKey)
+		}
+	}
+}
+
+// isTargetNamespacedKey returns true for a properly constructed namespaced key (<version>:<nsID>:<key>)
+// where <nsID> matches any targeted nsID
+func isTargetNamespacedKey(nskey string, nsTargets []string) bool {
+	split := strings.Split(nskey, ":")
+	return len(split) >= 3 && strutil.StrListContains(nsTargets, split[1])
 }

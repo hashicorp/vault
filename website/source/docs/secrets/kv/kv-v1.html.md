@@ -101,6 +101,12 @@ my-value            s3cr3t
 ttl                 30m
 ```
 
+## Learn
+
+Refer to the [Static Secrets: Key/Value Secrets
+Engine](https://learn.hashicorp.com/vault/secrets-management/sm-static-secrets)
+guide for a step-by-step tutorial.
+
 ## API
 
 The KV secrets engine has a full HTTP API. Please see the

@@ -49,6 +49,14 @@ storage "mysql" {
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to MySQL.
 
+- `max_idle_connections` `(string: "0")` – Specifies the maximum number of idle
+  connections to the database. A zero uses value defaults to 2 idle connections
+  and a negative value disables idle connections. If larger than
+  `max_parallel` it will be reduced to be equal.
+
+- `max_connection_lifetime` `(string: "0")` – Specifies the maximum amount of
+  time in seconds that a connection may be reused. If <= 0s connections are reused forever.
+
 Additionally, Vault requires the following authentication information.
 
 - `username` `(string: <required>)` – Specifies the MySQL username to connect to

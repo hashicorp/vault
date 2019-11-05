@@ -78,8 +78,14 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("missing token"), nil
 	}
 
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	// Here is where things diverge. If it is using OIDC Discovery, validate that way;
@@ -333,7 +339,8 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 	if groupsClaimRaw == nil {
 		return nil, nil, fmt.Errorf("%q claim not found in token", role.GroupsClaim)
 	}
-	groups, ok := groupsClaimRaw.([]interface{})
+
+	groups, ok := normalizeList(groupsClaimRaw)
 
 	if !ok {
 		return nil, nil, fmt.Errorf("%q claim could not be converted to string list", role.GroupsClaim)

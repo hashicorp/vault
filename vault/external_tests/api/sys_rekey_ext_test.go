@@ -2,25 +2,66 @@ package api
 
 import (
 	"encoding/base64"
-	"strings"
+	"fmt"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysRekey_Verification(t *testing.T) {
-	testSysRekey_Verification(t, false)
-	testSysRekey_Verification(t, true)
+	testcases := []struct {
+		recovery     bool
+		legacyShamir bool
+	}{
+		{recovery: true, legacyShamir: false},
+		{recovery: false, legacyShamir: false},
+		{recovery: false, legacyShamir: true},
+	}
+
+	for _, tc := range testcases {
+		recovery, legacy := tc.recovery, tc.legacyShamir
+		t.Run(fmt.Sprintf("recovery=%v,legacyShamir=%v", recovery, legacy), func(t *testing.T) {
+			t.Parallel()
+			testSysRekey_Verification(t, recovery, legacy)
+		})
+	}
 }
 
-func testSysRekey_Verification(t *testing.T, recovery bool) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
+	opts := &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
-	})
+	}
+	switch {
+	case recovery:
+		if legacyShamir {
+			panic("invalid case")
+		}
+		opts.SealFunc = func() vault.Seal {
+			return vault.NewTestSeal(t, &vault.TestSealOpts{
+				StoredKeys: vault.StoredKeysSupportedGeneric,
+			})
+		}
+	case legacyShamir:
+		opts.SealFunc = func() vault.Seal {
+			return vault.NewTestSeal(t, &vault.TestSealOpts{
+				StoredKeys: vault.StoredKeysNotSupported,
+			})
+		}
+	}
+	inm, err := inmem.NewInmemHA(nil, logging.NewVaultLogger(hclog.Debug))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := vault.CoreConfig{
+		Physical: inm,
+	}
+	cluster := vault.NewTestCluster(t, &conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
 
@@ -41,48 +82,6 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		verificationCancelFunc = client.Sys().RekeyRecoveryKeyVerificationCancel
 	}
 
-	sealAccess := cluster.Cores[0].Core.SealAccess()
-	sealTestingParams := &vault.SealAccessTestingParams{}
-
-	// This first block verifies that if we are using recovery keys to force a
-	// rekey of a stored-shares barrier that verification is not allowed since
-	// the keys aren't returned
-	if !recovery {
-		sealTestingParams.PretendToAllowRecoveryKeys = true
-		sealTestingParams.PretendToAllowStoredShares = true
-		if err := sealAccess.SetTestingParams(sealTestingParams); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := initFunc(&api.RekeyInitRequest{
-			StoredShares:        1,
-			RequireVerification: true,
-		})
-		if err == nil {
-			t.Fatal("expected error")
-		}
-		if !strings.Contains(err.Error(), "requiring verification not supported") {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		// Now we set things back and start a normal rekey with the verification process
-		sealTestingParams.PretendToAllowRecoveryKeys = false
-		sealTestingParams.PretendToAllowStoredShares = false
-		if err := sealAccess.SetTestingParams(sealTestingParams); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		cluster.RecoveryKeys = cluster.BarrierKeys
-		sealTestingParams.PretendToAllowRecoveryKeys = true
-		recoveryKey, err := shamir.Combine(cluster.BarrierKeys)
-		if err != nil {
-			t.Fatal(err)
-		}
-		sealTestingParams.PretendRecoveryKey = recoveryKey
-		if err := sealAccess.SetTestingParams(sealTestingParams); err != nil {
-			t.Fatal(err)
-		}
-	}
-
 	var verificationNonce string
 	var newKeys []string
 	doRekeyInitialSteps := func() {
@@ -101,9 +100,13 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 			t.Fatal("expected verification required")
 		}
 
+		keys := cluster.BarrierKeys
+		if recovery {
+			keys = cluster.RecoveryKeys
+		}
 		var resp *api.RekeyUpdateResponse
 		for i := 0; i < 3; i++ {
-			resp, err = updateFunc(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i]), status.Nonce)
+			resp, err = updateFunc(base64.StdEncoding.EncodeToString(keys[i]), status.Nonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +127,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 	doRekeyInitialSteps()
 
 	// We are still going, so should not be able to init again
-	_, err := initFunc(&api.RekeyInitRequest{
+	_, err = initFunc(&api.RekeyInitRequest{
 		SecretShares:        5,
 		SecretThreshold:     3,
 		RequireVerification: true,
@@ -136,7 +139,9 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 	// Sealing should clear state, so after this we should be able to perform
 	// the above again
 	cluster.EnsureCoresSealed(t)
-	cluster.UnsealCores(t)
+	if err := cluster.UnsealCoresWithError(recovery); err != nil {
+		t.Fatal(err)
+	}
 	doRekeyInitialSteps()
 
 	doStartVerify := func() {
@@ -211,6 +216,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		// still be the old keys (which are still currently set)
 		cluster.EnsureCoresSealed(t)
 		cluster.UnsealCores(t)
+		vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 		// Should be able to init again and get back to where we were
 		doRekeyInitialSteps()
@@ -218,7 +224,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 	} else {
 		// We haven't finished, so generating a root token should still be the
 		// old keys (which are still currently set)
-		testhelpers.GenerateRoot(t, cluster, false)
+		testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRootRegular)
 	}
 
 	// Provide the final new key
@@ -237,7 +243,19 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		// Seal and unseal -- it should fail to unseal because the key has now been
 		// rotated
 		cluster.EnsureCoresSealed(t)
-		if err := cluster.UnsealCoresWithError(); err == nil {
+
+		// Simulate restarting Vault rather than just a seal/unseal, because
+		// the standbys may not have had time to learn about the new key before
+		// we sealed them.  We could sleep, but that's unreliable.
+		oldKeys := cluster.BarrierKeys
+		opts.SkipInit = true
+		opts.SealFunc = nil // post rekey we should use the barrier config on disk
+		cluster = vault.NewTestCluster(t, &conf, opts)
+		cluster.BarrierKeys = oldKeys
+		cluster.Start()
+		defer cluster.Cleanup()
+
+		if err := cluster.UnsealCoresWithError(false); err == nil {
 			t.Fatal("expected error")
 		}
 
@@ -251,17 +269,17 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 			newKeyBytes = append(newKeyBytes, val)
 		}
 		cluster.BarrierKeys = newKeyBytes
-		if err := cluster.UnsealCoresWithError(); err != nil {
-			t.Fatal("expected error")
+		if err := cluster.UnsealCoresWithError(false); err != nil {
+			t.Fatal(err)
 		}
 	} else {
 		// The old keys should no longer work
-		_, err := testhelpers.GenerateRootWithError(t, cluster, false)
+		_, err := testhelpers.GenerateRootWithError(t, cluster, testhelpers.GenerateRootRegular)
 		if err == nil {
 			t.Fatal("expected error")
 		}
 
-		// Put tne new keys in place and run again
+		// Put the new keys in place and run again
 		cluster.RecoveryKeys = nil
 		for _, key := range newKeys {
 			dec, err := base64.StdEncoding.DecodeString(key)
@@ -273,6 +291,6 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		if err := client.Sys().GenerateRootCancel(); err != nil {
 			t.Fatal(err)
 		}
-		testhelpers.GenerateRoot(t, cluster, false)
+		testhelpers.GenerateRoot(t, cluster, testhelpers.GenerateRootRegular)
 	}
 }

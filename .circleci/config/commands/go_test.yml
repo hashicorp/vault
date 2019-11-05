@@ -8,7 +8,7 @@ steps:
       name: Run Go tests
       no_output_timeout: 20m
       command: |
-        set -eux -o pipefail
+        set -x
 
         # Install Go
         curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -48,7 +48,7 @@ steps:
           VAULT_ACC= \
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
-            -timeout=40m \
+            -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
             ${package_names}

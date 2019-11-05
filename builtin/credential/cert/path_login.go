@@ -72,8 +72,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, nil
 	}
 
-	if err := b.checkCIDR(matched.Entry, req); err != nil {
-		return nil, err
+	if len(matched.Entry.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, matched.Entry.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	clientCerts := req.Connection.ConnState.PeerCertificates
@@ -467,13 +473,6 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 		}
 	}
 	return false
-}
-
-func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
-	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cert.TokenBoundCIDRs) {
-		return nil
-	}
-	return logical.ErrPermissionDenied
 }
 
 // parsePEM parses a PEM encoded x509 certificate

@@ -111,6 +111,10 @@ LANGUAGE plpgsql;
 
 - `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
 
+- `ha_table` `(string: "vault_ha_locks")` – Specifies the name of the table to use
+  for storing high availability information. This table must already exist (Vault
+  will not attempt to create it).
+
 ## `postgresql` Examples
 
 ### Custom SSL Verification

@@ -31,6 +31,7 @@ func TestSysMounts(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -43,6 +44,7 @@ func TestSysMounts(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -56,6 +58,7 @@ func TestSysMounts(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -68,6 +71,7 @@ func TestSysMounts(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -81,6 +85,7 @@ func TestSysMounts(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -93,6 +98,7 @@ func TestSysMounts(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -106,6 +112,7 @@ func TestSysMounts(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -118,6 +125,7 @@ func TestSysMounts(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -178,6 +186,7 @@ func TestSysMount(t *testing.T) {
 			"foo/": map[string]interface{}{
 				"description": "foo",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -190,6 +199,7 @@ func TestSysMount(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -202,6 +212,7 @@ func TestSysMount(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -215,6 +226,7 @@ func TestSysMount(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -227,6 +239,7 @@ func TestSysMount(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -240,6 +253,7 @@ func TestSysMount(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -252,6 +266,7 @@ func TestSysMount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -264,6 +279,7 @@ func TestSysMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -277,6 +293,7 @@ func TestSysMount(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -289,6 +306,7 @@ func TestSysMount(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -369,6 +387,7 @@ func TestSysRemount(t *testing.T) {
 			"bar/": map[string]interface{}{
 				"description": "foo",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -381,6 +400,7 @@ func TestSysRemount(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -393,6 +413,7 @@ func TestSysRemount(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -406,6 +427,7 @@ func TestSysRemount(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -418,6 +440,7 @@ func TestSysRemount(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -431,6 +454,7 @@ func TestSysRemount(t *testing.T) {
 		"bar/": map[string]interface{}{
 			"description": "foo",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -443,6 +467,7 @@ func TestSysRemount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -455,6 +480,7 @@ func TestSysRemount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -468,6 +494,7 @@ func TestSysRemount(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -480,6 +507,7 @@ func TestSysRemount(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -540,6 +568,7 @@ func TestSysUnmount(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -552,6 +581,7 @@ func TestSysUnmount(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -565,6 +595,7 @@ func TestSysUnmount(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -577,6 +608,7 @@ func TestSysUnmount(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -590,6 +622,7 @@ func TestSysUnmount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -602,6 +635,7 @@ func TestSysUnmount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -615,6 +649,7 @@ func TestSysUnmount(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -627,6 +662,7 @@ func TestSysUnmount(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -769,6 +805,7 @@ func TestSysTuneMount(t *testing.T) {
 			"foo/": map[string]interface{}{
 				"description": "foo",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -781,6 +818,7 @@ func TestSysTuneMount(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -793,6 +831,7 @@ func TestSysTuneMount(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -806,6 +845,7 @@ func TestSysTuneMount(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -818,6 +858,7 @@ func TestSysTuneMount(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -831,6 +872,7 @@ func TestSysTuneMount(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -843,6 +885,7 @@ func TestSysTuneMount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -855,6 +898,7 @@ func TestSysTuneMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -868,6 +912,7 @@ func TestSysTuneMount(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -880,6 +925,7 @@ func TestSysTuneMount(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -966,6 +1012,7 @@ func TestSysTuneMount(t *testing.T) {
 			"foo/": map[string]interface{}{
 				"description": "foo",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("259196400"),
 					"max_lease_ttl":     json.Number("259200000"),
@@ -978,6 +1025,7 @@ func TestSysTuneMount(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
 				"type":        "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -990,6 +1038,7 @@ func TestSysTuneMount(t *testing.T) {
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
@@ -1003,6 +1052,7 @@ func TestSysTuneMount(t *testing.T) {
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
 				"type":        "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -1015,6 +1065,7 @@ func TestSysTuneMount(t *testing.T) {
 			"identity/": map[string]interface{}{
 				"description": "identity store",
 				"type":        "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -1028,6 +1079,7 @@ func TestSysTuneMount(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("259196400"),
 				"max_lease_ttl":     json.Number("259200000"),
@@ -1040,6 +1092,7 @@ func TestSysTuneMount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
 			"type":        "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -1052,6 +1105,7 @@ func TestSysTuneMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
@@ -1065,6 +1119,7 @@ func TestSysTuneMount(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -1077,6 +1132,7 @@ func TestSysTuneMount(t *testing.T) {
 		"identity/": map[string]interface{}{
 			"description": "identity store",
 			"type":        "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),

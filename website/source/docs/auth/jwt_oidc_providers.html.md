@@ -102,7 +102,8 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 ## Okta
 
-1. Make sure an Authorization Server has been created.
+1. Make sure an Authorization Server has been created. The "Issuer" field shown on the Setting page
+  will be used as the `oidc_discovery_url`.
 1. Visit Applications > Add Application (Web).
 1. Configure Login redirect URIs. Save.
 1. Save client ID and secret.

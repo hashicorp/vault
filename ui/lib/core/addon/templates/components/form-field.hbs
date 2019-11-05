@@ -89,6 +89,7 @@
 {{else if (eq attr.options.editType "file")}}
   {{text-file
     index=""
+    helpText=attr.options.helpText
     file=file
     onChange=(action "setFile")
     warning=attr.options.warning
@@ -162,14 +163,14 @@
   </div>
 {{else if (eq attr.type "boolean")}}
   <div class="b-checkbox">
-    <input type="checkbox" id="{{attr.name}}" class="styled" checked={{get model attr.name}} onchange={{action
+    <input disabled={{this.disabled}} type="checkbox" id="{{attr.name}}" class="styled" checked={{get model attr.name}} onchange={{action
         (action "setAndBroadcast" valuePath)
         value="target.checked"
       }} data-test-input={{attr.name}} />
 
     <label for="{{attr.name}}" class="is-label">
       {{labelString}}
-      {{#if attr.options.helpText}}
+      {{#if (and this.showHelpText attr.options.helpText)}}
         {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
       {{/if}}
     </label>

@@ -91,18 +91,18 @@ func (ResourceDescriptor_History) EnumDescriptor() ([]byte, []int) {
 //     };
 //   }
 type ResourceDescriptor struct {
-	// The full name of the resource type. It must be in the format of
-	// {service_name}/{resource_type_kind}. The resource type names are
-	// singular and do not contain version numbers.
+	// The resource type. It must be in the format of
+	// {service_name}/{resource_type_kind}. The `resource_type_kind` must be
+	// singular and must not include version numbers.
 	//
-	// For example: `storage.googleapis.com/Bucket`
+	// Example: `storage.googleapis.com/Bucket`
 	//
 	// The value of the resource_type_kind must follow the regular expression
-	// /[A-Z][a-zA-Z0-9]+/. It must start with upper case character and
-	// recommended to use PascalCase (UpperCamelCase). The maximum number of
-	// characters allowed for the resource_type_kind is 100.
+	// /[A-Za-z][a-zA-Z0-9]+/. It should start with an upper case character and
+	// should use PascalCase (UpperCamelCase). The maximum number of
+	// characters allowed for the `resource_type_kind` is 100.
 	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	// Required. The valid pattern or patterns for this resource's names.
+	// Optional. The valid resource name pattern(s) for this resource type.
 	//
 	// Examples:
 	//   - "projects/{project}/topics/{topic}"
@@ -124,7 +124,8 @@ type ResourceDescriptor struct {
 	//   message InspectTemplate {
 	//     option (google.api.resource) = {
 	//       type: "dlp.googleapis.com/InspectTemplate"
-	//       pattern: "organizations/{organization}/inspectTemplates/{inspect_template}"
+	//       pattern:
+	//       "organizations/{organization}/inspectTemplates/{inspect_template}"
 	//       pattern: "projects/{project}/inspectTemplates/{inspect_template}"
 	//       history: ORIGINALLY_SINGLE_PATTERN
 	//     };
@@ -188,11 +189,9 @@ func (m *ResourceDescriptor) GetHistory() ResourceDescriptor_History {
 	return ResourceDescriptor_HISTORY_UNSPECIFIED
 }
 
-// An annotation designating that this field is a reference to a resource
-// defined by another message.
+// Defines a proto annotation that describes a field that refers to a resource.
 type ResourceReference struct {
-	// The unified resource type name of the type that this field references.
-	// Marks this as a field referring to a resource in another message.
+	// The resource type that the annotated field references.
 	//
 	// Example:
 	//
@@ -202,11 +201,9 @@ type ResourceReference struct {
 	//     }];
 	//   }
 	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	// The fully-qualified message name of a child of the type that this field
-	// references.
-	//
-	// This is useful for `parent` fields where a resource has more than one
-	// possible type of parent.
+	// The resource type of a child collection that the annotated field
+	// references. This is useful for `parent` fields where a resource has more
+	// than one possible type of parent.
 	//
 	// Example:
 	//
@@ -214,14 +211,6 @@ type ResourceReference struct {
 	//     string parent = 1 [(google.api.resource_reference) = {
 	//       child_type: "logging.googleapis.com/LogEntry"
 	//     };
-	//   }
-	//
-	// If the referenced message is in the same proto package, the service name
-	// may be omitted:
-	//
-	//   message ListLogEntriesRequest {
-	//     string parent = 1
-	//       [(google.api.resource_reference).child_type = "LogEntry"];
 	//   }
 	ChildType            string   `protobuf:"bytes,2,opt,name=child_type,json=childType,proto3" json:"child_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`

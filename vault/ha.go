@@ -4,17 +4,17 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/vault/seal/shamir"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -22,8 +22,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/oklog/run"
 )
 
@@ -772,22 +770,35 @@ func (c *Core) reloadMasterKey(ctx context.Context) error {
 	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
 		return errwrap.Wrapf("error reloading master key: {{err}}", err)
 	}
+	return nil
+}
 
-	if c.seal.BarrierType() == seal.Shamir {
+func (c *Core) reloadShamirKey(ctx context.Context) error {
+	_ = c.seal.SetBarrierConfig(ctx, nil)
+	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+		return nil
+	}
+	var shamirKey []byte
+	switch c.seal.StoredKeysSupported() {
+	case StoredKeysSupportedGeneric:
+		return nil
+	case StoredKeysSupportedShamirMaster:
+		entry, err := c.barrier.Get(ctx, shamirKekPath)
+		if err != nil {
+			return err
+		}
+		if entry == nil {
+			return nil
+		}
+		shamirKey = entry.Value
+	case StoredKeysNotSupported:
 		keyring, err := c.barrier.Keyring()
 		if err != nil {
 			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
 		}
-
-		_, err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetConfig(map[string]string{
-			"key": base64.StdEncoding.EncodeToString(keyring.MasterKey()),
-		})
-		if err != nil {
-			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
-		}
+		shamirKey = keyring.masterKey
 	}
-
-	return nil
+	return c.seal.GetAccess().(*shamir.ShamirSeal).SetKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -801,6 +812,10 @@ func (c *Core) performKeyUpgrades(ctx context.Context) error {
 
 	if err := c.barrier.ReloadKeyring(ctx); err != nil {
 		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
+	}
+
+	if err := c.reloadShamirKey(ctx); err != nil {
+		return errwrap.Wrapf("error reloading shamir kek key: {{err}}", err)
 	}
 
 	if err := c.scheduleUpgradeCleanup(ctx); err != nil {

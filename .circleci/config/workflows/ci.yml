@@ -13,6 +13,14 @@ jobs:
       requires:
         - install-ui-dependencies
         - build-go-dev
+  - test-ui-browserstack:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+      filters:
+          branches:
+            # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+            ignore: /pull\/[0-9]+/
   - test-go:
       requires:
         - build-go-dev

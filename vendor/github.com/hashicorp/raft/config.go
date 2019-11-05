@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// These are the versions of the protocol (which includes RPC messages as
-// well as Raft-specific log entries) that this server can _understand_. Use
+// ProtocolVersion is the version of the protocol (which includes RPC messages
+// as well as Raft-specific log entries) that this server can _understand_. Use
 // the ProtocolVersion member of the Config object to control the version of
 // the protocol to use when _speaking_ to other servers. Note that depending on
 // the protocol version being spoken, some otherwise understood RPC messages
@@ -88,13 +88,15 @@ import (
 type ProtocolVersion int
 
 const (
+	// ProtocolVersionMin is the minimum protocol version
 	ProtocolVersionMin ProtocolVersion = 0
-	ProtocolVersionMax                 = 3
+	// ProtocolVersionMax is the maximum protocol version
+	ProtocolVersionMax = 3
 )
 
-// These are versions of snapshots that this server can _understand_. Currently,
-// it is always assumed that this server generates the latest version, though
-// this may be changed in the future to include a configurable version.
+// SnapshotVersion is the version of snapshots that this server can understand.
+// Currently, it is always assumed that the server generates the latest version,
+// though this may be changed in the future to include a configurable version.
 //
 // Version History
 //
@@ -112,8 +114,10 @@ const (
 type SnapshotVersion int
 
 const (
+	// SnapshotVersionMin is the minimum snapshot version
 	SnapshotVersionMin SnapshotVersion = 0
-	SnapshotVersionMax                 = 1
+	// SnapshotVersionMax is the maximum snapshot version
+	SnapshotVersionMax = 1
 )
 
 // Config provides any necessary configuration for the Raft server.

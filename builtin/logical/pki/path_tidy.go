@@ -118,6 +118,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting entry with nil value with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					cert, err := x509.ParseCertificate(certEntry.Value)
@@ -156,6 +157,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting nil revoked entry with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
@@ -163,6 +165,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting revoked entry with nil value with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					err = revokedEntry.DecodeJSON(&revInfo)

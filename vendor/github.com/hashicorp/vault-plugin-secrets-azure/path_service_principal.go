@@ -91,7 +91,7 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 }
 
 // createSPSecret generates a new App/Service Principal.
-func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
+func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
 	// Create the App, which is the top level object to be tracked in the secret
 	// and deleted upon revocation. If any subsequent step fails, the App is deleted.
 	app, err := c.createApp(ctx)
@@ -129,7 +129,7 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, role
 }
 
 // createStaticSPSecret adds a new password to the App associated with the role.
-func (b *azureSecretBackend) createStaticSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
+func (b *azureSecretBackend) createStaticSPSecret(ctx context.Context, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
 	lock := locksutil.LockForKey(b.appLocks, role.ApplicationObjectID)
 	lock.Lock()
 	defer lock.Unlock()

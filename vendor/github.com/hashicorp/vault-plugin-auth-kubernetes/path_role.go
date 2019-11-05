@@ -41,6 +41,10 @@ are allowed, both this and bound_service_account_namespaces can not be "*"`,
 					Description: `List of namespaces allowed to access this role. If set to "*" all namespaces
 are allowed, both this and bound_service_account_names can not be set to "*"`,
 				},
+				"audience": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Optional Audience claim to verify in the jwt.",
+				},
 				"policies": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: tokenutil.DeprecationText("token_policies"),
@@ -139,6 +143,10 @@ func (b *kubeAuthBackend) pathRoleRead() framework.OperationFunc {
 		d := map[string]interface{}{
 			"bound_service_account_names":      role.ServiceAccountNames,
 			"bound_service_account_namespaces": role.ServiceAccountNamespaces,
+		}
+
+		if role.Audience != "" {
+			d["audience"] = role.Audience
 		}
 
 		role.PopulateTokenData(d)
@@ -295,6 +303,11 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("service_account_names and service_account_namespaces can not both be \"*\""), nil
 		}
 
+		// optional audience field
+		if audience, ok := data.GetOk("audience"); ok {
+			role.Audience = audience.(string)
+		}
+
 		// Store the entry.
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), role)
 		if err != nil {
@@ -322,6 +335,9 @@ type roleStorageEntry struct {
 	// ServiceAccountNamespaces is the array of namespaces able to access this
 	// role.
 	ServiceAccountNamespaces []string `json:"bound_service_account_namespaces" mapstructure:"bound_service_account_namespaces" structs:"bound_service_account_namespaces"`
+
+	// Audience is an optional jwt claim to verify
+	Audience string `json:"audience" mapstructure:"audience" structs: "audience"`
 
 	// Deprecated by TokenParams
 	Policies   []string      `json:"policies" structs:"policies" mapstructure:"policies"`

@@ -8,6 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr, hasMany, belongsTo, Model } = DS;
 
 export default Model.extend(KeyMixin, {
+  failedServerRead: attr('boolean'),
   engine: belongsTo('secret-engine', { async: false }),
   engineId: attr('string'),
   versions: hasMany('secret-v2-version', { async: false, inverse: null }),

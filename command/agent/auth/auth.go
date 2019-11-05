@@ -29,11 +29,13 @@ type AuthConfig struct {
 type AuthHandler struct {
 	DoneCh                       chan struct{}
 	OutputCh                     chan string
+	TemplateTokenCh              chan string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	enableReauthOnNewCredentials bool
+	enableTemplateTokenCh        bool
 }
 
 type AuthHandlerConfig struct {
@@ -41,6 +43,7 @@ type AuthHandlerConfig struct {
 	Client                       *api.Client
 	WrapTTL                      time.Duration
 	EnableReauthOnNewCredentials bool
+	EnableTemplateTokenCh        bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -49,11 +52,13 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
+		TemplateTokenCh:              make(chan string, 1),
 		logger:                       conf.Logger,
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
+		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
 
 	return ah
@@ -76,6 +81,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		am.Shutdown()
 		close(ah.OutputCh)
 		close(ah.DoneCh)
+		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
@@ -99,7 +105,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		credCh = make(chan struct{})
 	}
 
-	var renewer *api.Renewer
+	var watcher *api.LifetimeWatcher
 
 	for {
 		select {
@@ -162,6 +168,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
 			ah.OutputCh <- string(wrappedResp)
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- string(wrappedResp)
+			}
 
 			am.CredSuccess()
 
@@ -188,48 +197,51 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
 			ah.OutputCh <- secret.Auth.ClientToken
+			if ah.enableTemplateTokenCh {
+				ah.TemplateTokenCh <- secret.Auth.ClientToken
+			}
 
 			am.CredSuccess()
 		}
 
-		if renewer != nil {
-			renewer.Stop()
+		if watcher != nil {
+			watcher.Stop()
 		}
 
-		renewer, err = ah.client.NewRenewer(&api.RenewerInput{
+		watcher, err = ah.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: secret,
 		})
 		if err != nil {
-			ah.logger.Error("error creating renewer, backing off and retrying", "error", err, "backoff", backoff.Seconds())
+			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
 			continue
 		}
 
 		// Start the renewal process
 		ah.logger.Info("starting renewal process")
-		go renewer.Renew()
+		go watcher.Renew()
 
-	RenewerLoop:
+	LifetimeWatcherLoop:
 		for {
 			select {
 			case <-ctx.Done():
-				ah.logger.Info("shutdown triggered, stopping renewer")
-				renewer.Stop()
-				break RenewerLoop
+				ah.logger.Info("shutdown triggered, stopping lifetime watcher")
+				watcher.Stop()
+				break LifetimeWatcherLoop
 
-			case err := <-renewer.DoneCh():
-				ah.logger.Info("renewer done channel triggered")
+			case err := <-watcher.DoneCh():
+				ah.logger.Info("lifetime watcher done channel triggered")
 				if err != nil {
 					ah.logger.Error("error renewing token", "error", err)
 				}
-				break RenewerLoop
+				break LifetimeWatcherLoop
 
-			case <-renewer.RenewCh():
+			case <-watcher.RenewCh():
 				ah.logger.Info("renewed auth token")
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
-				break RenewerLoop
+				break LifetimeWatcherLoop
 			}
 		}
 	}

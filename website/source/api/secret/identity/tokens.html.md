@@ -91,14 +91,16 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 
 - `verification_ttl` `(int or time string: "24h")` - Controls how long the public portion of a signing key will be available for verification after being rotated.
 
-- `algorithm` `(string: "RS256")` - Signing algorithm to use. This will default to `"RS256"`, and is currently the only allowed value.
+- `allowed_client_ids` `(list: [])` - Array of role client ids allowed to use this key for signing. If empty, no roles are allowed. If "*", all roles are allowed.
+
+- `algorithm` `(string: "RS256")` - Signing algorithm to use. Allowed values are: RS256 (default), RS384, RS512, ES256, ES384, ES512, EdDSA.
 
 ### Sample Payload
 
 ```json
 {
   "rotation_period":"12h",
-  "verification_ttl":43200,
+  "verification_ttl":43200
 }
 ```
 
@@ -357,7 +359,7 @@ Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `POST`   | `identity/oidc/token/:name`  |
+| `GET`   | `identity/oidc/token/:name`  |
 
 ### Parameters
 
@@ -439,7 +441,6 @@ Query this path to retrieve a set of claims about the identity tokens' configura
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/openid-configuration
 ```
@@ -472,7 +473,6 @@ Query this path to retrieve the public portion of named keys. Clients can use th
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/identity/oidc/.well-known/keys
 ```

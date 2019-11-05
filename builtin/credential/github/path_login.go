@@ -150,8 +150,14 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
-		return nil, nil, logical.ErrPermissionDenied
+	if len(config.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
+			return nil, nil, logical.ErrPermissionDenied
+		}
 	}
 
 	if config.Organization == "" {

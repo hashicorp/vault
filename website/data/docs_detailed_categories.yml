@@ -27,6 +27,7 @@
     - docs/concepts/policies.html
     - docs/concepts/ha.html
     - docs/concepts/pgp-gpg-keybase.html
+    - docs/concepts/recovery-mode.html
 -
   title: Configuration
   docs:
@@ -106,7 +107,9 @@
     - docs/auth/kubernetes.html
     - docs/auth/github.html
     - docs/auth/ldap.html
+    - docs/auth/oci.html
     - docs/auth/okta.html
+    - docs/auth/cf.html
     - docs/auth/radius.html
     - docs/auth/cert.html
     - docs/auth/token.html
@@ -124,6 +127,11 @@
   title: "Plugin Backends"
   docs:
     - docs/plugin/index.html
+-
+  title: "Platforms"
+  docs:
+    - docs/platform/k8s/index.html
+    - docs/platform/aws-mp/index.html
 -
   title: "Vault Enterprise"
   docs:

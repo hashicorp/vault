@@ -67,8 +67,14 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
-		return nil, nil, nil, logical.ErrPermissionDenied
+	if len(cfg.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
 	}
 
 	client := cfg.OktaClient()

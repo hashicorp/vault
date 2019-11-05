@@ -140,6 +140,11 @@ advertise the correct address to other nodes.
   there is no X-Forwarded-For header or it is empty, the client address will be
   used as-is, rather than the client connection rejected.
 
+### `telemetry` Parameters
+
+- `unauthenticated_metrics_access` `(string: "false")` - If set to true, allows
+  unauthenticated access to the `/v1/sys/metrics` endpoint. 
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS
@@ -169,6 +174,18 @@ listener "tcp" {
 # Advertise the non-loopback interface
 api_addr = "https://10.0.0.5:8200"
 cluster_addr = "https://10.0.0.5:8201"
+```
+
+### Configuring unauthenticated metrics access 
+
+This example shows enabling unauthenticated metrics access.
+
+```hcl
+listener "tcp" {
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+}
 ```
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go

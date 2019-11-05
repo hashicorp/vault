@@ -27,7 +27,7 @@ var (
 	LogErrors = false
 
 	// CompareUnexportedFields causes unexported struct fields, like s in
-	// T{s int}, to be comparsed when true.
+	// T{s int}, to be compared when true.
 	CompareUnexportedFields = false
 )
 
@@ -121,14 +121,14 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 			bString := b.MethodByName("Error").Call(nil)[0].String()
 			if aString != bString {
 				c.saveDiff(aString, bString)
+				return
 			}
-			return
 		}
 	}
 
 	// Dereference pointers and interface{}
-	if aElem, bElem := (aKind == reflect.Ptr || aKind == reflect.Interface),
-		(bKind == reflect.Ptr || bKind == reflect.Interface); aElem || bElem {
+	if aElem, bElem := aKind == reflect.Ptr || aKind == reflect.Interface,
+		bKind == reflect.Ptr || bKind == reflect.Interface; aElem || bElem {
 
 		if aElem {
 			a = a.Elem()
@@ -282,12 +282,13 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 			return
 		}
 
-		if a.Pointer() == b.Pointer() {
+		aLen := a.Len()
+		bLen := b.Len()
+
+		if a.Pointer() == b.Pointer() && aLen == bLen {
 			return
 		}
 
-		aLen := a.Len()
-		bLen := b.Len()
 		n := aLen
 		if bLen > aLen {
 			n = bLen

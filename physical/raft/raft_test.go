@@ -29,6 +29,10 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
+	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+}
+
+func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:  "raft",
 		Level: hclog.Trace,
@@ -56,9 +60,15 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 			t.Fatal(err)
 		}
 
-		err = backend.SetupCluster(context.Background(), nil, nil)
+		err = backend.SetupCluster(context.Background(), SetupOpts{})
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		for {
+			if backend.AppliedIndex() >= 2 {
+				break
+			}
 		}
 
 	}
@@ -255,9 +265,9 @@ func TestRaft_Recovery(t *testing.T) {
 	}
 
 	// Bring up the nodes again
-	raft1.SetupCluster(context.Background(), nil, nil)
-	raft2.SetupCluster(context.Background(), nil, nil)
-	raft4.SetupCluster(context.Background(), nil, nil)
+	raft1.SetupCluster(context.Background(), SetupOpts{})
+	raft2.SetupCluster(context.Background(), SetupOpts{})
+	raft4.SetupCluster(context.Background(), SetupOpts{})
 
 	peers, err := raft1.Peers(context.Background())
 	if err != nil {
@@ -293,34 +303,6 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	// Make sure all stores are the same
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 	compareFSMs(t, raft1.fsm, raft3.fsm)
-}
-
-func TestRaft_Backend_MaxSize(t *testing.T) {
-	// Set the max size a little lower for the test
-	maxCommandSizeBytes = 10 * 1024
-
-	b, dir := getRaft(t, true, true)
-	defer os.RemoveAll(dir)
-
-	// Test a value slightly below the max size
-	value := make([]byte, maxCommandSizeBytes-100)
-	err := b.Put(context.Background(), &physical.Entry{
-		Key:   "key",
-		Value: value,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Test value at max size, should error
-	value = make([]byte, maxCommandSizeBytes)
-	err = b.Put(context.Background(), &physical.Entry{
-		Key:   "key",
-		Value: value,
-	})
-	if err != ErrCommandTooLarge {
-		t.Fatal(err)
-	}
 }
 
 func TestRaft_Backend_Performance(t *testing.T) {

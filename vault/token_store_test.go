@@ -540,10 +540,6 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
-	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
-}
-
 func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
 	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
 }
@@ -645,10 +641,6 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 
 func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
 	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
-}
-
-func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
 }
 
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
@@ -849,6 +841,9 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	ts := exp.tokenStore
 
 	rootToken, err := ts.rootToken(namespace.RootContext(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
 	root := rootToken.ID
 
 	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
@@ -2117,6 +2112,9 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	ts := exp.tokenStore
 
 	rootToken, err := ts.rootToken(namespace.RootContext(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
 	root := rootToken.ID
 
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
@@ -2657,6 +2655,9 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 			"mount_accessor": tokenMountAccessor,
 		},
 	})
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{
@@ -4992,17 +4993,18 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 	cubbyFuncLock.Unlock()
 
+	errCh := make(chan error)
+	defer close(errCh)
 	go func() {
 		cubbyFuncLock.RLock()
 		err := ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
 		cubbyFuncLock.RUnlock()
-		if err == nil {
-			t.Fatalf("expected error")
-		}
+		errCh <- err
 	}()
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
+
 	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
@@ -5011,8 +5013,10 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal("nil token entry")
 	}
 
-	// Let things catch up
-	time.Sleep(2 * time.Second)
+	err = <-errCh
+	if err == nil {
+		t.Fatal("expected error on ts.revokeInternal() in anonymous goroutine")
+	}
 
 	// Put back to normal
 	cubbyFuncLock.Lock()

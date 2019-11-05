@@ -26,6 +26,11 @@
   }
 }
 
+.toolbar-label {
+  padding: $spacing-xs;
+  color: $grey;
+}
+
 .toolbar-scroller {
   align-items: center;
   display: flex;
@@ -93,11 +98,6 @@
     height: 2.5rem;
     padding: $size-10 $size-8;
   }
-}
-
-.toolbar-label {
-  padding: $spacing-xs;
-  color: $grey;
 }
 
 .toolbar-separator {

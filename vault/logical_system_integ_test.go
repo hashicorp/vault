@@ -752,11 +752,6 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
-			"sys/tools/random": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
 			"sys/wrapping/lookup": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",
@@ -784,11 +779,6 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 			"sys/tools/hash/": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/tools/random/": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",
 				},

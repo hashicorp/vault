@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"io"
-	"log"
 	"net"
 	"os"
 	"sync"
@@ -66,7 +66,7 @@ type NetworkTransport struct {
 	heartbeatFn     func(RPC)
 	heartbeatFnLock sync.Mutex
 
-	logger *log.Logger
+	logger hclog.Logger
 
 	maxPool int
 
@@ -92,7 +92,7 @@ type NetworkTransportConfig struct {
 	// ServerAddressProvider is used to override the target address when establishing a connection to invoke an RPC
 	ServerAddressProvider ServerAddressProvider
 
-	Logger *log.Logger
+	Logger hclog.Logger
 
 	// Dialer
 	Stream StreamLayer
@@ -105,6 +105,7 @@ type NetworkTransportConfig struct {
 	Timeout time.Duration
 }
 
+// ServerAddressProvider is a target address to which we invoke an RPC when establishing a connection
 type ServerAddressProvider interface {
 	ServerAddr(id ServerID) (ServerAddress, error)
 }
@@ -148,7 +149,11 @@ func NewNetworkTransportWithConfig(
 	config *NetworkTransportConfig,
 ) *NetworkTransport {
 	if config.Logger == nil {
-		config.Logger = log.New(os.Stderr, "", log.LstdFlags)
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Name:   "raft-net",
+			Output: hclog.DefaultOutput,
+			Level:  hclog.DefaultLevel,
+		})
 	}
 	trans := &NetworkTransport{
 		connPool:              make(map[ServerAddress][]*netConn),
@@ -182,7 +187,11 @@ func NewNetworkTransport(
 	if logOutput == nil {
 		logOutput = os.Stderr
 	}
-	logger := log.New(logOutput, "", log.LstdFlags)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   "raft-net",
+		Output: logOutput,
+		Level:  hclog.DefaultLevel,
+	})
 	config := &NetworkTransportConfig{Stream: stream, MaxPool: maxPool, Timeout: timeout, Logger: logger}
 	return NewNetworkTransportWithConfig(config)
 }
@@ -195,7 +204,7 @@ func NewNetworkTransportWithLogger(
 	stream StreamLayer,
 	maxPool int,
 	timeout time.Duration,
-	logger *log.Logger,
+	logger hclog.Logger,
 ) *NetworkTransport {
 	config := &NetworkTransportConfig{Stream: stream, MaxPool: maxPool, Timeout: timeout, Logger: logger}
 	return NewNetworkTransportWithConfig(config)
@@ -310,7 +319,7 @@ func (n *NetworkTransport) getProviderAddressOrFallback(id ServerID, target Serv
 	if n.serverAddressProvider != nil {
 		serverAddressOverride, err := n.serverAddressProvider.ServerAddr(id)
 		if err != nil {
-			n.logger.Printf("[WARN] raft: Unable to get address for server id %v, using fallback address %v: %v", id, target, err)
+			n.logger.Warn("unable to get address for sever, using fallback address", "id", id, "fallback", target, "error", err)
 		} else {
 			return serverAddressOverride
 		}
@@ -486,7 +495,7 @@ func (n *NetworkTransport) listen() {
 			}
 
 			if !n.IsShutdown() {
-				n.logger.Printf("[ERR] raft-net: Failed to accept connection: %v", err)
+				n.logger.Error("failed to accept connection", "error", err)
 			}
 
 			select {
@@ -499,7 +508,7 @@ func (n *NetworkTransport) listen() {
 		// No error, reset loop delay
 		loopDelay = 0
 
-		n.logger.Printf("[DEBUG] raft-net: %v accepted connection from: %v", n.LocalAddr(), conn.RemoteAddr())
+		n.logger.Debug("accepted connection", "local-address", n.LocalAddr(), "remote-address", conn.RemoteAddr().String())
 
 		// Handle the connection in dedicated routine
 		go n.handleConn(n.getStreamContext(), conn)
@@ -519,19 +528,19 @@ func (n *NetworkTransport) handleConn(connCtx context.Context, conn net.Conn) {
 	for {
 		select {
 		case <-connCtx.Done():
-			n.logger.Println("[DEBUG] raft-net: stream layer is closed")
+			n.logger.Debug("stream layer is closed")
 			return
 		default:
 		}
 
 		if err := n.handleCommand(r, dec, enc); err != nil {
 			if err != io.EOF {
-				n.logger.Printf("[ERR] raft-net: Failed to decode incoming command: %v", err)
+				n.logger.Error("failed to decode incoming command", "error", err)
 			}
 			return
 		}
 		if err := w.Flush(); err != nil {
-			n.logger.Printf("[ERR] raft-net: Failed to flush response: %v", err)
+			n.logger.Error("failed to flush response", "error", err)
 			return
 		}
 	}

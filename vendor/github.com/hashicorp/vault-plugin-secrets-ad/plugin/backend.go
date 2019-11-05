@@ -8,13 +8,16 @@ import (
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	backend := newBackend(util.NewSecretsClient(conf.Logger))
-	backend.Setup(ctx, conf)
+	if err := backend.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
 	return backend, nil
 }
 
@@ -24,6 +27,10 @@ func newBackend(client secretsClient) *backend {
 		roleCache:      cache.New(roleCacheExpiration, roleCacheCleanup),
 		credCache:      cache.New(credCacheExpiration, credCacheCleanup),
 		rotateRootLock: new(int32),
+		checkOutHandler: &checkOutHandler{
+			client: client,
+		},
+		checkOutLocks: locksutil.CreateLocks(),
 	}
 	adBackend.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -33,6 +40,14 @@ func newBackend(client secretsClient) *backend {
 			adBackend.pathListRoles(),
 			adBackend.pathCreds(),
 			adBackend.pathRotateCredentials(),
+
+			// The following paths are for AD credential checkout.
+			adBackend.pathSetCheckIn(),
+			adBackend.pathSetManageCheckIn(),
+			adBackend.pathSetCheckOut(),
+			adBackend.pathSetStatus(),
+			adBackend.pathSets(),
+			adBackend.pathListSets(),
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
@@ -42,12 +57,15 @@ func newBackend(client secretsClient) *backend {
 		},
 		Invalidate:  adBackend.Invalidate,
 		BackendType: logical.TypeLogical,
+		Secrets: []*framework.Secret{
+			adBackend.secretAccessKeys(),
+		},
 	}
 	return adBackend
 }
 
 type backend struct {
-	logical.Backend
+	*framework.Backend
 
 	client secretsClient
 
@@ -55,6 +73,11 @@ type backend struct {
 	credCache      *cache.Cache
 	credLock       sync.Mutex
 	rotateRootLock *int32
+
+	checkOutHandler *checkOutHandler
+	// checkOutLocks are used for avoiding races
+	// when working with sets through the check-out system.
+	checkOutLocks []*locksutil.LockEntry
 }
 
 func (b *backend) Invalidate(ctx context.Context, key string) {

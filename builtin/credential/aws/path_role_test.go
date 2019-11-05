@@ -757,13 +757,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if int64(resp.Data["ttl"].(int64)) != 10 {
+	if resp.Data["ttl"].(int64) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if int64(resp.Data["max_ttl"].(int64)) != 20 {
+	if resp.Data["max_ttl"].(int64) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if int64(resp.Data["period"].(int64)) != 30 {
+	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }
@@ -986,6 +986,6 @@ func TestAwsVersion(t *testing.T) {
 	}
 }
 
-func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
+func resolveArnToFakeUniqueId(_ context.Context, _ logical.Storage, _ string) (string, error) {
 	return "FakeUniqueId1", nil
 }

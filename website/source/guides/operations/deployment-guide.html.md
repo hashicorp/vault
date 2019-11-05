@@ -162,6 +162,8 @@ Vault requires a Consul token with specific policy to limit the requests Vault c
 
 On a host running a Consul agent, and using a Consul management token, create a Consul client token with specific policy for Vault:
 
+### Consul < 1.4
+
 ```text
 CONSUL_TOKEN="6609e426-1aeb-4b0d-c302-3a7568fbc1f9"
 curl \
@@ -171,9 +173,26 @@ curl \
 '{
   "Name": "Vault Token",
   "Type": "client",
-  "Rules": "node \"\" { policy = \"write\" } service \"vault\" { policy = \"write\" } agent \"\" { policy = \"write\" }  key \"vault\" { policy = \"write\" } session \"\" { policy = \"write\" } "
+  "Rules": "node \"\" { policy = \"write\" } service \"vault\" { policy = \"write\" } agent \"\" { policy = \"write\" }  key \"vault/\" { policy = \"write\" } session \"\" { policy = \"write\" } "
 }' http://127.0.0.1:8500/v1/acl/create
 ```
+
+### Consul >= 1.4
+
+```text
+CONSUL_TOKEN="6609e426-1aeb-4b0d-c302-3a7568fbc1f9"
+curl \
+    --request PUT \
+    --header "X-Consul-Token: ${CONSUL_TOKEN}" \
+    --data \
+'{
+  "Name": "Vault Token",
+  "Type": "client",
+  "Rules": "node_prefix \"\" { policy = \"write\" } service \"vault\" { policy = \"write\" } agent_prefix \"\" { policy = \"write\" }  key_prefix \"vault/\" { policy = \"write\" } session_prefix \"\" { policy = \"write\" } "
+}' http://127.0.0.1:8500/v1/acl/create
+```
+
+
 
 The response includes the value you will use as the `token` parameter value in Vault's storage stanza configuration. An example response:
 

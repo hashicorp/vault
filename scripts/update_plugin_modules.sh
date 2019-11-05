@@ -14,20 +14,23 @@ git clone https://github.com/hashicorp/vault
 
 for plugin in $(grep github.com/hashicorp/vault-plugin- vault/go.mod | cut -f 2 | cut -d ' ' -f 1 | cut -d '/' -f 3)
 do
-	echo "Fetching $plugin..."
-	git clone https://github.com/hashicorp/$plugin
-	cd $plugin
-	rm -rf vendor
-	go get github.com/hashicorp/vault/api@master
-	go mod tidy
-	go mod vendor
-	git add .
-	git commit --allow-empty -m "Updating vault dep"
-	if [ ! -z $PUSH_COMMITS ]
+	if [ -z $SKIP_MODULE_UPDATING ]
 	then
-		git push
+		echo "Fetching $plugin..."
+		git clone https://github.com/hashicorp/$plugin
+		cd $plugin
+		rm -rf vendor
+		go get github.com/hashicorp/vault/api${API_BRANCH}
+		go mod tidy
+		go mod vendor
+		git add .
+		git commit --allow-empty -m "Updating vault dep"
+		if [ ! -z $PUSH_COMMITS ]
+		then
+			git push
+		fi
+		cd ..
 	fi
-	cd ..
 	cd vault
 	go get github.com/hashicorp/$plugin@master
 	cd ..
@@ -39,7 +42,7 @@ rm -rf vendor
 go mod vendor
 git add .
 git commit --allow-empty -m "Updating plugin deps"
-if [ ! -z $PUSH_COMMITS ]
+if [ ! -z $PUSH_VAULT_COMMIT ]
 then
 	git push
 fi

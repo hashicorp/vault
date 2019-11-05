@@ -51,14 +51,18 @@ values set here cannot be changed after key creation.
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
 
-    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+    - `aes128-gcm96` – AES-128 wrapped with GCM using a 96-bit nonce size AEAD
       (symmetric, supports derivation and convergent encryption)
+    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+      (symmetric, supports derivation and convergent encryption, default)
     - `chacha20-poly1305` – ChaCha20-Poly1305 AEAD (symmetric, supports
       derivation and convergent encryption)
     - `ed25519` – ED25519 (asymmetric, supports derivation). When using
       derivation, a sign operation with the same context will derive the same
       key and signature; this is a signing analogue to `convergent_encryption`.
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
+    - `ecdsa-p384` – ECDSA using the P-384 elliptic curve (asymmetric)
+    - `ecdsa-p521` – ECDSA using the P-521 elliptic curve (asymmetric)
     - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
     - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
@@ -66,7 +70,7 @@ values set here cannot be changed after key creation.
 
 ```json
 {
-  "type": "ecdsa-p256",
+  "type": "ed25519",
   "derived": true
 }
 ```
@@ -1229,11 +1233,12 @@ keyring. Once trimmed, previous versions of the key cannot be recovered.
 
 ### Parameters
 
-- `min_version` `(int: <required>)` - The minimum version for the key ring. All
-  versions before this version will be permanently deleted. This value can at
-  most be equal to the lesser of `min_decryption_version` and
-  `min_encryption_version`. This is not allowed to be set when either
-  `min_encryption_version` or `min_decryption_version` is set to zero.
+- `min_available_version` `(int: <required>)` - The minimum available version
+  for the key ring. All versions before this version will be permanently
+  deleted. This value can at most be equal to the lesser of
+  `min_decryption_version` and `min_encryption_version`. This is not allowed to
+  be set when either `min_encryption_version` or `min_decryption_version` is set
+  to zero.
 
 ### Sample Payload
 

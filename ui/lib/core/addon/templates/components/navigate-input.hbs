@@ -6,6 +6,7 @@
     value={{@filter}}
     placeholder={{ or @placeholder "Filter keys" }}
     type="text"
+    data-test-comoponent="navigate-input"
 
     oninput={{action "handleInput" value="target.value"}}
     onkeyup={{action "handleKeyUp" }}

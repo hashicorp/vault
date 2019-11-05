@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-
 	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
 )
@@ -78,6 +78,12 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 }
 
 func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// Because the state is cached, don't process OIDC logins on perf standbys
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	state := b.verifyState(d.Get("state").(string))
 	if state == nil {
 		return logical.ErrorResponse(errLoginFailed + " Expired or missing OAuth state."), nil
@@ -100,8 +106,14 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
 	}
 
-	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
-		return logical.ErrorResponse("request originated from invalid CIDR"), nil
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	provider, err := b.getProvider(config)
@@ -187,25 +199,29 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		tokenMetadata[k] = v
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:     role.Policies,
-			DisplayName:  alias.Name,
-			Period:       role.Period,
-			NumUses:      role.NumUses,
-			Alias:        alias,
-			GroupAliases: groupAliases,
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
-			Metadata: tokenMetadata,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			BoundCIDRs: role.BoundCIDRs,
+	auth := &logical.Auth{
+		Policies:     role.Policies,
+		DisplayName:  alias.Name,
+		Period:       role.Period,
+		NumUses:      role.NumUses,
+		Alias:        alias,
+		GroupAliases: groupAliases,
+		InternalData: map[string]interface{}{
+			"role": roleName,
 		},
+		Metadata: tokenMetadata,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+			TTL:       role.TTL,
+			MaxTTL:    role.MaxTTL,
+		},
+		BoundCIDRs: role.BoundCIDRs,
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	return resp, nil
@@ -217,6 +233,11 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 // roles is intentionally non-descriptive and will simply be an empty string.
 func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	logger := b.Logger()
+
+	// Because the state is cached, don't process OIDC logins on perf standbys
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
 
 	// default response for most error/invalid conditions
 	resp := &logical.Response{

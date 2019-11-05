@@ -30,27 +30,25 @@ const (
 	// hashLog determines the size of the hash table used to quickly find a previous match position.
 	// Its value influences the compression speed and memory usage, the lower the faster,
 	// but at the expense of the compression ratio.
-	// 16 seems to be the best compromise.
-	hashLog       = 16
-	hashTableSize = 1 << hashLog
-	hashShift     = uint((minMatch * 8) - hashLog)
+	// 16 seems to be the best compromise for fast compression.
+	hashLog = 16
+	htSize  = 1 << hashLog
 
-	mfLimit      = 8 + minMatch // The last match cannot start within the last 12 bytes.
-	skipStrength = 6            // variable step for fast scan
+	mfLimit = 8 + minMatch // The last match cannot start within the last 12 bytes.
 )
 
 // map the block max size id with its value in bytes: 64Kb, 256Kb, 1Mb and 4Mb.
-var (
-	bsMapID    = map[byte]int{4: 64 << 10, 5: 256 << 10, 6: 1 << 20, 7: 4 << 20}
-	bsMapValue = make(map[int]byte, len(bsMapID))
+const (
+	blockSize64K  = 64 << 10
+	blockSize256K = 256 << 10
+	blockSize1M   = 1 << 20
+	blockSize4M   = 4 << 20
 )
 
-// Reversed.
-func init() {
-	for i, v := range bsMapID {
-		bsMapValue[v] = i
-	}
-}
+var (
+	bsMapID    = map[byte]int{4: blockSize64K, 5: blockSize256K, 6: blockSize1M, 7: blockSize4M}
+	bsMapValue = map[int]byte{blockSize64K: 4, blockSize256K: 5, blockSize1M: 6, blockSize4M: 7}
+)
 
 // Header describes the various flags that can be set on a Writer or obtained from a Reader.
 // The default values match those of the LZ4 frame format definition

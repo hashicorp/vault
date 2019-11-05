@@ -10,8 +10,8 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   queryParams: [{ authMethod: 'with' }],
   wrappedToken: alias('vaultController.wrappedToken'),
-  authMethod: '',
-  redirectTo: null,
+  authMethod: 'token',
+  redirectTo: alias('vaultController.redirectTo'),
 
   updateNamespace: task(function*(value) {
     // debounce

@@ -80,8 +80,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return nil, errors.New("centrify auth plugin configuration not set")
 	}
 
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(config.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	var token *oauth.TokenResponse

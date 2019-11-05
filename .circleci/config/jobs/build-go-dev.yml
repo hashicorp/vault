@@ -7,8 +7,6 @@ steps:
   - run:
       name: Build dev binary
       command: |
-        set -eux -o pipefail
-
         # Move dev UI assets to expected location
         rm -rf ./pkg
         mkdir ./pkg

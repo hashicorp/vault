@@ -9,8 +9,6 @@ import (
 	math "math"
 
 	proto "github.com/golang/protobuf/proto"
-	_ "github.com/golang/protobuf/ptypes/struct"
-	_ "github.com/golang/protobuf/ptypes/wrappers"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	grpc "google.golang.org/grpc"
@@ -27,23 +25,24 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// Request message for
-// [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
+// Request message for [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
 type ListKeyRingsRequest struct {
 	// Required. The resource name of the location associated with the
-	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format
-	// `projects/*/locations/*`.
+	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format `projects/*/locations/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of [KeyRings][google.cloud.kms.v1.KeyRing] to
-	// include in the response.  Further [KeyRings][google.cloud.kms.v1.KeyRing]
-	// can subsequently be obtained by including the
-	// [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token]
-	// in a subsequent request.  If unspecified, the server will pick an
-	// appropriate default.
+	// Optional limit on the number of [KeyRings][google.cloud.kms.v1.KeyRing] to include in the
+	// response.  Further [KeyRings][google.cloud.kms.v1.KeyRing] can subsequently be obtained by
+	// including the [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token] in a subsequent
+	// request.  If unspecified, the server will pick an appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListKeyRingsResponse.next_page_token][google.cloud.kms.v1.ListKeyRingsResponse.next_page_token].
-	PageToken            string   `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Optional. Only include resources that match the filter in the response.
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional. Specify how the results should be sorted. If not specified, the
+	// results will be sorted in the default order.
+	OrderBy              string   `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -95,28 +94,43 @@ func (m *ListKeyRingsRequest) GetPageToken() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
+func (m *ListKeyRingsRequest) GetFilter() string {
+	if m != nil {
+		return m.Filter
+	}
+	return ""
+}
+
+func (m *ListKeyRingsRequest) GetOrderBy() string {
+	if m != nil {
+		return m.OrderBy
+	}
+	return ""
+}
+
+// Request message for [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
 type ListCryptoKeysRequest struct {
-	// Required. The resource name of the [KeyRing][google.cloud.kms.v1.KeyRing]
-	// to list, in the format `projects/*/locations/*/keyRings/*`.
+	// Required. The resource name of the [KeyRing][google.cloud.kms.v1.KeyRing] to list, in the format
+	// `projects/*/locations/*/keyRings/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of [CryptoKeys][google.cloud.kms.v1.CryptoKey]
-	// to include in the response.  Further
-	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] can subsequently be obtained by
-	// including the
-	// [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token]
-	// in a subsequent request.  If unspecified, the server will pick an
-	// appropriate default.
+	// Optional limit on the number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] to include in the
+	// response.  Further [CryptoKeys][google.cloud.kms.v1.CryptoKey] can subsequently be obtained by
+	// including the [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token] in a subsequent
+	// request.  If unspecified, the server will pick an appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListCryptoKeysResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeysResponse.next_page_token].
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// The fields of the primary version to include in the response.
-	VersionView          CryptoKeyVersion_CryptoKeyVersionView `protobuf:"varint,4,opt,name=version_view,json=versionView,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionView" json:"version_view,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
-	XXX_unrecognized     []byte                                `json:"-"`
-	XXX_sizecache        int32                                 `json:"-"`
+	VersionView CryptoKeyVersion_CryptoKeyVersionView `protobuf:"varint,4,opt,name=version_view,json=versionView,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionView" json:"version_view,omitempty"`
+	// Optional. Only include resources that match the filter in the response.
+	Filter string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional. Specify how the results should be sorted. If not specified, the
+	// results will be sorted in the default order.
+	OrderBy              string   `protobuf:"bytes,6,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *ListCryptoKeysRequest) Reset()         { *m = ListCryptoKeysRequest{} }
@@ -172,29 +186,44 @@ func (m *ListCryptoKeysRequest) GetVersionView() CryptoKeyVersion_CryptoKeyVersi
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_VIEW_UNSPECIFIED
 }
 
-// Request message for
-// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
+func (m *ListCryptoKeysRequest) GetFilter() string {
+	if m != nil {
+		return m.Filter
+	}
+	return ""
+}
+
+func (m *ListCryptoKeysRequest) GetOrderBy() string {
+	if m != nil {
+		return m.OrderBy
+	}
+	return ""
+}
+
+// Request message for [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
 type ListCryptoKeyVersionsRequest struct {
-	// Required. The resource name of the
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to list, in the format
+	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to list, in the format
 	// `projects/*/locations/*/keyRings/*/cryptoKeys/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional limit on the number of
-	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] to include in the
-	// response. Further [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion]
-	// can subsequently be obtained by including the
-	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token]
-	// in a subsequent request. If unspecified, the server will pick an
-	// appropriate default.
+	// Optional limit on the number of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] to
+	// include in the response. Further [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] can
+	// subsequently be obtained by including the
+	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token] in a subsequent request.
+	// If unspecified, the server will pick an appropriate default.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional pagination token, returned earlier via
 	// [ListCryptoKeyVersionsResponse.next_page_token][google.cloud.kms.v1.ListCryptoKeyVersionsResponse.next_page_token].
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// The fields to include in the response.
-	View                 CryptoKeyVersion_CryptoKeyVersionView `protobuf:"varint,4,opt,name=view,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionView" json:"view,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
-	XXX_unrecognized     []byte                                `json:"-"`
-	XXX_sizecache        int32                                 `json:"-"`
+	View CryptoKeyVersion_CryptoKeyVersionView `protobuf:"varint,4,opt,name=view,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionView" json:"view,omitempty"`
+	// Optional. Only include resources that match the filter in the response.
+	Filter string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional. Specify how the results should be sorted. If not specified, the
+	// results will be sorted in the default order.
+	OrderBy              string   `protobuf:"bytes,6,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *ListCryptoKeyVersionsRequest) Reset()         { *m = ListCryptoKeyVersionsRequest{} }
@@ -250,17 +279,111 @@ func (m *ListCryptoKeyVersionsRequest) GetView() CryptoKeyVersion_CryptoKeyVersi
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_VIEW_UNSPECIFIED
 }
 
-// Response message for
-// [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
+func (m *ListCryptoKeyVersionsRequest) GetFilter() string {
+	if m != nil {
+		return m.Filter
+	}
+	return ""
+}
+
+func (m *ListCryptoKeyVersionsRequest) GetOrderBy() string {
+	if m != nil {
+		return m.OrderBy
+	}
+	return ""
+}
+
+// Request message for [KeyManagementService.ListImportJobs][google.cloud.kms.v1.KeyManagementService.ListImportJobs].
+type ListImportJobsRequest struct {
+	// Required. The resource name of the [KeyRing][google.cloud.kms.v1.KeyRing] to list, in the format
+	// `projects/*/locations/*/keyRings/*`.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Optional limit on the number of [ImportJobs][google.cloud.kms.v1.ImportJob] to include in the
+	// response. Further [ImportJobs][google.cloud.kms.v1.ImportJob] can subsequently be obtained by
+	// including the [ListImportJobsResponse.next_page_token][google.cloud.kms.v1.ListImportJobsResponse.next_page_token] in a subsequent
+	// request. If unspecified, the server will pick an appropriate default.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional pagination token, returned earlier via
+	// [ListImportJobsResponse.next_page_token][google.cloud.kms.v1.ListImportJobsResponse.next_page_token].
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Optional. Only include resources that match the filter in the response.
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional. Specify how the results should be sorted. If not specified, the
+	// results will be sorted in the default order.
+	OrderBy              string   `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListImportJobsRequest) Reset()         { *m = ListImportJobsRequest{} }
+func (m *ListImportJobsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListImportJobsRequest) ProtoMessage()    {}
+func (*ListImportJobsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_723aeaeb61739a25, []int{3}
+}
+
+func (m *ListImportJobsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListImportJobsRequest.Unmarshal(m, b)
+}
+func (m *ListImportJobsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListImportJobsRequest.Marshal(b, m, deterministic)
+}
+func (m *ListImportJobsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListImportJobsRequest.Merge(m, src)
+}
+func (m *ListImportJobsRequest) XXX_Size() int {
+	return xxx_messageInfo_ListImportJobsRequest.Size(m)
+}
+func (m *ListImportJobsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListImportJobsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListImportJobsRequest proto.InternalMessageInfo
+
+func (m *ListImportJobsRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *ListImportJobsRequest) GetPageSize() int32 {
+	if m != nil {
+		return m.PageSize
+	}
+	return 0
+}
+
+func (m *ListImportJobsRequest) GetPageToken() string {
+	if m != nil {
+		return m.PageToken
+	}
+	return ""
+}
+
+func (m *ListImportJobsRequest) GetFilter() string {
+	if m != nil {
+		return m.Filter
+	}
+	return ""
+}
+
+func (m *ListImportJobsRequest) GetOrderBy() string {
+	if m != nil {
+		return m.OrderBy
+	}
+	return ""
+}
+
+// Response message for [KeyManagementService.ListKeyRings][google.cloud.kms.v1.KeyManagementService.ListKeyRings].
 type ListKeyRingsResponse struct {
 	// The list of [KeyRings][google.cloud.kms.v1.KeyRing].
 	KeyRings []*KeyRing `protobuf:"bytes,1,rep,name=key_rings,json=keyRings,proto3" json:"key_rings,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListKeyRingsRequest.page_token][google.cloud.kms.v1.ListKeyRingsRequest.page_token]
-	// to retrieve the next page of results.
+	// [ListKeyRingsRequest.page_token][google.cloud.kms.v1.ListKeyRingsRequest.page_token] to retrieve the next page of results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of [KeyRings][google.cloud.kms.v1.KeyRing] that matched
-	// the query.
+	// The total number of [KeyRings][google.cloud.kms.v1.KeyRing] that matched the query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -271,7 +394,7 @@ func (m *ListKeyRingsResponse) Reset()         { *m = ListKeyRingsResponse{} }
 func (m *ListKeyRingsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListKeyRingsResponse) ProtoMessage()    {}
 func (*ListKeyRingsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{3}
+	return fileDescriptor_723aeaeb61739a25, []int{4}
 }
 
 func (m *ListKeyRingsResponse) XXX_Unmarshal(b []byte) error {
@@ -313,17 +436,14 @@ func (m *ListKeyRingsResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Response message for
-// [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
+// Response message for [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
 type ListCryptoKeysResponse struct {
 	// The list of [CryptoKeys][google.cloud.kms.v1.CryptoKey].
 	CryptoKeys []*CryptoKey `protobuf:"bytes,1,rep,name=crypto_keys,json=cryptoKeys,proto3" json:"crypto_keys,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListCryptoKeysRequest.page_token][google.cloud.kms.v1.ListCryptoKeysRequest.page_token]
-	// to retrieve the next page of results.
+	// [ListCryptoKeysRequest.page_token][google.cloud.kms.v1.ListCryptoKeysRequest.page_token] to retrieve the next page of results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] that
-	// matched the query.
+	// The total number of [CryptoKeys][google.cloud.kms.v1.CryptoKey] that matched the query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -334,7 +454,7 @@ func (m *ListCryptoKeysResponse) Reset()         { *m = ListCryptoKeysResponse{}
 func (m *ListCryptoKeysResponse) String() string { return proto.CompactTextString(m) }
 func (*ListCryptoKeysResponse) ProtoMessage()    {}
 func (*ListCryptoKeysResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{4}
+	return fileDescriptor_723aeaeb61739a25, []int{5}
 }
 
 func (m *ListCryptoKeysResponse) XXX_Unmarshal(b []byte) error {
@@ -376,17 +496,15 @@ func (m *ListCryptoKeysResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Response message for
-// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
+// Response message for [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions].
 type ListCryptoKeyVersionsResponse struct {
 	// The list of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	CryptoKeyVersions []*CryptoKeyVersion `protobuf:"bytes,1,rep,name=crypto_key_versions,json=cryptoKeyVersions,proto3" json:"crypto_key_versions,omitempty"`
 	// A token to retrieve next page of results. Pass this value in
-	// [ListCryptoKeyVersionsRequest.page_token][google.cloud.kms.v1.ListCryptoKeyVersionsRequest.page_token]
-	// to retrieve the next page of results.
+	// [ListCryptoKeyVersionsRequest.page_token][google.cloud.kms.v1.ListCryptoKeyVersionsRequest.page_token] to retrieve the next page of
+	// results.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The total number of
-	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] that matched the
+	// The total number of [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] that matched the
 	// query.
 	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -398,7 +516,7 @@ func (m *ListCryptoKeyVersionsResponse) Reset()         { *m = ListCryptoKeyVers
 func (m *ListCryptoKeyVersionsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListCryptoKeyVersionsResponse) ProtoMessage()    {}
 func (*ListCryptoKeyVersionsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{5}
+	return fileDescriptor_723aeaeb61739a25, []int{6}
 }
 
 func (m *ListCryptoKeyVersionsResponse) XXX_Unmarshal(b []byte) error {
@@ -440,11 +558,69 @@ func (m *ListCryptoKeyVersionsResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// Request message for
-// [KeyManagementService.GetKeyRing][google.cloud.kms.v1.KeyManagementService.GetKeyRing].
+// Response message for [KeyManagementService.ListImportJobs][google.cloud.kms.v1.KeyManagementService.ListImportJobs].
+type ListImportJobsResponse struct {
+	// The list of [ImportJobs][google.cloud.kms.v1.ImportJob].
+	ImportJobs []*ImportJob `protobuf:"bytes,1,rep,name=import_jobs,json=importJobs,proto3" json:"import_jobs,omitempty"`
+	// A token to retrieve next page of results. Pass this value in
+	// [ListImportJobsRequest.page_token][google.cloud.kms.v1.ListImportJobsRequest.page_token] to retrieve the next page of results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// The total number of [ImportJobs][google.cloud.kms.v1.ImportJob] that matched the query.
+	TotalSize            int32    `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListImportJobsResponse) Reset()         { *m = ListImportJobsResponse{} }
+func (m *ListImportJobsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListImportJobsResponse) ProtoMessage()    {}
+func (*ListImportJobsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_723aeaeb61739a25, []int{7}
+}
+
+func (m *ListImportJobsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListImportJobsResponse.Unmarshal(m, b)
+}
+func (m *ListImportJobsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListImportJobsResponse.Marshal(b, m, deterministic)
+}
+func (m *ListImportJobsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListImportJobsResponse.Merge(m, src)
+}
+func (m *ListImportJobsResponse) XXX_Size() int {
+	return xxx_messageInfo_ListImportJobsResponse.Size(m)
+}
+func (m *ListImportJobsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListImportJobsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListImportJobsResponse proto.InternalMessageInfo
+
+func (m *ListImportJobsResponse) GetImportJobs() []*ImportJob {
+	if m != nil {
+		return m.ImportJobs
+	}
+	return nil
+}
+
+func (m *ListImportJobsResponse) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+func (m *ListImportJobsResponse) GetTotalSize() int32 {
+	if m != nil {
+		return m.TotalSize
+	}
+	return 0
+}
+
+// Request message for [KeyManagementService.GetKeyRing][google.cloud.kms.v1.KeyManagementService.GetKeyRing].
 type GetKeyRingRequest struct {
-	// The [name][google.cloud.kms.v1.KeyRing.name] of the
-	// [KeyRing][google.cloud.kms.v1.KeyRing] to get.
+	// The [name][google.cloud.kms.v1.KeyRing.name] of the [KeyRing][google.cloud.kms.v1.KeyRing] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -455,7 +631,7 @@ func (m *GetKeyRingRequest) Reset()         { *m = GetKeyRingRequest{} }
 func (m *GetKeyRingRequest) String() string { return proto.CompactTextString(m) }
 func (*GetKeyRingRequest) ProtoMessage()    {}
 func (*GetKeyRingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{6}
+	return fileDescriptor_723aeaeb61739a25, []int{8}
 }
 
 func (m *GetKeyRingRequest) XXX_Unmarshal(b []byte) error {
@@ -483,11 +659,9 @@ func (m *GetKeyRingRequest) GetName() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.GetCryptoKey][google.cloud.kms.v1.KeyManagementService.GetCryptoKey].
+// Request message for [KeyManagementService.GetCryptoKey][google.cloud.kms.v1.KeyManagementService.GetCryptoKey].
 type GetCryptoKeyRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKey.name] of the
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to get.
+	// The [name][google.cloud.kms.v1.CryptoKey.name] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -498,7 +672,7 @@ func (m *GetCryptoKeyRequest) Reset()         { *m = GetCryptoKeyRequest{} }
 func (m *GetCryptoKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCryptoKeyRequest) ProtoMessage()    {}
 func (*GetCryptoKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{7}
+	return fileDescriptor_723aeaeb61739a25, []int{9}
 }
 
 func (m *GetCryptoKeyRequest) XXX_Unmarshal(b []byte) error {
@@ -526,11 +700,9 @@ func (m *GetCryptoKeyRequest) GetName() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.GetCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.GetCryptoKeyVersion].
+// Request message for [KeyManagementService.GetCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.GetCryptoKeyVersion].
 type GetCryptoKeyVersionRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to get.
+	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -541,7 +713,7 @@ func (m *GetCryptoKeyVersionRequest) Reset()         { *m = GetCryptoKeyVersionR
 func (m *GetCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCryptoKeyVersionRequest) ProtoMessage()    {}
 func (*GetCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{8}
+	return fileDescriptor_723aeaeb61739a25, []int{10}
 }
 
 func (m *GetCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -569,11 +741,10 @@ func (m *GetCryptoKeyVersionRequest) GetName() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+// Request message for [KeyManagementService.GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 type GetPublicKeyRequest struct {
-	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] public key to get.
+	// The [name][google.cloud.kms.v1.CryptoKeyVersion.name] of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] public key to
+	// get.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -584,7 +755,7 @@ func (m *GetPublicKeyRequest) Reset()         { *m = GetPublicKeyRequest{} }
 func (m *GetPublicKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*GetPublicKeyRequest) ProtoMessage()    {}
 func (*GetPublicKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{9}
+	return fileDescriptor_723aeaeb61739a25, []int{11}
 }
 
 func (m *GetPublicKeyRequest) XXX_Unmarshal(b []byte) error {
@@ -612,12 +783,51 @@ func (m *GetPublicKeyRequest) GetName() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.CreateKeyRing][google.cloud.kms.v1.KeyManagementService.CreateKeyRing].
+// Request message for [KeyManagementService.GetImportJob][google.cloud.kms.v1.KeyManagementService.GetImportJob].
+type GetImportJobRequest struct {
+	// The [name][google.cloud.kms.v1.ImportJob.name] of the [ImportJob][google.cloud.kms.v1.ImportJob] to get.
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetImportJobRequest) Reset()         { *m = GetImportJobRequest{} }
+func (m *GetImportJobRequest) String() string { return proto.CompactTextString(m) }
+func (*GetImportJobRequest) ProtoMessage()    {}
+func (*GetImportJobRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_723aeaeb61739a25, []int{12}
+}
+
+func (m *GetImportJobRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetImportJobRequest.Unmarshal(m, b)
+}
+func (m *GetImportJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetImportJobRequest.Marshal(b, m, deterministic)
+}
+func (m *GetImportJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetImportJobRequest.Merge(m, src)
+}
+func (m *GetImportJobRequest) XXX_Size() int {
+	return xxx_messageInfo_GetImportJobRequest.Size(m)
+}
+func (m *GetImportJobRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetImportJobRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetImportJobRequest proto.InternalMessageInfo
+
+func (m *GetImportJobRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+// Request message for [KeyManagementService.CreateKeyRing][google.cloud.kms.v1.KeyManagementService.CreateKeyRing].
 type CreateKeyRingRequest struct {
 	// Required. The resource name of the location associated with the
-	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format
-	// `projects/*/locations/*`.
+	// [KeyRings][google.cloud.kms.v1.KeyRing], in the format `projects/*/locations/*`.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Required. It must be unique within a location and match the regular
 	// expression `[a-zA-Z0-9_-]{1,63}`
@@ -633,7 +843,7 @@ func (m *CreateKeyRingRequest) Reset()         { *m = CreateKeyRingRequest{} }
 func (m *CreateKeyRingRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateKeyRingRequest) ProtoMessage()    {}
 func (*CreateKeyRingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{10}
+	return fileDescriptor_723aeaeb61739a25, []int{13}
 }
 
 func (m *CreateKeyRingRequest) XXX_Unmarshal(b []byte) error {
@@ -675,27 +885,32 @@ func (m *CreateKeyRingRequest) GetKeyRing() *KeyRing {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.CreateCryptoKey][google.cloud.kms.v1.KeyManagementService.CreateCryptoKey].
+// Request message for [KeyManagementService.CreateCryptoKey][google.cloud.kms.v1.KeyManagementService.CreateCryptoKey].
 type CreateCryptoKeyRequest struct {
-	// Required. The [name][google.cloud.kms.v1.KeyRing.name] of the KeyRing
-	// associated with the [CryptoKeys][google.cloud.kms.v1.CryptoKey].
+	// Required. The [name][google.cloud.kms.v1.KeyRing.name] of the KeyRing associated with the
+	// [CryptoKeys][google.cloud.kms.v1.CryptoKey].
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Required. It must be unique within a KeyRing and match the regular
 	// expression `[a-zA-Z0-9_-]{1,63}`
 	CryptoKeyId string `protobuf:"bytes,2,opt,name=crypto_key_id,json=cryptoKeyId,proto3" json:"crypto_key_id,omitempty"`
 	// A [CryptoKey][google.cloud.kms.v1.CryptoKey] with initial field values.
-	CryptoKey            *CryptoKey `protobuf:"bytes,3,opt,name=crypto_key,json=cryptoKey,proto3" json:"crypto_key,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
-	XXX_unrecognized     []byte     `json:"-"`
-	XXX_sizecache        int32      `json:"-"`
+	CryptoKey *CryptoKey `protobuf:"bytes,3,opt,name=crypto_key,json=cryptoKey,proto3" json:"crypto_key,omitempty"`
+	// If set to true, the request will create a [CryptoKey][google.cloud.kms.v1.CryptoKey] without any
+	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion]. You must manually call
+	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion] or
+	// [ImportCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.ImportCryptoKeyVersion]
+	// before you can use this [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	SkipInitialVersionCreation bool     `protobuf:"varint,5,opt,name=skip_initial_version_creation,json=skipInitialVersionCreation,proto3" json:"skip_initial_version_creation,omitempty"`
+	XXX_NoUnkeyedLiteral       struct{} `json:"-"`
+	XXX_unrecognized           []byte   `json:"-"`
+	XXX_sizecache              int32    `json:"-"`
 }
 
 func (m *CreateCryptoKeyRequest) Reset()         { *m = CreateCryptoKeyRequest{} }
 func (m *CreateCryptoKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateCryptoKeyRequest) ProtoMessage()    {}
 func (*CreateCryptoKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{11}
+	return fileDescriptor_723aeaeb61739a25, []int{14}
 }
 
 func (m *CreateCryptoKeyRequest) XXX_Unmarshal(b []byte) error {
@@ -737,15 +952,19 @@ func (m *CreateCryptoKeyRequest) GetCryptoKey() *CryptoKey {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion].
+func (m *CreateCryptoKeyRequest) GetSkipInitialVersionCreation() bool {
+	if m != nil {
+		return m.SkipInitialVersionCreation
+	}
+	return false
+}
+
+// Request message for [KeyManagementService.CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion].
 type CreateCryptoKeyVersionRequest struct {
-	// Required. The [name][google.cloud.kms.v1.CryptoKey.name] of the
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] associated with the
-	// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
+	// Required. The [name][google.cloud.kms.v1.CryptoKey.name] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] associated with
+	// the [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with initial
-	// field values.
+	// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with initial field values.
 	CryptoKeyVersion     *CryptoKeyVersion `protobuf:"bytes,2,opt,name=crypto_key_version,json=cryptoKeyVersion,proto3" json:"crypto_key_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
@@ -756,7 +975,7 @@ func (m *CreateCryptoKeyVersionRequest) Reset()         { *m = CreateCryptoKeyVe
 func (m *CreateCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateCryptoKeyVersionRequest) ProtoMessage()    {}
 func (*CreateCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{12}
+	return fileDescriptor_723aeaeb61739a25, []int{15}
 }
 
 func (m *CreateCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -791,8 +1010,169 @@ func (m *CreateCryptoKeyVersionRequest) GetCryptoKeyVersion() *CryptoKeyVersion 
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.UpdateCryptoKey][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKey].
+// Request message for [KeyManagementService.ImportCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.ImportCryptoKeyVersion].
+type ImportCryptoKeyVersionRequest struct {
+	// Required. The [name][google.cloud.kms.v1.CryptoKey.name] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to
+	// be imported into.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Required. The [algorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm] of
+	// the key being imported. This does not need to match the
+	// [version_template][google.cloud.kms.v1.CryptoKey.version_template] of the [CryptoKey][google.cloud.kms.v1.CryptoKey] this
+	// version imports into.
+	Algorithm CryptoKeyVersion_CryptoKeyVersionAlgorithm `protobuf:"varint,2,opt,name=algorithm,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionAlgorithm" json:"algorithm,omitempty"`
+	// Required. The [name][google.cloud.kms.v1.ImportJob.name] of the [ImportJob][google.cloud.kms.v1.ImportJob] that was used to
+	// wrap this key material.
+	ImportJob string `protobuf:"bytes,4,opt,name=import_job,json=importJob,proto3" json:"import_job,omitempty"`
+	// Required. The incoming wrapped key material that is to be imported.
+	//
+	// Types that are valid to be assigned to WrappedKeyMaterial:
+	//	*ImportCryptoKeyVersionRequest_RsaAesWrappedKey
+	WrappedKeyMaterial   isImportCryptoKeyVersionRequest_WrappedKeyMaterial `protobuf_oneof:"wrapped_key_material"`
+	XXX_NoUnkeyedLiteral struct{}                                           `json:"-"`
+	XXX_unrecognized     []byte                                             `json:"-"`
+	XXX_sizecache        int32                                              `json:"-"`
+}
+
+func (m *ImportCryptoKeyVersionRequest) Reset()         { *m = ImportCryptoKeyVersionRequest{} }
+func (m *ImportCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
+func (*ImportCryptoKeyVersionRequest) ProtoMessage()    {}
+func (*ImportCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_723aeaeb61739a25, []int{16}
+}
+
+func (m *ImportCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImportCryptoKeyVersionRequest.Unmarshal(m, b)
+}
+func (m *ImportCryptoKeyVersionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImportCryptoKeyVersionRequest.Marshal(b, m, deterministic)
+}
+func (m *ImportCryptoKeyVersionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImportCryptoKeyVersionRequest.Merge(m, src)
+}
+func (m *ImportCryptoKeyVersionRequest) XXX_Size() int {
+	return xxx_messageInfo_ImportCryptoKeyVersionRequest.Size(m)
+}
+func (m *ImportCryptoKeyVersionRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImportCryptoKeyVersionRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImportCryptoKeyVersionRequest proto.InternalMessageInfo
+
+func (m *ImportCryptoKeyVersionRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *ImportCryptoKeyVersionRequest) GetAlgorithm() CryptoKeyVersion_CryptoKeyVersionAlgorithm {
+	if m != nil {
+		return m.Algorithm
+	}
+	return CryptoKeyVersion_CRYPTO_KEY_VERSION_ALGORITHM_UNSPECIFIED
+}
+
+func (m *ImportCryptoKeyVersionRequest) GetImportJob() string {
+	if m != nil {
+		return m.ImportJob
+	}
+	return ""
+}
+
+type isImportCryptoKeyVersionRequest_WrappedKeyMaterial interface {
+	isImportCryptoKeyVersionRequest_WrappedKeyMaterial()
+}
+
+type ImportCryptoKeyVersionRequest_RsaAesWrappedKey struct {
+	RsaAesWrappedKey []byte `protobuf:"bytes,5,opt,name=rsa_aes_wrapped_key,json=rsaAesWrappedKey,proto3,oneof"`
+}
+
+func (*ImportCryptoKeyVersionRequest_RsaAesWrappedKey) isImportCryptoKeyVersionRequest_WrappedKeyMaterial() {
+}
+
+func (m *ImportCryptoKeyVersionRequest) GetWrappedKeyMaterial() isImportCryptoKeyVersionRequest_WrappedKeyMaterial {
+	if m != nil {
+		return m.WrappedKeyMaterial
+	}
+	return nil
+}
+
+func (m *ImportCryptoKeyVersionRequest) GetRsaAesWrappedKey() []byte {
+	if x, ok := m.GetWrappedKeyMaterial().(*ImportCryptoKeyVersionRequest_RsaAesWrappedKey); ok {
+		return x.RsaAesWrappedKey
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*ImportCryptoKeyVersionRequest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*ImportCryptoKeyVersionRequest_RsaAesWrappedKey)(nil),
+	}
+}
+
+// Request message for [KeyManagementService.CreateImportJob][google.cloud.kms.v1.KeyManagementService.CreateImportJob].
+type CreateImportJobRequest struct {
+	// Required. The [name][google.cloud.kms.v1.KeyRing.name] of the [KeyRing][google.cloud.kms.v1.KeyRing] associated with the
+	// [ImportJobs][google.cloud.kms.v1.ImportJob].
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Required. It must be unique within a KeyRing and match the regular
+	// expression `[a-zA-Z0-9_-]{1,63}`
+	ImportJobId string `protobuf:"bytes,2,opt,name=import_job_id,json=importJobId,proto3" json:"import_job_id,omitempty"`
+	// Required. An [ImportJob][google.cloud.kms.v1.ImportJob] with initial field values.
+	ImportJob            *ImportJob `protobuf:"bytes,3,opt,name=import_job,json=importJob,proto3" json:"import_job,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
+}
+
+func (m *CreateImportJobRequest) Reset()         { *m = CreateImportJobRequest{} }
+func (m *CreateImportJobRequest) String() string { return proto.CompactTextString(m) }
+func (*CreateImportJobRequest) ProtoMessage()    {}
+func (*CreateImportJobRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_723aeaeb61739a25, []int{17}
+}
+
+func (m *CreateImportJobRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateImportJobRequest.Unmarshal(m, b)
+}
+func (m *CreateImportJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateImportJobRequest.Marshal(b, m, deterministic)
+}
+func (m *CreateImportJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateImportJobRequest.Merge(m, src)
+}
+func (m *CreateImportJobRequest) XXX_Size() int {
+	return xxx_messageInfo_CreateImportJobRequest.Size(m)
+}
+func (m *CreateImportJobRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateImportJobRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateImportJobRequest proto.InternalMessageInfo
+
+func (m *CreateImportJobRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *CreateImportJobRequest) GetImportJobId() string {
+	if m != nil {
+		return m.ImportJobId
+	}
+	return ""
+}
+
+func (m *CreateImportJobRequest) GetImportJob() *ImportJob {
+	if m != nil {
+		return m.ImportJob
+	}
+	return nil
+}
+
+// Request message for [KeyManagementService.UpdateCryptoKey][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKey].
 type UpdateCryptoKeyRequest struct {
 	// [CryptoKey][google.cloud.kms.v1.CryptoKey] with updated values.
 	CryptoKey *CryptoKey `protobuf:"bytes,1,opt,name=crypto_key,json=cryptoKey,proto3" json:"crypto_key,omitempty"`
@@ -807,7 +1187,7 @@ func (m *UpdateCryptoKeyRequest) Reset()         { *m = UpdateCryptoKeyRequest{}
 func (m *UpdateCryptoKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateCryptoKeyRequest) ProtoMessage()    {}
 func (*UpdateCryptoKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{13}
+	return fileDescriptor_723aeaeb61739a25, []int{18}
 }
 
 func (m *UpdateCryptoKeyRequest) XXX_Unmarshal(b []byte) error {
@@ -842,11 +1222,9 @@ func (m *UpdateCryptoKeyRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.UpdateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyVersion].
+// Request message for [KeyManagementService.UpdateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyVersion].
 type UpdateCryptoKeyVersionRequest struct {
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with updated
-	// values.
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with updated values.
 	CryptoKeyVersion *CryptoKeyVersion `protobuf:"bytes,1,opt,name=crypto_key_version,json=cryptoKeyVersion,proto3" json:"crypto_key_version,omitempty"`
 	// Required list of fields to be updated in this request.
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
@@ -859,7 +1237,7 @@ func (m *UpdateCryptoKeyVersionRequest) Reset()         { *m = UpdateCryptoKeyVe
 func (m *UpdateCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateCryptoKeyVersionRequest) ProtoMessage()    {}
 func (*UpdateCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{14}
+	return fileDescriptor_723aeaeb61739a25, []int{19}
 }
 
 func (m *UpdateCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -894,38 +1272,32 @@ func (m *UpdateCryptoKeyVersionRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+// Request message for [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 type EncryptRequest struct {
-	// Required. The resource name of the
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] or
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
-	// encryption.
+	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] or [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
+	// to use for encryption.
 	//
-	// If a [CryptoKey][google.cloud.kms.v1.CryptoKey] is specified, the server
-	// will use its [primary version][google.cloud.kms.v1.CryptoKey.primary].
+	// If a [CryptoKey][google.cloud.kms.v1.CryptoKey] is specified, the server will use its
+	// [primary version][google.cloud.kms.v1.CryptoKey.primary].
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The data to encrypt. Must be no larger than 64KiB.
 	//
 	// The maximum size depends on the key version's
-	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level].
-	// For [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the
-	// plaintext must be no larger than 64KiB. For
-	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of
-	// the plaintext and additional_authenticated_data fields must be no larger
-	// than 8KiB.
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]. For
+	// [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the plaintext must be no larger
+	// than 64KiB. For [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of the
+	// plaintext and additional_authenticated_data fields must be no larger than
+	// 8KiB.
 	Plaintext []byte `protobuf:"bytes,2,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
 	// Optional data that, if specified, must also be provided during decryption
-	// through
-	// [DecryptRequest.additional_authenticated_data][google.cloud.kms.v1.DecryptRequest.additional_authenticated_data].
+	// through [DecryptRequest.additional_authenticated_data][google.cloud.kms.v1.DecryptRequest.additional_authenticated_data].
 	//
 	// The maximum size depends on the key version's
-	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level].
-	// For [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the AAD
-	// must be no larger than 64KiB. For
-	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of
-	// the plaintext and additional_authenticated_data fields must be no larger
-	// than 8KiB.
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]. For
+	// [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE] keys, the AAD must be no larger than
+	// 64KiB. For [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] keys, the combined length of the
+	// plaintext and additional_authenticated_data fields must be no larger than
+	// 8KiB.
 	AdditionalAuthenticatedData []byte   `protobuf:"bytes,3,opt,name=additional_authenticated_data,json=additionalAuthenticatedData,proto3" json:"additional_authenticated_data,omitempty"`
 	XXX_NoUnkeyedLiteral        struct{} `json:"-"`
 	XXX_unrecognized            []byte   `json:"-"`
@@ -936,7 +1308,7 @@ func (m *EncryptRequest) Reset()         { *m = EncryptRequest{} }
 func (m *EncryptRequest) String() string { return proto.CompactTextString(m) }
 func (*EncryptRequest) ProtoMessage()    {}
 func (*EncryptRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{15}
+	return fileDescriptor_723aeaeb61739a25, []int{20}
 }
 
 func (m *EncryptRequest) XXX_Unmarshal(b []byte) error {
@@ -978,12 +1350,10 @@ func (m *EncryptRequest) GetAdditionalAuthenticatedData() []byte {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+// Request message for [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
 type DecryptRequest struct {
-	// Required. The resource name of the
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] to use for decryption. The
-	// server will choose the appropriate version.
+	// Required. The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to use for decryption.
+	// The server will choose the appropriate version.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The encrypted data originally returned in
 	// [EncryptResponse.ciphertext][google.cloud.kms.v1.EncryptResponse.ciphertext].
@@ -1000,7 +1370,7 @@ func (m *DecryptRequest) Reset()         { *m = DecryptRequest{} }
 func (m *DecryptRequest) String() string { return proto.CompactTextString(m) }
 func (*DecryptRequest) ProtoMessage()    {}
 func (*DecryptRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{16}
+	return fileDescriptor_723aeaeb61739a25, []int{21}
 }
 
 func (m *DecryptRequest) XXX_Unmarshal(b []byte) error {
@@ -1042,12 +1412,9 @@ func (m *DecryptRequest) GetAdditionalAuthenticatedData() []byte {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
+// Request message for [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
 type AsymmetricSignRequest struct {
-	// Required. The resource name of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
-	// signing.
+	// Required. The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for signing.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The digest of the data to sign. The digest must be produced with
 	// the same digest algorithm as specified by the key version's
@@ -1062,7 +1429,7 @@ func (m *AsymmetricSignRequest) Reset()         { *m = AsymmetricSignRequest{} }
 func (m *AsymmetricSignRequest) String() string { return proto.CompactTextString(m) }
 func (*AsymmetricSignRequest) ProtoMessage()    {}
 func (*AsymmetricSignRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{17}
+	return fileDescriptor_723aeaeb61739a25, []int{22}
 }
 
 func (m *AsymmetricSignRequest) XXX_Unmarshal(b []byte) error {
@@ -1097,16 +1464,13 @@ func (m *AsymmetricSignRequest) GetDigest() *Digest {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+// Request message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
 type AsymmetricDecryptRequest struct {
-	// Required. The resource name of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
+	// Required. The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use for
 	// decryption.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Required. The data encrypted with the named
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s public key using
-	// OAEP.
+	// Required. The data encrypted with the named [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s public
+	// key using OAEP.
 	Ciphertext           []byte   `protobuf:"bytes,3,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1117,7 +1481,7 @@ func (m *AsymmetricDecryptRequest) Reset()         { *m = AsymmetricDecryptReque
 func (m *AsymmetricDecryptRequest) String() string { return proto.CompactTextString(m) }
 func (*AsymmetricDecryptRequest) ProtoMessage()    {}
 func (*AsymmetricDecryptRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{18}
+	return fileDescriptor_723aeaeb61739a25, []int{23}
 }
 
 func (m *AsymmetricDecryptRequest) XXX_Unmarshal(b []byte) error {
@@ -1152,11 +1516,9 @@ func (m *AsymmetricDecryptRequest) GetCiphertext() []byte {
 	return nil
 }
 
-// Response message for
-// [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+// Response message for [KeyManagementService.Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
 type DecryptResponse struct {
-	// The decrypted data originally supplied in
-	// [EncryptRequest.plaintext][google.cloud.kms.v1.EncryptRequest.plaintext].
+	// The decrypted data originally supplied in [EncryptRequest.plaintext][google.cloud.kms.v1.EncryptRequest.plaintext].
 	Plaintext            []byte   `protobuf:"bytes,1,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1167,7 +1529,7 @@ func (m *DecryptResponse) Reset()         { *m = DecryptResponse{} }
 func (m *DecryptResponse) String() string { return proto.CompactTextString(m) }
 func (*DecryptResponse) ProtoMessage()    {}
 func (*DecryptResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{19}
+	return fileDescriptor_723aeaeb61739a25, []int{24}
 }
 
 func (m *DecryptResponse) XXX_Unmarshal(b []byte) error {
@@ -1195,12 +1557,9 @@ func (m *DecryptResponse) GetPlaintext() []byte {
 	return nil
 }
 
-// Response message for
-// [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+// Response message for [KeyManagementService.Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 type EncryptResponse struct {
-	// The resource name of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] used in
-	// encryption.
+	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] used in encryption.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// The encrypted data.
 	Ciphertext           []byte   `protobuf:"bytes,2,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
@@ -1213,7 +1572,7 @@ func (m *EncryptResponse) Reset()         { *m = EncryptResponse{} }
 func (m *EncryptResponse) String() string { return proto.CompactTextString(m) }
 func (*EncryptResponse) ProtoMessage()    {}
 func (*EncryptResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{20}
+	return fileDescriptor_723aeaeb61739a25, []int{25}
 }
 
 func (m *EncryptResponse) XXX_Unmarshal(b []byte) error {
@@ -1248,8 +1607,7 @@ func (m *EncryptResponse) GetCiphertext() []byte {
 	return nil
 }
 
-// Response message for
-// [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
+// Response message for [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
 type AsymmetricSignResponse struct {
 	// The created signature.
 	Signature            []byte   `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -1262,7 +1620,7 @@ func (m *AsymmetricSignResponse) Reset()         { *m = AsymmetricSignResponse{}
 func (m *AsymmetricSignResponse) String() string { return proto.CompactTextString(m) }
 func (*AsymmetricSignResponse) ProtoMessage()    {}
 func (*AsymmetricSignResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{21}
+	return fileDescriptor_723aeaeb61739a25, []int{26}
 }
 
 func (m *AsymmetricSignResponse) XXX_Unmarshal(b []byte) error {
@@ -1290,8 +1648,7 @@ func (m *AsymmetricSignResponse) GetSignature() []byte {
 	return nil
 }
 
-// Response message for
-// [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+// Response message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
 type AsymmetricDecryptResponse struct {
 	// The decrypted data originally encrypted with the matching public key.
 	Plaintext            []byte   `protobuf:"bytes,1,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
@@ -1304,7 +1661,7 @@ func (m *AsymmetricDecryptResponse) Reset()         { *m = AsymmetricDecryptResp
 func (m *AsymmetricDecryptResponse) String() string { return proto.CompactTextString(m) }
 func (*AsymmetricDecryptResponse) ProtoMessage()    {}
 func (*AsymmetricDecryptResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{22}
+	return fileDescriptor_723aeaeb61739a25, []int{27}
 }
 
 func (m *AsymmetricDecryptResponse) XXX_Unmarshal(b []byte) error {
@@ -1332,14 +1689,11 @@ func (m *AsymmetricDecryptResponse) GetPlaintext() []byte {
 	return nil
 }
 
-// Request message for
-// [KeyManagementService.UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].
+// Request message for [KeyManagementService.UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].
 type UpdateCryptoKeyPrimaryVersionRequest struct {
-	// The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to
-	// update.
+	// The resource name of the [CryptoKey][google.cloud.kms.v1.CryptoKey] to update.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// The id of the child
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use as primary.
+	// The id of the child [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to use as primary.
 	CryptoKeyVersionId   string   `protobuf:"bytes,2,opt,name=crypto_key_version_id,json=cryptoKeyVersionId,proto3" json:"crypto_key_version_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1350,7 +1704,7 @@ func (m *UpdateCryptoKeyPrimaryVersionRequest) Reset()         { *m = UpdateCryp
 func (m *UpdateCryptoKeyPrimaryVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateCryptoKeyPrimaryVersionRequest) ProtoMessage()    {}
 func (*UpdateCryptoKeyPrimaryVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{23}
+	return fileDescriptor_723aeaeb61739a25, []int{28}
 }
 
 func (m *UpdateCryptoKeyPrimaryVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -1385,11 +1739,9 @@ func (m *UpdateCryptoKeyPrimaryVersionRequest) GetCryptoKeyVersionId() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion].
+// Request message for [KeyManagementService.DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion].
 type DestroyCryptoKeyVersionRequest struct {
-	// The resource name of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to destroy.
+	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to destroy.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1400,7 +1752,7 @@ func (m *DestroyCryptoKeyVersionRequest) Reset()         { *m = DestroyCryptoKey
 func (m *DestroyCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*DestroyCryptoKeyVersionRequest) ProtoMessage()    {}
 func (*DestroyCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{24}
+	return fileDescriptor_723aeaeb61739a25, []int{29}
 }
 
 func (m *DestroyCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -1428,11 +1780,9 @@ func (m *DestroyCryptoKeyVersionRequest) GetName() string {
 	return ""
 }
 
-// Request message for
-// [KeyManagementService.RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion].
+// Request message for [KeyManagementService.RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion].
 type RestoreCryptoKeyVersionRequest struct {
-	// The resource name of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to restore.
+	// The resource name of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] to restore.
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1443,7 +1793,7 @@ func (m *RestoreCryptoKeyVersionRequest) Reset()         { *m = RestoreCryptoKey
 func (m *RestoreCryptoKeyVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*RestoreCryptoKeyVersionRequest) ProtoMessage()    {}
 func (*RestoreCryptoKeyVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{25}
+	return fileDescriptor_723aeaeb61739a25, []int{30}
 }
 
 func (m *RestoreCryptoKeyVersionRequest) XXX_Unmarshal(b []byte) error {
@@ -1489,7 +1839,7 @@ func (m *Digest) Reset()         { *m = Digest{} }
 func (m *Digest) String() string { return proto.CompactTextString(m) }
 func (*Digest) ProtoMessage()    {}
 func (*Digest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{26}
+	return fileDescriptor_723aeaeb61739a25, []int{31}
 }
 
 func (m *Digest) XXX_Unmarshal(b []byte) error {
@@ -1569,13 +1919,11 @@ func (*Digest) XXX_OneofWrappers() []interface{} {
 	}
 }
 
-// Cloud KMS metadata for the given
-// [google.cloud.location.Location][google.cloud.location.Location].
+// Cloud KMS metadata for the given [google.cloud.location.Location][google.cloud.location.Location].
 type LocationMetadata struct {
 	// Indicates whether [CryptoKeys][google.cloud.kms.v1.CryptoKey] with
 	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level]
-	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] can be created in this
-	// location.
+	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM] can be created in this location.
 	HsmAvailable         bool     `protobuf:"varint,1,opt,name=hsm_available,json=hsmAvailable,proto3" json:"hsm_available,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1586,7 +1934,7 @@ func (m *LocationMetadata) Reset()         { *m = LocationMetadata{} }
 func (m *LocationMetadata) String() string { return proto.CompactTextString(m) }
 func (*LocationMetadata) ProtoMessage()    {}
 func (*LocationMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_723aeaeb61739a25, []int{27}
+	return fileDescriptor_723aeaeb61739a25, []int{32}
 }
 
 func (m *LocationMetadata) XXX_Unmarshal(b []byte) error {
@@ -1618,16 +1966,21 @@ func init() {
 	proto.RegisterType((*ListKeyRingsRequest)(nil), "google.cloud.kms.v1.ListKeyRingsRequest")
 	proto.RegisterType((*ListCryptoKeysRequest)(nil), "google.cloud.kms.v1.ListCryptoKeysRequest")
 	proto.RegisterType((*ListCryptoKeyVersionsRequest)(nil), "google.cloud.kms.v1.ListCryptoKeyVersionsRequest")
+	proto.RegisterType((*ListImportJobsRequest)(nil), "google.cloud.kms.v1.ListImportJobsRequest")
 	proto.RegisterType((*ListKeyRingsResponse)(nil), "google.cloud.kms.v1.ListKeyRingsResponse")
 	proto.RegisterType((*ListCryptoKeysResponse)(nil), "google.cloud.kms.v1.ListCryptoKeysResponse")
 	proto.RegisterType((*ListCryptoKeyVersionsResponse)(nil), "google.cloud.kms.v1.ListCryptoKeyVersionsResponse")
+	proto.RegisterType((*ListImportJobsResponse)(nil), "google.cloud.kms.v1.ListImportJobsResponse")
 	proto.RegisterType((*GetKeyRingRequest)(nil), "google.cloud.kms.v1.GetKeyRingRequest")
 	proto.RegisterType((*GetCryptoKeyRequest)(nil), "google.cloud.kms.v1.GetCryptoKeyRequest")
 	proto.RegisterType((*GetCryptoKeyVersionRequest)(nil), "google.cloud.kms.v1.GetCryptoKeyVersionRequest")
 	proto.RegisterType((*GetPublicKeyRequest)(nil), "google.cloud.kms.v1.GetPublicKeyRequest")
+	proto.RegisterType((*GetImportJobRequest)(nil), "google.cloud.kms.v1.GetImportJobRequest")
 	proto.RegisterType((*CreateKeyRingRequest)(nil), "google.cloud.kms.v1.CreateKeyRingRequest")
 	proto.RegisterType((*CreateCryptoKeyRequest)(nil), "google.cloud.kms.v1.CreateCryptoKeyRequest")
 	proto.RegisterType((*CreateCryptoKeyVersionRequest)(nil), "google.cloud.kms.v1.CreateCryptoKeyVersionRequest")
+	proto.RegisterType((*ImportCryptoKeyVersionRequest)(nil), "google.cloud.kms.v1.ImportCryptoKeyVersionRequest")
+	proto.RegisterType((*CreateImportJobRequest)(nil), "google.cloud.kms.v1.CreateImportJobRequest")
 	proto.RegisterType((*UpdateCryptoKeyRequest)(nil), "google.cloud.kms.v1.UpdateCryptoKeyRequest")
 	proto.RegisterType((*UpdateCryptoKeyVersionRequest)(nil), "google.cloud.kms.v1.UpdateCryptoKeyVersionRequest")
 	proto.RegisterType((*EncryptRequest)(nil), "google.cloud.kms.v1.EncryptRequest")
@@ -1648,112 +2001,134 @@ func init() {
 func init() { proto.RegisterFile("google/cloud/kms/v1/service.proto", fileDescriptor_723aeaeb61739a25) }
 
 var fileDescriptor_723aeaeb61739a25 = []byte{
-	// 1666 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x59, 0xcd, 0x73, 0x1b, 0xc5,
-	0x12, 0x7f, 0x63, 0xe7, 0x39, 0x76, 0xfb, 0x2b, 0x19, 0x27, 0x8e, 0x9f, 0x62, 0xbb, 0xfc, 0x26,
-	0x79, 0x79, 0x8e, 0x03, 0x12, 0x92, 0x9d, 0x0f, 0x2b, 0x15, 0x28, 0x3b, 0x4e, 0x4c, 0xca, 0x71,
-	0x70, 0xad, 0xb1, 0x21, 0x29, 0x53, 0xf2, 0x58, 0x3b, 0x91, 0x37, 0xd2, 0xee, 0x8a, 0xdd, 0x95,
-	0x12, 0x05, 0x72, 0xe1, 0x00, 0x39, 0xe4, 0x16, 0x0e, 0xa1, 0xb8, 0x50, 0x70, 0xa3, 0xe0, 0xc0,
-	0x0d, 0x0e, 0x5c, 0x28, 0x4e, 0xa9, 0xe2, 0x02, 0x95, 0xe2, 0x96, 0x13, 0xff, 0x00, 0x37, 0x8e,
-	0xd4, 0xce, 0xce, 0xae, 0xb4, 0xab, 0x5d, 0x7d, 0x45, 0x29, 0x6e, 0xde, 0x99, 0x9e, 0x9e, 0xdf,
-	0xaf, 0xfb, 0x37, 0x33, 0xdd, 0x32, 0xfc, 0x37, 0xa7, 0xeb, 0xb9, 0x02, 0x4b, 0x64, 0x0b, 0x7a,
-	0x49, 0x4e, 0xe4, 0x55, 0x33, 0x51, 0x4e, 0x26, 0x4c, 0x66, 0x94, 0x95, 0x2c, 0x8b, 0x17, 0x0d,
-	0xdd, 0xd2, 0xf1, 0x98, 0x63, 0x12, 0xe7, 0x26, 0xf1, 0xbc, 0x6a, 0xc6, 0xcb, 0xc9, 0xd8, 0xa4,
-	0x58, 0x47, 0x8b, 0x4a, 0x82, 0x6a, 0x9a, 0x6e, 0x51, 0x4b, 0xd1, 0x35, 0xd3, 0x59, 0x12, 0x3b,
-	0x11, 0xe6, 0xd5, 0x60, 0xa6, 0x5e, 0x32, 0xb2, 0xcc, 0x35, 0x9a, 0x11, 0x46, 0xfc, 0x6b, 0xaf,
-	0x74, 0x3b, 0x71, 0x5b, 0x61, 0x05, 0x39, 0xa3, 0x52, 0x33, 0x2f, 0x2c, 0x26, 0x83, 0x16, 0xa6,
-	0x65, 0x94, 0xb2, 0x96, 0x98, 0x9d, 0x0e, 0xce, 0xde, 0x35, 0x68, 0xb1, 0xc8, 0x0c, 0xe1, 0x9f,
-	0x28, 0x30, 0x76, 0x5d, 0x31, 0xad, 0x35, 0x56, 0x91, 0x14, 0x2d, 0x67, 0x4a, 0xec, 0xfd, 0x12,
-	0x33, 0x2d, 0x3c, 0x0e, 0x7d, 0x45, 0x6a, 0x30, 0xcd, 0x9a, 0x40, 0x33, 0x68, 0x76, 0x40, 0x12,
-	0x5f, 0xf8, 0x38, 0x0c, 0x14, 0x69, 0x8e, 0x65, 0x4c, 0xe5, 0x3e, 0x9b, 0xe8, 0x99, 0x41, 0xb3,
-	0xff, 0x96, 0xfa, 0xed, 0x81, 0x4d, 0xe5, 0x3e, 0xc3, 0x53, 0x00, 0x7c, 0xd2, 0xd2, 0xf3, 0x4c,
-	0x9b, 0xe8, 0xe5, 0x0b, 0xb9, 0xf9, 0xdb, 0xf6, 0x00, 0x79, 0x8a, 0xe0, 0xa8, 0xbd, 0xd7, 0x65,
-	0xa3, 0x52, 0xb4, 0xf4, 0x35, 0x56, 0x79, 0x99, 0xbb, 0xe1, 0xf7, 0x60, 0xa8, 0xcc, 0x0c, 0x53,
-	0xd1, 0xb5, 0x4c, 0x59, 0x61, 0x77, 0x27, 0x0e, 0xcc, 0xa0, 0xd9, 0x91, 0x54, 0x3a, 0x1e, 0x92,
-	0xa7, 0xb8, 0x87, 0x68, 0xdb, 0x59, 0x51, 0x37, 0xb0, 0xad, 0xb0, 0xbb, 0xd2, 0x60, 0xb9, 0xfa,
-	0x41, 0x7e, 0x42, 0x30, 0xe9, 0x23, 0x23, 0x2c, 0x5f, 0x2a, 0xa7, 0x1b, 0x70, 0xa0, 0x4b, 0x5c,
-	0xb8, 0x1f, 0xf2, 0x04, 0xc1, 0x11, 0x7f, 0xf6, 0xcd, 0xa2, 0xae, 0x99, 0x0c, 0x2f, 0xc2, 0x40,
-	0x9e, 0x55, 0x32, 0x86, 0x3d, 0x38, 0x81, 0x66, 0x7a, 0x67, 0x07, 0x53, 0x93, 0xa1, 0xbb, 0x89,
-	0x95, 0x52, 0x7f, 0x5e, 0xb8, 0xc0, 0xa7, 0x60, 0x54, 0x63, 0xf7, 0xac, 0x4c, 0x0d, 0x8f, 0x1e,
-	0xce, 0x63, 0xd8, 0x1e, 0xde, 0xf0, 0xb8, 0x4c, 0x01, 0x58, 0xba, 0x45, 0x0b, 0x4e, 0x20, 0x7a,
-	0x79, 0x20, 0x06, 0xf8, 0x88, 0x1d, 0x09, 0xf2, 0x05, 0x82, 0xf1, 0xa0, 0x58, 0x04, 0xb8, 0x37,
-	0x60, 0x30, 0xcb, 0x47, 0x33, 0x79, 0x56, 0x71, 0xe1, 0x4d, 0x37, 0x0e, 0x86, 0x04, 0x59, 0xcf,
-	0x51, 0xb7, 0x20, 0xfe, 0x88, 0x60, 0x2a, 0x42, 0x02, 0x02, 0xe9, 0x16, 0x8c, 0x55, 0x91, 0x66,
-	0x84, 0x7c, 0x5c, 0xc4, 0xff, 0x6b, 0x29, 0x7d, 0xd2, 0xe1, 0x6c, 0xd0, 0x7d, 0xb7, 0xf0, 0xff,
-	0x1f, 0x0e, 0xaf, 0x32, 0x37, 0xf7, 0xae, 0x6c, 0x31, 0x1c, 0xd0, 0xa8, 0xca, 0x84, 0x68, 0xf9,
-	0xdf, 0xe4, 0x34, 0x8c, 0xad, 0xb2, 0x2a, 0xcd, 0x46, 0xa6, 0xaf, 0x41, 0xac, 0xd6, 0xd4, 0x25,
-	0xd1, 0xd4, 0xf9, 0x46, 0x69, 0xaf, 0xa0, 0x64, 0x9b, 0x38, 0xff, 0x04, 0xc1, 0x91, 0xcb, 0x06,
-	0xa3, 0x16, 0x0b, 0x80, 0x8e, 0x3a, 0x6b, 0xd3, 0x30, 0xe8, 0xca, 0x38, 0xa3, 0xc8, 0x22, 0x48,
-	0x03, 0x42, 0xaa, 0xd7, 0x64, 0x7c, 0x1e, 0xfa, 0xdd, 0x79, 0x1e, 0x9e, 0x66, 0x2a, 0x3f, 0x28,
-	0x96, 0x92, 0xc7, 0x08, 0xc6, 0x1d, 0x24, 0x75, 0x51, 0x89, 0xc2, 0x42, 0x60, 0xb8, 0x46, 0x0b,
-	0x1e, 0x9a, 0x41, 0x2f, 0xbd, 0xd7, 0x64, 0x7c, 0x09, 0xa0, 0x6a, 0x23, 0x10, 0x35, 0x13, 0xf6,
-	0x80, 0xe7, 0x80, 0x3c, 0x42, 0x30, 0x15, 0x40, 0x15, 0x48, 0x40, 0x14, 0xb8, 0x4d, 0xc0, 0xf5,
-	0x42, 0xe5, 0x08, 0x5b, 0xd6, 0xe9, 0xa1, 0xa0, 0x4e, 0xc9, 0xa7, 0x08, 0xc6, 0xb7, 0x8a, 0x72,
-	0x58, 0x90, 0xfc, 0x44, 0x51, 0x9b, 0x44, 0xf1, 0x45, 0x18, 0x2c, 0x71, 0xc7, 0xfc, 0x1d, 0x14,
-	0x38, 0x63, 0xee, 0x7a, 0xf7, 0xa9, 0x8b, 0x5f, 0xb5, 0x9f, 0xca, 0x75, 0x6a, 0xe6, 0x25, 0x70,
-	0xcc, 0xed, 0xbf, 0xc9, 0x77, 0x08, 0xa6, 0x02, 0xb0, 0x02, 0x51, 0x0a, 0x8f, 0x06, 0x7a, 0xa1,
-	0x68, 0xbc, 0x18, 0xe6, 0x8f, 0x11, 0x8c, 0x5c, 0xd1, 0xb8, 0xcf, 0x06, 0x07, 0x04, 0x4f, 0xc2,
-	0x40, 0xb1, 0x40, 0x15, 0xcd, 0x62, 0xf7, 0x2c, 0xbe, 0xc3, 0x90, 0x54, 0x1d, 0xc0, 0xcb, 0x30,
-	0x45, 0x65, 0x59, 0xb1, 0x4b, 0x10, 0x5a, 0xc8, 0xd0, 0x92, 0xb5, 0xcf, 0x34, 0x4b, 0xc9, 0x52,
-	0x8b, 0xc9, 0x19, 0x99, 0x5a, 0x94, 0x0b, 0x6e, 0x48, 0x3a, 0x5e, 0x35, 0x5a, 0xaa, 0xb5, 0x59,
-	0xa1, 0x16, 0x25, 0x0f, 0x11, 0x8c, 0xac, 0xb0, 0xa6, 0x40, 0xa6, 0x01, 0xb2, 0x4a, 0x71, 0x9f,
-	0x19, 0x35, 0x48, 0x6a, 0x46, 0xba, 0x02, 0x65, 0x17, 0x8e, 0x2e, 0x99, 0x15, 0x55, 0x65, 0x96,
-	0xa1, 0x64, 0x37, 0x95, 0x5c, 0xa3, 0x5b, 0x06, 0xcf, 0x43, 0x9f, 0xac, 0xe4, 0x98, 0x69, 0x89,
-	0x53, 0x75, 0x3c, 0x34, 0x8d, 0x2b, 0xdc, 0x44, 0x12, 0xa6, 0xe4, 0x06, 0x4c, 0x54, 0x77, 0x68,
-	0x9b, 0x75, 0x6f, 0x90, 0x35, 0x49, 0xc0, 0xa8, 0xe7, 0x45, 0xbc, 0x10, 0xbe, 0x8c, 0xa1, 0x40,
-	0xc6, 0xc8, 0x15, 0x18, 0xf5, 0xb2, 0x2e, 0x16, 0x74, 0x10, 0x6d, 0x72, 0x0e, 0xc6, 0x83, 0x91,
-	0xaa, 0x6e, 0x6f, 0x2a, 0x39, 0x8d, 0x5a, 0x25, 0x83, 0xb9, 0xdb, 0x7b, 0x03, 0x64, 0x11, 0xfe,
-	0x13, 0xc2, 0xbf, 0x25, 0xe4, 0x2a, 0x9c, 0x0c, 0x9c, 0xb1, 0x0d, 0x43, 0x51, 0xa9, 0xd1, 0xc2,
-	0x8b, 0x80, 0x93, 0x70, 0xb4, 0xfe, 0xf8, 0x55, 0x6f, 0x4c, 0x1c, 0x3c, 0x5a, 0xd7, 0x64, 0xb2,
-	0x00, 0xd3, 0x2b, 0xcc, 0xb4, 0x0c, 0xbd, 0xd2, 0xce, 0xd3, 0xb3, 0x00, 0xd3, 0x12, 0x33, 0x2d,
-	0xdd, 0x60, 0xed, 0xac, 0xda, 0x85, 0x3e, 0x47, 0x27, 0x78, 0x02, 0xfa, 0xcc, 0x7d, 0x9a, 0x3a,
-	0x7b, 0xce, 0xe1, 0xff, 0xe6, 0xbf, 0x24, 0xf1, 0x2d, 0x66, 0xe6, 0x2f, 0x2c, 0x38, 0xd9, 0x10,
-	0x33, 0xf3, 0x17, 0x16, 0xc4, 0xcc, 0xd9, 0x64, 0xca, 0xd1, 0x87, 0x98, 0x39, 0x9b, 0x4c, 0x2d,
-	0xf7, 0xbb, 0x12, 0x25, 0xe7, 0xe1, 0xd0, 0x75, 0x3d, 0xcb, 0x7b, 0x85, 0x75, 0x66, 0x51, 0xfb,
-	0x40, 0xe0, 0x13, 0x30, 0xbc, 0x6f, 0xaa, 0x19, 0x5a, 0xa6, 0x4a, 0x81, 0xee, 0x15, 0x1c, 0x48,
-	0xfd, 0xd2, 0xd0, 0xbe, 0xa9, 0x2e, 0xb9, 0x63, 0xa9, 0x5f, 0x26, 0xe1, 0xc8, 0x1a, 0xab, 0xac,
-	0x53, 0x8d, 0xe6, 0x98, 0xca, 0x34, 0x6b, 0xd3, 0xe9, 0x51, 0xf0, 0x67, 0x08, 0x86, 0x6a, 0x0b,
-	0x3d, 0x3c, 0x1b, 0xaa, 0xff, 0x90, 0x4e, 0x20, 0x76, 0xba, 0x05, 0x4b, 0x47, 0x12, 0x64, 0xe1,
-	0xa3, 0xdf, 0xfe, 0x78, 0xdc, 0x13, 0xc7, 0xaf, 0xd8, 0x8d, 0xcc, 0x07, 0xce, 0xd3, 0x72, 0xa9,
-	0x68, 0xe8, 0x77, 0x58, 0xd6, 0x32, 0x13, 0x73, 0x89, 0x82, 0x20, 0x65, 0x26, 0xe6, 0x1e, 0x24,
-	0xbc, 0x82, 0xf1, 0x1b, 0x04, 0x23, 0xfe, 0x4a, 0x0f, 0xcf, 0x45, 0xee, 0x59, 0xd7, 0x3b, 0xc4,
-	0xce, 0xb4, 0x64, 0x2b, 0x10, 0x2e, 0x71, 0x84, 0x17, 0xf1, 0x62, 0x73, 0x84, 0x1e, 0x40, 0x1b,
-	0x6c, 0x4d, 0xf1, 0xf8, 0x2c, 0xd8, 0xc5, 0x78, 0x65, 0x59, 0xb2, 0x39, 0x92, 0x40, 0x93, 0x10,
-	0x4b, 0xb5, 0xb3, 0x44, 0x70, 0xd8, 0xe2, 0x1c, 0xde, 0xc2, 0xeb, 0x6d, 0x71, 0xa8, 0xa1, 0xe0,
-	0x23, 0xe4, 0xa1, 0x7f, 0x88, 0x00, 0xaa, 0xe5, 0x20, 0x3e, 0x15, 0x8a, 0xac, 0xae, 0x5e, 0x8c,
-	0x35, 0x2c, 0x98, 0x02, 0x8a, 0xb0, 0x8f, 0x4f, 0x0b, 0xd1, 0xc6, 0x9f, 0x23, 0x18, 0xaa, 0xad,
-	0x22, 0x23, 0xd4, 0x1a, 0x52, 0x93, 0xc6, 0x9a, 0x14, 0x11, 0x01, 0x01, 0xb4, 0x06, 0xc8, 0x1f,
-	0x3a, 0xfc, 0x33, 0xf2, 0x97, 0xc3, 0xee, 0x03, 0x9f, 0x68, 0x0a, 0xd2, 0x7f, 0xb9, 0xc4, 0x5a,
-	0x2b, 0x25, 0x02, 0xf9, 0xee, 0x00, 0x72, 0x7d, 0xb2, 0x6d, 0x1a, 0x3f, 0x38, 0x41, 0xf6, 0x0a,
-	0xef, 0xe8, 0x20, 0x07, 0x6b, 0xf3, 0x88, 0x20, 0x7b, 0x66, 0x24, 0xc3, 0x11, 0xdf, 0xc4, 0xef,
-	0x74, 0x15, 0x71, 0xa2, 0xe8, 0x41, 0x7d, 0x82, 0x60, 0xd8, 0xd7, 0x08, 0xe0, 0xd3, 0x11, 0xb1,
-	0xac, 0x6f, 0x16, 0x9a, 0x28, 0xf6, 0x75, 0x8e, 0xfd, 0x02, 0x69, 0xeb, 0x0e, 0x4b, 0x7b, 0x6d,
-	0x04, 0xfe, 0x16, 0xc1, 0x68, 0xa0, 0x06, 0xc7, 0x67, 0x1a, 0x80, 0x6b, 0x5b, 0xc1, 0xeb, 0x1c,
-	0xe0, 0x2a, 0xe9, 0xfc, 0x0a, 0x4b, 0xd7, 0xd4, 0xde, 0xf8, 0x79, 0x7d, 0x27, 0xe3, 0x0a, 0x3a,
-	0xd5, 0x0a, 0xec, 0xce, 0x34, 0xad, 0x70, 0x12, 0x59, 0xd2, 0xdd, 0x3b, 0x2c, 0x1d, 0x52, 0xb6,
-	0xe3, 0xef, 0x11, 0x8c, 0x06, 0x4a, 0x91, 0x88, 0x84, 0x84, 0xf7, 0x2a, 0x4d, 0x13, 0xf2, 0x2e,
-	0xe7, 0x22, 0xa5, 0x56, 0x38, 0x97, 0x2a, 0x82, 0x78, 0x27, 0xb7, 0x8b, 0x2f, 0x37, 0x7f, 0xd6,
-	0x37, 0x50, 0x8d, 0x73, 0xd3, 0xb0, 0xad, 0x69, 0x35, 0x37, 0x1f, 0x72, 0x3e, 0xe5, 0xd4, 0x6e,
-	0x80, 0x8f, 0x1b, 0xd1, 0x78, 0xb7, 0x0e, 0x74, 0x68, 0xba, 0xbe, 0x42, 0x70, 0x50, 0xd4, 0xbc,
-	0xf8, 0x44, 0x28, 0x60, 0x7f, 0x1f, 0x14, 0x3b, 0xd9, 0xd8, 0x48, 0x3c, 0x9a, 0xee, 0xa9, 0x59,
-	0xee, 0xf4, 0x4a, 0x9a, 0x7b, 0x90, 0x66, 0x8e, 0xcf, 0x34, 0x9a, 0xc3, 0x5f, 0x22, 0x38, 0x28,
-	0x0a, 0xe2, 0x08, 0x94, 0xfe, 0x76, 0x21, 0x02, 0x65, 0xa0, 0xa6, 0x26, 0xd7, 0x39, 0xca, 0xab,
-	0x64, 0xa9, 0xe3, 0xd7, 0x29, 0x2d, 0x33, 0x0f, 0xe4, 0xaf, 0x08, 0x46, 0xfc, 0x75, 0x7f, 0x44,
-	0x61, 0x15, 0xda, 0x46, 0x45, 0x14, 0x56, 0xe1, 0x8d, 0x04, 0xc9, 0x71, 0xe4, 0x94, 0xec, 0x74,
-	0xf5, 0xca, 0x4f, 0x53, 0xdf, 0x6e, 0x36, 0xa9, 0xe7, 0x08, 0x0e, 0xd7, 0x35, 0x25, 0xf8, 0xd5,
-	0x26, 0x58, 0x03, 0xd9, 0x88, 0xb7, 0x6a, 0x2e, 0xd8, 0xdd, 0xe1, 0xec, 0x64, 0x92, 0x79, 0x59,
-	0xec, 0x56, 0xaa, 0x59, 0x7b, 0x56, 0xff, 0xf3, 0x84, 0xbf, 0x75, 0xc2, 0x8b, 0xad, 0x9c, 0xfd,
-	0xd0, 0x76, 0xab, 0xe9, 0x5d, 0x76, 0x93, 0x13, 0xdd, 0x24, 0x37, 0x3a, 0x17, 0xa0, 0xf3, 0xab,
-	0x85, 0x7f, 0x7b, 0x9b, 0xd7, 0xef, 0x08, 0x8e, 0x45, 0xf4, 0x68, 0x78, 0x3e, 0xe2, 0x74, 0x34,
-	0xea, 0xe8, 0x5a, 0xbd, 0xce, 0x76, 0x39, 0xa5, 0x5b, 0x64, 0xab, 0xbb, 0xb9, 0x93, 0x1d, 0x70,
-	0x2e, 0xb3, 0x88, 0x3e, 0x32, 0x82, 0x59, 0xe3, 0xae, 0xf3, 0x1f, 0x66, 0x66, 0x38, 0xe0, 0xd2,
-	0x68, 0x6e, 0xf9, 0x11, 0x82, 0x63, 0x59, 0x5d, 0x0d, 0x83, 0xb3, 0xdc, 0xbf, 0xa6, 0x9a, 0x1b,
-	0x86, 0x6e, 0xe9, 0x1b, 0xe8, 0xd6, 0x39, 0x61, 0x90, 0xd3, 0x0b, 0x54, 0xcb, 0xc5, 0x75, 0x23,
-	0x97, 0xc8, 0x31, 0x8d, 0xff, 0xa6, 0x95, 0x70, 0xa6, 0x68, 0x51, 0x31, 0x7d, 0xff, 0xe8, 0xba,
-	0x98, 0x57, 0xcd, 0xbf, 0x10, 0xfa, 0xba, 0x67, 0x6c, 0xd5, 0x59, 0x7b, 0x99, 0x3b, 0x5f, 0x53,
-	0xcd, 0xf8, 0x76, 0xf2, 0xa9, 0x3b, 0xba, 0xc3, 0x47, 0x77, 0xd6, 0x54, 0x73, 0x67, 0x3b, 0xb9,
-	0xd7, 0xc7, 0x3d, 0xce, 0xff, 0x1d, 0x00, 0x00, 0xff, 0xff, 0xac, 0x72, 0x95, 0x44, 0x8f, 0x1b,
-	0x00, 0x00,
+	// 2029 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x5a, 0xcd, 0x73, 0x1c, 0x47,
+	0x15, 0x4f, 0xfb, 0x43, 0x96, 0x9e, 0x64, 0xc9, 0x6e, 0xd9, 0xb2, 0xb2, 0xb6, 0x54, 0x66, 0x1c,
+	0x82, 0xad, 0x24, 0x3b, 0x68, 0x25, 0x3b, 0xf6, 0xba, 0x42, 0x6a, 0x65, 0x25, 0x8e, 0x90, 0x65,
+	0x54, 0xa3, 0xd8, 0x26, 0x29, 0xa7, 0xc6, 0xad, 0xdd, 0xf6, 0x6a, 0xbc, 0x3b, 0x1f, 0x4c, 0xb7,
+	0xa4, 0x6c, 0x20, 0x17, 0x0e, 0x90, 0x43, 0x6e, 0xa1, 0x8a, 0x50, 0x50, 0x14, 0x05, 0x37, 0x0a,
+	0x0e, 0xdc, 0xe0, 0xc0, 0x8d, 0x53, 0x8e, 0x81, 0xc0, 0x2d, 0x27, 0xfe, 0x01, 0x0e, 0x54, 0x71,
+	0x81, 0xa2, 0xa6, 0xa7, 0xe7, 0x73, 0x67, 0x66, 0x3f, 0xbc, 0x2e, 0xb8, 0x69, 0x7b, 0x5e, 0xbf,
+	0xfe, 0xfd, 0xfa, 0xfd, 0x7e, 0x33, 0xfd, 0xba, 0x04, 0x5f, 0x69, 0xda, 0x76, 0xb3, 0x4d, 0xd5,
+	0x7a, 0xdb, 0xde, 0x6f, 0xa8, 0x2d, 0x93, 0xa9, 0x07, 0xcb, 0x2a, 0xa3, 0xee, 0x81, 0x51, 0xa7,
+	0x65, 0xc7, 0xb5, 0xb9, 0x8d, 0x67, 0xfd, 0x90, 0xb2, 0x08, 0x29, 0xb7, 0x4c, 0x56, 0x3e, 0x58,
+	0x2e, 0x5d, 0x90, 0xf3, 0x88, 0x63, 0xa8, 0xc4, 0xb2, 0x6c, 0x4e, 0xb8, 0x61, 0x5b, 0xcc, 0x9f,
+	0x52, 0xba, 0x94, 0x95, 0xd5, 0xa5, 0xcc, 0xde, 0x77, 0xeb, 0x34, 0x08, 0xba, 0x28, 0x83, 0xc4,
+	0xaf, 0xdd, 0xfd, 0xc7, 0xea, 0x63, 0x83, 0xb6, 0x1b, 0xba, 0x49, 0x58, 0x4b, 0x46, 0x9c, 0x8b,
+	0x2d, 0x52, 0x6f, 0x1b, 0xd4, 0xe2, 0xfe, 0x03, 0xe5, 0x67, 0x08, 0x66, 0xef, 0x18, 0x8c, 0x6f,
+	0xd2, 0x8e, 0x66, 0x58, 0x4d, 0xa6, 0xd1, 0xef, 0xec, 0x53, 0xc6, 0xf1, 0x1c, 0x8c, 0x39, 0xc4,
+	0xa5, 0x16, 0x9f, 0x47, 0x17, 0xd1, 0xe5, 0x09, 0x4d, 0xfe, 0xc2, 0xe7, 0x61, 0xc2, 0x21, 0x4d,
+	0xaa, 0x33, 0xe3, 0x03, 0x3a, 0x7f, 0xe4, 0x22, 0xba, 0x7c, 0x5c, 0x1b, 0xf7, 0x06, 0x76, 0x8c,
+	0x0f, 0x28, 0x5e, 0x00, 0x10, 0x0f, 0xb9, 0xdd, 0xa2, 0xd6, 0xfc, 0x51, 0x31, 0x51, 0x84, 0xbf,
+	0xed, 0x0d, 0x78, 0x39, 0x1f, 0x1b, 0x6d, 0x4e, 0xdd, 0xf9, 0x63, 0x7e, 0x4e, 0xff, 0x17, 0x7e,
+	0x1e, 0xc6, 0x6d, 0xb7, 0x41, 0x5d, 0x7d, 0xb7, 0x33, 0x7f, 0x5c, 0x3c, 0x39, 0x21, 0x7e, 0xaf,
+	0x75, 0x94, 0x7f, 0x23, 0x38, 0xeb, 0xc1, 0xbb, 0xe5, 0x76, 0x1c, 0x6e, 0x6f, 0xd2, 0xce, 0x33,
+	0x05, 0xf8, 0x1e, 0x4c, 0x1d, 0x50, 0x97, 0x19, 0xb6, 0xa5, 0x1f, 0x18, 0xf4, 0x50, 0xc0, 0x9c,
+	0xae, 0x54, 0xcb, 0x19, 0x65, 0x2b, 0x87, 0x88, 0xee, 0xfb, 0x33, 0xba, 0x06, 0xee, 0x1b, 0xf4,
+	0x50, 0x9b, 0x3c, 0x88, 0x7e, 0xc4, 0xf8, 0x1f, 0xcf, 0xe5, 0x3f, 0x96, 0xe4, 0xff, 0x4f, 0x04,
+	0x17, 0x12, 0xfc, 0x65, 0xf2, 0x67, 0xba, 0x0d, 0x77, 0xe1, 0xd8, 0x88, 0xe8, 0x8b, 0x3c, 0xc3,
+	0xf0, 0xfe, 0xb9, 0xac, 0xfb, 0x86, 0xe9, 0xd8, 0x2e, 0xff, 0xa6, 0xbd, 0xfb, 0xff, 0x26, 0xcc,
+	0x4f, 0x11, 0x9c, 0x49, 0xfa, 0x86, 0x39, 0xb6, 0xc5, 0x28, 0xbe, 0x01, 0x13, 0x2d, 0xda, 0xd1,
+	0x5d, 0x6f, 0x70, 0x1e, 0x5d, 0x3c, 0x7a, 0x79, 0xb2, 0x72, 0x21, 0x73, 0x07, 0xe5, 0x4c, 0x6d,
+	0xbc, 0x25, 0x53, 0xe0, 0x17, 0x61, 0xc6, 0xa2, 0xef, 0x73, 0x3d, 0x06, 0xf5, 0x88, 0x58, 0xf5,
+	0xa4, 0x37, 0xbc, 0x1d, 0xc2, 0x5d, 0x00, 0xe0, 0x36, 0x27, 0x6d, 0x9f, 0xeb, 0x51, 0xc1, 0x75,
+	0x42, 0x8c, 0x78, 0x64, 0x95, 0x5f, 0x20, 0x98, 0x4b, 0x7b, 0x46, 0x82, 0x7b, 0x1d, 0x26, 0xeb,
+	0x62, 0x54, 0x6f, 0xd1, 0x4e, 0x00, 0x6f, 0xb1, 0xb8, 0xc0, 0x1a, 0xd4, 0xc3, 0x44, 0xa3, 0x82,
+	0xf8, 0x47, 0x04, 0x0b, 0x39, 0xb2, 0x96, 0x48, 0xef, 0xc1, 0x6c, 0x84, 0x54, 0x97, 0x2e, 0x0a,
+	0x10, 0x7f, 0xb5, 0x2f, 0x49, 0x6a, 0xa7, 0xeb, 0xe9, 0xf4, 0xa3, 0xde, 0xe2, 0xb8, 0x3c, 0xa3,
+	0x2d, 0x36, 0xc4, 0xa8, 0xfe, 0xc4, 0xde, 0x2d, 0xde, 0xe2, 0x70, 0xb6, 0x06, 0x46, 0x98, 0x68,
+	0x54, 0x10, 0xbf, 0x06, 0xa7, 0x6f, 0xd3, 0x40, 0x9e, 0x81, 0x79, 0x30, 0x1c, 0xb3, 0x88, 0x49,
+	0xa5, 0x75, 0xc4, 0xdf, 0xca, 0x15, 0x98, 0xbd, 0x4d, 0xa3, 0x4a, 0x14, 0x85, 0x7e, 0x1d, 0x4a,
+	0xf1, 0xd0, 0x60, 0x9f, 0x7b, 0x26, 0xdf, 0xde, 0xdf, 0x6d, 0x1b, 0xf5, 0x1e, 0xc9, 0xfd, 0xd0,
+	0x68, 0x4f, 0x0a, 0x42, 0x7f, 0x88, 0xe0, 0xcc, 0x2d, 0x97, 0x12, 0x4e, 0x53, 0xfc, 0xf2, 0x5e,
+	0x0e, 0x8b, 0x30, 0x19, 0x98, 0x52, 0x37, 0x1a, 0x72, 0x3f, 0x27, 0xa4, 0xf1, 0x36, 0x1a, 0xf8,
+	0x55, 0x18, 0x0f, 0x9e, 0x8b, 0x9d, 0xec, 0xe5, 0xd9, 0x13, 0x72, 0xaa, 0xf2, 0x57, 0x04, 0x73,
+	0x3e, 0x92, 0xae, 0x0d, 0xcc, 0xc3, 0xa2, 0xc0, 0xc9, 0x98, 0xb2, 0x43, 0x34, 0x93, 0xa1, 0x58,
+	0x37, 0x1a, 0xf8, 0x35, 0x80, 0x28, 0x46, 0x22, 0xea, 0x65, 0xd3, 0x89, 0x30, 0x01, 0xae, 0xc1,
+	0x02, 0x6b, 0x19, 0x8e, 0x6e, 0x58, 0x06, 0x37, 0x48, 0x3b, 0xb0, 0x8f, 0x5e, 0xf7, 0x90, 0x1a,
+	0xb6, 0x25, 0x5e, 0x66, 0xe3, 0x5a, 0xc9, 0x0b, 0xda, 0xf0, 0x63, 0x64, 0x2d, 0x6f, 0xc9, 0x08,
+	0xe5, 0x63, 0x04, 0x0b, 0x29, 0x62, 0xa9, 0x72, 0xe7, 0xf1, 0xdb, 0x01, 0xdc, 0xed, 0x5c, 0x41,
+	0xb2, 0x6f, 0xe3, 0x9e, 0x4a, 0x1b, 0x57, 0xf9, 0x0f, 0x82, 0x05, 0x5f, 0x1a, 0x83, 0xc2, 0x79,
+	0x0f, 0x26, 0x48, 0xbb, 0x69, 0xbb, 0x06, 0xdf, 0x33, 0x05, 0x8a, 0xe9, 0xca, 0xeb, 0xc3, 0x7d,
+	0xd1, 0x6a, 0x41, 0x1a, 0x2d, 0xca, 0xe8, 0xb9, 0x30, 0xb2, 0xbb, 0xfc, 0x7c, 0x4c, 0x84, 0x6e,
+	0xc6, 0x2a, 0xcc, 0xba, 0x8c, 0xe8, 0x84, 0x32, 0xfd, 0xd0, 0x25, 0x8e, 0x43, 0x1b, 0xa2, 0xa2,
+	0xde, 0xfe, 0x4f, 0xbd, 0xf5, 0x9c, 0x76, 0xca, 0x65, 0xa4, 0x46, 0xd9, 0x03, 0xff, 0xd1, 0x26,
+	0xed, 0xac, 0xcd, 0xc1, 0x99, 0x58, 0xa0, 0x6e, 0x12, 0x4e, 0x5d, 0x83, 0xb4, 0x95, 0x4f, 0x42,
+	0xa1, 0x75, 0x39, 0xa4, 0x40, 0x68, 0x11, 0xb4, 0x98, 0xd0, 0x42, 0x74, 0xbe, 0xd0, 0x62, 0xf0,
+	0x8b, 0x84, 0x16, 0x2d, 0x1b, 0xd1, 0x53, 0x7e, 0x84, 0x60, 0xee, 0x9e, 0xd3, 0xc8, 0x92, 0x7f,
+	0x52, 0xc2, 0x68, 0x50, 0x09, 0xdf, 0x84, 0xc9, 0x7d, 0x91, 0x58, 0x9c, 0x62, 0xa5, 0x7c, 0x4a,
+	0xc1, 0xfc, 0xe0, 0xa0, 0x5b, 0x7e, 0xd3, 0x3b, 0xe8, 0x6e, 0x11, 0xd6, 0xd2, 0xc0, 0x0f, 0xf7,
+	0xfe, 0x56, 0x7e, 0x87, 0x60, 0x21, 0x05, 0x2b, 0xa5, 0x96, 0x6c, 0x91, 0xa2, 0xa7, 0x12, 0xe9,
+	0xd3, 0x61, 0xfe, 0x01, 0x82, 0xe9, 0x37, 0x2c, 0x91, 0xb3, 0xe0, 0xd5, 0x87, 0x2f, 0xc0, 0x84,
+	0xd3, 0x26, 0x86, 0xc5, 0xe9, 0xfb, 0x5c, 0xac, 0x30, 0xa5, 0x45, 0x03, 0x78, 0x0d, 0x16, 0x48,
+	0xa3, 0x61, 0x78, 0x0e, 0x26, 0x6d, 0x9d, 0xec, 0xf3, 0x3d, 0x6a, 0x71, 0xa3, 0x4e, 0x38, 0x6d,
+	0xe8, 0x0d, 0xc2, 0x89, 0xa8, 0xf0, 0x94, 0x76, 0x3e, 0x0a, 0xaa, 0xc5, 0x63, 0xd6, 0x09, 0x27,
+	0xca, 0x47, 0x08, 0xa6, 0xd7, 0x69, 0x4f, 0x20, 0x8b, 0x00, 0x75, 0xc3, 0xd9, 0xa3, 0x6e, 0x0c,
+	0x49, 0x6c, 0x64, 0x24, 0x50, 0x1e, 0xc1, 0xd9, 0x1a, 0xeb, 0x98, 0x26, 0xe5, 0xae, 0x51, 0xdf,
+	0x31, 0x9a, 0x45, 0x9f, 0x1a, 0xbc, 0x02, 0x63, 0x0d, 0xa3, 0x49, 0x19, 0x97, 0x32, 0x3e, 0x9f,
+	0x59, 0xc6, 0x75, 0x11, 0xa2, 0xc9, 0x50, 0xe5, 0x2e, 0xcc, 0x47, 0x2b, 0x0c, 0xcc, 0xfa, 0x68,
+	0x9a, 0xb5, 0xa2, 0xc2, 0x4c, 0x98, 0x45, 0x1e, 0x08, 0x12, 0x15, 0x43, 0xa9, 0x8a, 0x29, 0x6f,
+	0xc0, 0x4c, 0x58, 0x75, 0x39, 0x61, 0x88, 0xdd, 0x56, 0xae, 0xc1, 0x5c, 0x7a, 0xa7, 0xa2, 0xe5,
+	0x99, 0xd1, 0xb4, 0x08, 0xdf, 0x77, 0x69, 0xb0, 0x7c, 0x38, 0xa0, 0xdc, 0x80, 0xe7, 0x33, 0xf8,
+	0xf7, 0x85, 0xdc, 0x84, 0x17, 0x52, 0x1e, 0xdb, 0x76, 0x0d, 0x93, 0xb8, 0x7d, 0x1c, 0x0b, 0xf0,
+	0x32, 0x9c, 0xed, 0xb6, 0x5f, 0xf4, 0x8a, 0xc2, 0x69, 0x6b, 0x6d, 0x34, 0x94, 0x55, 0x58, 0x5c,
+	0xa7, 0x8c, 0xbb, 0x76, 0x67, 0x90, 0xf3, 0xc7, 0x2a, 0x2c, 0x6a, 0x94, 0x71, 0xdb, 0xa5, 0x83,
+	0xcc, 0x7a, 0x04, 0x63, 0xbe, 0x4e, 0xf0, 0x3c, 0x8c, 0xb1, 0x3d, 0x52, 0xb9, 0x7a, 0xcd, 0xe7,
+	0xff, 0xd6, 0x73, 0x9a, 0xfc, 0x2d, 0x9f, 0xac, 0x5c, 0x5f, 0xf5, 0xab, 0x21, 0x9f, 0xac, 0x5c,
+	0x5f, 0x95, 0x4f, 0xae, 0x2e, 0x57, 0x7c, 0x7d, 0xc8, 0x27, 0x57, 0x97, 0x2b, 0x6b, 0xe3, 0x81,
+	0x44, 0x95, 0x57, 0xe1, 0xd4, 0x1d, 0xbb, 0x2e, 0x3e, 0xb5, 0x5b, 0x94, 0x13, 0xcf, 0x10, 0xf8,
+	0x12, 0x9c, 0xdc, 0x63, 0xa6, 0x4e, 0x0e, 0x88, 0xd1, 0x26, 0xbb, 0x6d, 0x1f, 0xd2, 0xb8, 0x36,
+	0xb5, 0xc7, 0xcc, 0x5a, 0x30, 0x56, 0xf9, 0xf1, 0x25, 0x38, 0xb3, 0x49, 0x3b, 0x5b, 0xc4, 0x22,
+	0x4d, 0x6a, 0x52, 0x8b, 0xef, 0xf8, 0x37, 0x0c, 0xf8, 0x27, 0x08, 0xa6, 0xe2, 0x0d, 0x09, 0xbe,
+	0x9c, 0xa9, 0xff, 0x8c, 0x5e, 0xbf, 0x74, 0xa5, 0x8f, 0x48, 0x5f, 0x12, 0xca, 0xea, 0xf7, 0xff,
+	0xfc, 0xf7, 0x4f, 0x8e, 0x94, 0xf1, 0xcb, 0xea, 0xc1, 0xb2, 0xfa, 0x5d, 0xff, 0x43, 0xf3, 0x9a,
+	0xe3, 0xda, 0x4f, 0x68, 0x9d, 0x33, 0x75, 0x49, 0x6d, 0x4b, 0x52, 0x4c, 0x5d, 0xfa, 0x50, 0x0d,
+	0x1b, 0x9b, 0xdf, 0x20, 0x98, 0x4e, 0x76, 0x24, 0x78, 0x29, 0x77, 0xcd, 0xae, 0x56, 0xbf, 0xf4,
+	0x52, 0x5f, 0xb1, 0x12, 0x61, 0x4d, 0x20, 0xbc, 0x89, 0x6f, 0xf4, 0x46, 0x18, 0x02, 0xf4, 0xc0,
+	0xc6, 0x9a, 0x9c, 0x2f, 0xd2, 0x97, 0x0e, 0x61, 0xfb, 0xb0, 0xdc, 0x1b, 0x49, 0xaa, 0x41, 0x2f,
+	0x55, 0x06, 0x99, 0x22, 0x39, 0xdc, 0x13, 0x1c, 0xbe, 0x85, 0xb7, 0x06, 0xe2, 0x10, 0xa3, 0x90,
+	0x20, 0x14, 0xa2, 0x0f, 0xca, 0x10, 0x75, 0x2d, 0x05, 0x65, 0xe8, 0xea, 0xbc, 0x0b, 0xca, 0xd0,
+	0xdd, 0x06, 0x0d, 0x5d, 0x86, 0x58, 0x23, 0xf4, 0x11, 0x02, 0x88, 0x5a, 0x18, 0xfc, 0x62, 0xe6,
+	0xf2, 0x5d, 0x3d, 0x4e, 0xa9, 0xf0, 0xe4, 0x9e, 0x12, 0xb0, 0xe7, 0xf6, 0x3e, 0x50, 0xe1, 0x9f,
+	0x22, 0x98, 0x8a, 0x77, 0x3e, 0x39, 0xe6, 0xca, 0xe8, 0xa3, 0x4a, 0x3d, 0xce, 0x3c, 0xa9, 0x8d,
+	0xea, 0x0f, 0x50, 0xb2, 0xd2, 0xf8, 0x4f, 0x28, 0xd9, 0xc2, 0x05, 0xe7, 0x11, 0xb5, 0x27, 0xc8,
+	0xe4, 0xbb, 0xb0, 0xd4, 0xdf, 0xc9, 0x27, 0x25, 0xcf, 0x21, 0x20, 0x77, 0x6b, 0xd3, 0xa3, 0xf1,
+	0x07, 0x7f, 0x93, 0xc3, 0x66, 0x31, 0x7f, 0x93, 0xd3, 0xfd, 0x64, 0xce, 0x26, 0x87, 0x61, 0x8a,
+	0x2e, 0x10, 0xbf, 0x83, 0x1f, 0x8c, 0x14, 0xb1, 0xea, 0x84, 0x50, 0xa5, 0x40, 0x42, 0x23, 0xe4,
+	0x63, 0x4f, 0x1f, 0xdf, 0x4b, 0x3d, 0x8e, 0xdb, 0xc3, 0x09, 0x24, 0xb2, 0x91, 0xb7, 0xb3, 0x9f,
+	0x22, 0x38, 0x99, 0xe8, 0x97, 0xf1, 0x95, 0x9c, 0x4a, 0x77, 0xf7, 0xd4, 0x3d, 0xfc, 0xf4, 0x0d,
+	0x81, 0xee, 0xba, 0x32, 0xd0, 0x07, 0xa1, 0x1a, 0x76, 0xdb, 0xf8, 0xb7, 0x08, 0x66, 0x52, 0x7d,
+	0x26, 0x7e, 0xa9, 0x00, 0xdc, 0xc0, 0xfe, 0xda, 0x12, 0x00, 0x6f, 0x2b, 0xc3, 0x7f, 0x0f, 0xaa,
+	0xb1, 0x46, 0x06, 0x7f, 0xd9, 0xdd, 0xf0, 0x07, 0x76, 0xab, 0xf4, 0x03, 0x7b, 0x38, 0xc7, 0x19,
+	0x82, 0x44, 0x5d, 0x19, 0xed, 0x07, 0xa1, 0x9a, 0xd1, 0x03, 0xe1, 0xbf, 0x20, 0x98, 0xcb, 0xee,
+	0xb4, 0x73, 0x08, 0x16, 0xb6, 0xe5, 0xfd, 0x12, 0x94, 0x06, 0x55, 0xde, 0x1e, 0x2d, 0x41, 0xdf,
+	0x06, 0x55, 0xb4, 0x14, 0xd3, 0x59, 0xe4, 0xd1, 0x22, 0x9d, 0x0d, 0x6c, 0xd3, 0x61, 0x75, 0x16,
+	0x39, 0xb5, 0x1a, 0x6b, 0xc5, 0xf1, 0xef, 0x11, 0xcc, 0xa4, 0x8e, 0xd7, 0x39, 0x78, 0xb3, 0xfb,
+	0xef, 0x9e, 0xbe, 0xf8, 0xb6, 0xc0, 0xab, 0x55, 0xd6, 0x05, 0xde, 0x48, 0x08, 0xe5, 0x61, 0x3e,
+	0x41, 0x09, 0x8b, 0xfc, 0xa3, 0xfb, 0x52, 0xa0, 0x58, 0x41, 0x85, 0xad, 0x7a, 0xbf, 0x0a, 0xfa,
+	0x9e, 0xe0, 0x73, 0x50, 0x79, 0x94, 0xe2, 0x13, 0x08, 0xbb, 0x3c, 0xaa, 0xb7, 0x7e, 0xa6, 0x6b,
+	0x7e, 0x85, 0xe0, 0x84, 0xec, 0xe3, 0xf0, 0xa5, 0x4c, 0xc0, 0xc9, 0xde, 0xbe, 0xf4, 0x42, 0x71,
+	0x90, 0x3c, 0x45, 0x05, 0xa2, 0x5a, 0x1b, 0xf6, 0xbb, 0xb5, 0xf4, 0x61, 0x95, 0xfa, 0x39, 0x3d,
+	0x13, 0xfc, 0x12, 0xc1, 0x09, 0xd9, 0xe4, 0xe5, 0xa0, 0x4c, 0xb6, 0xc0, 0x39, 0x28, 0x53, 0x7d,
+	0xa2, 0x72, 0x47, 0xa0, 0x7c, 0x53, 0xa9, 0x0d, 0x7d, 0x84, 0xa9, 0x36, 0x68, 0x08, 0xf2, 0x73,
+	0x04, 0xd3, 0xc9, 0x5e, 0x36, 0xe7, 0x94, 0x9a, 0x79, 0x35, 0x90, 0x73, 0x4a, 0xcd, 0x6e, 0x8e,
+	0x95, 0xa6, 0x40, 0x4e, 0x94, 0x87, 0x23, 0x3d, 0x17, 0x54, 0x49, 0x62, 0x35, 0x8f, 0xd4, 0x97,
+	0x08, 0x4e, 0x77, 0x35, 0xda, 0xf8, 0x95, 0x1e, 0x58, 0x53, 0xd5, 0x28, 0xf7, 0x1b, 0x2e, 0xd9,
+	0x3d, 0x11, 0xec, 0x1a, 0x8a, 0xfe, 0xac, 0xd8, 0xad, 0x47, 0x55, 0xfb, 0xa2, 0xfb, 0xca, 0x2d,
+	0x79, 0x1d, 0x80, 0x6f, 0xf4, 0xe3, 0xfd, 0xcc, 0x2b, 0x84, 0x9e, 0xef, 0xb2, 0x77, 0x04, 0xd1,
+	0x1d, 0xe5, 0xee, 0xf0, 0x02, 0xf4, 0x6f, 0xe2, 0x92, 0xcb, 0x7b, 0xbc, 0xfe, 0x86, 0xe0, 0x5c,
+	0xce, 0xbd, 0x03, 0x5e, 0xc9, 0x71, 0x47, 0xd1, 0x2d, 0x45, 0xbf, 0xaf, 0xb3, 0x47, 0x82, 0xd2,
+	0xbb, 0xca, 0xbd, 0xd1, 0xd6, 0xae, 0xe1, 0x83, 0x0b, 0x98, 0xe5, 0xdc, 0x8d, 0xe4, 0x30, 0x2b,
+	0xbe, 0x49, 0xf9, 0x1f, 0x33, 0x73, 0x7d, 0x70, 0x55, 0xb4, 0x54, 0xe2, 0x9f, 0xd5, 0xce, 0x09,
+	0x0c, 0x1e, 0x04, 0x1f, 0x13, 0x71, 0x0c, 0x56, 0xae, 0xdb, 0xe6, 0xe7, 0xb5, 0x07, 0x7b, 0x9c,
+	0x3b, 0xac, 0xaa, 0xaa, 0x87, 0x87, 0x87, 0xa9, 0x87, 0x2a, 0xd9, 0xe7, 0x7b, 0xfe, 0x7f, 0x5a,
+	0xbc, 0xe2, 0xb4, 0x09, 0x7f, 0x6c, 0xbb, 0xe6, 0xcb, 0x7d, 0x85, 0xb7, 0x4c, 0xb6, 0xf6, 0x31,
+	0x82, 0x73, 0x75, 0xdb, 0xcc, 0xda, 0x84, 0xb5, 0xf1, 0x4d, 0x93, 0x6d, 0xbb, 0x36, 0xb7, 0xb7,
+	0xd1, 0xbb, 0xd7, 0x64, 0x40, 0xd3, 0x6e, 0x13, 0xab, 0x59, 0xb6, 0xdd, 0xa6, 0xda, 0xa4, 0x96,
+	0xb8, 0x1d, 0x56, 0xa3, 0x05, 0x12, 0xff, 0xf0, 0x71, 0xb3, 0x65, 0xb2, 0x7f, 0x21, 0xf4, 0xeb,
+	0x23, 0xb3, 0xb7, 0xfd, 0xb9, 0xb7, 0x44, 0xf2, 0x4d, 0x93, 0x95, 0xef, 0x2f, 0x7f, 0x16, 0x8c,
+	0x3e, 0x14, 0xa3, 0x0f, 0x37, 0x4d, 0xf6, 0xf0, 0xfe, 0xf2, 0xee, 0x98, 0xc8, 0xb8, 0xf2, 0xdf,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0xd5, 0x1e, 0x95, 0x51, 0x97, 0x22, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1774,110 +2149,95 @@ type KeyManagementServiceClient interface {
 	ListCryptoKeys(ctx context.Context, in *ListCryptoKeysRequest, opts ...grpc.CallOption) (*ListCryptoKeysResponse, error)
 	// Lists [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	ListCryptoKeyVersions(ctx context.Context, in *ListCryptoKeyVersionsRequest, opts ...grpc.CallOption) (*ListCryptoKeyVersionsResponse, error)
+	// Lists [ImportJobs][google.cloud.kms.v1.ImportJob].
+	ListImportJobs(ctx context.Context, in *ListImportJobsRequest, opts ...grpc.CallOption) (*ListImportJobsResponse, error)
 	// Returns metadata for a given [KeyRing][google.cloud.kms.v1.KeyRing].
 	GetKeyRing(ctx context.Context, in *GetKeyRingRequest, opts ...grpc.CallOption) (*KeyRing, error)
-	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as
-	// well as its [primary][google.cloud.kms.v1.CryptoKey.primary]
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as well as its
+	// [primary][google.cloud.kms.v1.CryptoKey.primary] [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKey(ctx context.Context, in *GetCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Returns metadata for a given
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKeyVersion(ctx context.Context, in *GetCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
-	// Returns the public key for the given
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
+	// Returns the public key for the given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN]
-	// or
+	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN] or
 	// [ASYMMETRIC_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_DECRYPT].
 	GetPublicKey(ctx context.Context, in *GetPublicKeyRequest, opts ...grpc.CallOption) (*PublicKey, error)
-	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and
-	// Location.
+	// Returns metadata for a given [ImportJob][google.cloud.kms.v1.ImportJob].
+	GetImportJob(ctx context.Context, in *GetImportJobRequest, opts ...grpc.CallOption) (*ImportJob, error)
+	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and Location.
 	CreateKeyRing(ctx context.Context, in *CreateKeyRingRequest, opts ...grpc.CallOption) (*KeyRing, error)
-	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a
-	// [KeyRing][google.cloud.kms.v1.KeyRing].
+	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a [KeyRing][google.cloud.kms.v1.KeyRing].
 	//
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] and
 	// [CryptoKey.version_template.algorithm][google.cloud.kms.v1.CryptoKeyVersionTemplate.algorithm]
 	// are required.
 	CreateCryptoKey(ctx context.Context, in *CreateCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	//
 	// The server will assign the next sequential id. If unset,
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
 	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED].
 	CreateCryptoKeyVersion(ctx context.Context, in *CreateCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
+	// Imports a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] into an existing [CryptoKey][google.cloud.kms.v1.CryptoKey] using the
+	// wrapped key material provided in the request.
+	//
+	// The version ID will be assigned the next sequential id within the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	ImportCryptoKeyVersion(ctx context.Context, in *ImportCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
+	// Create a new [ImportJob][google.cloud.kms.v1.ImportJob] within a [KeyRing][google.cloud.kms.v1.KeyRing].
+	//
+	// [ImportJob.import_method][google.cloud.kms.v1.ImportJob.import_method] is required.
+	CreateImportJob(ctx context.Context, in *CreateImportJobRequest, opts ...grpc.CallOption) (*ImportJob, error)
 	// Update a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	UpdateCryptoKey(ctx context.Context, in *UpdateCryptoKeyRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s
-	// metadata.
+	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s metadata.
 	//
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] may be changed between
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
-	// and
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED]
-	// using this method. See
-	// [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion]
-	// and
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
-	// to move between other states.
+	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] and
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED] using this
+	// method. See [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion] and [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] to
+	// move between other states.
 	UpdateCryptoKeyVersion(ctx context.Context, in *UpdateCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
-	// Encrypts data, so that it can only be recovered by a call to
-	// [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt]. The
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// Encrypts data, so that it can only be recovered by a call to [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+	// The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
 	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
-	// Decrypts data that was protected by
-	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
+	// Decrypts data that was protected by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// must be [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Decrypt(ctx context.Context, in *DecryptRequest, opts ...grpc.CallOption) (*DecryptResponse, error)
-	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 	// ASYMMETRIC_SIGN, producing a signature that can be verified with the public
-	// key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+	// key retrieved from [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	AsymmetricSign(ctx context.Context, in *AsymmetricSignRequest, opts ...grpc.CallOption) (*AsymmetricSignResponse, error)
 	// Decrypts data that was encrypted with a public key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey]
-	// corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// ASYMMETRIC_DECRYPT.
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey] corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] ASYMMETRIC_DECRYPT.
 	AsymmetricDecrypt(ctx context.Context, in *AsymmetricDecryptRequest, opts ...grpc.CallOption) (*AsymmetricDecryptResponse, error)
-	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that
-	// will be used in
-	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that will be used in [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 	//
 	// Returns an error if called on an asymmetric key.
 	UpdateCryptoKeyPrimaryVersion(ctx context.Context, in *UpdateCryptoKeyPrimaryVersionRequest, opts ...grpc.CallOption) (*CryptoKey, error)
-	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for
-	// destruction.
+	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for destruction.
 	//
-	// Upon calling this method,
-	// [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will
-	// be set to
+	// Upon calling this method, [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
-	// be set to a time 24 hours in the future, at which point the
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be changed to
-	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED],
-	// and the key material will be irrevocably destroyed.
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be set to a time 24
+	// hours in the future, at which point the [state][google.cloud.kms.v1.CryptoKeyVersion.state]
+	// will be changed to
+	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED], and the key
+	// material will be irrevocably destroyed.
 	//
-	// Before the
-	// [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is
-	// reached,
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
-	// may be called to reverse the process.
+	// Before the [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is reached,
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] may be called to reverse the process.
 	DestroyCryptoKeyVersion(ctx context.Context, in *DestroyCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
 	// Restore a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
 	// state.
 	//
-	// Upon restoration of the CryptoKeyVersion,
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
-	// be cleared.
+	// Upon restoration of the CryptoKeyVersion, [state][google.cloud.kms.v1.CryptoKeyVersion.state]
+	// will be set to [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be cleared.
 	RestoreCryptoKeyVersion(ctx context.Context, in *RestoreCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error)
 }
 
@@ -1910,6 +2270,15 @@ func (c *keyManagementServiceClient) ListCryptoKeys(ctx context.Context, in *Lis
 func (c *keyManagementServiceClient) ListCryptoKeyVersions(ctx context.Context, in *ListCryptoKeyVersionsRequest, opts ...grpc.CallOption) (*ListCryptoKeyVersionsResponse, error) {
 	out := new(ListCryptoKeyVersionsResponse)
 	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/ListCryptoKeyVersions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *keyManagementServiceClient) ListImportJobs(ctx context.Context, in *ListImportJobsRequest, opts ...grpc.CallOption) (*ListImportJobsResponse, error) {
+	out := new(ListImportJobsResponse)
+	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/ListImportJobs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1952,6 +2321,15 @@ func (c *keyManagementServiceClient) GetPublicKey(ctx context.Context, in *GetPu
 	return out, nil
 }
 
+func (c *keyManagementServiceClient) GetImportJob(ctx context.Context, in *GetImportJobRequest, opts ...grpc.CallOption) (*ImportJob, error) {
+	out := new(ImportJob)
+	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/GetImportJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *keyManagementServiceClient) CreateKeyRing(ctx context.Context, in *CreateKeyRingRequest, opts ...grpc.CallOption) (*KeyRing, error) {
 	out := new(KeyRing)
 	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/CreateKeyRing", in, out, opts...)
@@ -1973,6 +2351,24 @@ func (c *keyManagementServiceClient) CreateCryptoKey(ctx context.Context, in *Cr
 func (c *keyManagementServiceClient) CreateCryptoKeyVersion(ctx context.Context, in *CreateCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error) {
 	out := new(CryptoKeyVersion)
 	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/CreateCryptoKeyVersion", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *keyManagementServiceClient) ImportCryptoKeyVersion(ctx context.Context, in *ImportCryptoKeyVersionRequest, opts ...grpc.CallOption) (*CryptoKeyVersion, error) {
+	out := new(CryptoKeyVersion)
+	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/ImportCryptoKeyVersion", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *keyManagementServiceClient) CreateImportJob(ctx context.Context, in *CreateImportJobRequest, opts ...grpc.CallOption) (*ImportJob, error) {
+	out := new(ImportJob)
+	err := c.cc.Invoke(ctx, "/google.cloud.kms.v1.KeyManagementService/CreateImportJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2068,110 +2464,95 @@ type KeyManagementServiceServer interface {
 	ListCryptoKeys(context.Context, *ListCryptoKeysRequest) (*ListCryptoKeysResponse, error)
 	// Lists [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion].
 	ListCryptoKeyVersions(context.Context, *ListCryptoKeyVersionsRequest) (*ListCryptoKeyVersionsResponse, error)
+	// Lists [ImportJobs][google.cloud.kms.v1.ImportJob].
+	ListImportJobs(context.Context, *ListImportJobsRequest) (*ListImportJobsResponse, error)
 	// Returns metadata for a given [KeyRing][google.cloud.kms.v1.KeyRing].
 	GetKeyRing(context.Context, *GetKeyRingRequest) (*KeyRing, error)
-	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as
-	// well as its [primary][google.cloud.kms.v1.CryptoKey.primary]
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKey][google.cloud.kms.v1.CryptoKey], as well as its
+	// [primary][google.cloud.kms.v1.CryptoKey.primary] [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKey(context.Context, *GetCryptoKeyRequest) (*CryptoKey, error)
-	// Returns metadata for a given
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Returns metadata for a given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	GetCryptoKeyVersion(context.Context, *GetCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
-	// Returns the public key for the given
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
+	// Returns the public key for the given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. The
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN]
-	// or
+	// [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN] or
 	// [ASYMMETRIC_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_DECRYPT].
 	GetPublicKey(context.Context, *GetPublicKeyRequest) (*PublicKey, error)
-	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and
-	// Location.
+	// Returns metadata for a given [ImportJob][google.cloud.kms.v1.ImportJob].
+	GetImportJob(context.Context, *GetImportJobRequest) (*ImportJob, error)
+	// Create a new [KeyRing][google.cloud.kms.v1.KeyRing] in a given Project and Location.
 	CreateKeyRing(context.Context, *CreateKeyRingRequest) (*KeyRing, error)
-	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a
-	// [KeyRing][google.cloud.kms.v1.KeyRing].
+	// Create a new [CryptoKey][google.cloud.kms.v1.CryptoKey] within a [KeyRing][google.cloud.kms.v1.KeyRing].
 	//
 	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] and
 	// [CryptoKey.version_template.algorithm][google.cloud.kms.v1.CryptoKeyVersionTemplate.algorithm]
 	// are required.
 	CreateCryptoKey(context.Context, *CreateCryptoKeyRequest) (*CryptoKey, error)
-	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	// Create a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	//
 	// The server will assign the next sequential id. If unset,
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
 	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED].
 	CreateCryptoKeyVersion(context.Context, *CreateCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
+	// Imports a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] into an existing [CryptoKey][google.cloud.kms.v1.CryptoKey] using the
+	// wrapped key material provided in the request.
+	//
+	// The version ID will be assigned the next sequential id within the
+	// [CryptoKey][google.cloud.kms.v1.CryptoKey].
+	ImportCryptoKeyVersion(context.Context, *ImportCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
+	// Create a new [ImportJob][google.cloud.kms.v1.ImportJob] within a [KeyRing][google.cloud.kms.v1.KeyRing].
+	//
+	// [ImportJob.import_method][google.cloud.kms.v1.ImportJob.import_method] is required.
+	CreateImportJob(context.Context, *CreateImportJobRequest) (*ImportJob, error)
 	// Update a [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	UpdateCryptoKey(context.Context, *UpdateCryptoKeyRequest) (*CryptoKey, error)
-	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s
-	// metadata.
+	// Update a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s metadata.
 	//
 	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] may be changed between
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
-	// and
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED]
-	// using this method. See
-	// [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion]
-	// and
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
-	// to move between other states.
+	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] and
+	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED] using this
+	// method. See [DestroyCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.DestroyCryptoKeyVersion] and [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] to
+	// move between other states.
 	UpdateCryptoKeyVersion(context.Context, *UpdateCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
-	// Encrypts data, so that it can only be recovered by a call to
-	// [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt]. The
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
+	// Encrypts data, so that it can only be recovered by a call to [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
+	// The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
 	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Encrypt(context.Context, *EncryptRequest) (*EncryptResponse, error)
-	// Decrypts data that was protected by
-	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] must be
-	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
+	// Decrypts data that was protected by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt]. The [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// must be [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Decrypt(context.Context, *DecryptRequest) (*DecryptResponse, error)
-	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+	// Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 	// ASYMMETRIC_SIGN, producing a signature that can be verified with the public
-	// key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
+	// key retrieved from [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	AsymmetricSign(context.Context, *AsymmetricSignRequest) (*AsymmetricSignResponse, error)
 	// Decrypts data that was encrypted with a public key retrieved from
-	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey]
-	// corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// ASYMMETRIC_DECRYPT.
+	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey] corresponding to a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] with
+	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] ASYMMETRIC_DECRYPT.
 	AsymmetricDecrypt(context.Context, *AsymmetricDecryptRequest) (*AsymmetricDecryptResponse, error)
-	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that
-	// will be used in
-	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
+	// Update the version of a [CryptoKey][google.cloud.kms.v1.CryptoKey] that will be used in [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt].
 	//
 	// Returns an error if called on an asymmetric key.
 	UpdateCryptoKeyPrimaryVersion(context.Context, *UpdateCryptoKeyPrimaryVersionRequest) (*CryptoKey, error)
-	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for
-	// destruction.
+	// Schedule a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] for destruction.
 	//
-	// Upon calling this method,
-	// [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will
-	// be set to
+	// Upon calling this method, [CryptoKeyVersion.state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
-	// be set to a time 24 hours in the future, at which point the
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be changed to
-	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED],
-	// and the key material will be irrevocably destroyed.
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be set to a time 24
+	// hours in the future, at which point the [state][google.cloud.kms.v1.CryptoKeyVersion.state]
+	// will be changed to
+	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED], and the key
+	// material will be irrevocably destroyed.
 	//
-	// Before the
-	// [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is
-	// reached,
-	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
-	// may be called to reverse the process.
+	// Before the [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] is reached,
+	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion] may be called to reverse the process.
 	DestroyCryptoKeyVersion(context.Context, *DestroyCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
 	// Restore a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
 	// state.
 	//
-	// Upon restoration of the CryptoKeyVersion,
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] will be set to
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
-	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will
-	// be cleared.
+	// Upon restoration of the CryptoKeyVersion, [state][google.cloud.kms.v1.CryptoKeyVersion.state]
+	// will be set to [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
+	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be cleared.
 	RestoreCryptoKeyVersion(context.Context, *RestoreCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
 }
 
@@ -2229,6 +2610,24 @@ func _KeyManagementService_ListCryptoKeyVersions_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(KeyManagementServiceServer).ListCryptoKeyVersions(ctx, req.(*ListCryptoKeyVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KeyManagementService_ListImportJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListImportJobsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyManagementServiceServer).ListImportJobs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.kms.v1.KeyManagementService/ListImportJobs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyManagementServiceServer).ListImportJobs(ctx, req.(*ListImportJobsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2305,6 +2704,24 @@ func _KeyManagementService_GetPublicKey_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _KeyManagementService_GetImportJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetImportJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyManagementServiceServer).GetImportJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.kms.v1.KeyManagementService/GetImportJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyManagementServiceServer).GetImportJob(ctx, req.(*GetImportJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _KeyManagementService_CreateKeyRing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateKeyRingRequest)
 	if err := dec(in); err != nil {
@@ -2355,6 +2772,42 @@ func _KeyManagementService_CreateCryptoKeyVersion_Handler(srv interface{}, ctx c
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(KeyManagementServiceServer).CreateCryptoKeyVersion(ctx, req.(*CreateCryptoKeyVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KeyManagementService_ImportCryptoKeyVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportCryptoKeyVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyManagementServiceServer).ImportCryptoKeyVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.kms.v1.KeyManagementService/ImportCryptoKeyVersion",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyManagementServiceServer).ImportCryptoKeyVersion(ctx, req.(*ImportCryptoKeyVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KeyManagementService_CreateImportJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateImportJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyManagementServiceServer).CreateImportJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.kms.v1.KeyManagementService/CreateImportJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyManagementServiceServer).CreateImportJob(ctx, req.(*CreateImportJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2538,6 +2991,10 @@ var _KeyManagementService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _KeyManagementService_ListCryptoKeyVersions_Handler,
 		},
 		{
+			MethodName: "ListImportJobs",
+			Handler:    _KeyManagementService_ListImportJobs_Handler,
+		},
+		{
 			MethodName: "GetKeyRing",
 			Handler:    _KeyManagementService_GetKeyRing_Handler,
 		},
@@ -2554,6 +3011,10 @@ var _KeyManagementService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _KeyManagementService_GetPublicKey_Handler,
 		},
 		{
+			MethodName: "GetImportJob",
+			Handler:    _KeyManagementService_GetImportJob_Handler,
+		},
+		{
 			MethodName: "CreateKeyRing",
 			Handler:    _KeyManagementService_CreateKeyRing_Handler,
 		},
@@ -2564,6 +3025,14 @@ var _KeyManagementService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCryptoKeyVersion",
 			Handler:    _KeyManagementService_CreateCryptoKeyVersion_Handler,
+		},
+		{
+			MethodName: "ImportCryptoKeyVersion",
+			Handler:    _KeyManagementService_ImportCryptoKeyVersion_Handler,
+		},
+		{
+			MethodName: "CreateImportJob",
+			Handler:    _KeyManagementService_CreateImportJob_Handler,
 		},
 		{
 			MethodName: "UpdateCryptoKey",

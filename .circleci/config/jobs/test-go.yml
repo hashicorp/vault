@@ -5,8 +5,6 @@ steps:
   - run:
       name: Allow circleci user to restore Go modules cache
       command: |
-        set -eux -o pipefail
-
         sudo mkdir /go
         sudo chown -R circleci:circleci /go
   - restore_go_cache

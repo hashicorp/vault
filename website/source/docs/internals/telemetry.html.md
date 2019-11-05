@@ -395,6 +395,26 @@ Number of incidences where the starting Merkle Tree index used to begin streamin
 
 **[S]** Summary (Milliseconds): Time taken to perform a Merkle Tree based synchronization using the last delta generated between the clusters participating in replication
 
+### replication.merkle.commit_index
+
+**[G]** Gauge (Logical Sequence Number): The last committed index in the Merkle Tree.
+
+### replication.wal.last_wal
+
+**[G]** Gauge (Logical Sequence Number): The index of the last WAL
+
+### replication.wal.last_dr_wal
+
+**[G]** Gauge (Logical Sequence Number): The index of the last DR WAL
+
+### replication.wal.last_performance_wal
+
+**[G]** Gauge (Logical Sequence Number): The index of the last Performance WAL
+
+### replication.fsm.last_remote_wal
+
+**[G]** Gauge (Logical Sequence Number): The index of the last remote WAL
+
 ## Secrets Engines Metrics
 
 These metrics relate to the supported [secrets engines][secrets-engines].

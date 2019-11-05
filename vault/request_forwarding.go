@@ -189,7 +189,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	if c.ha == nil || c.clusterListener == nil {
+	if c.ha == nil || c.getClusterListener() == nil {
 		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
@@ -199,21 +199,22 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return err
 	}
 
-	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
+	handler, err := NewRequestForwardingHandler(c, c.getClusterListener().Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
 	if err != nil {
 		return err
 	}
 
-	c.clusterListener.AddHandler(consts.RequestForwardingALPN, handler)
+	c.getClusterListener().AddHandler(consts.RequestForwardingALPN, handler)
 
 	return nil
 }
 
 func (c *Core) stopForwarding() {
-	if c.clusterListener != nil {
-		c.clusterListener.StopHandler(consts.RequestForwardingALPN)
-		c.clusterListener.StopHandler(consts.PerfStandbyALPN)
+	if c.getClusterListener() != nil {
+		c.getClusterListener().StopHandler(consts.RequestForwardingALPN)
+		c.getClusterListener().StopHandler(consts.PerfStandbyALPN)
 	}
+	c.removeAllPerfStandbySecondaries()
 }
 
 // refreshRequestForwardingConnection ensures that the client/transport are
@@ -246,8 +247,9 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		return errors.New("no request forwarding cluster certificate found")
 	}
 
-	if c.clusterListener != nil {
-		c.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
+	clusterListener := c.getClusterListener()
+	if clusterListener != nil {
+		clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
 			core: c,
 		})
 	}
@@ -301,8 +303,9 @@ func (c *Core) clearForwardingClients() {
 	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
 
-	if c.clusterListener != nil {
-		c.clusterListener.RemoveClient(consts.RequestForwardingALPN)
+	clusterListener := c.getClusterListener()
+	if clusterListener != nil {
+		clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }

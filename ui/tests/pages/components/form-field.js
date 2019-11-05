@@ -32,7 +32,7 @@ export default {
     input: fillable('input'),
     select: fillable('select'),
     textarea: fillable('textarea'),
-    change: triggerable('keyup', 'input'),
+    change: triggerable('keyup', '.input'),
     inputValue: value('input'),
     textareaValue: value('textarea'),
     inputChecked: attribute('checked', 'input[type=checkbox]'),

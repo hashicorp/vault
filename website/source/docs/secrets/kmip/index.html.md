@@ -20,7 +20,7 @@ its storage and lifecycle to a key management server.
 ## Setup
 
 The KMIP secrets engine must be configured before it can start accepting KMIP
-requests. 
+requests.
 
 1. Enable the KMIP secrets engine
 
@@ -28,12 +28,12 @@ requests.
     $ vault secrets enable kmip
     Success! Enabled the kmip secrets engine at: kmip/
     ```
-    
+
 1. Configure the secrets engine with the desired listener addresses to use and
 TLS parameters, or leave unwritten to use default values
 
     ```text
-    $ vault write kmip/config listen_addrs=0.0.0.0:5696 
+    $ vault write kmip/config listen_addrs=0.0.0.0:5696
     ```
 
 ## Usage
@@ -56,15 +56,15 @@ allowed operations for it.
     $ vault write -f kmip/scope/my-service             
     Success! Data written to: kmip/scope/my-service
     ```
-    
+
 1. Create a role within the scope, specifying the set of operations to allow or
 deny.
 
     ```text
-    $ vault write kmip/scope/my-service/role/admin operation_all=true 
+    $ vault write kmip/scope/my-service/role/admin operation_all=true
       Success! Data written to: kmip/scope/my-service/role/admin
     ```
-    
+
 ### Client Certificate Generation
 
 Once a scope and role has been created, client certificates can be generated for
@@ -164,6 +164,12 @@ Pseudo-operations:
 operation_all
 operation_none
 ```
+
+## Learn
+
+Refer to the [KMIP Secrets Engine](https://learn.hashicorp.com/vault/secrets-management/kmip-engine)
+guide for a step-by-step tutorial.
+
 
 [kmip-spec]: http://docs.oasis-open.org/kmip/spec/v1.4/kmip-spec-v1.4.html
 [kmip-ops]: http://docs.oasis-open.org/kmip/spec/v1.4/os/kmip-spec-v1.4-os.html#_Toc490660840

@@ -45,8 +45,8 @@ func (b *backend) pathKeys() *framework.Path {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
-The type of key to create. Currently, "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), 'ed25519' (asymmetric), 'rsa-2048' (asymmetric), 'rsa-4096'
+The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
+(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
 (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
@@ -139,12 +139,18 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		AllowPlaintextBackup: allowPlaintextBackup,
 	}
 	switch keyType {
+	case "aes128-gcm96":
+		polReq.KeyType = keysutil.KeyType_AES128_GCM96
 	case "aes256-gcm96":
 		polReq.KeyType = keysutil.KeyType_AES256_GCM96
 	case "chacha20-poly1305":
 		polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 	case "ecdsa-p256":
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
+	case "ecdsa-p384":
+		polReq.KeyType = keysutil.KeyType_ECDSA_P384
+	case "ecdsa-p521":
+		polReq.KeyType = keysutil.KeyType_ECDSA_P521
 	case "ed25519":
 		polReq.KeyType = keysutil.KeyType_ED25519
 	case "rsa-2048":
@@ -155,7 +161,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, upserted, err := b.lm.GetPolicy(ctx, polReq)
+	p, upserted, err := b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +193,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -256,14 +262,14 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	switch p.Type {
-	case keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
 			retKeys[k] = v.DeprecatedCreationTime
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -277,6 +283,10 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			switch p.Type {
 			case keysutil.KeyType_ECDSA_P256:
 				key.Name = elliptic.P256().Params().Name
+			case keysutil.KeyType_ECDSA_P384:
+				key.Name = elliptic.P384().Params().Name
+			case keysutil.KeyType_ECDSA_P521:
+				key.Name = elliptic.P521().Params().Name
 			case keysutil.KeyType_ED25519:
 				if p.Derived {
 					if len(context) == 0 {

@@ -1,94 +1,93 @@
 {{#popup-menu name="role-ssh-nav"}}
-  <nav class="menu">
-    <ul class="menu-list">
-      {{#if (eq item.keyType 'otp')}}
-        {{#if item.generatePath.isPending}}
+  <Confirm as |c|>
+    <nav class="menu">
+      <ul class="menu-list">
+        {{#if (eq item.keyType 'otp')}}
+          {{#if item.generatePath.isPending}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else if item.canGenerate}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-ssh-link="generate"}}
+                Generate Credentials
+              {{/link-to}}
+            </li>
+          {{/if}}
+        {{else if (eq item.keyType 'ca')}}
+          {{#if item.signPath.isPending}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else if item.canGenerate}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets.backend.sign" item.id data-test-role-ssh-link="generate"}}
+                Sign Keys
+              {{/link-to}}
+            </li>
+          {{/if}}
+        {{/if}}
+        {{#if item.canEditZeroAddress}}
+          {{#if item.zeroAddress}}
+            <li class="action">
+              <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
+                {{if (get this (concat "loading-" item.id)) 'is-loading'}} " {{action "toggleZeroAddress" item backendModel}}>
+                Disable Zero Address
+              </button>
+            </li>
+          {{else}}
+            <li class="action">
+              <button
+                type="button"
+                disabled={{get this (concat "loading-" item.id)}}
+                class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
+                {{action "toggleZeroAddress" item backendModel}}
+              >
+                Enable Zero Address
+              </button>
+            </li>
+          {{/if}}
+        {{/if}}
+        {{#if item.updatePath.isPending}}
           <li class="action">
             <button disabled type="button" class="link button is-loading is-transparent">
               loading
             </button>
           </li>
-        {{else if item.canGenerate}}
-          <li class="action">
-            {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-ssh-link="generate"}}
-              Generate Credentials
-            {{/link-to}}
-          </li>
-        {{/if}}
-      {{else if (eq item.keyType 'ca')}}
-        {{#if item.signPath.isPending}}
           <li class="action">
             <button disabled type="button" class="link button is-loading is-transparent">
               loading
-            </button>
-          </li>
-        {{else if item.canGenerate}}
-          <li class="action">
-            {{#link-to "vault.cluster.secrets.backend.sign" item.id data-test-role-ssh-link="generate"}}
-              Sign Keys
-            {{/link-to}}
-          </li>
-        {{/if}}
-      {{/if}}
-      {{#if item.canEditZeroAddress}}
-        {{#if item.zeroAddress}}
-          <li class="action">
-            <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
-              {{if (get this (concat "loading-" item.id)) 'is-loading'}} " {{action "toggleZeroAddress" item backendModel}}>
-              Disable Zero Address
             </button>
           </li>
         {{else}}
-          <li class="action">
-            <button
-              type="button"
-              disabled={{get this (concat "loading-" item.id)}}
-              class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
-              {{action "toggleZeroAddress" item backendModel}}
-            >
-              Enable Zero Address
-            </button>
-          </li>
+          {{#if item.canRead}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-ssh-link="show"}}
+                Details
+              {{/link-to}}
+            </li>
+          {{/if}}
+          {{#if item.canEdit}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-ssh-link="edit"}}
+                Edit
+              {{/link-to}}
+            </li>
+          {{/if}}
+          {{#if item.canDelete}}
+            <li class="action">
+              <c.Message
+                @id={{item.id}}
+                @onConfirm={{action "delete" item}}
+                data-test-ssh-role-delete={{item.id}}/>
+            </li>
+          {{/if}}
         {{/if}}
-      {{/if}}
-      {{#if item.updatePath.isPending}}
-        <li class="action">
-          <button disabled type="button" class="link button is-loading is-transparent">
-            loading
-          </button>
-        </li>
-        <li class="action">
-          <button disabled type="button" class="link button is-loading is-transparent">
-            loading
-          </button>
-        </li>
-      {{else}}
-        {{#if item.canRead}}
-          <li class="action">
-            {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-ssh-link="show"}}
-              Details
-            {{/link-to}}
-          </li>
-        {{/if}}
-        {{#if item.canEdit}}
-          <li class="action">
-            {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-ssh-link="edit"}}
-              Edit
-            {{/link-to}}
-          </li>
-        {{/if}}
-        {{#if item.canDelete}}
-          <li class="action">
-            <ConfirmAction
-              @buttonClasses="link is-destroy"
-              @onConfirmAction={{action "delete" item}}
-              data-test-ssh-role-delete={{item.id}}
-            >
-              Delete
-            </ConfirmAction>
-          </li>
-        {{/if}}
-      {{/if}}
-    </ul>
-  </nav>
+      </ul>
+    </nav>
+  </Confirm>
 {{/popup-menu}}

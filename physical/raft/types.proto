@@ -9,13 +9,13 @@ message LogOperation {
 	uint32 op_type = 1;
 
 	// Flags is an opaque value, currently unused. Reserved.
-	uint64 flags   = 2;
+	uint64 flags = 2;
 
 	// Key that is being affected
-	string key	 = 3;
+	string key = 3;
 
 	// Value is optional, corresponds to the key
-	bytes  value   = 4;
+	bytes value = 4;
 }
 
 message LogData {

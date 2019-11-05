@@ -37,7 +37,7 @@ const (
 	ec2EntityType                 = "ec2_instance"
 )
 
-func pathLogin(b *backend) *framework.Path {
+func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
@@ -109,9 +109,13 @@ needs to be supplied along with 'identity' parameter.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLoginUpdate,
-			logical.AliasLookaheadOperation: b.pathLoginUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLoginUpdate,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLoginUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -607,8 +611,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(roleEntry.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	if roleEntry.AuthType != ec2AuthType {
@@ -1218,8 +1228,14 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
-		return nil, logical.ErrPermissionDenied
+	if len(roleEntry.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	if roleEntry.AuthType != iamAuthType {
@@ -1423,7 +1439,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	return &entity, nil
 }
 
-func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
+func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
 		if strings.EqualFold(iamServerIdHeader, k) {

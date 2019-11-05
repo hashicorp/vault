@@ -1,39 +1,39 @@
 {{#popup-menu name="alias-menu"}}
-  {{#with params.firstObject as |item|}}
-  <nav class="menu">
-    <ul class="menu-list">
-      <li class="action">
-        {{#link-to "vault.cluster.access.identity.aliases.show" (pluralize item.parentType) item.id "details"}}
-          Details
-        {{/link-to}}
-      </li>
-      {{#if item.updatePath.isPending}}
-        <li class="action">
-          <button disabled type="button" class="link button is-loading is-transparent">
-            loading
-          </button>
-        </li>
-      {{else}}
-        {{#if item.canEdit}}
+  <Confirm as |c|>
+    {{#with params.firstObject as |item|}}
+      <nav class="menu">
+        <ul class="menu-list">
           <li class="action">
-            {{#link-to "vault.cluster.access.identity.aliases.edit" (pluralize item.parentType) item.id}}
-              Edit
+            {{#link-to "vault.cluster.access.identity.aliases.show" (pluralize item.parentType) item.id "details"}}
+              Details
             {{/link-to}}
           </li>
-        {{/if}}
-        {{#if item.canDelete}}
-          <li class="action">
-            <ConfirmAction
-              @buttonClasses="link is-destroy"
-              @onConfirmAction={{action "performTransaction" item}}
-              data-test-item-delete="true"
-            >
-              Delete
-            </ConfirmAction>
-          </li>
-        {{/if}}
-      {{/if}}
-    </ul>
-  </nav>
-{{/with}}
+          {{#if item.updatePath.isPending}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else}}
+            {{#if item.canEdit}}
+              <li class="action">
+                {{#link-to "vault.cluster.access.identity.aliases.edit" (pluralize item.parentType) item.id}}
+                  Edit
+                {{/link-to}}
+              </li>
+            {{/if}}
+            {{#if item.canDelete}}
+              <li class="action">
+                <c.Message
+                  @id={{item.id}}
+                  @onConfirm={{action "performTransaction" item}}
+                  data-test-item-delete
+                  />
+              </li>
+            {{/if}}
+          {{/if}}
+        </ul>
+      </nav>
+    {{/with}}
+  </Confirm>
 {{/popup-menu}}

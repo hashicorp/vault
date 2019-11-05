@@ -43,6 +43,7 @@
     <ToolbarLink
       @type="add"
       @params={{array "scope.roles.create"}}
+      data-test-role-create
     >
       Create role
     </ToolbarLink>
@@ -63,7 +64,7 @@
       <Item.content>
         <Icon @glyph="user-plain" class="has-text-grey-light" @size="l" />{{list.item.id}}
       </Item.content>
-      <Item.menu>
+      <Item.menu as |m|>
         <li class="action">
           {{#link-to "credentials" this.scope list.item.id class="is-block"}}
             View credentials
@@ -83,9 +84,11 @@
         {{/if}}
         {{#if list.item.updatePath.canDelete}}
           <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <ConfirmAction
-              @buttonClasses="link is-destroy"
-              @onConfirmAction={{action
+            <m.Message
+              @id={{list.item.id}}
+              @triggerText='Delete role'
+              @message={{concat "Are you sure you want to delete " list.item.id "?"}}
+              @onConfirm={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
@@ -95,12 +98,8 @@
                   (action "refresh")
                 )
               }}
-              @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
-              @cancelButtonText="Cancel"
               data-test-scope-delete="true"
-              >
-                Delete role
-            </ConfirmAction>
+            />
           </MenuLoader>
         {{/if}}
       </Item.menu>

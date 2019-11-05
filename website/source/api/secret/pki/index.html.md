@@ -469,7 +469,7 @@ can be set in a CSR are supported.
   or `ec`.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
-  changed to a valid value if the `key_type` is `ec`.
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -523,7 +523,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/pki/intermediate/generate/internal
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/exported
 ```
 
 ```json
@@ -817,9 +817,7 @@ request is denied.
   1024 bits for RSA keys).
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use for the
-  generated keys. This will need to be changed for `ec` keys. See
-  https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
-  lengths for `ec`.
+  generated keys. This will need to be changed for `ec` keys, e.g., 224 or 521.
 
 - `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
   Specifies the allowed key usage constraint on issued certificates. Valid 
@@ -1084,8 +1082,8 @@ overwrite the existing cert/key with new values.
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
 
-- `key_bits` `(int: 2048)` – Specifies the number of bits to use. Must be
-  changed to a valid value if the `key_type` is `ec`.
+- `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `max_path_length` `(int: -1)` – Specifies the maximum path length to encode in
   the generated certificate. `-1` means no limit. Unless the signing certificate
