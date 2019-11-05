@@ -6,6 +6,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* api: Fix Go API using lease revocation via URL instead of body [GH-7777]
 * core: Don't allow registering a non-root zero TTL token lease. This is purely
   defense in depth as the lease would be revoked immediately anyways, but
   there's no real reason to allow registration. [GH-7524]
