@@ -772,17 +772,18 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID)
 		if err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
+			//c.tokenStore.revokeOrphan(ctx, te.ID)
 			return nil, nil, ErrInternalError
 		}
 
 		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
+		c.logger.Warn("###### ABOUT REGISTER AUTH", "te.ID", te.ID, "auth", auth.ClientToken)
 		if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
 			Path:        resp.Auth.CreationPath,
 			NamespaceID: ns.ID,
 		}, resp.Auth); err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
-			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
+			//c.tokenStore.revokeOrphan(ctx, te.ID)
+			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err, "orphan_ID", te.ID)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -1097,7 +1098,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 
 	// Register with the expiration manager
 	if err := c.expiration.RegisterAuth(ctx, &te, auth); err != nil {
-		c.tokenStore.revokeOrphan(ctx, te.ID)
+		//c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register token lease", "request_path", path, "error", err)
 		return ErrInternalError
 	}

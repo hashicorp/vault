@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -1098,11 +1100,40 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	return le.LeaseID, nil
 }
 
+//// Manual flag for disabling RegisterAuth function
+//// and force failure
+var ShouldRegisterAuth int64 = 1
+
+func init() {
+	ch := make(chan os.Signal, 5)
+	go func() {
+		for c := range ch {
+			var newEnable int64 = 1
+			switch c {
+			case syscall.SIGUSR1:
+				newEnable = 0
+			case syscall.SIGUSR2:
+				newEnable = 1
+			case syscall.SIGQUIT:
+				newEnable = 1 - atomic.LoadInt64(&ShouldRegisterAuth)
+			}
+
+			atomic.StoreInt64(&ShouldRegisterAuth, newEnable)
+			fmt.Println("##### CHANGED REGISTER AUTH; enabled=", newEnable != 0)
+		}
+	}()
+	signal.Notify(ch, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGQUIT)
+}
+
 // RegisterAuth is used to take an Auth response with an associated lease.
 // The token does not get a LeaseID, but the lease management is handled by
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
+
+	if atomic.LoadInt64(&ShouldRegisterAuth) == 0 {
+		return fmt.Errorf("registrating auth not enabled: te.ID=%v auth.ClientToken=%v", te.ID, auth.ClientToken)
+	}
 
 	if auth.ClientToken == "" {
 		return fmt.Errorf("cannot register an auth lease with an empty token")

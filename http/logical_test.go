@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -342,4 +343,61 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
 		t.Fatalf("bad response: %s", string(bodyRaw[:]))
 	}
+}
+
+func TestLogical_CreateToken_Failure(t *testing.T) {
+	defer func() {
+		vault.ShouldRegisterAuth = 1
+	}()
+
+	core, _, root := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, root)
+
+	// CREATE TOKEN
+	resp := testHttpPut(t, root, addr+"/v1/auth/token/create", map[string]interface{}{
+		"policies": []string{"root"},
+	})
+
+	testResponseStatus(t, resp, 200)
+
+	t.Logf("ROOT TOKEN: %v", root)
+
+	var actual map[string]interface{}
+	testResponseBody(t, resp, &actual)
+	tokenWithRootPolicy := actual["auth"].(map[string]interface{})["client_token"].(string)
+	if tokenWithRootPolicy == "" {
+		t.Fatalf("expected a client_token string but not found\n%#v", actual)
+	}
+	t.Logf("NEW TOKEN:  %v", tokenWithRootPolicy)
+
+	// Use new token to create yet a new token
+	// this should succeed
+	t.Run("basic create", func(t *testing.T) {
+		resp := testHttpPut(t, tokenWithRootPolicy, addr+"/v1/auth/token/create", nil)
+		testResponseStatus(t, resp, 200)
+	})
+
+	// try again but force fail RegisterAuth
+	t.Run("run a failing request", func(t *testing.T) {
+		atomic.StoreInt64(&vault.ShouldRegisterAuth, 0)
+		defer atomic.StoreInt64(&vault.ShouldRegisterAuth, 1)
+
+		resp := testHttpPut(t, tokenWithRootPolicy, addr+"/v1/auth/token/create", nil)
+		testResponseStatus(t, resp, 500)
+	})
+
+	// try again after failed request
+	t.Run("lookup token after failed request", func(t *testing.T) {
+		resp := testHttpPost(t, root, addr+"/v1/auth/token/lookup", map[string]interface{}{
+			"token": tokenWithRootPolicy,
+		})
+		testResponseStatus(t, resp, 200)
+	})
+
+	t.Run("create another token after failed request", func(t *testing.T) {
+		resp := testHttpPut(t, tokenWithRootPolicy, addr+"/v1/auth/token/create", nil)
+		testResponseStatus(t, resp, 200)
+	})
 }
