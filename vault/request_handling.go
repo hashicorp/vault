@@ -869,6 +869,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		case logical.TokenTypeBatch:
 		case logical.TokenTypeService:
 			if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
+				TTL:         auth.TTL,
+				Policies:    auth.TokenPolicies,
 				Path:        resp.Auth.CreationPath,
 				NamespaceID: ns.ID,
 			}, resp.Auth); err != nil {
@@ -1182,6 +1184,11 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		NamespaceID:    ns.ID,
 		ExplicitMaxTTL: auth.ExplicitMaxTTL,
 		Type:           auth.TokenType,
+	}
+
+	if te.TTL == 0 && (len(te.Policies) != 1 || te.Policies[0] != "root") {
+		c.logger.Error("refusing to create a non-root zero TTL token")
+		return ErrInternalError
 	}
 
 	if err := c.tokenStore.create(ctx, &te); err != nil {
