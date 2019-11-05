@@ -6,10 +6,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/vault/seal/shamir"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/vault/seal/shamir"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -923,7 +924,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return err
 	}
 
-	sd, ok := c.ha.(physical.ServiceDiscovery)
+	sd, ok := c.serviceDiscovery()
 	if ok {
 		if err := sd.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {
@@ -959,7 +960,7 @@ func (c *Core) clearLeader(uuid string) error {
 	err := c.barrier.Delete(context.Background(), key)
 
 	// Advertise ourselves as a standby
-	sd, ok := c.ha.(physical.ServiceDiscovery)
+	sd, ok := c.serviceDiscovery()
 	if ok {
 		if err := sd.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {

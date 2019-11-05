@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
 	"io/ioutil"
 	"net"
@@ -20,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/atomic"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
@@ -1473,21 +1474,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
 
-	// If the backend supports service discovery, run service discovery
-	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
-		if ok {
-			activeFunc := func() bool {
-				if isLeader, _, _, err := core.Leader(); err == nil {
-					return isLeader
-				}
-				return false
+	// If service discovery is available, run service discovery
+	sd, ok := coreConfig.ServiceDiscovery()
+	if ok {
+		activeFunc := func() bool {
+			if isLeader, _, _, err := core.Leader(); err == nil {
+				return isLeader
 			}
-
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
-				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
-				return 1
-			}
+			return false
+		}
+		if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+			return 1
 		}
 	}
 

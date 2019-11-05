@@ -596,6 +596,19 @@ func (c *CoreConfig) Clone() *CoreConfig {
 	}
 }
 
+// ServiceDiscovery returns the config's ServiceDiscovery, if it exists.
+func (c *CoreConfig) ServiceDiscovery() (physical.ServiceDiscovery, bool) {
+
+	// Check if HAPhysical is configured and implements ServiceDiscovery
+	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
+		sd, ok := c.HAPhysical.(physical.ServiceDiscovery)
+		return sd, ok
+	}
+
+	// No service discovery is configured
+	return nil, false
+}
+
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -852,6 +865,19 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	return c, nil
+}
+
+// serviceDiscovery returns the core's ServiceDiscovery, if it exists.
+func (c *Core) serviceDiscovery() (physical.ServiceDiscovery, bool) {
+
+	// Check if HAPhysical implements ServiceDiscovery
+	if c.ha != nil {
+		sd, ok := c.ha.(physical.ServiceDiscovery)
+		return sd, ok
+	}
+
+	// No service discovery
+	return nil, false
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -1347,13 +1373,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
-	if c.ha != nil {
-		sd, ok := c.ha.(physical.ServiceDiscovery)
-		if ok {
-			if err := sd.NotifySealedStateChange(); err != nil {
-				if c.logger.IsWarn() {
-					c.logger.Warn("failed to notify unsealed status", "error", err)
-				}
+	sd, ok := c.serviceDiscovery()
+	if ok {
+		if err := sd.NotifySealedStateChange(); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
 		}
 	}
@@ -1651,13 +1675,11 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		return err
 	}
 
-	if c.ha != nil {
-		sd, ok := c.ha.(physical.ServiceDiscovery)
-		if ok {
-			if err := sd.NotifySealedStateChange(); err != nil {
-				if c.logger.IsWarn() {
-					c.logger.Warn("failed to notify sealed status", "error", err)
-				}
+	sd, ok := c.serviceDiscovery()
+	if ok {
+		if err := sd.NotifySealedStateChange(); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify sealed status", "error", err)
 			}
 		}
 	}
