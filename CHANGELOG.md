@@ -1,5 +1,13 @@
 ## 1.3 (unreleased)
 
+CHANGES:
+
+* Secondary cluster activation: There has been a change to the way that activating
+  performance and DR secondary clusters works when using public keys for
+  encryption of the parameters rather than a wrapping token. This flow was
+  experimental and never documented. It is now officially supported and
+  documented but is not backwards compatible with older Vault releases.
+
 IMPROVEMENTS:
 
 * metrics: Upgrade DataDog library to improve performance [GH-7794]
@@ -15,6 +23,7 @@ BUG FIXES:
 ## 1.3-beta1 (October 30th, 2019)
 
 CHANGES:
+
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
    the full TLS 1.2 cipher suite list by default. Although this port is only
    used for Vault-to-Vault communication and would always pick a strong cipher,
@@ -196,6 +205,7 @@ BUG FIXES:
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters
    were not being applied to tokens generated using the OIDC login flow
    [JWT-67]
+ * raft: Fix an incorrect JSON tag on `leader_ca_cert` in the join request [GH-7393]
  * seal/transit: Allow using Vault Agent for transit seal operations [GH-7441]
  * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a

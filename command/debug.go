@@ -814,7 +814,8 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			if err != nil {
 				c.captureError("replication-status", err)
 			}
-			if replicationEntry := secret.Data; replicationEntry != nil {
+			if secret != nil && secret.Data != nil {
+				replicationEntry := secret.Data
 				replicationEntry["timestamp"] = time.Now().UTC()
 				c.replicationStatusCollection = append(c.replicationStatusCollection, replicationEntry)
 			}
