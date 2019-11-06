@@ -40,22 +40,16 @@ jobs:
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
     - checkout
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
           cd ui
           yarn install
           npm rebuild node-sass
         name: Install UI dependencies
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - save_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
   build-go-dev:
@@ -110,16 +104,10 @@ jobs:
     resource_class: medium+
     steps:
     - checkout
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
-    - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - run:
         command: |
           set -x
@@ -157,7 +145,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -394,11 +382,11 @@ workflows:
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#         key: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #   save_yarn_cache:
 #     steps:
 #     - save_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#         key: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #         paths:
 #         - ui/node_modules
 #   setup-go:
@@ -473,16 +461,13 @@ workflows:
 #     executor: node
 #     steps:
 #     - checkout
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - restore_yarn_cache
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - run:
 #         command: |
 #           cd ui
 #           yarn install
 #           npm rebuild node-sass
 #         name: Install UI dependencies
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - save_yarn_cache
 #   pre-flight-checks:
 #     description: Ensures nothing obvious is broken for faster failures.
@@ -540,12 +525,9 @@ workflows:
 #     resource_class: medium+
 #     steps:
 #     - checkout
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - restore_yarn_cache
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - attach_workspace:
 #         at: .
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - run:
 #         command: |
 #           set -x
@@ -591,7 +573,7 @@ workflows:
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
-#     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#     yarn-lock: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #   images:
 #     node: node:10-buster
 # version: 2.1

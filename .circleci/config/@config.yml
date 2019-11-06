@@ -7,7 +7,7 @@ references:
 
   cache:
     go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
-    yarn-lock: &YARN_LOCK_CACHE_KEY yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+    yarn-lock: &YARN_LOCK_CACHE_KEY yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
 
 # more commands defined in commands/
 commands:
