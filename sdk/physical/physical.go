@@ -81,23 +81,19 @@ type ActiveFunction func() bool
 type SealedFunction func() bool
 type PerformanceStandbyFunction func() bool
 
-// ServiceDiscovery is an optional interface that an HABackend can implement.
-// If they do, the state of a backend is advertised to the service discovery
-// network.
+// ServiceDiscovery is an interface that advertises the state of Vault to a
+// service discovery network.
 type ServiceDiscovery interface {
-	// NotifyActiveStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that this Vault instance has changed
-	// its status to active or standby.
+	// NotifyActiveStateChange is used by Core to notify that this Vault
+	// instance has changed its status to active or standby.
 	NotifyActiveStateChange() error
 
-	// NotifySealedStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that Vault has changed its Sealed
-	// status to sealed or unsealed.
+	// NotifySealedStateChange is used by Core to notify that Vault has changed
+	// its Sealed status to sealed or unsealed.
 	NotifySealedStateChange() error
 
-	// NotifyPerformanceStandbyStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that this Vault instance has changed it
-	// status to performance standby or standby.
+	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
+	// Vault instance has changed it status to performance standby or standby.
 	NotifyPerformanceStandbyStateChange() error
 
 	// Run executes any background service discovery tasks until the

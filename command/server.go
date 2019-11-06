@@ -1475,8 +1475,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-	sd, ok := coreConfig.ServiceDiscovery()
-	if ok {
+	sd := coreConfig.ServiceDiscovery()
+	if sd != nil {
 		activeFunc := func() bool {
 			if isLeader, _, _, err := core.Leader(); err == nil {
 				return isLeader

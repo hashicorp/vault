@@ -192,6 +192,9 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
+	// serviceDiscovery is the ServiceDiscovery network
+	serviceDiscovery physical.ServiceDiscovery
+
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
 	underlyingPhysical physical.Backend
@@ -596,17 +599,19 @@ func (c *CoreConfig) Clone() *CoreConfig {
 	}
 }
 
-// ServiceDiscovery returns the config's ServiceDiscovery, if it exists.
-func (c *CoreConfig) ServiceDiscovery() (physical.ServiceDiscovery, bool) {
+// ServiceDiscovery returns the config's ServiceDiscovery, or nil if it does
+// not exist.
+func (c *CoreConfig) ServiceDiscovery() physical.ServiceDiscovery {
 
 	// Check if HAPhysical is configured and implements ServiceDiscovery
 	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
-		sd, ok := c.HAPhysical.(physical.ServiceDiscovery)
-		return sd, ok
+		if sd, ok := c.HAPhysical.(physical.ServiceDiscovery); ok {
+			return sd
+		}
 	}
 
 	// No service discovery is configured
-	return nil, false
+	return nil
 }
 
 // NewCore is used to construct a new core
@@ -664,6 +669,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                      entCore{},
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
+		serviceDiscovery:             conf.ServiceDiscovery(),
 		underlyingPhysical:           conf.Physical,
 		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
@@ -865,19 +871,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	return c, nil
-}
-
-// serviceDiscovery returns the core's ServiceDiscovery, if it exists.
-func (c *Core) serviceDiscovery() (physical.ServiceDiscovery, bool) {
-
-	// Check if HAPhysical implements ServiceDiscovery
-	if c.ha != nil {
-		sd, ok := c.ha.(physical.ServiceDiscovery)
-		return sd, ok
-	}
-
-	// No service discovery
-	return nil, false
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -1373,9 +1366,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
-	sd, ok := c.serviceDiscovery()
-	if ok {
-		if err := sd.NotifySealedStateChange(); err != nil {
+	if c.serviceDiscovery != nil {
+		if err := c.serviceDiscovery.NotifySealedStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
@@ -1675,9 +1667,8 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		return err
 	}
 
-	sd, ok := c.serviceDiscovery()
-	if ok {
-		if err := sd.NotifySealedStateChange(); err != nil {
+	if c.serviceDiscovery != nil {
+		if err := c.serviceDiscovery.NotifySealedStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify sealed status", "error", err)
 			}
