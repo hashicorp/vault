@@ -37,7 +37,7 @@ authentications at the same path as their name, but this is not a requirement.
 To learn more about this authentication, use the built-in `path-help` command:
 
 ```sh
-$ vault path-help auth/my-auth
+$ vault path-help sys/auth/my-auth
 # ...
 ```
 
