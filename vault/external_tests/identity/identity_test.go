@@ -1,9 +1,10 @@
 package identity
 
 import (
+	"testing"
+
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-	"testing"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"

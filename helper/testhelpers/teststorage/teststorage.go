@@ -2,12 +2,13 @@ package teststorage
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/physical/raft"
 	"io/ioutil"
 	"os"
 	realtesting "testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"

@@ -1,10 +1,11 @@
 package misc
 
 import (
-	"github.com/go-test/deep"
-	"go.uber.org/atomic"
 	"path"
 	"testing"
+
+	"github.com/go-test/deep"
+	"go.uber.org/atomic"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"

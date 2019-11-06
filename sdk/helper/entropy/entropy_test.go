@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/errwrap"
 	"testing"
+
+	"github.com/hashicorp/errwrap"
 )
 
 type mockSourcer struct{}

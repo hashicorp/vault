@@ -2,9 +2,10 @@ package vault
 
 import (
 	"context"
-	"github.com/hashicorp/vault/vault/seal"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/vault/seal"
 
 	log "github.com/hashicorp/go-hclog"
 
