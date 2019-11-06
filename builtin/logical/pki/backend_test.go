@@ -2170,7 +2170,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
-		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"alt_names":   "foobar.com,foo.foobar.com,bar.foobar.com",
 		"ttl":         "1h",
 	})
 	if err != nil {
@@ -2185,9 +2185,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 
@@ -2272,9 +2273,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 1 to check:\n%s", certStr)
@@ -2299,9 +2301,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 2 to check:\n%s", certStr)
@@ -2326,9 +2329,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 3 to check:\n%s", certStr)

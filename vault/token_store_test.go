@@ -55,11 +55,15 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 			Operation:   logical.UpdateOperation,
 			Path:        "create",
 			ClientToken: root,
+			Data: map[string]interface{}{
+				"ttl": "600s",
+			},
 		}
 		// Supplying token ID forces SHA1 hashing to be used
 		if i%2 == 0 {
 			tokenReq.Data = map[string]interface{}{
-				"id": "testroot",
+				"id":  "testroot",
+				"ttl": "600s",
 			}
 		}
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
@@ -111,6 +115,9 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 			Operation:   logical.UpdateOperation,
 			Path:        "create",
 			ClientToken: root,
+			Data: map[string]interface{}{
+				"ttl": "600s",
+			},
 		}
 
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
@@ -119,7 +126,8 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		// Supplying token ID forces SHA1 hashing to be used
 		if i%3 == 0 {
 			tokenReq.Data = map[string]interface{}{
-				"id": "testroot",
+				"id":  "testroot",
+				"ttl": "600s",
 			}
 		}
 
@@ -540,15 +548,13 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
-	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
-}
-
 func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
+	t.Helper()
 	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
 }
 
 func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
+	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	if batch {
@@ -566,6 +572,7 @@ func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl str
 }
 
 func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request) *logical.Response {
+	t.Helper()
 	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
@@ -647,10 +654,6 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
 }
 
-func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
-}
-
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
@@ -727,7 +730,7 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "60s", []string{"foo"})
 	out, err := ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -765,7 +768,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	testKeys := []string{"token1", "token2", "token3", "token4"}
 	for _, key := range testKeys {
-		testMakeServiceTokenViaBackend(t, ts, root, key, "", []string{"foo"})
+		testMakeServiceTokenViaBackend(t, ts, root, key, "60s", []string{"foo"})
 	}
 
 	// Revoke root to make the number of accessors match
@@ -2125,7 +2128,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 	root := rootToken.ID
 
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
 
 	te, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
@@ -2147,7 +2150,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	te, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
 	if err != nil {
@@ -2201,8 +2204,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Now test without registering the tokens through the expiration manager
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
@@ -2239,8 +2242,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
 	req.Data = map[string]interface{}{
@@ -2291,7 +2294,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"foo"})
 
 	out, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {

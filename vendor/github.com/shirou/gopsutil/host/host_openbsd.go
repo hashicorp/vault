@@ -40,6 +40,11 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		ret.Hostname = hostname
 	}
 
+	kernelArch, err := kernelArch()
+	if err == nil {
+		ret.KernelArch = kernelArch
+	}
+
 	platform, family, version, err := PlatformInformation()
 	if err == nil {
 		ret.Platform = platform

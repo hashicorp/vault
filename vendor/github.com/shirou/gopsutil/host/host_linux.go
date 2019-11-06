@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/internal/common"
+	"golang.org/x/sys/unix"
 )
 
 type LSB struct {
@@ -53,6 +54,11 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 	kernelVersion, err := KernelVersion()
 	if err == nil {
 		ret.KernelVersion = kernelVersion
+	}
+
+	kernelArch, err := kernelArch()
+	if err == nil {
+		ret.KernelArch = kernelArch
 	}
 
 	system, role, err := Virtualization()
@@ -369,19 +375,12 @@ func KernelVersion() (version string, err error) {
 }
 
 func KernelVersionWithContext(ctx context.Context) (version string, err error) {
-	filename := common.HostProc("sys/kernel/osrelease")
-	if common.PathExists(filename) {
-		contents, err := common.ReadLines(filename)
-		if err != nil {
-			return "", err
-		}
-
-		if len(contents) > 0 {
-			version = contents[0]
-		}
+	var utsname unix.Utsname
+	err = unix.Uname(&utsname)
+	if err != nil {
+		return "", err
 	}
-
-	return version, nil
+	return string(utsname.Release[:bytes.IndexByte(utsname.Release[:], 0)]), nil
 }
 
 func getSlackwareVersion(contents []string) string {

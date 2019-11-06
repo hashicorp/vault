@@ -96,9 +96,9 @@ and consider if they're appropriate for your deployment.
     ```yaml
     # Extra Environment Variables are defined as key/value strings.
      extraEnvironmentVars:
-       GOOGLE_REGION: global,
-       GOOGLE_PROJECT: myproject,
-       GOOGLE_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
+       GOOGLE_REGION: global
+       GOOGLE_PROJECT: myproject
+       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
   * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
@@ -495,7 +495,7 @@ server:
     enabled: true
     
   ha:
-    enabled: false
+    enabled: true
     replicas: 5
 
     config: |

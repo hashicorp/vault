@@ -14,11 +14,12 @@ require (
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
+	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
+	github.com/armon/go-metrics v0.3.0
 	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
@@ -29,6 +30,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -40,6 +42,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap v3.0.2+incompatible
+	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
@@ -47,6 +50,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/hashicorp/consul-template v0.22.0
 	github.com/hashicorp/consul/api v1.1.0
 	github.com/hashicorp/errwrap v1.0.0
@@ -71,18 +75,18 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
 	github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
 	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190814210049-1ccb3dc10102
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20190815164639-5fa0eef3a023
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190826163451-8461c66275a9
 	github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 	github.com/hashicorp/vault/api v1.0.5-0.20191017194845-99f7184d3326
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191017211055-9bd3a27a36c4
+	github.com/hashicorp/vault/sdk v0.1.14-0.20191105202707-aebb13c5a343
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -95,7 +99,7 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/michaelklishin/rabbit-hole v1.5.0
+	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.0.0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -116,9 +120,9 @@ require (
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
-	github.com/shirou/gopsutil v0.0.0-20190731134726-d80c43f9c984
+	github.com/shirou/gopsutil v2.19.9+incompatible
+	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
-	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/bbolt v1.3.2

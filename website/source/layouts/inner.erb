@@ -1,8 +1,5 @@
 <% wrap_layout :layout do %>
-	<hashi-product-subnav project_site="true" current_path="<%= current_page.path %>" _data="<%= encode({
-	products: dato.enterprise_products.map(&:to_hash),
-	subnav: dato.vault_product_page.subnav.to_hash
-	}) %>"></hashi-product-subnav>
+	<%= partial "partials/subnav" %>
 
 	<div class="content-wrap g-container">
 		<div id="sidebar" role="complementary">

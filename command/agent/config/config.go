@@ -38,6 +38,7 @@ type Vault struct {
 	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
+	TLSServerName    string      `hcl:"tls_server_name"`
 }
 
 // Cache contains any configuration needed for Cache mode

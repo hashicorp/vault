@@ -18,13 +18,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/go-uuid"
+	memdb "github.com/hashicorp/go-memdb"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -894,7 +894,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Attempt mount
 	if err := b.Core.mount(ctx, me); err != nil {
-		b.Backend.Logger().Error("mount failed", "path", me.Path, "error", err)
+		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 
@@ -957,7 +957,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return nil, nil
 	}
 
-	prefix, found := b.Core.router.MatchingStoragePrefixByAPIPath(ctx, path)
+	_, found := b.Core.router.MatchingStoragePrefixByAPIPath(ctx, path)
 	if !found {
 		b.Backend.Logger().Error("unable to find storage for path", "path", path)
 		return handleError(fmt.Errorf("unable to find storage for path: %q", path))
@@ -969,8 +969,14 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return handleError(err)
 	}
 
+	// Get the view path if available
+	var viewPath string
+	if entry != nil {
+		viewPath = entry.ViewPath()
+	}
+
 	// Remove from filtered mounts
-	if err := b.Core.removePrefixFromFilteredPaths(ctx, prefix); err != nil {
+	if err := b.Core.removePathFromFilteredPaths(ctx, ns.Path+path, viewPath); err != nil {
 		b.Backend.Logger().Error("filtered path removal failed", path, "error", err)
 		return handleError(err)
 	}
@@ -981,6 +987,11 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1000,8 +1011,20 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.PerfStandby()); err != nil {
 		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
+		return handleError(err)
+	}
+
+	// Get the view path if available
+	var viewPath string
+	if entry != nil {
+		viewPath = entry.ViewPath()
+	}
+
+	// Remove from filtered mounts and restart evaluation process
+	if err := b.Core.removePathFromFilteredPaths(ctx, ns.Path+fromPath, viewPath); err != nil {
+		b.Backend.Logger().Error("filtered path removal failed", fromPath, "error", err)
 		return handleError(err)
 	}
 
@@ -1823,7 +1846,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Attempt enabling
 	if err := b.Core.enableCredential(ctx, me); err != nil {
-		b.Backend.Logger().Error("enable auth mount failed", "path", me.Path, "error", err)
+		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1857,7 +1880,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 		return nil, nil
 	}
 
-	prefix, found := b.Core.router.MatchingStoragePrefixByAPIPath(ctx, fullPath)
+	_, found := b.Core.router.MatchingStoragePrefixByAPIPath(ctx, fullPath)
 	if !found {
 		b.Backend.Logger().Error("unable to find storage for path", "path", fullPath)
 		return handleError(fmt.Errorf("unable to find storage for path: %q", fullPath))
@@ -1869,8 +1892,14 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 		return handleError(err)
 	}
 
+	// Get the view path if available
+	var viewPath string
+	if entry != nil {
+		viewPath = entry.ViewPath()
+	}
+
 	// Remove from filtered mounts
-	if err := b.Core.removePrefixFromFilteredPaths(ctx, prefix); err != nil {
+	if err := b.Core.removePathFromFilteredPaths(ctx, fullPath, viewPath); err != nil {
 		b.Backend.Logger().Error("filtered path removal failed", path, "error", err)
 		return handleError(err)
 	}
@@ -2489,7 +2518,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 // returned by the collection method will be returned as response warnings.
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{}
-	info, err := hostutil.CollectHostInfo()
+	info, err := hostutil.CollectHostInfo(ctx)
 	if err != nil {
 		// If the error is a HostInfoError, we return them as response warnings
 		if errs, ok := err.(*multierror.Error); ok {

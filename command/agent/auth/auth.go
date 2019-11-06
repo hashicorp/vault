@@ -7,7 +7,6 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/agentint"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -106,7 +105,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		credCh = make(chan struct{})
 	}
 
-	var renewer *agentint.Renewer
+	var watcher *api.LifetimeWatcher
 
 	for {
 		select {
@@ -205,44 +204,44 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			am.CredSuccess()
 		}
 
-		if renewer != nil {
-			renewer.Stop()
+		if watcher != nil {
+			watcher.Stop()
 		}
 
-		renewer, err = agentint.NewRenewer(ah.client, &agentint.RenewerInput{
+		watcher, err = ah.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: secret,
 		})
 		if err != nil {
-			ah.logger.Error("error creating renewer, backing off and retrying", "error", err, "backoff", backoff.Seconds())
+			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
 			continue
 		}
 
 		// Start the renewal process
 		ah.logger.Info("starting renewal process")
-		go renewer.Renew()
+		go watcher.Renew()
 
-	RenewerLoop:
+	LifetimeWatcherLoop:
 		for {
 			select {
 			case <-ctx.Done():
-				ah.logger.Info("shutdown triggered, stopping renewer")
-				renewer.Stop()
-				break RenewerLoop
+				ah.logger.Info("shutdown triggered, stopping lifetime watcher")
+				watcher.Stop()
+				break LifetimeWatcherLoop
 
-			case err := <-renewer.DoneCh():
-				ah.logger.Info("renewer done channel triggered")
+			case err := <-watcher.DoneCh():
+				ah.logger.Info("lifetime watcher done channel triggered")
 				if err != nil {
 					ah.logger.Error("error renewing token", "error", err)
 				}
-				break RenewerLoop
+				break LifetimeWatcherLoop
 
-			case <-renewer.RenewCh():
+			case <-watcher.RenewCh():
 				ah.logger.Info("renewed auth token")
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
-				break RenewerLoop
+				break LifetimeWatcherLoop
 			}
 		}
 	}
