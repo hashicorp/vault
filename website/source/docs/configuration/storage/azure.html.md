@@ -14,7 +14,11 @@ description: |-
 The Azure storage backend is used to persist Vault's data in an
 [Azure Storage Container][azure-storage]. The storage container must already
 exist and the provided account credentials must have read and write permissions
-to the storage container.
+to the storage container. The storage account type must support block blobs. This
+currently includes the general purpose "Storage V2" type with _Standard_ performance
+(Premium will not work), as well as Premium "Block Blob Storage"
+([limited region availability](https://azure.microsoft.com/en-us/global-infrastructure/services/?products=storage&regions=all)).
+
 
 - **No High Availability** – the Azure storage backend does not support high
   availability.
