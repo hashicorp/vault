@@ -2,12 +2,12 @@ executor: node
 resource_class: medium+
 steps:
   - checkout
-  - run: echo "$PWD"; ls -lah ./ui/node_modules
+  - run: echo "$PWD"; ls -lah ./ui/node_modules || true
   - restore_yarn_cache
-  - run: echo "$PWD"; ls -lah ./ui/node_modules
+  - run: echo "$PWD"; ls -lah ./ui/node_modules || true
   - attach_workspace:
       at: .
-  - run: echo "$PWD"; ls -lah ./ui/node_modules
+  - run: echo "$PWD"; ls -lah ./ui/node_modules || true
   - run:
       name: Test UI
       command: |

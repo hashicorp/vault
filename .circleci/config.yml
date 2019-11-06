@@ -41,11 +41,11 @@ jobs:
     steps:
     - checkout
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - restore_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - run:
         command: |
           cd ui
@@ -53,7 +53,7 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - save_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
         paths:
@@ -111,15 +111,15 @@ jobs:
     steps:
     - checkout
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - restore_cache:
         key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - attach_workspace:
         at: .
     - run:
-        command: echo "$PWD"; ls -lah ./ui/node_modules
+        command: echo "$PWD"; ls -lah ./ui/node_modules || true
     - run:
         command: |
           set -x
@@ -473,16 +473,16 @@ workflows:
 #     executor: node
 #     steps:
 #     - checkout
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - restore_yarn_cache
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - run:
 #         command: |
 #           cd ui
 #           yarn install
 #           npm rebuild node-sass
 #         name: Install UI dependencies
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - save_yarn_cache
 #   pre-flight-checks:
 #     description: Ensures nothing obvious is broken for faster failures.
@@ -540,12 +540,12 @@ workflows:
 #     resource_class: medium+
 #     steps:
 #     - checkout
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - restore_yarn_cache
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - attach_workspace:
 #         at: .
-#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules
+#     - run: echo \"$PWD\"; ls -lah ./ui/node_modules || true
 #     - run:
 #         command: |
 #           set -x
