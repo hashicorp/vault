@@ -1,0 +1,424 @@
+.g-before-after-diagrams {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -16px;
+  position: relative;
+
+  @media (max-width: 1023px) {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    margin-left: 40px;
+    margin-right: 0;
+  }
+
+  & > div {
+    display: flex;
+    flex-direction: column;
+    margin: 0 16px;
+    position: relative;
+    width: calc(50% - 32px);
+
+    @media (max-width: 1023px) {
+      margin: 0 12px;
+      width: calc(50% - 24px);
+    }
+
+    @media (max-width: 767px) {
+      margin: 0;
+      width: 100%;
+    }
+  }
+
+  & .before {
+    @media (max-width: 767px) {
+      margin-bottom: 62px;
+    }
+
+    & li:before {
+      background: url('/img/icons/alert-triangle.svg');
+      height: 20px;
+      margin-top: 3px;
+      width: 20px;
+    }
+  }
+
+  & .after li:before {
+    background: url('/img/icons/check-circle.svg');
+    height: 18px;
+    margin-top: 4px;
+    width: 18px;
+  }
+
+  & .image {
+    align-items: center;
+    display: flex;
+    height: 320px;
+    justify-content: center;
+    margin-bottom: 96px;
+
+    @media (max-width: 767px) {
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 640px) {
+      height: 284px;
+    }
+
+    @media (max-width: 540px) {
+      height: 238px;
+    }
+
+    @media (max-width: 480px) {
+      height: 211px;
+    }
+
+    @media (max-width: 375px) {
+      height: 163px;
+    }
+
+    & div {
+      height: 100%;
+      text-align: center;
+      width: 100%;
+    }
+
+    & img,
+    & svg {
+      max-height: 100%;
+      max-width: 100%;
+    }
+  }
+
+  & .content {
+    border: 1px solid var(--gray-9);
+    padding: 24px 32px 20px;
+    position: relative;
+    flex-grow: 1;
+
+    @media (max-width: 1023px) {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+
+    @media (max-width: 767px) {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    &:before,
+    &:after {
+      bottom: 100%;
+      border: solid transparent;
+      content: '';
+      height: 0;
+      left: 50%;
+      width: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    &:before {
+      border-color: rgba(229, 230, 235, 0);
+      border-bottom-color: var(--gray-9);
+      border-width: 18px;
+      margin-left: -18px;
+    }
+
+    &:after {
+      border-color: rgba(255, 255, 255, 0);
+      border-bottom-color: var(--white);
+      border-width: 17px;
+      margin-left: -17px;
+    }
+
+    & > div {
+      height: 100%;
+
+      &.line {
+        height: auto;
+      }
+
+      & > div {
+        @media (min-width: 768px) {
+          max-width: 480px;
+          margin: 0 auto;
+        }
+      }
+    }
+  }
+
+  & h3 {
+    border-bottom: 1px solid var(--gray-9);
+    color: var(--black);
+    font-weight: 300;
+    margin: 0 0 24px;
+    padding-bottom: 24px;
+    text-align: center;
+
+    @media (max-width: 767px) {
+      font-size: 1.3125rem;
+      line-height: 2rem;
+    }
+  }
+
+  & h4 {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.5px;
+    line-height: 1.125rem;
+    margin: 24px 0 26px;
+    text-transform: uppercase;
+  }
+
+  & ul {
+    list-style: none;
+    padding-left: 32px;
+    position: relative;
+  }
+
+  & li {
+    margin: 8px 0;
+
+    &:before {
+      background-repeat: no-repeat;
+      content: '';
+      left: 0;
+      position: absolute;
+    }
+  }
+
+  & .line {
+    padding: 0;
+    position: absolute;
+    right: 0;
+    top: -75px;
+    width: 100%;
+
+    @media (max-width: 767px) {
+      left: -28px;
+      height: 100%;
+      right: auto;
+      top: 28px;
+      width: auto;
+    }
+
+    & span {
+      display: block;
+      height: 1px;
+      position: absolute;
+      top: 12px;
+      width: calc(100% - 14px);
+
+      @media (max-width: 767px) {
+        width: 1px;
+      }
+
+      &:first-child {
+        background-image: linear-gradient(
+          90deg,
+          rgba(210, 212, 219, 0) 0%,
+          var(--gray-8) 100%
+        );
+        right: calc(50% + 20px);
+        width: calc(50% + 140px);
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            rgba(210, 212, 219, 0) 0%,
+            var(--gray-8) 100%
+          );
+          height: 245px;
+          right: auto;
+          top: -253px;
+          width: 1px;
+        }
+      }
+
+      &:last-child {
+        background-image: linear-gradient(
+          90deg,
+          var(--gray-8) 0%,
+          var(--black) 100%
+        );
+        left: calc(50% + 20px);
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            var(--gray-8) 0%,
+            var(--black) 100%
+          );
+          height: calc(100% + 375px);
+          left: auto;
+          top: 32px;
+        }
+
+        @media (max-width: 640px) {
+          height: calc(100% + 339px);
+        }
+
+        @media (max-width: 540px) {
+          height: calc(100% + 293px);
+        }
+
+        @media (max-width: 480px) {
+          height: calc(100% + 266px);
+        }
+
+        @media (max-width: 375px) {
+          height: calc(100% + 218px);
+        }
+
+        &:after {
+          border-color: transparent transparent transparent #000000;
+          border-style: solid;
+          border-width: 5.5px 0 5.5px 8px;
+          content: '';
+          height: 0;
+          position: absolute;
+          right: -8px;
+          top: -5px;
+          width: 0;
+
+          @media (max-width: 767px) {
+            transform: rotate(90deg);
+            top: auto;
+            bottom: -8px;
+            right: -4px;
+          }
+        }
+      }
+    }
+
+    & svg {
+      position: absolute;
+      left: 50%;
+      margin: 0 0 0 -11px;
+    }
+  }
+
+  /*
+   * TERRAFORM THEME
+   */
+  &.terraform {
+    & .line span {
+      &:first-child {
+        background-image: linear-gradient(
+          90deg,
+          rgba(95, 67, 233, 0) 0%,
+          var(--gray-8) 100%
+        );
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            rgba(95, 67, 233, 0) 0%,
+            var(--gray-8) 100%
+          );
+        }
+      }
+
+      &:last-child {
+        background-image: linear-gradient(
+          90deg,
+          var(--gray-8) 0%,
+          var(--terraform-purple) 100%
+        );
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            var(--gray-8) 0%,
+            var(--terraform-purple) 100%
+          );
+        }
+
+        &:after {
+          border-color: transparent transparent transparent
+            var(--terraform-purple);
+          border-style: solid;
+          border-width: 5.5px 0 5.5px 8px;
+        }
+      }
+    }
+    & .after {
+      & li:before {
+        background: url('/img/icons/check-circle-purple.svg');
+        height: 19px;
+      }
+
+      .line {
+        svg,
+        path:first-child {
+          fill: var(--terraform-purple);
+          stroke: var(--terraform-purple);
+        }
+      }
+    }
+  }
+
+  /*
+   * CONSUL THEME
+   */
+  &.consul {
+    & .line span {
+      &:first-child {
+        background-image: linear-gradient(
+          90deg,
+          rgba(95, 67, 233, 0) 0%,
+          var(--gray-8) 100%
+        );
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            rgba(95, 67, 233, 0) 0%,
+            var(--gray-8) 100%
+          );
+        }
+      }
+
+      &:last-child {
+        background-image: linear-gradient(
+          90deg,
+          var(--gray-8) 0%,
+          var(--consul-pink) 100%
+        );
+
+        @media (max-width: 767px) {
+          background-image: linear-gradient(
+            180deg,
+            var(--gray-8) 0%,
+            var(--consul-pink) 100%
+          );
+        }
+
+        &:after {
+          border-color: transparent transparent transparent var(--consul-pink);
+          border-style: solid;
+          border-width: 5.5px 0 5.5px 8px;
+        }
+      }
+    }
+    & .after {
+      & li:before {
+        background: url('/img/icons/check-circle-pink.svg');
+        height: 19px;
+      }
+
+      .line {
+        svg,
+        path:first-child {
+          fill: var(--consul-pink);
+          stroke: var(--consul-pink);
+        }
+      }
+    }
+  }
+}
