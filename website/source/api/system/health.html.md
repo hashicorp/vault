@@ -26,8 +26,8 @@ The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
-- `472` if data recovery mode replication secondary and active
-- `473` if performance standby 
+- `472` if disaster recovery mode replication secondary and active
+- `473` if performance standby
 - `501` if not initialized
 - `503` if sealed
 
@@ -37,7 +37,7 @@ The default status codes are:
   the active status code instead of the standby status code. This is useful when
   Vault is behind a non-configurable load balancer that just wants a 200-level
   response. This will not apply if the node is a performance standby.
-  
+
 - `perfstandbyok` `(bool: false)` – Specifies if being a performance standby should
   still return the active status code instead of the performance standby status code.
   This is useful when Vault is behind a non-configurable load balancer that just wants
