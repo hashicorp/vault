@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -41,7 +40,7 @@ type requestForwardingClusterClient struct {
 
 // NewRequestForwardingHandler creates a cluster handler for use with request
 // forwarding.
-func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster, perfStandbyCache *cache.Cache) (*requestForwardingHandler, error) {
+func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster) (*requestForwardingHandler, error) {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
 
@@ -59,7 +58,6 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 			handler:               c.clusterHandler,
 			perfStandbySlots:      perfStandbySlots,
 			perfStandbyRepCluster: perfStandbyRepCluster,
-			perfStandbyCache:      perfStandbyCache,
 			raftFollowerStates:    c.raftFollowerStates,
 		})
 	}
@@ -194,12 +192,12 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return nil
 	}
 
-	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots, err := c.perfStandbyClusterHandler()
+	perfStandbyRepCluster, perfStandbySlots, err := c.perfStandbyClusterHandler()
 	if err != nil {
 		return err
 	}
 
-	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
+	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster)
 	if err != nil {
 		return err
 	}
