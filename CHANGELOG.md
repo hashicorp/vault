@@ -1,5 +1,13 @@
 ## 1.3 (unreleased)
 
+CHANGES:
+
+* Secondary cluster activation: There has been a change to the way that activating
+  performance and DR secondary clusters works when using public keys for
+  encryption of the parameters rather than a wrapping token. This flow was
+  experimental and never documented. It is now officially supported and
+  documented but is not backwards compatible with older Vault releases.
+
 IMPROVEMENTS:
 
 * metrics: Upgrade DataDog library to improve performance [GH-7794]
@@ -15,6 +23,7 @@ BUG FIXES:
 ## 1.3-beta1 (October 30th, 2019)
 
 CHANGES:
+
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
    the full TLS 1.2 cipher suite list by default. Although this port is only
    used for Vault-to-Vault communication and would always pick a strong cipher,
