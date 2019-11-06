@@ -572,11 +572,6 @@ func testCoreWithIdentityTokenGithub(ctx context.Context, t *testing.T) (*Core, 
 	return core, is, core.tokenStore, ghAccessor
 }
 
-func testCoreWithIdentityTokenGithubRoot(ctx context.Context, t *testing.T) (*Core, *IdentityStore, *TokenStore, string, string) {
-	is, ghAccessor, core, root := testIdentityStoreWithGithubAuthRoot(ctx, t)
-	return core, is, core.tokenStore, ghAccessor, root
-}
-
 func testIdentityStoreWithGithubAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, *Core) {
 	is, ghA, c, _ := testIdentityStoreWithGithubAuthRoot(ctx, t)
 	return is, ghA, c
