@@ -88,6 +88,9 @@ type Config struct {
 	// The Backoff function to use; a default is used if not provided
 	Backoff retryablehttp.Backoff
 
+	// The CheckRetry function to use; a default is used if not provided
+	CheckRetry retryablehttp.CheckRetry
+
 	// Limiter is the rate limiter used by the client.
 	// If this pointer is nil, then there will be no limit set.
 	// In contrast, if this pointer is set, even to an empty struct,
@@ -492,6 +495,16 @@ func (c *Client) SetMaxRetries(retries int) {
 	c.config.MaxRetries = retries
 }
 
+// SetCheckRetry sets the CheckRetry function to be used for future requests.
+func (c *Client) SetCheckRetry(checkRetry retryablehttp.CheckRetry) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.CheckRetry = checkRetry
+}
+
 // SetClientTimeout sets the client request timeout
 func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RLock()
@@ -647,6 +660,7 @@ func (c *Client) Clone() (*Client, error) {
 		MaxRetries: config.MaxRetries,
 		Timeout:    config.Timeout,
 		Backoff:    config.Backoff,
+		CheckRetry: config.CheckRetry,
 		Limiter:    config.Limiter,
 	}
 	config.modifyLock.RUnlock()
@@ -740,6 +754,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	c.config.modifyLock.RLock()
 	limiter := c.config.Limiter
 	maxRetries := c.config.MaxRetries
+	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
@@ -775,8 +790,10 @@ START:
 		return nil, LastOutputStringError
 	}
 
+	var cancel context.CancelFunc
 	if timeout != 0 {
-		ctx, _ = context.WithTimeout(ctx, timeout)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 	req.Request = req.Request.WithContext(ctx)
 
@@ -784,13 +801,17 @@ START:
 		backoff = retryablehttp.LinearJitterBackoff
 	}
 
+	if checkRetry == nil {
+		checkRetry = retryablehttp.DefaultRetryPolicy
+	}
+
 	client := &retryablehttp.Client{
 		HTTPClient:   httpClient,
 		RetryWaitMin: 1000 * time.Millisecond,
 		RetryWaitMax: 1500 * time.Millisecond,
 		RetryMax:     maxRetries,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      backoff,
+		CheckRetry:   checkRetry,
 		ErrorHandler: retryablehttp.PassthroughErrorHandler,
 	}
 

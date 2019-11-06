@@ -7,8 +7,7 @@ export default Base.extend({
   model(params) {
     return hash({
       cluster: this.modelFor('mode.secondaries'),
-      config: this.store.findRecord('mount-filter-config', params.secondary_id),
-      mounts: this.fetchMounts(),
+      config: this.store.findRecord('path-filter-config', params.secondary_id),
     });
   },
 

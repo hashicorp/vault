@@ -3,12 +3,18 @@ package rabbithole
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 )
 
+// BindingVertex represents one end (vertex) of a binding,
+// a source or destination. This is primarily relevant for
+// exchange-to-exchange bindings (E2Es).
 type BindingVertex string
 
 const (
-	BindingSource      BindingVertex = "source"
+	// BindingSource indicates the source vertex of a binding
+	BindingSource BindingVertex = "source"
+	// BindingDestination indicates the source vertex of a binding
 	BindingDestination BindingVertex = "destination"
 )
 
@@ -36,6 +42,7 @@ func (v BindingVertex) String() string {
 //   }
 // ]
 
+// BindingInfo represents details of a binding.
 type BindingInfo struct {
 	// Binding source (exchange name)
 	Source string `json:"source"`
@@ -49,7 +56,7 @@ type BindingInfo struct {
 	PropertiesKey   string                 `json:"properties_key"`
 }
 
-// Returns all bindings
+// ListBindings returns all bindings
 func (c *Client) ListBindings() (rec []BindingInfo, err error) {
 	req, err := newGETRequest(c, "bindings/")
 	if err != nil {
@@ -80,9 +87,9 @@ func (c *Client) listBindingsVia(path string) (rec []BindingInfo, err error) {
 // GET /api/bindings/{vhost}
 //
 
-// Returns all bindings in a virtual host.
+// ListBindingsIn returns all bindings in a virtual host.
 func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
-	return c.listBindingsVia("bindings/" + PathEscape(vhost))
+	return c.listBindingsVia("bindings/" + url.PathEscape(vhost))
 }
 
 //
@@ -107,15 +114,17 @@ func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
 //    "properties_key":"~"}
 // ]
 
-// Returns all bindings of individual queue.
+// ListQueueBindings returns all bindings of individual queue.
 func (c *Client) ListQueueBindings(vhost, queue string) (rec []BindingInfo, err error) {
-	return c.listBindingsVia("queues/" + PathEscape(vhost) + "/" + PathEscape(queue) + "/bindings")
+	return c.listBindingsVia("queues/" + url.PathEscape(vhost) + "/" + url.PathEscape(queue) + "/bindings")
 }
 
 //
 // GET /api/exchanges/{vhost}/{exchange}/bindings/source
 //
 
+// ListExchangeBindingsWithSource returns exchange-to-exchange (E2E) bindings where
+// the given exchange is the source.
 func (c *Client) ListExchangeBindingsWithSource(vhost, exchange string) (rec []BindingInfo, err error) {
 	return c.ListExchangeBindings(vhost, exchange, BindingSource)
 }
@@ -124,6 +133,8 @@ func (c *Client) ListExchangeBindingsWithSource(vhost, exchange string) (rec []B
 // GET /api/exchanges/{vhost}/{exchange}/bindings/destination
 //
 
+// ListExchangeBindingsWithDestination returns exchange-to-exchange (E2E) bindings where
+// the given exchange is the destination.
 func (c *Client) ListExchangeBindingsWithDestination(vhost, exchange string) (rec []BindingInfo, err error) {
 	return c.ListExchangeBindings(vhost, exchange, BindingDestination)
 }
@@ -132,32 +143,34 @@ func (c *Client) ListExchangeBindingsWithDestination(vhost, exchange string) (re
 // GET /api/exchanges/{vhost}/{exchange}/bindings/{source-or-destination}
 //
 
-// Returns all bindings having the exchange as source or destination as defined by the Target
+// ListExchangeBindings returns all bindings having the exchange as source or destination as defined by the Target
 func (c *Client) ListExchangeBindings(vhost, exchange string, sourceOrDestination BindingVertex) (rec []BindingInfo, err error) {
-	return c.listBindingsVia("exchanges/" + PathEscape(vhost) + "/" + PathEscape(exchange) + "/bindings/" + sourceOrDestination.String())
+	return c.listBindingsVia("exchanges/" + url.PathEscape(vhost) + "/" + url.PathEscape(exchange) + "/bindings/" + sourceOrDestination.String())
 }
 
 //
 // GET /api/bindings/{vhost}/e/{source}/e/{destination}
 //
 
+// ListExchangeBindingsBetween returns a set of bindings between two exchanges.
 func (c *Client) ListExchangeBindingsBetween(vhost, source string, destination string) (rec []BindingInfo, err error) {
-	return c.listBindingsVia("bindings/" + PathEscape(vhost) + "/e/" + PathEscape(source) + "/e/" + destination)
+	return c.listBindingsVia("bindings/" + url.PathEscape(vhost) + "/e/" + url.PathEscape(source) + "/e/" + url.PathEscape(destination))
 }
 
 //
 // GET /api/bindings/{vhost}/e/{exchange}/q/{queue}
 //
 
+// ListQueueBindingsBetween returns a set of bindings between an exchange and a queue.
 func (c *Client) ListQueueBindingsBetween(vhost, exchange string, queue string) (rec []BindingInfo, err error) {
-	return c.listBindingsVia("bindings/" + PathEscape(vhost) + "/e/" + PathEscape(exchange) + "/q/" + queue)
+	return c.listBindingsVia("bindings/" + url.PathEscape(vhost) + "/e/" + url.PathEscape(exchange) + "/q/" + url.PathEscape(queue))
 }
 
 //
 // POST /api/bindings/{vhost}/e/{source}/{destination_type}/{destination}
 //
 
-// DeclareBinding updates information about a binding between a source and a target
+// DeclareBinding adds a new binding
 func (c *Client) DeclareBinding(vhost string, info BindingInfo) (res *http.Response, err error) {
 	info.Vhost = vhost
 
@@ -169,20 +182,30 @@ func (c *Client) DeclareBinding(vhost string, info BindingInfo) (res *http.Respo
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "POST", "bindings/"+PathEscape(vhost)+
-		"/e/"+PathEscape(info.Source)+"/"+PathEscape(string(info.DestinationType[0]))+
-		"/"+PathEscape(info.Destination), body)
+	req, err := newRequestWithBody(c, "POST", c.newBindingPath(vhost, info), body)
 
 	if err != nil {
 		return nil, err
 	}
 
-	res, err = executeRequest(c, req)
-	if err != nil {
+	if res, err = executeRequest(c, req); err != nil {
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func (c *Client) newBindingPath(vhost string, info BindingInfo) string {
+	if info.DestinationType == "queue" {
+		// /api/bindings/{vhost}/e/{exchange}/q/{queue}
+		return "bindings/" + url.PathEscape(vhost) +
+			"/e/" + url.PathEscape(info.Source) +
+			"/q/" + url.PathEscape(info.Destination)
+	}
+	// /api/bindings/{vhost}/e/{source}/e/{destination}
+	return "bindings/" + url.PathEscape(vhost) +
+		"/e/" + url.PathEscape(info.Source) +
+		"/e/" + url.PathEscape(info.Destination)
 }
 
 //
@@ -191,15 +214,14 @@ func (c *Client) DeclareBinding(vhost string, info BindingInfo) (res *http.Respo
 
 // DeleteBinding delets an individual binding
 func (c *Client) DeleteBinding(vhost string, info BindingInfo) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "bindings/"+PathEscape(vhost)+
-		"/e/"+PathEscape(info.Source)+"/"+PathEscape(string(info.DestinationType[0]))+
-		"/"+PathEscape(info.Destination)+"/"+PathEscape(info.PropertiesKey), nil)
+	req, err := newRequestWithBody(c, "DELETE", "bindings/"+url.PathEscape(vhost)+
+		"/e/"+url.PathEscape(info.Source)+"/"+url.PathEscape(string(info.DestinationType[0]))+
+		"/"+url.PathEscape(info.Destination)+"/"+url.PathEscape(info.PropertiesKey), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err = executeRequest(c, req)
-	if err != nil {
+	if res, err = executeRequest(c, req); err != nil {
 		return nil, err
 	}
 

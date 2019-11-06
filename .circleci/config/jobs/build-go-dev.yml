@@ -1,7 +1,7 @@
-executor: go
+executor: go-machine
 steps:
+  - setup-go
   - checkout
-  - restore_go_cache
   - attach_workspace:
       at: .
   - run:

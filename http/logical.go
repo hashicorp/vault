@@ -128,7 +128,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
-	if err != nil {
+	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
 

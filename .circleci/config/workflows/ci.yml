@@ -3,12 +3,9 @@ jobs:
   - install-ui-dependencies:
       requires:
         - pre-flight-checks
-  - go-mod-download:
-      requires:
-        - pre-flight-checks
   - build-go-dev:
       requires:
-        - go-mod-download
+        - pre-flight-checks
   - test-ui:
       requires:
         - install-ui-dependencies

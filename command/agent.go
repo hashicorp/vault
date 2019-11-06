@@ -260,6 +260,12 @@ func (c *AgentCommand) Run(args []string) int {
 		Default: false,
 		EnvVar:  api.EnvVaultSkipVerify,
 	})
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
+	})
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
