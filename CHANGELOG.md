@@ -196,6 +196,7 @@ BUG FIXES:
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters
    were not being applied to tokens generated using the OIDC login flow
    [JWT-67]
+ * raft: Fix an incorrect JSON tag on `leader_ca_cert` in the join request [GH-7393]
  * seal/transit: Allow using Vault Agent for transit seal operations [GH-7441]
  * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a
