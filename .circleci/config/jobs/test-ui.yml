@@ -25,6 +25,8 @@ steps:
 
         # Run Ember tests
         cd ui
+        yarn install
+        npm rebuild node-sass
         mkdir -p test-results/qunit
         yarn test:oss
   - store_artifacts:
