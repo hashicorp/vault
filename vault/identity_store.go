@@ -112,6 +112,11 @@ func (i *IdentityStore) paths() []*framework.Path {
 }
 
 func (i *IdentityStore) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	// Only primary should write the status
+	if i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
 		DisableLowerCasedNames: i.disableLowerCasedNames,
 	})
