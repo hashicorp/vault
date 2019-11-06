@@ -1,3 +1,12 @@
+# API landing
+/api  /api/overview
+
+# Docs landing
+/docs  /docs/install/index.html
+
+# Intro landing
+/intro /intro/getting-started/index.html
+
 /api/secret/generic/index.html  /api/secret/kv
 /api/system/renew.html  /api/system/leases
 /api/system/revoke-force.html /api/system/leases
@@ -167,18 +176,3 @@
 /intro/vs/keywhiz.html /docs/vs/keywhiz
 /intro/vs/kms.html /docs/vs/kms
 /intro/what-is-vault/index.html /docs/what-is-vault
-
-# Intro getting started content -> Learn
-/intro/index.html https://learn.hashicorp.com/vault/#getting-started
-/intro/getting-started/ https://learn.hashicorp.com/vault/getting-started/install
-/intro/getting-started/index.html https://learn.hashicorp.com/vault/getting-started/install
-/intro/getting-started/dev-server.html https://learn.hashicorp.com/vault/getting-started/dev-server
-/intro/getting-started/first-secret.html https://learn.hashicorp.com/vault/getting-started/first-secret
-/intro/getting-started/secrets-engines.html https://learn.hashicorp.com/vault/getting-started/secrets-engines
-/intro/getting-started/dynamic-secrets.html https://learn.hashicorp.com/vault/getting-started/dynamic-secrets
-/intro/getting-started/help.html https://learn.hashicorp.com/vault/getting-started/help
-/intro/getting-started/authentication.html https://learn.hashicorp.com/vault/getting-started/authentication
-/intro/getting-started/policies.html https://learn.hashicorp.com/vault/getting-started/policies
-/intro/getting-started/deploy.html https://learn.hashicorp.com/vault/getting-started/deploy
-/intro/getting-started/apis.html https://learn.hashicorp.com/vault/getting-started/apis
-/intro/getting-started/next-steps.html https://learn.hashicorp.com/vault/getting-started/next-steps

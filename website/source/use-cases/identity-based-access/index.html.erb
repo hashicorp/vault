@@ -1,0 +1,170 @@
+<%= partial "partials/subnav" %>
+
+<div class='g-section-block page-wrap'>
+
+  <%-# Header / Buttons -%>
+
+  <section class='g-container'>
+    <hashi-section-header
+      headline="Leverage Trusted Identities in Low Trust Networks"
+      description="Authenticate and access different clouds, systems, and endpoints using trusted identities"
+      use_h1="true"
+    ></hashi-section-header>
+
+    <div class='button-container'>
+      <hashi-button
+        title="Download"
+        url="/downloads.html"
+      ></hashi-button>
+      <hashi-button
+        title="Get Started"
+        url="/intro"
+        classes="dark-outline"
+      ></hashi-button>
+    </div>
+  </section>
+
+  <%-# Before After Diagram -%>
+
+  <section>
+    <div class="g-container">
+      <hashi-before-after _data='<%= encode({
+        before_image: {
+          url: "/img/use-cases/identity-based-access/challenge.png",
+          format: "png"
+        },
+        before_headline: "The Challenge",
+        before_content: "With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl",
+        after_image: {
+          url: "/img/use-cases/identity-based-access/solution.png",
+          format: "png"
+        },
+        after_headline: "The Solution",
+        after_content: "Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
+      }) %>'></hashi-before-after>
+    </div>
+  </section>
+
+  <%-# Features / Text And Content -%>
+
+  <section class='g-container pad-bottom'>
+    <hashi-section-header headline="Identity-based Access Features"></hashi-section-header>
+
+    <div class="g-text-and-content">
+      <div class="text">
+        <div>
+          <h3 id="secure-plugins">Identity Plugins</h3>
+          <p>Improve the extensibility of Vault with pluggable identity backends</p>
+        </div>
+      </div>
+      <div class="content logo-grid">
+        <ul class="g-logo-grid large">
+          <% ['aws', 'azure', 'gcp', 'kubernetes', 'nomad', 'okta', 'pivotalcf', 'ssh'].each do |logo| %>
+            <li><img src='/img/use-cases/identity-based-access/logos/<%= logo %>.png'></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+
+    <hashi-text-and-content _data='<%= encode({
+        reverse_direction: true,
+        text: "### Entities
+
+Integrated identities across platforms and using this information for policy and access control decisions.",
+        content: {
+            item_type: "sbc_image",
+            image: {
+                url: "/img/use-cases/identity-based-access/screenshot-entities.png",
+                format: "png",
+            }
+        }
+    }) %>'></hashi-text-and-content>
+
+    <hashi-text-and-content _data='<%= encode({
+        text: "### Control Groups
+
+Require multiple Identity Entities or members of Identity Groups to authorize an requested action.",
+        content: {
+            item_type: "sbc_image",
+            image: {
+                url: "/img/use-cases/identity-based-access/screenshot-control-groups.png",
+                format: "png",
+            }
+        }
+    }) %>'></hashi-text-and-content>
+
+    <hashi-text-and-content _data='<%= encode({
+        reverse_direction: true,
+        text: "### ACL Templates and Policy Control
+
+Create and manage policies that authorize access control throughout your infrastructure and organization",
+        content: {
+          item_type: "sbc_code_block",
+          chrome: true,
+          code: "# User template (user-tmpl.hcl)
+# Grant permissions on user specific path
+
+path \"user-kv/data/{{identity.entity.name}}/*\" {
+  capabilities = [ \"create\", \"update\", \"read\", \"delete\", \"list\" ]
+}
+
+# For Web UI usage
+path \"user-kv/metadata\" {
+  capabilities = [\"list\"]
+}
+
+# Group template (group-tmpl.hcl)
+# Grant permissions on the group specific path
+# The region is specified in the group metadata
+path \"group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*\" {
+  capabilities = [ \"create\", \"update\", \"read\", \"delete\", \"list\" ]
+}
+
+# Group member can update the group information
+path \"identity/group/id/{{identity.groups.names.education.id}}\" {
+  capabilities = [ \"update\", \"read\" ]
+}
+
+# For Web UI usage
+path \"group-kv/metadata\" {
+  capabilities = [\"list\"]
+}
+
+path \"identity/group/id\" {
+  capabilities = [ \"list\" ]
+}"
+    }
+}) %>'></hashi-text-and-content>
+
+    <hashi-text-and-content _data='<%= encode({
+        text: "### Identity Groups
+
+Group trusted identities into logical groups for group-based access control.",
+        content: {
+            item_type: "sbc_image",
+            image: {
+                url: "/img/use-cases/identity-based-access/screenshot-identity-groups.png",
+                format: "png",
+            }
+        }
+    }) %>'></hashi-text-and-content>
+
+    <hashi-text-and-content _data='<%= encode({
+        reverse_direction: true,
+        text: "### Multi-factor Authentication
+
+Enforce MFA workflows when accessing a secret or a secret path",
+        content: {
+          item_type: "sbc_code_block",
+          chrome: true,
+          code: "$ curl \
+--header \"X-Vault-Token: ...\" \\
+--header \"X-Vault-MFA:my_totp:695452\" \\
+http://127.0.0.1:8200/v1/secret/foo"
+        }
+}) %>'></hashi-text-and-content>
+  </section>
+
+  <%= partial "partials/use-case-cta-section" %>
+
+</div>
