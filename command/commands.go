@@ -155,6 +155,10 @@ var (
 		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
+
+	physicalServiceDiscoveries = map[string]physical.ServiceDiscoveryFactory{
+		// TODO "consul": physConsul.NewConsulServiceDiscovery,
+	}
 )
 
 // Commands is the mapping of all the available commands.

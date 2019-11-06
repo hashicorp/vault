@@ -122,6 +122,9 @@ type Lock interface {
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
 
+/// ServiceDiscoveryFactory is the factory function to create a ServiceDiscovery.
+type ServiceDiscoveryFactory func(config map[string]string, logger log.Logger) (ServiceDiscovery, error)
+
 // PermitPool is used to limit maximum outstanding requests
 type PermitPool struct {
 	sem chan int
