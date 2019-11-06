@@ -374,7 +374,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		case retErr == nil:
 		case strings.Contains(retErr.Error(), context.Canceled.Error()):
 			// Don't run error func because we lost leadership
-			m.logger.Warn("context cancled while restoring leases, stopping lease loading")
+			m.logger.Warn("context canceled while restoring leases, stopping lease loading")
 			retErr = nil
 		case errwrap.Contains(retErr, ErrBarrierSealed.Error()):
 			// Don't run error func because we're likely already shutting down
@@ -822,7 +822,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 
 	if le.Secret == nil {
 		if le.Auth != nil {
-			return logical.ErrorResponse("tokens cannot be renewed through this endpoint"), logical.ErrPermissionDenied
+			return logical.ErrorResponse("tokens cannot be renewed through this endpoint"), nil
 		}
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}
@@ -1077,6 +1077,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		IssueTime:       time.Now(),
 		ExpireTime:      resp.Secret.ExpirationTime(),
 		namespace:       ns,
+		Version:         1,
 	}
 
 	defer func() {
@@ -1147,6 +1148,12 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
+	authExpirationTime := auth.ExpirationTime()
+
+	if te.TTL == 0 && authExpirationTime.IsZero() && (len(te.Policies) != 1 || te.Policies[0] != "root") {
+		return errors.New("refusing to register a lease for a non-root token with no TTL")
+	}
+
 	if te.Type == logical.TokenTypeBatch {
 		return errors.New("cannot register a lease for a batch token")
 	}
@@ -1185,8 +1192,9 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		Auth:        auth,
 		Path:        te.Path,
 		IssueTime:   time.Now(),
-		ExpireTime:  auth.ExpirationTime(),
+		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
+		Version:     1,
 	}
 
 	// Encode the entry
@@ -1524,7 +1532,8 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	_, nsID := namespace.SplitIDFromString(token)
 	if nsID != "" {
-		tokenNS, err := NamespaceByID(ctx, nsID, m.core)
+		var err error
+		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
 		if err != nil {
 			return err
 		}
@@ -1560,7 +1569,8 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 	saltCtx := namespace.ContextWithNamespace(ctx, tokenNS)
 	_, nsID := namespace.SplitIDFromString(le.ClientToken)
 	if nsID != "" {
-		tokenNS, err := NamespaceByID(ctx, nsID, m.core)
+		var err error
+		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
 		if err != nil {
 			return nil, err
 		}
@@ -1594,12 +1604,22 @@ func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEnt
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	_, nsID := namespace.SplitIDFromString(le.ClientToken)
 	if nsID != "" {
-		tokenNS, err := NamespaceByID(ctx, nsID, m.core)
+		var err error
+		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
 		if err != nil {
 			return err
 		}
 		if tokenNS != nil {
 			saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+		}
+
+		// Downgrade logic for old-style (V0) namespace leases that had its
+		// secondary index live in the root namespace. This reverts to the old
+		// behavior of looking for the secondary index on these leases in the
+		// root namespace to be cleaned up properly. We set it here because the
+		// old behavior used the namespace's token store salt for its saltCtx.
+		if le.Version < 1 {
+			tokenNS = namespace.RootNamespace
 		}
 	}
 
@@ -1674,6 +1694,7 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 			IssueTime:   now,
 			ExpireTime:  now.Add(time.Nanosecond),
 			namespace:   tokenNS,
+			Version:     1,
 		}
 
 		// Encode the entry
@@ -1722,6 +1743,31 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 		}
 		leaseIDs = append(leaseIDs, string(out.Value))
 	}
+
+	// Downgrade logic for old-style (V0) leases entries created by a namespace
+	// token that lived in the root namespace.
+	if tokenNS.ID != namespace.RootNamespaceID {
+		tokenView := m.tokenIndexView(namespace.RootNamespace)
+
+		// Scan via the index for sub-leases on the root namespace
+		prefix := saltedID + "/"
+		subKeys, err := tokenView.List(ctx, prefix)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to list leases on root namespace: {{err}}", err)
+		}
+
+		for _, sub := range subKeys {
+			out, err := tokenView.Get(ctx, prefix+sub)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to read lease index on root namespace: {{err}}", err)
+			}
+			if out == nil {
+				continue
+			}
+			leaseIDs = append(leaseIDs, string(out.Value))
+		}
+	}
+
 	return leaseIDs, nil
 }
 
@@ -1755,6 +1801,11 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+
+	// Version is used to track new different versions of leases. V0 (or
+	// zero-value) had non-root namespaced secondary indexes live in the root
+	// namespace, and V1 has secondary indexes live in the matching namespace.
+	Version int `json:"version"`
 
 	namespace *namespace.Namespace
 }
