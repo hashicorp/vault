@@ -3,16 +3,14 @@ package rabbithole
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 )
 
 //
 // GET /api/permissions
 //
 
-// Example response:
-//
-// [{"user":"guest","vhost":"/","configure":".*","write":".*","read":".*"}]
-
+// PermissionInfo represents a user's permission in a virtual host.
 type PermissionInfo struct {
 	User  string `json:"user"`
 	Vhost string `json:"vhost"`
@@ -25,7 +23,7 @@ type PermissionInfo struct {
 	Read string `json:"read"`
 }
 
-// Returns permissions for all users and virtual hosts.
+// ListPermissions returns permissions for all users and virtual hosts.
 func (c *Client) ListPermissions() (rec []PermissionInfo, err error) {
 	req, err := newGETRequest(c, "permissions/")
 	if err != nil {
@@ -43,9 +41,9 @@ func (c *Client) ListPermissions() (rec []PermissionInfo, err error) {
 // GET /api/users/{user}/permissions
 //
 
-// Returns permissions of a specific user.
+// ListPermissionsOf returns permissions of a specific user.
 func (c *Client) ListPermissionsOf(username string) (rec []PermissionInfo, err error) {
-	req, err := newGETRequest(c, "users/"+PathEscape(username)+"/permissions")
+	req, err := newGETRequest(c, "users/"+url.PathEscape(username)+"/permissions")
 	if err != nil {
 		return []PermissionInfo{}, err
 	}
@@ -61,9 +59,9 @@ func (c *Client) ListPermissionsOf(username string) (rec []PermissionInfo, err e
 // GET /api/permissions/{vhost}/{user}
 //
 
-// Returns permissions of user in virtual host.
+// GetPermissionsIn returns permissions of user in virtual host.
 func (c *Client) GetPermissionsIn(vhost, username string) (rec PermissionInfo, err error) {
-	req, err := newGETRequest(c, "permissions/"+PathEscape(vhost)+"/"+PathEscape(username))
+	req, err := newGETRequest(c, "permissions/"+url.PathEscape(vhost)+"/"+url.PathEscape(username))
 	if err != nil {
 		return PermissionInfo{}, err
 	}
@@ -79,26 +77,27 @@ func (c *Client) GetPermissionsIn(vhost, username string) (rec PermissionInfo, e
 // PUT /api/permissions/{vhost}/{user}
 //
 
+// Permissions represents permissions of a user in a virtual host. Use this type to set
+// permissions of the user.
 type Permissions struct {
 	Configure string `json:"configure"`
 	Write     string `json:"write"`
 	Read      string `json:"read"`
 }
 
-// Updates permissions of user in virtual host.
+// UpdatePermissionsIn sets permissions of a user in a virtual host.
 func (c *Client) UpdatePermissionsIn(vhost, username string, permissions Permissions) (res *http.Response, err error) {
 	body, err := json.Marshal(permissions)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "permissions/"+PathEscape(vhost)+"/"+PathEscape(username), body)
+	req, err := newRequestWithBody(c, "PUT", "permissions/"+url.PathEscape(vhost)+"/"+url.PathEscape(username), body)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err = executeRequest(c, req)
-	if err != nil {
+	if res, err = executeRequest(c, req); err != nil {
 		return nil, err
 	}
 
@@ -109,15 +108,14 @@ func (c *Client) UpdatePermissionsIn(vhost, username string, permissions Permiss
 // DELETE /api/permissions/{vhost}/{user}
 //
 
-// Clears (deletes) permissions of user in virtual host.
+// ClearPermissionsIn clears (deletes) permissions of user in virtual host.
 func (c *Client) ClearPermissionsIn(vhost, username string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "permissions/"+PathEscape(vhost)+"/"+PathEscape(username), nil)
+	req, err := newRequestWithBody(c, "DELETE", "permissions/"+url.PathEscape(vhost)+"/"+url.PathEscape(username), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err = executeRequest(c, req)
-	if err != nil {
+	if res, err = executeRequest(c, req); err != nil {
 		return nil, err
 	}
 

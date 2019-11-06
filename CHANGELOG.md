@@ -1,7 +1,15 @@
 ## 1.3 (unreleased)
 
+IMPROVEMENTS:
+
+* metrics: Upgrade DataDog library to improve performance [GH-7794]
+
 BUG FIXES:
 
+* api: Fix Go API using lease revocation via URL instead of body [GH-7777]
+* core: Don't allow registering a non-root zero TTL token lease. This is purely
+  defense in depth as the lease would be revoked immediately anyways, but
+  there's no real reason to allow registration. [GH-7524]
 * ui: Ensure that items in the top navigation link to pages that users have access to. [GH-7590]
 
 ## 1.3-beta1 (October 30th, 2019)
@@ -154,6 +162,7 @@ BUG FIXES:
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * identity: Fixed nil pointer panic when merging entities [GH-7712]
+ * secrets/azure: Fix panic that could occur if client retries timeout [GH-7793]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]

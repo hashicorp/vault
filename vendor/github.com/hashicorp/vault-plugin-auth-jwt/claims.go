@@ -128,7 +128,7 @@ func validateBoundClaims(logger log.Logger, boundClaims, allClaims map[string]in
 	return nil
 }
 
-// normalizeList takes a string or list and returns a list. This is useful when
+// normalizeList takes a string, bool or list and returns a list. This is useful when
 // providers are expected to return a list (typically of strings) but reduce it
 // to a string type when the list count is 1.
 func normalizeList(raw interface{}) ([]interface{}, bool) {
@@ -137,7 +137,7 @@ func normalizeList(raw interface{}) ([]interface{}, bool) {
 	switch v := raw.(type) {
 	case []interface{}:
 		normalized = v
-	case string:
+	case string, bool:
 		normalized = []interface{}{v}
 	default:
 		return nil, false
