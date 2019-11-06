@@ -360,7 +360,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
@@ -372,7 +372,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20191017185408-8c0e790cc8e1 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191017185138-b26379d8fedc => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191106224550-32fb439b64e0 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
