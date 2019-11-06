@@ -40,7 +40,7 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/autorest/azure/cli
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/DataDog/datadog-go v2.2.0+incompatible
+# github.com/DataDog/datadog-go v3.2.0+incompatible
 github.com/DataDog/datadog-go/statsd
 # github.com/Jeffail/gabs v1.1.1
 github.com/Jeffail/gabs
@@ -84,7 +84,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
+# github.com/armon/go-metrics v0.3.0
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
@@ -388,7 +388,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2-0.20190814210135-54b8afbc42ae
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190814210141-d2086ff79b04
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
@@ -400,7 +400,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20191017194845-99f7184d3326 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191029142000-723755b103ac => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191105213622-77e44b419a22 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -597,6 +597,7 @@ github.com/pquerna/otp/totp
 github.com/pquerna/otp/hotp
 # github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/push
 github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f
 github.com/prometheus/client_model/go
