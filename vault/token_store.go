@@ -2062,17 +2062,15 @@ func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logica
 		},
 		Schema: map[string]*framework.FieldSchema{
 			"token": {
-				Type:        framework.TypeString,
-				Description: "Token to lookup",
+				Type: framework.TypeString,
+			},
+			"increment": {
+				Type: framework.TypeDurationSecond,
 			},
 		},
 	}
 	if inc, ok := data.GetOk("increment"); ok {
 		d.Raw["increment"] = inc
-		d.Schema["increment"] = &framework.FieldSchema{
-			Type:        framework.TypeDurationSecond,
-			Description: "The desired increment in seconds to the token expiration",
-		}
 	}
 
 	resp, err := ts.handleRenew(ctx, req, d)
