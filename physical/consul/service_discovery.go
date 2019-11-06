@@ -45,37 +45,11 @@ type ConsulServiceDiscovery struct {
 	notifyActiveCh      chan notifyEvent
 	notifySealedCh      chan notifyEvent
 	notifyPerfStandbyCh chan notifyEvent
-
-	//	path                string
-	//	kv                  *api.KV
-	//	permitPool          *physical.PermitPool
-	//	consistencyMode     string
-
-	//	sessionTTL   string
-	//	lockWaitTime time.Duration
 }
 
 // NewConsulServiceDiscovery constructs a Consul backend using the given API client
 // and the prefix in the KV store.
 func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physical.ServiceDiscovery, error) {
-	//// Get the path in Consul
-	//path, ok := conf["path"]
-	//if !ok {
-	//	path = "vault/"
-	//}
-	//if logger.IsDebug() {
-	//	logger.Debug("config path set", "path", path)
-	//}
-
-	//// Ensure path is suffixed but not prefixed
-	//if !strings.HasSuffix(path, "/") {
-	//	logger.Warn("appending trailing forward slash to path")
-	//	path += "/"
-	//}
-	//if strings.HasPrefix(path, "/") {
-	//	logger.Warn("trimming path of its forward slash")
-	//	path = strings.TrimPrefix(path, "/")
-	//}
 
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
@@ -138,32 +112,6 @@ func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physi
 		}
 	}
 
-	//sessionTTL := api.DefaultLockSessionTTL
-	//sessionTTLStr, ok := conf["session_ttl"]
-	//if ok {
-	//	_, err := parseutil.ParseDurationSecond(sessionTTLStr)
-	//	if err != nil {
-	//		return nil, errwrap.Wrapf("invalid session_ttl: {{err}}", err)
-	//	}
-	//	sessionTTL = sessionTTLStr
-	//	if logger.IsDebug() {
-	//		logger.Debug("config session_ttl set", "session_ttl", sessionTTL)
-	//	}
-	//}
-
-	//lockWaitTime := api.DefaultLockWaitTime
-	//lockWaitTimeRaw, ok := conf["lock_wait_time"]
-	//if ok {
-	//	d, err := parseutil.ParseDurationSecond(lockWaitTimeRaw)
-	//	if err != nil {
-	//		return nil, errwrap.Wrapf("invalid lock_wait_time: {{err}}", err)
-	//	}
-	//	lockWaitTime = d
-	//	if logger.IsDebug() {
-	//		logger.Debug("config lock_wait_time set", "lock_wait_time", d)
-	//	}
-	//}
-
 	// Configure the client
 	consulConf := api.DefaultConfig()
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
@@ -221,29 +169,6 @@ func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physi
 		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
 	}
 
-	//maxParStr, ok := conf["max_parallel"]
-	//var maxParInt int
-	//if ok {
-	//	maxParInt, err = strconv.Atoi(maxParStr)
-	//	if err != nil {
-	//		return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
-	//	}
-	//	if logger.IsDebug() {
-	//		logger.Debug("max_parallel set", "max_parallel", maxParInt)
-	//	}
-	//}
-
-	//consistencyMode, ok := conf["consistency_mode"]
-	//if ok {
-	//	switch consistencyMode {
-	//	case consistencyModeDefault, consistencyModeStrong:
-	//	default:
-	//		return nil, fmt.Errorf("invalid consistency_mode value: %q", consistencyMode)
-	//	}
-	//} else {
-	//	consistencyMode = consistencyModeDefault
-	//}
-
 	// Setup the backend
 	c := &ConsulServiceDiscovery{
 		logger:              logger,
@@ -257,16 +182,76 @@ func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physi
 		notifyActiveCh:      make(chan notifyEvent),
 		notifySealedCh:      make(chan notifyEvent),
 		notifyPerfStandbyCh: make(chan notifyEvent),
-
-		//path:                path,
-		//kv:                  client.KV(),
-		//permitPool:          physical.NewPermitPool(maxParInt),
-		//consistencyMode:     consistencyMode,
-
-		//sessionTTL:          sessionTTL,
-		//lockWaitTime:        lockWaitTime,
 	}
 	return c, nil
+}
+
+func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
+	serverName, _, err := net.SplitHostPort(address)
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "missing port"):
+		serverName = conf["address"]
+	default:
+		return nil, err
+	}
+
+	insecureSkipVerify := false
+	tlsSkipVerify, ok := conf["tls_skip_verify"]
+
+	if ok && tlsSkipVerify != "" {
+		b, err := parseutil.ParseBool(tlsSkipVerify)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+		}
+		insecureSkipVerify = b
+	}
+
+	tlsMinVersionStr, ok := conf["tls_min_version"]
+	if !ok {
+		// Set the default value
+		tlsMinVersionStr = "tls12"
+	}
+
+	tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
+	if !ok {
+		return nil, fmt.Errorf("invalid 'tls_min_version'")
+	}
+
+	tlsClientConfig := &tls.Config{
+		MinVersion:         tlsMinVersion,
+		InsecureSkipVerify: insecureSkipVerify,
+		ServerName:         serverName,
+	}
+
+	_, okCert := conf["tls_cert_file"]
+	_, okKey := conf["tls_key_file"]
+
+	if okCert && okKey {
+		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
+		if err != nil {
+			return nil, errwrap.Wrapf("client tls setup failed: {{err}}", err)
+		}
+
+		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	}
+
+	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
+		caPool := x509.NewCertPool()
+
+		data, err := ioutil.ReadFile(tlsCaFile)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
+		}
+
+		if !caPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+
+		tlsClientConfig.RootCAs = caPool
+	}
+
+	return tlsClientConfig, nil
 }
 
 func (c *ConsulServiceDiscovery) NotifyActiveStateChange() error {
@@ -425,117 +410,6 @@ func (c *ConsulServiceDiscovery) runEventDemuxer(waitGroup *sync.WaitGroup, shut
 	}
 }
 
-func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
-	serverName, _, err := net.SplitHostPort(address)
-	switch {
-	case err == nil:
-	case strings.Contains(err.Error(), "missing port"):
-		serverName = conf["address"]
-	default:
-		return nil, err
-	}
-
-	insecureSkipVerify := false
-	tlsSkipVerify, ok := conf["tls_skip_verify"]
-
-	if ok && tlsSkipVerify != "" {
-		b, err := parseutil.ParseBool(tlsSkipVerify)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
-		}
-		insecureSkipVerify = b
-	}
-
-	tlsMinVersionStr, ok := conf["tls_min_version"]
-	if !ok {
-		// Set the default value
-		tlsMinVersionStr = "tls12"
-	}
-
-	tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version'")
-	}
-
-	tlsClientConfig := &tls.Config{
-		MinVersion:         tlsMinVersion,
-		InsecureSkipVerify: insecureSkipVerify,
-		ServerName:         serverName,
-	}
-
-	_, okCert := conf["tls_cert_file"]
-	_, okKey := conf["tls_key_file"]
-
-	if okCert && okKey {
-		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
-		if err != nil {
-			return nil, errwrap.Wrapf("client tls setup failed: {{err}}", err)
-		}
-
-		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	}
-
-	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
-		caPool := x509.NewCertPool()
-
-		data, err := ioutil.ReadFile(tlsCaFile)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
-		}
-
-		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		tlsClientConfig.RootCAs = caPool
-	}
-
-	return tlsClientConfig, nil
-}
-
-// runCheck immediately pushes a TTL check.
-func (c *ConsulServiceDiscovery) runCheck(sealed bool) error {
-	// Run a TTL check
-	agent := c.client.Agent()
-	if !sealed {
-		return agent.PassTTL(c.checkID(), "Vault Unsealed")
-	} else {
-		return agent.FailTTL(c.checkID(), "Vault Sealed")
-	}
-}
-
-func (c *ConsulServiceDiscovery) setRedirectAddr(addr string) (err error) {
-	if addr == "" {
-		return fmt.Errorf("redirect address must not be empty")
-	}
-
-	url, err := url.Parse(addr)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
-	}
-
-	var portStr string
-	c.redirectHost, portStr, err = net.SplitHostPort(url.Host)
-	if err != nil {
-		if url.Scheme == "http" {
-			portStr = "80"
-		} else if url.Scheme == "https" {
-			portStr = "443"
-		} else if url.Scheme == "unix" {
-			portStr = "-1"
-			c.redirectHost = url.Path
-		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
-		}
-	}
-	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
-	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
-	}
-
-	return nil
-}
-
 // checkID returns the ID used for a Consul Check.  Assume at least a read
 // lock is held.
 func (c *ConsulServiceDiscovery) checkID() string {
@@ -640,6 +514,17 @@ func (c *ConsulServiceDiscovery) reconcileConsul(registeredServiceID string, act
 	return serviceID, nil
 }
 
+// runCheck immediately pushes a TTL check.
+func (c *ConsulServiceDiscovery) runCheck(sealed bool) error {
+	// Run a TTL check
+	agent := c.client.Agent()
+	if !sealed {
+		return agent.PassTTL(c.checkID(), "Vault Unsealed")
+	} else {
+		return agent.FailTTL(c.checkID(), "Vault Sealed")
+	}
+}
+
 // fetchServiceTags returns all of the relevant tags for Consul.
 func (c *ConsulServiceDiscovery) fetchServiceTags(active bool, perfStandby bool) []string {
 	activeTag := "standby"
@@ -654,4 +539,36 @@ func (c *ConsulServiceDiscovery) fetchServiceTags(active bool, perfStandby bool)
 	}
 
 	return result
+}
+
+func (c *ConsulServiceDiscovery) setRedirectAddr(addr string) (err error) {
+	if addr == "" {
+		return fmt.Errorf("redirect address must not be empty")
+	}
+
+	url, err := url.Parse(addr)
+	if err != nil {
+		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+	}
+
+	var portStr string
+	c.redirectHost, portStr, err = net.SplitHostPort(url.Host)
+	if err != nil {
+		if url.Scheme == "http" {
+			portStr = "80"
+		} else if url.Scheme == "https" {
+			portStr = "443"
+		} else if url.Scheme == "unix" {
+			portStr = "-1"
+			c.redirectHost = url.Path
+		} else {
+			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+		}
+	}
+	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
+	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+	}
+
+	return nil
 }
