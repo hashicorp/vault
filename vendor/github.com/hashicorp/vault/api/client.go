@@ -790,8 +790,10 @@ START:
 		return nil, LastOutputStringError
 	}
 
+	var cancel context.CancelFunc
 	if timeout != 0 {
-		ctx, _ = context.WithTimeout(ctx, timeout)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 	req.Request = req.Request.WithContext(ctx)
 
