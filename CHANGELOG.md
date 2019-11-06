@@ -1,6 +1,29 @@
-## 1.3 (Unreleased)
+## 1.3 (unreleased)
 
 CHANGES:
+
+* Secondary cluster activation: There has been a change to the way that activating
+  performance and DR secondary clusters works when using public keys for
+  encryption of the parameters rather than a wrapping token. This flow was
+  experimental and never documented. It is now officially supported and
+  documented but is not backwards compatible with older Vault releases.
+
+IMPROVEMENTS:
+
+* metrics: Upgrade DataDog library to improve performance [GH-7794]
+
+BUG FIXES:
+
+* api: Fix Go API using lease revocation via URL instead of body [GH-7777]
+* core: Don't allow registering a non-root zero TTL token lease. This is purely
+  defense in depth as the lease would be revoked immediately anyways, but
+  there's no real reason to allow registration. [GH-7524]
+* ui: Ensure that items in the top navigation link to pages that users have access to. [GH-7590]
+
+## 1.3-beta1 (October 30th, 2019)
+
+CHANGES:
+
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
    the full TLS 1.2 cipher suite list by default. Although this port is only
    used for Vault-to-Vault communication and would always pick a strong cipher,
@@ -46,9 +69,12 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
+ * **Filtered Paths Replication** Based on the predecessor Filtered Mount Replication, 
+   Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
 
 IMPROVEMENTS:
 
+ * agent: Add ability to set the TLS SNI name used by Agent [GH-7519]
  * api: Allow setting a function to control retry behavior [GH-7331]
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
@@ -145,6 +171,7 @@ BUG FIXES:
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * identity: Fixed nil pointer panic when merging entities [GH-7712]
+ * secrets/azure: Fix panic that could occur if client retries timeout [GH-7793]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
@@ -178,6 +205,7 @@ BUG FIXES:
  * auth/jwt: Fix an error where newer (v1.2) token_* configuration parameters
    were not being applied to tokens generated using the OIDC login flow
    [JWT-67]
+ * raft: Fix an incorrect JSON tag on `leader_ca_cert` in the join request [GH-7393]
  * seal/transit: Allow using Vault Agent for transit seal operations [GH-7441]
  * storage/couchdb: Fix a file descriptor leak [GH-7345]
  * ui: Fix a bug where the status menu would disappear when trying to revoke a
