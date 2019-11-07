@@ -2082,7 +2082,6 @@ func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logica
 	}
 	if resp.IsError() {
 		return resp, nil
-
 	}
 
 	// Remove the token ID from the response
