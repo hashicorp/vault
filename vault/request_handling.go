@@ -860,7 +860,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID)
 		if err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
+			// Best-effort clean up on error, so we log the cleanup error as a
+			// warning but still return as internal error.
+			if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+				c.logger.Warn("failed to clean up token lease", "request_path", req.Path, "error", err)
+			}
 			return nil, nil, ErrInternalError
 		}
 
@@ -874,7 +878,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				Path:        resp.Auth.CreationPath,
 				NamespaceID: ns.ID,
 			}, resp.Auth); err != nil {
-				c.tokenStore.revokeOrphan(ctx, te.ID)
+				// Best-effort clean up on error, so we log the cleanup error as
+				// a warning but still return as internal error.
+				if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+					c.logger.Warn("failed to clean up token lease", "request_path", req.Path, "error", err)
+				}
 				c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
@@ -1209,7 +1217,9 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	case logical.TokenTypeService:
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(ctx, &te, auth); err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
+			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
+				c.logger.Warn("failed to clean up token lease", "request_path", path, "error", err)
+			}
 			c.logger.Error("failed to register token lease", "request_path", path, "error", err)
 			return ErrInternalError
 		}

@@ -48,7 +48,7 @@ const (
 	// defaultLeaseDuration is the default lease duration used when no lease is specified
 	defaultLeaseTTL = maxLeaseTTL
 
-	//maxLeaseThreshold is the maximum lease count before generating log warning
+	// maxLeaseThreshold is the maximum lease count before generating log warning
 	maxLeaseThreshold = 256000
 )
 
@@ -1146,6 +1146,12 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
+
+	// Triggers failure of RegisterAuth. This should only be triggered by tests
+	// to simulate partial failure during a token creation request.
+	if m.core.testRegisterAuthFailure.Load() {
+		return fmt.Errorf("failing explicitly on RegisterAuth")
+	}
 
 	authExpirationTime := auth.ExpirationTime()
 
