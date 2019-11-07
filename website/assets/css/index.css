@@ -1,10 +1,10 @@
 @import 'normalize.css';
+@import '_fonts';
 @import '@hashicorp/hashi-global-styles/style';
 
 /* NPM Preact Components */
 @import '@hashicorp/hashi-alert/dist/style.css';
 @import '@hashicorp/hashi-button/dist/style.css';
-@import '@hashicorp/hashi-callouts/dist/style.css';
 @import '@hashicorp/hashi-case-study-slider/dist/style.css';
 @import '@hashicorp/hashi-code-block/dist/style.css';
 @import '@hashicorp/hashi-consent-manager/dist/style.css';
@@ -24,6 +24,7 @@
 @import '@hashicorp/hashi-split-cta/dist/style.css';
 @import '@hashicorp/hashi-text-and-content/dist/style.css';
 @import '@hashicorp/hashi-toggle/dist/style.css';
+@import '@hashicorp/hashi-use-cases/dist/style.css';
 @import '@hashicorp/hashi-vertical-text-block-list/dist/style.css';
 
 /* Local Preact Components */
@@ -45,10 +46,6 @@
 
 /* Print styles */
 @import '_print';
-
-h5 {
-  font-weight: 600;
-}
 
 .g-text-and-content .image img {
   width: 100%;
