@@ -28,8 +28,8 @@ import (
 
 var _ physical.ServiceDiscovery = (*ConsulServiceDiscovery)(nil)
 
-// ConsulServiceDiscovery is a ServiceDiscovery that advertises the state of Vault to
-// Consul.
+// ConsulServiceDiscovery is a ServiceDiscovery that advertises the state of
+// Vault to Consul.
 type ConsulServiceDiscovery struct {
 	logger              log.Logger
 	client              *api.Client
@@ -47,8 +47,7 @@ type ConsulServiceDiscovery struct {
 	notifyPerfStandbyCh chan notifyEvent
 }
 
-// NewConsulServiceDiscovery constructs a Consul backend using the given API client
-// and the prefix in the KV store.
+// NewConsulServiceDiscovery constructs a Consul-based ServiceDiscovery.
 func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physical.ServiceDiscovery, error) {
 
 	// Allow admins to disable consul integration

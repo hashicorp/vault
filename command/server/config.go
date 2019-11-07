@@ -28,6 +28,8 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
+	ServiceDiscovery *ServiceDiscovery `hcl:"-"`
+
 	Seals   []*Seal  `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
 
@@ -147,6 +149,17 @@ type Storage struct {
 }
 
 func (b *Storage) GoString() string {
+	return fmt.Sprintf("*%#v", *b)
+}
+
+// ServiceDiscovery is the optional service discovery for the server.
+type ServiceDiscovery struct {
+	Type         string
+	RedirectAddr string
+	Config       map[string]string
+}
+
+func (b *ServiceDiscovery) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
@@ -584,6 +597,13 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	//parse service discovery
+	if o := list.Filter("service_discovery"); len(o.Items) > 0 {
+		if err := parseServiceDiscovery(&result, o, "service_discovery"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'service_discovery': {{err}}", err)
+		}
+	}
+
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
 		if err := parseSeals(&result, o, "hsm"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
@@ -824,6 +844,47 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		DisableClustering: disableClustering,
 		Type:              strings.ToLower(key),
 		Config:            m,
+	}
+	return nil
+}
+
+func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one %q block is permitted", name)
+	}
+
+	// Get our item
+	item := list.Items[0]
+
+	key := name
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
+	}
+
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	// Pull out the redirect address since it's common to all backends
+	var redirectAddr string
+	if v, ok := m["redirect_addr"]; ok {
+		redirectAddr = v
+		delete(m, "redirect_addr")
+	} else if v, ok := m["advertise_addr"]; ok {
+		redirectAddr = v
+		delete(m, "advertise_addr")
+	}
+
+	// Override with top-level values if they are set
+	if result.APIAddr != "" {
+		redirectAddr = result.APIAddr
+	}
+
+	result.ServiceDiscovery = &ServiceDiscovery{
+		RedirectAddr: redirectAddr,
+		Type:         strings.ToLower(key),
+		Config:       m,
 	}
 	return nil
 }

@@ -83,6 +83,8 @@ type ConsulBackend struct {
 // and the prefix in the KV store.
 func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 
+	// Create the ConsulServiceDiscovery struct that we will embed in the
+	// ConsulBackend
 	sd, err := NewConsulServiceDiscovery(conf, logger)
 	if err != nil {
 		return nil, err

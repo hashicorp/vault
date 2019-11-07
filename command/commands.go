@@ -157,7 +157,7 @@ var (
 	}
 
 	physicalServiceDiscoveries = map[string]physical.ServiceDiscoveryFactory{
-		// TODO "consul": physConsul.NewConsulServiceDiscovery,
+		"consul": physConsul.NewConsulServiceDiscovery,
 	}
 )
 
