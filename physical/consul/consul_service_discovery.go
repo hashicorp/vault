@@ -28,7 +28,7 @@ import (
 
 var _ physical.ServiceDiscovery = (*ConsulServiceDiscovery)(nil)
 
-// ConsulService is a ServiceDiscovery that advertises the state of Vault to
+// ConsulServiceDiscovery is a ServiceDiscovery that advertises the state of Vault to
 // Consul.
 type ConsulServiceDiscovery struct {
 	logger              log.Logger
