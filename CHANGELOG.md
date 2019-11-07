@@ -171,6 +171,8 @@ BUG FIXES:
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * identity: Fixed nil pointer panic when merging entities [GH-7712]
+ * replication (Enterprise): Fix issue causing performance standbys nodes 
+   disconnecting when under high loads.
  * secrets/azure: Fix panic that could occur if client retries timeout [GH-7793]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]
