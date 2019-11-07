@@ -80,6 +80,8 @@ type ServerCommand struct {
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
 
+	PhysicalServiceDiscoveries map[string]physical.ServiceDiscoveryFactory
+
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
 	SigUSR2Ch  chan struct{}
@@ -936,6 +938,24 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Initialize the Service Discovery, if there is one
+	var configSd physical.ServiceDiscovery
+	if config.ServiceDiscovery != nil {
+		sdFactory, ok := c.PhysicalServiceDiscoveries[config.ServiceDiscovery.Type]
+		if !ok {
+			c.UI.Error(fmt.Sprintf("Unknown service_discovery type %s", config.ServiceDiscovery.Type))
+			return 1
+		}
+
+		namedSDLogger := c.logger.Named("service_discovery." + config.ServiceDiscovery.Type)
+		allLoggers = append(allLoggers, namedSDLogger)
+		configSd, err = sdFactory(config.ServiceDiscovery.Config, namedSDLogger)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing service_discovery of type %s: %s", config.ServiceDiscovery.Type, err))
+			return 1
+		}
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = logLevelString
@@ -1020,6 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
+		ConfigServiceDiscovery:    configSd,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,

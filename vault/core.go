@@ -502,6 +502,8 @@ type CoreConfig struct {
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend
 
+	ConfigServiceDiscovery physical.ServiceDiscovery
+
 	Seal Seal
 
 	SecureRandomReader io.Reader
@@ -572,6 +574,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AuditBackends:             c.AuditBackends,
 		Physical:                  c.Physical,
 		HAPhysical:                c.HAPhysical,
+		ConfigServiceDiscovery:    c.ConfigServiceDiscovery,
 		Seal:                      c.Seal,
 		Logger:                    c.Logger,
 		DisableCache:              c.DisableCache,
@@ -603,6 +606,11 @@ func (c *CoreConfig) Clone() *CoreConfig {
 // not exist.
 func (c *CoreConfig) ServiceDiscovery() physical.ServiceDiscovery {
 
+	// Check whether there is a ServiceDiscovery explictly configured
+	if c.ConfigServiceDiscovery != nil {
+		return c.ConfigServiceDiscovery
+	}
+
 	// Check if HAPhysical is configured and implements ServiceDiscovery
 	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
 		if sd, ok := c.HAPhysical.(physical.ServiceDiscovery); ok {
@@ -610,7 +618,7 @@ func (c *CoreConfig) ServiceDiscovery() physical.ServiceDiscovery {
 		}
 	}
 
-	// No service discovery is configured
+	// No service discovery is available.
 	return nil
 }
 
