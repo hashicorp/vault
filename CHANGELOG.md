@@ -146,7 +146,13 @@ BUG FIXES:
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  
-## 1.2.4 (Unreleased)
+## 1.2.4 (November 7th, 2019)
+
+SECURITY:
+
+ * In a non-root namespace, revocation of a token scoped to a non-root namespace did not trigger the expected revocation of dynamic secret leases associated with that token. As a result, dynamic secret leases in non-root namespaces may outlive the token that created them.  This vulnerability, CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
+ * Disaster Recovery secondary clusters did not delete already-replicated data after a mount filter has been created on an upstream Performance secondary cluster. As a result, encrypted secrets may remain replicated on a Disaster Recovery secondary cluster after application of a mount filter excluding those secrets from replication. This vulnerability, CVE-2019-18617, affects Vault Enterprise 0.8 and newer.
+ * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which corresponds to CVE-2019-17596.
 
 CHANGES: 
 
