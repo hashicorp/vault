@@ -7,16 +7,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/oracle/oci-go-sdk/objectstorage"
 	"io/ioutil"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/oracle/oci-go-sdk/objectstorage"
 )
 
 // The lock implementation below prioritizes ensuring that there are not 2 primary at any given point in time

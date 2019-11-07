@@ -1,17 +1,17 @@
 package misc
 
 import (
-	"github.com/go-test/deep"
-	"go.uber.org/atomic"
 	"path"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
+	"go.uber.org/atomic"
 )
 
 func TestRecovery(t *testing.T) {

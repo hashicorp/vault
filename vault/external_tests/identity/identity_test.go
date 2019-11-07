@@ -1,16 +1,16 @@
 package identity
 
 import (
-	"github.com/go-ldap/ldap"
-	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"testing"
 
+	"github.com/go-ldap/ldap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )

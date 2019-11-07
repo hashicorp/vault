@@ -2,12 +2,12 @@ package keysutil
 
 import (
 	"context"
+	"crypto/rand"
 	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
-	"crypto/rand"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
