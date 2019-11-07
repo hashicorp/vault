@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"

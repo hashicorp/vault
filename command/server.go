@@ -20,8 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -55,6 +53,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"

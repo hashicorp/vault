@@ -7,12 +7,11 @@ import (
 	realtesting "testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/physical/raft"
-
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	physConsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
