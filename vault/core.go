@@ -485,60 +485,60 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	DevToken string `json:"dev_token" structs:"dev_token" mapstructure:"dev_token"`
+	DevToken string
 
-	BuiltinRegistry BuiltinRegistry `json:"builtin_registry" structs:"builtin_registry" mapstructure:"builtin_registry"`
+	BuiltinRegistry BuiltinRegistry
 
-	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
+	LogicalBackends map[string]logical.Factory
 
-	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
+	CredentialBackends map[string]logical.Factory
 
-	AuditBackends map[string]audit.Factory `json:"audit_backends" structs:"audit_backends" mapstructure:"audit_backends"`
+	AuditBackends map[string]audit.Factory
 
-	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
+	Physical physical.Backend
 
-	StorageType string `json:"storage_type" structs:"storage_type" mapstructure:"storage_type"`
+	StorageType string
 
 	// May be nil, which disables HA operations
-	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
+	HAPhysical physical.HABackend
 
-	Seal Seal `json:"seal" structs:"seal" mapstructure:"seal"`
+	Seal Seal
 
-	SecureRandomReader io.Reader `json:"secure_random_reader" structs:"secure_random_reader" mapstructure:"secure_random_reader"`
+	SecureRandomReader io.Reader
 
-	Logger log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
+	Logger log.Logger
 
 	// Disables the LRU cache on the physical backend
-	DisableCache bool `json:"disable_cache" structs:"disable_cache" mapstructure:"disable_cache"`
+	DisableCache bool
 
 	// Disables mlock syscall
-	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
+	DisableMlock bool
 
 	// Custom cache size for the LRU cache on the physical backend, or zero for default
-	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
+	CacheSize int
 
 	// Set as the leader address for HA
-	RedirectAddr string `json:"redirect_addr" structs:"redirect_addr" mapstructure:"redirect_addr"`
+	RedirectAddr string
 
 	// Set as the cluster address for HA
-	ClusterAddr string `json:"cluster_addr" structs:"cluster_addr" mapstructure:"cluster_addr"`
+	ClusterAddr string
 
-	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	DefaultLeaseTTL time.Duration
 
-	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	MaxLeaseTTL time.Duration
 
-	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
+	ClusterName string
 
-	ClusterCipherSuites string `json:"cluster_cipher_suites" structs:"cluster_cipher_suites" mapstructure:"cluster_cipher_suites"`
+	ClusterCipherSuites string
 
-	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
+	EnableUI bool
 
 	// Enable the raw endpoint
-	EnableRaw bool `json:"enable_raw" structs:"enable_raw" mapstructure:"enable_raw"`
+	EnableRaw bool
 
-	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
+	PluginDirectory string
 
-	DisableSealWrap bool `json:"disable_sealwrap" structs:"disable_sealwrap" mapstructure:"disable_sealwrap"`
+	DisableSealWrap bool
 
 	RawConfig *server.Config
 
