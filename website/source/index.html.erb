@@ -11,10 +11,10 @@ description: "Vault secures, stores, and tightly controls access to tokens, pass
   <%-# Text Section -%>
 
   <section class='g-container remove-bottom-padding'>
-    <div class="g-section-header infrastructure">
-      <h2>Secure dynamic infrastructure across clouds and environments</h2>
-      <h3>The shift from static, on-premise infrastructure to dynamic, multi-provider infrastructure changes the approach to security. Security in static infrastructure relies on dedicated servers, static IP addresses, and a clear network perimeter. Security in dynamic infrastructure is defined by ephemeral applications and servers, trusted sources of user and application identity, and software-based encryption.</h3>
-    </div>
+    <hashi-section-header
+      headline="Secure dynamic infrastructure across clouds and environments"
+      description="The shift from static, on-premise infrastructure to dynamic, multi-provider infrastructure changes the approach to security. Security in static infrastructure relies on dedicated servers, static IP addresses, and a clear network perimeter. Security in dynamic infrastructure is defined by ephemeral applications and servers, trusted sources of user and application identity, and software-based encryption."
+    ></hashi-section-header>    
   </section>
 
   <%-# Before After Diagram -%>
@@ -23,11 +23,11 @@ description: "Vault secures, stores, and tightly controls access to tokens, pass
     <hashi-before-after _data="<%= encode(dato.vault_product_page.static_dynamic_section.layout.content.last.to_hash(4)) %>"></hashi-before-after>
   </section>
 
-  <%-# Callouts -%>
+  <%-# Use cases -%>
 
   <section>
     <div class='g-container'>
-      <hashi-callouts _data="<%= encode({items: [
+      <hashi-use-cases _data="<%= encode({items: [
         {
           title: 'Secrets Management',
           description: 'Audit access, automatically Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
@@ -67,7 +67,7 @@ description: "Vault secures, stores, and tightly controls access to tokens, pass
             url: '/use-cases/identity-based-access'
           }
         }
-      ]}) %>"></hashi-callouts>
+      ]}) %>"></hashi-use-cases>
     </div>
   </section>
 
@@ -117,6 +117,7 @@ Securely manage secrets and access through a centralized workflow",
 } %>
 
     <hashi-text-and-content _data='<%= encode(extend_text_and_content) %>'></hashi-text-and-content>
+    
   </section>
 
   <section class='g-container'>
