@@ -156,7 +156,7 @@ var (
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
 
-	physicalServiceDiscoveries = map[string]physical.ServiceDiscoveryFactory{
+	physicalServiceDiscoverers = map[string]physical.ServiceDiscoveryFactory{
 		"consul": physConsul.NewConsulServiceDiscovery,
 	}
 )
@@ -522,7 +522,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 
-				PhysicalServiceDiscoveries: physicalServiceDiscoveries,
+				PhysicalServiceDiscoverers: physicalServiceDiscoverers,
 
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),

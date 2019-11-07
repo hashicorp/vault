@@ -80,7 +80,7 @@ type ServerCommand struct {
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
 
-	PhysicalServiceDiscoveries map[string]physical.ServiceDiscoveryFactory
+	PhysicalServiceDiscoverers map[string]physical.ServiceDiscoveryFactory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -941,7 +941,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the Service Discovery, if there is one
 	var configSd physical.ServiceDiscovery
 	if config.ServiceDiscovery != nil {
-		sdFactory, ok := c.PhysicalServiceDiscoveries[config.ServiceDiscovery.Type]
+		sdFactory, ok := c.PhysicalServiceDiscoverers[config.ServiceDiscovery.Type]
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Unknown service_discovery type %s", config.ServiceDiscovery.Type))
 			return 1
