@@ -40,7 +40,7 @@
     "color-contrast": "^0.0.1",
     "highlight.js": "^9.15.10",
     "js-cookie": "^2.2.0",
-    "marked": "^0.5.1",
+    "marked": "^0.6.1",
     "normalize.css": "^8.0.0",
     "object-assign": "^4.1.1",
     "object-fit-images": "^3.2.4",
