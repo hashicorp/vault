@@ -112,6 +112,9 @@ IMPROVEMENTS:
  * sys: Add endpoint that counts the total number of active identity entities [GH-7541]
  * sys: `sys/seal-status` now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
+ * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
+   total number of active service token accessors in the shared token storage.
+   [GH-7541]
  * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
    returns the configuration state of the server. It excludes config values
    from `storage`, `ha_storage`, and `seal` stanzas and some values
@@ -119,9 +122,6 @@ IMPROVEMENTS:
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
  * ui: clarify when secret version is deleted in the secret version history dropdown [GH-7714]
- * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
-   total number of active service token accessors in the shared token storage.
-   [GH-7541]
 
 BUG FIXES:
 
@@ -132,10 +132,12 @@ BUG FIXES:
    could cause confusing error messages during `vault login` [GH-7508]
  * cli: Fix a bug where the `namespace list` command with JSON formatting 
    always returned an empty object [GH-7705]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
- * secret/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
+ * secrets/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
  * sys/health: Pay attention to the values provided for `standbyok` and
    `perfstandbyok` rather than simply using their presence as a key to flip on
    that behavior [GH-7323]
@@ -143,8 +145,7 @@ BUG FIXES:
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
  * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685] 
- * cli: Command timeouts are now always specified solely by the
-   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
+
  
 ## 1.2.4 (November 7th, 2019)
 
