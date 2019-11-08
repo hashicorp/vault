@@ -44,7 +44,6 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	cache "github.com/patrickmn/go-cache"
-	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
 
@@ -479,11 +478,6 @@ type Core struct {
 	secureRandomReader io.Reader
 
 	recoveryMode bool
-
-	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
-	// RegisterAuth to simulate a partial failure during a token creation
-	// request. This value should only be set by tests.
-	testRegisterAuthFailure uberAtomic.Bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -2179,14 +2173,6 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
 	return c.metricsHelper
-}
-
-// SetTestRegisterAuthFailure sets the an internal atomic bool within
-// core to trigger failure on its expiration manager's RegisterAuth
-// method to simulate partial failure during a token creation request.
-// This method should only be used by tests.
-func (c *Core) SetTestRegisterAuthFailure(active bool) {
-	c.testRegisterAuthFailure.Store(active)
 }
 
 // BuiltinRegistry is an interface that allows the "vault" package to use

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -87,6 +88,11 @@ type ExpirationManager struct {
 
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
+
+	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
+	// RegisterAuth to simulate a partial failure during a token creation
+	// request. This value should only be set by tests.
+	testRegisterAuthFailure uberAtomic.Bool
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
@@ -1147,9 +1153,9 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
-	// Triggers failure of RegisterAuth. This should only be triggered by tests
-	// to simulate partial failure during a token creation request.
-	if m.core.testRegisterAuthFailure.Load() {
+	// Triggers failure of RegisterAuth. This should only be set and triggered
+	// by tests to simulate partial failure during a token creation request.
+	if m.testRegisterAuthFailure.Load() {
 		return fmt.Errorf("failing explicitly on RegisterAuth")
 	}
 
