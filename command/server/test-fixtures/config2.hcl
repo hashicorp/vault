@@ -23,7 +23,6 @@ ha_storage "consul" {
 
 service_discovery "consul" {
     foo = "bar"
-    redirect_addr = "quux"
 }
 
 telemetry {

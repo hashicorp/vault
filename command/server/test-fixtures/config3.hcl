@@ -23,7 +23,6 @@ ha_backend "consul" {
 }
 
 service_discovery "consul" {
-  redirect_addr = "foo"
   token = "foo"
 }
 

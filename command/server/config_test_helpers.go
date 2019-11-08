@@ -48,8 +48,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 		},
 
 		ServiceDiscovery: &ServiceDiscovery{
-			Type:         "consul",
-			RedirectAddr: "top_level_api_addr",
+			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
 			},
@@ -277,8 +276,7 @@ func testLoadConfigFile(t *testing.T) {
 		},
 
 		ServiceDiscovery: &ServiceDiscovery{
-			Type:         "consul",
-			RedirectAddr: "quux",
+			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
 			},
@@ -348,8 +346,7 @@ func testLoadConfigFile_json(t *testing.T) {
 		},
 
 		ServiceDiscovery: &ServiceDiscovery{
-			Type:         "consul",
-			RedirectAddr: "quux",
+			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
 			},
@@ -508,8 +505,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"type":               "consul",
 		},
 		"service_discovery": map[string]interface{}{
-			"redirect_addr": "top_level_api_addr",
-			"type":          "consul",
+			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{
 			"circonus_api_app":                       "",

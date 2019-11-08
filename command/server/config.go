@@ -154,9 +154,8 @@ func (b *Storage) GoString() string {
 
 // ServiceDiscovery is the optional service discovery for the server.
 type ServiceDiscovery struct {
-	Type         string
-	RedirectAddr string
-	Config       map[string]string
+	Type   string
+	Config map[string]string
 }
 
 func (b *ServiceDiscovery) GoString() string {
@@ -860,7 +859,6 @@ func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) er
 
 	// Get our item
 	item := list.Items[0]
-
 	key := name
 	if len(item.Keys) > 0 {
 		key = item.Keys[0].Token.Value().(string)
@@ -871,22 +869,9 @@ func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) er
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
-	// Pull out the redirect address since it's common to all backends
-	var redirectAddr string
-	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
-		delete(m, "redirect_addr")
-	}
-
-	// Override with top-level values if they are set
-	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
-	}
-
 	result.ServiceDiscovery = &ServiceDiscovery{
-		RedirectAddr: redirectAddr,
-		Type:         strings.ToLower(key),
-		Config:       m,
+		Type:   strings.ToLower(key),
+		Config: m,
 	}
 	return nil
 }
@@ -1074,8 +1059,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 	// Sanitize service_discovery stanza
 	if c.ServiceDiscovery != nil {
 		sanitizedServiceDiscovery := map[string]interface{}{
-			"type":          c.ServiceDiscovery.Type,
-			"redirect_addr": c.ServiceDiscovery.RedirectAddr,
+			"type": c.ServiceDiscovery.Type,
 		}
 		result["service_discovery"] = sanitizedServiceDiscovery
 	}

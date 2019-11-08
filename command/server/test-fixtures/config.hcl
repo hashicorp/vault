@@ -20,7 +20,6 @@ ha_backend "consul" {
 
 service_discovery "consul" {
     foo = "bar"
-    redirect_addr = "quux"
 }
 
 telemetry {
