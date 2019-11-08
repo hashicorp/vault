@@ -863,7 +863,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
 			if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
-				c.logger.Warn("failed to clean up token lease", "request_path", req.Path, "error", err)
+				c.logger.Warn("failed to clean up token lease from entity and policy lookup failure", "request_path", req.Path, "error", err)
 			}
 			return nil, nil, ErrInternalError
 		}
@@ -881,9 +881,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				// Best-effort clean up on error, so we log the cleanup error as
 				// a warning but still return as internal error.
 				if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
-					c.logger.Warn("failed to clean up token lease", "request_path", req.Path, "error", err)
+					c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
 				}
-				c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
+				c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
@@ -1167,6 +1167,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	return resp, auth, routeErr
 }
 
+// RegisterAuth uses a logical.Auth object to create a token entry in the token
+// store, and registers the a corresponding token lease to the expiration
+// manager.
 func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
@@ -1218,9 +1221,9 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(ctx, &te, auth); err != nil {
 			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
-				c.logger.Warn("failed to clean up token lease", "request_path", path, "error", err)
+				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
 			}
-			c.logger.Error("failed to register token lease", "request_path", path, "error", err)
+			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
 			return ErrInternalError
 		}
 	}
