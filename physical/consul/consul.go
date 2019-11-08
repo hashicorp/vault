@@ -20,28 +20,6 @@ import (
 )
 
 const (
-	// checkJitterFactor specifies the jitter factor used to stagger checks
-	checkJitterFactor = 16
-
-	// checkMinBuffer specifies provides a guarantee that a check will not
-	// be executed too close to the TTL check timeout
-	checkMinBuffer = 100 * time.Millisecond
-
-	// consulRetryInterval specifies the retry duration to use when an
-	// API call to the Consul agent fails.
-	consulRetryInterval = 1 * time.Second
-
-	// defaultCheckTimeout changes the timeout of TTL checks
-	defaultCheckTimeout = 5 * time.Second
-
-	// DefaultServiceName is the default Consul service name used when
-	// advertising a Vault instance.
-	DefaultServiceName = "vault"
-
-	// reconcileTimeout is how often Vault should query Consul to detect
-	// and fix any state drift.
-	reconcileTimeout = 60 * time.Second
-
 	// consistencyModeDefault is the configuration value used to tell
 	// consul to use default consistency.
 	consistencyModeDefault = "default"
