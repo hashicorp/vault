@@ -8,6 +8,12 @@ CHANGES:
   experimental and never documented. It is now officially supported and
   documented but is not backwards compatible with older Vault releases.
 
+FEATURES:
+
+ * Token Renewal via Accessor: Tokens can now be renewed via the accessor value through
+   the new `auth/token/renew-accessor` endpoint if the caller's token has
+   permission to access that endpoint.
+
 IMPROVEMENTS:
 
 * metrics: Upgrade DataDog library to improve performance [GH-7794]
