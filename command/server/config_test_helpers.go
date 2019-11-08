@@ -47,6 +47,14 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 			DisableClustering: true,
 		},
 
+		ServiceDiscovery: &ServiceDiscovery{
+			Type:         "consul",
+			RedirectAddr: "top_level_api_addr",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
 		Telemetry: &Telemetry{
 			StatsdAddr:                 "bar",
 			StatsiteAddr:               "foo",
@@ -124,6 +132,13 @@ func testLoadConfigFile_json2(t *testing.T, entropy *Entropy) {
 				"bar": "baz",
 			},
 			DisableClustering: true,
+		},
+
+		ServiceDiscovery: &ServiceDiscovery{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
 		},
 
 		CacheSize: 45678,
@@ -222,7 +237,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v",config.Entropy)
+			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}
@@ -259,6 +274,14 @@ func testLoadConfigFile(t *testing.T) {
 				"bar": "baz",
 			},
 			DisableClustering: true,
+		},
+
+		ServiceDiscovery: &ServiceDiscovery{
+			Type:         "consul",
+			RedirectAddr: "quux",
+			Config: map[string]string{
+				"foo": "bar",
+			},
 		},
 
 		Telemetry: &Telemetry{
@@ -322,6 +345,14 @@ func testLoadConfigFile_json(t *testing.T) {
 				"foo": "bar",
 			},
 			DisableClustering: true,
+		},
+
+		ServiceDiscovery: &ServiceDiscovery{
+			Type:         "consul",
+			RedirectAddr: "quux",
+			Config: map[string]string{
+				"foo": "bar",
+			},
 		},
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
@@ -475,6 +506,10 @@ func testConfig_Sanitized(t *testing.T) {
 			"disable_clustering": false,
 			"redirect_addr":      "top_level_api_addr",
 			"type":               "consul",
+		},
+		"service_discovery": map[string]interface{}{
+			"redirect_addr": "top_level_api_addr",
+			"type":          "consul",
 		},
 		"telemetry": map[string]interface{}{
 			"circonus_api_app":                       "",

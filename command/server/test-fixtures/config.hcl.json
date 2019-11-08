@@ -11,6 +11,12 @@
 			"disable_clustering": "true"
 		}
 	},
+	"service_discovery": {
+		"consul": {
+			"foo": "bar",
+			"redirect_addr": "quux"
+		}
+	},
 	"telemetry": {
 		"statsite_address": "baz"
 	},

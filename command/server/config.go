@@ -304,6 +304,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
+	result.ServiceDiscovery = c.ServiceDiscovery
+	if c2.ServiceDiscovery != nil {
+		result.ServiceDiscovery = c2.ServiceDiscovery
+	}
+
 	result.Entropy = c.Entropy
 	if c2.Entropy != nil {
 		result.Entropy = c2.Entropy
@@ -871,9 +876,6 @@ func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) er
 	if v, ok := m["redirect_addr"]; ok {
 		redirectAddr = v
 		delete(m, "redirect_addr")
-	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
-		delete(m, "advertise_addr")
 	}
 
 	// Override with top-level values if they are set
@@ -1067,6 +1069,15 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
 		result["ha_storage"] = sanitizedHAStorage
+	}
+
+	// Sanitize service_discovery stanza
+	if c.ServiceDiscovery != nil {
+		sanitizedServiceDiscovery := map[string]interface{}{
+			"type":          c.ServiceDiscovery.Type,
+			"redirect_addr": c.ServiceDiscovery.RedirectAddr,
+		}
+		result["service_discovery"] = sanitizedServiceDiscovery
 	}
 
 	// Sanitize seals stanza

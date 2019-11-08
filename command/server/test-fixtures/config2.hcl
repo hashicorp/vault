@@ -21,6 +21,11 @@ ha_storage "consul" {
     disable_clustering = "true"
 }
 
+service_discovery "consul" {
+    foo = "bar"
+    redirect_addr = "quux"
+}
+
 telemetry {
     statsd_address = "bar"
     statsite_address = "foo"

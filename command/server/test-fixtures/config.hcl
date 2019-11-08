@@ -18,6 +18,11 @@ ha_backend "consul" {
     disable_clustering = "true"
 }
 
+service_discovery "consul" {
+    foo = "bar"
+    redirect_addr = "quux"
+}
+
 telemetry {
     statsd_address = "bar"
     statsite_address = "foo"

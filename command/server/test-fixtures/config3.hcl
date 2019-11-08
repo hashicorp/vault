@@ -22,6 +22,11 @@ ha_backend "consul" {
   token = "foo"
 }
 
+service_discovery "consul" {
+  redirect_addr = "foo"
+  token = "foo"
+}
+
 telemetry {
   statsd_address = "bar"
   circonus_api_token = "baz"
