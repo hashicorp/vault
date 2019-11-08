@@ -1168,8 +1168,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
-// store, and registers the a corresponding token lease to the expiration
-// manager.
+// store, and registers a corresponding token lease to the expiration manager.
 func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
