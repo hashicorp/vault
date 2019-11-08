@@ -76,7 +76,7 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
- * **Filtered Paths Replication** Based on the predecessor Filtered Mount Replication, 
+ * **Filtered Paths Replication (Enterprise):** Based on the predecessor Filtered Mount Replication, 
    Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
 
 IMPROVEMENTS:
