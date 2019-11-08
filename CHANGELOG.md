@@ -24,6 +24,8 @@ BUG FIXES:
 * core: Don't allow registering a non-root zero TTL token lease. This is purely
   defense in depth as the lease would be revoked immediately anyways, but
   there's no real reason to allow registration. [GH-7524]
+* core: Correctly revoke the token that's present in the response auth from a
+  auth/token/ request if there's partial failure during the process. [GH-7835]
 * identity: Ensure only replication primary stores the identity case sensitivity state [GH-7820]
 * ui: Ensure that items in the top navigation link to pages that users have access to [GH-7590]
 
