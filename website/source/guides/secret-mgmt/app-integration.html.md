@@ -168,7 +168,7 @@ working with `database` secrets engine is out of scope for this guide.
 $ vault secrets enable database
 
 # Configure the secret engine with appropriate parameter values
-$ vault write database/config/postgresql
+$ vault write database/config/postgresql \
       plugin_name=postgresql-database-plugin \
       allowed_roles=* \
       connection_url=postgresql://root:rootpassword@localhost:5432/myapp
