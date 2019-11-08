@@ -284,7 +284,7 @@ $ curl \
 }
 ```
 
-## Lookup a Token Accessor
+## Lookup a Token (Accessor)
 
 Returns information about the client token from the accessor.
 
@@ -440,6 +440,60 @@ $ curl \
 {
   "auth": {
     "client_token": "ABCD",
+    "policies": [
+      "web",
+      "stage"
+    ],
+    "metadata": {
+      "user": "armon"
+    },
+    "lease_duration": 3600,
+    "renewable": true
+  }
+}
+```
+
+## Renew a Token (Accessor)
+
+Renews a lease associated with a token using its accessor. This is used to
+prevent the expiration of a token, and the automatic revocation of it. Token
+renewal is possible only if there is a lease associated with it.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/token/renew-accessor`          |
+
+### Parameters
+
+- `accessor` `(string: <required>)` - Accessor associated with the token to
+renew.
+- `increment` `(string: "")` - An optional requested lease increment can be
+provided. This increment may be ignored.
+
+### Sample Payload
+
+```json
+{
+  "accessor": "7JFKXuXKXa2D44YfDiovZ9aq"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/token/renew-accessor
+```
+
+### Sample Response
+
+```json
+{
+  "auth": {
+    "client_token": "",
     "policies": [
       "web",
       "stage"
