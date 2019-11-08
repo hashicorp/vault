@@ -51,13 +51,13 @@ FEATURES:
  * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
    engine, users or applications can check out a service account for use, and its
    password will be rotated when it's checked back in.
- * **Vault Agent Template** Vault Agent now supports rendering templates containing 
+ * **Vault Agent Template**: Vault Agent now supports rendering templates containing 
    Vault secrets to disk, similar to Consul Template [GH-7652]
  * **Transit Key Type Support**: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551] and encryption and 
    decryption is now supported via AES128-GCM96 [GH-7555]
  * **SSRF Protection for Vault Agent**: Vault Agent has a configuration option to 
-   require a specific header beffore allowing requests [GH-7627]
+   require a specific header before allowing requests [GH-7627]
  * **AWS Auth Method Root Rotation**: The credential used by the AWS auth method can 
    now be rotated, to ensure that only Vault knows the credentials it is using [GH-7131]
  * **New UI Features** The UI now supports managing users and groups for the 
