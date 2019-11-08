@@ -2,6 +2,7 @@ package entropy
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/errwrap"
 )
 
@@ -13,7 +14,7 @@ type Reader struct {
 	source Sourcer
 }
 
-func NewReader(source Sourcer) *Reader{
+func NewReader(source Sourcer) *Reader {
 	return &Reader{source}
 }
 
@@ -21,7 +22,7 @@ func NewReader(source Sourcer) *Reader{
 // If r returns an error having read at least len(p) bytes, the error is dropped.
 // It returns the number of bytes copied and an error if fewer bytes were read.
 // On return, n == len(p) if and only if err == nil.
-func (r *Reader) Read(p []byte) (n int, err error){
+func (r *Reader) Read(p []byte) (n int, err error) {
 	requested := len(p)
 	randBytes, err := r.source.GetRandom(requested)
 	delivered := copy(p, randBytes)

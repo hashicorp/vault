@@ -847,7 +847,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
+func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -888,7 +888,59 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
+	lookupAccessor := func() int64 {
+		req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
+		req.Data = map[string]interface{}{
+			"accessor": out.Accessor,
+		}
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.Data == nil {
+			t.Fatal("response should contain data")
+		}
+		if resp.Data["accessor"].(string) == "" {
+			t.Fatal("accessor should not be empty")
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl == 0 {
+			t.Fatal("ttl was zero")
+		}
+		return ttl
+	}
+
+	firstTTL := lookupAccessor()
+
+	// Sleep so we can verify renew behavior
+	time.Sleep(10 * time.Second)
+
+	secondTTL := lookupAccessor()
+	if secondTTL >= firstTTL {
+		t.Fatalf("second TTL %d was greater than first %d", secondTTL, firstTTL)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": out.Accessor,
+	}
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Auth == nil {
+		t.Fatal("resp auth is nil")
+	}
+	if resp.Auth.ClientToken != "" {
+		t.Fatal("client token found in response")
+	}
+
+	thirdTTL := lookupAccessor()
+	if thirdTTL <= secondTTL {
+		t.Fatalf("third TTL %d was not greater than second %d", thirdTTL, secondTTL)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
 	req.Data = map[string]interface{}{
 		"accessor": out.Accessor,
 	}

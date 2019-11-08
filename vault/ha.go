@@ -6,10 +6,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/vault/seal/shamir"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/vault/seal/shamir"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
