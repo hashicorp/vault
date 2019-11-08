@@ -2,7 +2,9 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -2384,5 +2386,71 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 	// Test passthrough values, they should not be present in the backend
 	if _, ok := headers[consts.AuthHeaderName]; ok {
 		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
+	}
+}
+
+// mockServiceDiscovery is a mocked ServiceDiscovery that is used for
+// testing whether the service_discovery config stanza works properly.
+type mockServiceDiscovery struct {
+	sealedStateChangeCount int
+}
+
+func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
+	return errors.New("NotifyActiveStateChange should not be called")
+}
+
+func (m *mockServiceDiscovery) NotifySealedStateChange() error {
+	m.sealedStateChangeCount++
+	return nil
+}
+
+func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
+	return errors.New("NotifyPerformanceStandbyStateChange should not be called")
+}
+
+func (m *mockServiceDiscovery) RunServiceDiscovery(
+	_ *sync.WaitGroup, _ physical.ShutdownChannel, _ string,
+	_ physical.ActiveFunction, _ physical.SealedFunction,
+	_ physical.PerformanceStandbyFunction) error {
+	return errors.New("RunServiceDiscovery should not be called")
+}
+
+// Test with a mocked ServiceDiscovery to see whether the service_discovery
+// config stanza works properly.
+func TestCore_ServiceDiscovery(t *testing.T) {
+
+	mock := &mockServiceDiscovery{}
+	conf := &CoreConfig{
+		ConfigServiceDiscovery: mock,
+	}
+
+	// create an unsealed core
+	c, keys, root := TestCoreUnsealedWithConfig(t, conf)
+	if mock.sealedStateChangeCount != 1 {
+		t.Fatalf("err: sealed state change count should be %d, not %d", 1, mock.sealedStateChangeCount)
+	}
+
+	// seal the core
+	err := c.Seal(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if mock.sealedStateChangeCount != 2 {
+		t.Fatalf("err: sealed state change count should be %d, not %d", 2, mock.sealedStateChangeCount)
+	}
+
+	// unseal the core
+	var unseal bool
+	for _, key := range keys {
+		unseal, err = TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+	if !unseal {
+		t.Fatalf("err: should be unsealed")
+	}
+	if mock.sealedStateChangeCount != 3 {
+		t.Fatalf("err: sealed state change count should be %d, not %d", 3, mock.sealedStateChangeCount)
 	}
 }
