@@ -2390,13 +2390,13 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 }
 
 // mockServiceDiscovery is a mocked ServiceDiscovery that is used for
-// testing whether the service_discovery config stanza works properly.
+// testing whether a standalone ServiceDiscovery works properly
 type mockServiceDiscovery struct {
 	sealedStateChangeCount int
 }
 
 func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
-	return errors.New("NotifyActiveStateChange should not be called")
+	return errors.New("NotifyActiveStateChange is intentionally not implemented")
 }
 
 func (m *mockServiceDiscovery) NotifySealedStateChange() error {
@@ -2405,18 +2405,18 @@ func (m *mockServiceDiscovery) NotifySealedStateChange() error {
 }
 
 func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
-	return errors.New("NotifyPerformanceStandbyStateChange should not be called")
+	return errors.New("NotifyPerformanceStandbyStateChange is intentionally not implemented")
 }
 
 func (m *mockServiceDiscovery) RunServiceDiscovery(
 	_ *sync.WaitGroup, _ physical.ShutdownChannel, _ string,
 	_ physical.ActiveFunction, _ physical.SealedFunction,
 	_ physical.PerformanceStandbyFunction) error {
-	return errors.New("RunServiceDiscovery should not be called")
+	return errors.New("RunServiceDiscovery is intentionally not implemented")
 }
 
-// Test with a mocked ServiceDiscovery to see whether the service_discovery
-// config stanza works properly.
+// Test with a mocked ServiceDiscovery to see whether the service_discovery a
+// standalone ServiceDiscovery works properly
 func TestCore_ServiceDiscovery(t *testing.T) {
 
 	mock := &mockServiceDiscovery{}
