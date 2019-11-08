@@ -74,7 +74,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			environmentName = "AzurePublicCloud"
 		}
 	}
-	
+
 	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
 	if environmentUrl == "" {
 		environmentUrl = conf["arm_endpoint"]
@@ -87,7 +87,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		environment, err = azure.EnvironmentFromURL(environmentUrl)
 		if err != nil {
 			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for URL %q: {{err}}",
-			environmentUrl)
+				environmentUrl)
 			return nil, errwrap.Wrapf(errorMsg, err)
 		}
 	} else {
