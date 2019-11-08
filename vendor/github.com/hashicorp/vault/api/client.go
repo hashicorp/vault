@@ -790,10 +790,15 @@ START:
 		return nil, LastOutputStringError
 	}
 
-	var cancel context.CancelFunc
 	if timeout != 0 {
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
+		// NOTE: this leaks a timer. But when we defer a cancel call here for
+		// the returned function we see errors in tests with contxt canceled.
+		// Although the request is done by the time we exit this function it is
+		// still causing something else to go wrong. Maybe it ends up being
+		// tied to the response somehow and reading the response body ends up
+		// checking it, or something. I don't know, but until we can chase this
+		// down, keep it not-canceled even though vet complains.
+		ctx, _ = context.WithTimeout(ctx, timeout)
 	}
 	req.Request = req.Request.WithContext(ctx)
 

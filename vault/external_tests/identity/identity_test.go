@@ -3,7 +3,7 @@ package identity
 import (
 	"testing"
 
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
