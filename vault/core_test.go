@@ -2386,3 +2386,63 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
 	}
 }
+
+func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+
+	// Create a root token and use that for subsequent requests
+	req := logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.Data = map[string]interface{}{
+		"policies": []string{"root"},
+	}
+	req.ClientToken = root
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
+		t.Fatalf("expected a response from token creation, got: %#v", resp)
+	}
+	tokenWithRootPolicy := resp.Auth.ClientToken
+
+	// Use new token to create yet a new token, this should succeed
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try again but force failure on RegisterAuth to simulate a network failure
+	// when registering the lease (e.g. a storage failure). This should trigger
+	// an expiration manager cleanup on the newly created token
+	core.expiration.testRegisterAuthFailure.Store(true)
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error, got a response: %#v", resp)
+	}
+	core.expiration.testRegisterAuthFailure.Store(false)
+
+	// Do a lookup against the client token that we used for the failed request.
+	// It should still be present
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
+	req.Data = map[string]interface{}{
+		"token": tokenWithRootPolicy,
+	}
+	req.ClientToken = root
+	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Do a token creation request with the token to ensure that it's still
+	// valid, should succeed.
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
