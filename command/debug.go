@@ -389,6 +389,13 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 
 	if len(c.flagTargets) == 0 {
 		c.flagTargets = c.defaultTargets()
+	} else {
+		// Check for any invalid targets and ignore them if found
+		invalidTargets := strutil.Difference(c.flagTargets, c.defaultTargets(), true)
+		if len(invalidTargets) != 0 {
+			c.UI.Info(fmt.Sprintf("Ignoring invalid targets: %s", strings.Join(invalidTargets, ", ")))
+			c.flagTargets = strutil.Difference(c.flagTargets, invalidTargets, true)
+		}
 	}
 
 	// Make sure we can talk to the server
