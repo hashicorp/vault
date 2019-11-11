@@ -765,7 +765,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
 		c.flagDev = true
 	}
 
