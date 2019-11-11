@@ -61,6 +61,16 @@ func TestDebugCommand_Run(t *testing.T) {
 			"Too many arguments",
 			1,
 		},
+		{
+			"invalid_target",
+			[]string{
+				"-duration=1s",
+				fmt.Sprintf("-output=%s/too_many_args", testDir),
+				"-target=foo",
+			},
+			"Ignoring invalid targets: foo",
+			0,
+		},
 	}
 
 	for _, tc := range cases {
