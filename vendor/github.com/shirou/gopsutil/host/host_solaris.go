@@ -54,6 +54,11 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		result.PlatformVersion = fields[2]
 	}
 
+	kernelArch, err := kernelArch()
+	if err == nil {
+		result.KernelArch = kernelArch
+	}
+
 	// Find distribution name from /etc/release
 	fh, err := os.Open("/etc/release")
 	if err != nil {

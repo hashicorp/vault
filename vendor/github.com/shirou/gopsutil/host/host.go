@@ -20,6 +20,7 @@ type InfoStat struct {
 	PlatformFamily       string `json:"platformFamily"`  // ex: debian, rhel
 	PlatformVersion      string `json:"platformVersion"` // version of the complete OS
 	KernelVersion        string `json:"kernelVersion"`   // version of the OS kernel (if available)
+	KernelArch           string `json:"kernelArch"`      // native cpu architecture queried at runtime, as returned by `uname -m` or empty string in case of error
 	VirtualizationSystem string `json:"virtualizationSystem"`
 	VirtualizationRole   string `json:"virtualizationRole"` // guest or host
 	HostID               string `json:"hostid"`             // ex: uuid

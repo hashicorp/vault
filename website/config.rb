@@ -83,6 +83,9 @@ helpers do
     if page.url == "/" || page.url == "/index.html"
       return "page-home"
     end
+    if page.path.include? "use-cases"
+      return "use-cases"
+    end
     if !(title = page.data.page_title).blank?
       return title
         .downcase
@@ -116,5 +119,64 @@ helpers do
     end
 
     return classes.join(" ")
+  end
+
+  # Returns data / attributes used by the product subnav component.
+  # @return [Object]
+  def getSubNavData
+    return {
+      current_path: current_page.path,
+      products: dato.enterprise_products.map(&:to_hash),
+      subnav: {
+        tdm_focused_links: [
+          {
+            title: "Intro",
+            url: "/intro"
+          },
+          {
+            item_type: "dropdown_link",
+            title: "Use Cases",
+            links: [{
+              title: "Secrets Management",
+              url: "/use-cases/secrets-management"
+            },
+            {
+              title: "Data Encryption",
+              url: "/use-cases/data-encryption"
+            }, {
+              title: "Identity-based Access",
+              url: "/use-cases/identity-based-access"
+            }]
+          },
+          {
+            title: "Enterprise",
+            url: "https://www.hashicorp.com/products/vault/enterprise"
+          },
+          {
+            title: "Whitepaper",
+            url: "https://www.hashicorp.com/resources/unlocking-the-cloud-operating-model-security?utm_source=vaultsubnav"
+          }
+        ],
+        practitioner_focused_links: [
+          {
+            title: "Learn",
+            url: "https://learn.hashicorp.com/vault"
+          },
+          {
+            title: "Docs",
+            url: "/docs"
+          },
+          {
+            title: "API",
+            url: "/api"
+          },
+          {
+            title: "Community",
+            url: "/community"
+          }
+        ],
+        product: dato.vault_product_page.subnav.product.to_hash
+      }
+    }
   end
 end

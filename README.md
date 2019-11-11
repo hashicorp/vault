@@ -84,16 +84,6 @@ $ bin/vault
 ...
 ```
 
-To compile a development version of Vault Enterprise, run `make premdev`. Keep in mind this binary will contain a perpetual built-in license and should thus be protected from unauthorized use. Running `make premdev` will
-put the Vault binary in the `bin` and `$GOPATH/bin` folders:
-
-```sh
-$ make premdev
-...
-$ bin/vault
-...
-```
-
 To compile a development version of Vault with the UI, run `make static-dist dev-ui`. This will
 put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
