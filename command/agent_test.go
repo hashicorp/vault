@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
@@ -312,8 +314,6 @@ func TestExitAfterAuth(t *testing.T) {
 	}
 
 	config := `
-exit_after_auth = true
-
 auto_auth {
         method {
                 type = "jwt"
@@ -380,32 +380,6 @@ auto_auth {
 
 func TestAgent_RequireRequestHeader(t *testing.T) {
 
-	// request issues HTTP requests.
-	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
-		resp, err := client.RawRequest(req)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		if resp.StatusCode != expectedStatusCode {
-			t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
-		}
-
-		bytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		if len(bytes) == 0 {
-			return nil
-		}
-
-		var body map[string]interface{}
-		err = json.Unmarshal(bytes, &body)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		return body
-	}
-
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -466,7 +440,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	req.BodyBytes = []byte(`{
 		"type": "approle"
 	}`)
-	request(serverClient, req, 204)
+	request(t, serverClient, req, 204)
 
 	// Create a named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
@@ -477,17 +451,17 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	  "token_num_uses": "10",
 	  "token_ttl": "1m"
 	}`)
-	request(serverClient, req, 204)
+	request(t, serverClient, req, 204)
 
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(serverClient, req, 200)
+	body := request(t, serverClient, req, 200)
 	data := body["data"].(map[string]interface{})
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(serverClient, req, 200)
+	body = request(t, serverClient, req, 200)
 	data = body["data"].(map[string]interface{})
 	secretID := data["secret_id"].(string)
 
@@ -579,13 +553,13 @@ listener "tcp" {
 	// 'require_request_header', with the header missing from the request.
 	agentClient := newApiClient("http://127.0.0.1:8101", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'false', with the header missing from the request.
 	agentClient = newApiClient("http://127.0.0.1:8102", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header missing from the request.
@@ -618,5 +592,297 @@ listener "tcp" {
 	// to 'true', with the proper header present in the request.
 	agentClient = newApiClient("http://127.0.0.1:8103", true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
+}
+
+// TestAgent_Template tests rendering templates
+func TestAgent_Template(t *testing.T) {
+	//----------------------------------------------------
+	// Pre-test setup
+	//----------------------------------------------------
+	// makeTempFile creates a temp file and populates it.
+	makeTempFile := func(name, contents string) string {
+		f, err := ioutil.TempFile("", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := f.Name()
+		f.WriteString(contents)
+		f.Close()
+		return path
+	}
+
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// give test-role permissions to read the kv secret
+	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
+	req.BodyBytes = []byte(`{
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// setup the kv secrets
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate a secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// Get a temp file path we can use for the sink
+	sinkPath := makeTempFile("sink.txt", "")
+	defer os.Remove(sinkPath)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+
+	// start test cases here
+	testCases := map[string]struct {
+		templateCount int
+		exitAfterAuth bool
+	}{
+		"zero": {},
+		"zero-with-exit": {
+			exitAfterAuth: true,
+		},
+		"one": {
+			templateCount: 1,
+		},
+		"one_exit": {
+			templateCount: 1,
+			exitAfterAuth: true,
+		},
+		"many": {
+			templateCount: 15,
+		},
+		"many_exit": {
+			templateCount: 15,
+			exitAfterAuth: true,
+		},
+	}
+
+	for tcname, tc := range testCases {
+		t.Run(tcname, func(t *testing.T) {
+			// make some template files
+			var templatePaths []string
+			for i := 0; i < tc.templateCount; i++ {
+				path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents)
+				templatePaths = append(templatePaths, path)
+			}
+
+			// create temp dir for this test run
+			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// build up the template config to be added to the Agent config.hcl file
+			var templateConfigStrings []string
+			for i, t := range templatePaths {
+				index := fmt.Sprintf("render_%d.json", i)
+				s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
+				templateConfigStrings = append(templateConfigStrings, s)
+			}
+
+			// Create a config file
+			config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+						remove_secret_id_file_after_reading = false
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+
+%s
+
+%s
+`
+
+			// conditionally set the exit_after_auth flag
+			exitAfterAuth := ""
+			if tc.exitAfterAuth {
+				exitAfterAuth = "exit_after_auth = true"
+			}
+
+			// flatten the template configs
+			templateConfig := strings.Join(templateConfigStrings, " ")
+
+			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig, exitAfterAuth)
+			configPath := makeTempFile("config.hcl", config)
+			defer os.Remove(configPath)
+
+			// Start the agent
+			ui, cmd := testAgentCommand(t, logger)
+			cmd.client = serverClient
+			cmd.startedCh = make(chan struct{})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			go func() {
+				code := cmd.Run([]string{"-config", configPath})
+				if code != 0 {
+					t.Errorf("non-zero return code when running agent: %d", code)
+					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+				}
+				wg.Done()
+			}()
+
+			select {
+			case <-cmd.startedCh:
+			case <-time.After(5 * time.Second):
+				t.Errorf("timeout")
+			}
+
+			// if using exit_after_auth, then the command will have returned at the
+			// end and no longer be running. If we are not using exit_after_auth, then
+			// we need to shut down the command
+			if !tc.exitAfterAuth {
+				// We need to sleep to give Agent time to render the templates. Without this
+				// sleep, the test will attempt to read the temp dir before Agent has had time
+				// to render and will likely fail the test
+				time.Sleep(5 * time.Second)
+				cmd.ShutdownCh <- struct{}{}
+			}
+			wg.Wait()
+
+			//----------------------------------------------------
+			// Perform the tests
+			//----------------------------------------------------
+
+			files, err := ioutil.ReadDir(tmpDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(files) != len(templatePaths) {
+				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+			}
+		})
+	}
+}
+
+var templateContents = `{{ with secret "secret/myapp"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}`
+
+var templateConfigString = `
+template {
+  source      = "%s"
+  destination = "%s/%s"
+}
+`
+
+// request issues HTTP requests.
+func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.StatusCode != expectedStatusCode {
+		t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
+	}
+
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(bytes) == 0 {
+		return nil
+	}
+
+	var body map[string]interface{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	return body
 }

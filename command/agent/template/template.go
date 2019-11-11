@@ -29,9 +29,6 @@ type ServerConfig struct {
 
 // Server manages the Consul Template Runner which renders templates
 type Server struct {
-	// UnblockCh is used to block until a template is rendered
-	UnblockCh chan struct{}
-
 	// config holds the ServerConfig used to create it. It's passed along in other
 	// methods
 	config *ServerConfig
@@ -42,7 +39,6 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// TODO: remove donech?
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
@@ -53,7 +49,6 @@ func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
-		UnblockCh:     make(chan struct{}),
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
 	}
@@ -66,6 +61,7 @@ func NewServer(conf *ServerConfig) *Server {
 func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
 	latestToken := new(string)
 	ts.logger.Info("starting template server")
+	// defer the closing of the DoneCh
 	defer func() {
 		ts.logger.Info("template server stopped")
 		close(ts.DoneCh)
@@ -75,11 +71,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		panic("incoming channel is nil")
 	}
 
-	// If there are no templates, close the UnblockCh
+	// If there are no templates, return
 	if len(templates) == 0 {
-		// nothing to do
 		ts.logger.Info("no templates found")
-		close(ts.UnblockCh)
 		return
 	}
 
@@ -88,7 +82,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
 		ts.logger.Error("template server failed to generate runner config")
-		close(ts.UnblockCh)
 		return
 	}
 
@@ -96,15 +89,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Error("template server failed to create", "error", err)
-		close(ts.UnblockCh)
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			ts.runner.StopImmediately()
-			ts.runner = nil
+			ts.runner.Stop()
 			return
 
 		case token := <-incoming:
@@ -117,28 +108,26 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
-				runnerConfig.Merge(&ctv)
-				runnerConfig.Finalize()
+				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
-				} else {
-					go ts.runner.Start()
 				}
+				go ts.runner.Start()
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
-			close(ts.UnblockCh)
 			return
 		case <-ts.runner.TemplateRenderedCh():
-			// A template has been rendered, unblock
 			if ts.exitAfterAuth {
-				// if we want to exit after auth, go ahead and shut down the runner
+				// if we want to exit after auth, go ahead and shut down the runner and
+				// return. The deferred closing of the DoneCh will allow agent to
+				// continue with closing down
 				ts.runner.Stop()
+				return
 			}
-			close(ts.UnblockCh)
 		}
 	}
 }
