@@ -285,6 +285,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, err
 		}
 
+		b.logger.Info("follower node answered the raft bootstrap challenge", "follower_server_id", serverID)
+
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"peers":       peers,

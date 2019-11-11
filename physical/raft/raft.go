@@ -106,6 +106,10 @@ type RaftBackend struct {
 	permitPool *physical.PermitPool
 }
 
+func (b *RaftBackend) RetryJoinConfig() string {
+	return b.conf["retry_join"]
+}
+
 // EnsurePath is used to make sure a path exists
 func EnsurePath(path string, dir bool) error {
 	if !dir {
