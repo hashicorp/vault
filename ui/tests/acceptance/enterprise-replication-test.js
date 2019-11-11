@@ -87,10 +87,9 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
     assert
       .dom('[data-test-mount-config-paths]')
-      .hasText(mountPath, 'show page renders the correct mount path');
-    // click edit
+      .includesText(mountPath, 'show page renders the correct mount path');
 
-    // delete config
+    // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
     await click('#no-filtering');
 
