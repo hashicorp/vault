@@ -46,7 +46,6 @@ func TestServerRun(t *testing.T) {
 
 	type templateTest struct {
 		template *ctconfig.TemplateConfig
-		// secret   *secretRender
 	}
 
 	testCases := map[string]struct {
@@ -112,7 +111,7 @@ func TestServerRun(t *testing.T) {
 				templatesToRender = append(templatesToRender, templateTest.template)
 			}
 
-			ctx, cancelFunc := context.WithCancel(context.Background())
+			ctx := context.Background()
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				VaultConf: &config.Vault{
@@ -157,7 +156,6 @@ func TestServerRun(t *testing.T) {
 			if fileCount != len(templatesToRender) {
 				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
 			}
-			cancelFunc()
 		})
 	}
 }

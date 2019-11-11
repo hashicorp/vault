@@ -380,32 +380,6 @@ auto_auth {
 
 func TestAgent_RequireRequestHeader(t *testing.T) {
 
-	// request issues HTTP requests.
-	request := func(client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
-		resp, err := client.RawRequest(req)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		if resp.StatusCode != expectedStatusCode {
-			t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
-		}
-
-		bytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		if len(bytes) == 0 {
-			return nil
-		}
-
-		var body map[string]interface{}
-		err = json.Unmarshal(bytes, &body)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		return body
-	}
-
 	// makeTempFile creates a temp file and populates it.
 	makeTempFile := func(name, contents string) string {
 		f, err := ioutil.TempFile("", name)
@@ -466,7 +440,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	req.BodyBytes = []byte(`{
 		"type": "approle"
 	}`)
-	request(serverClient, req, 204)
+	request(t, serverClient, req, 204)
 
 	// Create a named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
@@ -477,17 +451,17 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	  "token_num_uses": "10",
 	  "token_ttl": "1m"
 	}`)
-	request(serverClient, req, 204)
+	request(t, serverClient, req, 204)
 
 	// Fetch the RoleID of the named role
 	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(serverClient, req, 200)
+	body := request(t, serverClient, req, 200)
 	data := body["data"].(map[string]interface{})
 	roleID := data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
 	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(serverClient, req, 200)
+	body = request(t, serverClient, req, 200)
 	data = body["data"].(map[string]interface{})
 	secretID := data["secret_id"].(string)
 
@@ -579,13 +553,13 @@ listener "tcp" {
 	// 'require_request_header', with the header missing from the request.
 	agentClient := newApiClient("http://127.0.0.1:8101", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'false', with the header missing from the request.
 	agentClient = newApiClient("http://127.0.0.1:8102", false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header missing from the request.
@@ -618,7 +592,7 @@ listener "tcp" {
 	// to 'true', with the proper header present in the request.
 	agentClient = newApiClient("http://127.0.0.1:8103", true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
-	request(agentClient, req, 200)
+	request(t, agentClient, req, 200)
 }
 
 // TestAgent_Template tests rendering templates
@@ -844,18 +818,17 @@ auto_auth {
 				t.Errorf("timeout")
 			}
 
-			// We need to sleep to give Agent time to render the templates. Without this
-			// sleep, the test will attempt to read the temp dir before Agent has had time
-			// to render and will likely fail the test
-			time.Sleep(5 * time.Second)
-
 			// if using exit_after_auth, then the command will have returned at the
 			// end and no longer be running. If we are not using exit_after_auth, then
 			// we need to shut down the command
 			if !tc.exitAfterAuth {
+				// We need to sleep to give Agent time to render the templates. Without this
+				// sleep, the test will attempt to read the temp dir before Agent has had time
+				// to render and will likely fail the test
+				time.Sleep(5 * time.Second)
 				cmd.ShutdownCh <- struct{}{}
-				wg.Wait()
 			}
+			wg.Wait()
 
 			//----------------------------------------------------
 			// Perform the tests
