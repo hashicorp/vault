@@ -19,7 +19,7 @@ commands. The `debug` command aims to provide a simple workflow that produces a
 consistent output to help operators retrieve and share information about the
 server in question.
 
-The `debug` sub-command honors the same the variables that the base command
+The `debug` command honors the same the variables that the base command
 accepts, such as the token stored via a previous login or the environment
 variables `VAULT_TOKEN` and `VAULT_ADDRESS`. The token used determines the
 permissions and, in turn, the information that `debug` may be able to collect.
@@ -32,7 +32,7 @@ point gets persisted to an output directory.
 
 Regardless of whether a particular target is provided, the ability for `debug`
 to fetch data for the target depends on the token provided. Some targets, such
-as `server-status` queries unauthenticated endpoints which means that it can be
+as `server-status`, queries unauthenticated endpoints which means that it can be
 queried all the time. Other targets require the token to have ACL permissions to
 query the matching endpoint in order to get a proper response. Any errors
 encountered during capture due to permissions or otherwise will be logged in the
