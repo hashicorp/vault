@@ -101,7 +101,7 @@ supports an additional optional entry:
 
 - `require_request_header (bool: false)` - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
-  Using this option offers an additional layer of protection from Service Side
+  Using this option offers an additional layer of protection from Server Side
   Request Forgery attacks.  Requests on the listener that do not have the proper
   `X-Vault-Request` header will fail, with a HTTP response status code of `412:
   Precondition Failed`.
