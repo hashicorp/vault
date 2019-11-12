@@ -100,7 +100,7 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 	if err != nil {
 		return err
 	}
-	if rs != nil && rs.TokenGen != nil && entry.KeyName == rs.TokenGen.KeyName {
+	if rs == nil || (rs.TokenGen != nil && entry.KeyName == rs.TokenGen.KeyName) {
 		return nil
 	}
 
