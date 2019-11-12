@@ -59,26 +59,25 @@ You'll note that log entries are prefixed with the metric type as follows:
 
 The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals.
 
-## Internal Metrics
+## Audit Metrics
 
-These metrics represent operational aspects of the running Vault instance.
+These metrics relate to auditing.
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
 | `vault.audit.log_request`| Duration of time taken by all audit log requests across all audit log devices | ms | summary |
 | `vault.audit.log_response`| Duration of time taken by audit log responses across all audit log devices | ms | summary |
-
-Additionally, per audit log device metrics such as those for a specific backend like `file` will be present as:
-
-| Metric | Description | Unit | Type |
-| :----- | :---------- | :--- | :--- |
-| `vault.audit.file.log_request`| Duration of time taken by audit log requests for the file based audit device mounted as `file` | ms | summary |
-| `vault.audit.file.log_response`| Duration of time taken by audit log responses for the file based audit device mounted as `file` | ms | summary |
-
-| Metric | Description | Unit | Type |
-| :----- | :---------- | :--- | :--- |
 | `vault.audit.log_request_failure` | Number of audit log request failures.  **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
 | `vault.audit.log_response_failure` | Number of audit log response failures. **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
+
+**NOTE:** For each audit device, the metrics appear as `vault.audit.<type>.log_request`.  For example, if a file audit device is enabled, its metrics would be `vault.audit.file.log_request`  and `vault.audit.file.log_response` .
+
+## Core Metrics
+
+These metrics represent operational aspects of the running Vault instance.
+
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
 | `vault.barrier.delete` | Duration of time taken by DELETE operations at the barrier | ms | summary |
 | `vault.barrier.get` | Duration of time taken by GET operations at the barrier | ms | summary |
 | `vault.barrier.put` | Duration of time taken by PUT operations at the barrier | ms | summary |
@@ -96,6 +95,13 @@ Additionally, per audit log device metrics such as those for a specific backend 
 | `vault.core.seal-internal` | Duration of time taken by internal seal operations | ms | gauge |
 | `vault.core.step_down` | Duration of time taken by cluster leadership step downs.  This should be monitored and alerted on for overall cluster leadership status. | ms | summary |
 | `vault.core.unseal` | Duration of time taken by unseal operations | ms | summary |
+
+## Runtime Metrics
+
+These metrics represent runtime aspects of the running Vault instance.
+
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
 | `vault.runtime.alloc_bytes` | Number of bytes allocated by the Vault process.  This could burst from time to time, but should return to a steady state value. | bytes | gauge |
 | `vault.runtime.free_count` | Number of freed objects | objects | gauge |
 | `vault.runtime.heap_objects` | Number of objects on the heap.  This is a good general memory pressure indicator worth establishing a baseline and thresholds for alerting. | objects | gauge |
