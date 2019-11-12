@@ -52,8 +52,10 @@ depending on the number and size of objects in the data store.
 
 - `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key 
    level check to diagnose issues. Defaults false.
+
 - `force` `(bool: false)` – Forces a complete re-indexing which only scans data 
    available in the storage. Defaults false.
+
 - `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex 
    process. This setting can be used to reduce the amount of time the tree is locked
    during a reindex process. If this node is killed before the full tree has been 
