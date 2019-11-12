@@ -7,9 +7,11 @@ package template
 
 import (
 	"context"
+	"io"
 	"strings"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
+	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
@@ -25,6 +27,15 @@ type ServerConfig struct {
 	ExitAfterAuth bool
 
 	Namespace string
+
+	// LogLevel is needed to set the internal Consul Template Runner's log level
+	// to match the log level of Vault Agent. The internal Runner creates it's own
+	// logger and can't be set externally or copied from the Template Server.
+	//
+	// LogWriter is needed to initialize Consul Template's internal logger to use
+	// the same io.Writer that Vault Agent itself is using.
+	LogLevel  hclog.Level
+	LogWriter io.Writer
 }
 
 // Server manages the Consul Template Runner which renders templates
@@ -80,8 +91,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// construct a consul template vault config based the agents vault
 	// configuration
 	var runnerConfig *ctconfig.Config
-	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
-		ts.logger.Error("template server failed to generate runner config")
+	var runnerConfigErr error
+	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
+		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
 		return
 	}
 
@@ -134,8 +146,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 // newRunnerConfig returns a consul-template runner configuration, setting the
 // Vault and Consul configurations based on the clients configs.
-func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctconfig.Config {
-	// TODO only use default Vault config
+func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
 	conf := ctconfig.DefaultConfig()
 	conf.Templates = templates.Copy()
 
@@ -173,5 +184,39 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 	}
 
 	conf.Finalize()
-	return conf
+
+	// setup log level from TemplateServer config
+	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
+
+	if err := ctlogging.Setup(&ctlogging.Config{
+		Name:   "template.server.runner",
+		Level:  *conf.LogLevel,
+		Writer: sc.LogWriter,
+	}); err != nil {
+		return nil, err
+	}
+	return conf, nil
+}
+
+// logLevelToString converts a go-hclog level to a matching, uppercase string
+// value. It's used to convert Vault Agent's hclog level to a string version
+// suitable for use in Consul Template's runner configuration input.
+func logLevelToStringPtr(level hclog.Level) *string {
+	// consul template's default level is WARN, but Vault Agent's default is INFO,
+	// so we use that for the Runner's default.
+	var levelStr string
+
+	switch level {
+	case hclog.Trace:
+		levelStr = "TRACE"
+	case hclog.Debug:
+		levelStr = "DEBUG"
+	case hclog.Warn:
+		levelStr = "WARN"
+	case hclog.Error:
+		levelStr = "ERROR"
+	default:
+		levelStr = "INFO"
+	}
+	return pointerutil.StringPtr(levelStr)
 }

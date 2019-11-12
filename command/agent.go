@@ -530,6 +530,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
+			LogLevel:      level,
+			LogWriter:     c.logWriter,
 			VaultConf:     config.Vault,
 			Namespace:     namespace,
 			ExitAfterAuth: config.ExitAfterAuth,
