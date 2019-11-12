@@ -6,7 +6,7 @@ parameters:
 steps:
   - run:
       name: Run Go tests
-      no_output_timeout: 20m
+      no_output_timeout: 60m
       command: |
         set -x
 
