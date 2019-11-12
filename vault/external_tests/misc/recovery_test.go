@@ -16,7 +16,7 @@ import (
 
 func TestRecovery(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
-	inm, err := inmem.NewInmemHA(nil, logger)
+	inm, err := inmem.NewTransactionalInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
