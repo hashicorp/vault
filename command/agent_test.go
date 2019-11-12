@@ -314,6 +314,8 @@ func TestExitAfterAuth(t *testing.T) {
 	}
 
 	config := `
+exit_after_auth = true
+
 auto_auth {
         method {
                 type = "jwt"
