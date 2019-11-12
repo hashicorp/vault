@@ -235,7 +235,17 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
-	return c.disableCredentialInternal(ctx, path, MountTableUpdateStorage)
+	// Disable credential internally
+	if err := c.disableCredentialInternal(ctx, path, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		// Even we failed to evaluate filtered paths, the unmount operation was still successful
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+	}
+	return nil
 }
 
 func (c *Core) disableCredentialInternal(ctx context.Context, path string, updateStorage bool) error {
@@ -366,27 +376,6 @@ func (c *Core) removeCredEntry(ctx context.Context, path string, updateStorage b
 	c.auth = newTable
 
 	return nil
-}
-
-// remountCredEntryForce takes a copy of the mount entry for the path and fully
-// unmounts and remounts the backend to pick up any changes, such as filtered
-// paths
-func (c *Core) remountCredEntryForce(ctx context.Context, path string) error {
-	fullPath := credentialRoutePrefix + path
-	me := c.router.MatchingMountEntry(ctx, fullPath)
-	if me == nil {
-		return fmt.Errorf("cannot find mount for path %q", path)
-	}
-
-	me, err := me.Clone()
-	if err != nil {
-		return err
-	}
-
-	if err := c.disableCredential(ctx, path); err != nil {
-		return err
-	}
-	return c.enableCredential(ctx, me)
 }
 
 // remountCredEntryForceInternal takes a copy of the mount entry for the path and fully

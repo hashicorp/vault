@@ -117,6 +117,8 @@ func TestServerRun(t *testing.T) {
 				VaultConf: &config.Vault{
 					Address: ts.URL,
 				},
+				LogLevel:      hclog.Trace,
+				LogWriter:     hclog.DefaultOutput,
 				ExitAfterAuth: true,
 			}
 

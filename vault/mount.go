@@ -560,7 +560,18 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 			return fmt.Errorf("cannot unmount %q", path)
 		}
 	}
-	return c.unmountInternal(ctx, path, MountTableUpdateStorage)
+
+	// Unmount mount internally
+	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		// Even we failed to evaluate filtered paths, the unmount operation was still successful
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+	}
+	return nil
 }
 
 func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
@@ -723,25 +734,6 @@ func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage b
 	}
 
 	return nil
-}
-
-// remountForce takes a copy of the mount entry for the path and fully unmounts
-// and remounts the backend to pick up any changes, such as filtered paths
-func (c *Core) remountForce(ctx context.Context, path string) error {
-	me := c.router.MatchingMountEntry(ctx, path)
-	if me == nil {
-		return fmt.Errorf("cannot find mount for path %q", path)
-	}
-
-	me, err := me.Clone()
-	if err != nil {
-		return err
-	}
-
-	if err := c.unmount(ctx, path); err != nil {
-		return err
-	}
-	return c.mount(ctx, me)
 }
 
 // remountForceInternal takes a copy of the mount entry for the path and fully unmounts

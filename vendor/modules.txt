@@ -290,6 +290,7 @@ github.com/grpc-ecosystem/grpc-gateway/internal
 github.com/hailocab/go-hostpool
 # github.com/hashicorp/consul-template v0.22.0
 github.com/hashicorp/consul-template/config
+github.com/hashicorp/consul-template/logging
 github.com/hashicorp/consul-template/manager
 github.com/hashicorp/consul-template/signals
 github.com/hashicorp/consul-template/child
@@ -349,6 +350,8 @@ github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/hcl/strconv
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/hashicorp/logutils v1.0.0
+github.com/hashicorp/logutils
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
@@ -392,7 +395,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.5.2
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20190926185807-2bf1d3b105ac
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191112195538-3c798536d157
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
