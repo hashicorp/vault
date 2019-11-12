@@ -151,16 +151,16 @@ These metrics relate to supported authentication methods.
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
-| `vault.rollback.attempt.auth-token-` | Time taken to perform a rollback operation for the [token auth method][token-auth-backend] | ms | summary |
-| `vault.rollback.attempt.auth-ldap-` | Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend] | ms | summary |
-| `vault.rollback.attempt.cubbyhole-` | Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms | summary |
-| `vault.rollback.attempt.secret-` | Time taken to perform a rollback operation for the [K/V secret backend][kv-secrets-engine] | ms | summary |
-| `vault.rollback.attempt.sys-` | Time taken to perform a rollback operation for the system backend | ms | summary |
-| `vault.route.rollback.auth-ldap-` | Time taken to perform a route rollback operation for the [LDAP auth method][ldap-auth-backend] | ms | summary |
-| `vault.route.rollback.auth-token-` | Time taken to perform a route rollback operation for the [token auth method][token-auth-backend] | ms | summary |
-| `vault.route.rollback.cubbyhole-` | Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms | summary |
-| `vault.route.rollback.secret-` | Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine] | ms | summary |
-| `vault.route.rollback.sys-` | Time taken to perform a route rollback operation for the system backend | ms | summary |
+| `vault.rollback.attempt.auth-token` | Time taken to perform a rollback operation for the [token auth method][token-auth-backend] | ms | summary |
+| `vault.rollback.attempt.auth-ldap` | Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend] | ms | summary |
+| `vault.rollback.attempt.cubbyhole` | Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms | summary |
+| `vault.rollback.attempt.secret` | Time taken to perform a rollback operation for the [K/V secret backend][kv-secrets-engine] | ms | summary |
+| `vault.rollback.attempt.sys` | Time taken to perform a rollback operation for the system backend | ms | summary |
+| `vault.route.rollback.auth-ldap` | Time taken to perform a route rollback operation for the [LDAP auth method][ldap-auth-backend] | ms | summary |
+| `vault.route.rollback.auth-token` | Time taken to perform a route rollback operation for the [token auth method][token-auth-backend] | ms | summary |
+| `vault.route.rollback.cubbyhole` | Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms | summary |
+| `vault.route.rollback.secret` | Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine] | ms | summary |
+| `vault.route.rollback.sys` | Time taken to perform a route rollback operation for the system backend | ms | summary |
 
 ## Replication Metrics
 
