@@ -70,7 +70,7 @@ These metrics relate to auditing.
 | `vault.audit.log_request_failure` | Number of audit log request failures.  **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
 | `vault.audit.log_response_failure` | Number of audit log response failures. **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
 
-**NOTE:** For each audit device, the metrics appear as `vault.audit.<type>.log_request`.  For example, if a file audit device is enabled, its metrics would be `vault.audit.file.log_request`  and `vault.audit.file.log_response` .
+**NOTE:** In addition, there are audit metrics for each enabled audit device represented as `vault.audit.<type>.log_request`.  For example, if a file audit device is enabled, its metrics would be `vault.audit.file.log_request` and `vault.audit.file.log_response` .
 
 ## Core Metrics
 
