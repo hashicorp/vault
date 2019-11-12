@@ -63,29 +63,10 @@ The following sections describe available Vault metrics. The metrics interval ca
 
 These metrics represent operational aspects of the running Vault instance.
 
-<table class="table table-bordered table-striped">
-  <tr>
-    <th>Metric</th>
-    <th>Description</th>
-    <th>Unit</th>
-    <th>Type</th>
-  </tr>
-
-  <tr>
-    <td>`vault.audit.log_request`</td>
-    <td>Duration of time taken by all audit log requests across all audit log devices</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.audit.log_response`</td>
-    <td>Duration of time taken by audit log responses across all audit log devices</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-</table>
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
+| `vault.audit.log_request`| Duration of time taken by all audit log requests across all audit log devices | ms | summary |
+| `vault.audit.log_response`| Duration of time taken by audit log responses across all audit log devices | ms | summary |
 
 Additionally, per audit log device metrics such as those for a specific backend like `file` will be present as:
 
