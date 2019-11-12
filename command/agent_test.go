@@ -824,10 +824,29 @@ auto_auth {
 			// end and no longer be running. If we are not using exit_after_auth, then
 			// we need to shut down the command
 			if !tc.exitAfterAuth {
-				// We need to sleep to give Agent time to render the templates. Without this
-				// sleep, the test will attempt to read the temp dir before Agent has had time
-				// to render and will likely fail the test
-				time.Sleep(5 * time.Second)
+				// We need to poll for a bit to give Agent time to render the
+				// templates. Without this this, the test will attempt to read
+				// the temp dir before Agent has had time to render and will
+				// likely fail the test
+				start := time.Now()
+				tick := time.Tick(1 * time.Second)
+				for {
+					select {
+					case <-tick:
+					}
+
+					if time.Now().After(start.Add(30 * time.Second)) {
+						t.Error("timed out waiting for templates to render")
+						break
+					}
+					// Check for files rendered in the directory and break
+					// early for shutdown if we do have all the files
+					// rendered
+					if testListFiles(t, tmpDir) == len(templatePaths) {
+						break
+					}
+				}
+
 				cmd.ShutdownCh <- struct{}{}
 			}
 			wg.Wait()
@@ -836,16 +855,22 @@ auto_auth {
 			// Perform the tests
 			//----------------------------------------------------
 
-			files, err := ioutil.ReadDir(tmpDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(files) != len(templatePaths) {
-				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+			if numFiles := testListFiles(t, tmpDir); numFiles != len(templatePaths) {
+				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
 			}
 		})
 	}
+}
+
+func testListFiles(t *testing.T, dir string) int {
+	t.Helper()
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return len(files)
 }
 
 var templateContents = `{{ with secret "secret/myapp"}}
