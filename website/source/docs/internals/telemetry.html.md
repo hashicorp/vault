@@ -151,7 +151,6 @@ These metrics relate to supported authentication methods.
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
-<tr> <th>Metric</th> <th>Description</th> <th>Unit</th> <th>Type</th> </tr>
 | `vault.rollback.attempt.auth-token-` | Time taken to perform a rollback operation for the [token auth method][token-auth-backend] | ms | summary |
 | `vault.rollback.attempt.auth-ldap-` | Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend] | ms | summary |
 | `vault.rollback.attempt.cubbyhole-` | Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms | summary |
@@ -169,7 +168,6 @@ These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
-<tr> <th>Metric</th> <th>Description</th> <th>Unit</th> <th>Type</th> </tr>
 | `logshipper.streamWALs.missing_guard` | Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is not matched/found | missing guards | counter | 
 | `logshipper.streamWALs.guard_found` | Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is matched/found | found guards | counter |
 | `replication.fetchRemoteKeys` | Time taken to fetch keys from a remote cluster participating in replication prior to Merkle Tree based delta generation | ms | summary |
@@ -244,7 +242,6 @@ These metrics relate to the supported [storage backends][storage-backends].
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
-<tr> <th>Metric</th> <th>Description</th> <th>Unit</th> <th>Type</th> </tr>
 | `vault.azure.put` | Duration of a PUT operation against the [Azure storage backend][azure-storage-backend] | ms | summary |
 | `vault.azure.get` | Duration of a GET operation against the [Azure storage backend][azure-storage-backend] | ms | summary |
 | `vault.azure.delete` | Duration of a DELETE operation against the [Azure storage backend][azure-storage-backend] | ms | summary |
