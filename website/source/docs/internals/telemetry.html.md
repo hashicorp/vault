@@ -70,244 +70,40 @@ These metrics represent operational aspects of the running Vault instance.
 
 Additionally, per audit log device metrics such as those for a specific backend like `file` will be present as:
 
-<table class="table table-bordered table-striped">
-  <tr>
-    <th>Metric</th>
-    <th>Description</th>
-    <th>Unit</th>
-    <th>Type</th>
-  </tr>
-  <tr>
-    <td>`vault.audit.file.log_request`</td>
-    <td>Duration of time taken by audit log requests for the file based audit device mounted as `file`</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
+| `vault.audit.file.log_request`| Duration of time taken by audit log requests for the file based audit device mounted as `file` | ms | summary |
+| `vault.audit.file.log_response`| Duration of time taken by audit log responses for the file based audit device mounted as `file` | ms | summary |
 
-  <tr>
-    <td>`vault.audit.file.log_response`</td>
-    <td>Duration of time taken by audit log responses for the file based audit device mounted as `file`</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-</table>
-
-<table class="table table-bordered table-striped">
-  <tr>
-    <th>Metric</th>
-    <th>Description</th>
-    <th>Unit</th>
-    <th>Type</th>
-  </tr>
-  <tr>
-    <td>`vault.audit.log_request_failure`</td>
-    <td>Number of audit log request failures.  **NOTE**: This is a particularly
-        important metric. Any non-zero value here indicates that there was a failure to
-        make an audit log request to any of the configured audit log devices; **when
-        Vault cannot log to any of the configured audit log devices it ceases all user
-        operations**, and you should begin troubleshooting the audit log devices
-        immediately if this metric continually increases.</td>
-    <td>failures</td>
-    <td>counter</td>
-  </tr>
-
-  <tr>
-    <td>`vault.audit.log_response_failure`</td>
-    <td>Number of audit log response failures. **NOTE**: This is a particularly
-        important metric. Any non-zero value here indicates that there was a failure to
-        receive a response to a request made to one of the configured audit log
-        devices; **when Vault cannot log to any of the configured audit log devices it
-        ceases all user operations**, and you should begin troubleshooting the audit
-        log devices immediately if this metric continually increases.</td>
-    <td>failures</td>
-    <td>counter</td>
-  </tr>
-
-  <tr>
-    <td>`vault.barrier.delete`</td>
-    <td>Duration of time taken by DELETE operations at the barrier</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.barrier.get`</td>
-    <td>Duration of time taken by GET operations at the barrier</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.barrier.put`</td>
-    <td>Duration of time taken by PUT operations at the barrier</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.barrier.list`</td>
-    <td>Duration of time taken by LIST operations at the barrier</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.check_token`</td>
-    <td>Duration of time taken by token checks handled by Vault core</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.fetch_acl_and_token`</td>
-    <td>Duration of time taken by ACL and corresponding token entry fetches handled by Vault core</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.handle_request`</td>
-    <td>Duration of time taken by requests handled by Vault core</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.handle_login_request`</td>
-    <td>Duration of time taken by login requests handled by Vault core</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.leadership_setup_failed`</td>
-    <td>Duration of time taken by cluster leadership setup failures which have
-        occurred in a highly available Vault cluster. This should be monitored and
-        alerted on for overall cluster leadership status.</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.leadership_lost`</td>
-    <td>Duration of time taken by cluster leadership losses which have occurred
-        in a highly available Vault cluster.  This should be monitored and alerted on
-        for overall cluster leadership status.</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.post_unseal`</td>
-    <td>Duration of time taken by post-unseal operations handled by Vault core</td>
-    <td>ms</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.pre_seal`</td>
-    <td>Duration of time taken by pre-seal operations</td>
-    <td>ms</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.seal-with-request`</td>
-    <td>Duration of time taken by requested seal operations</td>
-    <td>ms</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.seal`</td>
-    <td>Duration of time taken by seal operations</td>
-    <td>ms</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.seal-internal`</td>
-    <td>Duration of time taken by internal seal operations</td>
-    <td>ms</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.step_down`</td>
-    <td>Duration of time taken by cluster leadership step downs.  This should
-        be monitored and alerted on for overall cluster leadership status.</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.core.unseal`</td>
-    <td>Duration of time taken by unseal operations</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.alloc_bytes`</td>
-    <td>Number of bytes allocated by the Vault process.  This could burst from
-        time to time, but should return to a steady state value.</td>
-    <td>bytes</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.free_count`</td>
-    <td>Number of freed objects</td>
-    <td>objects</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.heap_objects`</td>
-    <td>Number of objects on the heap.  This is a good general memory pressure
-        indicator worth establishing a baseline and thresholds for alerting.</td>
-    <td>objects</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.malloc_count`</td>
-    <td>Cumulative count of allocated heap objects</td>
-    <td>objects</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.num_goroutines`</td>
-    <td>Number of goroutines.  This serves as a general system load indicator
-        worth establishing a baseline and thresholds for alerting.</td>
-    <td>goroutines</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.sys_bytes`</td>
-    <td>Number of bytes allocated to Vault.  This includes what is being used
-        by Vault's heap and what has been reclaimed but not given back to the operating
-        system.</td>
-    <td>bytes</td>
-    <td>gauge</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.total_gc_pause_ns`</td>
-    <td>The total garbage collector pause time since Vault was last started</td>
-    <td>ms</td>
-    <td>summary</td>
-  </tr>
-
-  <tr>
-    <td>`vault.runtime.total_gc_runs`</td>
-    <td>Total number of garbage collection runs since Vault was last started</td>
-    <td>operations</td>
-    <td>gauge</td>
-  </tr>
-</table>
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
+| `vault.audit.log_request_failure` | Number of audit log request failures.  **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
+| `vault.audit.log_response_failure` | Number of audit log response failures. **NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases. | failures | counter |
+| `vault.barrier.delete` | Duration of time taken by DELETE operations at the barrier | ms | summary |
+| `vault.barrier.get` | Duration of time taken by GET operations at the barrier | ms | summary |
+| `vault.barrier.put` | Duration of time taken by PUT operations at the barrier | ms | summary |
+| `vault.barrier.list` | Duration of time taken by LIST operations at the barrier | ms | summary |
+| `vault.core.check_token` | Duration of time taken by token checks handled by Vault core | ms | summary |
+| `vault.core.fetch_acl_and_token` | Duration of time taken by ACL and corresponding token entry fetches handled by Vault core | ms | summary |
+| `vault.core.handle_request` | Duration of time taken by requests handled by Vault core | ms | summary |
+| `vault.core.handle_login_request` | Duration of time taken by login requests handled by Vault core | ms | summary |
+| `vault.core.leadership_setup_failed` | Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status. | ms | summary |
+| `vault.core.leadership_lost` | Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster.  This should be monitored and alerted on for overall cluster leadership status. | ms | summary |
+| `vault.core.post_unseal` | Duration of time taken by post-unseal operations handled by Vault core | ms | gauge |
+| `vault.core.pre_seal` | Duration of time taken by pre-seal operations | ms | gauge |
+| `vault.core.seal-with-request` | Duration of time taken by requested seal operations | ms | gauge |
+| `vault.core.seal` | Duration of time taken by seal operations | ms | gauge |
+| `vault.core.seal-internal` | Duration of time taken by internal seal operations | ms | gauge |
+| `vault.core.step_down` | Duration of time taken by cluster leadership step downs.  This should be monitored and alerted on for overall cluster leadership status. | ms | summary |
+| `vault.core.unseal` | Duration of time taken by unseal operations | ms | summary |
+| `vault.runtime.alloc_bytes` | Number of bytes allocated by the Vault process.  This could burst from time to time, but should return to a steady state value. | bytes | gauge |
+| `vault.runtime.free_count` | Number of freed objects | objects | gauge |
+| `vault.runtime.heap_objects` | Number of objects on the heap.  This is a good general memory pressure indicator worth establishing a baseline and thresholds for alerting. | objects | gauge |
+| `vault.runtime.malloc_count` | Cumulative count of allocated heap objects | objects | gauge |
+| `vault.runtime.num_goroutines` | Number of goroutines.  This serves as a general system load indicator worth establishing a baseline and thresholds for alerting. | goroutines | gauge |
+| `vault.runtime.sys_bytes` | Number of bytes allocated to Vault.  This includes what is being used by Vault's heap and what has been reclaimed but not given back to the operating system. | bytes | gauge |
+| `vault.runtime.total_gc_pause_ns` | The total garbage collector pause time since Vault was last started | ms | summary |
+| `vault.runtime.total_gc_runs` | Total number of garbage collection runs since Vault was last started | operations | gauge |
 
 ## Policy and Token Metrics
 
