@@ -27,6 +27,7 @@ BUG FIXES:
 * core: Correctly revoke the token that's present in the response auth from a
   auth/token/ request if there's partial failure during the process. [GH-7835]
 * identity: Ensure only replication primary stores the identity case sensitivity state [GH-7820]
+* secrets/gcp: Fix panic during rollback if the roleset has been deleted [GCP-52]
 * ui: Ensure that items in the top navigation link to pages that users have access to [GH-7590]
 
 ## 1.3-beta1 (October 30th, 2019)
