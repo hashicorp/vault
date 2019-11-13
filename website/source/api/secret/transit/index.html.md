@@ -381,11 +381,25 @@ will be returned.
   all nonces are unique for a given context.  Failing to do so will severely
   impact the ciphertext's security.
 
+**NOTE:** All plaintext data **must be base64-encoded**. The reason for this
+requirement is that Vault does not require that the plaintext is "text". It
+could be a binary file such as a PDF or image. The easiest safe transport
+mechanism for this data as part of a JSON payload is to base64-encode it.
+
 ### Sample Payload
+
+Fist, encode the plaintext with base64:
+
+```sh
+$ base64 <<< "the quick brown fox"
+dGhlIHF1aWNrIGJyb3duIGZveAo=
+```
+
+Use the base64-encoded plaintext in the payload:
 
 ```json
 {
-  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
 }
 ```
 
@@ -410,7 +424,7 @@ $ curl \
 ```json
 {
   "data": {
-    "ciphertext": "vault:v1:abcdefgh"
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   }
 }
 ```
@@ -749,14 +763,14 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, if the parameter 'input' is also set, it will be 
-  ignored.  Responses are returned in the 'batch_results' array component of the 
-  'data' element of the response. If the input data value of an item is invalid, the 
-  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  When this parameter is set, if the parameter 'input' is also set, it will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
   describing the error. The format for batch_input is:
 
     ```json
@@ -874,14 +888,14 @@ supports signing.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, any supplied 'input' or 'context' parameters will be 
-  ignored.  Responses are returned in the 'batch_results' array component of the 
-  'data' element of the response. If the input data value of an item is invalid, the 
-  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  When this parameter is set, any supplied 'input' or 'context' parameters will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
   describing the error. The format for batch_input is:
 
     ```json
@@ -955,7 +969,7 @@ $ curl \
 
 ### Sample Payload with batch_input
 
- Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and 
+ Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and
  the response will include the derived public key for each item.
 ```
 {
@@ -1017,9 +1031,9 @@ data.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
-  
+
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
   supplied.
@@ -1029,13 +1043,13 @@ data.
   supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters 
+  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters
   will be ignored.  'batch_input' items should contain an 'input' parameter and
   either an 'hmac' or 'signature' parameter. All items in the batch must consistently
   supply either 'hmac' or 'signature' parameters.  It is an error for some items to
-  supply 'hmac' while others supply 'signature'. Responses are returned in the 
-  'batch_results' array component of the 'data' element of the response. If the 
-  input data value of an item is invalid, the corresponding item in the 'batch_results' 
+  supply 'hmac' while others supply 'signature'. Responses are returned in the
+  'batch_results' array component of the 'data' element of the response. If the
+  input data value of an item is invalid, the corresponding item in the 'batch_results'
   will have the key 'error' with a value describing the error. The format for batch_input is:
 
     ```json

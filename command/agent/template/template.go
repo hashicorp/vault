@@ -7,9 +7,11 @@ package template
 
 import (
 	"context"
+	"io"
 	"strings"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
+	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
@@ -25,13 +27,19 @@ type ServerConfig struct {
 	ExitAfterAuth bool
 
 	Namespace string
+
+	// LogLevel is needed to set the internal Consul Template Runner's log level
+	// to match the log level of Vault Agent. The internal Runner creates it's own
+	// logger and can't be set externally or copied from the Template Server.
+	//
+	// LogWriter is needed to initialize Consul Template's internal logger to use
+	// the same io.Writer that Vault Agent itself is using.
+	LogLevel  hclog.Level
+	LogWriter io.Writer
 }
 
 // Server manages the Consul Template Runner which renders templates
 type Server struct {
-	// UnblockCh is used to block until a template is rendered
-	UnblockCh chan struct{}
-
 	// config holds the ServerConfig used to create it. It's passed along in other
 	// methods
 	config *ServerConfig
@@ -42,7 +50,6 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// TODO: remove donech?
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
@@ -53,7 +60,6 @@ func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
-		UnblockCh:     make(chan struct{}),
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
 	}
@@ -66,6 +72,7 @@ func NewServer(conf *ServerConfig) *Server {
 func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
 	latestToken := new(string)
 	ts.logger.Info("starting template server")
+	// defer the closing of the DoneCh
 	defer func() {
 		ts.logger.Info("template server stopped")
 		close(ts.DoneCh)
@@ -75,20 +82,18 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		panic("incoming channel is nil")
 	}
 
-	// If there are no templates, close the UnblockCh
+	// If there are no templates, return
 	if len(templates) == 0 {
-		// nothing to do
 		ts.logger.Info("no templates found")
-		close(ts.UnblockCh)
 		return
 	}
 
 	// construct a consul template vault config based the agents vault
 	// configuration
 	var runnerConfig *ctconfig.Config
-	if runnerConfig = newRunnerConfig(ts.config, templates); runnerConfig == nil {
-		ts.logger.Error("template server failed to generate runner config")
-		close(ts.UnblockCh)
+	var runnerConfigErr error
+	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
+		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
 		return
 	}
 
@@ -96,15 +101,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Error("template server failed to create", "error", err)
-		close(ts.UnblockCh)
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			ts.runner.StopImmediately()
-			ts.runner = nil
+			ts.runner.Stop()
 			return
 
 		case token := <-incoming:
@@ -117,36 +120,33 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
-				runnerConfig.Merge(&ctv)
-				runnerConfig.Finalize()
+				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
-				} else {
-					go ts.runner.Start()
 				}
+				go ts.runner.Start()
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
-			close(ts.UnblockCh)
 			return
 		case <-ts.runner.TemplateRenderedCh():
-			// A template has been rendered, unblock
 			if ts.exitAfterAuth {
-				// if we want to exit after auth, go ahead and shut down the runner
+				// if we want to exit after auth, go ahead and shut down the runner and
+				// return. The deferred closing of the DoneCh will allow agent to
+				// continue with closing down
 				ts.runner.Stop()
+				return
 			}
-			close(ts.UnblockCh)
 		}
 	}
 }
 
 // newRunnerConfig returns a consul-template runner configuration, setting the
 // Vault and Consul configurations based on the clients configs.
-func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctconfig.Config {
-	// TODO only use default Vault config
+func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
 	conf := ctconfig.DefaultConfig()
 	conf.Templates = templates.Copy()
 
@@ -184,5 +184,39 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) *ctco
 	}
 
 	conf.Finalize()
-	return conf
+
+	// setup log level from TemplateServer config
+	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
+
+	if err := ctlogging.Setup(&ctlogging.Config{
+		Name:   "template.server.runner",
+		Level:  *conf.LogLevel,
+		Writer: sc.LogWriter,
+	}); err != nil {
+		return nil, err
+	}
+	return conf, nil
+}
+
+// logLevelToString converts a go-hclog level to a matching, uppercase string
+// value. It's used to convert Vault Agent's hclog level to a string version
+// suitable for use in Consul Template's runner configuration input.
+func logLevelToStringPtr(level hclog.Level) *string {
+	// consul template's default level is WARN, but Vault Agent's default is INFO,
+	// so we use that for the Runner's default.
+	var levelStr string
+
+	switch level {
+	case hclog.Trace:
+		levelStr = "TRACE"
+	case hclog.Debug:
+		levelStr = "DEBUG"
+	case hclog.Warn:
+		levelStr = "WARN"
+	case hclog.Error:
+		levelStr = "ERROR"
+	default:
+		levelStr = "INFO"
+	}
+	return pointerutil.StringPtr(levelStr)
 }

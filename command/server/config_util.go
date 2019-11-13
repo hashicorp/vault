@@ -4,7 +4,7 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 )
 
-var(
+var (
 	parseEntropy = parseEntropyOSS
 )
 

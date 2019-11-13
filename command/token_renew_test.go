@@ -121,6 +121,41 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("accessor", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		token, accessor := testTokenAndAccessor(t, client)
+
+		_, cmd := testTokenRenewCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-increment", "30m",
+			"-accessor",
+			accessor,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		secret, err := client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		str := string(secret.Data["ttl"].(json.Number))
+		ttl, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			t.Fatalf("bad ttl: %#v", secret.Data["ttl"])
+		}
+		if exp := int64(1800); ttl > exp {
+			t.Errorf("expected %d to be <= to %d", ttl, exp)
+		}
+	})
+
 	t.Run("self", func(t *testing.T) {
 		t.Parallel()
 

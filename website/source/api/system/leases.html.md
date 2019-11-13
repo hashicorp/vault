@@ -222,3 +222,23 @@ $ curl \
     --request PUT \
     http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/aws/creds
 ```
+
+
+## Tidy Leases
+
+This endpoint cleans up the dangling storage entries for leases. Generally,
+running this is not needed unless upgrade notes or support personnel suggest it.
+This may perform a lot of I/O to the storage method so should be used sparingly.
+
+| Method | Path               |
+|:-------|:-------------------|
+| `POST` | `/sys/leases/tidy` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/leases/tidy
+```

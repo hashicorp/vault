@@ -53,6 +53,7 @@
     - api/system/config-auditing.html
     - api/system/config-control-group.html
     - api/system/config-cors.html
+    - api/system/config-state.html
     - api/system/config-ui.html
     - api/system/control-group.html
     - api/system/generate-recovery-token.html

@@ -215,7 +215,7 @@ jobs:
                \
               ${package_names}
         name: Run Go tests
-        no_output_timeout: 20m
+        no_output_timeout: 60m
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -288,7 +288,7 @@ jobs:
               -race \
               ${package_names}
         name: Run Go tests
-        no_output_timeout: 20m
+        no_output_timeout: 60m
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -376,7 +376,7 @@ workflows:
 #               << parameters.extra_flags >> \\
 #               ${package_names}
 #         name: Run Go tests
-#         no_output_timeout: 20m
+#         no_output_timeout: 60m
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:

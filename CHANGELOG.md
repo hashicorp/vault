@@ -1,5 +1,19 @@
 ## 1.3 (unreleased)
 
+CHANGES:
+
+* Secondary cluster activation: There has been a change to the way that activating
+  performance and DR secondary clusters works when using public keys for
+  encryption of the parameters rather than a wrapping token. This flow was
+  experimental and never documented. It is now officially supported and
+  documented but is not backwards compatible with older Vault releases.
+
+FEATURES:
+
+ * Token Renewal via Accessor: Tokens can now be renewed via the accessor value through
+   the new `auth/token/renew-accessor` endpoint if the caller's token has
+   permission to access that endpoint.
+
 IMPROVEMENTS:
 
 * metrics: Upgrade DataDog library to improve performance [GH-7794]
@@ -10,11 +24,16 @@ BUG FIXES:
 * core: Don't allow registering a non-root zero TTL token lease. This is purely
   defense in depth as the lease would be revoked immediately anyways, but
   there's no real reason to allow registration. [GH-7524]
-* ui: Ensure that items in the top navigation link to pages that users have access to. [GH-7590]
+* core: Correctly revoke the token that's present in the response auth from a
+  auth/token/ request if there's partial failure during the process. [GH-7835]
+* identity: Ensure only replication primary stores the identity case sensitivity state [GH-7820]
+* secrets/gcp: Fix panic during rollback if the roleset has been deleted [GCP-52]
+* ui: Ensure that items in the top navigation link to pages that users have access to [GH-7590]
 
 ## 1.3-beta1 (October 30th, 2019)
 
 CHANGES:
+
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
    the full TLS 1.2 cipher suite list by default. Although this port is only
    used for Vault-to-Vault communication and would always pick a strong cipher,
@@ -42,13 +61,13 @@ FEATURES:
  * **Active Directory Secret Check-In/Check-Out**: In the Active Directory secrets
    engine, users or applications can check out a service account for use, and its
    password will be rotated when it's checked back in.
- * **Vault Agent Template** Vault Agent now supports rendering templates containing 
+ * **Vault Agent Template**: Vault Agent now supports rendering templates containing 
    Vault secrets to disk, similar to Consul Template [GH-7652]
  * **Transit Key Type Support**: Signing and verification is now supported with the P-384
    (secp384r1) and P-521 (secp521r1) ECDSA curves [GH-7551] and encryption and 
    decryption is now supported via AES128-GCM96 [GH-7555]
  * **SSRF Protection for Vault Agent**: Vault Agent has a configuration option to 
-   require a specific header beffore allowing requests [GH-7627]
+   require a specific header before allowing requests [GH-7627]
  * **AWS Auth Method Root Rotation**: The credential used by the AWS auth method can 
    now be rotated, to ensure that only Vault knows the credentials it is using [GH-7131]
  * **New UI Features** The UI now supports managing users and groups for the 
@@ -60,7 +79,7 @@ FEATURES:
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
- * **Filtered Paths Replication** Based on the predecessor Filtered Mount Replication, 
+ * **Filtered Paths Replication (Enterprise):** Based on the predecessor Filtered Mount Replication, 
    Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
 
 IMPROVEMENTS:
@@ -103,6 +122,9 @@ IMPROVEMENTS:
  * sys: Add endpoint that counts the total number of active identity entities [GH-7541]
  * sys: `sys/seal-status` now has a `storage_type` field denoting what type of storage
    the cluster is configured to use
+ * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
+   total number of active service token accessors in the shared token storage.
+   [GH-7541]
  * sys/config: Add  a new endpoint under `sys/config/state/sanitized` that
    returns the configuration state of the server. It excludes config values
    from `storage`, `ha_storage`, and `seal` stanzas and some values
@@ -110,9 +132,6 @@ IMPROVEMENTS:
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
  * ui: clarify when secret version is deleted in the secret version history dropdown [GH-7714]
- * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
-   total number of active service token accessors in the shared token storage.
-   [GH-7541]
 
 BUG FIXES:
 
@@ -123,10 +142,12 @@ BUG FIXES:
    could cause confusing error messages during `vault login` [GH-7508]
  * cli: Fix a bug where the `namespace list` command with JSON formatting 
    always returned an empty object [GH-7705]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
- * secret/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
+ * secrets/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
  * sys/health: Pay attention to the values provided for `standbyok` and
    `perfstandbyok` rather than simply using their presence as a key to flip on
    that behavior [GH-7323]
@@ -134,10 +155,15 @@ BUG FIXES:
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
  * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685] 
- * cli: Command timeouts are now always specified solely by the
-   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
+
  
-## 1.2.4 (Unreleased)
+## 1.2.4 (November 7th, 2019)
+
+SECURITY:
+
+ * In a non-root namespace, revocation of a token scoped to a non-root namespace did not trigger the expected revocation of dynamic secret leases associated with that token. As a result, dynamic secret leases in non-root namespaces may outlive the token that created them.  This vulnerability, CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
+ * Disaster Recovery secondary clusters did not delete already-replicated data after a mount filter has been created on an upstream Performance secondary cluster. As a result, encrypted secrets may remain replicated on a Disaster Recovery secondary cluster after application of a mount filter excluding those secrets from replication. This vulnerability, CVE-2019-18617, affects Vault Enterprise 0.8 and newer.
+ * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which corresponds to CVE-2019-17596.
 
 CHANGES: 
 
@@ -162,6 +188,8 @@ BUG FIXES:
  * identity: Add required field `response_types_supported` to identity token
    `.well-known/openid-configuration` response [GH-7533]
  * identity: Fixed nil pointer panic when merging entities [GH-7712]
+ * replication (Enterprise): Fix issue causing performance standbys nodes 
+   disconnecting when under high loads.
  * secrets/azure: Fix panic that could occur if client retries timeout [GH-7793]
  * secrets/database: Fix bug in combined DB secrets engine that can result in
    writes to static-roles endpoints timing out [GH-7518]

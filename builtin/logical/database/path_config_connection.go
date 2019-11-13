@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -217,7 +218,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 
 		err := req.Storage.Delete(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, errors.New("failed to delete connection configuration")
+			return nil, errwrap.Wrapf("failed to delete connection configuration: {{err}}", err)
 		}
 
 		if err := b.ClearConnection(name); err != nil {

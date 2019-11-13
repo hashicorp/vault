@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/config"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -223,12 +222,14 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Vault == nil {
 		config.Vault = new(agentConfig.Vault)
 	}
+
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
 		Target:  &c.flagAddress,
 		Default: "https://127.0.0.1:8200",
 		EnvVar:  api.EnvVaultAddress,
 	})
+
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
 		Name:    flagNameCACert,
 		Target:  &c.flagCACert,
@@ -507,8 +508,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
-	var ts *template.Server
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -528,16 +528,15 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		ssDoneCh = ss.DoneCh
 
-		// create an independent vault configuration for Consul Template to use
-		vaultConfig := c.setupTemplateConfig()
-		ts = template.NewServer(&template.ServerConfig{
+		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
-			VaultConf:     vaultConfig,
+			LogLevel:      level,
+			LogWriter:     c.logWriter,
+			VaultConf:     config.Vault,
 			Namespace:     namespace,
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
-		unblockCh = ts.UnblockCh
 
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
@@ -572,19 +571,14 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	// If the template server is running and we've assinged the Unblock channel,
-	// wait for the template to render
-	if unblockCh != nil {
-		select {
-		case <-ctx.Done():
-		case <-ts.UnblockCh:
-		}
-	}
-
 	select {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
+		// allow any templates to be rendered
+		if tsDoneCh != nil {
+			<-tsDoneCh
+		}
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -696,22 +690,4 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
-}
-
-// setupTemplateConfig creates a config.Vault struct for use by Consul Template.
-// Consul Template does not currently allow us to pass in a configured API
-// client, unlike the AuthHandler and SinkServer that reuse the client created
-// in this Run() method. Here we build a config.Vault struct for use by the
-// Template Server that matches the configuration used to create the client
-// (c.client), but in a struct of type config.Vault so that Consul Template can
-// create it's own api client internally.
-func (c *AgentCommand) setupTemplateConfig() *config.Vault {
-	return &config.Vault{
-		Address:       c.flagAddress,
-		CACert:        c.flagCACert,
-		CAPath:        c.flagCAPath,
-		ClientCert:    c.flagClientCert,
-		ClientKey:     c.flagClientKey,
-		TLSSkipVerify: c.flagTLSSkipVerify,
-	}
 }
