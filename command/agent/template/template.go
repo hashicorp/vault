@@ -50,6 +50,11 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
+	// lookup allows looking up the set of templates by their consul-template ID.
+	// This is used to ensure all Vault templates have been rendered before
+	// returning from the runner in the event we're using exit after auth.
+	lookup map[string][]*ctconfig.TemplateConfig
+
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
@@ -104,6 +109,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		return
 	}
 
+	// setup lookup map
+	// Build the lookup
+	idMap := ts.runner.TemplateConfigMapping()
+	lookup := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
+	for id, ctmpls := range idMap {
+		for _, ctmpl := range ctmpls {
+			tl := lookup[id]
+			tl = append(tl, ctmpl)
+			lookup[id] = tl
+		}
+	}
+	ts.lookup = lookup
+
+WAIT:
 	for {
 		select {
 		case <-ctx.Done():
@@ -133,12 +152,27 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			ts.logger.Error("template server error", "error", err.Error())
 			return
 		case <-ts.runner.TemplateRenderedCh():
+			// A template has been rendered, figure out what to do
+			events := ts.runner.RenderEvents()
+
+			// Not all templates have been rendered yet
+			if len(events) < len(ts.lookup) {
+				continue
+			}
+
+			for _, event := range events {
+				// This template hasn't been rendered
+				if event.LastWouldRender.IsZero() {
+					continue WAIT
+				}
+			}
+
 			if ts.exitAfterAuth {
 				// if we want to exit after auth, go ahead and shut down the runner and
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
 				ts.runner.Stop()
-				return
+				break WAIT
 			}
 		}
 	}
