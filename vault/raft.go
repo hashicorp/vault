@@ -596,7 +596,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 		leaderInfos = append(leaderInfos, leaderInfo)
 	}
 
-	join := func() error {
+	join := func(retry bool) error {
 		joinLeader := func(leaderInfo *RetryJoinLeaderInfo) error {
 			if leaderInfo == nil {
 				return errors.New("raft leader information is nil")
@@ -696,7 +696,14 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 			}
 			if c.seal.BarrierType() == seal.Shamir {
 				c.raftInfo = raftInfo
-				return c.seal.SetBarrierConfig(ctx, &sealConfig)
+				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
+					return err
+				}
+				// If retry is set, continue to join after some time
+				if retry {
+					return errors.New("raft join is waiting for unseal keys to be supplied")
+				}
+				return nil
 			}
 
 			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
@@ -720,7 +727,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 	case true:
 		go func() {
 			for {
-				err := join()
+				err := join(retry)
 				if err == nil {
 					return
 				}
@@ -732,7 +739,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 		// Backgrounded so return false
 		return false, nil
 	default:
-		if err := join(); err != nil {
+		if err := join(retry); err != nil {
 			c.logger.Error("failed to join raft cluster", "error", err)
 			return false, errwrap.Wrapf("failed to join raft cluster: {{err}}", err)
 		}

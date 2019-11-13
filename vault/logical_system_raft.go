@@ -5,10 +5,10 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"github.com/hashicorp/go-uuid"
 	"strings"
 
-	proto "github.com/golang/protobuf/proto"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -176,9 +176,17 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		_, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		leader, err := raftStorage.IsLeader(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !leader {
+			return logical.ErrorResponse("not the raft leader node"), logical.ErrInvalidRequest
 		}
 
 		serverID := d.Get("server_id").(string)
@@ -186,13 +194,17 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		uuid, err := uuid.GenerateRandomBytes(16)
-		if err != nil {
-			return nil, err
+		answer, ok := b.Core.pendingRaftPeers[serverID]
+		if !ok {
+			var err error
+			answer, err = uuid.GenerateRandomBytes(16)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
-		eBlob, err := sealAccess.Encrypt(ctx, uuid)
+		eBlob, err := sealAccess.Encrypt(ctx, answer)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +213,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		b.Core.pendingRaftPeers[serverID] = uuid
+		b.Core.pendingRaftPeers[serverID] = answer
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
