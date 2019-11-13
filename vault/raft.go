@@ -618,7 +618,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 				return nil
 			}
 
-			c.logger.Info("attempting to join raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
+			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
 
 			// Create an API client to interact with the leader node
 			transport := cleanhttp.DefaultPooledTransport()
