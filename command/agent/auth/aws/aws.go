@@ -72,7 +72,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		mountPath:  conf.MountPath,
 		credsFound: make(chan struct{}),
 		stopCh:     make(chan struct{}),
-		region:     awsutil.DefaultRegion,
+		region:     "",
 	}
 
 	typeRaw, ok := conf.Config["type"]
