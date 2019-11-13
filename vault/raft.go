@@ -545,7 +545,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	c.logger.Info("raft retry join triggered")
+	c.logger.Info("raft retry join initiated")
 	return c.JoinRaftCluster(ctx, nil, false)
 }
 
@@ -571,6 +571,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 	var leaderInfos []*RetryJoinLeaderInfo
 	switch {
 	case leaderInfo == nil:
+		// leaderInfo will be nil when retry join is being initiated from the config
+		// file. Set retry to true and fetch the retry join information from the
+		// backend's configuration.
 		retry = true
 		retryJoinConfig := raftStorage.RetryJoinConfig()
 		if retryJoinConfig == "" {
@@ -592,6 +595,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 			info.TLSConfig = tlsConfig
 		}
 	default:
+		// This is the case for manual join. Retry setting will be sent down via the CLI
+		// flag.
 		retry = leaderInfo.Retry
 		leaderInfos = append(leaderInfos, leaderInfo)
 	}
@@ -714,6 +719,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 
 			return nil
 		}
+
+		// Each join try goes through all the possible leader nodes and attempts to join
+		// them, until one of the attempt succeeds.
 		for _, leaderInfo := range leaderInfos {
 			if err := joinLeader(leaderInfo); err == nil {
 				return nil
@@ -727,6 +735,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 	case true:
 		go func() {
 			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				err := join(retry)
 				if err == nil {
 					return
