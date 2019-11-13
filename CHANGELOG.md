@@ -1,3 +1,9 @@
+## Next
+
+IMPROVEMENTS:
+
+* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
+
 ## 1.3 (unreleased)
 
 CHANGES:
