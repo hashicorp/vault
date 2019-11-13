@@ -174,10 +174,6 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		conf.AuditBackends[k] = v
 	}
 
-	if opts.ConfigServiceDiscovery != nil {
-		conf.ConfigServiceDiscovery = opts.ConfigServiceDiscovery
-	}
-
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
