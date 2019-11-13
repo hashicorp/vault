@@ -52,7 +52,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.2.0
+$ git checkout v0.2.1
 
 # Run Helm
 $ helm install --dry-run ./
@@ -82,10 +82,6 @@ and consider if they're appropriate for your deployment.
   * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
 * `server` - Values that configure running a Vault server within Kubernetes.
-
-  * `securityContext` - Values that configure Vault pods security context.
-
-    - `readOnlyRootFilesystem` (`boolean: true`) - When set to `true`, the root filesystem of the container is read only.
 
   * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
 
