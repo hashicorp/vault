@@ -828,16 +828,13 @@ auto_auth {
 				// templates. Without this this, the test will attempt to read
 				// the temp dir before Agent has had time to render and will
 				// likely fail the test
-				start := time.Now()
 				tick := time.Tick(1 * time.Second)
+				timeout := time.After(30 * time.Second)
 				for {
 					select {
-					case <-tick:
-					}
-
-					if time.Now().After(start.Add(30 * time.Second)) {
+					case <-timeout:
 						t.Error("timed out waiting for templates to render")
-						break
+					case <-tick:
 					}
 					// Check for files rendered in the directory and break
 					// early for shutdown if we do have all the files
