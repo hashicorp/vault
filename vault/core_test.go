@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"sync"
 	"testing"
@@ -2389,72 +2388,6 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 	}
 }
 
-// mockServiceDiscovery is a mocked ServiceDiscovery that is used for
-// testing whether a standalone ServiceDiscovery works properly
-type mockServiceDiscovery struct {
-	sealedStateChangeCount int
-}
-
-func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
-	return errors.New("NotifyActiveStateChange is intentionally not implemented")
-}
-
-func (m *mockServiceDiscovery) NotifySealedStateChange() error {
-	m.sealedStateChangeCount++
-	return nil
-}
-
-func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
-	return errors.New("NotifyPerformanceStandbyStateChange is intentionally not implemented")
-}
-
-func (m *mockServiceDiscovery) RunServiceDiscovery(
-	_ *sync.WaitGroup, _ physical.ShutdownChannel, _ string,
-	_ physical.ActiveFunction, _ physical.SealedFunction,
-	_ physical.PerformanceStandbyFunction) error {
-	return errors.New("RunServiceDiscovery is intentionally not implemented")
-}
-
-// Test with a mocked ServiceDiscovery to see whether the service_discovery a
-// standalone ServiceDiscovery works properly
-func TestCore_ServiceDiscovery(t *testing.T) {
-
-	mock := &mockServiceDiscovery{}
-	conf := &CoreConfig{
-		ConfigServiceDiscovery: mock,
-	}
-
-	// create an unsealed core
-	c, keys, root := TestCoreUnsealedWithConfig(t, conf)
-	if mock.sealedStateChangeCount != 1 {
-		t.Fatalf("err: sealed state change count should be %d, not %d", 1, mock.sealedStateChangeCount)
-	}
-
-	// seal the core
-	err := c.Seal(root)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if mock.sealedStateChangeCount != 2 {
-		t.Fatalf("err: sealed state change count should be %d, not %d", 2, mock.sealedStateChangeCount)
-	}
-
-	// unseal the core
-	var unseal bool
-	for _, key := range keys {
-		unseal, err = TestCoreUnseal(c, key)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-	}
-	if !unseal {
-		t.Fatalf("err: should be unsealed")
-	}
-	if mock.sealedStateChangeCount != 3 {
-		t.Fatalf("err: sealed state change count should be %d, not %d", 3, mock.sealedStateChangeCount)
-	}
-}
-
 func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
@@ -2512,5 +2445,111 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// mockServiceDiscovery helps test whether standalone ServiceDiscovery works
+type mockServiceDiscovery struct {
+	activeCount int
+	sealedCount int
+	perfCount   int
+	runCount    int
+}
+
+func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
+	m.activeCount++
+	return nil
+}
+
+func (m *mockServiceDiscovery) NotifySealedStateChange() error {
+	m.sealedCount++
+	return nil
+}
+
+func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
+	m.perfCount++
+	return nil
+}
+
+func (m *mockServiceDiscovery) RunServiceDiscovery(
+	_ *sync.WaitGroup, _ physical.ShutdownChannel, _ string,
+	_ physical.ActiveFunction, _ physical.SealedFunction,
+	_ physical.PerformanceStandbyFunction) error {
+
+	m.runCount++
+	return nil
+}
+
+// TestCore_ServiceDiscovery tests whether standalone ServiceDiscovery works
+func TestCore_ServiceDiscovery(t *testing.T) {
+
+	// Make a service discovery
+	sd := &mockServiceDiscovery{}
+
+	// Create the core
+	logger = logging.NewVaultLogger(log.Trace)
+
+	inm, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const redirectAddr = "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		ConfigServiceDiscovery: sd,
+		Physical:               inm,
+		HAPhysical:             inmha.(physical.HABackend),
+		RedirectAddr:           redirectAddr,
+		DisableMlock:           true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(sd, &mockServiceDiscovery{}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Run service discovery on the core
+	wg := &sync.WaitGroup{}
+	var shutdown chan struct{}
+	activeFunc := func() bool {
+		if isLeader, _, _, err := core.Leader(); err == nil {
+			return isLeader
+		}
+		return false
+	}
+	err = sd.RunServiceDiscovery(wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(sd, &mockServiceDiscovery{
+		runCount: 1,
+	}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Initialize the core
+	keys, _ := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+	if core.Sealed() {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	TestWaitActive(t, core)
+	if diff := deep.Equal(sd, &mockServiceDiscovery{
+		activeCount: 1,
+		sealedCount: 1,
+		runCount:    1,
+	}); diff != nil {
+		t.Fatal(diff)
 	}
 }
