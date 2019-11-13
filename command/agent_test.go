@@ -224,7 +224,7 @@ cache {
 }
 */
 
-func TestExitAfterAuth(t *testing.T) {
+func TestAgent_ExitAfterAuth(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
