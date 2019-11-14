@@ -1239,6 +1239,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
+	// If ServiceDiscovery is configured, then the backend must support HA
+	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
+	if (coreConfig.ConfigServiceDiscovery != nil) && !isBackendHA {
+		c.UI.Output("service_discovery is configured, but storage does not support HA")
+		return 1
+	}
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
