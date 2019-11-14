@@ -239,7 +239,7 @@ There are currently two types of tokens.
 
 Service tokens are what users will generally think of as "normal" Vault tokens.
 They support all features, such as renewal, revocation, creating child tokens,
-and more. The are correspondingly heavyweight to create and track.
+and more. They are correspondingly heavyweight to create and track.
 
 ### Batch Tokens
 
