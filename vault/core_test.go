@@ -2450,24 +2450,24 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 
 // mockServiceDiscovery helps test whether standalone ServiceDiscovery works
 type mockServiceDiscovery struct {
-	activeCount int
-	sealedCount int
-	perfCount   int
-	runCount    int
+	notifyActiveCount int
+	notifySealedCount int
+	notifyPerfCount   int
+	runDiscoveryCount int
 }
 
 func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
-	m.activeCount++
+	m.notifyActiveCount++
 	return nil
 }
 
 func (m *mockServiceDiscovery) NotifySealedStateChange() error {
-	m.sealedCount++
+	m.notifySealedCount++
 	return nil
 }
 
 func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
-	m.perfCount++
+	m.notifyPerfCount++
 	return nil
 }
 
@@ -2476,7 +2476,7 @@ func (m *mockServiceDiscovery) RunServiceDiscovery(
 	_ physical.ActiveFunction, _ physical.SealedFunction,
 	_ physical.PerformanceStandbyFunction) error {
 
-	m.runCount++
+	m.runDiscoveryCount++
 	return nil
 }
 
@@ -2530,7 +2530,7 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 
 	// Vault should be registered
 	if diff := deep.Equal(sd, &mockServiceDiscovery{
-		runCount: 1,
+		runDiscoveryCount: 1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2551,9 +2551,9 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 
 	// Vault should be registered, unsealed, and active
 	if diff := deep.Equal(sd, &mockServiceDiscovery{
-		activeCount: 1,
-		sealedCount: 1,
-		runCount:    1,
+		runDiscoveryCount: 1,
+		notifyActiveCount: 1,
+		notifySealedCount: 1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}
