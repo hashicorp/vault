@@ -1,0 +1,67 @@
+---
+layout: "docs"
+page_title: "Service Discovery - Configuration"
+sidebar_title: "<code>service_discovery</code>"
+sidebar_current: "docs-configuration-serviceDiscovery"
+description: |-
+  The optional `service_discovery` stanza configures Vault's mechanism for
+  service discovery.  
+---
+
+# `service_discovery` Stanza
+
+The optional `service_discovery` stanza configures Vault's mechanism for
+service discovery.  The `service_discovery` stanza is designed for use cases
+where you would like to use a system like [Consul][consul] for [service
+discovery][consul-discovery], but use a different system for the [storage
+backend][storage-backend].  
+
+By default, Vault implicitly uses Consul for service discovery when Consul is
+configured as the [storage backend][consul-backend], so the `service_discovery`
+stanza is not needed.  
+
+For times when you would like to use a different storage backend, like
+[Raft][raft-backend], but still have service discovery available, the
+`service_discovery` stanza can be used:
+
+```hcl
+service_discovery "consul" {
+  address = "127.0.0.1:8500"
+}
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+```
+
+For information about a specific service discovery provider, choose one from
+the navigation on the left.
+
+## Configuration
+
+Service discovery configuration is done through the Vault configuration file
+using the `service_discovery` stanza:
+
+```hcl
+service_discovery [NAME] {
+  [PARAMETERS...]
+}
+```
+
+For example:
+
+```hcl
+service_discovery "consul" {
+  address = "127.0.0.1:8500"
+}
+```
+
+For configuration options which also read an environment variable, the
+environment variable will take precedence over values in the configuration
+file.
+
+[consul]: https://www.consul.io/
+[consul-discovery]: https://www.consul.io/discovery.html
+[storage-backend]: /docs/configuration/storage/index.html
+[consul-backend]: /docs/configuration/storage/consul.html
+[raft-backend]: /docs/configuration/storage/raft.html
