@@ -11,7 +11,7 @@ description: |-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files 
-using Consul Template markup.
+using [Consul Template markup](https://github.com/hashicorp/consul-template#templating-language).
 
 ## Functionality
 
@@ -73,7 +73,7 @@ a new template to disk and triggering a command, separated by a colon (`:`).
 
 ## Example Template
 
-Template with Vault Agent requires the use of the `secret` function from Consul Template.  
+Template with Vault Agent requires the use of the `secret` [function from Consul Template](https://github.com/hashicorp/consul-template#secret).  
 The following is an example of a template that retrieves a generic secret from Vault's 
 KV store:
 
