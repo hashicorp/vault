@@ -49,6 +49,17 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/state/sanitized$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handleConfigStateSanitized,
+					Summary:     "Return a sanitized version of the Vault server configuration.",
+					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+				},
+			},
+		},
+
+		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
@@ -143,7 +154,40 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "health$",
-
+			Fields: map[string]*framework.FieldSchema{
+				"standbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a standby should still return the active status code.",
+				},
+				"perfstandbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a performance standby should still return the active status code.",
+				},
+				"activecode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an active node.",
+				},
+				"standbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a standby node.",
+				},
+				"drsecondarycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a DR secondary node.",
+				},
+				"performancestandbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a performance standby node.",
+				},
+				"sealedcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a sealed node.",
+				},
+				"uninitcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an uninitialized node.",
+				},
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Returns the health status of Vault.",
@@ -156,6 +200,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["health"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["health"][1]),
 		},
 
 		{
@@ -835,6 +882,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
 		},
+		{
+			Pattern: "internal/counters/tokens",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersTokens,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
+		},
+		{
+			Pattern: "internal/counters/entities",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersEntities,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
+		},
 	}
 }
 
@@ -1130,6 +1199,21 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 
 }
 
+func (b *SystemBackend) hostInfoPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "host-info/?",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.handleHostInfo,
+				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
+				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+			},
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["host-info"][1]),
+	}
+}
+
 func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -1231,6 +1315,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
 				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -1521,6 +1610,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
 				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,

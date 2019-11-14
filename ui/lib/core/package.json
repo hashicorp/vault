@@ -18,6 +18,7 @@
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
+    "ember-power-select-with-create": "*",
     "ember-radio-button": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",

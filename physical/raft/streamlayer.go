@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	fmt "fmt"
+	"io"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -86,8 +87,8 @@ func (k *TLSKeyring) GetActive() *TLSKey {
 	return nil
 }
 
-func GenerateTLSKey() (*TLSKey, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P521(), reader)
 	if err != nil {
 		return nil, err
 	}

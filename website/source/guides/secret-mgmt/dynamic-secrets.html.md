@@ -204,7 +204,7 @@ command with correct URL to match your environment.
 **Example:**
 
 ```plaintext
-$ vault write database/config/postgresql
+$ vault write database/config/postgresql \
       plugin_name=postgresql-database-plugin \
       allowed_roles=readonly \
       connection_url=postgresql://root:rootpassword@localhost:5432/myapp

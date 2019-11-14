@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net/http"
 
@@ -24,9 +25,13 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req JoinRequest
-	if _, err := parseRequest(core, r, w, &req); err != nil && err != io.EOF {
+	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
+	}
+
+	if req.NonVoter && !nonVotersAllowed {
+		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"))
 	}
 
 	var tlsConfig *tls.Config
@@ -39,7 +44,7 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAPIAddr, tlsConfig, req.Retry)
+	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAPIAddr, tlsConfig, req.Retry, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -57,8 +62,9 @@ type JoinResponse struct {
 
 type JoinRequest struct {
 	LeaderAPIAddr    string `json:"leader_api_addr"`
-	LeaderCACert     string `json:"leader_ca_cert":`
+	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`
 	LeaderClientKey  string `json:"leader_client_key"`
 	Retry            bool   `json:"retry"`
+	NonVoter         bool   `json:"non_voter"`
 }

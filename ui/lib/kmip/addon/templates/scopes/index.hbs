@@ -2,19 +2,19 @@
   <Toolbar>
     {{#if model.meta.total}}
       <ToolbarFilters>
-      <NavigateInput
-        @filterFocusDidChange={{action "setFilterFocus" }}
-        @filterDidChange={{action "setFilter"}}
-        @filter={{this.filter}}
-        @filterMatchesKey={{filterMatchesKey}}
-        @firstPartialMatch={{firstPartialMatch}}
-        @placeholder="Filter scopes by name"
-        @urls={{hash
-          create="vault.cluster.secrets.backend.kmip.scopes.create"
-          list="vault.cluster.secrets.backend.kmip.scopes.index"
-          show="vault.cluster.secrets.backend.kmip.scope.roles"
-        }}
-      />
+        <NavigateInput
+          @filterFocusDidChange={{action "setFilterFocus" }}
+          @filterDidChange={{action "setFilter"}}
+          @filter={{this.filter}}
+          @filterMatchesKey={{filterMatchesKey}}
+          @firstPartialMatch={{firstPartialMatch}}
+          @placeholder="Filter scopes by name"
+          @urls={{hash
+            create="vault.cluster.secrets.backend.kmip.scopes.create"
+            list="vault.cluster.secrets.backend.kmip.scopes.index"
+            show="vault.cluster.secrets.backend.kmip.scope.roles"
+          }}
+        />
         {{#if filterFocused}}
           {{#if filterMatchesKey}}
             <p class="input-hint">
@@ -33,6 +33,7 @@
       <ToolbarLink
         @type="add"
         @params={{array "scopes.create"}}
+        data-test-scope-create
       >
         Create scope
       </ToolbarLink>
@@ -53,7 +54,7 @@
         <Item.content>
           <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
         </Item.content>
-        <Item.menu>
+        <Item.menu as |m|>
           <li class="action">
             {{#link-to "scope" list.item.id class="is-block"}}
               View scope
@@ -61,9 +62,13 @@
           </li>
           {{#if list.item.updatePath.canDelete}}
             <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-              <ConfirmAction
-                @buttonClasses="link is-destroy"
-                @onConfirmAction={{action
+              <m.Message
+                @id={{list.item.id}}
+                @triggerText='Delete scope'
+                @title={{concat "Delete scope " list.item.id "?"}}
+                @message="This will permanently delete this scope and all roles and credentials contained within"
+                @cancelButtonText="Cancel"
+                @onConfirm={{action
                   (perform
                     Item.callMethod
                     "destroyRecord"
@@ -73,13 +78,7 @@
                     (action "refresh")
                   )
                 }}
-                @confirmTitle={{concat "Delete scope " list.item.id "?"}}
-                @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
-                @cancelButtonText="Cancel"
-                data-test-scope-delete="true"
-                >
-                  Delete scope
-              </ConfirmAction>
+                data-test-scope-delete="true" />
             </MenuLoader>
           {{/if}}
         </Item.menu>

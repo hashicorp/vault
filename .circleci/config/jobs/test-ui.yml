@@ -26,7 +26,7 @@ steps:
         # Run Ember tests
         cd ui
         mkdir -p test-results/qunit
-        yarn run test-oss
+        yarn test:oss
   - store_artifacts:
       path: ui/test-results
   - store_test_results:

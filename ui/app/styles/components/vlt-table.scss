@@ -1,0 +1,37 @@
+.vlt-table {
+  .is-collapsed {
+    visibility: collapse;
+    height: 0;
+  }
+
+  th,
+  td {
+    padding: $spacing-s;
+  }
+
+  th {
+    color: $grey-dark;
+    font-weight: 500;
+    font-size: $size-8;
+  }
+
+  tbody th {
+    font-size: $size-7;
+  }
+
+  tr {
+    border-bottom: 1px solid $grey-light;
+  }
+
+  td {
+    color: $grey-darkest;
+  }
+
+  td.middle {
+    vertical-align: middle;
+  }
+
+  td.no-padding {
+    padding: 0;
+  }
+}

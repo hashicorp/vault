@@ -23,18 +23,27 @@ import (
 var _ cli.Command = (*OperatorGenerateRootCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
 
+type generateRootKind int
+
+const (
+	generateRootRegular generateRootKind = iota
+	generateRootDR
+	generateRootRecovery
+)
+
 type OperatorGenerateRootCommand struct {
 	*BaseCommand
 
-	flagInit        bool
-	flagCancel      bool
-	flagStatus      bool
-	flagDecode      string
-	flagOTP         string
-	flagPGPKey      string
-	flagNonce       string
-	flagGenerateOTP bool
-	flagDRToken     bool
+	flagInit          bool
+	flagCancel        bool
+	flagStatus        bool
+	flagDecode        string
+	flagOTP           string
+	flagPGPKey        string
+	flagNonce         string
+	flagGenerateOTP   bool
+	flagDRToken       bool
+	flagRecoveryToken bool
 
 	testStdin io.Reader // for tests
 }
@@ -143,6 +152,16 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 			"tokens.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:       "recovery-token",
+		Target:     &c.flagRecoveryToken,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage: "Set this flag to do generate root operations on Recovery Operational " +
+			"tokens.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:       "otp",
 		Target:     &c.flagOTP,
@@ -200,43 +219,60 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagDRToken && c.flagRecoveryToken {
+		c.UI.Error("Both -recovery-token and -dr-token flags are set")
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
+	kind := generateRootRegular
+	switch {
+	case c.flagDRToken:
+		kind = generateRootDR
+	case c.flagRecoveryToken:
+		kind = generateRootRecovery
+	}
+
 	switch {
 	case c.flagGenerateOTP:
-		otp, code := c.generateOTP(client, c.flagDRToken)
+		otp, code := c.generateOTP(client, kind)
 		if code == 0 {
 			return PrintRaw(c.UI, otp)
 		}
 		return code
 	case c.flagDecode != "":
-		return c.decode(client, c.flagDecode, c.flagOTP, c.flagDRToken)
+		return c.decode(client, c.flagDecode, c.flagOTP, kind)
 	case c.flagCancel:
-		return c.cancel(client, c.flagDRToken)
+		return c.cancel(client, kind)
 	case c.flagInit:
-		return c.init(client, c.flagOTP, c.flagPGPKey, c.flagDRToken)
+		return c.init(client, c.flagOTP, c.flagPGPKey, kind)
 	case c.flagStatus:
-		return c.status(client, c.flagDRToken)
+		return c.status(client, kind)
 	default:
 		// If there are no other flags, prompt for an unseal key.
 		key := ""
 		if len(args) > 0 {
 			key = strings.TrimSpace(args[0])
 		}
-		return c.provide(client, key, c.flagDRToken)
+		return c.provide(client, key, kind)
 	}
 }
 
 // generateOTP generates a suitable OTP code for generating a root token.
-func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, drToken bool) (string, int) {
+func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind generateRootKind) (string, int) {
 	f := client.Sys().GenerateRootStatus
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenStatus
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenStatus
 	}
+
 	status, err := f()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
@@ -272,7 +308,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, drToken bo
 }
 
 // decode decodes the given value using the otp.
-func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp string, drToken bool) int {
+func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp string, kind generateRootKind) int {
 	if encoded == "" {
 		c.UI.Error("Missing encoded value: use -decode=<string> to supply it")
 		return 1
@@ -283,9 +319,13 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	}
 
 	f := client.Sys().GenerateRootStatus
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenStatus
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenStatus
 	}
+
 	status, err := f()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
@@ -327,7 +367,7 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 }
 
 // init is used to start the generation process
-func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey string, drToken bool) int {
+func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey string, kind generateRootKind) int {
 	// Validate incoming fields. Either OTP OR PGP keys must be supplied.
 	if otp != "" && pgpKey != "" {
 		c.UI.Error("Error initializing: cannot specify both -otp and -pgp-key")
@@ -336,8 +376,11 @@ func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey strin
 
 	// Start the root generation
 	f := client.Sys().GenerateRootInit
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenInit
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenInit
 	}
 	status, err := f(otp, pgpKey)
 	if err != nil {
@@ -355,10 +398,13 @@ func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey strin
 
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
-func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, drToken bool) int {
+func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, kind generateRootKind) int {
 	f := client.Sys().GenerateRootStatus
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenStatus
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenStatus
 	}
 	status, err := f()
 	if err != nil {
@@ -437,8 +483,11 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 
 	// Provide the key, this may potentially complete the update
 	fUpd := client.Sys().GenerateRootUpdate
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		fUpd = client.Sys().GenerateDROperationTokenUpdate
+	case generateRootRecovery:
+		fUpd = client.Sys().GenerateRecoveryOperationTokenUpdate
 	}
 	status, err = fUpd(key, nonce)
 	if err != nil {
@@ -454,10 +503,13 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 }
 
 // cancel cancels the root token generation
-func (c *OperatorGenerateRootCommand) cancel(client *api.Client, drToken bool) int {
+func (c *OperatorGenerateRootCommand) cancel(client *api.Client, kind generateRootKind) int {
 	f := client.Sys().GenerateRootCancel
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenCancel
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenCancel
 	}
 	if err := f(); err != nil {
 		c.UI.Error(fmt.Sprintf("Error canceling root token generation: %s", err))
@@ -468,11 +520,15 @@ func (c *OperatorGenerateRootCommand) cancel(client *api.Client, drToken bool) i
 }
 
 // status is used just to fetch and dump the status
-func (c *OperatorGenerateRootCommand) status(client *api.Client, drToken bool) int {
+func (c *OperatorGenerateRootCommand) status(client *api.Client, kind generateRootKind) int {
 	f := client.Sys().GenerateRootStatus
-	if drToken {
+	switch kind {
+	case generateRootDR:
 		f = client.Sys().GenerateDROperationTokenStatus
+	case generateRootRecovery:
+		f = client.Sys().GenerateRecoveryOperationTokenStatus
 	}
+
 	status, err := f()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))

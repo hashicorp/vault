@@ -136,8 +136,8 @@ be set up depending on the installation.
 
 If you plan to support authentication via `vault login -method=oidc`, a localhost redirect URI
 must be set. This can usually be: `http://localhost:8250/oidc/callback`. Logins via the CLI may
-specify a different listening port if needed, and a URI with this port must match one of the
-configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
+specify a different host and/or listening port if needed, and a URI with this host/port must match one
+of the configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
 
 **Vault UI**
 

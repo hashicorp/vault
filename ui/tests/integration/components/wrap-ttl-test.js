@@ -40,12 +40,12 @@ module('Integration | Component | wrap ttl', function(hooks) {
     await fillIn('[data-test-wrap-ttl-picker] input', '20');
     assert.equal(this.lastOnChangeCall, '20m', 'calls onChange correctly on time input');
 
-    await fillIn('#unit', 'h');
-    await blur('#unit');
+    await fillIn('[data-test-select="ttl-unit"]', 'h');
+    await blur('[data-test-select="ttl-unit"]');
     assert.equal(this.lastOnChangeCall, '20h', 'calls onChange correctly on unit change');
 
-    await fillIn('#unit', 'd');
-    await blur('#unit');
+    await fillIn('[data-test-select="ttl-unit"]', 'd');
+    await blur('[data-test-select="ttl-unit"]');
     assert.equal(this.lastOnChangeCall, '480h', 'converts days to hours correctly');
   });
 });

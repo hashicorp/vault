@@ -9,21 +9,27 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
-			"role_tag": &framework.FieldSchema{
+			"role_tag": {
 				Type: framework.TypeString,
 				Description: `Role tag to be blacklisted. The tag can be supplied as-is. In order
 to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRoletagBlacklistUpdate,
-			logical.ReadOperation:   b.pathRoletagBlacklistRead,
-			logical.DeleteOperation: b.pathRoletagBlacklistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathRoletagBlacklistSyn,
@@ -32,12 +38,14 @@ to avoid any encoding problems, it can be base64 encoded.`,
 }
 
 // Path to list all the blacklisted tags.
-func pathListRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathListRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoletagBlacklistsList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistsList,
+			},
 		},
 
 		HelpSynopsis:    pathListRoletagBlacklistHelpSyn,

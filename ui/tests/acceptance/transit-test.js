@@ -248,7 +248,7 @@ module('Acceptance | transit', function(hooks) {
       // wait for capabilities
       await settled();
       assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
-      await click('[data-test-confirm-action-trigger');
+      await click('[data-test-confirm-action-trigger]');
       await click('[data-test-confirm-button]');
       // wait for rotate call
       await settled();

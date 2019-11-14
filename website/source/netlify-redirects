@@ -7,15 +7,12 @@
 # Intro landing
 /intro /intro/getting-started/index.html
 
-/api/auth/pcf/index.html /api/auth/cf
 /api/secret/generic/index.html  /api/secret/kv
 /api/system/renew.html  /api/system/leases
 /api/system/revoke-force.html /api/system/leases
 /api/system/revoke-prefix.html  /api/system/leases
 /api/system/revoke.html /api/system/leases
-/docs/agent/autoauth/methods/pcf.html /docs/agent/autoauth/methods/cf
 /docs/auth/aws-ec2.html /docs/auth/aws
-/docs/auth/pcf.html /docs/auth/cf
 /docs/commands/environment.html  /docs/commands/#environment-variables
 /docs/commands/help.html  /docs/commands/path-help
 /docs/commands/read-write.html /docs/commands#reading-and-writing-data

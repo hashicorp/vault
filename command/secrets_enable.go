@@ -33,6 +33,7 @@ type SecretsEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagExternalEntropyAccess     bool
 	flagVersion                   int
 }
 
@@ -192,6 +193,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "external-entropy-access",
+		Target:  &c.flagExternalEntropyAccess,
+		Default: false,
+		Usage:   "Enable secrets engine to access Vault's external entropy source.",
+	})
+
 	f.IntVar(&IntVar{
 		Name:    "version",
 		Target:  &c.flagVersion,
@@ -263,10 +271,11 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 	// Build mount input
 	mountInput := &api.MountInput{
-		Type:        engineType,
-		Description: c.flagDescription,
-		Local:       c.flagLocal,
-		SealWrap:    c.flagSealWrap,
+		Type:                  engineType,
+		Description:           c.flagDescription,
+		Local:                 c.flagLocal,
+		SealWrap:              c.flagSealWrap,
+		ExternalEntropyAccess: c.flagExternalEntropyAccess,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),

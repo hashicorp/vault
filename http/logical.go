@@ -14,11 +14,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"go.uber.org/atomic"
 )
 
-func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -27,8 +29,8 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	var data map[string]interface{}
 	var origBody io.ReadCloser
-	var requestReader io.ReadCloser
-	var responseWriter io.Writer
+	var passHTTPReq bool
+	var responseWriter http.ResponseWriter
 
 	// Determine the operation
 	var op logical.Operation
@@ -59,7 +61,11 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 			data = parseQuery(queryVals)
 		}
 
-		if path == "sys/storage/raft/snapshot" {
+		switch {
+		case strings.HasPrefix(path, "sys/pprof/"):
+			passHTTPReq = true
+			responseWriter = w
+		case path == "sys/storage/raft/snapshot":
 			responseWriter = w
 		}
 
@@ -68,13 +74,13 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		// Parse the request if we can
 		if op == logical.UpdateOperation {
 			// If we are uploading a snapshot we don't want to parse it. Instead
-			// we will simply add the request body to the logical request object
+			// we will simply add the HTTP request to the logical request object
 			// for later consumption.
 			if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
-				requestReader = r.Body
+				passHTTPReq = true
 				origBody = r.Body
 			} else {
-				origBody, err = parseRequest(core, r, w, &data)
+				origBody, err = parseRequest(perfStandby, r, w, &data)
 				if err == io.EOF {
 					data = nil
 					err = nil
@@ -101,14 +107,32 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
-	req, err := requestAuth(core, r, &logical.Request{
+	req := &logical.Request{
 		ID:         request_id,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
 		Headers:    r.Header,
-	})
+	}
+
+	if passHTTPReq {
+		req.HTTPRequest = r
+	}
+	if responseWriter != nil {
+		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
+	}
+
+	return req, origBody, 0, nil
+}
+
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	if err != nil || status != 0 {
+		return nil, nil, status, err
+	}
+
+	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 			return nil, nil, http.StatusForbidden, nil
@@ -131,24 +155,63 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
-	if requestReader != nil {
-		req.RequestReader = requestReader
-	}
-	if responseWriter != nil {
-		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
-	}
 	return req, origBody, 0, nil
 }
 
+// handleLogical returns a handler for processing logical requests. These requests
+// may or may not end up getting forwarded under certain scenarios if the node
+// is a performance standby. Some of these cases include:
+//     - Perf standby and token with limited use count.
+//     - Perf standby and token re-validation needed (e.g. due to invalid token).
+//     - Perf standby and control group error.
 func handleLogical(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false)
+	return handleLogicalInternal(core, false, false)
 }
 
+// handleLogicalWithInjector returns a handler for processing logical requests
+// that also have their logical response data injected at the top-level payload.
+// All forwarding behavior remains the same as `handleLogical`.
 func handleLogicalWithInjector(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, true)
+	return handleLogicalInternal(core, true, false)
 }
 
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.Handler {
+// handleLogicalNoForward returns a handler for processing logical local-only
+// requests. These types of requests never forwarded, and return an
+// `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
+func handleLogicalNoForward(core *vault.Core) http.Handler {
+	return handleLogicalInternal(core, false, true)
+}
+
+func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		if err != nil || statusCode != 0 {
+			respondError(w, statusCode, err)
+			return
+		}
+		reqToken := r.Header.Get(consts.AuthHeaderName)
+		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
+			respondError(w, http.StatusForbidden, nil)
+		}
+
+		resp, err := raw.HandleRequest(r.Context(), req)
+		if respondErrorCommon(w, req, resp, err) {
+			return
+		}
+
+		var httpResp *logical.HTTPResponse
+		if resp != nil {
+			httpResp = logical.LogicalResponseToHTTPResponse(resp)
+			httpResp.RequestID = req.ID
+		}
+		respondOk(w, httpResp)
+	})
+}
+
+// handleLogicalInternal is a common helper that returns a handler for
+// processing logical requests. The behavior depends on the various boolean
+// toggles. Refer to usage on functions for possible behaviors.
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
@@ -158,6 +221,12 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 
 		// Always forward requests that are using a limited use count token.
 		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			// Prevent forwarding on local-only requests.
+			if noForward {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
+			}
+
 			if origBody != nil {
 				r.Body = origBody
 			}
@@ -171,11 +240,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
 			// Get the token ns info; if we match the paths below we want to
 			// swap in the token context (but keep the relative path)
-			if err != nil {
-				core.Logger().Warn("error looking up just-set context", "error", err)
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
 			te := req.TokenEntry()
 			newCtx := r.Context()
 			if te != nil {
@@ -276,19 +340,26 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// handles all error cases; if we hit respondLogical, the request is a
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
-		if needsForward {
+		switch {
+		case needsForward && noForward:
+			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+			return
+		case needsForward && !noForward:
 			if origBody != nil {
 				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
 			return
-		}
-		if !ok {
+		case !ok:
+			// If not ok, we simply return. The call on request should have
+			// taken care of setting the appropriate response code and payload
+			// in this case.
+			return
+		default:
+			// Build and return the proper response if everything is fine.
+			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
-
-		// Build the proper response
-		respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 	})
 }
 

@@ -33,7 +33,7 @@ Vault can become a highly available service in Kubernetes.
 **Encryption as a Service:** Applications using the Vault service running in Kubernetes 
 can leverage the [Transit secret engine](/docs/secrets/transit) 
 as "encryption as a service".  This allows applications to offload encryption needs 
-to Vault before storage data at rest.
+to Vault before storing data at rest.
 
 **Audit Logs for Vault:** Operators can choose to attach a persistent volume 
 to the Vault cluster which can be used to [store audit logs](/docs/audit).

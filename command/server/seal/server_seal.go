@@ -27,6 +27,9 @@ func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string
 	case seal.AzureKeyVault:
 		return configureAzureKeyVaultSeal(configSeal, infoKeys, info, logger, inseal)
 
+	case seal.OCIKMS:
+		return configureOCIKMSSeal(configSeal, infoKeys, info, logger, inseal)
+
 	case seal.Transit:
 		return configureTransitSeal(configSeal, infoKeys, info, logger, inseal)
 

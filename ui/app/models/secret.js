@@ -6,6 +6,7 @@ const { attr } = DS;
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default DS.Model.extend(KeyMixin, {
+  failedServerRead: attr('boolean'),
   auth: attr('string'),
   lease_duration: attr('number'),
   lease_id: attr('string'),

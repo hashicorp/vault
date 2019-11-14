@@ -663,6 +663,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, project strin
 
 	return AuthorizeGCE(ctx, &AuthorizeGCEInput{
 		client: &gcpClient{
+			logger:     b.Logger(),
 			computeSvc: computeClient,
 			iamSvc:     iamClient,
 		},

@@ -48,7 +48,7 @@ var (
 var _ physical.Backend = (*FSM)(nil)
 var _ physical.Transactional = (*FSM)(nil)
 var _ raft.FSM = (*FSM)(nil)
-var _ raft.ConfigurationStore = (*FSM)(nil)
+var _ raft.BatchingFSM = (*FSM)(nil)
 
 type restoreCallback func(context.Context) error
 
@@ -75,7 +75,6 @@ type FSM struct {
 	l           sync.RWMutex
 	path        string
 	logger      log.Logger
-	permitPool  *physical.PermitPool
 	noopRestore bool
 
 	db *bolt.DB
@@ -88,7 +87,7 @@ type FSM struct {
 	// additional state in the backend.
 	storeLatestState bool
 
-	chunker *raftchunking.ChunkingConfigurationStore
+	chunker *raftchunking.ChunkingBatchingFSM
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -159,9 +158,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	}
 
 	f := &FSM{
-		path:       conf["path"],
-		logger:     logger,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		path:   conf["path"],
+		logger: logger,
 
 		db:               boltDB,
 		latestTerm:       latestTerm,
@@ -170,7 +168,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		storeLatestState: storeLatestState,
 	}
 
-	f.chunker = raftchunking.NewChunkingConfigurationStore(f, &FSMChunkStorage{
+	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
 		f:   f,
 		ctx: context.Background(),
 	})
@@ -245,9 +243,6 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 func (f *FSM) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft", "delete"}, time.Now())
 
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -259,9 +254,6 @@ func (f *FSM) Delete(ctx context.Context, path string) error {
 // Delete deletes the given key from the bolt file.
 func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 	defer metrics.MeasureSince([]string{"raft", "delete_prefix"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -286,9 +278,6 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -324,9 +313,6 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft", "put"}, time.Now())
 
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -339,9 +325,6 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
-
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -374,9 +357,6 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 // Transaction writes all the operations in the provided transaction to the bolt
 // file.
 func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	f.permitPool.Acquire()
-	defer f.permitPool.Release()
-
 	f.l.RLock()
 	defer f.l.RUnlock()
 
@@ -404,27 +384,51 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 	return err
 }
 
-// Apply will apply a log value to the FSM. This is called from the raft
+// ApplyBatch will apply a set of logs to the FSM. This is called from the raft
 // library.
-func (f *FSM) Apply(log *raft.Log) interface{} {
-	command := &LogData{}
-	err := proto.Unmarshal(log.Data, command)
-	if err != nil {
-		f.logger.Error("error proto unmarshaling log data", "error", err)
-		panic("error proto unmarshaling log data")
+func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
+	if len(logs) == 0 {
+		return []interface{}{}
 	}
 
-	f.l.RLock()
-	defer f.l.RUnlock()
+	// Do the unmarshalling first so we don't hold locks
+	var latestConfiguration *ConfigurationValue
+	commands := make([]interface{}, 0, len(logs))
+	for _, log := range logs {
+		switch log.Type {
+		case raft.LogCommand:
+			command := &LogData{}
+			err := proto.Unmarshal(log.Data, command)
+			if err != nil {
+				f.logger.Error("error proto unmarshaling log data", "error", err)
+				panic("error proto unmarshaling log data")
+			}
+			commands = append(commands, command)
+		case raft.LogConfiguration:
+			configuration := raft.DecodeConfiguration(log.Data)
+			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+
+			commands = append(commands, config)
+
+			// Update the latest configuration the fsm has received; we will
+			// store this after it has been committed to storage.
+			latestConfiguration = config
+
+		default:
+			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+		}
+	}
 
 	// Only advance latest pointer if this log has a higher index value than
 	// what we have seen in the past.
 	var logIndex []byte
+	var err error
 	latestIndex, _ := f.LatestState()
-	if latestIndex.Index < log.Index {
+	lastLog := logs[len(logs)-1]
+	if latestIndex.Index < lastLog.Index {
 		logIndex, err = proto.Marshal(&IndexValue{
-			Term:  log.Term,
-			Index: log.Index,
+			Term:  lastLog.Term,
+			Index: lastLog.Index,
 		})
 		if err != nil {
 			f.logger.Error("unable to marshal latest index", "error", err)
@@ -432,29 +436,46 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		}
 	}
 
+	f.l.RLock()
+	defer f.l.RUnlock()
+
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
-		for _, op := range command.Operations {
-			var err error
-			switch op.OpType {
-			case putOp:
-				err = b.Put([]byte(op.Key), op.Value)
-			case deleteOp:
-				err = b.Delete([]byte(op.Key))
-			case restoreCallbackOp:
-				if f.restoreCb != nil {
-					// Kick off the restore callback function in a go routine
-					go f.restoreCb(context.Background())
+		for _, commandRaw := range commands {
+			switch command := commandRaw.(type) {
+			case *LogData:
+				for _, op := range command.Operations {
+					var err error
+					switch op.OpType {
+					case putOp:
+						err = b.Put([]byte(op.Key), op.Value)
+					case deleteOp:
+						err = b.Delete([]byte(op.Key))
+					case restoreCallbackOp:
+						if f.restoreCb != nil {
+							// Kick off the restore callback function in a go routine
+							go f.restoreCb(context.Background())
+						}
+					default:
+						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+					}
+					if err != nil {
+						return err
+					}
 				}
-			default:
-				return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
-			}
-			if err != nil {
-				return err
+
+			case *ConfigurationValue:
+				b := tx.Bucket(configBucketName)
+				configBytes, err := proto.Marshal(command)
+				if err != nil {
+					return err
+				}
+				if err := b.Put(latestConfigKey, configBytes); err != nil {
+					return err
+				}
 			}
 		}
 
-		// TODO: benchmark so we can know how much time this adds
 		if f.storeLatestState && len(logIndex) > 0 {
 			b := tx.Bucket(configBucketName)
 			err = b.Put(latestIndexKey, logIndex)
@@ -472,13 +493,32 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 
 	// If we advanced the latest value, update the in-memory representation too.
 	if len(logIndex) > 0 {
-		atomic.StoreUint64(f.latestTerm, log.Term)
-		atomic.StoreUint64(f.latestIndex, log.Index)
+		atomic.StoreUint64(f.latestTerm, lastLog.Term)
+		atomic.StoreUint64(f.latestIndex, lastLog.Index)
 	}
 
-	return &FSMApplyResponse{
-		Success: true,
+	// If one or more configuration changes were processed, store the latest one.
+	if latestConfiguration != nil {
+		f.latestConfig.Store(latestConfiguration)
 	}
+
+	// Build the responses. The logs array is used here to ensure we reply to
+	// all command values; even if they are not of the types we expect. This
+	// should future proof this function from more log types being provided.
+	resp := make([]interface{}, len(logs))
+	for i := range logs {
+		resp[i] = &FSMApplyResponse{
+			Success: true,
+		}
+	}
+
+	return resp
+}
+
+// Apply will apply a log value to the FSM. This is called from the raft
+// library.
+func (f *FSM) Apply(log *raft.Log) interface{} {
+	return f.ApplyBatch([]*raft.Log{log})[0]
 }
 
 type writeErrorCloser interface {
@@ -609,61 +649,6 @@ func (s *noopSnapshotter) Persist(sink raft.SnapshotSink) error {
 // Release doesn't do anything.
 func (s *noopSnapshotter) Release() {}
 
-// StoreConfig satisfies the raft.ConfigurationStore interface and persists the
-// latest raft server configuration to the bolt file.
-func (f *FSM) StoreConfiguration(index uint64, configuration raft.Configuration) {
-	f.l.RLock()
-	defer f.l.RUnlock()
-
-	var indexBytes []byte
-	latestIndex, _ := f.LatestState()
-	// Only write the new index if we are advancing the pointer
-	if index > latestIndex.Index {
-		latestIndex.Index = index
-
-		var err error
-		indexBytes, err = proto.Marshal(latestIndex)
-		if err != nil {
-			f.logger.Error("unable to marshal latest index", "error", err)
-			panic(fmt.Sprintf("unable to marshal latest index: %v", err))
-		}
-	}
-
-	protoConfig := raftConfigurationToProtoConfiguration(index, configuration)
-	configBytes, err := proto.Marshal(protoConfig)
-	if err != nil {
-		f.logger.Error("unable to marshal config", "error", err)
-		panic(fmt.Sprintf("unable to marshal config: %v", err))
-	}
-
-	if f.storeLatestState {
-		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(configBucketName)
-			err := b.Put(latestConfigKey, configBytes)
-			if err != nil {
-				return err
-			}
-
-			// TODO: benchmark so we can know how much time this adds
-			if len(indexBytes) > 0 {
-				err = b.Put(latestIndexKey, indexBytes)
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
-		if err != nil {
-			f.logger.Error("unable to store latest configuration", "error", err)
-			panic(fmt.Sprintf("unable to store latest configuration: %v", err))
-		}
-	}
-
-	f.witnessIndex(latestIndex)
-	f.latestConfig.Store(protoConfig)
-}
-
 // raftConfigurationToProtoConfiguration converts a raft configuration object to
 // a proto value.
 func raftConfigurationToProtoConfiguration(index uint64, configuration raft.Configuration) *ConfigurationValue {
@@ -721,9 +706,6 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 		Key:   key,
 		Value: b,
 	}
-
-	f.f.permitPool.Acquire()
-	defer f.f.permitPool.Release()
 
 	f.f.l.RLock()
 	defer f.f.l.RUnlock()

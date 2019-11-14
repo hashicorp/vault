@@ -118,7 +118,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    d.Get("name").(string),
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

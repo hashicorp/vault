@@ -100,7 +100,7 @@ This endpoint creates or updates a named key which is used by a role to sign tok
 ```json
 {
   "rotation_period":"12h",
-  "verification_ttl":43200,
+  "verification_ttl":43200
 }
 ```
 
@@ -359,7 +359,7 @@ Use this endpoint to generate a signed ID (OIDC) token.
 
 | Method   | Path                |
 | :------------------ | :----------------------|
-| `POST`   | `identity/oidc/token/:name`  |
+| `GET`   | `identity/oidc/token/:name`  |
 
 ### Parameters
 

@@ -55,13 +55,19 @@ time.
 As of now, the transit secrets engine supports the following key types (all key
 types also generate separate HMAC keys):
 
-* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+* `aes128-gcm96`: AES-GCM with a 128-bit AES key and a 96-bit nonce; supports
   encryption, decryption, key derivation, and convergent encryption
+* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+  encryption, decryption, key derivation, and convergent encryption (default)
 * `chacha20-poly1305`: ChaCha20-Poly1305 with a 256-bit key; supports
   encryption, decryption, key derivation, and convergent encryption
 * `ed25519`: Ed25519; supports signing, signature verification, and key
   derivation
-* `ecdsa-p256`: ECDSA using curve P256; supports signing and signature
+* `ecdsa-p256`: ECDSA using curve P-256; supports signing and signature
+  verification
+* `ecdsa-p384`: ECDSA using curve P-384; supports signing and signature
+  verification
+* `ecdsa-p521`: ECDSA using curve P-521; supports signing and signature
   verification
 * `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
   signature verification

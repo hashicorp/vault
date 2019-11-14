@@ -9,14 +9,14 @@ export default Route.extend(ListRoute, {
 
   getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { path: method } = this.paramsFor('vault.cluster.access.method');
+    const { path: authMethodPath } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
     const { apiPath, type } = methodModel;
-    return { apiPath, type, method, itemType };
+    return { apiPath, type, authMethodPath, itemType, methodModel };
   },
 
   model() {
-    const { type, method, itemType } = this.getMethodAndModelInfo();
+    const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     const { page, pageFilter } = this.paramsFor(this.routeName);
     let modelType = `generated-${singularize(itemType)}-${type}`;
 
@@ -26,7 +26,7 @@ export default Route.extend(ListRoute, {
         page: page,
         pageFilter: pageFilter,
         type: itemType,
-        method: method,
+        id: authMethodPath,
       })
       .catch(err => {
         if (err.httpStatus === 404) {
@@ -51,11 +51,14 @@ export default Route.extend(ListRoute, {
   },
   setupController(controller) {
     this._super(...arguments);
-    const { apiPath, method, itemType } = this.getMethodAndModelInfo();
+    const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
-    controller.set('method', method);
-    this.pathHelp.getPaths(apiPath, method, itemType).then(paths => {
-      controller.set('paths', paths.navPaths.reduce((acc, cur) => acc.concat(cur.path), []));
+    controller.set('methodModel', methodModel);
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
+      controller.set(
+        'paths',
+        paths.paths.filter(path => path.navigation && path.itemType.includes(itemType))
+      );
     });
   },
 });

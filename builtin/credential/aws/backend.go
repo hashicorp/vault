@@ -87,7 +87,7 @@ type backend struct {
 	upgradeCancelFunc context.CancelFunc
 }
 
-func Backend(conf *logical.BackendConfig) (*backend, error) {
+func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
@@ -118,25 +118,25 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			},
 		},
 		Paths: []*framework.Path{
-			pathLogin(b),
-			pathListRole(b),
-			pathListRoles(b),
-			pathRole(b),
-			pathRoleTag(b),
-			pathConfigClient(b),
-			pathConfigCertificate(b),
-			pathConfigIdentity(b),
-			pathConfigSts(b),
-			pathListSts(b),
-			pathConfigTidyRoletagBlacklist(b),
-			pathConfigTidyIdentityWhitelist(b),
-			pathListCertificates(b),
-			pathListRoletagBlacklist(b),
-			pathRoletagBlacklist(b),
-			pathTidyRoletagBlacklist(b),
-			pathListIdentityWhitelist(b),
-			pathIdentityWhitelist(b),
-			pathTidyIdentityWhitelist(b),
+			b.pathLogin(),
+			b.pathListRole(),
+			b.pathListRoles(),
+			b.pathRole(),
+			b.pathRoleTag(),
+			b.pathConfigClient(),
+			b.pathConfigCertificate(),
+			b.pathConfigIdentity(),
+			b.pathConfigSts(),
+			b.pathListSts(),
+			b.pathConfigTidyRoletagBlacklist(),
+			b.pathConfigTidyIdentityWhitelist(),
+			b.pathListCertificates(),
+			b.pathListRoletagBlacklist(),
+			b.pathRoletagBlacklist(),
+			b.pathTidyRoletagBlacklist(),
+			b.pathListIdentityWhitelist(),
+			b.pathIdentityWhitelist(),
+			b.pathTidyIdentityWhitelist(),
 		},
 		Invalidate:     b.invalidate,
 		InitializeFunc: b.initialize,
@@ -160,8 +160,8 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-			// safety_buffer defaults to 180 days for roletag blacklist
-			safety_buffer := 15552000
+			// safetyBuffer defaults to 180 days for roletag blacklist
+			safetyBuffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 			if err != nil {
 				return err
@@ -173,12 +173,12 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 				if tidyBlacklistConfigEntry.DisablePeriodicTidy {
 					skipBlacklistTidy = true
 				}
-				// overwrite the default safety_buffer with the configured value
-				safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
+				// overwrite the default safetyBuffer with the configured value
+				safetyBuffer = tidyBlacklistConfigEntry.SafetyBuffer
 			}
 			// tidy role tags if explicitly not disabled
 			if !skipBlacklistTidy {
-				b.tidyBlacklistRoleTag(ctx, req, safety_buffer)
+				b.tidyBlacklistRoleTag(ctx, req, safetyBuffer)
 			}
 		}
 

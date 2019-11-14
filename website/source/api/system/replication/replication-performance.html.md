@@ -169,6 +169,10 @@ identifier can later be used to revoke a secondary's access.
 - `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
   token.
 
+- `secondary_public_key` `(string: "")` – Specifies the secondary's generated
+  public key, if using encryption rather than response wrapping to protect the
+  secondary credentials. (Vault 1.3+)
+
 ### Sample Payload
 
 ```json
@@ -238,7 +242,160 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/revoke-secondary
 ```
 
-## Create Mounts Filter
+## Create Paths Filter 
+
+This endpoint is used to modify the mounts and namespaces that are filtered to a secondary.
+Filtering can be specified in allow mode or deny mode.  In allow
+mode the secret and auth mounts that are specified are included to the
+selected secondary.  In deny mode, the mount and namespace paths are excluded.
+
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/paths-filter/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+- `mode` `(string: "allow")` – Specifies the filtering mode.  Available values
+  are "allow" and "deny".
+
+- `paths` `(array: [])` – The list of mount and namespace paths that are filtered.
+
+### Sample Payload
+
+```json
+{
+  "mode": "allow",
+  "paths": ["secret/", "ns1/"]
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+## Read Paths Filter
+
+This endpoint is used to read the mode and the mount/namespace paths that are filtered
+for a secondary.
+
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/primary/paths-filter/:id`  | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+### Sample Response
+
+```json
+{
+  "mode": "allow",
+  "paths": ["secret/", "ns1/"]
+}
+```
+
+## Delete Paths Filter
+
+This endpoint is used to delete the mount and namespace filters for a secondary.
+
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `DELETE` | `/sys/replication/performance/primary/paths-filter/:id`  |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+## Read Dynamically Generated Filter (PRIMARY)
+
+This endpoint is used to read the namespace and the mount paths that are dynamically
+filtered for a secondary on the primary.
+
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/primary/dynamic-filter/:id`  | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/dynamic-filter/mySecondaryID
+```
+
+### Sample Response
+
+```json
+{
+  "dynamic_filtered_mounts": ["ns1/ns2/secret/", "ns1/kv/"],
+  "dynamic_filtered_namespaces": ["ns1/", "ns1/ns2/"]
+}
+```
+
+## Read Dynamically Generated Filter (SECONDARY)
+
+This endpoint is used to read the namespace and the mount paths that are dynamically
+filtered for a secondary on the secondary.
+
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/secondary/dynamic-filter/:id`  | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/dynamic-filter/mySecondaryID
+```
+
+### Sample Response
+
+```json
+{
+  "dynamic_filtered_mounts": ["ns1/ns2/secret/", "ns1/kv/"],
+  "dynamic_filtered_namespaces": ["ns1/", "ns1/ns2/"]
+}
+```
+
+## Create Mounts Filter (DEPRECATED)
+
+~> This API is deprecated and will be removed in a future version of Vault.
+Please use Paths Filter instead.
 
 This endpoint is used to modify the mounts that are filtered to a secondary.
 Filtering can be specified in whitelist mode or blacklist mode.  In whitelist
@@ -277,7 +434,10 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
-## Read Mounts Filter
+## Read Mounts Filter (DEPRECATED)
+
+~> This API is deprecated and will be removed in a future version of Vault.
+Please use Paths Filter instead.
 
 This endpoint is used to read the mode and the mount paths that are filtered
 for a secondary.
@@ -307,7 +467,10 @@ $ curl \
 }
 ```
 
-## Delete Mounts Filter
+## Delete Mounts Filter (DEPRECATED)
+
+~> This API is deprecated and will be removed in a future version of Vault.
+Please use Paths Filter instead.
 
 This endpoint is used to delete the mount filters for a secondary.
 
@@ -328,6 +491,27 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
+## Fetch Performance Secondary Public Key
+
+(Vault 1.3+)
+
+This endpoint allows fetching a public key that is used to encrypt the returned
+credential information (instead of using a response wrapped token). This avoids
+needing to make an API call to the primary during activation.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/generate-public-key` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/generate-public-key
+```
+
 ## Enable Performance Secondary
 
 This endpoint enables performance replication on a secondary using a secondary activation
@@ -341,7 +525,8 @@ token.
 
 ### Parameters
 
-- `token` `(string: <required>)` – Specifies the secondary activation token fetched from the primary.
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary.
 
 - `primary_api_addr` `(string: "")` – Set this to the API address (normal Vault
   address) to override the value embedded in the token. This can be useful if

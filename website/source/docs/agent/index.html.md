@@ -45,12 +45,16 @@ These are the currently-available general configuration option:
 
 - `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies options used for Caching functionality.
 
+- `listener` <tt>([listener][listener]: \<optional\>)</tt> - Specifies the addresses and ports on which the Agent will respond to requests.
+
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
 
 - `exit_after_auth` `(bool: false)` - If set to `true`, the agent will exit
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
+
+- `template` <tt>([template][template`]: \<optional\>)</tt> - Specifies options used for templating Vault secrets to files.
 
 ### vault Stanza
 
@@ -84,6 +88,23 @@ configuration entries:
   certificates. Using this option is highly discouraged as it decreases the
   security of data transmissions to and from the Vault server. This value can
   be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
+
+- `tls_server_name (string: optional)` - Name to use as the SNI host when
+  connecting via TLS. This value can be overridden by setting the
+  `VAULT_TLS_SERVER_NAME` environment variable.
+
+### listener Stanza
+
+Agent supports one or more [listener][listener_main] stanzas.  In addition to
+the standard listener configuration, an Agent's listener configuration also
+supports an additional optional entry:
+
+- `require_request_header (bool: false)` - Require that all incoming HTTP
+  requests on this listener must have an `X-Vault-Request: true` header entry.
+  Using this option offers an additional layer of protection from Server Side
+  Request Forgery attacks.  Requests on the listener that do not have the proper
+  `X-Vault-Request` header will fail, with a HTTP response status code of `412:
+  Precondition Failed`.
 
 ## Example Configuration
 
@@ -135,8 +156,21 @@ listener "tcp" {
          address = "127.0.0.1:8100"
          tls_disable = true
 }
+
+template {
+  source      = "/etc/vault/server.key.ctmpl"
+  destination = "/etc/vault/server.key"
+}
+
+template {
+  source      = "/etc/vault/server.crt.ctmpl"
+  destination = "/etc/vault/server.crt"
+}
 ```
 
 [vault]: /docs/agent/index.html#vault-stanza
 [autoauth]: /docs/agent/autoauth/index.html
 [caching]: /docs/agent/caching/index.html
+[template]: /docs/agent/template/index.html
+[listener]: /docs/agent/index.html#listener-stanza
+[listener_main]: /docs/configuration/listener/tcp.html

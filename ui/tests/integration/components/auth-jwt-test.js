@@ -14,12 +14,14 @@ import form from '../../pages/components/auth-jwt';
 import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS } from 'vault/components/auth-jwt';
 
 const component = create(form);
+const windows = [];
 const fakeWindow = EmberObject.extend(Evented, {
   init() {
     this._super(...arguments);
-    this.__proto__.on('close', () => {
+    this.on('close', () => {
       this.set('closed', true);
     });
+    windows.push(this);
   },
   screen: computed(function() {
     return {
@@ -41,7 +43,7 @@ fakeWindow.reopen({
   },
 
   close() {
-    fakeWindow.proto().trigger('close');
+    windows.forEach(w => w.trigger('close'));
   },
 });
 

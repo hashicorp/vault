@@ -53,6 +53,10 @@ has a number of parameters to further configure a connection.
   `issue` command from the `pki` secrets engine; see
   [the pki documentation](/docs/secrets/pki/index.html).
 
+- `skip_verification` `(bool: false)` - Skip permissions checks when a connection to Cassandra
+is first created. These checks ensure that Vault is able to create roles, but can be resource
+intensive in clusters with many roles.
+
 - `protocol_version` `(int: 2)` – Specifies the CQL protocol version to use.
 
 - `connect_timeout` `(string: "5s")` – Specifies the connection timeout to use.

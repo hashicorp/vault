@@ -1,3 +1,4 @@
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -5,6 +6,9 @@ import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
+import ss from 'vault/tests/pages/components/search-select';
+
+const searchSelect = create(ss);
 const flash = create(flashMessage);
 
 const disableReplication = async (type, assert) => {
@@ -42,8 +46,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
   test('replication', async function(assert) {
     const secondaryName = 'firstSecondary';
-    const mode = 'blacklist';
-    const mountType = 'kv';
+    const mode = 'deny';
     let mountPath;
 
     await visit('/vault/replication');
@@ -60,11 +63,11 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
-    //expand the config
-    await click('[data-test-replication-secondary-token-options]');
-    await fillIn('[data-test-replication-filter-mount-mode]', mode);
-    await click(findAll(`[data-test-mount-filter="${mountType}"]`)[0]);
-    mountPath = findAll(`[data-test-mount-filter-path-for-type="${mountType}"]`)[0].textContent.trim();
+
+    await click('#deny');
+    await clickTrigger();
+    mountPath = searchSelect.options.objectAt(0).text;
+    await searchSelect.options.objectAt(0).click();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -84,13 +87,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
     assert
       .dom('[data-test-mount-config-paths]')
-      .hasText(mountPath, 'show page renders the correct mount path');
-    // click edit
+      .includesText(mountPath, 'show page renders the correct mount path');
 
-    // delete config
+    // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
-    await click('[data-test-delete-mount-config] button');
-    await click('[data-test-confirm-button]');
+    await click('#no-filtering');
+
+    await click('[data-test-config-save]');
     assert.equal(
       flash.latestMessage,
       `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,

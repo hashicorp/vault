@@ -96,7 +96,7 @@ let Model = DS.Model.extend({
 });
 
 export default attachCapabilities(Model, {
-  deltePath: apiPath`sys/auth/${'id'}`,
+  deletePath: apiPath`sys/auth/${'id'}`,
   configPath: function(context) {
     if (context.type === 'aws') {
       return apiPath`auth/${'id'}/config/client`;

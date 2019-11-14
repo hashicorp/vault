@@ -11,7 +11,7 @@ description: |-
 # list
 
 The `list` command lists data from Vault at the given path. This can be used to
-list keys in a, given secrets engine.
+list keys in a given secrets engine.
 
 ## Examples
 

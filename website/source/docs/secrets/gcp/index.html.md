@@ -188,6 +188,30 @@ resource "buckets/my-bucket" {
     "roles/storage.legacyBucketReader",
   ]
 }
+
+# At instance level, using self-link
+resource "https://www.googleapis.com/compute/v1/projects/my-project/zone/my-zone/instances/my-instance" {
+  roles = [
+    "roles/compute.instanceAdmin.v1"
+  ]
+}
+
+# At project level
+resource "//cloudresourcemanager.googleapis.com/projects/my-project" {
+  roles = [
+    "roles/compute.instanceAdmin.v1",
+    "roles/iam.serviceAccountUser",  # required if managing instances that run as service accounts
+  ]
+}
+
+# At folder level
+resource "//cloudresourcemanager.googleapis.com/folders/123456" {
+  roles = [
+    "roles/compute.viewer",
+    "roles/deploymentmanager.viewer",
+  ]
+}
+
 ```
 
 The top-level `resource` block defines the resource or resource path for which
@@ -213,6 +237,9 @@ few different formats:
 
     # Pubsub snapshot
     //pubsub.googleapis.com/project/my-project/snapshots/my-pubsub-snapshot
+
+    # Resource manager
+    //cloudresourcemanager.googleapis.com/projects/my-project"
     ```
 
 - **Relative resource name** - A path-noscheme URI path, usually as accepted by

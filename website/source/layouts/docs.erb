@@ -33,7 +33,8 @@
               'response-wrapping',
               'policies',
               'ha',
-              'pgp-gpg-keybase'
+              'pgp-gpg-keybase',
+              'recovery-mode'
             ]
           }, {
             category: 'configuration',
@@ -79,7 +80,8 @@
                 ]
               },
               'telemetry',
-              { category: 'ui' }
+              { category: 'ui' },
+              { category: 'entropy-augmentation' }
             ]
           }, {
             category: 'commands',
@@ -102,6 +104,7 @@
                 'tune'
               ]
             },
+            'debug',
             'delete',
             {
               category: 'kv',
@@ -184,6 +187,7 @@
               ]
             },
             'unwrap',
+            'version',
             'write',
             'token-helper'
             ]
@@ -384,6 +388,7 @@
                 category: 'hsm',
                 content: ['behavior', 'security']
               },
+              { category: 'entropy-augmentation' },
               { category: 'sealwrap' },
               { category: 'namespaces' },
               { category: 'performance-standby' },

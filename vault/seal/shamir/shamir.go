@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -17,6 +16,7 @@ import (
 // ShamirSeal implements the seal.Access interface for Shamir unseal
 type ShamirSeal struct {
 	logger log.Logger
+	key    []byte
 	aead   cipher.AEAD
 }
 
@@ -31,35 +31,24 @@ func NewSeal(logger log.Logger) *ShamirSeal {
 	return seal
 }
 
-// SetConfig sets the fields on the ShamirSeal object based on
-// values from the config parameter.
-func (s *ShamirSeal) SetConfig(config map[string]string) (map[string]string, error) {
-	// Map that holds non-sensitive configuration info
-	sealInfo := make(map[string]string)
+func (s *ShamirSeal) GetKey() []byte {
+	return s.key
+}
 
-	if config == nil || config["key"] == "" {
-		return sealInfo, nil
-	}
-
-	keyB64 := config["key"]
-	key, err := base64.StdEncoding.DecodeString(keyB64)
-	if err != nil {
-		return sealInfo, err
-	}
-
+func (s *ShamirSeal) SetKey(key []byte) error {
 	aesCipher, err := aes.NewCipher(key)
 	if err != nil {
-		return sealInfo, err
+		return err
 	}
 
 	aead, err := cipher.NewGCM(aesCipher)
 	if err != nil {
-		return sealInfo, err
+		return err
 	}
 
+	s.key = key
 	s.aead = aead
-
-	return sealInfo, nil
+	return nil
 }
 
 // Init is called during core.Initialize. No-op at the moment.

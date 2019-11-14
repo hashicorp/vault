@@ -56,7 +56,7 @@
   padding-left: $spacing-xxs + $spacing-l;
 }
 
-.ember-power-select-options {
+div > .ember-power-select-options {
   background: $white;
   border: $base-border;
   box-shadow: $box-shadow-middle;

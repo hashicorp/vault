@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 /* eslint-disable */
+// run this script via yarn in the ui directory:
+// yarn gen-story-md some-component
+//
+// or if the story is for a component in an in-repo-addon or an engine:
+// yarn gen-story-md some-component name-of-engine
+
 const fs = require('fs');
 const jsdoc2md = require('jsdoc-to-markdown');
 var args = process.argv.slice(2);
@@ -8,7 +14,8 @@ const addonOrEngine = args[1];
 const inputFile = addonOrEngine
   ? `lib/${addonOrEngine}/addon/components/${name}.js`
   : `app/components/${name}.js`;
-const outputFile = `stories/${name}.md`;
+const outputFile = addonOrEngine ? `lib/${addonOrEngine}/stories/${name}.md` : `stories/${name}.md`;
+
 const component = name
   .split('-')
   .map(word => word.charAt(0).toUpperCase() + word.slice(1))

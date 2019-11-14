@@ -1,0 +1,109 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Raft Storage
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+  <Toolbar>
+    <ToolbarActions>
+      <BasicDropdown
+        @class="popup-menu"
+        @horizontalPosition="auto-right"
+        @verticalPosition="below"
+        as |D|
+      >
+        <D.trigger
+          data-test-popup-menu-trigger="true"
+          @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+          @tagName="button"
+        >
+          Snapshots
+          <Chevron @direction="down" @isButton={{true}} />
+        </D.trigger>
+        <D.content @class="popup-menu-content">
+          <nav class="box menu">
+            <ul class="menu-list">
+              <li class="action">
+                {{#if this.useServiceWorker}}
+                <a href="/v1/sys/storage/raft/snapshot" onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}>
+                    Download
+                  </a>
+                {{else}}
+                  <button type="button" class="link is-ghost" onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}>
+                    Download
+                </button>
+                {{/if}}
+              </li>
+              <li class="action">
+                {{#link-to "vault.cluster.storage-restore"}}
+                  Restore
+                {{/link-to}}
+              </li>
+            </ul>
+          </nav>
+        </D.content>
+      </BasicDropdown>
+    </ToolbarActions>
+  </Toolbar>
+
+  <table class="vlt-table is-fullwidth">
+    <caption class="is-collapsed">Raft servers</caption>
+    <thead class="has-text-weight-semibold">
+      <tr>
+        <th scope="col">Address</th>
+        <th scope="col">Voter</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each @model as |server|}}
+        <tr data-raft-row>
+          <td>
+            {{server.address}}
+            {{#if server.leader}}
+            <span class="tag">Leader</span>
+            {{/if}}
+          </td>
+          <td>
+
+      {{#if server.voter}}
+        <Icon
+          aria-label="Yes"
+          class="icon-true has-text-success"
+          @size="l"
+          @glyph="check-circle-outline"
+        />
+      {{else}}
+        <Icon
+          aria-label="No"
+          class="icon-false"
+          @size="l"
+          @glyph="cancel-square-outline"
+        />
+      {{/if}}
+            </td>
+          <td class="middle no-padding has-text-right">
+            <PopupMenu>
+              <Confirm as |c|>
+              <nav>
+                <ul>
+                  <li class="action">
+                    <c.Message
+                      @id={{server.nodeId}}
+                      @onConfirm={{action "removePeer" server}}
+                      @triggerText="Remove Peer"
+                      @confirmButtonText="Remove"
+                      @title={{concat "Remove " server.nodeId "?"}}
+                      @message="This will remove the server from the raft cluster."
+                    />
+                  </li>
+                </ul>
+              </nav>
+              </Confirm>
+            </PopupMenu>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>

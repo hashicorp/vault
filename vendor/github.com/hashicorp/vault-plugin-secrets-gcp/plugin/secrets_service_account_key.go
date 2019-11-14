@@ -59,9 +59,9 @@ func pathSecretServiceAccountKey(b *backend) *framework.Path {
 			},
 		},
 		ExistenceCheck: b.pathRoleSetExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathServiceAccountKey,
-			logical.UpdateOperation: b.pathServiceAccountKey,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathServiceAccountKey},
+			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathServiceAccountKey},
 		},
 		HelpSynopsis:    pathServiceAccountKeySyn,
 		HelpDescription: pathServiceAccountKeyDesc,
@@ -138,7 +138,7 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	}
 
 	// Verify service account key still exists.
-	iamAdmin, err := b.IAMClient(req.Storage)
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("could not confirm key still exists in GCP"), nil
 	}
@@ -154,7 +154,7 @@ func (b *backend) secretKeyRevoke(ctx context.Context, req *logical.Request, d *
 		return nil, fmt.Errorf("secret is missing key_name internal data")
 	}
 
-	iamAdmin, err := b.IAMClient(req.Storage)
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -176,7 +176,7 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 		cfg = &config{}
 	}
 
-	iamC, err := b.IAMClient(s)
+	iamC, err := b.IAMAdminClient(s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
 	}

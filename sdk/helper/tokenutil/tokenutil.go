@@ -75,7 +75,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Bound CIDRs",
+				Name:  "Generated Token's Bound CIDRs",
+				Group: "Tokens",
 			},
 		},
 
@@ -83,7 +84,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeDurationSecond,
 			Description: tokenExplicitMaxTTLHelp,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Explicit Maximum TTL",
+				Name:  "Generated Token's Explicit Maximum TTL",
+				Group: "Tokens",
 			},
 		},
 
@@ -91,7 +93,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeDurationSecond,
 			Description: "The maximum lifetime of the generated token",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Maximum TTL",
+				Name:  "Generated Token's Maximum TTL",
+				Group: "Tokens",
 			},
 		},
 
@@ -99,7 +102,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeBool,
 			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Do Not Attach 'default' Policy To Generated Tokens",
+				Name:  "Do Not Attach 'default' Policy To Generated Tokens",
+				Group: "Tokens",
 			},
 		},
 
@@ -107,7 +111,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Period",
+				Name:  "Generated Token's Period",
+				Group: "Tokens",
 			},
 		},
 
@@ -115,7 +120,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Policies",
+				Name:  "Generated Token's Policies",
+				Group: "Tokens",
 			},
 		},
 
@@ -124,7 +130,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Default:     "default-service",
 			Description: "The type of token to generate, service or batch",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Type",
+				Name:  "Generated Token's Type",
+				Group: "Tokens",
 			},
 		},
 
@@ -132,7 +139,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeDurationSecond,
 			Description: "The initial ttl of the token to generate",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Generated Token's Initial TTL",
+				Name:  "Generated Token's Initial TTL",
+				Group: "Tokens",
 			},
 		},
 
@@ -140,7 +148,8 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeInt,
 			Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Maximum Uses of Generated Tokens",
+				Name:  "Maximum Uses of Generated Tokens",
+				Group: "Tokens",
 			},
 		},
 	}

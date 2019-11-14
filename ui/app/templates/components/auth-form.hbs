@@ -32,27 +32,16 @@
       data-test-auth-error
     />
     {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
-      <div class="field">
-        <label for="selectedMethod" class="is-label">
-          Method
-        </label>
-        <div class="control is-expanded" >
-          <div class="select is-fullwidth">
-            <select
-              name="selectedMethod"
-              id="selectedMethod"
-              onchange={{action (mut selectedAuth) value="target.value"}}
-              data-test-method-select
-            >
-              {{#each (supported-auth-backends) as |method|}}
-                <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
-                  {{method.typeDisplay}}
-                </option>
-              {{/each}}
-            </select>
-          </div>
-        </div>
-      </div>
+      <Select
+        @label='Method'
+        @name='auth-method'
+        @options={{supported-auth-backends}}
+        @valueAttribute={{'type'}}
+        @labelAttribute={{'typeDisplay'}}
+        @isFullwidth={{true}}
+        @selectedValue={{this.selectedAuth}}
+        @onChange={{action (mut this.selectedAuth)}}
+        />
     {{/if}}
   {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
     <AuthJwt

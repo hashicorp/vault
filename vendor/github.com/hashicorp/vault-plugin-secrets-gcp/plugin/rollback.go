@@ -76,7 +76,7 @@ func (b *backend) serviceAccountRollback(ctx context.Context, req *logical.Reque
 	}
 
 	// Delete service account.
-	iamC, err := b.IAMClient(req.Storage)
+	iamC, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -100,11 +100,11 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 	if err != nil {
 		return err
 	}
-	if rs != nil && rs.TokenGen != nil && entry.KeyName == rs.TokenGen.KeyName {
+	if rs == nil || (rs.TokenGen != nil && entry.KeyName == rs.TokenGen.KeyName) {
 		return nil
 	}
 
-	iamC, err := b.IAMClient(req.Storage)
+	iamC, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func isGoogleAccountKeyNotFoundErr(err error) bool {
 	return isGoogleApiErrorWithCodes(err, 403, 404)
 }
 
-func isGoogleApiErrorWithCodes(err error, validErrCodes... int) bool {
+func isGoogleApiErrorWithCodes(err error, validErrCodes ...int) bool {
 	if err == nil {
 		return false
 	}

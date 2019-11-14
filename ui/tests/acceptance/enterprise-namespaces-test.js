@@ -1,4 +1,4 @@
-import { click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
+import { click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -52,7 +52,7 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
       await switchToNS(targetNamespace);
     }
     await logout.visit();
-    await authPage.visit({ with: 'token', namespace: '/beep/boop' });
+    await authPage.visit({ namespace: '/beep/boop' });
     await authPage.tokenInput('root').submit();
     await click('[data-test-namespace-toggle]');
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');

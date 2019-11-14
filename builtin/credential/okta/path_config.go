@@ -87,6 +87,9 @@ func pathConfig(b *backend) *framework.Path {
 		ExistenceCheck: b.pathConfigExistenceCheck,
 
 		HelpSynopsis: pathConfigHelp,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action: "Configure",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

@@ -1,5 +1,5 @@
 configure-cache:
-	@mkdir -p tmp/cache
+	@mkdir -p tmp/cache .bundle
 
 build: configure-cache
 	@echo "==> Starting build in Docker..."
@@ -9,6 +9,7 @@ build: configure-cache
 		--tty \
 		--volume "$(shell pwd):/opt/buildhome/repo" \
 		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
+		--user buildbot:$(shell id -g) \
 		--env "ENV=production" \
 		netlify/build \
 		build "sh bootstrap.sh && middleman build --verbose"
@@ -21,6 +22,7 @@ website: configure-cache
 		--tty \
 		--volume "$(shell pwd):/opt/buildhome/repo" \
 		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
+		--user buildbot:$(shell id -g) \
 		--publish "4567:4567" \
 		--publish "35729:35729" \
 		--env "ENV=production" \

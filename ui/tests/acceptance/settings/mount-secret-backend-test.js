@@ -21,8 +21,10 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     const maxTTLSeconds = maxTTLHours * 60 * 60;
 
     await page.visit();
+
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
+
     await page
       .next()
       .path(path)
@@ -32,6 +34,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
       .maxTTLVal(maxTTLHours)
       .maxTTLUnit('h')
       .submit();
+
     await configPage.visit({ backend: path });
     assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
