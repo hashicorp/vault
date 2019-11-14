@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -737,7 +738,7 @@ func TestAgent_Template(t *testing.T) {
 			// make some template files
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
-				path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents)
+				path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents())
 				templatePaths = append(templatePaths, path)
 			}
 
@@ -848,13 +849,36 @@ auto_auth {
 	}
 }
 
-var templateContents = `{{ with secret "secret/myapp"}}
+// a slice of template options
+var templates = []string{
+	`{{ with secret "secret/myapp"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
 {{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
 }
-{{ end }}`
+{{ end }}`,
+	`{{ with secret "secret/myapp"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+}
+{{ end }}`,
+	`{{ with secret "secret/myapp"}}
+{
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+}
+{{ end }}`,
+}
+
+// templateContents returns one of 2 templates at pseudo-random. We do this to
+// create a dynamic, changing number of template stanzas with different sources,
+// to simulate multiple stanzas with a varying number of source templates.
+func templateContents() string {
+	rand.Seed(time.Now().UnixNano())
+	index := rand.Intn(len(templates) - 1)
+	return templates[index]
+}
 
 var templateConfigString = `
 template {
