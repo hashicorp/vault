@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	consulapi "github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -18,37 +18,22 @@ import (
 // TestConsul_ServiceDiscovery tests whether consul ServiceDiscovery works
 func TestConsul_ServiceDiscovery(t *testing.T) {
 
-	logger := logging.NewVaultLogger(log.Trace)
-
 	// Prepare a docker-based consul instance
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	cleanup, addr, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
 	defer cleanup()
 
 	// Create a consul client
-	consulCfg := consulapi.DefaultConfig()
-	consulCfg.Address = connURL
-	consulCfg.Token = connToken
-	client, err := consulapi.NewClient(consulCfg)
+	cfg := api.DefaultConfig()
+	cfg.Address = addr
+	cfg.Token = token
+	client, err := api.NewClient(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// checkServices is a helper function that checks whether the Consul
-	// catalog is in the state that we expect.
-	checkServices := func(t *testing.T, expected map[string][]string) {
-		t.Helper()
-		services, _, err := client.Catalog().Services(nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if diff := deep.Equal(services, expected); diff != nil {
-			t.Fatal(diff)
-		}
-	}
-
-	// awaitServicesTransition is a helper function that waits patiently for
-	// the Consul catalog to transition from a known state to some other state.
-	awaitServicesTransition := func(t *testing.T, from map[string][]string) {
+	// transitionFrom waits patiently for the services in the Consul catalog to
+	// transition from a known state, and then returns the new services.
+	transitionFrom := func(t *testing.T, known map[string][]string) map[string][]string {
 		t.Helper()
 		// Wait for up to 10 seconds
 		for i := 0; i < 10; i++ {
@@ -56,18 +41,20 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := deep.Equal(services, from); diff != nil {
-				return
+			if diff := deep.Equal(services, known); diff != nil {
+				return services
 			}
 			time.Sleep(time.Second)
 		}
-		t.Fatalf("Catalog Services never transitioned from %v", from)
+		t.Fatalf("Catalog Services never transitioned from %v", known)
+		return nil
 	}
 
 	// Create a ServiceDiscovery that points to our consul instance
+	logger := logging.NewVaultLogger(log.Trace)
 	sd, err := NewConsulServiceDiscovery(map[string]string{
-		"address": connURL,
-		"token":   connToken,
+		"address": addr,
+		"token":   token,
 	}, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -95,9 +82,15 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 	}
 
 	// Vault should not yet be registered with Consul
-	checkServices(t, map[string][]string{
+	services, _, err := client.Catalog().Services(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(services, map[string][]string{
 		"consul": []string{},
-	})
+	}); diff != nil {
+		t.Fatal(diff)
+	}
 
 	// Run service discovery on the core
 	wg := &sync.WaitGroup{}
@@ -108,21 +101,24 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 		}
 		return false
 	}
-	err = sd.RunServiceDiscovery(wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
+	err = sd.RunServiceDiscovery(
+		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Vault should now be registered with Consul in standby mode
-	awaitServicesTransition(t, map[string][]string{
+	// Vault should soon be registered with Consul in standby mode
+	services = transitionFrom(t, map[string][]string{
 		"consul": []string{},
 	})
-	checkServices(t, map[string][]string{
+	if diff := deep.Equal(services, map[string][]string{
 		"consul": []string{},
 		"vault":  []string{"standby"},
-	})
+	}); diff != nil {
+		t.Fatal(diff)
+	}
 
-	// Initialize the core
+	// Initialize and unseal the core
 	keys, _ := vault.TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := vault.TestCoreUnseal(core, vault.TestKeyCopy(key)); err != nil {
@@ -136,13 +132,15 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 	// Wait for the core to become active
 	vault.TestWaitActive(t, core)
 
-	// Vault should now be registered with Consul in active mode
-	awaitServicesTransition(t, map[string][]string{
+	// Vault should soon be registered with Consul in active mode
+	services = transitionFrom(t, map[string][]string{
 		"consul": []string{},
 		"vault":  []string{"standby"},
 	})
-	checkServices(t, map[string][]string{
+	if diff := deep.Equal(services, map[string][]string{
 		"consul": []string{},
 		"vault":  []string{"active"},
-	})
+	}); diff != nil {
+		t.Fatal(diff)
+	}
 }

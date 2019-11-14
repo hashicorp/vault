@@ -2483,12 +2483,11 @@ func (m *mockServiceDiscovery) RunServiceDiscovery(
 // TestCore_ServiceDiscovery tests whether standalone ServiceDiscovery works
 func TestCore_ServiceDiscovery(t *testing.T) {
 
-	// Make a service discovery
+	// Make a mock service discovery
 	sd := &mockServiceDiscovery{}
 
 	// Create the core
 	logger = logging.NewVaultLogger(log.Trace)
-
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -2497,7 +2496,6 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	const redirectAddr = "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		ConfigServiceDiscovery: sd,
@@ -2509,6 +2507,8 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Vault should not yet be registered
 	if diff := deep.Equal(sd, &mockServiceDiscovery{}); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2522,17 +2522,20 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 		}
 		return false
 	}
-	err = sd.RunServiceDiscovery(wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
+	err = sd.RunServiceDiscovery(
+		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Vault should be registered
 	if diff := deep.Equal(sd, &mockServiceDiscovery{
 		runCount: 1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}
 
-	// Initialize the core
+	// Initialize and unseal the core
 	keys, _ := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -2545,6 +2548,8 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 
 	// Wait for core to become active
 	TestWaitActive(t, core)
+
+	// Vault should be registered, unsealed, and active
 	if diff := deep.Equal(sd, &mockServiceDiscovery{
 		activeCount: 1,
 		sealedCount: 1,
