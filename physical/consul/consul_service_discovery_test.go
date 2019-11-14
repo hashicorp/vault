@@ -32,7 +32,7 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 	}
 
 	// transitionFrom waits patiently for the services in the Consul catalog to
-	// transition from a known state, and then returns the new services.
+	// transition from a known value, and then returns the new value.
 	transitionFrom := func(t *testing.T, known map[string][]string) map[string][]string {
 		t.Helper()
 		// Wait for up to 10 seconds
