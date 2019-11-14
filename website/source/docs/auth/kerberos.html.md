@@ -136,7 +136,8 @@ like the following:
 communicate with the Kerberos environment.
 - `keytab_path` is the path to the keytab in which the entry lives for the
 entity authenticating to Vault.
-- `username` is the username for the keytab entry to use for logging into Kerberos.
+- `username` is the username for the entry _within_ the keytab to use for 
+logging into Kerberos.
 - `service` is the service principal name to use in obtaining a service ticket for
 gaining a SPNEGO token.
 - `realm` is the name of the Kerberos realm.
@@ -149,8 +150,7 @@ Once the malfunctioning piece of the journey is identified, you can focus
 your debugging efforts in the most useful direction.
 
 1. Use `ldapsearch` while logged into your machine hosting Vault to ensure
-your LDAP configuration is functional. This ensures your LDAP connection 
-is working.
+your LDAP configuration is functional.
 2. Authenticate to your domain server using kinit, your keytab, and your 
 krb5.conf. Do this with both Vault's keytab, and any client keytab being
 used for logging in. This ensures your Kerberos network is working.
@@ -184,7 +184,7 @@ in the keytab file.
 The Vault Kerberos library has a working integration test environment that
 can be referenced as an example of a full Kerberos and LDAP environment. 
 It runs through Docker and can be run through the `$ make integration` or 
-`$ make dev-env` commands. These command run variations of [a script](https://github.com/hashicorp/vault-plugin-auth-kerberos/blob/master/scripts/integration_env.sh)
+`$ make dev-env` commands. These commands run variations of [a script](https://github.com/hashicorp/vault-plugin-auth-kerberos/blob/master/scripts/integration_env.sh)
 that spins up a full environment, adds users, and executes a login from a 
 client.
 
@@ -192,3 +192,9 @@ This script is not intended to substitute for a true understanding of the
 Kerberos environment. Please ensure your Kerberos environment is fully 
 functioning independently before troubleshooting through Vault (see 
 Prerequisites above).
+
+## API
+
+The Kerberos auth method has a full HTTP API. Please see the
+[Kerberos auth method API](/api/auth/kerberos/index.html) for more
+details.
