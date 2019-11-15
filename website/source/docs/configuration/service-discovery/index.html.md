@@ -16,9 +16,9 @@ where you would like to use a system like [Consul][consul] for [service
 discovery][consul-discovery], but use a different system for the [storage
 backend][storage-backend].  
 
-By default, Vault implicitly uses Consul for service discovery when Consul is
-configured as the [storage backend][consul-backend], so the `service_discovery`
-stanza is not needed.  
+When Consul is configured as the [storage backend][consul-backend], Vault
+implicitly uses Consul for service discovery, so the `service_discovery` stanza
+is not needed.  
 
 For times when you would like to use a different storage backend, like
 [Raft][raft-backend], but still have service discovery available, the
