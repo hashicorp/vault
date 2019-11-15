@@ -62,6 +62,8 @@ and confirmed working, you will be ready to use Kerberos with Vault.
         kerberos
     ```
    
+# TODO insert instructions from the README here.
+   
 1. Create a keytab for Vault to use in verifying inbound
 login requests, and send it to base 64:
 
@@ -175,6 +177,12 @@ be able to login using a command like:
 Then make sure you're ready to share the error output of that command, the
 contents of the krb5.conf file, and [the entries listed](https://docs.oracle.com/cd/E19683-01/806-4078/6jd6cjs1q/index.html)
 in the keytab file.
+
+After you've stripped the issue down to its simplest form, if you still
+encounter difficulty resolving it, it will be much easier to gain assistance
+by posting your reproduction to the Vault [Google Group](https://groups.google.com/forum/#!forum/vault-tool)
+or by providing it to [HashiCorp Support](https://www.hashicorp.com/support.html) 
+(if applicable.)
 
 ### Use These Resources
 

@@ -20,6 +20,75 @@ any location, please update your API calls accordingly.
 The Kerberos auth method validates both Kerberos and LDAP authorization,
 so both configurations are required.
 
+## Configure Vault Kerberos
+
+This endpoint configures the keytab and service account to be used by Vault
+for verifying inbound SPNEGO tokens.
+
+| Method   | Path                         |
+| :------- | :--------------------------- |
+| `POST`   | `/auth/kerberos/config`      |
+
+- `keytab` `(string: <required>)` – A base 64 representation of the contents
+of the Kerberos keytab that will be used for verifying inbound SPNEGO tokens.
+It should contain an entry matching the service account given. This can be
+created through the following command: "$ base64 vault.keytab > vault.keytab.base64".
+- `service_account` `(string: <required>)` – The service account associated
+with both the keytab entry and an LDAP service account created for Vault. Ex.:
+"vault_svc".
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/kerberos/config
+```
+
+### Sample Payload
+
+```json
+{
+  "keytab": "BQIAAAA6AAEACk1BVFJJWC5MQU4ACXZhdWx0X3N2YwAAAAFdzZSjAgAXABDwhEyRR9nRqkpP8KTn2A83AAAAAg==",
+  "service_account": "vault_svc"
+}
+```
+
+## Read Vault Kerberos
+
+This endpoint retrieves the service account for the Kerberos auth method.
+The keytab is not returned because it is sensitive information.
+
+| Method   | Path                         |
+| :------- | :--------------------------- |
+| `GET`    | `/auth/kerberos/config`      |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/kerberos/config
+```
+
+### Sample Response
+
+```json
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "service_account": "vault_svc"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
 ## Configure Kerberos LDAP
 
 This endpoint configures LDAP in the Kerberos auth method.
@@ -283,4 +352,65 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
     http://127.0.0.1:8200/v1/auth/kerberos/groups/admins
+```
+
+## Login with Kerberos
+
+This endpoint allows you to log in with a valid Kerberos SPNEGO
+token. This token is obtained by the client, marshalled, and
+converted to base 64 using standard encoding.
+
+Example SPNEGO token (newlines added for readability):
+
+```
+YIIFSwYGKwYBBQUCoIIFPzCCBTugDTALBgkqhkiG9xIBAgKiggUoBIIFJGCCBSAGCSq
+GSIb3EgECAgEAboIFDzCCBQugAwIBBaEDAgEOogcDBQAgAAAAo4IEB2GCBAMwggP/oA
+MCAQWhDBsKTUFUUklYLkxBTqIvMC2gAwIBA6EmMCQbBEhUVFAbHDdlZmNjZTg4MGVkM
+y5tYXRyaXgubGFuOjgyMDCjggO3MIIDs6ADAgEXoQMCAQKiggOlBIIDoXky+VDSMXqT
+Z8XqUiIfzX3+t1ROgO49WYQPoqW1EJLA6vOVtsLITTuDUw8WaLIexki07up3wiO7bKn
+unPFN3Y6VaKZfGoubVBFnLwrxqiEqytk19fiuc0bUJD5fNX+BUeHjePPmE73kRcuchC
+L5+WkbY0X37cH5uKwCWI6TxpuEc74+mvmGOdAOdisC31MO6EBnOpTlxvKOXzShVk5Xa
+rkkHjTJyjoUslgm8JVdj/uB/+x16k0bFVOuWybfeCkn4FY7OeIxypxDJgk6uHU+5jpy
+XsdXK4w5GG+TK5BI6LXW8ZH6NOhcTZnRyt1/S4Wihd6HKhL8lH6H+wPWAnN4Ym8jiSg
+7O0nIkp9su1l/umJWnLnyUdsC9ekKmCYS9MLrmaUREnKMFfrYOF283gWVmfuSWd832Q
+9PIE93vUVTfetw1OwbJXEbG7ex3BotXPJ8yaDUAz4Zv0a6zQlj6JutE7LF3JvuuQeot
+QnwPhrZTrmv7ZbmGO3GmkzbMzIwcTXCCKX8ocOo8GLmtEigAPK23FOW2Y0p1meYjF0U
+xPzU6MPxfQWiXTWflqabXug7uZh8u76rzSEEceosPxoBqMm6hSmGc85+0bzy/E7AGJM
+5ELa2Ny2KpyniPiYCap44GsFZbGM1FwJeh1bG3dJungIn7po4X2wlg00wZVlbHsBzhP
+Hys0oxVzOQfrvx88G0fH80+vyzQiQAq4ZqmZqkO0zFSsdqG8ReJvpY0eGzN6/lGwcRl
+eav7Vum/s5MalXhYUdOjB4K3A5yQArHbbLfeZlhb7d4vttzPNkmaZ9ZNTyW1GSuqDtd
++YJ0g70aN82KQMWiK3cbJcx/1jcmaN5gjSDm0xk19G2eb8VlRpwLFAazOlpPGozPl0Y
+PD45h3Yv3AA5aMVXvEi+NvSYR3z9VXxk6A8wFJxV5NZxV2hYwmxt0S+TYXFeudXzT+W
+ySoykcsxIU6rUevmJlEqZDyD3VcdnUOE9pxrIY/cqpdBBwatorF+jIK/ytcTBjvoM6c
+LL4g4n/isWMu8Xs6lSMxZzrC3Ewv9VYMzOEFxaHUXlyIC8GCN6t9DHZNzT91TC0u5Rj
+XuLqXENczg33dACvr+yhvin/0QNBQG+EXz/E4NiBBWqtTFa0BiTVTwyrKL5OyiLcIVe
+v4l8l9vyj/ABwDacr9ZGjhFbOShCTuFFWBPNnBwPqiRBV4y1gPP4abYBmeboLrUiqwZ
+81UrP2L8rCTEtYu9q3GmW/pIHqMIHnoAMCAReigd8EgdxwBViqyCyL0+J/k2bw0upNL
+h+4wzJcFBFC/wxX2aMvvIYdQv5nWwdNLMII3l/zQ0+eRdzpKfg1ZRT6x0D5278eQLto
+9r1CqKNW515u4kD5+pE8VOwZJMVe3FmduaH2gnTLAcoYXkBUE24hcr0ExSY6kTTBWPj
+U5dsmUsj3+qrN9JruEADqw99t/EWnN3iTsHh1rOQOd9jIJ1wCIkgvnLB8Rad+q5jguG
+8qQh1WDObTlNOnezDtiuLtRb03QDo8Q4Sm72IIcLDlffVvl7WAog5TpC8qM97+Wmv0C
+sWw
+```
+
+| Method   | Path                         |
+| :------- | :--------------------------- |
+| `POST`   | `/auth/kerberos/login`       |
+
+- `keytab` `(string: <required>)` – A base 64 representation of the contents
+of the Kerberos keytab that will be used for verifying inbound SPNEGO tokens.
+It should contain an entry matching the service account given. This can be
+created through the following command: "$ base64 vault.keytab > vault.keytab.base64".
+- `service_account` `(string: <required>)` – The service account associated
+with both the keytab entry and an LDAP service account created for Vault. Ex.:
+"vault_svc".
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "Authorization: Negotiate YIIFSw...sWw" \
+    --request POST \
+    http://127.0.0.1:8200/v1/auth/kerberos/login
 ```
