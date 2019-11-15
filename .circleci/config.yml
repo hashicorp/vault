@@ -200,6 +200,9 @@ jobs:
           curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
             | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
 
+          # go get
+          go get ./...
+
           # Run tests
           make prep
           mkdir -p test-results/go-test
@@ -272,6 +275,9 @@ jobs:
           # Install gotestsum
           curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
             | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+          # go get
+          go get ./...
 
           # Run tests
           make prep
