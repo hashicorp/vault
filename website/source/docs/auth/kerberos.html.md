@@ -85,10 +85,6 @@ and confirmed working, you will be ready to use Kerberos with Vault.
    $ base64 vault.keytab > vault.keytab.base64
    ```
 
-    ```text
-    $ base64 vault.keytab > vault.keytab.base64
-    ```
-
 1. Configure the Kerberos auth method with the keytab and 
 entry name that will be used to verify inbound login 
 requests:
