@@ -696,6 +696,17 @@ func TestAgent_Template(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 200)
 
+	// populate another secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap",
+			"cert": "something"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
 	// Get a temp file path we can use for the sink
 	sinkPath := makeTempFile("sink.txt", "")
 	defer os.Remove(sinkPath)
@@ -728,7 +739,7 @@ func TestAgent_Template(t *testing.T) {
 			templateCount: 15,
 		},
 		"many_exit": {
-			templateCount: 15,
+			templateCount: 13,
 			exitAfterAuth: true,
 		},
 	}
@@ -849,13 +860,218 @@ auto_auth {
 	}
 }
 
+func TestAgent_Template_diff(t *testing.T) {
+	//----------------------------------------------------
+	// Pre-test setup
+	//----------------------------------------------------
+	// makeTempFile creates a temp file and populates it.
+	makeTempFile := func(name, contents string) string {
+		f, err := ioutil.TempFile("", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := f.Name()
+		f.WriteString(contents)
+		f.Close()
+		return path
+	}
+
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// give test-role permissions to read the kv secret
+	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
+	req.BodyBytes = []byte(`{
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// setup the kv secrets
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate a secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate a secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp2")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// Get a temp file path we can use for the sink
+	sinkPath := makeTempFile("sink.txt", "")
+	defer os.Remove(sinkPath)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+
+	// create temp dir for this test run
+	tmpDir, err := ioutil.TempDir(tmpDirRoot, "agent-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a config file
+	config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+						remove_secret_id_file_after_reading = false
+        }
+    }
+
+    sink "file" {
+        config = {
+            path = "%s"
+        }
+    }
+}
+
+template {
+    contents = "{{ with secret \"secret/myapp\" }}{{ range $k, $v := .Data.data }}{{ $v }}{{ end }}{{ end }}"
+    destination = "%s/render-pass.txt"
+}
+
+template {
+    contents = "{{ with secret \"secret/myapp2\" }}{{ .Data.data.username}}{{ end }}"
+    destination = "%s/render-user.txt"
+}
+
+exit_after_auth=true
+`
+
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, tmpDir, tmpDir)
+	configPath := makeTempFile("config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	wg.Wait()
+
+	//----------------------------------------------------
+	// Perform the tests
+	//----------------------------------------------------
+
+	files, err := ioutil.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(files) != 2 {
+		t.Fatalf("expected (%d) templates, got (%d)", 2, len(files))
+	}
+}
+
 // a slice of template options
 var templates = []string{
-	`{{ with secret "secret/myapp"}}
+	`{{ with secret "secret/otherapp"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
-{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+{{ .Data.data.cert }}
 }
 {{ end }}`,
 	`{{ with secret "secret/myapp"}}
@@ -876,7 +1092,7 @@ var templates = []string{
 // to simulate multiple stanzas with a varying number of source templates.
 func templateContents() string {
 	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(len(templates) - 1)
+	index := rand.Intn(len(templates))
 	return templates[index]
 }
 

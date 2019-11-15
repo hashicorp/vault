@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/y0ssar1an/q"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -145,7 +144,6 @@ WAIT:
 					},
 				}
 				runnerConfig = runnerConfig.Merge(&ctv)
-				// q.Q("runnerConfig:", runnerConfig)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
 				if runnerErr != nil {
@@ -162,24 +160,18 @@ WAIT:
 			events := ts.runner.RenderEvents()
 
 			// Not all templates have been rendered yet
-			q.Q("events len:", len(events))
-			q.Q("lookup len:", len(ts.lookup))
 			if len(events) < len(ts.lookup) {
 				continue
 			}
 
 			for _, event := range events {
-				q.Q("events template config count:", len(event.TemplateConfigs))
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
-					q.Q(">> continuing wait")
 					continue WAIT
 				}
-				q.Q(">> passed wait")
 			}
 
 			if ts.exitAfterAuth {
-				q.Q("::: exit after auth")
 				// if we want to exit after auth, go ahead and shut down the runner and
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
