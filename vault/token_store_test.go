@@ -651,10 +651,10 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 }
 
 func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
+	testMakeTokenViaCore(t, c, root, client, ttl, "", policy, false, nil)
 }
 
-func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
+func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
@@ -664,6 +664,10 @@ func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, polic
 	}
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
+
+	if len(period) != 0 {
+		req.Data["period"] = period
+	}
 
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2379,11 +2383,20 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
-	testTokenStore_HandleRequest_Lookup(t, false)
-	testTokenStore_HandleRequest_Lookup(t, true)
+	t.Run("service_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, false)
+	})
+
+	t.Run("service_token_periodic", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, false, true)
+	})
+
+	t.Run("batch_token", func(t *testing.T) {
+		testTokenStoreHandleRequestLookup(t, true, false)
+	})
 }
 
-func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
+func testTokenStoreHandleRequestLookup(t *testing.T, batch, periodic bool) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	req := logical.TestRequest(t, logical.UpdateOperation, "lookup")
@@ -2424,8 +2437,13 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
+	period := ""
+	if periodic {
+		period = "3600s"
+	}
+
 	outAuth := new(logical.Auth)
-	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"}, batch, outAuth)
+	testMakeTokenViaCore(t, c, root, "client", "3600s", period, []string{"foo"}, batch, outAuth)
 
 	tokenType := "service"
 	expID := "client"
@@ -2463,57 +2481,8 @@ func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 		"entity_id":        "",
 		"type":             tokenType,
 	}
-
-	if resp.Data["creation_time"].(int64) == 0 {
-		t.Fatalf("creation time was zero")
-	}
-	delete(resp.Data, "creation_time")
-	if resp.Data["issue_time"].(time.Time).IsZero() {
-		t.Fatal("issue time is default time")
-	}
-	delete(resp.Data, "issue_time")
-	if resp.Data["expire_time"].(time.Time).IsZero() {
-		t.Fatal("expire time is default time")
-	}
-	delete(resp.Data, "expire_time")
-
-	// Depending on timing of the test this may have ticked down, so accept 3599
-	if resp.Data["ttl"].(int64) == 3599 {
-		resp.Data["ttl"] = int64(3600)
-	}
-
-	if diff := deep.Equal(resp.Data, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Test via POST
-	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
-	req.Data = map[string]interface{}{
-		"token": expID,
-	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	exp = map[string]interface{}{
-		"id":               expID,
-		"accessor":         resp.Data["accessor"],
-		"policies":         []string{"default", "foo"},
-		"path":             "auth/token/create",
-		"meta":             map[string]string(nil),
-		"display_name":     "token",
-		"orphan":           false,
-		"num_uses":         0,
-		"creation_ttl":     int64(3600),
-		"ttl":              int64(3600),
-		"explicit_max_ttl": int64(0),
-		"renewable":        !batch,
-		"entity_id":        "",
-		"type":             tokenType,
+	if periodic {
+		exp["period"] = int64(3600)
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {

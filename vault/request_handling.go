@@ -1193,6 +1193,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		Policies:       auth.TokenPolicies,
 		NamespaceID:    ns.ID,
 		ExplicitMaxTTL: auth.ExplicitMaxTTL,
+		Period:         auth.Period,
 		Type:           auth.TokenType,
 	}
 
