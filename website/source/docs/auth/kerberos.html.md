@@ -62,10 +62,28 @@ and confirmed working, you will be ready to use Kerberos with Vault.
         kerberos
     ```
    
-# TODO insert instructions from the README here.
+1. Create a keytab for the Kerberos plugin:
+
+   ```text
+   $ ktutil
+   ktutil:  addent -password -p your_service_account@REALM.COM -e aes256-cts -k 1
+   Password for your_service_account@REALM.COM:
+   ktutil:  list -e
+   slot KVNO Principal
+   ---- ---- ---------------------------------------------------------------------
+      1    1            your_service_account@REALM.COM (aes256-cts-hmac-sha1-96)
+   ktutil:  wkt vault.keytab
+   ```
    
-1. Create a keytab for Vault to use in verifying inbound
-login requests, and send it to base 64:
+   The KVNO (`-k 1`) should match the KVNO of the service account. An error will show in the Vault logs if this is incorrect.
+   
+   Different encryption types can also be added to the keytab, for example `-e rc4-hmac` with additional `addent` commands.
+   
+   Then base64 encode it:
+   
+   ```text
+   $ base64 vault.keytab > vault.keytab.base64
+   ```
 
     ```text
     $ base64 vault.keytab > vault.keytab.base64
