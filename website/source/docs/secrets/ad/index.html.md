@@ -16,9 +16,9 @@ It has two main features.
 The first feature (password rotation) is where the AD secrets engine rotates AD passwords dynamically.
 This is designed for a high-load environment where many instances may be accessing
 a shared password simultaneously. With a simple set up and a simple creds API,
-it doesn't require instances to be manually registered in advance to gain access. 
-As long as access has been granted to the creds path via a method like 
-[AppRole](https://www.vaultproject.io/api/auth/approle/index.html), they're available. Passwords are 
+it doesn't require instances to be manually registered in advance to gain access.
+As long as access has been granted to the creds path via a method like
+[AppRole](https://www.vaultproject.io/api/auth/approle/index.html), they're available. Passwords are
 lazily rotated based on preset TTLs and can have a length configured to meet your needs.
 
 The second feature (service account check-out) is where a library of service accounts can
@@ -42,7 +42,7 @@ was next requested. "Lazy" rotation means passwords are rotated when all of the 
 - They are over their TTL
 - They are requested
 
-Therefore, the AD TTL can be considered a soft contract. It's fulfilled when the given password is next requested. 
+Therefore, the AD TTL can be considered a soft contract. It's fulfilled when the given password is next requested.
 
 To ensure your passwords are rotated as expected, we'd recommend you configure services to request each password at least
 twice as often as its TTL.
@@ -73,7 +73,7 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
-    
+
 1. Enable the Active Directory secrets engine:
 
     ```text
@@ -84,7 +84,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-2. Configure the credentials that Vault uses to communicate with Active Directory 
+2. Configure the credentials that Vault uses to communicate with Active Directory
 to generate passwords:
 
     ```text
@@ -99,9 +99,9 @@ to generate passwords:
     for the given account. It is possible to delegate access to change
     passwords for these accounts to the one Vault is in control of, and this is
     usually the highest-security solution.
-    
+
     If you'd like to do a quick, insecure evaluation, also set `insecure_tls` to true. However, this is NOT RECOMMENDED
-    in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
+    in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid
     `certificate`.
 
 3. Configure a role that maps a name in Vault to an account in Active Directory.
@@ -113,7 +113,7 @@ this role.
         service_account_name="my-application@example.com"
     ```
 
-4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
+4. Grant "my-application" access to its creds at `ad/creds/my-application` using an
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
 ### FAQ
@@ -122,7 +122,7 @@ auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.ht
 
 If an administrator at your company rotates a password that Vault is managing,
 the next time an application asks _Vault_ for that password, Vault won't know
-it. 
+it.
 
 To maintain that application's up-time, Vault will need to return to a state of
 knowing the password. Vault will generate a new password, update it, and return
@@ -132,7 +132,7 @@ human intervention.
 Thus, we wouldn't recommend that administrators directly rotate the passwords
 for accounts that Vault is managing. This may lead to behavior the
 administrator wouldn't expect, like finding very quickly afterwards that their
-new password has already been changed. 
+new password has already been changed.
 
 The password `ttl` on a role can be updated at any time to ensure that the
 responsibility of updating passwords can be left to Vault, rather than
@@ -177,11 +177,11 @@ $ vault write ad/library/accounting-team \
 ```
 
 In this example, the service account names of `fizz@example.com` and `buzz@example.com` have
-already been created on the remote AD server. They've been set aside solely for Vault to handle. 
+already been created on the remote AD server. They've been set aside solely for Vault to handle.
 The `ttl` is how long each check-out will last before Vault checks in a service account,
 rotating its password during check-in. The `max_ttl` is the maximum amount of time it can live
-if it's renewed. These default to `24h`. Also by default, a service account must be checked in 
-by the same Vault entity or client token that checked it out. However, if this behavior causes 
+if it's renewed. These default to `24h`. Also by default, a service account must be checked in
+by the same Vault entity or client token that checked it out. However, if this behavior causes
 problems, set `disable_check_in_enforcement=true`.
 
 When a library of service accounts has been created, view their status at any time to see if they're
@@ -208,7 +208,7 @@ password                ?@09AZKh03hBORZPJcTDgLfntlHqxLy29tcQjPVThzuwWAx/Twx4a2Zc
 service_account_name    fizz@example.com
 ```
 
-If the default `ttl` for the check-out is higher than needed, set the check-out to last 
+If the default `ttl` for the check-out is higher than needed, set the check-out to last
 for a shorter time by using:
 
 ```text
@@ -222,7 +222,7 @@ password                ?@09AZerLLuJfEMbRqP+3yfQYDSq6laP48TCJRBJaJu/kDKLsq9WxL9s
 service_account_name    buzz@example.com
 ```
 
-This can be a nice way to say, "Although I _can_ have a check-out for 24 hours, if I 
+This can be a nice way to say, "Although I _can_ have a check-out for 24 hours, if I
 haven't checked it in after 30 minutes, I forgot or I'm a dead instance, so you can just
 check it back in."
 
@@ -249,7 +249,7 @@ lease_duration     10h
 lease_renewable    true
 ```
 
-Renewing a check-out means its current password will live longer, since passwords are rotated 
+Renewing a check-out means its current password will live longer, since passwords are rotated
 anytime a password is _checked in_ either by a caller, or by Vault because the check-out `ttl`
 ends.
 
@@ -262,7 +262,7 @@ Key          Value
 check_ins    [fizz@example.com]
 ```
 
-Most of the time this will just work, but if multiple service accounts checked out by the same 
+Most of the time this will just work, but if multiple service accounts checked out by the same
 caller, Vault will need to know which one(s) to check in.
 
 ```text
@@ -273,11 +273,11 @@ check_ins    [fizz@example.com]
 ```
 
 To perform a check-in, Vault verifies that the caller _should_ be able to check in a given service account.
-To do this, Vault looks for either the same [entity ID](https://learn.hashicorp.com/vault/identity-access-management/iam-identity) 
+To do this, Vault looks for either the same [entity ID](https://learn.hashicorp.com/vault/identity-access-management/iam-identity)
 used to check out the service account, or the same client token.
 
 If a caller is unable to check in a service account, or simply doesn't try,
-Vault will check it back in automatically when the `ttl` expires. However, if that is too long, 
+Vault will check it back in automatically when the `ttl` expires. However, if that is too long,
 service accounts can be forcibly checked in by a highly privileged user through:
 
 ```text
@@ -300,7 +300,7 @@ All revocation operations queued successfully!
 
 During testing, we found that by default, many versions of Active Directory
 perpetuate old passwords for a short while. After we discovered this behavior,
-we found articles discussing it by searching for "AD password caching" and "OldPasswordAllowedPeriod". We 
+we found articles discussing it by searching for "AD password caching" and "OldPasswordAllowedPeriod". We
 also found [an article from Microsoft](https://support.microsoft.com/en-us/help/906305/new-setting-modifies-ntlm-network-authentication-behavior)
 discussing how to configure this behavior. This behavior appears to vary by AD
 version. We recommend you test the behavior of your particular AD server,
@@ -310,12 +310,12 @@ and edit its settings to gain the desired behavior.
 
 This will occur when there aren't enough service accounts for those requesting them. Let's
 suppose our "accounting-team" service accounts are the ones being requested. When Vault
-receives a check-out call but none are available, Vault will log at debug level: 
-"'accounting-team' had no check-outs available". Vault will also increment a metric 
+receives a check-out call but none are available, Vault will log at debug level:
+"'accounting-team' had no check-outs available". Vault will also increment a metric
 containing the strings "active directory", "check-out", "unavailable", and "accounting-team".
 
 Once it's known _which_ library needs more service accounts for checkout, fix this issue
-by merely creating a new service account for it to use in Active Directory, then adding it to 
+by merely creating a new service account for it to use in Active Directory, then adding it to
 Vault like so:
 
 ```text
@@ -323,7 +323,7 @@ $ vault write ad/library/accounting-team \
     service_account_names=fizz@example.com,buzz@example.com,new@example.com
 ```
 
-In this example, fizz and buzz were pre-existing but were still included in the call 
+In this example, fizz and buzz were pre-existing but were still included in the call
 because we'd like them to exist in the resulting set. The new account was appended to
 the end.
 
@@ -331,8 +331,13 @@ the end.
 
 Active Directory is eventually consistent, meaning that it can take some time for word
 of a new password to travel across all AD instances in a cluster. In larger clusters, we
-have observed the password taking over 10 seconds to propagate fully. The simplest way to 
+have observed the password taking over 10 seconds to propagate fully. The simplest way to
 handle this is to simply wait and retry using the new password.
+
+## Learn
+
+Refer to the [Active Directory Service Account Check-out](https://learn.hashicorp.com/vault/secrets-management/ad-secrets) guide
+for a step-by-step tutorial.
 
 ## API
 
