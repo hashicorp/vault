@@ -9,17 +9,17 @@ import (
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
-func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
+func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	t.Helper()
 	if opts == nil {
-		opts = &TestSealOpts{}
+		opts = &seal.TestSealOpts{}
 	}
 	if opts.Logger == nil {
 		opts.Logger = logging.NewVaultLogger(hclog.Debug)
 	}
 
 	switch opts.StoredKeys {
-	case StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirMaster:
 		newSeal := NewDefaultSeal(&seal.Access{
 			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
@@ -32,7 +32,7 @@ func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
 			SecretShares:    1,
 		})
 		return newSeal
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		newSeal := NewDefaultSeal(&seal.Access{
 			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
@@ -45,6 +45,6 @@ func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
 		})
 		return newSeal
 	default:
-		return NewAutoSeal(seal.NewTestSeal(opts.Secret))
+		return NewAutoSeal(seal.NewTestSeal(opts))
 	}
 }

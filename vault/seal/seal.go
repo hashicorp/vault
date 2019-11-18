@@ -8,10 +8,45 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 )
 
+type StoredKeysSupport int
+
+const (
+	// The 0 value of StoredKeysSupport is an invalid option
+	StoredKeysInvalid StoredKeysSupport = iota
+	StoredKeysNotSupported
+	StoredKeysSupportedGeneric
+	StoredKeysSupportedShamirMaster
+)
+
+func (s StoredKeysSupport) String() string {
+	switch s {
+	case StoredKeysNotSupported:
+		return "Old-style Shamir"
+	case StoredKeysSupportedGeneric:
+		return "AutoUnseal"
+	case StoredKeysSupportedShamirMaster:
+		return "New-style Shamir"
+	default:
+		return "Invalid StoredKeys type"
+	}
+}
+
 // Access is the embedded implementation of autoSeal that contains logic
 // specific to encrypting and decrypting data, or in this case keys.
 type Access struct {
 	wrapping.Wrapper
+	OverriddenType string
+}
+
+func (a *Access) SetType(t string) {
+	a.OverriddenType = t
+}
+
+func (a *Access) Type() string {
+	if a.OverriddenType != "" {
+		return a.OverriddenType
+	}
+	return a.Wrapper.Type()
 }
 
 func (a *Access) Encrypt(ctx context.Context, plaintext []byte) (blob *wrapping.EncryptedBlobInfo, err error) {

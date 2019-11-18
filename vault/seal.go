@@ -50,35 +50,12 @@ const (
 	RecoveryTypeShamir      = "shamir"
 )
 
-type StoredKeysSupport int
-
-const (
-	// The 0 value of StoredKeysSupport is an invalid option
-	StoredKeysInvalid StoredKeysSupport = iota
-	StoredKeysNotSupported
-	StoredKeysSupportedGeneric
-	StoredKeysSupportedShamirMaster
-)
-
-func (s StoredKeysSupport) String() string {
-	switch s {
-	case StoredKeysNotSupported:
-		return "Old-style Shamir"
-	case StoredKeysSupportedGeneric:
-		return "AutoUnseal"
-	case StoredKeysSupportedShamirMaster:
-		return "New-style Shamir"
-	default:
-		return "Invalid StoredKeys type"
-	}
-}
-
 type Seal interface {
 	SetCore(*Core)
 	Init(context.Context) error
 	Finalize(context.Context) error
 
-	StoredKeysSupported() StoredKeysSupport
+	StoredKeysSupported() seal.StoredKeysSupport
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
@@ -149,19 +126,19 @@ func (d *defaultSeal) BarrierType() string {
 	return wrapping.Shamir
 }
 
-func (d *defaultSeal) StoredKeysSupported() StoredKeysSupport {
+func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
 	isLegacy, err := d.LegacySeal()
 	if err != nil {
 		if d.core != nil && d.core.logger != nil {
 			d.core.logger.Error("no seal config found, can't determine if legacy or new-style shamir")
 		}
-		return StoredKeysInvalid
+		return seal.StoredKeysInvalid
 	}
 	switch {
 	case isLegacy:
-		return StoredKeysNotSupported
+		return seal.StoredKeysNotSupported
 	default:
-		return StoredKeysSupportedShamirMaster
+		return seal.StoredKeysSupportedShamirMaster
 	}
 }
 

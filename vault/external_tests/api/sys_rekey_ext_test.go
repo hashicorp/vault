@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func TestSysRekey_Verification(t *testing.T) {
@@ -44,7 +45,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		}
 		opts.SealFunc = func() vault.Seal {
 			return vault.NewTestSeal(t, &vault.TestSealOpts{
-				StoredKeys: vault.StoredKeysSupportedGeneric,
+				StoredKeys: seal.StoredKeysSupportedGeneric,
 			})
 		}
 	case legacyShamir:

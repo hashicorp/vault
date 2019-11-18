@@ -333,7 +333,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	var existingConfig *SealConfig
 	var err error
 	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
-	if c.seal.StoredKeysSupported() == StoredKeysSupportedGeneric && c.seal.RecoveryKeySupported() {
+	if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedGeneric && c.seal.RecoveryKeySupported() {
 		existingConfig, err = c.seal.RecoveryConfig(ctx)
 		useRecovery = true
 	} else {
@@ -398,7 +398,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 		}
 	case c.seal.BarrierType() == wrapping.Shamir:
-		if c.seal.StoredKeysSupported() == StoredKeysSupportedShamirMaster {
+		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirMaster {
 			testseal := NewDefaultSeal(&seal.Access{
 				Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("testseal"),
@@ -438,7 +438,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	results := &RekeyResult{
 		Backup: c.barrierRekeyConfig.Backup,
 	}
-	if c.seal.StoredKeysSupported() != StoredKeysSupportedGeneric {
+	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
 		// Set result.SecretShares to the new key itself if only a single key
 		// part is used -- no Shamir split required.
 		if c.barrierRekeyConfig.SecretShares == 1 {
@@ -521,7 +521,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 }
 
 func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logical.HTTPCodedError {
-	legacyUpgrade := c.seal.StoredKeysSupported() == StoredKeysNotSupported
+	legacyUpgrade := c.seal.StoredKeysSupported() == seal.StoredKeysNotSupported
 	if legacyUpgrade {
 		// We won't be able to call SetStoredKeys without setting StoredShares=1.
 		existingConfig, err := c.seal.BarrierConfig(ctx)
@@ -532,7 +532,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 		c.seal.SetCachedBarrierConfig(existingConfig)
 	}
 
-	if c.seal.StoredKeysSupported() != StoredKeysSupportedGeneric {
+	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
 		err := c.seal.GetAccess().Wrapper.(*shamirseal.ShamirWrapper).SetKey(newSealKey)
 		if err != nil {
 			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to update barrier seal key: {{err}}", err).Error())

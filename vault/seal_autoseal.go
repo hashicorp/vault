@@ -78,8 +78,8 @@ func (d *autoSeal) BarrierType() string {
 	return d.Type()
 }
 
-func (d *autoSeal) StoredKeysSupported() StoredKeysSupport {
-	return StoredKeysSupportedGeneric
+func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
+	return seal.StoredKeysSupportedGeneric
 }
 
 func (d *autoSeal) RecoveryKeySupported() bool {

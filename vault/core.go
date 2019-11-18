@@ -43,7 +43,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/seal"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	cache "github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 )
@@ -743,7 +743,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	if c.seal == nil {
-		c.seal = NewDefaultSeal(&seal.Access{
+		c.seal = NewDefaultSeal(&vaultseal.Access{
 			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("shamir"),
 			}),
@@ -1014,7 +1014,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		go func() {
 			keyringFound := false
-			haveMasterKey := c.seal.StoredKeysSupported() != StoredKeysSupportedShamirMaster
+			haveMasterKey := c.seal.StoredKeysSupported() != vaultseal.StoredKeysSupportedShamirMaster
 			defer func() {
 				if keyringFound && haveMasterKey {
 					_, err := c.unsealInternal(ctx, masterKey)
@@ -1148,7 +1148,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
 		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
-		if seal.StoredKeysSupported() == StoredKeysSupportedGeneric {
+		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedGeneric {
 			masterKeyShares, err := seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
@@ -1173,7 +1173,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 	// If we have a migration seal, now's the time!
 	if c.migrationSeal != nil {
-		if seal.StoredKeysSupported() == StoredKeysSupportedShamirMaster {
+		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
 			err = seal.GetAccess().Wrapper.(*shamirseal.ShamirWrapper).SetKey(masterKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
@@ -2081,7 +2081,7 @@ func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 // that can be used to unseal the barrier.
 func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]byte, error) {
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedGeneric:
+	case vaultseal.StoredKeysSupportedGeneric:
 		if err := c.seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
 			return nil, errwrap.Wrapf("recovery key verification failed: {{err}}", err)
 		}
@@ -2095,8 +2095,8 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 		}
 		return storedKeys[0], nil
 
-	case StoredKeysSupportedShamirMaster:
-		testseal := NewDefaultSeal(&seal.Access{
+	case vaultseal.StoredKeysSupportedShamirMaster:
+		testseal := NewDefaultSeal(&vaultseal.Access{
 			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("testseal"),
 			}),
@@ -2120,7 +2120,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 		}
 		return storedKeys[0], nil
 
-	case StoredKeysNotSupported:
+	case vaultseal.StoredKeysNotSupported:
 		return combinedKey, nil
 	}
 	return nil, fmt.Errorf("invalid seal")

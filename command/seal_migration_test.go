@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -29,7 +30,11 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
+	shamirSeal := vault.NewDefaultSeal(&seal.Access{
+		Wrapper: shamirseal.NewSeal(&wrapping.WrapperOptions{
+			Logger: logger.Named("shamir"),
+		}),
+	})
 	coreConfig := &vault.CoreConfig{
 		Seal:            shamirSeal,
 		Physical:        phys,
@@ -201,7 +206,7 @@ func TestSealMigration(t *testing.T) {
 	}
 
 	altTestSeal := seal.NewTestSeal(nil)
-	altTestSeal.Type = "test-alternate"
+	altTestSeal.SetType("test-alternate")
 	altSeal := vault.NewAutoSeal(altTestSeal)
 
 	{
