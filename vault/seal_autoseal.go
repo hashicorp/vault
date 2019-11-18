@@ -10,6 +10,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -22,7 +23,7 @@ var barrierTypeUpgradeCheck = func(_ string, _ *SealConfig) {}
 // decrypting stored keys via an underlying AutoSealAccess implementation, as
 // well as logic related to recovery keys and barrier config.
 type autoSeal struct {
-	seal.Access
+	*seal.Access
 
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
@@ -33,7 +34,7 @@ type autoSeal struct {
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel seal.Access) *autoSeal {
+func NewAutoSeal(lowLevel *seal.Access) *autoSeal {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
@@ -46,7 +47,7 @@ func (d *autoSeal) SealWrapable() bool {
 	return true
 }
 
-func (d *autoSeal) GetAccess() seal.Access {
+func (d *autoSeal) GetAccess() *seal.Access {
 	return d.Access
 }
 
@@ -74,7 +75,7 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *autoSeal) BarrierType() string {
-	return d.SealType()
+	return d.Type()
 }
 
 func (d *autoSeal) StoredKeysSupported() StoredKeysSupport {
@@ -88,13 +89,13 @@ func (d *autoSeal) RecoveryKeySupported() bool {
 // SetStoredKeys uses the autoSeal.Access.Encrypts method to wrap the keys. The stored entry
 // does not need to be seal wrapped in this case.
 func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	return writeStoredKeys(ctx, d.core.physical, d, keys)
+	return writeStoredKeys(ctx, d.core.physical, d.Access, keys)
 }
 
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	return readStoredKeys(ctx, d.core.physical, d)
+	return readStoredKeys(ctx, d.core.physical, d.Access)
 }
 
 func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
@@ -106,7 +107,7 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 		return fmt.Errorf("no stored keys found")
 	}
 
-	blobInfo := &physical.EncryptedBlobInfo{}
+	blobInfo := &wrapping.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
 	}
@@ -422,7 +423,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &physical.EncryptedBlobInfo{}
+	blobInfo := &wrapping.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
 	}
@@ -444,7 +445,7 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		return fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &physical.EncryptedBlobInfo{}
+	blobInfo := &wrapping.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return errwrap.Wrapf("failed to proto decode recovery key: {{err}}", err)
 	}

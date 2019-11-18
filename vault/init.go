@@ -9,14 +9,14 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
-	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 // InitParams keeps the init function from being littered with too many
@@ -254,7 +254,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	var sealKey []byte
 	var sealKeyShares [][]byte
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == seal.Shamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.Shamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -302,7 +302,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	switch c.seal.StoredKeysSupported() {
 	case StoredKeysSupportedShamirMaster:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*shamirseal.ShamirWrapper).SetKey(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
 		}
@@ -407,7 +407,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == seal.Shamir {
+	if c.seal.BarrierType() == wrapping.Shamir {
 		return nil
 	}
 

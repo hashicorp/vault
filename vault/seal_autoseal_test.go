@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	proto "github.com/golang/protobuf/proto"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -123,7 +124,7 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 			// in encKeys. Iterate over each phyEntry and verify it was
 			// encrypted with its corresponding key in encKeys.
 			for i, phyEntry := range phyEntries {
-				blobInfo := &physical.EncryptedBlobInfo{}
+				blobInfo := &wrapping.EncryptedBlobInfo{}
 				if err := proto.Unmarshal(phyEntry.Value, blobInfo); err != nil {
 					t.Errorf("phyKey = %s: failed to proto decode stored keys: %s", phyKey, err)
 				}

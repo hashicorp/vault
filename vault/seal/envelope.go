@@ -1,72 +1,36 @@
 package seal
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"errors"
+	"sync"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 )
 
-type Envelope struct{}
-
-type EnvelopeInfo struct {
-	Ciphertext []byte
-	Key        []byte
-	IV         []byte
+type Envelope struct {
+	envelope *wrapping.Envelope
+	once     sync.Once
 }
 
 func NewEnvelope() *Envelope {
 	return &Envelope{}
 }
 
-func (e *Envelope) Encrypt(plaintext []byte) (*EnvelopeInfo, error) {
+func (e *Envelope) init() {
+	e.envelope = new(wrapping.Envelope)
+}
+
+func (e *Envelope) Encrypt(plaintext []byte) (*wrapping.EnvelopeInfo, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "encrypt"}, time.Now())
+	e.once.Do(e.init)
 
-	// Generate DEK
-	key, err := uuid.GenerateRandomBytes(32)
-	if err != nil {
-		return nil, err
-	}
-	iv, err := uuid.GenerateRandomBytes(12)
-	if err != nil {
-		return nil, err
-	}
-	aead, err := e.aeadEncrypter(key)
-	if err != nil {
-		return nil, err
-	}
-	return &EnvelopeInfo{
-		Ciphertext: aead.Seal(nil, iv, plaintext, nil),
-		Key:        key,
-		IV:         iv,
-	}, nil
+	return e.envelope.Encrypt(plaintext, nil)
 }
 
-func (e *Envelope) Decrypt(data *EnvelopeInfo) ([]byte, error) {
+func (e *Envelope) Decrypt(data *wrapping.EnvelopeInfo) ([]byte, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "decrypt"}, time.Now())
+	e.once.Do(e.init)
 
-	aead, err := e.aeadEncrypter(data.Key)
-	if err != nil {
-		return nil, err
-	}
-	return aead.Open(nil, data.IV, data.Ciphertext, nil)
-}
-
-func (e *Envelope) aeadEncrypter(key []byte) (cipher.AEAD, error) {
-	aesCipher, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to create cipher: {{err}}", err)
-	}
-
-	// Create the GCM mode AEAD
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return nil, errors.New("failed to initialize GCM mode")
-	}
-
-	return gcm, nil
+	return e.envelope.Decrypt(data, nil)
 }

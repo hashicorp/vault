@@ -28,6 +28,8 @@ import (
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
@@ -49,7 +51,6 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -485,7 +486,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var sealConfigError error
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 	}
 
 	if len(config.Seals) > 1 {
@@ -494,7 +495,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := vaultseal.Shamir
+	sealType := wrapping.Shamir
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -504,7 +505,11 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var seal vault.Seal
 	sealLogger := c.logger.Named(sealType)
-	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
+		Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
+			Logger: c.logger.Named("shamir"),
+		}),
+	}))
 	if sealConfigError != nil {
 		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 			c.UI.Error(fmt.Sprintf(
@@ -950,16 +955,16 @@ func (c *ServerCommand) Run(args []string) int {
 		// Handle the case where no seal is provided
 		switch len(config.Seals) {
 		case 0:
-			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+			config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 		case 1:
 			// If there's only one seal and it's disabled assume they want to
 			// migrate to a shamir seal and simply didn't provide it
 			if config.Seals[0].Disabled {
-				config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+				config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 			}
 		}
 		for _, configSeal := range config.Seals {
-			sealType := vaultseal.Shamir
+			sealType := wrapping.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
 				configSeal.Type = sealType
@@ -970,7 +975,11 @@ func (c *ServerCommand) Run(args []string) int {
 			var seal vault.Seal
 			sealLogger := c.logger.Named(sealType)
 			allLoggers = append(allLoggers, sealLogger)
-			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
+				Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
+					Logger: c.logger.Named("shamir"),
+				}),
+			}))
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(

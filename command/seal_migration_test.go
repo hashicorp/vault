@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -16,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 func TestSealMigration(t *testing.T) {
