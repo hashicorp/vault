@@ -10,7 +10,7 @@ description: |-
 
 # Entropy Augmentation
 
-Vault Enterprise features a mechanism to sample entropy (or randomness for 
+Vault Enterprise features a mechanism to sample entropy (or randomness for
 cryptographic operations) from external cryptographic modules via the [seals](/docs/configuration/seal/index.html)
 interface. While the system entropy used by Vault is more than capable of
 operating in most threat models, there are some situations where additional
@@ -27,14 +27,14 @@ where alignment with cryptographic regulations like [NIST SP800-90B](https://csr
 is required or when augmented entropy from external sources such as hardware true
 random number generators (TRNGs) or [quantum computing TRNGs](https://www.hashicorp.com/blog/quantum-security-and-cryptography-in-hashicorp-vault/)
 are desirable, augmented entropy replaces system entropy when performing random
-number operations on critical security parameters (CSPs). 
+number operations on critical security parameters (CSPs).
 
 These CSPs have been selected from our previous work in [evaluating Vault for conformance with
 FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
-and include the following: 
+and include the following:
 
 
-- Vault’s master key 
+- Vault’s master key
 - Keyring encryption keys
 - Auto Unseal recovery keys
 - TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
@@ -51,3 +51,9 @@ Entropy augmentation is disabled by default. To enable entropy augmentation Vaul
 entropy stanza](/docs/configuration/entropy-augmentation/index.html).
 
 [configuration]: /docs/configuration/index.html
+
+
+## Learn
+
+Refer to the [HSM Integration - Entropy Augmentation](https://learn.hashicorp.com/vault/operations/hsm-entropy) guide
+for a step-by-step tutorial.
