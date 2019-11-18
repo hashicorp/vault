@@ -382,19 +382,6 @@ auto_auth {
 }
 
 func TestAgent_RequireRequestHeader(t *testing.T) {
-
-	// makeTempFile creates a temp file and populates it.
-	makeTempFile := func(name, contents string) string {
-		f, err := ioutil.TempFile("", name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		path := f.Name()
-		f.WriteString(contents)
-		f.Close()
-		return path
-	}
-
 	// newApiClient creates an *api.Client.
 	newApiClient := func(addr string, includeVaultRequestHeader bool) *api.Client {
 		conf := api.DefaultConfig()
@@ -469,13 +456,13 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
 	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile("sink.txt", "")
+	sinkPath := makeTempFile(t, "sink.txt", "")
 	defer os.Remove(sinkPath)
 
 	// Create a config file
@@ -516,7 +503,7 @@ listener "tcp" {
 }
 `
 	config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
-	configPath := makeTempFile("config.hcl", config)
+	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
 	// Start the agent
@@ -601,21 +588,6 @@ listener "tcp" {
 // TestAgent_Template tests rendering templates
 func TestAgent_Template(t *testing.T) {
 	//----------------------------------------------------
-	// Pre-test setup
-	//----------------------------------------------------
-	// makeTempFile creates a temp file and populates it.
-	makeTempFile := func(name, contents string) string {
-		f, err := ioutil.TempFile("", name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		path := f.Name()
-		f.WriteString(contents)
-		f.Close()
-		return path
-	}
-
-	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -674,8 +646,8 @@ func TestAgent_Template(t *testing.T) {
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
@@ -708,7 +680,7 @@ func TestAgent_Template(t *testing.T) {
 	request(t, serverClient, req, 200)
 
 	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile("sink.txt", "")
+	sinkPath := makeTempFile(t, "sink.txt", "")
 	defer os.Remove(sinkPath)
 
 	// make a temp directory to hold renders. Each test will create a temp dir
@@ -749,7 +721,7 @@ func TestAgent_Template(t *testing.T) {
 			// make some template files
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
-				path := makeTempFile(fmt.Sprintf("render_%d", i), templateContents())
+				path := makeTempFile(t, fmt.Sprintf("render_%d", i), templateContents())
 				templatePaths = append(templatePaths, path)
 			}
 
@@ -806,7 +778,7 @@ auto_auth {
 			templateConfig := strings.Join(templateConfigStrings, " ")
 
 			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig, exitAfterAuth)
-			configPath := makeTempFile("config.hcl", config)
+			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
 			// Start the agent
@@ -861,21 +833,6 @@ auto_auth {
 }
 
 func TestAgent_Template_diff(t *testing.T) {
-	//----------------------------------------------------
-	// Pre-test setup
-	//----------------------------------------------------
-	// makeTempFile creates a temp file and populates it.
-	makeTempFile := func(name, contents string) string {
-		f, err := ioutil.TempFile("", name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		path := f.Name()
-		f.WriteString(contents)
-		f.Close()
-		return path
-	}
-
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
@@ -935,8 +892,8 @@ func TestAgent_Template_diff(t *testing.T) {
 	secretID := data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile("role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile("secret_id.txt", secretID+"\n")
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
@@ -968,7 +925,7 @@ func TestAgent_Template_diff(t *testing.T) {
 	request(t, serverClient, req, 200)
 
 	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile("sink.txt", "")
+	sinkPath := makeTempFile(t, "sink.txt", "")
 	defer os.Remove(sinkPath)
 
 	// make a temp directory to hold renders. Each test will create a temp dir
@@ -1019,11 +976,11 @@ template {
     destination = "%s/render-user.txt"
 }
 
-exit_after_auth=true
+exit_after_auth = true
 `
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, tmpDir, tmpDir)
-	configPath := makeTempFile("config.hcl", config)
+	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
 	// Start the agent
@@ -1105,6 +1062,7 @@ template {
 
 // request issues HTTP requests.
 func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusCode int) map[string]interface{} {
+	t.Helper()
 	resp, err := client.RawRequest(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -1127,4 +1085,20 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 		t.Fatalf("err: %s", err)
 	}
 	return body
+}
+
+//----------------------------------------------------
+// Pre-test setup
+//---------cc-------------------------------------------
+// makeTempFile creates a temp file and populates it.
+func makeTempFile(t *testing.T, name, contents string) string {
+	t.Helper()
+	f, err := ioutil.TempFile("", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := f.Name()
+	f.WriteString(contents)
+	f.Close()
+	return path
 }
