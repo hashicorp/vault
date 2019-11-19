@@ -54,7 +54,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
 	github.com/hashicorp/go-hclog v0.10.0
-	github.com/hashicorp/go-kms-wrapping v0.0.0-20191119215034-5e32a7939738
+	github.com/hashicorp/go-kms-wrapping v0.0.0-20191119225415-0ba8ded8c750
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -80,10 +80,10 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.1-0.20191108162300-8f4121d78b9c
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.3-0.20191119150734-45c076c82f1d
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191112195538-3c798536d157
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191119222840-524d5b57ed36
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
-	github.com/hashicorp/vault/api v1.0.5-0.20191119151908-6a42ac99dd24
+	github.com/hashicorp/vault/api v1.0.5-0.20191119221745-86341afaded0
 	github.com/hashicorp/vault/sdk v0.1.14-0.20191119151908-6a42ac99dd24
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
@@ -107,7 +107,7 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.0.0 // indirect
 	github.com/oklog/run v1.0.0
-	github.com/oracle/oci-go-sdk v7.0.0+incompatible
+	github.com/oracle/oci-go-sdk v12.5.0+incompatible
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
@@ -128,8 +128,8 @@ require (
 	go.uber.org/atomic v1.4.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
-	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
-	google.golang.org/api v0.5.0
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	google.golang.org/api v0.14.0
 	google.golang.org/grpc v1.22.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4

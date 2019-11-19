@@ -24,22 +24,18 @@ func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string
 	case wrapping.AzureKeyVault:
 		return configureAzureKeyVaultSeal(configSeal, infoKeys, info, logger, inseal)
 
-		/*
-			case seal.GCPCKMS:
-				return configureGCPCKMSSeal(configSeal, infoKeys, info, logger, inseal)
+	case wrapping.GCPCKMS:
+		return configureGCPCKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
-			case seal.OCIKMS:
-				return configureOCIKMSSeal(configSeal, infoKeys, info, logger, inseal)
+	case wrapping.OCIKMS:
+		return configureOCIKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
-		*/
 	case wrapping.Transit:
 		return configureTransitSeal(configSeal, infoKeys, info, logger, inseal)
 
-		/*
-			case seal.PKCS11:
-				return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
+	case wrapping.PKCS11:
+		return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
 
-		*/
 	case wrapping.Shamir:
 		return inseal, nil
 
