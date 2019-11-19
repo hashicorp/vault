@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/go-kms-wrapping/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -255,14 +255,14 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	}
 	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
 	if err != nil {
-		return "", awsutil.AppendLogicalError(err)
+		return "", awsutil.AppendAWSError(err)
 	}
 
 	switch entity.Type {
 	case "user":
 		userInfo, err := iamClient.GetUser(&iam.GetUserInput{UserName: &entity.FriendlyName})
 		if err != nil {
-			return "", awsutil.AppendLogicalError(err)
+			return "", awsutil.AppendAWSError(err)
 		}
 		if userInfo == nil {
 			return "", fmt.Errorf("got nil result from GetUser")
@@ -271,7 +271,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	case "role":
 		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
-			return "", awsutil.AppendLogicalError(err)
+			return "", awsutil.AppendAWSError(err)
 		}
 		if roleInfo == nil {
 			return "", fmt.Errorf("got nil result from GetRole")
@@ -280,7 +280,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	case "instance-profile":
 		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
-			return "", awsutil.AppendLogicalError(err)
+			return "", awsutil.AppendAWSError(err)
 		}
 		if profileInfo == nil {
 			return "", fmt.Errorf("got nil result from GetInstanceProfile")

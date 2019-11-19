@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/errwrap"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"

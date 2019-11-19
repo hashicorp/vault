@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"

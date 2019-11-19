@@ -29,7 +29,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"

@@ -9,7 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"

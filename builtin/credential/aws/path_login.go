@@ -21,8 +21,8 @@ import (
 	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-kms-wrapping/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -137,7 +137,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
-		return "", awsutil.AppendLogicalError(err)
+		return "", awsutil.AppendAWSError(err)
 	}
 	if profile == nil {
 		return "", fmt.Errorf("nil output while getting instance profile details")

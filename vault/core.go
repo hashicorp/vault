@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/shamir"
+	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"

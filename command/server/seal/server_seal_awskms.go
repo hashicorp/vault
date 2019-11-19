@@ -2,17 +2,17 @@ package seal
 
 import (
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-func configureAliCloudKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kms := alicloudkms.NewWrapper(&wrapping.WrapperOptions{
+func configureAWSKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger hclog.Logger, inseal vault.Seal) (vault.Seal, error) {
+	kms := awskms.NewWrapper(&wrapping.WrapperOptions{
 		Logger: logger,
 	})
 	kmsInfo, err := kms.SetConfig(configSeal.Config)
@@ -26,13 +26,13 @@ func configureAliCloudKMSSeal(configSeal *server.Seal, infoKeys *[]string, info 
 		Wrapper: kms,
 	})
 	if kmsInfo != nil {
-		*infoKeys = append(*infoKeys, "Seal Type", "AliCloud KMS Region", "AliCloud KMS KeyID")
+		*infoKeys = append(*infoKeys, "Seal Type", "AWS KMS Region", "AWS KMS KeyID")
 		(*info)["Seal Type"] = configSeal.Type
-		(*info)["AliCloud KMS Region"] = kmsInfo["region"]
-		(*info)["AliCloud KMS KeyID"] = kmsInfo["kms_key_id"]
-		if domain, ok := kmsInfo["domain"]; ok {
-			*infoKeys = append(*infoKeys, "AliCloud KMS Domain")
-			(*info)["AliCloud KMS Domain"] = domain
+		(*info)["AWS KMS Region"] = kmsInfo["region"]
+		(*info)["AWS KMS KeyID"] = kmsInfo["kms_key_id"]
+		if endpoint, ok := kmsInfo["endpoint"]; ok {
+			*infoKeys = append(*infoKeys, "AWS KMS Endpoint")
+			(*info)["AWS KMS Endpoint"] = endpoint
 		}
 	}
 	return autoseal, nil
