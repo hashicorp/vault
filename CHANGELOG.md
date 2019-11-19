@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
+* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 
 ## 1.3 (November 14th, 2019)
 
