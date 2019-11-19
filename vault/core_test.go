@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	sd "github.com/hashicorp/vault/servicediscovery"
 )
 
 var (
@@ -2472,9 +2473,9 @@ func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
 }
 
 func (m *mockServiceDiscovery) RunServiceDiscovery(
-	_ *sync.WaitGroup, _ physical.ShutdownChannel, _ string,
-	_ physical.ActiveFunction, _ physical.SealedFunction,
-	_ physical.PerformanceStandbyFunction) error {
+	_ *sync.WaitGroup, _ sd.ShutdownChannel, _ string,
+	_ sd.ActiveFunction, _ sd.SealedFunction,
+	_ sd.PerformanceStandbyFunction) error {
 
 	m.runDiscoveryCount++
 	return nil

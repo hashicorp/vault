@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	sd "github.com/hashicorp/vault/servicediscovery"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
@@ -193,7 +194,7 @@ type Core struct {
 	physical physical.Backend
 
 	// serviceDiscovery is the ServiceDiscovery network
-	serviceDiscovery physical.ServiceDiscovery
+	serviceDiscovery sd.ServiceDiscovery
 
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
@@ -502,7 +503,7 @@ type CoreConfig struct {
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend
 
-	ConfigServiceDiscovery physical.ServiceDiscovery
+	ConfigServiceDiscovery sd.ServiceDiscovery
 
 	Seal Seal
 
@@ -604,7 +605,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 
 // ServiceDiscovery returns the config's ServiceDiscovery, or nil if it does
 // not exist.
-func (c *CoreConfig) ServiceDiscovery() physical.ServiceDiscovery {
+func (c *CoreConfig) ServiceDiscovery() sd.ServiceDiscovery {
 
 	// Check whether there is a ServiceDiscovery explictly configured
 	if c.ConfigServiceDiscovery != nil {
@@ -613,8 +614,8 @@ func (c *CoreConfig) ServiceDiscovery() physical.ServiceDiscovery {
 
 	// Check if HAPhysical is configured and implements ServiceDiscovery
 	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
-		if sd, ok := c.HAPhysical.(physical.ServiceDiscovery); ok {
-			return sd
+		if disc, ok := c.HAPhysical.(sd.ServiceDiscovery); ok {
+			return disc
 		}
 	}
 

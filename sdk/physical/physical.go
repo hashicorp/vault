@@ -3,7 +3,6 @@ package physical
 import (
 	"context"
 	"strings"
-	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 )
@@ -23,9 +22,6 @@ const (
 const (
 	ErrValueTooLarge = "put failed due to value being too large"
 )
-
-// ShutdownSignal
-type ShutdownChannel chan struct{}
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
@@ -76,31 +72,6 @@ type RedirectDetect interface {
 	DetectHostAddr() (string, error)
 }
 
-// Callback signatures for RunServiceDiscovery
-type ActiveFunction func() bool
-type SealedFunction func() bool
-type PerformanceStandbyFunction func() bool
-
-// ServiceDiscovery is an interface that advertises the state of Vault to a
-// service discovery network.
-type ServiceDiscovery interface {
-	// NotifyActiveStateChange is used by Core to notify that this Vault
-	// instance has changed its status to active or standby.
-	NotifyActiveStateChange() error
-
-	// NotifySealedStateChange is used by Core to notify that Vault has changed
-	// its Sealed status to sealed or unsealed.
-	NotifySealedStateChange() error
-
-	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
-	// Vault instance has changed it status to performance standby or standby.
-	NotifyPerformanceStandbyStateChange() error
-
-	// Run executes any background service discovery tasks until the
-	// shutdown channel is closed.
-	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
-}
-
 type Lock interface {
 	// Lock is used to acquire the given lock
 	// The stopCh is optional and if closed should interrupt the lock
@@ -117,9 +88,6 @@ type Lock interface {
 
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
-
-/// ServiceDiscoveryFactory is the factory function to create a ServiceDiscovery.
-type ServiceDiscoveryFactory func(config map[string]string, logger log.Logger) (ServiceDiscovery, error)
 
 // PermitPool is used to limit maximum outstanding requests
 type PermitPool struct {

@@ -47,6 +47,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
+	sd "github.com/hashicorp/vault/servicediscovery"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
@@ -79,7 +80,7 @@ type ServerCommand struct {
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
 
-	PhysicalServiceDiscoverers map[string]physical.ServiceDiscoveryFactory
+	ServiceDiscoverers map[string]sd.ServiceDiscoveryFactory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -938,9 +939,9 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the Service Discovery, if there is one
-	var configSd physical.ServiceDiscovery
+	var configSd sd.ServiceDiscovery
 	if config.ServiceDiscovery != nil {
-		sdFactory, ok := c.PhysicalServiceDiscoverers[config.ServiceDiscovery.Type]
+		sdFactory, ok := c.ServiceDiscoverers[config.ServiceDiscovery.Type]
 		if !ok {
 			c.UI.Error(fmt.Sprintf("Unknown service_discovery type %s", config.ServiceDiscovery.Type))
 			return 1
@@ -1502,15 +1503,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-	sd := coreConfig.ServiceDiscovery()
-	if sd != nil {
+
+	if disc := coreConfig.ServiceDiscovery(); disc != nil {
 		activeFunc := func() bool {
 			if isLeader, _, _, err := core.Leader(); err == nil {
 				return isLeader
 			}
 			return false
 		}
-		if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
+		if err := disc.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 			return 1
 		}

@@ -17,6 +17,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	sd "github.com/hashicorp/vault/servicediscovery"
 )
 
 const (
@@ -36,7 +37,7 @@ var _ physical.Backend = (*ConsulBackend)(nil)
 var _ physical.HABackend = (*ConsulBackend)(nil)
 var _ physical.Lock = (*ConsulLock)(nil)
 var _ physical.Transactional = (*ConsulBackend)(nil)
-var _ physical.ServiceDiscovery = (*ConsulBackend)(nil)
+var _ sd.ServiceDiscovery = (*ConsulBackend)(nil)
 
 var (
 	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)

@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/sdk/physical"
+	sd "github.com/hashicorp/vault/servicediscovery"
 	"golang.org/x/net/http2"
 )
 
@@ -50,7 +50,7 @@ const (
 	reconcileTimeout = 60 * time.Second
 )
 
-var _ physical.ServiceDiscovery = (*ConsulServiceDiscovery)(nil)
+var _ sd.ServiceDiscovery = (*ConsulServiceDiscovery)(nil)
 
 // ConsulServiceDiscovery is a ServiceDiscovery that advertises the state of
 // Vault to Consul.
@@ -72,7 +72,7 @@ type ConsulServiceDiscovery struct {
 }
 
 // NewConsulServiceDiscovery constructs a Consul-based ServiceDiscovery.
-func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (physical.ServiceDiscovery, error) {
+func NewConsulServiceDiscovery(conf map[string]string, logger log.Logger) (sd.ServiceDiscovery, error) {
 
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
@@ -317,7 +317,7 @@ func (c *ConsulServiceDiscovery) checkDuration() time.Duration {
 	return DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulServiceDiscovery) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) (err error) {
+func (c *ConsulServiceDiscovery) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh sd.ShutdownChannel, redirectAddr string, activeFunc sd.ActiveFunction, sealedFunc sd.SealedFunction, perfStandbyFunc sd.PerformanceStandbyFunction) (err error) {
 	if err := c.setRedirectAddr(redirectAddr); err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (c *ConsulServiceDiscovery) RunServiceDiscovery(waitGroup *sync.WaitGroup, 
 	return nil
 }
 
-func (c *ConsulServiceDiscovery) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) {
+func (c *ConsulServiceDiscovery) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh sd.ShutdownChannel, redirectAddr string, activeFunc sd.ActiveFunction, sealedFunc sd.SealedFunction, perfStandbyFunc sd.PerformanceStandbyFunction) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
@@ -450,7 +450,7 @@ func (c *ConsulServiceDiscovery) serviceID() string {
 // without any locks held and can be run concurrently, therefore no changes
 // to ConsulServiceDiscovery can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *ConsulServiceDiscovery) reconcileConsul(registeredServiceID string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) (serviceID string, err error) {
+func (c *ConsulServiceDiscovery) reconcileConsul(registeredServiceID string, activeFunc sd.ActiveFunction, sealedFunc sd.SealedFunction, perfStandbyFunc sd.PerformanceStandbyFunction) (serviceID string, err error) {
 	// Query vault Core for its current state
 	active := activeFunc()
 	sealed := sealedFunc()
