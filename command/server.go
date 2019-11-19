@@ -939,7 +939,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the Service Discovery, if there is one
-	var configSd sd.ServiceDiscovery
+	var configSD sd.ServiceDiscovery
 	if config.ServiceDiscovery != nil {
 		sdFactory, ok := c.ServiceDiscoverers[config.ServiceDiscovery.Type]
 		if !ok {
@@ -949,7 +949,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 		namedSDLogger := c.logger.Named("service_discovery." + config.ServiceDiscovery.Type)
 		allLoggers = append(allLoggers, namedSDLogger)
-		configSd, err = sdFactory(config.ServiceDiscovery.Config, namedSDLogger)
+		configSD, err = sdFactory(config.ServiceDiscovery.Config, namedSDLogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_discovery of type %s: %s", config.ServiceDiscovery.Type, err))
 			return 1
@@ -1040,7 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
-		ConfigServiceDiscovery:    configSd,
+		ConfigServiceDiscovery:    configSD,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
