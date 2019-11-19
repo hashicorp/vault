@@ -3,7 +3,6 @@ package seal
 import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -12,9 +11,7 @@ import (
 )
 
 func configureAliCloudKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kms := alicloudkms.NewWrapper(&wrapping.WrapperOptions{
-		Logger: logger,
-	})
+	kms := alicloudkms.NewWrapper(nil)
 	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
