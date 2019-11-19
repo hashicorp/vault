@@ -27,7 +27,7 @@ This endpoint configures the LDAP auth method.
 
 ### Parameters
 
-- `url` `(string: <required>)` – The LDAP server to connect to. Examples:
+- `url` `(string: ldap://127.0.0.1)` – The LDAP server to connect to. Examples:
   `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. Multiple URLs can be
   specified with commas, e.g. `ldap://ldap.myorg.com,ldap://ldap2.myorg.com`;
   these will be tried in-order.
@@ -52,7 +52,7 @@ This endpoint configures the LDAP auth method.
   user search.
 - `userdn` `(string: "")` – Base DN under which to perform user search. Example:
   `ou=Users,dc=example,dc=com`
-- `userattr` `(string: "")` – Attribute on user attribute object matching the
+- `userattr` `(string: "cn")` – Attribute on user attribute object matching the
   username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
 - `discoverdn` `(bool: false)` – Use anonymous bind to discover the bind DN of a
   user.
