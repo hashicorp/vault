@@ -711,7 +711,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 
 	switch conf.ClusterCipherSuites {
-	case "tls12":
+	case "tls13", "tls12":
 		// Do nothing, let Go use the default
 
 	case "":
