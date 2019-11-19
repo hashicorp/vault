@@ -126,7 +126,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
-WAIT:
 	for {
 		select {
 		case <-ctx.Done():
@@ -166,19 +165,21 @@ WAIT:
 				continue
 			}
 
+			// assume the renders are finished, until we find otherwise
+			doneRendering := true
 			for _, event := range events {
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
-					continue WAIT
+					doneRendering = false
 				}
 			}
 
-			if ts.exitAfterAuth {
+			if doneRendering && ts.exitAfterAuth {
 				// if we want to exit after auth, go ahead and shut down the runner and
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
 				ts.runner.Stop()
-				break WAIT
+				return
 			}
 		}
 	}
