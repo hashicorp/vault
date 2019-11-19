@@ -43,6 +43,12 @@ const (
 	// revokeRetryBase is a baseline retry time
 	revokeRetryBase = 10 * time.Second
 
+	// maxCollectAttempts limits how many attempts are made to collect leases on start
+	maxCollectAttempts = 3
+
+	// collectRetryBase is a baseline retry time
+	collectRetryBase = 10 * time.Second
+
 	// maxLeaseDuration is the default maximum lease duration
 	maxLeaseTTL = 32 * 24 * time.Hour
 
