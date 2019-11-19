@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -721,7 +720,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 			// make some template files
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
-				path := makeTempFile(t, fmt.Sprintf("render_%d", i), templateContents())
+				path := makeTempFile(t, fmt.Sprintf("render_%d", i), templateContents(i))
 				templatePaths = append(templatePaths, path)
 			}
 
@@ -1074,12 +1073,12 @@ var templates = []string{
 {{ end }}`,
 }
 
-// templateContents returns one of 2 templates at pseudo-random. We do this to
-// create a dynamic, changing number of template stanzas with different sources,
-// to simulate multiple stanzas with a varying number of source templates.
-func templateContents() string {
-	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(len(templates))
+// templateContents returns a template from the above templates slice. Each
+// invocation with incrementing seed will return "the next" template, and loop.
+// This ensures as we use multiple templates that we have a increasing number of
+// sources before we reuse a template.
+func templateContents(seed int) string {
+	index := seed % len(templates)
 	return templates[index]
 }
 
