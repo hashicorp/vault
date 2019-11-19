@@ -31,7 +31,7 @@ func TestSealMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	shamirSeal := vault.NewDefaultSeal(&seal.Access{
-		Wrapper: shamirseal.NewSeal(&wrapping.WrapperOptions{
+		Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
 			Logger: logger.Named("shamir"),
 		}),
 	})

@@ -44,14 +44,14 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 			panic("invalid case")
 		}
 		opts.SealFunc = func() vault.Seal {
-			return vault.NewTestSeal(t, &vault.TestSealOpts{
+			return vault.NewTestSeal(t, &seal.TestSealOpts{
 				StoredKeys: seal.StoredKeysSupportedGeneric,
 			})
 		}
 	case legacyShamir:
 		opts.SealFunc = func() vault.Seal {
-			return vault.NewTestSeal(t, &vault.TestSealOpts{
-				StoredKeys: vault.StoredKeysNotSupported,
+			return vault.NewTestSeal(t, &seal.TestSealOpts{
+				StoredKeys: seal.StoredKeysNotSupported,
 			})
 		}
 	}

@@ -65,7 +65,7 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		testSeal.SetKeyID(key)
+		testSeal.Wrapper.(*wrapping.TestWrapper).SetKeyID(key)
 	}
 
 	// Set initial encryption key.
