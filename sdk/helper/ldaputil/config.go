@@ -172,6 +172,12 @@ Default: cn`,
 			Type:        framework.TypeBool,
 			Description: "In Vault 1.1.1 a fix for handling group CN values of different cases unfortunately introduced a regression that could cause previously defined groups to not be found due to a change in the resulting name. If set true, the pre-1.1.1 behavior for matching group CNs will be used. This is only needed in some upgrade scenarios for backwards compatibility. It is enabled by default if the config is upgraded but disabled by default on new configurations.",
 		},
+
+		"request_timeout": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Timeout, in seconds, for the connection when making requests against the server before returning back an error.",
+			Default:     "90s",
+		},
 	}
 }
 
@@ -302,6 +308,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.UseTokenGroups = d.Get("use_token_groups").(bool)
 	}
 
+	if _, ok := d.Raw["request_timeout"]; ok || !hadExisting {
+		cfg.RequestTimeout = d.Get("request_timeout").(int)
+	}
+
 	return cfg, nil
 }
 
@@ -324,6 +334,7 @@ type ConfigEntry struct {
 	TLSMaxVersion            string `json:"tls_max_version"`
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
+	RequestTimeout           int    `json:"request_timeout"`
 
 	// This json tag deviates from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
