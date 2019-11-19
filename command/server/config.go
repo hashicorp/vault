@@ -601,7 +601,7 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
-	//parse service discovery
+	// Parse service discovery
 	if o := list.Filter("service_discovery"); len(o.Items) > 0 {
 		if err := parseServiceDiscovery(&result, o, "service_discovery"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'service_discovery': {{err}}", err)
