@@ -47,3 +47,7 @@ func (s *SealAccess) ClearCaches(ctx context.Context) {
 		s.seal.SetRecoveryConfig(ctx, nil)
 	}
 }
+
+func (s *SealAccess) GetAccess() *seal.Access {
+	return s.seal.GetAccess()
+}
