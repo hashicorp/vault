@@ -809,6 +809,12 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			continue
 		}
 
+		// If -l has been specified then this is our user name
+		if arg == "-l" {
+			username = i
+			continue
+		}
+
 		// this is an ssh option, lets see if User or Port have been set and use it
 		if arg == "-o" {
 			split := strings.Split(i, "=")
