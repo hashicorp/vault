@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strings"
+	"strconv"
 	"syscall"
 
 	"github.com/hashicorp/errwrap"
@@ -814,6 +815,11 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			key := split[0]
 			// Incase the value contains = signs we want to get all of them
 			value := strings.Join(split[1:], " ")
+
+			// Remove double quotes
+			if value[0:1] == "\"" {
+				value, err = strconv.Unquote(value)
+			}
 
 			if key == "User" {
 				// Don't overwrite the user if it is already set by username@hostname
