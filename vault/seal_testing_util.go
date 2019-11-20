@@ -3,7 +3,7 @@ package vault
 import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -21,7 +21,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirMaster:
 		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
 			}),
 		})
@@ -34,7 +34,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		return newSeal
 	case seal.StoredKeysNotSupported:
 		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,
 			}),
 		})

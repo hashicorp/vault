@@ -799,7 +799,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.masterKey
 	}
-	return c.seal.GetAccess().Wrapper.(*shamir.ShamirWrapper).SetKey(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*shamir.Wrapper).SetKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

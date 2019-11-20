@@ -324,6 +324,8 @@ github.com/hashicorp/go-immutable-radix v1.1.0 h1:vN9wG1D6KG6YHRTWr8512cxGOVgTME
 github.com/hashicorp/go-immutable-radix v1.1.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-kms-wrapping v0.0.0-20191120191659-c3246b539dd0 h1:ipAVa+bZbx8KOrzTJjRLcmDraKf2O5yERN5wVX8bZgI=
 github.com/hashicorp/go-kms-wrapping v0.0.0-20191120191659-c3246b539dd0/go.mod h1:VYhzuTTdB4pGvHyf8+qnf74MIEWr21yb92HGeCyO0CM=
+github.com/hashicorp/go-kms-wrapping v0.0.0-20191120194743-693a55b1c069 h1:GtqYmekjjwNpDPvdfL9Ry8MjB/5F6BWdGNblm5PaKRI=
+github.com/hashicorp/go-kms-wrapping v0.0.0-20191120194743-693a55b1c069/go.mod h1:VYhzuTTdB4pGvHyf8+qnf74MIEWr21yb92HGeCyO0CM=
 github.com/hashicorp/go-memdb v1.0.2 h1:AIjzJlwIxz2inhZqRJZfe6D15lPeF0/cZyS1BVlnlHg=
 github.com/hashicorp/go-memdb v1.0.2/go.mod h1:I6dKdmYhZqU0RJSheVEWgTNWdVQH5QvTgIUQ0t/t32M=
 github.com/hashicorp/go-msgpack v0.5.3 h1:zKjpN5BK/P5lMYrLmBHdBULWbJ0XpYR+7NGzqkZzoD4=

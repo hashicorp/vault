@@ -9,7 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -30,13 +30,13 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal(&seal.Access{
-		Wrapper: shamirseal.NewWrapper(&wrapping.WrapperOptions{
+	shamirwrapper := vault.NewDefaultSeal(&seal.Access{
+		Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
 			Logger: logger.Named("shamir"),
 		}),
 	})
 	coreConfig := &vault.CoreConfig{
-		Seal:            shamirSeal,
+		Seal:            shamirwrapper,
 		Physical:        phys,
 		HAPhysical:      haPhys.(physical.HABackend),
 		DisableSealWrap: true,
@@ -257,7 +257,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(logger, core, shamirSeal, altSeal); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, shamirwrapper, altSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -293,7 +293,7 @@ func TestSealMigration(t *testing.T) {
 	{
 		logger.SetLevel(hclog.Trace)
 		logger.Info("integ: verify autoseal is off and the expected key shares work")
-		coreConfig.Seal = shamirSeal
+		coreConfig.Seal = shamirwrapper
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
 		defer cluster.Cleanup()

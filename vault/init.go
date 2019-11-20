@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/errwrap"
-	shamirseal "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
@@ -303,7 +303,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedShamirMaster:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*shamirseal.ShamirWrapper).SetKey(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*shamirwrapper.Wrapper).SetKey(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
 		}
