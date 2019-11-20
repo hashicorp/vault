@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+* auth/ldap: Add a `request_timeout` configuration option to prevent connection
+  requests from hanging [GH-7909]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 
