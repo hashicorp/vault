@@ -7,6 +7,11 @@ IMPROVEMENTS:
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 
+BUG FIXES:
+
+* agent: Fix issue where Agent exits before all templates are rendered when 
+  using and `exit_after_auth` [GH-7899]
+
 ## 1.3 (November 14th, 2019)
 
 CHANGES:
