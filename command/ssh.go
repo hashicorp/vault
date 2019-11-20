@@ -820,7 +820,7 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			split := strings.Split(i, "=")
 			key := split[0]
 			// Incase the value contains = signs we want to get all of them
-			value := strings.Join(split[1:], " ")
+			value := strings.Join(split[1:], "=")
 
 			// Remove double quotes
 			if value[0:1] == "\"" {
