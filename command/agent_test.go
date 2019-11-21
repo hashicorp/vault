@@ -362,21 +362,30 @@ auto_auth {
 		logger.Trace("wrote test config", "path", conf)
 	}
 
-	// If this hangs forever until the test times out, exit-after-auth isn't
-	// working
-	ui, cmd := testAgentCommand(t, logger)
-	cmd.client = client
+	doneCh := make(chan struct{})
+	go func() {
+		ui, cmd := testAgentCommand(t, logger)
+		cmd.client = client
 
-	args := []string{"-config", conf}
-	if viaFlag {
-		args = append(args, "-exit-after-auth")
-	}
+		args := []string{"-config", conf}
+		if viaFlag {
+			args = append(args, "-exit-after-auth")
+		}
 
-	code := cmd.Run(args)
-	if code != 0 {
-		t.Errorf("expected %d to be %d", code, 0)
-		t.Logf("output from agent:\n%s", ui.OutputWriter.String())
-		t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+		code := cmd.Run(args)
+		if code != 0 {
+			t.Errorf("expected %d to be %d", code, 0)
+			t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+		}
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		break
+	case <-time.After(1 * time.Minute):
+		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
 	sink1Bytes, err := ioutil.ReadFile(sink1)
