@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -400,12 +400,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	case c.seal.BarrierType() == wrapping.Shamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirMaster {
 			testseal := NewDefaultSeal(&seal.Access{
-				Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("testseal"),
 				}),
 			})
 			testseal.SetCore(c)
-			err = testseal.GetAccess().Wrapper.(*shamirwrapper.Wrapper).SetKey(recoveredKey)
+			err = testseal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to setup unseal key: {{err}}", err).Error())
 			}
@@ -533,7 +533,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 	}
 
 	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
-		err := c.seal.GetAccess().Wrapper.(*shamirwrapper.Wrapper).SetKey(newSealKey)
+		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(newSealKey)
 		if err != nil {
 			return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to update barrier seal key: {{err}}", err).Error())
 		}

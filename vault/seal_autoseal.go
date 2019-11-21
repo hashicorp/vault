@@ -115,7 +115,7 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
 		d.logger.Info("upgrading stored keys")
 
-		pt, err := d.Decrypt(ctx, blobInfo)
+		pt, err := d.Decrypt(ctx, blobInfo, nil)
 		if err != nil {
 			return errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
 		}
@@ -140,7 +140,7 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
 	// Many of the seals update their keys to the latest KeyID when Encrypt
 	// is called.
-	if _, err := d.Encrypt(ctx, []byte("a")); err != nil {
+	if _, err := d.Encrypt(ctx, []byte("a"), nil); err != nil {
 		return err
 	}
 
@@ -385,7 +385,7 @@ func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	}
 
 	// Encrypt and marshal the keys
-	blobInfo, err := d.Encrypt(ctx, key)
+	blobInfo, err := d.Encrypt(ctx, key, nil)
 	if err != nil {
 		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
 	}
@@ -428,7 +428,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
 	}
 
-	pt, err := d.Decrypt(ctx, blobInfo)
+	pt, err := d.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
 	}
@@ -453,7 +453,7 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
 		d.logger.Info("upgrading recovery key")
 
-		pt, err := d.Decrypt(ctx, blobInfo)
+		pt, err := d.Decrypt(ctx, blobInfo, nil)
 		if err != nil {
 			return errwrap.Wrapf("failed to decrypt encrypted recovery key: {{err}}", err)
 

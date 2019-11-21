@@ -1045,7 +1045,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	if s.access == nil {
 		return nil, errors.New("no seal access available")
 	}
-	eblob, err := s.access.Encrypt(ctx, pt)
+	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1065,5 +1065,5 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return s.access.Decrypt(ctx, &eblob)
+	return s.access.Decrypt(ctx, &eblob, nil)
 }

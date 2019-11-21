@@ -49,7 +49,7 @@ func (a *Access) Type() string {
 	return a.Wrapper.Type()
 }
 
-func (a *Access) Encrypt(ctx context.Context, plaintext []byte) (blob *wrapping.EncryptedBlobInfo, err error) {
+func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrapping.EncryptedBlobInfo, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
 		metrics.MeasureSince([]string{"seal", a.Wrapper.Type(), "encrypt", "time"}, now)
@@ -63,10 +63,10 @@ func (a *Access) Encrypt(ctx context.Context, plaintext []byte) (blob *wrapping.
 	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
 	metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "encrypt"}, 1)
 
-	return a.Wrapper.Encrypt(ctx, plaintext)
+	return a.Wrapper.Encrypt(ctx, plaintext, aad)
 }
 
-func (a *Access) Decrypt(ctx context.Context, data *wrapping.EncryptedBlobInfo) (pt []byte, err error) {
+func (a *Access) Decrypt(ctx context.Context, data *wrapping.EncryptedBlobInfo, aad []byte) (pt []byte, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
 		metrics.MeasureSince([]string{"seal", a.Wrapper.Type(), "decrypt", "time"}, now)
@@ -80,5 +80,5 @@ func (a *Access) Decrypt(ctx context.Context, data *wrapping.EncryptedBlobInfo) 
 	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
 	metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "decrypt"}, 1)
 
-	return a.Wrapper.Decrypt(ctx, data)
+	return a.Wrapper.Decrypt(ctx, data, aad)
 }

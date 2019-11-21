@@ -9,7 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -31,7 +31,7 @@ func TestSealMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	shamirwrapper := vault.NewDefaultSeal(&seal.Access{
-		Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 			Logger: logger.Named("shamir"),
 		}),
 	})

@@ -29,7 +29,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
@@ -506,7 +506,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var seal vault.Seal
 	sealLogger := c.logger.Named(sealType)
 	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 			Logger: c.logger.Named("shamir"),
 		}),
 	}))
@@ -976,7 +976,7 @@ func (c *ServerCommand) Run(args []string) int {
 			sealLogger := c.logger.Named(sealType)
 			allLoggers = append(allLoggers, sealLogger)
 			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
-				Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("shamir"),
 				}),
 			}))

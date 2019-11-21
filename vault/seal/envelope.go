@@ -21,16 +21,16 @@ func (e *Envelope) init() {
 	e.envelope = new(wrapping.Envelope)
 }
 
-func (e *Envelope) Encrypt(plaintext []byte) (*wrapping.EnvelopeInfo, error) {
+func (e *Envelope) Encrypt(plaintext, aad []byte) (*wrapping.EnvelopeInfo, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "encrypt"}, time.Now())
 	e.once.Do(e.init)
 
-	return e.envelope.Encrypt(plaintext, nil)
+	return e.envelope.Encrypt(plaintext, aad)
 }
 
-func (e *Envelope) Decrypt(data *wrapping.EnvelopeInfo) ([]byte, error) {
+func (e *Envelope) Decrypt(data *wrapping.EnvelopeInfo, aad []byte) ([]byte, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "decrypt"}, time.Now())
 	e.once.Do(e.init)
 
-	return e.envelope.Decrypt(data, nil)
+	return e.envelope.Decrypt(data, aad)
 }

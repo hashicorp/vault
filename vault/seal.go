@@ -430,7 +430,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 	}
 
 	// Encrypt and marshal the keys
-	blobInfo, err := encryptor.Encrypt(ctx, buf)
+	blobInfo, err := encryptor.Encrypt(ctx, buf, nil)
 	if err != nil {
 		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
 	}
@@ -470,7 +470,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
 	}
 
-	pt, err := encryptor.Decrypt(ctx, blobInfo)
+	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
 	}

@@ -192,7 +192,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
-		eBlob, err := sealAccess.Encrypt(ctx, uuid)
+		eBlob, err := sealAccess.Encrypt(ctx, uuid, nil)
 		if err != nil {
 			return nil, err
 		}

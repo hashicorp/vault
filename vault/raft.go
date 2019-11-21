@@ -666,7 +666,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge)
+	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
 	if err != nil {
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}

@@ -8,7 +8,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	shamirwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/shamir"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -73,7 +73,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 	case wrapping.Shamir:
 		// The value reflected in config is what we're going to
 		existSeal = vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: shamirwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 				Logger: logger.Named("shamir"),
 			}),
 		})
