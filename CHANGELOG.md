@@ -8,6 +8,7 @@ IMPROVEMENTS:
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
+* secrets/gcp: Add support for rotating root keys [GCP-53]
 
 BUG FIXES:
 
