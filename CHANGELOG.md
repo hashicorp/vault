@@ -2,44 +2,28 @@
 
 IMPROVEMENTS:
 
+* auth/ldap: Add a `request_timeout` configuration option to prevent connection
+  requests from hanging [GH-7909]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
-
-## 1.3 (unreleased)
-
-CHANGES:
-
-* Secondary cluster activation: There has been a change to the way that activating
-  performance and DR secondary clusters works when using public keys for
-  encryption of the parameters rather than a wrapping token. This flow was
-  experimental and never documented. It is now officially supported and
-  documented but is not backwards compatible with older Vault releases.
-
-FEATURES:
-
- * Token Renewal via Accessor: Tokens can now be renewed via the accessor value through
-   the new `auth/token/renew-accessor` endpoint if the caller's token has
-   permission to access that endpoint.
-
-IMPROVEMENTS:
-
-* metrics: Upgrade DataDog library to improve performance [GH-7794]
+* secrets/ad: Add a `request_timeout` configuration option to prevent connection
+  requests from hanging [AD-59]
+* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
+* secrets/gcp: Add support for rotating root keys [GCP-53]
 
 BUG FIXES:
 
-* api: Fix Go API using lease revocation via URL instead of body [GH-7777]
-* core: Don't allow registering a non-root zero TTL token lease. This is purely
-  defense in depth as the lease would be revoked immediately anyways, but
-  there's no real reason to allow registration. [GH-7524]
-* core: Correctly revoke the token that's present in the response auth from a
-  auth/token/ request if there's partial failure during the process. [GH-7835]
-* identity: Ensure only replication primary stores the identity case sensitivity state [GH-7820]
-* secrets/gcp: Fix panic during rollback if the roleset has been deleted [GCP-52]
-* ui: Ensure that items in the top navigation link to pages that users have access to [GH-7590]
+* agent: Fix issue where Agent exits before all templates are rendered when 
+  using and `exit_after_auth` [GH-7899]
 
-## 1.3-beta1 (October 30th, 2019)
+## 1.3 (November 14th, 2019)
 
 CHANGES:
 
+ * Secondary cluster activation: There has been a change to the way that activating
+   performance and DR secondary clusters works when using public keys for
+   encryption of the parameters rather than a wrapping token. This flow was
+   experimental and never documented. It is now officially supported and
+   documented but is not backwards compatible with older Vault releases.
  * Cluster cipher suites: On its cluster port, Vault will no longer advertise
    the full TLS 1.2 cipher suite list by default. Although this port is only
    used for Vault-to-Vault communication and would always pick a strong cipher,
@@ -76,22 +60,27 @@ FEATURES:
    require a specific header before allowing requests [GH-7627]
  * **AWS Auth Method Root Rotation**: The credential used by the AWS auth method can 
    now be rotated, to ensure that only Vault knows the credentials it is using [GH-7131]
- * **New UI Features** The UI now supports managing users and groups for the 
+ * **New UI Features**: The UI now supports managing users and groups for the 
    Userpass, Cert, Okta, and Radius auth methods.
- * **Shamir with Stored Master Key** The on disk format for Shamir seals has changed,
+ * **Shamir with Stored Master Key**: The on disk format for Shamir seals has changed,
    allowing for a secondary cluster using Shamir downstream from a primary cluster
    using Auto Unseal. [GH-7694]
  * **Stackdriver Metrics Sink**: Vault can now send metrics to
    [Stackdriver](https://cloud.google.com/stackdriver/). See the [configuration
    documentation](https://www.vaultproject.io/docs/config/index.html) for
    details. [GH-6957]
- * **Filtered Paths Replication (Enterprise):** Based on the predecessor Filtered Mount Replication, 
+ * **Filtered Paths Replication (Enterprise)**: Based on the predecessor Filtered Mount Replication, 
    Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
+ * **Token Renewal via Accessor**: Tokens can now be renewed via the accessor value through
+   the new `auth/token/renew-accessor` endpoint if the caller's token has
+   permission to access that endpoint.
+ * **Improved Integrated Storage (Beta)**: Improved raft write performance, added support for 
+   non-voter nodes, along with UI support for: using raft storage, joining a raft cluster, 
+   and downloading and restoring a snapshot.
 
 IMPROVEMENTS:
 
  * agent: Add ability to set the TLS SNI name used by Agent [GH-7519]
- * api: Allow setting a function to control retry behavior [GH-7331]
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * auth/jwt: Bound claims may now contain boolean values [JWT-73]
@@ -104,6 +93,7 @@ IMPROVEMENTS:
  * core (enterprise): Add background seal re-wrap
  * core/metrics: Add config parameter to allow unauthenticated sys/metrics 
    access. [GH-7550] 
+ * metrics: Upgrade DataDog library to improve performance [GH-7794]
  * replication (enterprise): Write-Ahead-Log entries will not duplicate the
    data belonging to the encompassing physical entries of the transaction,
    thereby improving the performance and storage capacity.
@@ -115,6 +105,7 @@ IMPROVEMENTS:
  * secrets/aws: The root config can now be read [GH-7245]
  * secrets/aws: Role paths may now contain the '@' character [GH-7553]
  * secrets/database/cassandra: Add ability to skip verfication of connection [GH-7614]
+ * secrets/gcp: Fix panic during rollback if the roleset has been deleted [GCP-52]
  * storage/azure: Add config parameter to Azure storage backend to allow
    specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
@@ -142,6 +133,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * agent: Fix a data race on the token value for inmemsink [GH-7707]
+ * api: Fix Go API using lease revocation via URL instead of body [GH-7777]
+ * api: Allow setting a function to control retry behavior [GH-7331]
  * auth/gcp: Fix a bug where region information in instance groups names could
    cause an authorization attempt to fail [GCP-74]
  * cli: Fix a bug where a token of an unknown format (e.g. in ~/.vault-token)
@@ -150,8 +143,14 @@ BUG FIXES:
    always returned an empty object [GH-7705]
  * cli: Command timeouts are now always specified solely by the
    `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
+ * core: Don't allow registering a non-root zero TTL token lease. This is purely
+   defense in depth as the lease would be revoked immediately anyways, but
+   there's no real reason to allow registration. [GH-7524]
+ * core: Correctly revoke the token that's present in the response auth from a
+   auth/token/ request if there's partial failure during the process. [GH-7835]
  * identity (enterprise): Fixed identity case sensitive loading in secondary
    cluster [GH-7327]
+ * identity: Ensure only replication primary stores the identity case sensitivity state [GH-7820]
  * raft: Fixed VAULT_CLUSTER_ADDR env being ignored at startup [GH-7619]
  * secrets/pki: Don't allow duplicate SAN names in issued certs [GH-7605]
  * sys/health: Pay attention to the values provided for `standbyok` and
@@ -160,8 +159,8 @@ BUG FIXES:
  * ui: using the `wrapped_token` query param will work with `redirect_to` and
    will automatically log in as intended [GH-7398]
  * ui: fix an error when initializing from the UI using PGP keys [GH-7542]
- * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685] 
-
+ * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [GH-7685]
+ * ui: Ensure that items in the top navigation link to pages that users have access to [GH-7590]
  
 ## 1.2.4 (November 7th, 2019)
 

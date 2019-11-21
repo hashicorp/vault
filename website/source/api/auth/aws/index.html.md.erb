@@ -158,7 +158,7 @@ This configures the way that Vault interacts with the
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
-- `ec2_alias (string: "role_id")` - Configures how to generate the identity
+- `ec2_alias` `(string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
   generated ID of the role is used. When `instance_id` is selected, the
