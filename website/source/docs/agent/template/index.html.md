@@ -1,8 +1,8 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Templates"
-sidebar_title: "TemplatesAuto-Auth"
-sidebar_current: "docs-agent-templates"
+sidebar_title: "Templates"
+sidebar_current: "docs-agent-template"
 description: |-
   Vault Agent's Template functionality allows Vault secrets to be rendered to files 
   using Consul Template markup.
