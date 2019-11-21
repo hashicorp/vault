@@ -42,6 +42,12 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
 
+			"sts_region": {
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "The region ID for the sts_endpoint, if set.",
+			},
+
 			"iam_server_id_header_value": {
 				Type:        framework.TypeString,
 				Default:     "",
@@ -127,6 +133,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"endpoint":                   clientConfig.Endpoint,
 			"iam_endpoint":               clientConfig.IAMEndpoint,
 			"sts_endpoint":               clientConfig.STSEndpoint,
+			"sts_region":                 clientConfig.STSRegion,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
 		},
@@ -217,7 +224,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	stsEndpointStr, ok := data.GetOk("sts_endpoint")
 	if ok {
 		if configEntry.STSEndpoint != stsEndpointStr.(string) {
-			// We don't directly cache STS clients as they are ever directly used.
+			// We don't directly cache STS clients as they are never directly used.
 			// However, they are potentially indirectly used as credential providers
 			// for the EC2 and IAM clients, and thus we would be indirectly caching
 			// them there. So, if we change the STS endpoint, we should flush those
@@ -227,6 +234,18 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.STSEndpoint = data.Get("sts_endpoint").(string)
+	}
+
+	stsRegionStr, ok := data.GetOk("sts_region")
+	if ok {
+		if configEntry.STSRegion != stsRegionStr.(string) {
+			// Region is used when building STS clients. As such, all the comments
+			// regarding the sts_endpoint changing apply here as well.
+			changedCreds = true
+			configEntry.STSRegion = stsRegionStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.STSRegion = data.Get("sts_region").(string)
 	}
 
 	headerValStr, ok := data.GetOk("iam_server_id_header_value")
@@ -281,6 +300,7 @@ type clientConfig struct {
 	Endpoint               string `json:"endpoint"`
 	IAMEndpoint            string `json:"iam_endpoint"`
 	STSEndpoint            string `json:"sts_endpoint"`
+	STSRegion              string `json:"sts_region"`
 	IAMServerIdHeaderValue string `json:"iam_server_id_header_value"`
 	MaxRetries             int    `json:"max_retries"`
 }

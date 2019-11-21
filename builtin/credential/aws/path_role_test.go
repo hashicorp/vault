@@ -986,6 +986,65 @@ func TestAwsVersion(t *testing.T) {
 	}
 }
 
+// This test was used to reproduces https://github.com/hashicorp/vault/issues/7418
+// and verify its fix.
+func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
+	t.Skip("skipping test because it hits real endpoints")
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// configure the client with an sts endpoint that should be used in creating the role
+	data := map[string]interface{}{
+		"sts_endpoint": "https://sts.eu-west-1.amazonaws.com",
+		// Note - if you comment this out, you can reproduce the error shown
+		// in the linked GH issue above. This essentially reproduces the problem
+		// we had when we didn't have an sts_region field.
+		"sts_region": "eu-west-1",
+	}
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "config/client",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+
+	data = map[string]interface{}{
+		"auth_type":               iamAuthType,
+		"bound_iam_principal_arn": "arn:aws:iam::123456789012:assumed-role/MyRole/foo",
+		"resolve_aws_unique_ids":  true,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/MyRoleName",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+}
+
 func resolveArnToFakeUniqueId(_ context.Context, _ logical.Storage, _ string) (string, error) {
 	return "FakeUniqueId1", nil
 }

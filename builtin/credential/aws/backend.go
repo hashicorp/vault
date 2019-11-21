@@ -238,22 +238,33 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	if err != nil {
 		return "", err
 	}
-	// This odd-looking code is here because IAM is an inherently global service. IAM and STS ARNs
-	// don't have regions in them, and there is only a single global endpoint for IAM; see
-	// http://docs.aws.amazon.com/general/latest/gr/rande.html#iam_region
-	// However, the ARNs do have a partition in them, because the GovCloud and China partitions DO
-	// have their own separate endpoints, and the partition is encoded in the ARN. If Amazon's Go SDK
-	// would allow us to pass a partition back to the IAM client, it would be much simpler. But it
-	// doesn't appear that's possible, so in order to properly support GovCloud and China, we do a
-	// circular dance of extracting the partition from the ARN, finding any arbitrary region in the
-	// partition, and passing that region back back to the SDK, so that the SDK can figure out the
-	// proper partition from the arbitrary region we passed in to look up the endpoint.
-	// Sigh
-	region := getAnyRegionForAwsPartition(entity.Partition)
-	if region == nil {
-		return "", fmt.Errorf("unable to resolve partition %q to a region", entity.Partition)
+	clientConf, err := b.lockedClientConfigEntry(ctx, s)
+	if err != nil {
+		return "", err
 	}
-	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
+	regionID := ""
+	switch {
+	case clientConf != nil && clientConf.STSRegion != "":
+		regionID = clientConf.STSRegion
+	default:
+		// This odd-looking code is here because IAM is an inherently global service. IAM and STS ARNs
+		// don't have regions in them, and there is only a single global endpoint for IAM; see
+		// http://docs.aws.amazon.com/general/latest/gr/rande.html#iam_region
+		// However, the ARNs do have a partition in them, because the GovCloud and China partitions DO
+		// have their own separate endpoints, and the partition is encoded in the ARN. If Amazon's Go SDK
+		// would allow us to pass a partition back to the IAM client, it would be much simpler. But it
+		// doesn't appear that's possible, so in order to properly support GovCloud and China, we do a
+		// circular dance of extracting the partition from the ARN, finding any arbitrary region in the
+		// partition, and passing that region back back to the SDK, so that the SDK can figure out the
+		// proper partition from the arbitrary region we passed in to look up the endpoint.
+		// Sigh
+		region, err := getAnyRegionForAwsPartition(entity.Partition)
+		if err != nil {
+			return "", err
+		}
+		regionID = region.ID()
+	}
+	iamClient, err := b.clientIAM(ctx, s, regionID, entity.AccountNumber)
 	if err != nil {
 		return "", awsutil.AppendLogicalError(err)
 	}
@@ -293,18 +304,21 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 
 // Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
 // the "Enumerating Regions and Endpoint Metadata" section
-func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
+func getAnyRegionForAwsPartition(partitionId string) (*endpoints.Region, error) {
 	resolver := endpoints.DefaultResolver()
 	partitions := resolver.(endpoints.EnumPartitions).Partitions()
 
 	for _, p := range partitions {
 		if p.ID() == partitionId {
+			if _, ok := p.Services()["sts"]; !ok {
+				return nil, fmt.Errorf("entity partition ID %q doesn't support sts, please set 'sts_region' parameter to designate a region", partitionId)
+			}
 			for _, r := range p.Regions() {
-				return &r
+				return &r, nil
 			}
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("no matching partition ID found for %q, please set 'sts_region' parameter to designate a region", partitionId)
 }
 
 const backendHelp = `
