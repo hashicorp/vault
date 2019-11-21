@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80]
