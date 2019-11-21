@@ -61,8 +61,9 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs  []string
-	flagLogLevel string
+	flagConfigs       []string
+	flagLogLevel      string
+	flagExitAfterAuth bool
 
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
@@ -113,6 +114,15 @@ func (c *AgentCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "exit-after-auth",
+		Target:  &c.flagExitAfterAuth,
+		Default: false,
+		Usage: "If set to true, the agent will exit with code 0 after a single " +
+			"successful auth, where success means that a token was retrieved and " +
+			"all sinks successfully wrote it",
 	})
 
 	// Internal-only flags to follow.
@@ -222,6 +232,13 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Vault == nil {
 		config.Vault = new(agentConfig.Vault)
 	}
+
+	exitAfterAuth := config.ExitAfterAuth
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == "exit-after-auth" {
+			exitAfterAuth = c.flagExitAfterAuth
+		}
+	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
@@ -524,7 +541,7 @@ func (c *AgentCommand) Run(args []string) int {
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
-			ExitAfterAuth: config.ExitAfterAuth,
+			ExitAfterAuth: exitAfterAuth,
 		})
 		ssDoneCh = ss.DoneCh
 
@@ -534,7 +551,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogWriter:     c.logWriter,
 			VaultConf:     config.Vault,
 			Namespace:     namespace,
-			ExitAfterAuth: config.ExitAfterAuth,
+			ExitAfterAuth: exitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
 
