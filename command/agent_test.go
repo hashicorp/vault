@@ -225,6 +225,16 @@ cache {
 */
 
 func TestAgent_ExitAfterAuth(t *testing.T) {
+	t.Run("via_config", func(t *testing.T) {
+		testAgentExitAfterAuth(t, false)
+	})
+
+	t.Run("via_flag", func(t *testing.T) {
+		testAgentExitAfterAuth(t, true)
+	})
+}
+
+func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -313,8 +323,13 @@ func TestAgent_ExitAfterAuth(t *testing.T) {
 		logger.Trace("wrote test jwt", "path", in)
 	}
 
+	exitAfterAuthTemplText := "exit_after_auth = true"
+	if viaFlag {
+		exitAfterAuthTemplText = ""
+	}
+
 	config := `
-exit_after_auth = true
+%s
 
 auto_auth {
         method {
@@ -340,7 +355,7 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
 	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	} else {
@@ -352,7 +367,12 @@ auto_auth {
 	ui, cmd := testAgentCommand(t, logger)
 	cmd.client = client
 
-	code := cmd.Run([]string{"-config", conf})
+	args := []string{"-config", conf}
+	if viaFlag {
+		args = append(args, "-exit-after-auth")
+	}
+
+	code := cmd.Run(args)
 	if code != 0 {
 		t.Errorf("expected %d to be %d", code, 0)
 		t.Logf("output from agent:\n%s", ui.OutputWriter.String())
