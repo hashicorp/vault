@@ -173,6 +173,3 @@ DEPENDENCIES
   middleman-hashicorp!
   tzinfo-data
   wdm (~> 0.1)
-
-BUNDLED WITH
-   2.0.1
