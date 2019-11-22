@@ -18,7 +18,7 @@ ha_backend "consul" {
     disable_clustering = "true"
 }
 
-service_discovery "consul" {
+service_registration "consul" {
     foo = "bar"
 }
 

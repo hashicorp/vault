@@ -17,7 +17,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 const (
@@ -37,7 +37,7 @@ var _ physical.Backend = (*ConsulBackend)(nil)
 var _ physical.HABackend = (*ConsulBackend)(nil)
 var _ physical.Lock = (*ConsulLock)(nil)
 var _ physical.Transactional = (*ConsulBackend)(nil)
-var _ sd.ServiceDiscovery = (*ConsulBackend)(nil)
+var _ sr.ServiceRegistration = (*ConsulBackend)(nil)
 
 var (
 	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
@@ -47,7 +47,7 @@ var (
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ConsulBackend struct {
-	*ConsulServiceDiscovery
+	*ConsulServiceRegistration
 
 	path            string
 	kv              *api.KV
@@ -62,13 +62,13 @@ type ConsulBackend struct {
 // and the prefix in the KV store.
 func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 
-	// Create the ConsulServiceDiscovery struct that we will embed in the
+	// Create the ConsulServiceRegistration struct that we will embed in the
 	// ConsulBackend
-	sd, err := NewConsulServiceDiscovery(conf, logger)
+	sr, err := NewConsulServiceRegistration(conf, logger)
 	if err != nil {
 		return nil, err
 	}
-	csd := sd.(*ConsulServiceDiscovery)
+	csr := sr.(*ConsulServiceRegistration)
 
 	// Get the path in Consul
 	path, ok := conf["path"]
@@ -140,10 +140,10 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	// Setup the backend
 	c := &ConsulBackend{
-		ConsulServiceDiscovery: csd,
+		ConsulServiceRegistration: csr,
 
 		path:            path,
-		kv:              csd.client.KV(),
+		kv:              csr.client.KV(),
 		permitPool:      physical.NewPermitPool(maxParInt),
 		consistencyMode: consistencyMode,
 

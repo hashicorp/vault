@@ -28,7 +28,7 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	ServiceDiscovery *ServiceDiscovery `hcl:"-"`
+	ServiceRegistration *ServiceRegistration `hcl:"-"`
 
 	Seals   []*Seal  `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -152,13 +152,13 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
-// ServiceDiscovery is the optional service discovery for the server.
-type ServiceDiscovery struct {
+// ServiceRegistration is the optional service discovery for the server.
+type ServiceRegistration struct {
 	Type   string
 	Config map[string]string
 }
 
-func (b *ServiceDiscovery) GoString() string {
+func (b *ServiceRegistration) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
@@ -303,9 +303,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.ServiceDiscovery = c.ServiceDiscovery
-	if c2.ServiceDiscovery != nil {
-		result.ServiceDiscovery = c2.ServiceDiscovery
+	result.ServiceRegistration = c.ServiceRegistration
+	if c2.ServiceRegistration != nil {
+		result.ServiceRegistration = c2.ServiceRegistration
 	}
 
 	result.Entropy = c.Entropy
@@ -602,9 +602,9 @@ func ParseConfig(d string) (*Config, error) {
 	}
 
 	// Parse service discovery
-	if o := list.Filter("service_discovery"); len(o.Items) > 0 {
-		if err := parseServiceDiscovery(&result, o, "service_discovery"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'service_discovery': {{err}}", err)
+	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		if err := parseServiceRegistration(&result, o, "service_registration"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'service_registration': {{err}}", err)
 		}
 	}
 
@@ -852,7 +852,7 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) error {
+func parseServiceRegistration(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one %q block is permitted", name)
 	}
@@ -869,7 +869,7 @@ func parseServiceDiscovery(result *Config, list *ast.ObjectList, name string) er
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
-	result.ServiceDiscovery = &ServiceDiscovery{
+	result.ServiceRegistration = &ServiceRegistration{
 		Type:   strings.ToLower(key),
 		Config: m,
 	}
@@ -1056,12 +1056,12 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
-	// Sanitize service_discovery stanza
-	if c.ServiceDiscovery != nil {
-		sanitizedServiceDiscovery := map[string]interface{}{
-			"type": c.ServiceDiscovery.Type,
+	// Sanitize service_registration stanza
+	if c.ServiceRegistration != nil {
+		sanitizedServiceRegistration := map[string]interface{}{
+			"type": c.ServiceRegistration.Type,
 		}
-		result["service_discovery"] = sanitizedServiceDiscovery
+		result["service_registration"] = sanitizedServiceRegistration
 	}
 
 	// Sanitize seals stanza

@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestConsul_ServiceDiscovery tests whether consul ServiceDiscovery works
-func TestConsul_ServiceDiscovery(t *testing.T) {
+// TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
+func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Prepare a docker-based consul instance
 	cleanup, addr, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
@@ -50,9 +50,9 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 		return nil
 	}
 
-	// Create a ServiceDiscovery that points to our consul instance
+	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewConsulServiceDiscovery(map[string]string{
+	sd, err := NewConsulServiceRegistration(map[string]string{
 		"address": addr,
 		"token":   token,
 	}, logger)
@@ -71,11 +71,11 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 	}
 	const redirectAddr = "http://127.0.0.1:8200"
 	core, err := vault.NewCore(&vault.CoreConfig{
-		ConfigServiceDiscovery: sd,
-		Physical:               inm,
-		HAPhysical:             inmha.(physical.HABackend),
-		RedirectAddr:           redirectAddr,
-		DisableMlock:           true,
+		ConfigServiceRegistration: sd,
+		Physical:                  inm,
+		HAPhysical:                inmha.(physical.HABackend),
+		RedirectAddr:              redirectAddr,
+		DisableMlock:              true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestConsul_ServiceDiscovery(t *testing.T) {
 		}
 		return false
 	}
-	err = sd.RunServiceDiscovery(
+	err = sd.RunServiceRegistration(
 		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
 	if err != nil {
 		t.Fatal(err)

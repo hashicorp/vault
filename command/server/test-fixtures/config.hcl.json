@@ -11,7 +11,7 @@
 			"disable_clustering": "true"
 		}
 	},
-	"service_discovery": {
+	"service_registration": {
 		"consul": {
 			"foo": "bar",
 		}

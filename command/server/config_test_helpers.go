@@ -47,7 +47,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 			DisableClustering: true,
 		},
 
-		ServiceDiscovery: &ServiceDiscovery{
+		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -133,7 +133,7 @@ func testLoadConfigFile_json2(t *testing.T, entropy *Entropy) {
 			DisableClustering: true,
 		},
 
-		ServiceDiscovery: &ServiceDiscovery{
+		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -275,7 +275,7 @@ func testLoadConfigFile(t *testing.T) {
 			DisableClustering: true,
 		},
 
-		ServiceDiscovery: &ServiceDiscovery{
+		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -345,7 +345,7 @@ func testLoadConfigFile_json(t *testing.T) {
 			DisableClustering: true,
 		},
 
-		ServiceDiscovery: &ServiceDiscovery{
+		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -504,7 +504,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"redirect_addr":      "top_level_api_addr",
 			"type":               "consul",
 		},
-		"service_discovery": map[string]interface{}{
+		"service_registration": map[string]interface{}{
 			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{

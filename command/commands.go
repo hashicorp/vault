@@ -63,7 +63,7 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 const (
@@ -158,8 +158,8 @@ var (
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
 
-	serviceDiscovers = map[string]sd.ServiceDiscoveryFactory{
-		"consul": physConsul.NewConsulServiceDiscovery,
+	serviceRegistrations = map[string]sr.Factory{
+		"consul": physConsul.NewConsulServiceRegistration,
 	}
 )
 
@@ -524,7 +524,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
 
-				ServiceDiscoverers: serviceDiscovers,
+				ServiceRegistrations: serviceRegistrations,
 
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),

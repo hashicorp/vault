@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 var (
@@ -2449,43 +2449,43 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 	}
 }
 
-// mockServiceDiscovery helps test whether standalone ServiceDiscovery works
-type mockServiceDiscovery struct {
+// mockServiceRegistration helps test whether standalone ServiceRegistration works
+type mockServiceRegistration struct {
 	notifyActiveCount int
 	notifySealedCount int
 	notifyPerfCount   int
 	runDiscoveryCount int
 }
 
-func (m *mockServiceDiscovery) NotifyActiveStateChange() error {
+func (m *mockServiceRegistration) NotifyActiveStateChange() error {
 	m.notifyActiveCount++
 	return nil
 }
 
-func (m *mockServiceDiscovery) NotifySealedStateChange() error {
+func (m *mockServiceRegistration) NotifySealedStateChange() error {
 	m.notifySealedCount++
 	return nil
 }
 
-func (m *mockServiceDiscovery) NotifyPerformanceStandbyStateChange() error {
+func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange() error {
 	m.notifyPerfCount++
 	return nil
 }
 
-func (m *mockServiceDiscovery) RunServiceDiscovery(
-	_ *sync.WaitGroup, _ sd.ShutdownChannel, _ string,
-	_ sd.ActiveFunction, _ sd.SealedFunction,
-	_ sd.PerformanceStandbyFunction) error {
+func (m *mockServiceRegistration) RunServiceRegistration(
+	_ *sync.WaitGroup, _ sr.ShutdownChannel, _ string,
+	_ sr.ActiveFunction, _ sr.SealedFunction,
+	_ sr.PerformanceStandbyFunction) error {
 
 	m.runDiscoveryCount++
 	return nil
 }
 
-// TestCore_ServiceDiscovery tests whether standalone ServiceDiscovery works
-func TestCore_ServiceDiscovery(t *testing.T) {
+// TestCore_ServiceRegistration tests whether standalone ServiceRegistration works
+func TestCore_ServiceRegistration(t *testing.T) {
 
 	// Make a mock service discovery
-	sd := &mockServiceDiscovery{}
+	sr := &mockServiceRegistration{}
 
 	// Create the core
 	logger = logging.NewVaultLogger(log.Trace)
@@ -2499,18 +2499,18 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 	}
 	const redirectAddr = "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		ConfigServiceDiscovery: sd,
-		Physical:               inm,
-		HAPhysical:             inmha.(physical.HABackend),
-		RedirectAddr:           redirectAddr,
-		DisableMlock:           true,
+		ConfigServiceRegistration: sr,
+		Physical:                  inm,
+		HAPhysical:                inmha.(physical.HABackend),
+		RedirectAddr:              redirectAddr,
+		DisableMlock:              true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Vault should not yet be registered
-	if diff := deep.Equal(sd, &mockServiceDiscovery{}); diff != nil {
+	if diff := deep.Equal(sr, &mockServiceRegistration{}); diff != nil {
 		t.Fatal(diff)
 	}
 
@@ -2523,14 +2523,14 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 		}
 		return false
 	}
-	err = sd.RunServiceDiscovery(
+	err = sr.RunServiceRegistration(
 		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Vault should be registered
-	if diff := deep.Equal(sd, &mockServiceDiscovery{
+	if diff := deep.Equal(sr, &mockServiceRegistration{
 		runDiscoveryCount: 1,
 	}); diff != nil {
 		t.Fatal(diff)
@@ -2551,7 +2551,7 @@ func TestCore_ServiceDiscovery(t *testing.T) {
 	TestWaitActive(t, core)
 
 	// Vault should be registered, unsealed, and active
-	if diff := deep.Equal(sd, &mockServiceDiscovery{
+	if diff := deep.Equal(sr, &mockServiceRegistration{
 		runDiscoveryCount: 1,
 		notifyActiveCount: 1,
 		notifySealedCount: 1,

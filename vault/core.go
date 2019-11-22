@@ -39,7 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
@@ -193,8 +193,8 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
-	// serviceDiscovery is the ServiceDiscovery network
-	serviceDiscovery sd.ServiceDiscovery
+	// serviceDiscovery is the ServiceRegistration network
+	serviceDiscovery sr.ServiceRegistration
 
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
@@ -503,7 +503,7 @@ type CoreConfig struct {
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend
 
-	ConfigServiceDiscovery sd.ServiceDiscovery
+	ConfigServiceRegistration sr.ServiceRegistration
 
 	Seal Seal
 
@@ -575,7 +575,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AuditBackends:             c.AuditBackends,
 		Physical:                  c.Physical,
 		HAPhysical:                c.HAPhysical,
-		ConfigServiceDiscovery:    c.ConfigServiceDiscovery,
+		ConfigServiceRegistration: c.ConfigServiceRegistration,
 		Seal:                      c.Seal,
 		Logger:                    c.Logger,
 		DisableCache:              c.DisableCache,
@@ -603,18 +603,18 @@ func (c *CoreConfig) Clone() *CoreConfig {
 	}
 }
 
-// ServiceDiscovery returns the config's ServiceDiscovery, or nil if it does
+// ServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
-func (c *CoreConfig) ServiceDiscovery() sd.ServiceDiscovery {
+func (c *CoreConfig) ServiceRegistration() sr.ServiceRegistration {
 
-	// Check whether there is a ServiceDiscovery explictly configured
-	if c.ConfigServiceDiscovery != nil {
-		return c.ConfigServiceDiscovery
+	// Check whether there is a ServiceRegistration explictly configured
+	if c.ConfigServiceRegistration != nil {
+		return c.ConfigServiceRegistration
 	}
 
-	// Check if HAPhysical is configured and implements ServiceDiscovery
+	// Check if HAPhysical is configured and implements ServiceRegistration
 	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
-		if disc, ok := c.HAPhysical.(sd.ServiceDiscovery); ok {
+		if disc, ok := c.HAPhysical.(sr.ServiceRegistration); ok {
 			return disc
 		}
 	}
@@ -678,7 +678,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                      entCore{},
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
-		serviceDiscovery:             conf.ServiceDiscovery(),
+		serviceDiscovery:             conf.ServiceRegistration(),
 		underlyingPhysical:           conf.Physical,
 		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,

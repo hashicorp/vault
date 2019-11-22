@@ -22,7 +22,7 @@ ha_backend "consul" {
   token = "foo"
 }
 
-service_discovery "consul" {
+service_registration "consul" {
   token = "foo"
 }
 

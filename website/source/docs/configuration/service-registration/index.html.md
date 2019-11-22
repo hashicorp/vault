@@ -1,31 +1,31 @@
 ---
 layout: "docs"
-page_title: "Service Discovery - Configuration"
-sidebar_title: "<code>service_discovery</code>"
+page_title: "Service Registration - Configuration"
+sidebar_title: "<code>service_registration</code>"
 sidebar_current: "docs-configuration-serviceDiscovery"
 description: |-
-  The optional `service_discovery` stanza configures Vault's mechanism for
-  service discovery.  
+  The optional `service_registration` stanza configures Vault's mechanism for
+  service registration.  
 ---
 
-# `service_discovery` Stanza
+# `service_registration` Stanza
 
-The optional `service_discovery` stanza configures Vault's mechanism for
-service discovery.  The `service_discovery` stanza is designed for use cases
+The optional `service_registration` stanza configures Vault's mechanism for
+service registration.  The `service_registration` stanza is designed for use cases
 where you would like to use a system like [Consul][consul] for [service
 discovery][consul-discovery], but use a different system for the [storage
 backend][storage-backend].  
 
 When Consul is configured as the [storage backend][consul-backend], Vault
-implicitly uses Consul for service discovery, so the `service_discovery` stanza
+implicitly uses Consul for service registration, so the `service_registration` stanza
 is not needed.  
 
 For times when you would like to use a different storage backend, like
-[Raft][raft-backend], but still have service discovery available, the
-`service_discovery` stanza can be used:
+[Raft][raft-backend], but still have service registration available, the
+`service_registration` stanza can be used:
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   address = "127.0.0.1:8500"
 }
 storage "raft" {
@@ -34,16 +34,16 @@ storage "raft" {
 }
 ```
 
-For information about a specific service discovery provider, choose one from
+For information about a specific service registration provider, choose one from
 the navigation on the left.
 
 ## Configuration
 
-Service discovery configuration is done through the Vault configuration file
-using the `service_discovery` stanza:
+Service registration configuration is done through the Vault configuration file
+using the `service_registration` stanza:
 
 ```hcl
-service_discovery [NAME] {
+service_registration [NAME] {
   [PARAMETERS...]
 }
 ```
@@ -51,7 +51,7 @@ service_discovery [NAME] {
 For example:
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   address = "127.0.0.1:8500"
 }
 ```

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 type consulConf map[string]string
@@ -53,7 +53,7 @@ func testConsul_testConsulBackend(t *testing.T) {
 	}
 }
 
-func testActiveFunc(activePct float64) sd.ActiveFunction {
+func testActiveFunc(activePct float64) sr.ActiveFunction {
 	return func() bool {
 		var active bool
 		standbyProb := rand.Float64()
@@ -64,7 +64,7 @@ func testActiveFunc(activePct float64) sd.ActiveFunction {
 	}
 }
 
-func testSealedFunc(sealedPct float64) sd.SealedFunction {
+func testSealedFunc(sealedPct float64) sr.SealedFunction {
 	return func() bool {
 		var sealed bool
 		unsealedProb := rand.Float64()
@@ -75,7 +75,7 @@ func testSealedFunc(sealedPct float64) sd.SealedFunction {
 	}
 }
 
-func testPerformanceStandbyFunc(perfPct float64) sd.PerformanceStandbyFunction {
+func testPerformanceStandbyFunc(perfPct float64) sr.PerformanceStandbyFunction {
 	return func() bool {
 		var ps bool
 		unsealedProb := rand.Float64()
@@ -304,9 +304,9 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			}
 		}
 
-		var shutdownCh sd.ShutdownChannel
+		var shutdownCh sr.ShutdownChannel
 		waitGroup := &sync.WaitGroup{}
-		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5), testPerformanceStandbyFunc(0.5)); err != nil {
+		if err := c.RunServiceRegistration(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5), testPerformanceStandbyFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 

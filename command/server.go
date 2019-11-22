@@ -47,7 +47,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
-	sd "github.com/hashicorp/vault/servicediscovery"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
@@ -80,7 +80,7 @@ type ServerCommand struct {
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
 
-	ServiceDiscoverers map[string]sd.ServiceDiscoveryFactory
+	ServiceRegistrations map[string]sr.Factory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -939,19 +939,19 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the Service Discovery, if there is one
-	var configSD sd.ServiceDiscovery
-	if config.ServiceDiscovery != nil {
-		sdFactory, ok := c.ServiceDiscoverers[config.ServiceDiscovery.Type]
+	var configSR sr.ServiceRegistration
+	if config.ServiceRegistration != nil {
+		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
 		if !ok {
-			c.UI.Error(fmt.Sprintf("Unknown service_discovery type %s", config.ServiceDiscovery.Type))
+			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
 			return 1
 		}
 
-		namedSDLogger := c.logger.Named("service_discovery." + config.ServiceDiscovery.Type)
+		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
 		allLoggers = append(allLoggers, namedSDLogger)
-		configSD, err = sdFactory(config.ServiceDiscovery.Config, namedSDLogger)
+		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing service_discovery of type %s: %s", config.ServiceDiscovery.Type, err))
+			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
 		}
 	}
@@ -1040,7 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
-		ConfigServiceDiscovery:    configSD,
+		ConfigServiceRegistration: configSR,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
@@ -1240,10 +1240,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	// If ServiceDiscovery is configured, then the backend must support HA
+	// If ServiceRegistration is configured, then the backend must support HA
 	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
-	if (coreConfig.ConfigServiceDiscovery != nil) && !isBackendHA {
-		c.UI.Output("service_discovery is configured, but storage does not support HA")
+	if (coreConfig.ConfigServiceRegistration != nil) && !isBackendHA {
+		c.UI.Output("service_registration is configured, but storage does not support HA")
 		return 1
 	}
 
@@ -1504,14 +1504,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// If service discovery is available, run service discovery
 
-	if disc := coreConfig.ServiceDiscovery(); disc != nil {
+	if disc := coreConfig.ServiceRegistration(); disc != nil {
 		activeFunc := func() bool {
 			if isLeader, _, _, err := core.Leader(); err == nil {
 				return isLeader
 			}
 			return false
 		}
-		if err := disc.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
+		if err := disc.RunServiceRegistration(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 			return 1
 		}

@@ -21,7 +21,7 @@ ha_storage "consul" {
     disable_clustering = "true"
 }
 
-service_discovery "consul" {
+service_registration "consul" {
     foo = "bar"
 }
 

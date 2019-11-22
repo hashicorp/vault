@@ -1,23 +1,23 @@
 ---
 layout: "docs"
-page_title: "Consul - Service Discovery - Configuration"
+page_title: "Consul - Service Registration - Configuration"
 sidebar_title: "Consul"
 sidebar_current: "docs-configuration-storage-consul"
 description: |-
-  Consul Service Discovery registers Vault as a service in Consul with a default
+  Consul Service Registration registers Vault as a service in Consul with a default
   health check.
 ---
 
-# Consul Service Discovery
+# Consul Service Registration
 
-Consul Service Discovery registers Vault as a service in [Consul][consul] with
+Consul Service Registration registers Vault as a service in [Consul][consul] with
 a default health check.
 
-- **HashiCorp Supported** – Consul Service Discovery is officially supported
+- **HashiCorp Supported** – Consul Service Registration is officially supported
 by HashiCorp.
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   address      = "127.0.0.1:8500"
 }
 ```
@@ -186,7 +186,7 @@ This example shows a sample configuration which communicates with a local
 Consul agent running on `127.0.0.1:8500`.
 
 ```hcl
-service_discovery "consul" {}
+service_registration "consul" {}
 ```
 
 ### Detailed Customization
@@ -195,7 +195,7 @@ This example shows communicating with Consul on a custom address with an ACL
 token.
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   address = "10.5.7.92:8194"
   token   = "abcd1234"
 }
@@ -206,7 +206,7 @@ service_discovery "consul" {
 This example shows communicating with Consul over a local unix socket.
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   address = "unix:///tmp/.consul.http.sock"
 }
 ```
@@ -217,7 +217,7 @@ This example shows using a custom CA, certificate, and key file to securely
 communicate with Consul over TLS.
 
 ```hcl
-service_discovery "consul" {
+service_registration "consul" {
   scheme        = "https"
   tls_ca_file   = "/etc/pem/vault.ca"
   tls_cert_file = "/etc/pem/vault.cert"

@@ -1,4 +1,4 @@
-package servicediscovery
+package serviceregistration
 
 import (
 	"sync"
@@ -6,12 +6,12 @@ import (
 	log "github.com/hashicorp/go-hclog"
 )
 
-// ServiceDiscoveryFactory is the factory function to create a ServiceDiscovery.
-type ServiceDiscoveryFactory func(config map[string]string, logger log.Logger) (ServiceDiscovery, error)
+// Factory is the factory function to create a ServiceRegistration.
+type Factory func(config map[string]string, logger log.Logger) (ServiceRegistration, error)
 
-// ServiceDiscovery is an interface that advertises the state of Vault to a
+// ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
-type ServiceDiscovery interface {
+type ServiceRegistration interface {
 	// NotifyActiveStateChange is used by Core to notify that this Vault
 	// instance has changed its status to active or standby.
 	NotifyActiveStateChange() error
@@ -26,15 +26,15 @@ type ServiceDiscovery interface {
 
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
-	RunServiceDiscovery(
+	RunServiceRegistration(
 		waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string,
 		activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
 }
 
-// Callback signatures for RunServiceDiscovery
+// Callback signatures for RunServiceRegistration
 type ActiveFunction func() bool
 type SealedFunction func() bool
 type PerformanceStandbyFunction func() bool
 
-// ShutdownChannel is the shutdown signal for RunServiceDiscovery
+// ShutdownChannel is the shutdown signal for RunServiceRegistration
 type ShutdownChannel chan struct{}
