@@ -2,6 +2,7 @@ package ldaputil
 
 import (
 	"crypto/tls"
+	"time"
 
 	"github.com/go-ldap/ldap/v3"
 )
@@ -14,5 +15,6 @@ type Connection interface {
 	Modify(modifyRequest *ldap.ModifyRequest) error
 	Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
 	StartTLS(config *tls.Config) error
+	SetTimeout(timeout time.Duration)
 	UnauthenticatedBind(username string) error
 }

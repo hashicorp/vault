@@ -608,6 +608,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"bindpass":             cfg.BindPassword,
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
@@ -627,6 +628,7 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"bindpass":             cfg.BindPassword,
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
@@ -646,6 +648,7 @@ func testAccStepConfigUrlWithDiscover(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"discoverdn":           true,
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
@@ -662,6 +665,7 @@ func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logi
 			"bindpass":             cfg.BindPassword,
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
@@ -891,6 +895,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"bindpass":               cfg.BindPassword,
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
+			"request_timeout":        cfg.RequestTimeout,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{},
@@ -930,6 +935,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			TLSMaxVersion:            defParams.TLSMaxVersion,
 			CaseSensitiveNames:       falseBool,
 			UsePre111GroupCNBehavior: new(bool),
+			RequestTimeout:           cfg.RequestTimeout,
 		},
 	}
 

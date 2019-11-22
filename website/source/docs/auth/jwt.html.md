@@ -160,8 +160,7 @@ they must be added as query parameters, for example:
 ### OIDC Login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI. The default local listening port is 8250. This
-can be changed with the `port` option.
+different path, specify `-path=/my-path` in the CLI.
 
 ```text
 $ vault login -method=oidc port=8400 role=test
@@ -173,6 +172,11 @@ Complete the login via your OIDC provider. Launching browser to:
 
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
+
+The callback listener may be customized with the following optional parameters:
+
+* `callbackhost` (default: "localhost")
+* `port` (default: 8250)
 
 ### OIDC Provider Configuration
 

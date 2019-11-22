@@ -2,8 +2,6 @@ module github.com/hashicorp/vault
 
 go 1.12
 
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
-
 replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk

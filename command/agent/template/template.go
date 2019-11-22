@@ -50,6 +50,11 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
+	// lookupMap is alist of templates indexed by their consul-template ID. This
+	// is used to ensure all Vault templates have been rendered before returning
+	// from the runner in the event we're using exit after auth.
+	lookupMap map[string][]*ctconfig.TemplateConfig
+
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
@@ -104,6 +109,23 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		return
 	}
 
+	// Build the lookup map using the id mapping from the Template runner. This is
+	// used to check the template rendering against the expected templates. This
+	// returns a map with a generated ID and a slice of templates for that id. The
+	// slice is determined by the source or contents of the template, so if a
+	// configuration has multiple templates specified, but are the same source /
+	// contents, they will be identified by the same key.
+	idMap := ts.runner.TemplateConfigMapping()
+	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
+	for id, ctmpls := range idMap {
+		for _, ctmpl := range ctmpls {
+			tl := lookupMap[id]
+			tl = append(tl, ctmpl)
+			lookupMap[id] = tl
+		}
+	}
+	ts.lookupMap = lookupMap
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -133,7 +155,26 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			ts.logger.Error("template server error", "error", err.Error())
 			return
 		case <-ts.runner.TemplateRenderedCh():
-			if ts.exitAfterAuth {
+			// A template has been rendered, figure out what to do
+			events := ts.runner.RenderEvents()
+
+			// events are keyed by template ID, and can be matched up to the id's from
+			// the lookupMap
+			if len(events) < len(ts.lookupMap) {
+				// Not all templates have been rendered yet
+				continue
+			}
+
+			// assume the renders are finished, until we find otherwise
+			doneRendering := true
+			for _, event := range events {
+				// This template hasn't been rendered
+				if event.LastWouldRender.IsZero() {
+					doneRendering = false
+				}
+			}
+
+			if doneRendering && ts.exitAfterAuth {
 				// if we want to exit after auth, go ahead and shut down the runner and
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
