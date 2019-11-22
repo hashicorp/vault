@@ -48,7 +48,7 @@ exit code. Vault Agent is not a replacement for a process monitor or init system
 - `command_timeout` `(object: optional)` - This is the maximum amount of time to 
 wait for the optional command to return. Default is 30s.
 - `error_on_missing_key` `(object: optional)` - Exit with an error when accessing 
-a struct or map field/key that does notexist. The default behavior will print "<no value>" 
+a struct or map field/key that does notexist. The default behavior will print "`<no value>`" 
 when accessing a field that does not exist. It is highly recommended you set this 
 to "true". 
 - `perms` `(object: optional)` - This is the permission to render the file. If 
