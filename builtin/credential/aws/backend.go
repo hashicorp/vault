@@ -316,6 +316,9 @@ func getAnyRegionForAwsPartition(partitionId string) (*endpoints.Region, error) 
 			for _, r := range p.Regions() {
 				return &r, nil
 			}
+			// Just in case a matching region wasn't found, we should break here
+			// so we can error below.
+			break
 		}
 	}
 	return nil, fmt.Errorf("no matching partition ID found for %q, please set 'sts_region' parameter to designate a region", partitionId)
