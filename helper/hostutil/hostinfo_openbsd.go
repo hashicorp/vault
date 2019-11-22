@@ -3,6 +3,7 @@
 package hostutil
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -16,6 +17,6 @@ type HostInfo struct {
 	Memory    interface{}   `json:"memory"`
 }
 
-func CollectHostInfo() (*HostInfo, error) {
+func CollectHostInfo(ctx context.Context) (*HostInfo, error) {
 	return nil, fmt.Errorf("host info not supported on this platform")
 }

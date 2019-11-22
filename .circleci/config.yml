@@ -37,11 +37,11 @@ jobs:
     docker:
     - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
           cd ui
@@ -49,40 +49,32 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
-  go-mod-download:
-    docker:
-    - image: golang:1.12.12-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
-    steps:
-    - add_ssh_keys:
-        fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-    - checkout
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: go mod download
-        name: Download Go modules
-    - run:
-        command: go mod verify
-        name: Verify checksums of Go modules
-    - save_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-        paths:
-        - /go/pkg/mod
   build-go-dev:
-    docker:
-    - image: golang:1.12.12-buster
+    machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
     - checkout
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
     - attach_workspace:
         at: .
     - run:
@@ -98,16 +90,22 @@ jobs:
         paths:
         - bin
         root: .
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.12.12
+    - GO111MODULE: 'off'
+    - GOTESTSUM_VERSION: 0.3.3
   test-ui:
     docker:
     - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
+    working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -140,12 +138,12 @@ jobs:
     docker:
     - image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /src
+    working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v1-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -157,28 +155,30 @@ jobs:
   test-go:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: ~/src
+    working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 2
     steps:
-    - checkout
     - run:
         command: |
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
-        name: Allow circleci user to restore Go modules cache
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: |
-          set -x
-
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          export GOPATH=/go
-          export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - run:
+        command: |
+          set -x
 
           # Install CircleCI CLI
           curl -sSL \
@@ -215,40 +215,43 @@ jobs:
                \
               ${package_names}
         name: Run Go tests
-        no_output_timeout: 20m
+        no_output_timeout: 60m
     - store_artifacts:
         path: test-results
     - store_test_results:
         path: test-results
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: null
+    - GO_TAGS: ''
     - GO_VERSION: 1.12.12
+    - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: ~/src
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
-    - checkout
     - run:
         command: |
-          sudo mkdir /go
-          sudo chown -R circleci:circleci /go
-        name: Allow circleci user to restore Go modules cache
-    - restore_cache:
-        key: go-sum-v1-{{ checksum "go.sum" }}
-    - run:
-        command: |
-          set -x
-
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          export GOPATH=/go
-          export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - run:
+        command: |
+          set -x
 
           # Install CircleCI CLI
           curl -sSL \
@@ -285,15 +288,16 @@ jobs:
               -race \
               ${package_names}
         name: Run Go tests
-        no_output_timeout: 20m
+        no_output_timeout: 60m
     - store_artifacts:
         path: test-results
     - store_test_results:
         path: test-results
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: null
+    - GO_TAGS: ''
     - GO_VERSION: 1.12.12
+    - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
   ci:
@@ -302,12 +306,9 @@ workflows:
     - install-ui-dependencies:
         requires:
         - pre-flight-checks
-    - go-mod-download:
-        requires:
-        - pre-flight-checks
     - build-go-dev:
         requires:
-        - go-mod-download
+        - pre-flight-checks
     - test-ui:
         requires:
         - install-ui-dependencies
@@ -339,14 +340,6 @@ workflows:
 #     - run:
 #         command: |
 #           set -x
-# 
-#           # Install Go
-#           curl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"
-#           sudo rm -rf /usr/local/go
-#           sudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"
-#           rm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"
-#           export GOPATH=/go
-#           export PATH=\"${PATH}:${GOPATH}/bin:/usr/local/go/bin\"
 # 
 #           # Install CircleCI CLI
 #           curl -sSL \\
@@ -383,53 +376,70 @@ workflows:
 #               << parameters.extra_flags >> \\
 #               ${package_names}
 #         name: Run Go tests
-#         no_output_timeout: 20m
-#   restore_go_cache:
-#     steps:
-#     - restore_cache:
-#         key: go-sum-v1-{{ checksum \"go.sum\" }}
+#         no_output_timeout: 60m
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
-#   save_go_cache:
-#     steps:
-#     - save_cache:
-#         key: go-sum-v1-{{ checksum \"go.sum\" }}
-#         paths:
-#         - /go/pkg/mod
+#         key: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #   save_yarn_cache:
 #     steps:
 #     - save_cache:
-#         key: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#         key: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #         paths:
 #         - ui/node_modules
+#   setup-go:
+#     description: |
+#       Ensure the right version of Go is installed and set GOPATH to $HOME/go.
+#     steps:
+#     - run:
+#         command: |
+#           [ -n \"$GO_VERSION\" ] || { echo \"You must set GO_VERSION\"; exit 1; }
+#           # Install Go
+#           curl -sSLO \"https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz\"
+#           sudo rm -rf /usr/local/go
+#           sudo tar -C /usr/local -xzf \"go${GO_VERSION}.linux-amd64.tar.gz\"
+#           rm -f \"go${GO_VERSION}.linux-amd64.tar.gz\"
+#           GOPATH=\"/go\"
+#           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+#           echo \"export GOPATH='$GOPATH'\" >> \"$BASH_ENV\"
+#           echo \"export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'\" >> \"$BASH_ENV\"
+# 
+#           echo \"$ go version\"
+#           go version
+#         name: Setup Go
+#         working_directory: ~/
 # executors:
-#   go:
+#   alpine:
 #     docker:
-#     - image: golang:1.12.12-buster
-#     shell: /usr/bin/env bash -euo pipefail -c
-#     working_directory: /src
+#     - image: alpine:3.10.2
+#     shell: /bin/sh
+#     working_directory: /go/src/github.com/hashicorp/vault
 #   go-machine:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
-#       GO_TAGS: null
+#       GO_TAGS: \"\"
 #       GO_VERSION: 1.12.12
+#       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
-#     working_directory: ~/src
+#     working_directory: /go/src/github.com/hashicorp/vault
 #   node:
 #     docker:
 #     - image: node:10-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
-#     working_directory: /src
+#     working_directory: /go/src/github.com/hashicorp/vault
+#   python:
+#     docker:
+#     - image: python:3-alpine
+#     shell: /usr/bin/env bash -euo pipefail -c
+#     working_directory: /go/src/github.com/hashicorp/vault
 # jobs:
 #   build-go-dev:
-#     executor: go
+#     executor: go-machine
 #     steps:
+#     - setup-go
 #     - checkout
-#     - restore_go_cache
 #     - attach_workspace:
 #         at: .
 #     - run:
@@ -445,21 +455,6 @@ workflows:
 #         paths:
 #         - bin
 #         root: .
-#   go-mod-download:
-#     executor: go
-#     steps:
-#     - add_ssh_keys:
-#         fingerprints:
-#         - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
-#     - checkout
-#     - restore_go_cache
-#     - run:
-#         command: go mod download
-#         name: Download Go modules
-#     - run:
-#         command: go mod verify
-#         name: Verify checksums of Go modules
-#     - save_go_cache
 #   install-ui-dependencies:
 #     executor: node
 #     steps:
@@ -505,13 +500,8 @@ workflows:
 #     executor: go-machine
 #     parallelism: 2
 #     steps:
+#     - setup-go
 #     - checkout
-#     - run:
-#         command: |
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
-#     - restore_go_cache
 #     - go_test
 #     - store_artifacts:
 #         path: test-results
@@ -520,13 +510,8 @@ workflows:
 #   test-go-race:
 #     executor: go-machine
 #     steps:
+#     - setup-go
 #     - checkout
-#     - run:
-#         command: |
-#           sudo mkdir /go
-#           sudo chown -R circleci:circleci /go
-#         name: Allow circleci user to restore Go modules cache
-#     - restore_go_cache
 #     - go_test:
 #         extra_flags: -race
 #     - store_artifacts:
@@ -584,9 +569,8 @@ workflows:
 # references:
 #   cache:
 #     go-sum: go-sum-v1-{{ checksum \"go.sum\" }}
-#     yarn-lock: yarn-lock-v1-{{ checksum \"ui/yarn.lock\" }}
+#     yarn-lock: yarn-lock-v6-{{ checksum \"ui/yarn.lock\" }}
 #   images:
-#     go: golang:1.12.12-buster
 #     node: node:10-buster
 # version: 2.1
 # workflows:
@@ -596,12 +580,9 @@ workflows:
 #     - install-ui-dependencies:
 #         requires:
 #         - pre-flight-checks
-#     - go-mod-download:
-#         requires:
-#         - pre-flight-checks
 #     - build-go-dev:
 #         requires:
-#         - go-mod-download
+#         - pre-flight-checks
 #     - test-ui:
 #         requires:
 #         - install-ui-dependencies

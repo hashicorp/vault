@@ -60,7 +60,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.1.2
+$ git checkout v0.2.1
 
 # Run Helm
 $ helm install --name vault ./
@@ -118,7 +118,7 @@ global:
 Next, run the upgrade. You should run this with `--dry-run` first to verify
 the changes that will be sent to the Kubernetes cluster.
 
-```
+```shell
 $ helm upgrade vault ./
 ...
 ```
@@ -174,6 +174,121 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 After a few moments the Vault cluster should elect a new active primary.  The Vault 
 cluster is now upgraded!
 
+#### Google KMS Auto Unseal
+
+In order to authenticate and use KMS in Google Cloud, Vault Helm needs credentials.  The `credentials.json` 
+file will need to be mounted as a secret to the Vault container.
+
+
+##### Create the Secret
+
+First, create the secret in Kubernetes:
+
+```bash
+kubectl create secret generic kms-creds --from-file=credentials.json
+```
+
+Vault Helm will mount this to `/vault/userconfig/kms-creds/credentials.json`.
+
+##### Config Example
+
+The following is an example of how to configure Vault Helm to use Google KMS:
+
+```yaml
+global:
+  enabled: true
+  image: "vault:1.2.4"
+
+server:
+  extraEnvironmentVars:
+    GOOGLE_REGION: <REGION WHERE KMS IS LOCATED>
+    GOOGLE_PROJECT: <PROJECT NAME>
+    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
+
+  extraVolumes:
+    - type: "secret"
+      name: "kms-creds"
+
+  ha:
+    enabled: true
+    replicas: 3
+
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      seal "gcpckms" {
+        project     = "<NAME OF PROJECT>"
+        region      = "<NAME OF REGION>"
+        key_ring    = "<NAME OF KEYRING>"
+        crypto_key  = "<NAME OF KEY>"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+```
+
+#### Amazon EKS Auto Unseal
+
+In order to authenticate and use EKS in AWS, Vault Helm needs credentials.  The AWS access key 
+ID and key will be mounted as secret environment variables in the Vault pods.
+
+##### Create the Secret
+
+First, create a secret with your EKS access key/secret:
+
+```bash
+kubectl create secret generic eks-creds\ 
+  --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
+```
+
+##### Config Example
+
+The following is an example of how to configure Vault Helm to use AWS EKS:
+
+```yaml
+global:
+  enabled: true
+  image: "vault:1.2.4"
+
+server:
+  extraSecretEnvironmentVars:
+  - envName: AWS_ACCESS_KEY_ID
+    secretName: eks-creds
+    secretKey: AWS_ACCESS_KEY_ID
+  - envName: AWS_SECRET_ACCESS_KEY
+    secretName: eks-creds
+    secretKey: AWS_SECRET_ACCESS_KEY
+
+  ha:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      seal "awskms" {
+        region     = "KMS_REGION_HERE"
+        kms_key_id = "KMS_KEY_ID_HERE"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+```
 
 ## Architecture
 

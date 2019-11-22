@@ -27,6 +27,7 @@
     - docs/concepts/policies.html
     - docs/concepts/ha.html
     - docs/concepts/pgp-gpg-keybase.html
+    - docs/concepts/recovery-mode.html
 -
   title: Configuration
   docs:
@@ -42,6 +43,7 @@
     - docs/commands/agent.html
     - docs/commands/audit/index.html
     - docs/commands/auth/index.html
+    - docs/commands/debug.html
     - docs/commands/delete.html
     - docs/commands/lease/index.html
     - docs/commands/list.html

@@ -23,9 +23,9 @@ func pathSecretAccessToken(b *backend) *framework.Path {
 			},
 		},
 		ExistenceCheck: b.pathRoleSetExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathAccessToken,
-			logical.UpdateOperation: b.pathAccessToken,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathAccessToken},
+			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathAccessToken},
 		},
 		HelpSynopsis:    pathTokenHelpSyn,
 		HelpDescription: pathTokenHelpDesc,

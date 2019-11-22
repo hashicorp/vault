@@ -383,6 +383,11 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
+			c.logger.Error("failed to unmount", "error", unmountInternalErr)
+		}
 		return err
 	}
 
@@ -555,7 +560,18 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 			return fmt.Errorf("cannot unmount %q", path)
 		}
 	}
-	return c.unmountInternal(ctx, path, MountTableUpdateStorage)
+
+	// Unmount mount internally
+	if err := c.unmountInternal(ctx, path, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		// Even we failed to evaluate filtered paths, the unmount operation was still successful
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+	}
+	return nil
 }
 
 func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
@@ -720,25 +736,6 @@ func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage b
 	return nil
 }
 
-// remountForce takes a copy of the mount entry for the path and fully unmounts
-// and remounts the backend to pick up any changes, such as filtered paths
-func (c *Core) remountForce(ctx context.Context, path string) error {
-	me := c.router.MatchingMountEntry(ctx, path)
-	if me == nil {
-		return fmt.Errorf("cannot find mount for path %q", path)
-	}
-
-	me, err := me.Clone()
-	if err != nil {
-		return err
-	}
-
-	if err := c.unmount(ctx, path); err != nil {
-		return err
-	}
-	return c.mount(ctx, me)
-}
-
 // remountForceInternal takes a copy of the mount entry for the path and fully unmounts
 // and remounts the backend to pick up any changes, such as filtered paths.
 // Should be only used for internal usage.
@@ -771,7 +768,7 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 }
 
 // Remount is used to remount a path at a new mount point.
-func (c *Core) remount(ctx context.Context, src, dst string) error {
+func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -810,7 +807,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, src, true); err != nil {
+	if err := c.taintMountEntry(ctx, src, updateStorage); err != nil {
 		return err
 	}
 
@@ -822,12 +819,13 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	if !c.IsDRSecondary() {
 		// Invoke the rollback manager a final time
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-		if err := c.rollback.Rollback(rCtx, src); err != nil {
-			return err
+		if c.rollback != nil {
+			if err := c.rollback.Rollback(rCtx, src); err != nil {
+				return err
+			}
 		}
 
-		entry := c.router.MatchingMountEntry(ctx, src)
-		if entry == nil {
+		if entry := c.router.MatchingMountEntry(ctx, src); entry == nil {
 			return fmt.Errorf("no matching mount at %q", src)
 		}
 

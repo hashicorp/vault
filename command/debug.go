@@ -389,6 +389,13 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 
 	if len(c.flagTargets) == 0 {
 		c.flagTargets = c.defaultTargets()
+	} else {
+		// Check for any invalid targets and ignore them if found
+		invalidTargets := strutil.Difference(c.flagTargets, c.defaultTargets(), true)
+		if len(invalidTargets) != 0 {
+			c.UI.Info(fmt.Sprintf("Ignoring invalid targets: %s", strings.Join(invalidTargets, ", ")))
+			c.flagTargets = strutil.Difference(c.flagTargets, invalidTargets, true)
+		}
 	}
 
 	// Make sure we can talk to the server
@@ -814,7 +821,8 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			if err != nil {
 				c.captureError("replication-status", err)
 			}
-			if replicationEntry := secret.Data; replicationEntry != nil {
+			if secret != nil && secret.Data != nil {
+				replicationEntry := secret.Data
 				replicationEntry["timestamp"] = time.Now().UTC()
 				c.replicationStatusCollection = append(c.replicationStatusCollection, replicationEntry)
 			}

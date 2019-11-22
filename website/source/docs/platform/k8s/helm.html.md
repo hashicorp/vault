@@ -52,7 +52,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.1.2
+$ git checkout v0.2.1
 
 # Run Helm
 $ helm install --dry-run ./
@@ -71,6 +71,13 @@ and consider if they're appropriate for your deployment.
   * `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
   * `image` (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
+  
+  * `imagePullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+  
+  * `imagePullSecrets` (`string: ""`) - Defines secrets to be used when pulling images from private registries.
+
+      - `name`: (`string: required`) - 
+      Name of the secret containing files required for authentication to private image registries.
 
   * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
@@ -86,6 +93,43 @@ and consider if they're appropriate for your deployment.
       limits:
         memory: "10Gi"
     ```
+  
+  * `ingress` - Values that configure Ingress services for Vault.
+
+    - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
+    
+    - `annotations` (`string`) - This value defines additional annotations to add to the Ingress service.  This should be formatted as a multi-line string.
+
+        ```yaml
+        annotations: |
+          kubernetes.io/ingress.class: nginx
+          kubernetes.io/tls-acme: "true"
+        ```
+    * `hosts` - Values that configure the Ingress host rules.
+
+      - `host`: Name of the host to use for Ingress.
+
+      - `paths`: This value defines the types of host rules for the Ingress service.
+
+          ```yaml
+          paths:
+          - backend:
+            serviceName: service2
+            servicePort: 80
+          ``` 
+
+    * `tls` - Values that configure the Ingress TLS rules.
+
+      - `hosts`: Name of the hosts defined in the Common Name of the TLS Certificate.  This should be formated as a multi-line string.
+
+      - `secretName`: Name of the secret containing the required TLS files such as certificates and keys.
+
+        ```yaml
+        hosts:
+          - sslexample.foo.com
+          - sslexample.bar.com
+         secretName: testsecret-tls
+        ```
 
   * `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
@@ -96,9 +140,9 @@ and consider if they're appropriate for your deployment.
     ```yaml
     # Extra Environment Variables are defined as key/value strings.
      extraEnvironmentVars:
-       GOOGLE_REGION: global,
-       GOOGLE_PROJECT: myproject,
-       GOOGLE_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
+       GOOGLE_REGION: global
+       GOOGLE_PROJECT: myproject
+       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
   * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
@@ -173,6 +217,14 @@ and consider if they're appropriate for your deployment.
           disktype: ssd
         ```
 
+  * `extraLabels` (`string`) - This value defines additional labels for server pods. This should be formatted as a multi-line string.
+
+        ```yaml
+        extraLabels: |
+          "sample/label1": "foo"
+          "sample/label2": "bar"
+        ```
+
   * `annotations` (`string`) - This value defines additional annotations for server pods. This should be a formatted as a multi-line string.
 
         ```yaml
@@ -186,6 +238,28 @@ and consider if they're appropriate for your deployment.
     - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
 
     - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes.  By default the Vault service will be given a Cluster IP address, set to `None` to disable.  When disabled Kubernetes will create a "headless" service.  Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
+    
+    - `port` (`int: 8200`) - Port on which Vault server is listening inside the pod.
+
+    - `targetPort` (`int: 8200`) - Port on which the service is listening.
+
+    - `annotations` (`string`) - This value defines additional annotations for the service. This should be formatted as a multi-line string.
+
+        ```yaml
+        annotations: |
+          "sample/annotation1": "foo"
+          "sample/annotation2": "bar"
+        ```
+
+ * `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
+
+    - `annotations` (`string`) - This value defines additional annotations for the service account. This should be formatted as a multi-line string.
+
+        ```yaml
+        annotations: |
+          "sample/annotation1": "foo"
+          "sample/annotation2": "bar"
+        ```
 
   * `extraVolumes` - This configures the `Service` resource created for the Vault server.
 
@@ -319,6 +393,19 @@ and consider if they're appropriate for your deployment.
 
   - `serviceNodePort` (`int: null`) -
   Sets the Node Port value when using `serviceType: NodePort` on the Vault UI service.
+
+  - `externalPort` (`int: 8200`) -
+  Sets the external port value of the service.
+
+  - `loadBalancerSourceRanges` (`string`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`.  This should be formatted as a multi-line string.
+
+    ```yaml
+    loadBalancerSourceRanges:
+    - 10.0.0.0/16
+    - 120.78.23.3/32
+    ```
+
+  - `loadBalancerIP` (`string`) - This value defines the IP address of the load balancer when using `serviceType: LoadBalancer`.
    
   - `annotations` (`string`) - This value defines additional annotations for the UI service. This should be a formatted as a multi-line string.
 
@@ -340,7 +427,7 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.2"
+  image: "vault:1.2.4"
  
 server:
   standalone:
@@ -380,7 +467,7 @@ certificate authority:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.2"
+  image: "vault:1.2.4"
   tlsDisable: false
 
 server:
@@ -421,7 +508,7 @@ auditing enabled.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.2"
+  image: "vault:1.2.4"
 
 server:
   standalone:
@@ -468,18 +555,17 @@ Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.2"
+  image: "vault:1.2.4"
 
 server:
   extraEnvironmentVars:
-    GOOGLE_REGION: global,
-    GOOGLE_PROJECT: myproject,
-    GOOGLE_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
+    GOOGLE_REGION: global
+    GOOGLE_PROJECT: myproject
+    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
   extraVolumes: []
     - type: secret
       name: my-gcp-iam
-      load: false
 
   affinity: |
     podAntiAffinity:
@@ -495,7 +581,7 @@ server:
     enabled: true
     
   ha:
-    enabled: false
+    enabled: true
     replicas: 5
 
     config: |

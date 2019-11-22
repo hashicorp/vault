@@ -161,6 +161,10 @@ identifier can later be used to revoke a DR secondary's access.
 - `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
   token.
 
+- `secondary_public_key` `(string: "")` – Specifies the secondary's generated
+  public key, if using encryption rather than response wrapping to protect the
+  secondary credentials. (Vault 1.3+)
+
 ### Sample Payload
 
 ```json
@@ -230,6 +234,27 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/primary/revoke-secondary
 ```
 
+## Fetch DR Secondary Public Key
+
+(Vault 1.3+)
+
+This endpoint allows fetching a public key that is used to encrypt the returned
+credential information (instead of using a response wrapped token). This avoids
+needing to make an API call to the primary during activation.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/dr/secondary/generate-public-key` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-public-key
+```
+
 ## Enable DR Secondary
 
 This endpoint enables replication on a DR secondary using a DR secondary activation
@@ -243,7 +268,8 @@ token.
 
 ### Parameters
 
-- `token` `(string: <required>)` – Specifies the secondary activation token fetched from the primary.
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary.
 
 - `primary_api_addr` `(string: "")` – Set this to the API address (normal Vault
   address) to override the value embedded in the token. This can be useful if
@@ -412,7 +438,7 @@ $ curl \
 
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
-certain DR Operation. They should be treated like traditional root tokens by
+certain DR Operations. They should be treated like traditional root tokens by
 being generated when needed and deleted soon after.
 
 ## Read Generation Progress

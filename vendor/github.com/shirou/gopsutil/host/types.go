@@ -5,7 +5,7 @@ import (
 )
 
 type Warnings struct {
-    List []error
+	List []error
 }
 
 func (w *Warnings) Add(err error) {
@@ -21,5 +21,5 @@ func (w *Warnings) Reference() error {
 }
 
 func (w *Warnings) Error() string {
-    return fmt.Sprintf("Number of warnings: %v", len(w.List))
+	return fmt.Sprintf("Number of warnings: %v", len(w.List))
 }

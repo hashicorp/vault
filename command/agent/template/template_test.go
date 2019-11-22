@@ -24,9 +24,6 @@ func TestNewServer(t *testing.T) {
 	if server == nil {
 		t.Fatal("nil server returned")
 	}
-	if server.UnblockCh == nil {
-		t.Fatal("nil blocking channel returned")
-	}
 }
 
 func TestServerRun(t *testing.T) {
@@ -39,18 +36,6 @@ func TestServerRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testCases := map[string]struct {
-		templates []*ctconfig.TemplateConfig
-	}{
-		"basic": {
-			templates: []*ctconfig.TemplateConfig{
-				&ctconfig.TemplateConfig{
-					Contents: pointerutil.StringPtr(templateContents),
-				},
-			},
-		},
-	}
-
 	// secretRender is a simple struct that represents the secret we render to
 	// disk. It's used to unmarshal the file contents and test against
 	type secretRender struct {
@@ -59,20 +44,82 @@ func TestServerRun(t *testing.T) {
 		Version  string `json:"version"`
 	}
 
+	type templateTest struct {
+		template *ctconfig.TemplateConfig
+	}
+
+	testCases := map[string]struct {
+		templateMap map[string]*templateTest
+	}{
+		"simple": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+			},
+		},
+		"multiple": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_02": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_03": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_04": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_05": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_06": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+				"render_07": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContents),
+					},
+				},
+			},
+		},
+	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			templateTokenCh := make(chan string, 1)
-			for i, template := range tc.templates {
-				dstFile := fmt.Sprintf("%s/render_%d.txt", tmpDir, i)
-				template.Destination = pointerutil.StringPtr(dstFile)
+			var templatesToRender []*ctconfig.TemplateConfig
+			for fileName, templateTest := range tc.templateMap {
+				dstFile := fmt.Sprintf("%s/%s", tmpDir, fileName)
+				templateTest.template.Destination = pointerutil.StringPtr(dstFile)
+				templatesToRender = append(templatesToRender, templateTest.template)
 			}
 
-			ctx, cancelFunc := context.WithCancel(context.Background())
+			ctx := context.Background()
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				VaultConf: &config.Vault{
 					Address: ts.URL,
 				},
+				LogLevel:      hclog.Trace,
+				LogWriter:     hclog.DefaultOutput,
+				ExitAfterAuth: true,
 			}
 
 			var server *Server
@@ -80,26 +127,17 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			if server.UnblockCh == nil {
-				t.Fatal("nil blocking channel returned")
-			}
 
-			go server.Run(ctx, templateTokenCh, tc.templates)
+			go server.Run(ctx, templateTokenCh, templatesToRender)
 
 			// send a dummy value to trigger the internal Runner to query for secret
 			// info
 			templateTokenCh <- "test"
-
-			select {
-			case <-ctx.Done():
-			case <-server.UnblockCh:
-			}
-
-			// cancel to clean things up
-			cancelFunc()
+			<-server.DoneCh
 
 			// verify test file exists and has the content we're looking for
-			for _, template := range tc.templates {
+			var fileCount int
+			for _, template := range templatesToRender {
 				if template.Destination == nil {
 					t.Fatal("nil template destination")
 				}
@@ -107,6 +145,7 @@ func TestServerRun(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				fileCount++
 
 				secret := secretRender{}
 				if err := json.Unmarshal(content, &secret); err != nil {
@@ -115,6 +154,9 @@ func TestServerRun(t *testing.T) {
 				if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
 					t.Fatalf("secret didn't match: %#v", secret)
 				}
+			}
+			if fileCount != len(templatesToRender) {
+				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
 			}
 		})
 	}

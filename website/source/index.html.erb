@@ -2,54 +2,135 @@
 description: "Vault secures, stores, and tightly controls access to tokens, passwords, certificates, API keys, and other secrets in modern computing. Vault handles leasing, key revocation, key rolling, auditing, and provides secrets as a service through a unified API."
 ---
 
-<% page = dato.vault_oss_page %>
+<%= partial "partials/subnav" %>
 
-<hashi-product-subnav project_site="true" current_path="<%= current_page.path %>" _data="<%= encode({
-  products: dato.enterprise_products.map(&:to_hash),
-  subnav: dato.vault_product_page.subnav.to_hash
-}) %>"></hashi-product-subnav>
+<hashi-hero _data="<%= encode(dato.vault_oss_page.hero) %>"></hashi-hero>
 
-<hashi-hero _data="<%= encode(page.hero) %>"></hashi-hero>
-<div class='g-section-block'>
-  <section class='g-container'>
+<div class='g-section-block page-wrap'>
+
+  <%-# Text Section -%>
+
+  <section class='g-container remove-bottom-padding'>
     <hashi-section-header
-      headline="<%= page.use_cases_headline.headline %>"
-      description="<%= page.use_cases_headline.description %>"
-    ></hashi-section-header>
-
-    <hashi-callouts _data="<%= encode(page.use_cases_callouts[0]) %>"></hashi-callouts>
+      headline="Secure dynamic infrastructure across clouds and environments"
+      description="The shift from static, on-premise infrastructure to dynamic, multi-provider infrastructure changes the approach to security. Security in static infrastructure relies on dedicated servers, static IP addresses, and a clear network perimeter. Security in dynamic infrastructure is defined by ephemeral applications and servers, trusted sources of user and application identity, and software-based encryption."
+    ></hashi-section-header>    
   </section>
 
-  <section class='g-container'>
-    <hashi-section-header
-      headline="<%= page.documentation_headline.headline %>"
-      description="<%= page.documentation_headline.description %>"
-    ></hashi-section-header>
+  <%-# Before After Diagram -%>
 
-    <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
+  <section class="g-container before-after">
+    <hashi-before-after _data="<%= encode(dato.vault_product_page.static_dynamic_section.layout.content.last.to_hash(4)) %>"></hashi-before-after>
   </section>
 
-  <section class='gray'>
+  <%-# Use cases -%>
+
+  <section>
     <div class='g-container'>
-      <hashi-section-header
-        headline="<%= page.features_headline.headline %>"
-        description="<%= page.features_headline.description %>"
-      ></hashi-section-header>
-
-      <div class='button-container'>
-        <% if page.features_buttons %>
-          <% page.features_buttons.buttons.each do |btn| %>
-            <hashi-button
-              title="<%= btn.text %>"
-              url="<%= btn.url %>"
-            ></hashi-button>
-          <% end %>
-        <% end %>
-      </div>
+      <hashi-use-cases _data="<%= encode({items: [
+        {
+          title: 'Secrets Management',
+          description: 'Audit access, automatically Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
+          image: {
+            url: '/img/homepage/callouts/secrets.png',
+            alt: 'Vault secrets diagram',
+            format: 'png'
+          },
+          link: {
+            title: 'Learn More',
+            url: '/use-cases/secrets-management'
+          }
+        },
+        {
+          title: 'Data Encryption',
+          description: 'Keep secrets and application data secure with one centralized workflow to encrypt data in flight and at rest',
+          image: {
+            url: '/img/homepage/callouts/encryption.png',
+            alt: 'Vault encryption diagram',
+            format: 'png'
+          },
+          link: {
+            title: 'Learn More',
+            url: '/use-cases/data-encryption'
+          }
+        },
+        {
+          title: 'Identity-based Access',
+          description: 'Authenticate and access different clouds, systems, and endpoints using trusted identities',
+          image: {
+            url: '/img/homepage/callouts/identity.png',
+            alt: 'Vault identity access diagram',
+            format: 'png'
+          },
+          link: {
+            title: 'Learn More',
+            url: '/use-cases/identity-based-access'
+          }
+        }
+      ]}) %>"></hashi-use-cases>
     </div>
   </section>
 
-  <section class='no-pad'>
-    <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta>
+  <%-# Principles / Text & Content Blocks -%>
+
+  <section class='g-container'>
+    <hashi-section-header
+      headline="Vault Principles"
+    ></hashi-section-header>
+
+    <hashi-text-and-content _data='<%= encode({
+        text: "### API-driven
+
+Use policy to codify, protect, and automate access to secrets",
+        content: {
+          item_type: "sbc_code_block",
+          chrome: true,
+          code: "$ curl \\\n
+--header \"X-Vault-Token: ...\" \\\n
+--request POST \\\n
+--data @payload.json \\\n
+https://127.0.0.1:8200/v1/secret/config"
+        }
+    }) %>'></hashi-text-and-content>
+
+<% secure_text_and_content = {
+  reverse_direction: true,
+  text: "### Secure with any identity
+
+Seamlessly integrate any trusted identity provider",
+  content: {
+    item_type: "sbc_logo_grid",
+    companies: dato.vault_product_page.principles_section.layout.content[2].content.companies.to_hash
+  }
+} %>
+
+    <hashi-text-and-content _data='<%= encode(secure_text_and_content) %>'></hashi-text-and-content>
+
+<% extend_text_and_content = {
+  text: "### Extend and integrate
+
+Securely manage secrets and access through a centralized workflow",
+  content: {
+    item_type: "sbc_logo_grid",
+    companies: dato.vault_product_page.principles_section.layout.content[3].content.companies.to_hash
+  }
+} %>
+
+    <hashi-text-and-content _data='<%= encode(extend_text_and_content) %>'></hashi-text-and-content>
+    
+  </section>
+
+  <section class='g-container'>
+    <hashi-section-header
+      headline="Open Source and Enterprise"
+      description="Vault Open Source addresses the *technical complexity* of managing secrets by leveraging trusted identities across distributed infrastructure and clouds. Vault Enterprise addresses the *organizational complexity* of large user bases and compliance requirements with collaboration and governance features."
+    ></hashi-section-header>
+
+    <div class='button-container'>
+      <hashi-button
+        title="Learn More"
+        url="https://www.hashicorp.com/products/vault/enterprise"
+      ></hashi-button>
+    </div>
   </section>
 </div>

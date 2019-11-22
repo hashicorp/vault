@@ -150,11 +150,7 @@ func init() {
 		0)
 }
 
-func Pids() ([]int32, error) {
-	return PidsWithContext(context.Background())
-}
-
-func PidsWithContext(ctx context.Context) ([]int32, error) {
+func pidsWithContext(ctx context.Context) ([]int32, error) {
 	// inspired by https://gist.github.com/henkman/3083408
 	// and https://github.com/giampaolo/psutil/blob/1c3a15f637521ba5c0031283da39c733fda53e4c/psutil/arch/windows/process_info.c#L315-L329
 	var ret []int32
@@ -324,11 +320,7 @@ func (p *Process) CmdlineSliceWithContext(ctx context.Context) ([]string, error)
 	return strings.Split(cmdline, " "), nil
 }
 
-func (p *Process) CreateTime() (int64, error) {
-	return p.CreateTimeWithContext(context.Background())
-}
-
-func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
+func (p *Process) createTimeWithContext(ctx context.Context) (int64, error) {
 	ru, err := getRusage(p.Pid)
 	if err != nil {
 		return 0, fmt.Errorf("could not get CreationDate: %s", err)
@@ -520,11 +512,11 @@ func (p *Process) NumThreads() (int32, error) {
 }
 
 func (p *Process) NumThreadsWithContext(ctx context.Context) (int32, error) {
-	dst, err := GetWin32ProcWithContext(ctx, p.Pid)
+	_, ret, _, err := getFromSnapProcess(p.Pid)
 	if err != nil {
-		return 0, fmt.Errorf("could not get ThreadCount: %s", err)
+		return 0, err
 	}
-	return int32(dst[0].ThreadCount), nil
+	return ret, nil
 }
 func (p *Process) Threads() (map[int32]*cpu.TimesStat, error) {
 	return p.ThreadsWithContext(context.Background())
@@ -644,7 +636,7 @@ func (p *Process) Connections() ([]net.ConnectionStat, error) {
 }
 
 func (p *Process) ConnectionsWithContext(ctx context.Context) ([]net.ConnectionStat, error) {
-	return nil, common.ErrNotImplementedError
+	return net.ConnectionsPidWithContext(ctx, "all", p.Pid)
 }
 
 func (p *Process) ConnectionsMax(max int) ([]net.ConnectionStat, error) {
@@ -663,14 +655,6 @@ func (p *Process) NetIOCountersWithContext(ctx context.Context, pernic bool) ([]
 	return nil, common.ErrNotImplementedError
 }
 
-func (p *Process) IsRunning() (bool, error) {
-	return p.IsRunningWithContext(context.Background())
-}
-
-func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
-	return true, common.ErrNotImplementedError
-}
-
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	return p.MemoryMapsWithContext(context.Background(), grouped)
 }
@@ -678,12 +662,6 @@ func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 func (p *Process) MemoryMapsWithContext(ctx context.Context, grouped bool) (*[]MemoryMapsStat, error) {
 	var ret []MemoryMapsStat
 	return &ret, common.ErrNotImplementedError
-}
-
-func NewProcess(pid int32) (*Process, error) {
-	p := &Process{Pid: pid}
-
-	return p, nil
 }
 
 func (p *Process) SendSignal(sig windows.Signal) error {

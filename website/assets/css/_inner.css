@@ -37,14 +37,4 @@
   & .g-section-header {
     margin-bottom: 100px;
   }
-
-  /* TODO: this should be applied in global styles, temporary override here */
-  & pre,
-  & code {
-    font-size: 0.875em;
-  }
-
-  & pre code {
-    font-size: 1em;
-  }
 }

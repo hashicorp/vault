@@ -1011,7 +1011,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.PerfStandby()); err != nil {
 		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
@@ -2518,7 +2518,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 // returned by the collection method will be returned as response warnings.
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{}
-	info, err := hostutil.CollectHostInfo()
+	info, err := hostutil.CollectHostInfo(ctx)
 	if err != nil {
 		// If the error is a HostInfoError, we return them as response warnings
 		if errs, ok := err.(*multierror.Error); ok {

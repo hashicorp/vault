@@ -5,6 +5,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -15,12 +22,6 @@ import (
 	"github.com/oracle/oci-go-sdk/common/auth"
 	"github.com/oracle/oci-go-sdk/objectstorage"
 	"golang.org/x/net/context"
-	"io/ioutil"
-	"net/http"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // Verify Backend satisfies the correct interfaces

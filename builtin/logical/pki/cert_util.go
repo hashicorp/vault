@@ -1037,8 +1037,8 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
-			DNSNames:                      dnsNames,
-			EmailAddresses:                emailAddresses,
+			DNSNames:                      strutil.RemoveDuplicates(dnsNames, false),
+			EmailAddresses:                strutil.RemoveDuplicates(emailAddresses, false),
 			IPAddresses:                   ipAddresses,
 			URIs:                          URIs,
 			OtherSANs:                     otherSANs,

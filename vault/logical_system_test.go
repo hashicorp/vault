@@ -150,11 +150,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 	// copy what's given
 	exp := map[string]interface{}{
 		"secret/": map[string]interface{}{
-			"type":        "kv",
+			"type":                    "kv",
 			"external_entropy_access": false,
-			"description": "key/value secret storage",
-			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["secret/"].(map[string]interface{})["uuid"],
+			"description":             "key/value secret storage",
+			"accessor":                resp.Data["secret/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["secret/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -167,11 +167,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 		},
 		"sys/": map[string]interface{}{
-			"type":        "system",
+			"type":                    "system",
 			"external_entropy_access": false,
-			"description": "system endpoints used for control, policy and debugging",
-			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["sys/"].(map[string]interface{})["uuid"],
+			"description":             "system endpoints used for control, policy and debugging",
+			"accessor":                resp.Data["sys/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["sys/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl":           resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":               resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -183,11 +183,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
-			"description": "per-token private secret storage",
-			"type":        "cubbyhole",
+			"description":             "per-token private secret storage",
+			"type":                    "cubbyhole",
 			"external_entropy_access": false,
-			"accessor":    resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["cubbyhole/"].(map[string]interface{})["uuid"],
+			"accessor":                resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["cubbyhole/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -198,11 +198,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 		"identity/": map[string]interface{}{
-			"description": "identity store",
-			"type":        "identity",
+			"description":             "identity store",
+			"type":                    "identity",
 			"external_entropy_access": false,
-			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["identity/"].(map[string]interface{})["uuid"],
+			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -251,11 +251,11 @@ func TestSystemBackend_mount(t *testing.T) {
 	// copy what's given
 	exp := map[string]interface{}{
 		"secret/": map[string]interface{}{
-			"type":        "kv",
+			"type":                    "kv",
 			"external_entropy_access": false,
-			"description": "key/value secret storage",
-			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["secret/"].(map[string]interface{})["uuid"],
+			"description":             "key/value secret storage",
+			"accessor":                resp.Data["secret/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["secret/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -268,11 +268,11 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 		},
 		"sys/": map[string]interface{}{
-			"type":        "system",
+			"type":                    "system",
 			"external_entropy_access": false,
-			"description": "system endpoints used for control, policy and debugging",
-			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["sys/"].(map[string]interface{})["uuid"],
+			"description":             "system endpoints used for control, policy and debugging",
+			"accessor":                resp.Data["sys/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["sys/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl":           resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":               resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -284,11 +284,11 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
-			"description": "per-token private secret storage",
-			"type":        "cubbyhole",
+			"description":             "per-token private secret storage",
+			"type":                    "cubbyhole",
 			"external_entropy_access": false,
-			"accessor":    resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["cubbyhole/"].(map[string]interface{})["uuid"],
+			"accessor":                resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["cubbyhole/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -299,11 +299,11 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 		"identity/": map[string]interface{}{
-			"description": "identity store",
-			"type":        "identity",
+			"description":             "identity store",
+			"type":                    "identity",
 			"external_entropy_access": false,
-			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["identity/"].(map[string]interface{})["uuid"],
+			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -314,11 +314,11 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 		"prod/secret/": map[string]interface{}{
-			"description": "",
-			"type":        "kv",
+			"description":             "",
+			"type":                    "kv",
 			"external_entropy_access": false,
-			"accessor":    resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["prod/secret/"].(map[string]interface{})["uuid"],
+			"accessor":                resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["prod/secret/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(2100),
 				"max_lease_ttl":     int64(2700),
@@ -1456,11 +1456,11 @@ func TestSystemBackend_authTable(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"token/": map[string]interface{}{
-			"type":        "token",
+			"type":                    "token",
 			"external_entropy_access": false,
-			"description": "token based credentials",
-			"accessor":    resp.Data["token/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["token/"].(map[string]interface{})["uuid"],
+			"description":             "token based credentials",
+			"accessor":                resp.Data["token/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["token/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
@@ -1511,11 +1511,11 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"foo/": map[string]interface{}{
-			"type":        "noop",
+			"type":                    "noop",
 			"external_entropy_access": false,
-			"description": "",
-			"accessor":    resp.Data["foo/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["foo/"].(map[string]interface{})["uuid"],
+			"description":             "",
+			"accessor":                resp.Data["foo/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["foo/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(2100),
 				"max_lease_ttl":     int64(2700),
@@ -1527,11 +1527,11 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"options":   map[string]string{},
 		},
 		"token/": map[string]interface{}{
-			"type":        "token",
+			"type":                    "token",
 			"external_entropy_access": false,
-			"description": "token based credentials",
-			"accessor":    resp.Data["token/"].(map[string]interface{})["accessor"],
-			"uuid":        resp.Data["token/"].(map[string]interface{})["uuid"],
+			"description":             "token based credentials",
+			"accessor":                resp.Data["token/"].(map[string]interface{})["accessor"],
+			"uuid":                    resp.Data["token/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
@@ -2296,11 +2296,11 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
 			"secret/": map[string]interface{}{
-				"type":        "kv",
+				"type":                    "kv",
 				"external_entropy_access": false,
-				"description": "key/value secret storage",
-				"accessor":    resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["accessor"],
-				"uuid":        resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["uuid"],
+				"description":             "key/value secret storage",
+				"accessor":                resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["accessor"],
+				"uuid":                    resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
 					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -2313,11 +2313,11 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				},
 			},
 			"sys/": map[string]interface{}{
-				"type":        "system",
+				"type":                    "system",
 				"external_entropy_access": false,
-				"description": "system endpoints used for control, policy and debugging",
-				"accessor":    resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["accessor"],
-				"uuid":        resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["uuid"],
+				"description":             "system endpoints used for control, policy and debugging",
+				"accessor":                resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["accessor"],
+				"uuid":                    resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
 					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -2329,11 +2329,11 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options":   map[string]string(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
-				"description": "per-token private secret storage",
-				"type":        "cubbyhole",
+				"description":             "per-token private secret storage",
+				"type":                    "cubbyhole",
 				"external_entropy_access": false,
-				"accessor":    resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["accessor"],
-				"uuid":        resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["uuid"],
+				"accessor":                resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["accessor"],
+				"uuid":                    resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
 					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -2344,11 +2344,11 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options":   map[string]string(nil),
 			},
 			"identity/": map[string]interface{}{
-				"description": "identity store",
-				"type":        "identity",
+				"description":             "identity store",
+				"type":                    "identity",
 				"external_entropy_access": false,
-				"accessor":    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
-				"uuid":        resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
+				"accessor":                resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
+				"uuid":                    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
 					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -2368,13 +2368,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},
-				"type":        "token",
+				"type":                    "token",
 				"external_entropy_access": false,
-				"description": "token based credentials",
-				"accessor":    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["accessor"],
-				"uuid":        resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
-				"local":       false,
-				"seal_wrap":   false,
+				"description":             "token based credentials",
+				"accessor":                resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["accessor"],
+				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
+				"local":                   false,
+				"seal_wrap":               false,
 			},
 		},
 	}

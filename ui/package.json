@@ -152,7 +152,16 @@
     "lint-staged": "^9.2.1"
   },
   "resolutions": {
-    "handlebars": "^4.1.2"
+    "handlebars": "^4.1.2",
+    "eslint-utils": "^1.4.1",
+    "lodash.defaultsdeep": "^4.6.1",
+    "lodash.merge": "^4.6.2",
+    "js-yaml": "^3.13.1",
+    "jquery": "^3.4.0",
+    "lodash": "^4.17.13",
+    "merge": "^1.2.1",
+    "minimatch": "^3.0.2",
+    "growl": "^1.10.0"
   },
   "engines": {
     "node": " >= 10.* <11"

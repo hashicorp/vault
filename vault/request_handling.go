@@ -860,7 +860,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID)
 		if err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
+			// Best-effort clean up on error, so we log the cleanup error as a
+			// warning but still return as internal error.
+			if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+				c.logger.Warn("failed to clean up token lease from entity and policy lookup failure", "request_path", req.Path, "error", err)
+			}
 			return nil, nil, ErrInternalError
 		}
 
@@ -869,11 +873,17 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		case logical.TokenTypeBatch:
 		case logical.TokenTypeService:
 			if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
+				TTL:         auth.TTL,
+				Policies:    auth.TokenPolicies,
 				Path:        resp.Auth.CreationPath,
 				NamespaceID: ns.ID,
 			}, resp.Auth); err != nil {
-				c.tokenStore.revokeOrphan(ctx, te.ID)
-				c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
+				// Best-effort clean up on error, so we log the cleanup error as
+				// a warning but still return as internal error.
+				if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+					c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+				}
+				c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
@@ -1157,6 +1167,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	return resp, auth, routeErr
 }
 
+// RegisterAuth uses a logical.Auth object to create a token entry in the token
+// store, and registers a corresponding token lease to the expiration manager.
 func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
@@ -1184,6 +1196,11 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		Type:           auth.TokenType,
 	}
 
+	if te.TTL == 0 && (len(te.Policies) != 1 || te.Policies[0] != "root") {
+		c.logger.Error("refusing to create a non-root zero TTL token")
+		return ErrInternalError
+	}
+
 	if err := c.tokenStore.create(ctx, &te); err != nil {
 		c.logger.Error("failed to create token", "error", err)
 		return ErrInternalError
@@ -1202,8 +1219,10 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	case logical.TokenTypeService:
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(ctx, &te, auth); err != nil {
-			c.tokenStore.revokeOrphan(ctx, te.ID)
-			c.logger.Error("failed to register token lease", "request_path", path, "error", err)
+			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
+				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
+			}
+			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
 			return ErrInternalError
 		}
 	}
