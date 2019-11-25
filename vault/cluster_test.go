@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -129,7 +128,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			}
 			connState := conn.ConnectionState()
 			switch {
-			case connState.Version != tls.VersionTLS12:
+			case connState.Version != tls.VersionTLS12 && connState.Version != tls.VersionTLS13:
 				t.Fatal("version mismatch")
 			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
@@ -370,40 +369,5 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		if statusCode != 203 {
 			t.Fatal("bad response")
 		}
-	}
-}
-
-func TestCluster_CustomCipherSuites(t *testing.T) {
-	cluster := NewTestCluster(t, &CoreConfig{
-		ClusterCipherSuites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-	}, nil)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0]
-
-	// Wait for core to become active
-	TestWaitActive(t, core.Core)
-
-	core.getClusterListener().AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{core.Core})
-
-	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dialer := core.getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
-
-	netConn, err := dialer(core.getClusterListener().Addrs()[0].String(), 0)
-	conn := netConn.(*tls.Conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-	err = conn.Handshake()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conn.ConnectionState().CipherSuite != tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 {
-		var availCiphers string
-		for _, cipher := range core.clusterCipherSuites {
-			availCiphers += fmt.Sprintf("%x ", cipher)
-		}
-		t.Fatalf("got bad negotiated cipher %x, core-set suites are %s", conn.ConnectionState().CipherSuite, availCiphers)
 	}
 }
