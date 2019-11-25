@@ -95,7 +95,7 @@ github.com/armon/go-proxyproto
 github.com/armon/go-radix
 # github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 github.com/asaskevich/govalidator
-# github.com/aws/aws-sdk-go v1.19.39
+# github.com/aws/aws-sdk-go v1.25.41
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/stscreds
@@ -141,6 +141,7 @@ github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/restxml
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/internal/sdkmath
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
