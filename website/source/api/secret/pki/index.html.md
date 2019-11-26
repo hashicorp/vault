@@ -57,7 +57,7 @@ This is an unauthenticated endpoint.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/ca(/pem)`              | `200 application/binary` |
+| `GET`    | `/pki/ca(/pem)`              | 
 
 ### Sample Request
 
@@ -82,7 +82,7 @@ This is an unauthenticated endpoint.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/ca_chain`              | `200 application/binary` |
+| `GET`    | `/pki/ca_chain`              |
 
 ### Sample Request
 
@@ -371,7 +371,7 @@ This is an unauthenticated endpoint.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/crl(/pem)`             | `200 application/binary` |
+| `GET`    | `/pki/crl(/pem)`             | 
 
 ### Sample Request
 
