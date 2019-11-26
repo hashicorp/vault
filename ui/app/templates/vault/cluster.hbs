@@ -3,7 +3,7 @@
     as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
-        {{partial 'svg/vault-logo'}}
+        <Icon @glyph="vault-logo" @size="l" />
       </HomeLink>
     </Nav.home>
     <Nav.main>
@@ -76,11 +76,11 @@
       <div class="navbar-item">
         <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"
           {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
-          <ICon @glyph="console" @size=24 />
+          <Icon @glyph="console" @size="l" />
           <div class="status-menu-label">
             Console
           </div>
-          <ICon @glyph="chevron-down" @aria-hidden="true" @size=8 @class="has-text-white is-status-chevron" />
+          <Chevron @direction="down" class="has-text-white is-status-chevron" />
         </button>
       </div>
       <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
@@ -91,11 +91,11 @@
 {{/if}}
 <div class="global-flash">
   {{#each flashMessages.queue as |flash|}}
-    {{#flash-message data-test-flash-message=true flash=flash as |component flash close|}}
+    {{#flash-message data-test-flash-message=true flash=flash as |customComponent flash close|}}
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}}/>
+        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}} @isPreformatted={{flash.preformatted}} />
       {{/if}}
     {{/flash-message}}
   {{/each}}

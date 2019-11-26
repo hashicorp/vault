@@ -16,20 +16,8 @@
       {{model.name}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#unless (or (and (eq model.identityType "group") (eq model.type "internal")) model.alias)}}
-      {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize model.identityType) model.id class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true}}
-        Add alias
-        {{i-con glyph="chevron-right" size=11}}
-      {{/link-to}}
-    {{/unless}}
-    {{#link-to "vault.cluster.access.identity.edit" (pluralize model.identityType) model.id class="button has-icon-right is-ghost is-compact" data-test-entity-edit-link=true}}
-      Edit {{model.identityType}}
-      {{i-con glyph="chevron-right" size=11}}
-    {{/link-to}}
-  </p.levelRight>
 </PageHeader>
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show model.identityType model.type) as |tab|}}
@@ -42,4 +30,23 @@
     </ul>
   </nav>
 </div>
+<Toolbar>
+  <ToolbarActions>
+    {{#unless (or (and (eq model.identityType "group") (eq model.type "internal")) model.alias)}}
+      <ToolbarLink
+        @type="add"
+        @params={{array "vault.cluster.access.identity.aliases.add" (pluralize model.identityType) model.id}}
+        @data-test-entity-create-link=true
+      >
+        Add alias
+      </ToolbarLink>
+    {{/unless}}
+    <ToolbarLink
+      @params={{array "vault.cluster.access.identity.edit" (pluralize model.identityType) model.id}}
+      @data-test-entity-edit-link=true
+    >
+      Edit {{model.identityType}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
 {{component (concat 'identity/item-' section) model=model}}

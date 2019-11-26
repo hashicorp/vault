@@ -40,11 +40,9 @@ message Group {
 	// updates to the groups.
 	uint64 modify_index = 9;
 
-	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
-	// group is stored in the underlying storage. This is useful to find all
-	// the groups belonging to a particular bucket during invalidation of the
-	// storage key.
-	string bucket_key_hash = 10;
+	// BucketKey is the path of the storage packer key into which this group is
+	// stored.
+	string bucket_key = 10;
 
 	// Alias is used to mark this group as an internal mapping of a group that
 	// is external to the identity store. Alias can only be set if the 'type'
@@ -107,11 +105,9 @@ message Entity {
 	// Policies the entity is entitled to
 	repeated string policies = 8;
 
-	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
-	// entity is stored in the underlying storage. This is useful to find all
-	// the entities belonging to a particular bucket during invalidation of the
-	// storage key.
-	string bucket_key_hash = 9;
+	// BucketKey is the path of the storage packer key into which this entity is
+	// stored.
+	string bucket_key = 9;
 
 	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
 	// method configuration.

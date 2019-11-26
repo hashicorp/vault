@@ -8,22 +8,22 @@ import (
 	"fmt"
 	"time"
 
+	"regexp"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iam/v1"
-	"regexp"
 )
 
 const (
 	serviceAccountMaxLen          = 30
 	serviceAccountDisplayNameTmpl = "Service account for Vault secrets backend role set %s"
-	defaultCloudPlatformScope     = "https://www.googleapis.com/auth/cloud-platform"
 )
 
 type RoleSet struct {
@@ -88,8 +88,7 @@ func (rs *RoleSet) save(ctx context.Context, s logical.Storage) error {
 }
 
 func (rs *RoleSet) bindingHash() string {
-	ssum := sha256.Sum256([]byte(rs.RawBindings)[:])
-	return base64.StdEncoding.EncodeToString(ssum[:])
+	return getStringHash(rs.RawBindings)
 }
 
 func (rs *RoleSet) getServiceAccount(iamAdmin *iam.Service) (*iam.ServiceAccount, error) {
@@ -128,12 +127,12 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 	b.rolesetLock.Lock()
 	defer b.rolesetLock.Unlock()
 
-	httpC, err := newHttpClient(ctx, s, defaultCloudPlatformScope)
+	httpC, err := b.HTTPClient(s)
 	if err != nil {
 		return nil, err
 	}
 
-	iamAdmin, err := newIamAdmin(ctx, s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +217,7 @@ func (b *backend) saveRoleSetWithNewTokenKey(ctx context.Context, s logical.Stor
 		return "", fmt.Errorf("a key is not saved or used for non-access-token role set '%s'", rs.Name)
 	}
 
-	iamAdmin, err := newIamAdmin(ctx, s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return "", err
 	}
@@ -414,4 +413,9 @@ func roleSetServiceAccountName(rsName string) (name string) {
 		name = fmt.Sprintf("vault%s-%s", rsName[:len(rsName)-toTrunc], intSuffix)
 	}
 	return name
+}
+
+func getStringHash(bindingsRaw string) string {
+	ssum := sha256.Sum256([]byte(bindingsRaw)[:])
+	return base64.StdEncoding.EncodeToString(ssum[:])
 }

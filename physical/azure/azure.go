@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -74,11 +74,29 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			environmentName = "AzurePublicCloud"
 		}
 	}
-	environment, err := azure.EnvironmentFromName(environmentName)
-	if err != nil {
-		errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
-			environmentName)
-		return nil, errwrap.Wrapf(errorMsg, err)
+
+	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
+	if environmentUrl == "" {
+		environmentUrl = conf["arm_endpoint"]
+	}
+
+	var environment azure.Environment
+	var err error
+
+	if environmentUrl != "" {
+		environment, err = azure.EnvironmentFromURL(environmentUrl)
+		if err != nil {
+			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for URL %q: {{err}}",
+				environmentUrl)
+			return nil, errwrap.Wrapf(errorMsg, err)
+		}
+	} else {
+		environment, err = azure.EnvironmentFromName(environmentName)
+		if err != nil {
+			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
+				environmentName)
+			return nil, errwrap.Wrapf(errorMsg, err)
+		}
 	}
 
 	client, err := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, environment)

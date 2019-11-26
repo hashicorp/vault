@@ -284,41 +284,15 @@ func NewInteger64(i uint64) Attribute {
 	return Attribute(v)
 }
 
-// Tag returns the components of a tagged attribute.
-func Tag(a Attribute) (tag byte, value Attribute, err error) {
-	switch len(a) {
-	case 0:
-		err = errors.New("invalid length")
-	case 1:
-		tag = a[0]
-	default:
-		tag = a[0]
-		value = make(Attribute, len(a)-1)
-		copy(value, a[1:])
-	}
-	return
-}
-
-// NewTag returns a new tagged attribute.
-func NewTag(tag byte, value Attribute) (Attribute, error) {
-	if len(value) > 252 {
-		return nil, errors.New("invalid value length")
-	}
-	a := make(Attribute, 1+len(value))
-	a[0] = tag
-	copy(a[1:], value)
-	return a, nil
-}
-
 // TLV returns a components of a Type-Length-Value (TLV) attribute.
-func TLV(a Attribute) (tlvType byte, typValue Attribute, err error) {
+func TLV(a Attribute) (tlvType byte, tlvValue Attribute, err error) {
 	if len(a) < 3 || len(a) > 255 || int(a[1]) != len(a) {
 		err = errors.New("invalid length")
 		return
 	}
 	tlvType = a[0]
-	typValue = make(Attribute, len(a)-2)
-	copy(typValue, a[2:])
+	tlvValue = make(Attribute, len(a)-2)
+	copy(tlvValue, a[2:])
 	return
 }
 
@@ -330,7 +304,7 @@ func NewTLV(tlvType byte, tlvValue Attribute) (Attribute, error) {
 	a := make(Attribute, 1+1+len(tlvValue))
 	a[0] = tlvType
 	a[1] = byte(1 + 1 + len(tlvValue))
-	copy(a, tlvValue)
+	copy(a[2:], tlvValue)
 	return a, nil
 }
 
@@ -439,4 +413,57 @@ func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password,
 	return
 }
 
-// TODO: ipv6prefix
+func NewIPv6Prefix(prefix *net.IPNet) (Attribute, error) {
+	if prefix == nil {
+		return nil, errors.New("nil prefix")
+	}
+
+	if len(prefix.IP) != net.IPv6len {
+		return nil, errors.New("IP is not IPv6")
+	}
+
+	ones, bits := prefix.Mask.Size()
+	if bits != net.IPv6len*8 {
+		return nil, errors.New("mask is not IPv6")
+	}
+
+	attr := make(Attribute, 2+((ones+7)/8))
+	// attr[0] = 0x00
+	attr[1] = byte(ones)
+	copy(attr[2:], prefix.IP)
+
+	// clear final non-mask bits
+	if i := uint(ones % 8); i != 0 {
+		for ; i < 8; i++ {
+			attr[len(attr)-1] &^= 1 << (7 - i)
+		}
+	}
+
+	return attr, nil
+}
+
+func IPv6Prefix(a Attribute) (*net.IPNet, error) {
+	if len(a) < 2 || len(a) > 18 {
+		return nil, errors.New("invalid length")
+	}
+
+	prefixLength := int(a[1])
+	if (len(a)-2)*8 < prefixLength {
+		return nil, errors.New("invalid prefix length")
+	}
+
+	ip := make(net.IP, net.IPv6len)
+	copy(ip, a[2:])
+
+	// clear final non-mask bits
+	if i := uint(prefixLength % 8); i != 0 {
+		for ; i < 8; i++ {
+			ip[prefixLength/8] &^= 1 << (7 - i)
+		}
+	}
+
+	return &net.IPNet{
+		IP:   ip,
+		Mask: net.CIDRMask(prefixLength, net.IPv6len*8),
+	}, nil
+}

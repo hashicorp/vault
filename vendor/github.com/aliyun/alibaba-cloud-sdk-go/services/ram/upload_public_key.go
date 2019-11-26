@@ -76,8 +76,8 @@ func (client *Client) UploadPublicKeyWithCallback(request *UploadPublicKeyReques
 // UploadPublicKeyRequest is the request struct for api UploadPublicKey
 type UploadPublicKeyRequest struct {
 	*requests.RpcRequest
-	UserName      string `position:"Query" name:"UserName"`
 	PublicKeySpec string `position:"Query" name:"PublicKeySpec"`
+	UserName      string `position:"Query" name:"UserName"`
 }
 
 // UploadPublicKeyResponse is the response struct for api UploadPublicKey

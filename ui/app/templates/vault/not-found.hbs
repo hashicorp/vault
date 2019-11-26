@@ -1,9 +1,9 @@
 <header>
   <nav class="navbar is-grouped-split">
     <div class="navbar-brand">
-      {{#home-link class="navbar-item has-text-white has-current-color-fill"}}
-        {{partial 'svg/vault-logo'}}
-      {{/home-link}}
+      <HomeLink @class="navbar-item has-text-white has-current-color-fill">
+        <Icon @glyph="vault-logo" @size="l" />
+      </HomeLink>
     </div>
   </nav>
 </header>

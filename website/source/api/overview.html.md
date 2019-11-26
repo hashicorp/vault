@@ -162,6 +162,26 @@ more flexible.
 
 For more examples, please look at the Vault API client.
 
+## The `X-Vault-Request` Header
+
+Requests that are sent to a [Vault Agent][agent] that is configured to use the
+`require_request_header` option must include the `X-Vault-Request` header
+entry, e.g.:
+
+```shell
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -H "X-Vault-Request: true" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"value":"bar"}' \
+    http://127.0.0.1:8200/v1/secret/baz
+```
+
+The Vault CLI always adds this header to every request, regardless of whether
+the request is being sent to a Vault Agent or directly to a Vault Server. In
+addition, the Vauld SDK always adds this header to every request.
+
 ## Help
 
 To retrieve the help for any API within Vault, including mounted backends, auth
@@ -271,3 +291,5 @@ warnings are generated during the operation.
 A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
+
+[agent]: /docs/agent/index.html#listener-stanza

@@ -8,10 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
-
+	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -19,7 +17,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -91,33 +89,8 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
-	// Check and set region
-	region, regionOk := config["region"]
-	switch {
-	case os.Getenv("AWS_REGION") != "":
-		k.region = os.Getenv("AWS_REGION")
-	case os.Getenv("AWS_DEFAULT_REGION") != "":
-		k.region = os.Getenv("AWS_DEFAULT_REGION")
-	case regionOk && region != "":
-		k.region = region
-	default:
-		k.region = "us-east-1"
-
-		// If available, get the region from EC2 instance metadata
-		sess, err := session.NewSession(nil)
-		if err != nil {
-			k.logger.Warn(fmt.Sprintf("unable to begin session: %s, defaulting region to %s", err, k.region))
-			break
-		}
-
-		// This will hang for ~10 seconds if the agent isn't running on an EC2 instance
-		region, err := ec2metadata.New(sess).Region()
-		if err != nil {
-			k.logger.Warn(fmt.Sprintf("unable to retrieve region from ec2 instance metadata: %s, defaulting region to %s", err, k.region))
-			break
-		}
-		k.region = region
-	}
+	// Please see GetOrDefaultRegion for an explanation of the order in which region is parsed.
+	k.region = awsutil.GetOrDefaultRegion(k.logger, config["region"])
 
 	// Check and set AWS access key, secret key, and session token
 	k.accessKey = config["access_key"]

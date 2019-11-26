@@ -17,13 +17,13 @@ package ram
 
 // PasswordPolicy is a nested struct in ram response
 type PasswordPolicy struct {
-	MaxPasswordAge             int  `json:"MaxPasswordAge" xml:"MaxPasswordAge"`
-	RequireNumbers             bool `json:"RequireNumbers" xml:"RequireNumbers"`
-	RequireLowercaseCharacters bool `json:"RequireLowercaseCharacters" xml:"RequireLowercaseCharacters"`
-	HardExpiry                 bool `json:"HardExpiry" xml:"HardExpiry"`
-	RequireSymbols             bool `json:"RequireSymbols" xml:"RequireSymbols"`
 	RequireUppercaseCharacters bool `json:"RequireUppercaseCharacters" xml:"RequireUppercaseCharacters"`
+	MaxPasswordAge             int  `json:"MaxPasswordAge" xml:"MaxPasswordAge"`
+	RequireSymbols             bool `json:"RequireSymbols" xml:"RequireSymbols"`
+	RequireLowercaseCharacters bool `json:"RequireLowercaseCharacters" xml:"RequireLowercaseCharacters"`
+	PasswordReusePrevention    int  `json:"PasswordReusePrevention" xml:"PasswordReusePrevention"`
+	HardExpiry                 bool `json:"HardExpiry" xml:"HardExpiry"`
 	MaxLoginAttemps            int  `json:"MaxLoginAttemps" xml:"MaxLoginAttemps"`
 	MinimumPasswordLength      int  `json:"MinimumPasswordLength" xml:"MinimumPasswordLength"`
-	PasswordReusePrevention    int  `json:"PasswordReusePrevention" xml:"PasswordReusePrevention"`
+	RequireNumbers             bool `json:"RequireNumbers" xml:"RequireNumbers"`
 }

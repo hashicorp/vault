@@ -27,6 +27,22 @@ it down to the specific instance of a service based on the SQL username.
 Vault makes use of its own internal revocation system to ensure that users
 become invalid within a reasonable time of the lease expiring.
 
+### Static Roles
+
+The database secrets engine supports the concept of "static roles", which are
+a 1-to-1 mapping of Vault Roles to usernames in a database. The current password
+for the database user is stored and automatically rotated by Vault on a
+configurable period of time. This is in contrast to dynamic secrets, where a
+unique username and password pair are generated with each credential request.
+When credentials are requested for the Role, Vault returns the current
+password for the configured database user, allowing anyone with the proper
+Vault policies to have access to the user account in the database.
+
+Not all database types support static roles at this time. Please consult the
+specific database documentation on the left navigation to see if a given
+database backend supports static roles.
+
+
 ## Setup
 
 Most secrets engines must be configured in advance before they can perform their
@@ -97,6 +113,20 @@ of the role:
 This secrets engine allows custom database types to be run through the exposed
 plugin interface. Please see the [custom database
 plugin](/docs/secrets/databases/custom.html) for more information.
+
+## Password Generation
+
+Password generation for both static and dynamic database credentials occurs via the ''GetPassword()'' function. For static credentials, the ''SetCredentials()''function is also used on the output of ''GetPassword().''
+
+Please see the [DB plugin credentials source code](https://github.com/hashicorp/vault/blob/master/sdk/database/dbplugin/database.pb.go) for more information.
+
+## Learn
+
+Refer to the following step-by-step tutorials for more information:
+
+- [Secrets as a Service: Dynamic Secrets](https://learn.hashicorp.com/vault/secrets-management/sm-dynamic-secrets)
+- [Database Root Credential Rotation](https://learn.hashicorp.com/vault/secrets-management/db-root-rotation)
+- [Database Static Roles and Credential Rotation](https://learn.hashicorp.com/vault/secrets-management/db-creds-rotation)
 
 ## API
 

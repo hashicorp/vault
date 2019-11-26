@@ -1,13 +1,14 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, findAll, find, triggerEvent, waitUntil } from '@ember/test-helpers';
+import { settled, render, click, fillIn, findAll, find, triggerEvent, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 let file;
 const fileEvent = () => {
   const data = { some: 'content' };
-  file = new File([JSON.stringify(data, null, 2)], 'file.json', { type: 'application/json' });
-  return ['change', [file]];
+  file = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  file.name = 'file.json';
+  return ['change', { files: [file] }];
 };
 
 module('Integration | Component | pgp file', function(hooks) {
@@ -81,6 +82,7 @@ module('Integration | Component | pgp file', function(hooks) {
 
     await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
     await triggerEvent('[data-test-pgp-file-input]', ...event);
+    await settled();
     await click('[data-test-text-toggle]');
     assert.equal(findAll('[data-test-pgp-file-textarea]').length, 1, 'renders the textarea on toggle');
     assert.equal(

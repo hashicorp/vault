@@ -31,12 +31,6 @@ module('Integration | Component | auth-config-form options', function(hooks) {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it submits data correctly', async function(assert) {

@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
@@ -401,6 +402,9 @@ func TestKVGetCommand(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				// Give time for the upgrade code to run/finish
+				time.Sleep(time.Second)
+
 				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
 					"foo": "bar",
 				}); err != nil {
@@ -495,6 +499,9 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
+
+				// Give time for the upgrade code to run/finish
+				time.Sleep(time.Second)
 
 				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
 					"data": map[string]interface{}{

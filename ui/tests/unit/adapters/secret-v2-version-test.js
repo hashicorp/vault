@@ -16,6 +16,7 @@ module('Unit | Adapter | secret-v2-version', function(hooks) {
   let fakeStore = {
     peekRecord() {
       return {
+        rollbackAttributes() {},
         reload() {},
       };
     },

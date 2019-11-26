@@ -3,6 +3,7 @@ package client // import "github.com/influxdata/influxdb/client/v2"
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -48,6 +50,10 @@ type HTTPConfig struct {
 
 	// Proxy configures the Proxy function on the HTTP client.
 	Proxy func(req *http.Request) (*url.URL, error)
+
+	// DialContext specifies the dial function for creating unencrypted TCP connections.
+	// If DialContext is nil then the transport dials using package net.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // BatchPointsConfig is the config data needed to create an instance of the BatchPoints struct.
@@ -78,6 +84,10 @@ type Client interface {
 	// the UDP client.
 	Query(q Query) (*Response, error)
 
+	// QueryCtx makes an InfluxDB Query on the database. This will fail if using
+	// the UDP client.
+	QueryCtx(ctx context.Context, q Query) (*Response, error)
+
 	// QueryAsChunk makes an InfluxDB Query on the database. This will fail if using
 	// the UDP client.
 	QueryAsChunk(q Query) (*ChunkedResponse, error)
@@ -106,7 +116,8 @@ func NewHTTPClient(conf HTTPConfig) (Client, error) {
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: conf.InsecureSkipVerify,
 		},
-		Proxy: conf.Proxy,
+		Proxy:       conf.Proxy,
+		DialContext: conf.DialContext,
 	}
 	if conf.TLSConfig != nil {
 		tr.TLSClientConfig = conf.TLSConfig
@@ -500,7 +511,12 @@ type Result struct {
 
 // Query sends a command to the server and returns the Response.
 func (c *client) Query(q Query) (*Response, error) {
-	req, err := c.createDefaultRequest(q)
+	return c.QueryCtx(nil, q)
+}
+
+// QueryCtx sends a command to the server and returns the Response.
+func (c *client) QueryCtx(ctx context.Context, q Query) (*Response, error) {
+	req, err := c.createDefaultRequest(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +586,7 @@ func (c *client) Query(q Query) (*Response, error) {
 
 // QueryAsChunk sends a command to the server and returns the Response.
 func (c *client) QueryAsChunk(q Query) (*ChunkedResponse, error) {
-	req, err := c.createDefaultRequest(q)
+	req, err := c.createDefaultRequest(nil, q)
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +635,7 @@ func checkResponse(resp *http.Response) error {
 	return nil
 }
 
-func (c *client) createDefaultRequest(q Query) (*http.Request, error) {
+func (c *client) createDefaultRequest(ctx context.Context, q Query) (*http.Request, error) {
 	u := c.url
 	u.Path = path.Join(u.Path, "query")
 
@@ -631,6 +647,10 @@ func (c *client) createDefaultRequest(q Query) (*http.Request, error) {
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 
 	req.Header.Set("Content-Type", "")

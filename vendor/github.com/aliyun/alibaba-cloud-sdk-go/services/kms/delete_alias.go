@@ -77,7 +77,6 @@ func (client *Client) DeleteAliasWithCallback(request *DeleteAliasRequest, callb
 type DeleteAliasRequest struct {
 	*requests.RpcRequest
 	AliasName string `position:"Query" name:"AliasName"`
-	STSToken  string `position:"Query" name:"STSToken"`
 }
 
 // DeleteAliasResponse is the response struct for api DeleteAlias

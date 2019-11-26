@@ -1,0 +1,10 @@
+executor: go-machine
+steps:
+  - setup-go
+  - checkout
+  - go_test:
+      extra_flags: "-race"
+  - store_artifacts:
+      path: test-results
+  - store_test_results:
+      path: test-results

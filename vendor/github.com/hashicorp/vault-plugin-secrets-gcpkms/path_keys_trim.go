@@ -9,8 +9,8 @@ import (
 
 	"github.com/gammazero/workerpool"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iterator"
 
 	multierror "github.com/hashicorp/go-multierror"

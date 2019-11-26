@@ -1,0 +1,351 @@
+@import '@hashicorp/hashi-global-styles/style';
+
+.g-section-block {
+  padding: 160px 0;
+
+  @media (max-width: 1119px) {
+    padding: 104px 0;
+  }
+
+  @media (max-width: 767px) {
+    padding: 80px 0;
+  }
+
+  &.theme-white-background-black-text:not(.divider-gray-line)
+    + .theme-white-background-black-text {
+    padding-top: 32px;
+  }
+
+  /*  Layout Styles */
+  &.layout-horizontal {
+    & > .g-container {
+      display: flex;
+      align-items: center;
+
+      & > * + * {
+        margin-left: 96px;
+      }
+    }
+
+    & .img-container {
+      flex-shrink: 0;
+
+      & img {
+        align-self: center;
+      }
+    }
+  }
+
+  &.layout-vertical {
+    & > .g-container {
+      & > * + * {
+        margin-top: 96px;
+
+        @media (max-width: 1119px) {
+          margin-top: 72px;
+        }
+
+        @media (max-width: 767px) {
+          margin-top: 56px;
+        }
+      }
+
+      & > .g-text-and-content + .g-text-and-content {
+        margin-top: 192px;
+
+        @media (max-width: 1119px) {
+          margin-top: 144px;
+        }
+
+        @media (max-width: 767px) {
+          margin-top: 112px;
+        }
+      }
+
+      & > .g-section-header {
+        & + * {
+          margin-top: 72px;
+
+          @media (max-width: 1119px) {
+            margin-top: 64px;
+          }
+
+          @media (max-width: 767px) {
+            margin-top: 40px;
+          }
+        }
+      }
+
+      & > * + .btn-container {
+        margin-top: 40px;
+
+        @media (max-width: 767px) {
+          margin-top: 32px;
+        }
+      }
+    }
+  }
+
+  /* TODO: remove this once new section header is out */
+  & .g-section-header {
+    margin: 0 auto;
+  }
+
+  /* Module styles */
+
+  & .btn-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: auto -8px -16px;
+
+    & > * {
+      margin: auto 8px 16px;
+    }
+  }
+
+  & .img-container {
+    display: flex;
+    justify-content: center;
+
+    & .g-container {
+      flex-shrink: 0;
+      width: 100%;
+    }
+
+    & img {
+      max-width: 100%;
+    }
+
+    & picture {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+
+      & img {
+        object-fit: contain;
+        font-family: 'object-fit:contain';
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  & .two-col-text-container {
+    & .g-container {
+      display: flex;
+      @media (max-width: 850px) {
+        flex-direction: column;
+      }
+    }
+
+    & .left,
+    & .right {
+      width: 48%;
+      flex-shrink: 0;
+
+      @media (max-width: 850px) {
+        width: 100%;
+      }
+
+      & > *:first-child {
+        margin-top: 0;
+      }
+    }
+
+    & .left {
+      margin-right: 4%;
+
+      @media (max-width: 850px) {
+        margin-right: 0;
+        margin-bottom: 32px;
+      }
+    }
+
+    & a {
+      font-weight: 600;
+      color: inherit;
+
+      &:hover {
+        border-bottom: 1px solid;
+        opacity: 0.8;
+      }
+    }
+
+    & h5 {
+      margin-bottom: 1em;
+    }
+
+    & ul {
+      list-style: none;
+      padding-left: 15px;
+
+      & li {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+
+        &:before {
+          content: '';
+          width: 18px;
+          height: 18px;
+          background: url('/img/black-circle-white-check.svg') no-repeat;
+          background-size: 100%;
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+
+  & .g-text-and-image {
+    & .imgwrap {
+      display: flex;
+
+      & picture {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+
+        & img {
+          object-fit: contain;
+          font-family: 'object-fit:contain';
+          max-width: 350px;
+        }
+      }
+    }
+
+    & .text {
+      & h2 {
+        font-size: 1.5rem;
+      }
+
+      & a {
+        font-weight: 600;
+        color: white;
+        padding-bottom: 1px;
+
+        &:hover {
+          border-bottom: 1px solid;
+        }
+      }
+    }
+  }
+
+  & .small-text-tag {
+    text-align: center;
+    text-transform: uppercase;
+    color: #8d9096;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  & .g-logo-grid.large li {
+    background-color: white;
+  }
+
+  & .video-container {
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* THEMES */
+  &.theme-terraform-purple-top-gradient {
+    color: white;
+    background: linear-gradient(to bottom, #1b212c, #000000);
+  }
+
+  &.theme-dark-blue {
+    color: white;
+    background: #1b212d;
+  }
+
+  &.theme-white-background-black-text {
+    background: white;
+    color: black;
+  }
+
+  &.theme-black-background-white-text {
+    background: var(--gray-1);
+    color: white;
+  }
+
+  &.theme-light-gray {
+    color: black;
+    background: #f3f4f6;
+  }
+
+  &.theme-default-blue-gradient {
+    background: url('/img/backgrounds/partner-cta-bg.svg');
+    background-position: center center;
+    background-size: cover;
+    color: var(--white);
+  }
+
+  &.theme-terraform-purple-gradient {
+    @extend %gradient-bg;
+    background: linear-gradient(to right, #695af0, #6b5cf3);
+
+    &::before {
+      background: linear-gradient(to right, #5b48e7, #6b5cf3);
+    }
+  }
+
+  &.theme-nomad-green-gradient {
+    @extend %gradient-bg;
+    background: linear-gradient(to right, #1dbe83, #1ec185);
+
+    &::before {
+      background: linear-gradient(to right, #20c78a, #17c185);
+    }
+  }
+
+  &.theme-terraform-purple-testimonial-split {
+    color: white;
+    position: relative;
+    overflow: hidden;
+
+    &:before {
+      content: '';
+      background: linear-gradient(to right, #695af0, #6b5cf3);
+      width: 100%;
+      height: 550px;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    & .g-container {
+      position: relative;
+    }
+  }
+
+  /* DIVIDERS */
+  &.divider-gray-line {
+    border-bottom: 1px solid #d9dbdd;
+  }
+
+  &.divider-dark-gray-line {
+    border-bottom: 1px solid #424242;
+  }
+
+  &.divider-black-down-arrow {
+    border-bottom: 1px solid #d0d2d5;
+    position: relative;
+
+    &:after {
+      content: '';
+      width: 82px;
+      height: 82px;
+      background: black url('/img/white-down-chevron.svg') 50% 55% no-repeat;
+      margin-top: 21px;
+      border-radius: 50%;
+      position: absolute;
+      bottom: -40px;
+      margin-left: auto;
+      margin-right: auto;
+      left: 0;
+      right: 0;
+      z-index: 2;
+    }
+  }
+}

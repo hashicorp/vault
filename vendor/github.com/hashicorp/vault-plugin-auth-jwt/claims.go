@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/pointerstructure"
@@ -96,10 +96,52 @@ func validateBoundClaims(logger log.Logger, boundClaims, allClaims map[string]in
 			return fmt.Errorf("claim %q is missing", claim)
 		}
 
-		if expValue != actValue {
-			return fmt.Errorf("claim %q does not match associated bound claim", claim)
+		var actVals, expVals []interface{}
+
+		actVals, ok := normalizeList(actValue)
+		if !ok {
+			return fmt.Errorf("received claim is not a string or list: %v", actValue)
+		}
+
+		expVals, ok = normalizeList(expValue)
+		if !ok {
+			return fmt.Errorf("bound claim is not a string or list: %v", expValue)
+		}
+
+		found := false
+
+	scan:
+		for _, v := range expVals {
+			for _, av := range actVals {
+				if av == v {
+					found = true
+					break scan
+				}
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("claim %q does not match any associated bound claim values", claim)
 		}
 	}
 
 	return nil
+}
+
+// normalizeList takes a string, bool or list and returns a list. This is useful when
+// providers are expected to return a list (typically of strings) but reduce it
+// to a string type when the list count is 1.
+func normalizeList(raw interface{}) ([]interface{}, bool) {
+	var normalized []interface{}
+
+	switch v := raw.(type) {
+	case []interface{}:
+		normalized = v
+	case string, bool:
+		normalized = []interface{}{v}
+	default:
+		return nil, false
+	}
+
+	return normalized, true
 }

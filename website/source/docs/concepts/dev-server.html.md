@@ -42,6 +42,9 @@ flags or by specifying a configuration file):
   * **Single unseal key** - The server is initialized with a single unseal
     key. The Vault is already unsealed, but if you want to experiment with
     seal/unseal, then only the single outputted key is required.
+    
+  * **Key Value store mounted** - A v2 KV secret engine is mounted at
+    `secret/`.
 
 ## Use Case
 

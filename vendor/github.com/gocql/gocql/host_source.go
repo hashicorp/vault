@@ -1,6 +1,7 @@
 package gocql
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -86,6 +87,10 @@ func (c cassVersion) Before(major, minor, patch int) bool {
 
 	}
 	return false
+}
+
+func (c cassVersion) AtLeast(major, minor, patch int) bool {
+	return !c.Before(major, minor, patch)
 }
 
 func (c cassVersion) String() string {
@@ -555,7 +560,7 @@ func (r *ringDescriber) getClusterPeerInfo() ([]*HostInfo, error) {
 	var hosts []*HostInfo
 	iter := r.session.control.withConnHost(func(ch *connHost) *Iter {
 		hosts = append(hosts, ch.host)
-		return ch.conn.query("SELECT * FROM system.peers")
+		return ch.conn.query(context.TODO(), "SELECT * FROM system.peers")
 	})
 
 	if iter == nil {
@@ -622,7 +627,7 @@ func (r *ringDescriber) getHostInfo(ip net.IP, port int) (*HostInfo, error) {
 			return nil
 		}
 
-		return ch.conn.query("SELECT * FROM system.peers")
+		return ch.conn.query(context.TODO(), "SELECT * FROM system.peers")
 	})
 
 	if iter != nil {

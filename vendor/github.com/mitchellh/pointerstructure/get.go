@@ -14,9 +14,10 @@ func (p *Pointer) Get(v interface{}) (interface{}, error) {
 
 	// Map for lookup of getter to call for type
 	funcMap := map[reflect.Kind]func(string, reflect.Value) (reflect.Value, error){
-		reflect.Array: p.getSlice,
-		reflect.Map:   p.getMap,
-		reflect.Slice: p.getSlice,
+		reflect.Array:  p.getSlice,
+		reflect.Map:    p.getMap,
+		reflect.Slice:  p.getSlice,
+		reflect.Struct: p.getStruct,
 	}
 
 	currentVal := reflect.ValueOf(v)
@@ -88,4 +89,8 @@ func (p *Pointer) getSlice(part string, v reflect.Value) (reflect.Value, error) 
 
 	// Get the key
 	return v.Index(idx), nil
+}
+
+func (p *Pointer) getStruct(part string, m reflect.Value) (reflect.Value, error) {
+	return m.FieldByName(part), nil
 }

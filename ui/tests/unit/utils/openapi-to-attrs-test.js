@@ -9,14 +9,18 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       type: 'string',
       format: 'seconds',
       description: 'this is a TTL!',
-      'x-vault-displayName': 'TTL',
+      'x-vault-displayAttrs': {
+        name: 'TTL',
+      },
     },
     'awesome-people': {
       type: 'array',
       items: {
         type: 'string',
       },
-      'x-vault-displayValue': 'Grace Hopper,Lady Ada',
+      'x-vault-displayAttrs': {
+        value: 'Grace Hopper,Lady Ada',
+      },
     },
     'favorite-ice-cream': {
       type: 'string',
@@ -24,16 +28,22 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     },
     'default-value': {
       default: 30,
-      'x-vault-displayValue': 300,
+      'x-vault-displayAttrs': {
+        value: 300,
+      },
       type: 'integer',
     },
     default: {
-      default: 30,
+      'x-vault-displayAttrs': {
+        value: 30,
+      },
       type: 'integer',
     },
     'super-secret': {
       type: 'string',
-      'x-vault-displaySensitive': true,
+      'x-vault-displayAttrs': {
+        sensitive: true,
+      },
       description: 'A really secret thing',
     },
   };
@@ -41,35 +51,38 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     ttl: {
       helpText: 'this is a TTL!',
       editType: 'ttl',
-      type: 'string',
       label: 'TTL',
+      fieldGroup: 'default',
     },
     awesomePeople: {
       editType: 'stringArray',
-      type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
+      fieldGroup: 'default',
     },
     favoriteIceCream: {
       editType: 'string',
       type: 'string',
       possibleValues: ['vanilla', 'chocolate', 'strawberry'],
+      fieldGroup: 'default',
     },
     defaultValue: {
       editType: 'number',
       type: 'number',
       defaultValue: 300,
+      fieldGroup: 'default',
     },
     default: {
       editType: 'number',
       type: 'number',
       defaultValue: 30,
+      fieldGroup: 'default',
     },
-
     superSecret: {
       type: 'string',
       editType: 'string',
       sensitive: true,
       helpText: 'A really secret thing',
+      fieldGroup: 'default',
     },
   };
 
@@ -105,14 +118,12 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     }),
     ttl: attr('string', {
       editType: 'ttl',
-      type: 'string',
       label: 'TTL',
       helpText: 'this is a TTL!',
     }),
     awesomePeople: attr({
       label: 'People Who Are Awesome',
       editType: 'stringArray',
-      type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
     }),
     favoriteIceCream: attr('string', {

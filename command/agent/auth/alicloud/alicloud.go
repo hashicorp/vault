@@ -207,7 +207,7 @@ func (a *alicloudMethod) pollForCreds(credProvider providers.Provider, frequency
 			return
 		case <-ticker.C:
 			if err := a.checkCreds(credProvider); err != nil {
-				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
+				a.logger.Warn("unable to retrieve current creds, retaining last creds", "error", err)
 			}
 		}
 	}

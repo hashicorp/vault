@@ -1,20 +1,20 @@
 package jwtauth
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"context"
-
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
 )
 
@@ -24,20 +24,30 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"oidc_discovery_url": {
 				Type:        framework.TypeString,
-				Description: `OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwt_validation_pubkeys".`,
+				Description: `OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwks_url" or "jwt_validation_pubkeys".`,
 			},
 			"oidc_discovery_ca_pem": {
 				Type:        framework.TypeString,
-				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC Discovery URL. If not set, system certificates are used.",
+				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.",
 			},
 			"oidc_client_id": {
 				Type:        framework.TypeString,
 				Description: "The OAuth Client ID configured with your OIDC provider.",
 			},
 			"oidc_client_secret": {
-				Type:             framework.TypeString,
-				Description:      "The OAuth Client Secret configured with your OIDC provider.",
-				DisplaySensitive: true,
+				Type:        framework.TypeString,
+				Description: "The OAuth Client Secret configured with your OIDC provider.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
+			},
+			"jwks_url": {
+				Type:        framework.TypeString,
+				Description: `JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".`,
+			},
+			"jwks_ca_pem": {
+				Type:        framework.TypeString,
+				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 			"default_role": {
 				Type:        framework.TypeString,
@@ -45,7 +55,7 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 			},
 			"jwt_validation_pubkeys": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
+				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "jwks_url" or "oidc_discovery_url".`,
 			},
 			"jwt_supported_algs": {
 				Type:        framework.TypeCommaStringSlice,
@@ -76,8 +86,8 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 }
 
 func (b *jwtAuthBackend) config(ctx context.Context, s logical.Storage) (*jwtConfig, error) {
-	b.l.RLock()
-	defer b.l.RUnlock()
+	b.l.Lock()
+	defer b.l.Unlock()
 
 	if b.cachedConfig != nil {
 		return b.cachedConfig, nil
@@ -92,10 +102,8 @@ func (b *jwtAuthBackend) config(ctx context.Context, s logical.Storage) (*jwtCon
 	}
 
 	result := &jwtConfig{}
-	if entry != nil {
-		if err := entry.DecodeJSON(result); err != nil {
-			return nil, err
-		}
+	if err := entry.DecodeJSON(result); err != nil {
+		return nil, err
 	}
 
 	for _, v := range result.JWTValidationPubKeys {
@@ -128,6 +136,8 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"default_role":           config.DefaultRole,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
 			"jwt_supported_algs":     config.JWTSupportedAlgs,
+			"jwks_url":               config.JWKSURL,
+			"jwks_ca_pem":            config.JWKSCAPEM,
 			"bound_issuer":           config.BoundIssuer,
 		},
 	}
@@ -141,6 +151,8 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		OIDCDiscoveryCAPEM:   d.Get("oidc_discovery_ca_pem").(string),
 		OIDCClientID:         d.Get("oidc_client_id").(string),
 		OIDCClientSecret:     d.Get("oidc_client_secret").(string),
+		JWKSURL:              d.Get("jwks_url").(string),
+		JWKSCAPEM:            d.Get("jwks_ca_pem").(string),
 		DefaultRole:          d.Get("default_role").(string),
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
@@ -148,10 +160,20 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	}
 
 	// Run checks on values
+	methodCount := 0
+	if config.OIDCDiscoveryURL != "" {
+		methodCount++
+	}
+	if len(config.JWTValidationPubKeys) != 0 {
+		methodCount++
+	}
+	if config.JWKSURL != "" {
+		methodCount++
+	}
+
 	switch {
-	case config.OIDCDiscoveryURL == "" && len(config.JWTValidationPubKeys) == 0,
-		config.OIDCDiscoveryURL != "" && len(config.JWTValidationPubKeys) != 0:
-		return logical.ErrorResponse("exactly one of 'oidc_discovery_url' and 'jwt_validation_pubkeys' must be set"), nil
+	case methodCount != 1:
+		return logical.ErrorResponse("exactly one of 'jwt_validation_pubkeys', 'jwks_url' or 'oidc_discovery_url' must be set"), nil
 
 	case config.OIDCClientID != "" && config.OIDCClientSecret == "",
 		config.OIDCClientID == "" && config.OIDCClientSecret != "":
@@ -160,11 +182,31 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	case config.OIDCDiscoveryURL != "":
 		_, err := b.createProvider(config)
 		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error checking discovery URL: {{err}}", err).Error()), nil
+			return logical.ErrorResponse(errwrap.Wrapf("error checking oidc discovery URL: {{err}}", err).Error()), nil
 		}
 
 	case config.OIDCClientID != "" && config.OIDCDiscoveryURL == "":
 		return logical.ErrorResponse("'oidc_discovery_url' must be set for OIDC"), nil
+
+	case config.JWKSURL != "":
+		ctx, err := b.createCAContext(context.Background(), config.JWKSCAPEM)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error checking jwks_ca_pem: {{err}}", err).Error()), nil
+		}
+
+		keyset := oidc.NewRemoteKeySet(ctx, config.JWKSURL)
+
+		// Try to verify a correctly formatted JWT. The signature will fail to match, but other
+		// errors with fetching the remote keyset should be reported.
+		testJWT := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.Hf3E3iCHzqC5QIQ0nCqS1kw78IiQTRVzsLTuKoDIpdk"
+		_, err = keyset.VerifySignature(ctx, testJWT)
+		if err == nil {
+			err = errors.New("unexpected verification of JWT")
+		}
+
+		if !strings.Contains(err.Error(), "failed to verify id token signature") {
+			return logical.ErrorResponse(errwrap.Wrapf("error checking jwks URL: {{err}}", err).Error()), nil
+		}
 
 	case len(config.JWTValidationPubKeys) != 0:
 		for _, v := range config.JWTValidationPubKeys {
@@ -199,12 +241,29 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 }
 
 func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, error) {
-	var certPool *x509.CertPool
-	if config.OIDCDiscoveryCAPEM != "" {
-		certPool = x509.NewCertPool()
-		if ok := certPool.AppendCertsFromPEM([]byte(config.OIDCDiscoveryCAPEM)); !ok {
-			return nil, errors.New("could not parse 'oidc_discovery_ca_pem' value successfully")
-		}
+	oidcCtx, err := b.createCAContext(b.providerCtx, config.OIDCDiscoveryCAPEM)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating provider: {{err}}", err)
+	}
+
+	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating provider with given values: {{err}}", err)
+	}
+
+	return provider, nil
+}
+
+// createCAContext returns a context with custom TLS client, configured with the root certificates
+// from caPEM. If no certificates are configured, the original context is returned.
+func (b *jwtAuthBackend) createCAContext(ctx context.Context, caPEM string) (context.Context, error) {
+	if caPEM == "" {
+		return ctx, nil
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM([]byte(caPEM)); !ok {
+		return nil, errors.New("could not parse CA PEM value successfully")
 	}
 
 	tr := cleanhttp.DefaultPooledTransport()
@@ -216,14 +275,10 @@ func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, erro
 	tc := &http.Client{
 		Transport: tr,
 	}
-	oidcCtx := context.WithValue(b.providerCtx, oauth2.HTTPClient, tc)
 
-	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
-	if err != nil {
-		return nil, errwrap.Wrapf("error creating provider with given values: {{err}}", err)
-	}
+	caCtx := context.WithValue(ctx, oauth2.HTTPClient, tc)
 
-	return provider, nil
+	return caCtx, nil
 }
 
 type jwtConfig struct {
@@ -231,12 +286,39 @@ type jwtConfig struct {
 	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
 	OIDCClientID         string   `json:"oidc_client_id"`
 	OIDCClientSecret     string   `json:"oidc_client_secret"`
+	JWKSURL              string   `json:"jwks_url"`
+	JWKSCAPEM            string   `json:"jwks_ca_pem"`
 	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
 	JWTSupportedAlgs     []string `json:"jwt_supported_algs"`
 	BoundIssuer          string   `json:"bound_issuer"`
 	DefaultRole          string   `json:"default_role"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
+}
+
+const (
+	StaticKeys = iota
+	JWKS
+	OIDCDiscovery
+	OIDCFlow
+	unconfigured
+)
+
+// authType classifies the authorization type/flow based on config parameters.
+func (c jwtConfig) authType() int {
+	switch {
+	case len(c.ParsedJWTPubKeys) > 0:
+		return StaticKeys
+	case c.JWKSURL != "":
+		return JWKS
+	case c.OIDCDiscoveryURL != "":
+		if c.OIDCClientID != "" && c.OIDCClientSecret != "" {
+			return OIDCFlow
+		}
+		return OIDCDiscovery
+	}
+
+	return unconfigured
 }
 
 const (

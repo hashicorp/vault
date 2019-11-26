@@ -1,30 +1,30 @@
 <div class="auth-form">
   {{#if showLoading}}
     <div class="vault-loader">
-      {{partial 'svg/vault-loading'}}
+      <VaultLogoSpinner />
     </div>
   {{/if}}
   {{#if hasMethodsWithPath}}
-  <nav class="tabs is-marginless">
-    <ul>
-      {{#each methodsToShow as |method|}}
-        {{#with (or method.path method.type) as |methodKey|}}
-            <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
-              {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
-                {{or method.id (capitalize method.type)}}
-              {{/link-to}}
-            </li>
-        {{/with}}
-      {{/each}}
-      {{#if hasMethodsWithPath}}
-        <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
-          {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
-            Other
-          {{/link-to}}
-        </li>
-      {{/if}}
-    </ul>
-  </nav>
+    <nav class="tabs is-marginless">
+      <ul>
+        {{#each methodsToShow as |method|}}
+          {{#with (or method.path method.type) as |methodKey|}}
+              <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
+                {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
+                  {{or method.id (capitalize method.type)}}
+                {{/link-to}}
+              </li>
+          {{/with}}
+        {{/each}}
+        {{#if hasMethodsWithPath}}
+          <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
+            {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
+              Other
+            {{/link-to}}
+          </li>
+        {{/if}}
+      </ul>
+    </nav>
   {{/if}}
   <div class="box is-marginless is-shadowless">
     <MessageError
@@ -32,31 +32,20 @@
       data-test-auth-error
     />
     {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
-      <div class="field">
-        <label for="selectedMethod" class="is-label">
-          Method
-        </label>
-        <div class="control is-expanded" >
-          <div class="select is-fullwidth">
-            <select
-              name="selectedMethod"
-              id="selectedMethod"
-              onchange={{action (mut selectedAuth) value="target.value"}}
-              data-test-method-select
-            >
-              {{#each (supported-auth-backends) as |method|}}
-                <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
-                  {{method.typeDisplay}}
-                </option>
-              {{/each}}
-            </select>
-          </div>
-        </div>
-      </div>
+      <Select
+        @label='Method'
+        @name='auth-method'
+        @options={{supported-auth-backends}}
+        @valueAttribute={{'type'}}
+        @labelAttribute={{'typeDisplay'}}
+        @isFullwidth={{true}}
+        @selectedValue={{this.selectedAuth}}
+        @onChange={{action (mut this.selectedAuth)}}
+        />
     {{/if}}
   {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
     <AuthJwt
-      @onError={{action (mut this.error)}}
+      @onError={{action "handleError"}}
       @onLoading={{action (mut this.isLoading)}}
       @onToken={{action (mut this.token)}}
       @namespace={{this.namespace}}

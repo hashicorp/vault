@@ -55,13 +55,19 @@ time.
 As of now, the transit secrets engine supports the following key types (all key
 types also generate separate HMAC keys):
 
-* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+* `aes128-gcm96`: AES-GCM with a 128-bit AES key and a 96-bit nonce; supports
   encryption, decryption, key derivation, and convergent encryption
+* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+  encryption, decryption, key derivation, and convergent encryption (default)
 * `chacha20-poly1305`: ChaCha20-Poly1305 with a 256-bit key; supports
   encryption, decryption, key derivation, and convergent encryption
 * `ed25519`: Ed25519; supports signing, signature verification, and key
   derivation
-* `ecdsa-p256`: ECDSA using curve P256; supports signing and signature
+* `ecdsa-p256`: ECDSA using curve P-256; supports signing and signature
+  verification
+* `ecdsa-p384`: ECDSA using curve P-384; supports signing and signature
+  verification
+* `ecdsa-p521`: ECDSA using curve P-521; supports signing and signature
   verification
 * `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
   signature verification
@@ -128,6 +134,11 @@ the proper permission, it can use this secrets engine.
 
 1. Encrypt some plaintext data using the `/encrypt` endpoint with a named key:
 
+    **NOTE:** All plaintext data **must be base64-encoded**. The reason for this
+    requirement is that Vault does not require that the plaintext is "text". It
+    could be a binary file such as a PDF or image. The easiest safe transport
+    mechanism for this data as part of a JSON payload is to base64-encode it.
+
     ```text
     $ vault write transit/encrypt/my-key plaintext=$(base64 <<< "my secret data")
 
@@ -136,10 +147,11 @@ the proper permission, it can use this secrets engine.
     ciphertext    vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
     ```
 
-    All plaintext data **must be base64-encoded**. The reason for this
-    requirement is that Vault does not require that the plaintext is "text". It
-    could be a binary file such as a PDF or image. The easiest safe transport
-    mechanism for this data as part of a JSON payload is to base64-encode it.
+    The returned ciphertext starts with `vault:v1:`. The first prefix (`vault`)
+    identifies that it has been wrapped by Vault. The `v1` indicates the key
+    version 1 was used to encrypt the plaintext; therefore, when you rotate
+    keys, Vault knows which version to use for decryption. The rest is a base64
+    concatenation of the initialization vector (IV) and ciphertext.
 
     Note that Vault does not _store_ any of this data. The caller is responsible
     for storing the encrypted ciphertext. When the caller wants the plaintext,
@@ -207,6 +219,12 @@ plaintext with the newest key in the keyring.
     could grant almost an untrusted process the ability to "rewrap" encrypted
     data, since the process would not be able to get access to the plaintext
     data.
+
+## Learn
+
+Refer to the [Encryption as a Service: Transit Secrets
+Engine](https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit)
+guide for a step-by-step tutorial.
 
 ## API
 

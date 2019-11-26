@@ -81,6 +81,36 @@ $ curl \
     http://127.0.0.1:8200/v1/aws/config/root
 ```
 
+## Read Root Configuration
+
+This endpoint allows you to read non-secure values that have been configured in the
+`config/root` endpoint. In particular, the `secret_key` parameter is never returned.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/aws/config/root`           |
+
+### Sample Request
+```
+$ curl
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/aws/config/root
+
+```
+
+### Sample Response
+```json
+{
+  "data": {
+    "access_key": "AKIAEXAMPLE",
+    "region": "us-west-2",
+    "iam_endpoint": "https://iam.amazonaws.com",
+    "sts_endpoint": "https://sts.us-west-2.amazonaws.com",
+    "max_retries": -1
+  }
+}
+```
+
 ## Rotate Root IAM Credentials
 
 When you have configured Vault with static credentials, you can use this
@@ -209,9 +239,12 @@ updated with the new attributes.
   is allowed to assume. Required when `credential_type` is `assumed_role` and
   prohibited otherwise. This is a comma-separated string or JSON array.
 
-- `policy_arns` `(list: [])` – Specifies the ARNs of the AWS managed policies to
-  be attached to IAM users when they are requested. Valid only when
-  `credential_type` is `iam_user`. When `credential_type` is `iam_user`, at
+- `policy_arns` `(list: [])` – Specifies a list of AWS managed policy ARN. The
+  behavior depends on the credential type. With `iam_user`, the policies will
+  be attached to IAM users when they are requested. With `assumed_role` and
+  `federation_token`, the policy ARNs will act as a filter on what the
+  credentials can do, similar to `policy_document`.
+  When `credential_type` is `iam_user` or `federation_token`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
 
@@ -219,7 +252,7 @@ updated with the new attributes.
   behavior depends on the credential type. With `iam_user`, the policy document
   will be attached to the IAM user generated and augment the permissions the IAM
   user has. With `assumed_role` and `federation_token`, the policy document will
-  act as a filter on what the credentials can do.
+  act as a filter on what the credentials can do, similar to `policy_arns`.
 
 - `default_sts_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
   specified when STS credentials are requested, and a default TTL is specified
@@ -229,6 +262,15 @@ updated with the new attributes.
 - `max_sts_ttl` `(string)` - The max allowed TTL for STS credentials (credentials
   TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
   `assumed_role` or `federation_token`.
+
+- `user_path` `(string)` - The path for the user name. Valid only when
+  `credential_type` is `iam_user`. Default is `/`
+
+- `permissions_boundary_arn` `(string)` - The ARN of the [AWS Permissions
+  Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+  to attach to IAM users created in the role. Valid only when `credential_type`
+  is `iam_user`. If not specified, then no permissions boundary policy will be
+  attached.
 
 Legacy parameters:
 

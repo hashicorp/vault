@@ -7,15 +7,18 @@ import (
 	"strings"
 	"time"
 
-	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"gopkg.in/square/go-jose.v2/jwt"
+
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var reservedMetadata = []string{"role"}
+
+const claimDefaultLeeway = 150
 
 func pathRoleList(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
@@ -34,7 +37,7 @@ func pathRoleList(b *jwtAuthBackend) *framework.Path {
 
 // pathRole returns the path configurations for the CRUD operations on roles
 func pathRole(b *jwtAuthBackend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
@@ -45,30 +48,54 @@ func pathRole(b *jwtAuthBackend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Type of the role, either 'jwt' or 'oidc'.",
 			},
-			"policies": {
+
+			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "List of policies on the role.",
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
-			"num_uses": {
+			"num_uses": &framework.FieldSchema{
 				Type:        framework.TypeInt,
-				Description: `Number of times issued tokens can be used`,
+				Description: tokenutil.DeprecationText("token_num_uses"),
+				Deprecated:  true,
 			},
-			"ttl": {
-				Type: framework.TypeDurationSecond,
-				Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fall back to the system/mount defaults.`,
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_ttl"),
+				Deprecated:  true,
 			},
-			"max_ttl": {
-				Type: framework.TypeDurationSecond,
-				Description: `Duration in seconds after which the issued token should not be allowed to
-be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_max_ttl"),
+				Deprecated:  true,
 			},
-			"period": {
-				Type: framework.TypeDurationSecond,
-				Description: `If set, indicates that the token generated using this role
-should never expire. The token should be renewed within the
-duration specified by this value. At each renewal, the token's
-TTL will be set to the value of this parameter.`,
+			"period": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
+			},
+			"bound_cidrs": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_bound_cidrs"),
+				Deprecated:  true,
+			},
+			"expiration_leeway": {
+				Type: framework.TypeSignedDurationSecond,
+				Description: `Duration in seconds of leeway when validating expiration of a token to account for clock skew. 
+Defaults to 150 (2.5 minutes) if set to 0 and can be disabled if set to -1.`,
+				Default: claimDefaultLeeway,
+			},
+			"not_before_leeway": {
+				Type: framework.TypeSignedDurationSecond,
+				Description: `Duration in seconds of leeway when validating not before values of a token to account for clock skew. 
+Defaults to 150 (2.5 minutes) if set to 0 and can be disabled if set to -1.`,
+				Default: claimDefaultLeeway,
+			},
+			"clock_skew_leeway": {
+				Type: framework.TypeSignedDurationSecond,
+				Description: `Duration in seconds of leeway when validating all claims to account for clock skew. 
+Defaults to 60 (1 minute) if set to 0 and can be disabled if set to -1.`,
+				Default: jwt.DefaultLeeway,
 			},
 			"bound_subject": {
 				Type:        framework.TypeString,
@@ -94,11 +121,6 @@ TTL will be set to the value of this parameter.`,
 				Type:        framework.TypeString,
 				Description: `The claim to use for the Identity group alias names`,
 			},
-			"bound_cidrs": {
-				Type: framework.TypeCommaStringSlice,
-				Description: `Comma-separated list of IP CIDRS that are allowed to 
-authenticate against this role`,
-			},
 			"oidc_scopes": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of OIDC scopes`,
@@ -106,6 +128,12 @@ authenticate against this role`,
 			"allowed_redirect_uris": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of allowed values for redirect_uri`,
+			},
+			"verbose_oidc_logging": {
+				Type: framework.TypeBool,
+				Description: `Log received OIDC tokens and claims when debug-level logging is active. 
+Not recommended in production since sensitive information may be present 
+in OIDC responses.`,
 			},
 		},
 		ExistenceCheck: b.pathRoleExistenceCheck,
@@ -135,40 +163,43 @@ authenticate against this role`,
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
 type jwtRole struct {
+	tokenutil.TokenParams
+
 	RoleType string `json:"role_type"`
 
-	// Policies that are to be required by the token to access this role
-	Policies []string `json:"policies"`
+	// Duration of leeway for expiration to account for clock skew
+	ExpirationLeeway time.Duration `json:"expiration_leeway"`
 
-	// TokenNumUses defines the number of allowed uses of the token issued
-	NumUses int `json:"num_uses"`
+	// Duration of leeway for not before to account for clock skew
+	NotBeforeLeeway time.Duration `json:"not_before_leeway"`
 
-	// Duration before which an issued token must be renewed
-	TTL time.Duration `json:"ttl"`
-
-	// Duration after which an issued token should not be allowed to be renewed
-	MaxTTL time.Duration `json:"max_ttl"`
-
-	// Period, if set, indicates that the token generated using this role
-	// should never expire. The token should be renewed within the duration
-	// specified by this value. The renewal duration will be fixed if the
-	// value is not modified on the role. If the `Period` in the role is modified,
-	// a token will pick up the new value during its next renewal.
-	Period time.Duration `json:"period"`
+	// Duration of leeway for all claims to account for clock skew
+	ClockSkewLeeway time.Duration `json:"clock_skew_leeway"`
 
 	// Role binding properties
-	BoundAudiences      []string                      `json:"bound_audiences"`
-	BoundSubject        string                        `json:"bound_subject"`
-	BoundClaims         map[string]interface{}        `json:"bound_claims"`
-	ClaimMappings       map[string]string             `json:"claim_mappings"`
-	BoundCIDRs          []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
-	UserClaim           string                        `json:"user_claim"`
-	GroupsClaim         string                        `json:"groups_claim"`
-	OIDCScopes          []string                      `json:"oidc_scopes"`
-	AllowedRedirectURIs []string                      `json:"allowed_redirect_uris"`
+	BoundAudiences      []string               `json:"bound_audiences"`
+	BoundSubject        string                 `json:"bound_subject"`
+	BoundClaims         map[string]interface{} `json:"bound_claims"`
+	ClaimMappings       map[string]string      `json:"claim_mappings"`
+	UserClaim           string                 `json:"user_claim"`
+	GroupsClaim         string                 `json:"groups_claim"`
+	OIDCScopes          []string               `json:"oidc_scopes"`
+	AllowedRedirectURIs []string               `json:"allowed_redirect_uris"`
+	VerboseOIDCLogging  bool                   `json:"verbose_oidc_logging"`
+
+	// Deprecated by TokenParams
+	Policies   []string                      `json:"policies"`
+	NumUses    int                           `json:"num_uses"`
+	TTL        time.Duration                 `json:"ttl"`
+	MaxTTL     time.Duration                 `json:"max_ttl"`
+	Period     time.Duration                 `json:"period"`
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 }
 
 // role takes a storage backend and the name and returns the role's storage
@@ -190,6 +221,25 @@ func (b *jwtAuthBackend) role(ctx context.Context, s logical.Storage, name strin
 	// Report legacy roles as type "jwt"
 	if role.RoleType == "" {
 		role.RoleType = "jwt"
+	}
+
+	if role.TokenTTL == 0 && role.TTL > 0 {
+		role.TokenTTL = role.TTL
+	}
+	if role.TokenMaxTTL == 0 && role.MaxTTL > 0 {
+		role.TokenMaxTTL = role.MaxTTL
+	}
+	if role.TokenPeriod == 0 && role.Period > 0 {
+		role.TokenPeriod = role.Period
+	}
+	if role.TokenNumUses == 0 && role.NumUses > 0 {
+		role.TokenNumUses = role.NumUses
+	}
+	if len(role.TokenPolicies) == 0 && len(role.Policies) > 0 {
+		role.TokenPolicies = role.Policies
+	}
+	if len(role.TokenBoundCIDRs) == 0 && len(role.BoundCIDRs) > 0 {
+		role.TokenBoundCIDRs = role.BoundCIDRs
 	}
 
 	return role, nil
@@ -229,26 +279,46 @@ func (b *jwtAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Create a map of data to be returned
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"role_type":             role.RoleType,
-			"policies":              role.Policies,
-			"num_uses":              role.NumUses,
-			"period":                int64(role.Period.Seconds()),
-			"ttl":                   int64(role.TTL.Seconds()),
-			"max_ttl":               int64(role.MaxTTL.Seconds()),
-			"bound_audiences":       role.BoundAudiences,
-			"bound_subject":         role.BoundSubject,
-			"bound_cidrs":           role.BoundCIDRs,
-			"bound_claims":          role.BoundClaims,
-			"claim_mappings":        role.ClaimMappings,
-			"user_claim":            role.UserClaim,
-			"groups_claim":          role.GroupsClaim,
-			"allowed_redirect_uris": role.AllowedRedirectURIs,
-		},
+	d := map[string]interface{}{
+		"role_type":             role.RoleType,
+		"expiration_leeway":     int64(role.ExpirationLeeway.Seconds()),
+		"not_before_leeway":     int64(role.NotBeforeLeeway.Seconds()),
+		"clock_skew_leeway":     int64(role.ClockSkewLeeway.Seconds()),
+		"bound_audiences":       role.BoundAudiences,
+		"bound_subject":         role.BoundSubject,
+		"bound_claims":          role.BoundClaims,
+		"claim_mappings":        role.ClaimMappings,
+		"user_claim":            role.UserClaim,
+		"groups_claim":          role.GroupsClaim,
+		"allowed_redirect_uris": role.AllowedRedirectURIs,
+		"oidc_scopes":           role.OIDCScopes,
+		"verbose_oidc_logging":  role.VerboseOIDCLogging,
 	}
 
-	return resp, nil
+	role.PopulateTokenData(d)
+
+	if len(role.Policies) > 0 {
+		d["policies"] = d["token_policies"]
+	}
+	if len(role.BoundCIDRs) > 0 {
+		d["bound_cidrs"] = d["token_bound_cidrs"]
+	}
+	if role.TTL > 0 {
+		d["ttl"] = int64(role.TTL.Seconds())
+	}
+	if role.MaxTTL > 0 {
+		d["max_ttl"] = int64(role.MaxTTL.Seconds())
+	}
+	if role.Period > 0 {
+		d["period"] = int64(role.Period.Seconds())
+	}
+	if role.NumUses > 0 {
+		d["num_uses"] = role.NumUses
+	}
+
+	return &logical.Response{
+		Data: d,
+	}, nil
 }
 
 // pathRoleDelete removes the role from storage
@@ -297,39 +367,51 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	}
 	role.RoleType = roleType
 
-	if policiesRaw, ok := data.GetOk("policies"); ok {
-		role.Policies = policyutil.ParsePolicies(policiesRaw)
+	if err := role.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	periodRaw, ok := data.GetOk("period")
-	if ok {
-		role.Period = time.Duration(periodRaw.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		role.Period = time.Duration(data.Get("period").(int)) * time.Second
-	}
-	if role.Period > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("'period' of '%q' is greater than the backend's maximum lease TTL of '%q'", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	// Handle upgrade cases
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "bound_cidrs", "token_bound_cidrs", &role.BoundCIDRs, &role.TokenBoundCIDRs); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "num_uses", "token_num_uses", &role.NumUses, &role.TokenNumUses); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &role.TTL, &role.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &role.MaxTTL, &role.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
-	if tokenNumUsesRaw, ok := data.GetOk("num_uses"); ok {
-		role.NumUses = tokenNumUsesRaw.(int)
-	} else if req.Operation == logical.CreateOperation {
-		role.NumUses = data.Get("num_uses").(int)
-	}
-	if role.NumUses < 0 {
-		return logical.ErrorResponse("num_uses cannot be negative"), nil
+	if role.TokenPeriod > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("'period' of '%q' is greater than the backend's maximum lease TTL of '%q'", role.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
-	if tokenTTLRaw, ok := data.GetOk("ttl"); ok {
-		role.TTL = time.Duration(tokenTTLRaw.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		role.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
+	if tokenExpLeewayRaw, ok := data.GetOk("expiration_leeway"); ok {
+		role.ExpirationLeeway = time.Duration(tokenExpLeewayRaw.(int)) * time.Second
 	}
 
-	if tokenMaxTTLRaw, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Duration(tokenMaxTTLRaw.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
+	if tokenNotBeforeLeewayRaw, ok := data.GetOk("not_before_leeway"); ok {
+		role.NotBeforeLeeway = time.Duration(tokenNotBeforeLeewayRaw.(int)) * time.Second
+	}
+
+	if tokenClockSkewLeeway, ok := data.GetOk("clock_skew_leeway"); ok {
+		role.ClockSkewLeeway = time.Duration(tokenClockSkewLeeway.(int)) * time.Second
 	}
 
 	if boundAudiences, ok := data.GetOk("bound_audiences"); ok {
@@ -340,12 +422,8 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		role.BoundSubject = boundSubject.(string)
 	}
 
-	if boundCIDRs, ok := data.GetOk("bound_cidrs"); ok {
-		parsedCIDRs, err := parseutil.ParseAddrs(boundCIDRs)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		role.BoundCIDRs = parsedCIDRs
+	if verboseOIDCLoggingRaw, ok := data.GetOk("verbose_oidc_logging"); ok {
+		role.VerboseOIDCLogging = verboseOIDCLoggingRaw.(bool)
 	}
 
 	if boundClaimsRaw, ok := data.GetOk("bound_claims"); ok {
@@ -359,11 +437,11 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		targets := make(map[string]bool)
 		for _, metadataKey := range claimMappings {
 			if strutil.StrListContains(reservedMetadata, metadataKey) {
-				return logical.ErrorResponse("metadata key '%s' is reserved and may not be a mapping destination", metadataKey), nil
+				return logical.ErrorResponse("metadata key %q is reserved and may not be a mapping destination", metadataKey), nil
 			}
 
 			if targets[metadataKey] {
-				return logical.ErrorResponse("multiple keys are mapped to metadata key '%s'", metadataKey), nil
+				return logical.ErrorResponse("multiple keys are mapped to metadata key %q", metadataKey), nil
 			}
 			targets[metadataKey] = true
 		}
@@ -399,8 +477,9 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	// For other methods, require at least one bound constraint.
 	if roleType != "oidc" {
 		if len(role.BoundAudiences) == 0 &&
-			len(role.BoundCIDRs) == 0 &&
-			role.BoundSubject == "" {
+			len(role.TokenBoundCIDRs) == 0 &&
+			role.BoundSubject == "" &&
+			len(role.BoundClaims) == 0 {
 			return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
 		}
 	}
@@ -408,14 +487,19 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	// Check that the TTL value provided is less than the MaxTTL.
 	// Sanitizing the TTL and MaxTTL is not required now and can be performed
 	// at credential issue time.
-	if role.MaxTTL > 0 && role.TTL > role.MaxTTL {
-		return logical.ErrorResponse("ttl should not be greater than max_ttl"), nil
+	if role.TokenMaxTTL > 0 && role.TokenTTL > role.TokenMaxTTL {
+		return logical.ErrorResponse("ttl should not be greater than max ttl"), nil
 	}
 
-	var resp *logical.Response
-	if role.MaxTTL > b.System().MaxLeaseTTL() {
-		resp = &logical.Response{}
-		resp.AddWarning("max_ttl is greater than the system or backend mount's maximum TTL value; issued tokens' max TTL value will be truncated")
+	resp := &logical.Response{}
+	if role.TokenMaxTTL > b.System().MaxLeaseTTL() {
+		resp.AddWarning("token max ttl is greater than the system or backend mount's maximum TTL value; issued tokens' max TTL value will be truncated")
+	}
+
+	if role.VerboseOIDCLogging {
+		resp.AddWarning(`verbose_oidc_logging has been enabled for this role. ` +
+			`This is not recommended in production since sensitive information ` +
+			`may be present in OIDC responses.`)
 	}
 
 	// Store the entry.

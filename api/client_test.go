@@ -2,12 +2,13 @@ package api
 
 import (
 	"bytes"
-	"github.com/hashicorp/vault/helper/consts"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -191,6 +192,22 @@ func TestClientEnvSettings(t *testing.T) {
 	if tlsConfig.GetClientCertificate == nil {
 		t.Fatalf("bad: expected client tls config to have a certificate getter")
 	}
+	if tlsConfig.InsecureSkipVerify != true {
+		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+}
+
+func TestClientDeprecatedEnvSettings(t *testing.T) {
+	oldInsecure := os.Getenv(EnvVaultInsecure)
+	os.Setenv(EnvVaultInsecure, "true")
+	defer os.Setenv(EnvVaultInsecure, oldInsecure)
+
+	config := DefaultConfig()
+	if err := config.ReadEnvironment(); err != nil {
+		t.Fatalf("error reading environment: %v", err)
+	}
+
+	tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
 	}

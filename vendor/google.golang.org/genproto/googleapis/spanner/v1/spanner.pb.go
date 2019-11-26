@@ -4,15 +4,17 @@
 package spanner
 
 import (
+	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
+	status "google.golang.org/genproto/googleapis/rpc/status"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,7 +26,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // Mode in which the statement must be processed.
 type ExecuteSqlRequest_QueryMode int32
@@ -237,7 +239,8 @@ type ListSessionsRequest struct {
 	// to the server's maximum allowed page size.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// If non-empty, `page_token` should contain a
-	// [next_page_token][google.spanner.v1.ListSessionsResponse.next_page_token] from a previous
+	// [next_page_token][google.spanner.v1.ListSessionsResponse.next_page_token]
+	// from a previous
 	// [ListSessionsResponse][google.spanner.v1.ListSessionsResponse].
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// An expression for filtering the results of the request. Filter rules are
@@ -314,8 +317,8 @@ type ListSessionsResponse struct {
 	// The list of requested sessions.
 	Sessions []*Session `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
 	// `next_page_token` can be sent in a subsequent
-	// [ListSessions][google.spanner.v1.Spanner.ListSessions] call to fetch more of the matching
-	// sessions.
+	// [ListSessions][google.spanner.v1.Spanner.ListSessions] call to fetch more
+	// of the matching sessions.
 	NextPageToken        string   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -440,7 +443,8 @@ type ExecuteSqlRequest struct {
 	Params *_struct.Struct `protobuf:"bytes,4,opt,name=params,proto3" json:"params,omitempty"`
 	// It is not always possible for Cloud Spanner to infer the right SQL type
 	// from a JSON value.  For example, values of type `BYTES` and values
-	// of type `STRING` both appear in [params][google.spanner.v1.ExecuteSqlRequest.params] as JSON strings.
+	// of type `STRING` both appear in
+	// [params][google.spanner.v1.ExecuteSqlRequest.params] as JSON strings.
 	//
 	// In these cases, `param_types` can be used to specify the exact
 	// SQL type for some or all of the SQL statement parameters. See the
@@ -449,14 +453,17 @@ type ExecuteSqlRequest struct {
 	ParamTypes map[string]*Type `protobuf:"bytes,5,rep,name=param_types,json=paramTypes,proto3" json:"param_types,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// If this request is resuming a previously interrupted SQL statement
 	// execution, `resume_token` should be copied from the last
-	// [PartialResultSet][google.spanner.v1.PartialResultSet] yielded before the interruption. Doing this
-	// enables the new SQL statement execution to resume where the last one left
-	// off. The rest of the request parameters must exactly match the
-	// request that yielded this token.
+	// [PartialResultSet][google.spanner.v1.PartialResultSet] yielded before the
+	// interruption. Doing this enables the new SQL statement execution to resume
+	// where the last one left off. The rest of the request parameters must
+	// exactly match the request that yielded this token.
 	ResumeToken []byte `protobuf:"bytes,6,opt,name=resume_token,json=resumeToken,proto3" json:"resume_token,omitempty"`
 	// Used to control the amount of debugging information returned in
-	// [ResultSetStats][google.spanner.v1.ResultSetStats]. If [partition_token][google.spanner.v1.ExecuteSqlRequest.partition_token] is set, [query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode] can only
-	// be set to [QueryMode.NORMAL][google.spanner.v1.ExecuteSqlRequest.QueryMode.NORMAL].
+	// [ResultSetStats][google.spanner.v1.ResultSetStats]. If
+	// [partition_token][google.spanner.v1.ExecuteSqlRequest.partition_token] is
+	// set, [query_mode][google.spanner.v1.ExecuteSqlRequest.query_mode] can only
+	// be set to
+	// [QueryMode.NORMAL][google.spanner.v1.ExecuteSqlRequest.QueryMode.NORMAL].
 	QueryMode ExecuteSqlRequest_QueryMode `protobuf:"varint,7,opt,name=query_mode,json=queryMode,proto3,enum=google.spanner.v1.ExecuteSqlRequest_QueryMode" json:"query_mode,omitempty"`
 	// If present, results will be restricted to the specified partition
 	// previously created using PartitionQuery().  There must be an exact
@@ -567,6 +574,238 @@ func (m *ExecuteSqlRequest) GetSeqno() int64 {
 	return 0
 }
 
+// The request for [ExecuteBatchDml][google.spanner.v1.Spanner.ExecuteBatchDml]
+type ExecuteBatchDmlRequest struct {
+	// Required. The session in which the DML statements should be performed.
+	Session string `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
+	// The transaction to use. A ReadWrite transaction is required. Single-use
+	// transactions are not supported (to avoid replay).  The caller must either
+	// supply an existing transaction ID or begin a new transaction.
+	Transaction *TransactionSelector `protobuf:"bytes,2,opt,name=transaction,proto3" json:"transaction,omitempty"`
+	// The list of statements to execute in this batch. Statements are executed
+	// serially, such that the effects of statement i are visible to statement
+	// i+1. Each statement must be a DML statement. Execution will stop at the
+	// first failed statement; the remaining statements will not run.
+	//
+	// REQUIRES: statements_size() > 0.
+	Statements []*ExecuteBatchDmlRequest_Statement `protobuf:"bytes,3,rep,name=statements,proto3" json:"statements,omitempty"`
+	// A per-transaction sequence number used to identify this request. This is
+	// used in the same space as the seqno in
+	// [ExecuteSqlRequest][Spanner.ExecuteSqlRequest]. See more details
+	// in [ExecuteSqlRequest][Spanner.ExecuteSqlRequest].
+	Seqno                int64    `protobuf:"varint,4,opt,name=seqno,proto3" json:"seqno,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExecuteBatchDmlRequest) Reset()         { *m = ExecuteBatchDmlRequest{} }
+func (m *ExecuteBatchDmlRequest) String() string { return proto.CompactTextString(m) }
+func (*ExecuteBatchDmlRequest) ProtoMessage()    {}
+func (*ExecuteBatchDmlRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a420fdbb92791b07, []int{7}
+}
+
+func (m *ExecuteBatchDmlRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecuteBatchDmlRequest.Unmarshal(m, b)
+}
+func (m *ExecuteBatchDmlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecuteBatchDmlRequest.Marshal(b, m, deterministic)
+}
+func (m *ExecuteBatchDmlRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecuteBatchDmlRequest.Merge(m, src)
+}
+func (m *ExecuteBatchDmlRequest) XXX_Size() int {
+	return xxx_messageInfo_ExecuteBatchDmlRequest.Size(m)
+}
+func (m *ExecuteBatchDmlRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecuteBatchDmlRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExecuteBatchDmlRequest proto.InternalMessageInfo
+
+func (m *ExecuteBatchDmlRequest) GetSession() string {
+	if m != nil {
+		return m.Session
+	}
+	return ""
+}
+
+func (m *ExecuteBatchDmlRequest) GetTransaction() *TransactionSelector {
+	if m != nil {
+		return m.Transaction
+	}
+	return nil
+}
+
+func (m *ExecuteBatchDmlRequest) GetStatements() []*ExecuteBatchDmlRequest_Statement {
+	if m != nil {
+		return m.Statements
+	}
+	return nil
+}
+
+func (m *ExecuteBatchDmlRequest) GetSeqno() int64 {
+	if m != nil {
+		return m.Seqno
+	}
+	return 0
+}
+
+// A single DML statement.
+type ExecuteBatchDmlRequest_Statement struct {
+	// Required. The DML string.
+	Sql string `protobuf:"bytes,1,opt,name=sql,proto3" json:"sql,omitempty"`
+	// The DML string can contain parameter placeholders. A parameter
+	// placeholder consists of `'@'` followed by the parameter
+	// name. Parameter names consist of any combination of letters,
+	// numbers, and underscores.
+	//
+	// Parameters can appear anywhere that a literal value is expected.  The
+	// same parameter name can be used more than once, for example:
+	//   `"WHERE id > @msg_id AND id < @msg_id + 100"`
+	//
+	// It is an error to execute an SQL statement with unbound parameters.
+	//
+	// Parameter values are specified using `params`, which is a JSON
+	// object whose keys are parameter names, and whose values are the
+	// corresponding parameter values.
+	Params *_struct.Struct `protobuf:"bytes,2,opt,name=params,proto3" json:"params,omitempty"`
+	// It is not always possible for Cloud Spanner to infer the right SQL type
+	// from a JSON value.  For example, values of type `BYTES` and values
+	// of type `STRING` both appear in [params][google.spanner.v1.ExecuteBatchDmlRequest.Statement.params] as JSON strings.
+	//
+	// In these cases, `param_types` can be used to specify the exact
+	// SQL type for some or all of the SQL statement parameters. See the
+	// definition of [Type][google.spanner.v1.Type] for more information
+	// about SQL types.
+	ParamTypes           map[string]*Type `protobuf:"bytes,3,rep,name=param_types,json=paramTypes,proto3" json:"param_types,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
+}
+
+func (m *ExecuteBatchDmlRequest_Statement) Reset()         { *m = ExecuteBatchDmlRequest_Statement{} }
+func (m *ExecuteBatchDmlRequest_Statement) String() string { return proto.CompactTextString(m) }
+func (*ExecuteBatchDmlRequest_Statement) ProtoMessage()    {}
+func (*ExecuteBatchDmlRequest_Statement) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a420fdbb92791b07, []int{7, 0}
+}
+
+func (m *ExecuteBatchDmlRequest_Statement) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecuteBatchDmlRequest_Statement.Unmarshal(m, b)
+}
+func (m *ExecuteBatchDmlRequest_Statement) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecuteBatchDmlRequest_Statement.Marshal(b, m, deterministic)
+}
+func (m *ExecuteBatchDmlRequest_Statement) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecuteBatchDmlRequest_Statement.Merge(m, src)
+}
+func (m *ExecuteBatchDmlRequest_Statement) XXX_Size() int {
+	return xxx_messageInfo_ExecuteBatchDmlRequest_Statement.Size(m)
+}
+func (m *ExecuteBatchDmlRequest_Statement) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecuteBatchDmlRequest_Statement.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExecuteBatchDmlRequest_Statement proto.InternalMessageInfo
+
+func (m *ExecuteBatchDmlRequest_Statement) GetSql() string {
+	if m != nil {
+		return m.Sql
+	}
+	return ""
+}
+
+func (m *ExecuteBatchDmlRequest_Statement) GetParams() *_struct.Struct {
+	if m != nil {
+		return m.Params
+	}
+	return nil
+}
+
+func (m *ExecuteBatchDmlRequest_Statement) GetParamTypes() map[string]*Type {
+	if m != nil {
+		return m.ParamTypes
+	}
+	return nil
+}
+
+// The response for [ExecuteBatchDml][google.spanner.v1.Spanner.ExecuteBatchDml]. Contains a list
+// of [ResultSet][google.spanner.v1.ResultSet], one for each DML statement that has successfully executed.
+// If a statement fails, the error is returned as part of the response payload.
+// Clients can determine whether all DML statements have run successfully, or if
+// a statement failed, using one of the following approaches:
+//
+//   1. Check if 'status' field is OkStatus.
+//   2. Check if result_sets_size() equals the number of statements in
+//      [ExecuteBatchDmlRequest][Spanner.ExecuteBatchDmlRequest].
+//
+// Example 1: A request with 5 DML statements, all executed successfully.
+// Result: A response with 5 ResultSets, one for each statement in the same
+// order, and an OK status.
+//
+// Example 2: A request with 5 DML statements. The 3rd statement has a syntax
+// error.
+// Result: A response with 2 ResultSets, for the first 2 statements that
+// run successfully, and a syntax error (INVALID_ARGUMENT) status. From
+// result_set_size() client can determine that the 3rd statement has failed.
+type ExecuteBatchDmlResponse struct {
+	// ResultSets, one for each statement in the request that ran successfully, in
+	// the same order as the statements in the request. Each [ResultSet][google.spanner.v1.ResultSet] will
+	// not contain any rows. The [ResultSetStats][google.spanner.v1.ResultSetStats] in each [ResultSet][google.spanner.v1.ResultSet] will
+	// contain the number of rows modified by the statement.
+	//
+	// Only the first ResultSet in the response contains a valid
+	// [ResultSetMetadata][google.spanner.v1.ResultSetMetadata].
+	ResultSets []*ResultSet `protobuf:"bytes,1,rep,name=result_sets,json=resultSets,proto3" json:"result_sets,omitempty"`
+	// If all DML statements are executed successfully, status will be OK.
+	// Otherwise, the error status of the first failed statement.
+	Status               *status.Status `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *ExecuteBatchDmlResponse) Reset()         { *m = ExecuteBatchDmlResponse{} }
+func (m *ExecuteBatchDmlResponse) String() string { return proto.CompactTextString(m) }
+func (*ExecuteBatchDmlResponse) ProtoMessage()    {}
+func (*ExecuteBatchDmlResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a420fdbb92791b07, []int{8}
+}
+
+func (m *ExecuteBatchDmlResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecuteBatchDmlResponse.Unmarshal(m, b)
+}
+func (m *ExecuteBatchDmlResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecuteBatchDmlResponse.Marshal(b, m, deterministic)
+}
+func (m *ExecuteBatchDmlResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecuteBatchDmlResponse.Merge(m, src)
+}
+func (m *ExecuteBatchDmlResponse) XXX_Size() int {
+	return xxx_messageInfo_ExecuteBatchDmlResponse.Size(m)
+}
+func (m *ExecuteBatchDmlResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecuteBatchDmlResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExecuteBatchDmlResponse proto.InternalMessageInfo
+
+func (m *ExecuteBatchDmlResponse) GetResultSets() []*ResultSet {
+	if m != nil {
+		return m.ResultSets
+	}
+	return nil
+}
+
+func (m *ExecuteBatchDmlResponse) GetStatus() *status.Status {
+	if m != nil {
+		return m.Status
+	}
+	return nil
+}
+
 // Options for a PartitionQueryRequest and
 // PartitionReadRequest.
 type PartitionOptions struct {
@@ -595,7 +834,7 @@ func (m *PartitionOptions) Reset()         { *m = PartitionOptions{} }
 func (m *PartitionOptions) String() string { return proto.CompactTextString(m) }
 func (*PartitionOptions) ProtoMessage()    {}
 func (*PartitionOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{7}
+	return fileDescriptor_a420fdbb92791b07, []int{9}
 }
 
 func (m *PartitionOptions) XXX_Unmarshal(b []byte) error {
@@ -645,7 +884,8 @@ type PartitionQueryRequest struct {
 	// then unions all results.
 	//
 	// This must not contain DML commands, such as INSERT, UPDATE, or
-	// DELETE. Use [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] with a
+	// DELETE. Use
+	// [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] with a
 	// PartitionedDml transaction for large, partition-friendly DML operations.
 	Sql string `protobuf:"bytes,3,opt,name=sql,proto3" json:"sql,omitempty"`
 	// The SQL query string can contain parameter placeholders. A parameter
@@ -665,7 +905,8 @@ type PartitionQueryRequest struct {
 	Params *_struct.Struct `protobuf:"bytes,4,opt,name=params,proto3" json:"params,omitempty"`
 	// It is not always possible for Cloud Spanner to infer the right SQL type
 	// from a JSON value.  For example, values of type `BYTES` and values
-	// of type `STRING` both appear in [params][google.spanner.v1.PartitionQueryRequest.params] as JSON strings.
+	// of type `STRING` both appear in
+	// [params][google.spanner.v1.PartitionQueryRequest.params] as JSON strings.
 	//
 	// In these cases, `param_types` can be used to specify the exact
 	// SQL type for some or all of the SQL query parameters. See the
@@ -683,7 +924,7 @@ func (m *PartitionQueryRequest) Reset()         { *m = PartitionQueryRequest{} }
 func (m *PartitionQueryRequest) String() string { return proto.CompactTextString(m) }
 func (*PartitionQueryRequest) ProtoMessage()    {}
 func (*PartitionQueryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{8}
+	return fileDescriptor_a420fdbb92791b07, []int{10}
 }
 
 func (m *PartitionQueryRequest) XXX_Unmarshal(b []byte) error {
@@ -755,16 +996,22 @@ type PartitionReadRequest struct {
 	Transaction *TransactionSelector `protobuf:"bytes,2,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	// Required. The name of the table in the database to be read.
 	Table string `protobuf:"bytes,3,opt,name=table,proto3" json:"table,omitempty"`
-	// If non-empty, the name of an index on [table][google.spanner.v1.PartitionReadRequest.table]. This index is
-	// used instead of the table primary key when interpreting [key_set][google.spanner.v1.PartitionReadRequest.key_set]
-	// and sorting result rows. See [key_set][google.spanner.v1.PartitionReadRequest.key_set] for further information.
+	// If non-empty, the name of an index on
+	// [table][google.spanner.v1.PartitionReadRequest.table]. This index is used
+	// instead of the table primary key when interpreting
+	// [key_set][google.spanner.v1.PartitionReadRequest.key_set] and sorting
+	// result rows. See [key_set][google.spanner.v1.PartitionReadRequest.key_set]
+	// for further information.
 	Index string `protobuf:"bytes,4,opt,name=index,proto3" json:"index,omitempty"`
-	// The columns of [table][google.spanner.v1.PartitionReadRequest.table] to be returned for each row matching
-	// this request.
+	// The columns of [table][google.spanner.v1.PartitionReadRequest.table] to be
+	// returned for each row matching this request.
 	Columns []string `protobuf:"bytes,5,rep,name=columns,proto3" json:"columns,omitempty"`
 	// Required. `key_set` identifies the rows to be yielded. `key_set` names the
-	// primary keys of the rows in [table][google.spanner.v1.PartitionReadRequest.table] to be yielded, unless [index][google.spanner.v1.PartitionReadRequest.index]
-	// is present. If [index][google.spanner.v1.PartitionReadRequest.index] is present, then [key_set][google.spanner.v1.PartitionReadRequest.key_set] instead names
+	// primary keys of the rows in
+	// [table][google.spanner.v1.PartitionReadRequest.table] to be yielded, unless
+	// [index][google.spanner.v1.PartitionReadRequest.index] is present. If
+	// [index][google.spanner.v1.PartitionReadRequest.index] is present, then
+	// [key_set][google.spanner.v1.PartitionReadRequest.key_set] instead names
 	// index keys in [index][google.spanner.v1.PartitionReadRequest.index].
 	//
 	// It is not an error for the `key_set` to name rows that do not
@@ -781,7 +1028,7 @@ func (m *PartitionReadRequest) Reset()         { *m = PartitionReadRequest{} }
 func (m *PartitionReadRequest) String() string { return proto.CompactTextString(m) }
 func (*PartitionReadRequest) ProtoMessage()    {}
 func (*PartitionReadRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{9}
+	return fileDescriptor_a420fdbb92791b07, []int{11}
 }
 
 func (m *PartitionReadRequest) XXX_Unmarshal(b []byte) error {
@@ -867,7 +1114,7 @@ func (m *Partition) Reset()         { *m = Partition{} }
 func (m *Partition) String() string { return proto.CompactTextString(m) }
 func (*Partition) ProtoMessage()    {}
 func (*Partition) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{10}
+	return fileDescriptor_a420fdbb92791b07, []int{12}
 }
 
 func (m *Partition) XXX_Unmarshal(b []byte) error {
@@ -911,7 +1158,7 @@ func (m *PartitionResponse) Reset()         { *m = PartitionResponse{} }
 func (m *PartitionResponse) String() string { return proto.CompactTextString(m) }
 func (*PartitionResponse) ProtoMessage()    {}
 func (*PartitionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{11}
+	return fileDescriptor_a420fdbb92791b07, []int{13}
 }
 
 func (m *PartitionResponse) XXX_Unmarshal(b []byte) error {
@@ -956,22 +1203,29 @@ type ReadRequest struct {
 	Transaction *TransactionSelector `protobuf:"bytes,2,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	// Required. The name of the table in the database to be read.
 	Table string `protobuf:"bytes,3,opt,name=table,proto3" json:"table,omitempty"`
-	// If non-empty, the name of an index on [table][google.spanner.v1.ReadRequest.table]. This index is
-	// used instead of the table primary key when interpreting [key_set][google.spanner.v1.ReadRequest.key_set]
-	// and sorting result rows. See [key_set][google.spanner.v1.ReadRequest.key_set] for further information.
+	// If non-empty, the name of an index on
+	// [table][google.spanner.v1.ReadRequest.table]. This index is used instead of
+	// the table primary key when interpreting
+	// [key_set][google.spanner.v1.ReadRequest.key_set] and sorting result rows.
+	// See [key_set][google.spanner.v1.ReadRequest.key_set] for further
+	// information.
 	Index string `protobuf:"bytes,4,opt,name=index,proto3" json:"index,omitempty"`
-	// The columns of [table][google.spanner.v1.ReadRequest.table] to be returned for each row matching
-	// this request.
+	// The columns of [table][google.spanner.v1.ReadRequest.table] to be returned
+	// for each row matching this request.
 	Columns []string `protobuf:"bytes,5,rep,name=columns,proto3" json:"columns,omitempty"`
 	// Required. `key_set` identifies the rows to be yielded. `key_set` names the
-	// primary keys of the rows in [table][google.spanner.v1.ReadRequest.table] to be yielded, unless [index][google.spanner.v1.ReadRequest.index]
-	// is present. If [index][google.spanner.v1.ReadRequest.index] is present, then [key_set][google.spanner.v1.ReadRequest.key_set] instead names
-	// index keys in [index][google.spanner.v1.ReadRequest.index].
+	// primary keys of the rows in [table][google.spanner.v1.ReadRequest.table] to
+	// be yielded, unless [index][google.spanner.v1.ReadRequest.index] is present.
+	// If [index][google.spanner.v1.ReadRequest.index] is present, then
+	// [key_set][google.spanner.v1.ReadRequest.key_set] instead names index keys
+	// in [index][google.spanner.v1.ReadRequest.index].
 	//
-	// If the [partition_token][google.spanner.v1.ReadRequest.partition_token] field is empty, rows are yielded
-	// in table primary key order (if [index][google.spanner.v1.ReadRequest.index] is empty) or index key order
-	// (if [index][google.spanner.v1.ReadRequest.index] is non-empty).  If the [partition_token][google.spanner.v1.ReadRequest.partition_token] field is not
-	// empty, rows will be yielded in an unspecified order.
+	// If the [partition_token][google.spanner.v1.ReadRequest.partition_token]
+	// field is empty, rows are yielded in table primary key order (if
+	// [index][google.spanner.v1.ReadRequest.index] is empty) or index key order
+	// (if [index][google.spanner.v1.ReadRequest.index] is non-empty).  If the
+	// [partition_token][google.spanner.v1.ReadRequest.partition_token] field is
+	// not empty, rows will be yielded in an unspecified order.
 	//
 	// It is not an error for the `key_set` to name rows that do not
 	// exist in the database. Read yields nothing for nonexistent rows.
@@ -982,9 +1236,9 @@ type ReadRequest struct {
 	Limit int64 `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty"`
 	// If this request is resuming a previously interrupted read,
 	// `resume_token` should be copied from the last
-	// [PartialResultSet][google.spanner.v1.PartialResultSet] yielded before the interruption. Doing this
-	// enables the new read to resume where the last read left off. The
-	// rest of the request parameters must exactly match the request
+	// [PartialResultSet][google.spanner.v1.PartialResultSet] yielded before the
+	// interruption. Doing this enables the new read to resume where the last read
+	// left off. The rest of the request parameters must exactly match the request
 	// that yielded this token.
 	ResumeToken []byte `protobuf:"bytes,9,opt,name=resume_token,json=resumeToken,proto3" json:"resume_token,omitempty"`
 	// If present, results will be restricted to the specified partition
@@ -1001,7 +1255,7 @@ func (m *ReadRequest) Reset()         { *m = ReadRequest{} }
 func (m *ReadRequest) String() string { return proto.CompactTextString(m) }
 func (*ReadRequest) ProtoMessage()    {}
 func (*ReadRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{12}
+	return fileDescriptor_a420fdbb92791b07, []int{14}
 }
 
 func (m *ReadRequest) XXX_Unmarshal(b []byte) error {
@@ -1085,7 +1339,8 @@ func (m *ReadRequest) GetPartitionToken() []byte {
 	return nil
 }
 
-// The request for [BeginTransaction][google.spanner.v1.Spanner.BeginTransaction].
+// The request for
+// [BeginTransaction][google.spanner.v1.Spanner.BeginTransaction].
 type BeginTransactionRequest struct {
 	// Required. The session in which the transaction runs.
 	Session string `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
@@ -1100,7 +1355,7 @@ func (m *BeginTransactionRequest) Reset()         { *m = BeginTransactionRequest
 func (m *BeginTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*BeginTransactionRequest) ProtoMessage()    {}
 func (*BeginTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{13}
+	return fileDescriptor_a420fdbb92791b07, []int{15}
 }
 
 func (m *BeginTransactionRequest) XXX_Unmarshal(b []byte) error {
@@ -1158,7 +1413,7 @@ func (m *CommitRequest) Reset()         { *m = CommitRequest{} }
 func (m *CommitRequest) String() string { return proto.CompactTextString(m) }
 func (*CommitRequest) ProtoMessage()    {}
 func (*CommitRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{14}
+	return fileDescriptor_a420fdbb92791b07, []int{16}
 }
 
 func (m *CommitRequest) XXX_Unmarshal(b []byte) error {
@@ -1230,74 +1485,12 @@ func (m *CommitRequest) GetMutations() []*Mutation {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*CommitRequest) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _CommitRequest_OneofMarshaler, _CommitRequest_OneofUnmarshaler, _CommitRequest_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*CommitRequest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*CommitRequest_TransactionId)(nil),
 		(*CommitRequest_SingleUseTransaction)(nil),
 	}
-}
-
-func _CommitRequest_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*CommitRequest)
-	// transaction
-	switch x := m.Transaction.(type) {
-	case *CommitRequest_TransactionId:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.TransactionId)
-	case *CommitRequest_SingleUseTransaction:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.SingleUseTransaction); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("CommitRequest.Transaction has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _CommitRequest_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*CommitRequest)
-	switch tag {
-	case 2: // transaction.transaction_id
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Transaction = &CommitRequest_TransactionId{x}
-		return true, err
-	case 3: // transaction.single_use_transaction
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(TransactionOptions)
-		err := b.DecodeMessage(msg)
-		m.Transaction = &CommitRequest_SingleUseTransaction{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _CommitRequest_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*CommitRequest)
-	// transaction
-	switch x := m.Transaction.(type) {
-	case *CommitRequest_TransactionId:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.TransactionId)))
-		n += len(x.TransactionId)
-	case *CommitRequest_SingleUseTransaction:
-		s := proto.Size(x.SingleUseTransaction)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 // The response for [Commit][google.spanner.v1.Spanner.Commit].
@@ -1313,7 +1506,7 @@ func (m *CommitResponse) Reset()         { *m = CommitResponse{} }
 func (m *CommitResponse) String() string { return proto.CompactTextString(m) }
 func (*CommitResponse) ProtoMessage()    {}
 func (*CommitResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{15}
+	return fileDescriptor_a420fdbb92791b07, []int{17}
 }
 
 func (m *CommitResponse) XXX_Unmarshal(b []byte) error {
@@ -1356,7 +1549,7 @@ func (m *RollbackRequest) Reset()         { *m = RollbackRequest{} }
 func (m *RollbackRequest) String() string { return proto.CompactTextString(m) }
 func (*RollbackRequest) ProtoMessage()    {}
 func (*RollbackRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a420fdbb92791b07, []int{16}
+	return fileDescriptor_a420fdbb92791b07, []int{18}
 }
 
 func (m *RollbackRequest) XXX_Unmarshal(b []byte) error {
@@ -1402,6 +1595,10 @@ func init() {
 	proto.RegisterType((*DeleteSessionRequest)(nil), "google.spanner.v1.DeleteSessionRequest")
 	proto.RegisterType((*ExecuteSqlRequest)(nil), "google.spanner.v1.ExecuteSqlRequest")
 	proto.RegisterMapType((map[string]*Type)(nil), "google.spanner.v1.ExecuteSqlRequest.ParamTypesEntry")
+	proto.RegisterType((*ExecuteBatchDmlRequest)(nil), "google.spanner.v1.ExecuteBatchDmlRequest")
+	proto.RegisterType((*ExecuteBatchDmlRequest_Statement)(nil), "google.spanner.v1.ExecuteBatchDmlRequest.Statement")
+	proto.RegisterMapType((map[string]*Type)(nil), "google.spanner.v1.ExecuteBatchDmlRequest.Statement.ParamTypesEntry")
+	proto.RegisterType((*ExecuteBatchDmlResponse)(nil), "google.spanner.v1.ExecuteBatchDmlResponse")
 	proto.RegisterType((*PartitionOptions)(nil), "google.spanner.v1.PartitionOptions")
 	proto.RegisterType((*PartitionQueryRequest)(nil), "google.spanner.v1.PartitionQueryRequest")
 	proto.RegisterMapType((map[string]*Type)(nil), "google.spanner.v1.PartitionQueryRequest.ParamTypesEntry")
@@ -1418,112 +1615,122 @@ func init() {
 func init() { proto.RegisterFile("google/spanner/v1/spanner.proto", fileDescriptor_a420fdbb92791b07) }
 
 var fileDescriptor_a420fdbb92791b07 = []byte{
-	// 1673 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe4, 0x58, 0x4f, 0x6f, 0x1b, 0xb9,
-	0x15, 0xcf, 0x48, 0xb6, 0x6c, 0x3d, 0x59, 0xb6, 0xcc, 0xd5, 0x3a, 0x5a, 0x25, 0xdd, 0xd5, 0xce,
-	0x6e, 0xd6, 0x86, 0x80, 0x4a, 0x6b, 0x37, 0x28, 0xbc, 0xde, 0x6d, 0x93, 0x38, 0x71, 0x12, 0x37,
-	0x76, 0xac, 0x8c, 0xec, 0x04, 0x0d, 0x52, 0x08, 0x94, 0xc4, 0xa8, 0x53, 0xcf, 0x3f, 0x0f, 0x29,
-	0xc3, 0x4a, 0x91, 0x4b, 0x8b, 0xde, 0xdb, 0x06, 0x45, 0x0f, 0xed, 0xad, 0xb7, 0x22, 0xc7, 0x02,
-	0xb9, 0xf5, 0x52, 0xa0, 0x87, 0x00, 0x3d, 0xf5, 0x2b, 0xf4, 0x5b, 0xf4, 0x52, 0x90, 0x9c, 0x19,
-	0x8d, 0x24, 0x5a, 0x56, 0xa0, 0xb4, 0x40, 0xb1, 0x27, 0x0d, 0xf9, 0x1e, 0xf9, 0x7e, 0xfc, 0xbd,
-	0x47, 0xbe, 0xf7, 0x04, 0x9f, 0x74, 0x5c, 0xb7, 0x63, 0x91, 0x2a, 0xf5, 0xb0, 0xe3, 0x10, 0xbf,
-	0x7a, 0xba, 0x1e, 0x7e, 0x56, 0x3c, 0xdf, 0x65, 0x2e, 0x5a, 0x96, 0x0a, 0x95, 0x70, 0xf6, 0x74,
-	0xbd, 0x78, 0x35, 0x58, 0x83, 0x3d, 0xb3, 0x8a, 0x1d, 0xc7, 0x65, 0x98, 0x99, 0xae, 0x43, 0xe5,
-	0x82, 0xe2, 0x95, 0x40, 0x2a, 0x46, 0xcd, 0xee, 0xf3, 0x2a, 0xb1, 0x3d, 0xd6, 0x0b, 0x84, 0x57,
-	0x87, 0x85, 0x94, 0xf9, 0xdd, 0x16, 0x0b, 0xa4, 0x9f, 0x0c, 0x4b, 0x99, 0x69, 0x13, 0xca, 0xb0,
-	0xed, 0x0d, 0x2d, 0x8f, 0xa1, 0x3d, 0x26, 0xbd, 0xd0, 0x72, 0x69, 0x54, 0x6a, 0x77, 0x25, 0xb8,
-	0x40, 0x43, 0x1f, 0xd5, 0xf0, 0x09, 0xed, 0x5a, 0xac, 0x41, 0x49, 0x08, 0xe2, 0xb3, 0x51, 0x1d,
-	0xe6, 0x63, 0x87, 0xe2, 0x56, 0x6c, 0x23, 0x05, 0x10, 0xd6, 0xf3, 0x88, 0x94, 0xea, 0x3f, 0x85,
-	0xfc, 0x6d, 0x9f, 0x60, 0x46, 0xea, 0x84, 0x52, 0xd3, 0x75, 0x0c, 0x72, 0xd2, 0x25, 0x94, 0xa1,
-	0x22, 0xcc, 0xb7, 0x31, 0xc3, 0x4d, 0x4c, 0x49, 0x41, 0x2b, 0x69, 0x6b, 0x69, 0x23, 0x1a, 0xa3,
-	0xeb, 0x30, 0x47, 0xa5, 0x76, 0x21, 0x51, 0xd2, 0xd6, 0x32, 0x1b, 0xc5, 0xca, 0x08, 0xf3, 0x95,
-	0x70, 0xbf, 0x50, 0x55, 0x7f, 0x9d, 0x80, 0xb9, 0x60, 0x12, 0x21, 0x98, 0x71, 0xb0, 0x1d, 0xee,
-	0x2c, 0xbe, 0xd1, 0x0f, 0x21, 0x65, 0xe1, 0x26, 0xb1, 0x68, 0x21, 0x51, 0x4a, 0xae, 0x65, 0x36,
-	0xbe, 0x38, 0x7f, 0xd3, 0xca, 0x9e, 0x50, 0xdc, 0x71, 0x98, 0xdf, 0x33, 0x82, 0x55, 0xe8, 0x6b,
-	0xc8, 0xb4, 0xc4, 0x49, 0x1a, 0xdc, 0x15, 0x85, 0xe4, 0x20, 0xb2, 0xd0, 0x4f, 0x95, 0xc3, 0xd0,
-	0x4f, 0x06, 0x48, 0x75, 0x3e, 0x81, 0x8e, 0xe0, 0x23, 0xec, 0x79, 0xbe, 0x7b, 0x66, 0xda, 0x7c,
-	0x07, 0x0b, 0x53, 0xd6, 0xe8, 0xd2, 0x60, 0xab, 0x99, 0x0b, 0xb7, 0x5a, 0x89, 0x2d, 0xde, 0xc3,
-	0x94, 0x1d, 0x51, 0xb1, 0x6d, 0xf1, 0x2b, 0xc8, 0xc4, 0xa0, 0xa2, 0x1c, 0x24, 0x8f, 0x49, 0x2f,
-	0x38, 0x35, 0xff, 0x44, 0x79, 0x98, 0x3d, 0xc5, 0x56, 0x97, 0x08, 0x22, 0xd3, 0x86, 0x1c, 0x6c,
-	0x25, 0x36, 0x35, 0x7d, 0x15, 0x96, 0xef, 0x11, 0x36, 0xe4, 0x15, 0x05, 0x6f, 0xfa, 0xaf, 0x34,
-	0xf8, 0x60, 0xcf, 0xa4, 0xa1, 0x2a, 0x9d, 0xc4, 0x83, 0x57, 0x20, 0xed, 0xe1, 0x0e, 0x69, 0x50,
-	0xf3, 0x85, 0x34, 0x3d, 0x6b, 0xcc, 0xf3, 0x89, 0xba, 0xf9, 0x82, 0xa0, 0xef, 0x00, 0x08, 0x21,
-	0x73, 0x8f, 0x89, 0x23, 0x78, 0x4c, 0x1b, 0x42, 0xfd, 0x90, 0x4f, 0xa0, 0x15, 0x48, 0x3d, 0x37,
-	0x2d, 0x46, 0x7c, 0xc1, 0x4b, 0xda, 0x08, 0x46, 0xfa, 0x29, 0xe4, 0x07, 0x61, 0x50, 0xcf, 0x75,
-	0x28, 0x41, 0xdf, 0x87, 0xf9, 0x20, 0x04, 0x68, 0x41, 0x13, 0x9e, 0x1d, 0x17, 0x2e, 0x91, 0x2e,
-	0xfa, 0x02, 0x96, 0x1c, 0x72, 0xc6, 0x1a, 0x31, 0x2c, 0x92, 0xa4, 0x2c, 0x9f, 0xae, 0x85, 0x78,
-	0xf4, 0x32, 0xe4, 0xef, 0x10, 0x8b, 0x8c, 0x44, 0xb0, 0x8a, 0xab, 0xb7, 0x33, 0xb0, 0xbc, 0x73,
-	0x46, 0x5a, 0x5d, 0x46, 0xea, 0x27, 0x56, 0xa8, 0x59, 0xe8, 0xc7, 0xb3, 0x54, 0x0e, 0x87, 0xe8,
-	0x3e, 0x64, 0x62, 0x17, 0x2a, 0x88, 0x76, 0x55, 0x60, 0x1e, 0xf6, 0xb5, 0xea, 0xc4, 0x22, 0x2d,
-	0xe6, 0xfa, 0x46, 0x7c, 0x29, 0x77, 0x3d, 0x3d, 0xb1, 0x02, 0x36, 0xf9, 0x27, 0xaa, 0x42, 0xca,
-	0xc3, 0x3e, 0xb6, 0x69, 0x10, 0x5f, 0x97, 0x47, 0xe2, 0xab, 0x2e, 0x1e, 0x1c, 0x23, 0x50, 0x43,
-	0x47, 0x90, 0x11, 0x5f, 0x0d, 0x7e, 0x7d, 0x69, 0x61, 0x56, 0x70, 0x79, 0x5d, 0x01, 0x66, 0xe4,
-	0x84, 0x95, 0x1a, 0x5f, 0x77, 0xc8, 0x97, 0xc9, 0x3b, 0x03, 0x5e, 0x34, 0x81, 0x3e, 0x85, 0x05,
-	0xfe, 0xb0, 0xd8, 0x21, 0xc9, 0xa9, 0x92, 0xb6, 0xb6, 0x60, 0x64, 0xe4, 0x9c, 0x74, 0xf9, 0x3e,
-	0xc0, 0x49, 0x97, 0xf8, 0xbd, 0x86, 0xed, 0xb6, 0x49, 0x61, 0xae, 0xa4, 0xad, 0x2d, 0x6e, 0x54,
-	0x26, 0x32, 0xfc, 0x88, 0x2f, 0xdb, 0x77, 0xdb, 0xc4, 0x48, 0x9f, 0x84, 0x9f, 0x68, 0x15, 0x96,
-	0x3c, 0xec, 0x33, 0x93, 0x13, 0x13, 0x18, 0x9d, 0x17, 0x46, 0x17, 0xa3, 0x69, 0x69, 0x37, 0x0f,
-	0xb3, 0x94, 0x9c, 0x38, 0x6e, 0x21, 0x5d, 0xd2, 0xd6, 0x92, 0x86, 0x1c, 0x14, 0x1f, 0xc3, 0xd2,
-	0xd0, 0x79, 0x14, 0x17, 0xeb, 0xbb, 0xf1, 0x8b, 0x15, 0x23, 0x37, 0xee, 0xb3, 0x9e, 0x47, 0xe2,
-	0x37, 0xae, 0x02, 0xe9, 0x08, 0x2e, 0x02, 0x48, 0x3d, 0x3c, 0x30, 0xf6, 0x6f, 0xed, 0xe5, 0x2e,
-	0xa1, 0x79, 0x98, 0xa9, 0xed, 0xdd, 0x7a, 0x98, 0xd3, 0x50, 0x06, 0xe6, 0x6a, 0xc6, 0xc1, 0xdd,
-	0xdd, 0xbd, 0x9d, 0x5c, 0x42, 0x3f, 0x86, 0x5c, 0x2d, 0xc4, 0x7b, 0xe0, 0x89, 0xbc, 0x82, 0xbe,
-	0x84, 0x7c, 0xff, 0x68, 0xfc, 0x76, 0x35, 0x9a, 0x3d, 0x46, 0xa8, 0x40, 0x96, 0x34, 0x50, 0x24,
-	0xe3, 0x17, 0x6d, 0x9b, 0x4b, 0xd0, 0x35, 0x58, 0xb4, 0xf1, 0x59, 0x23, 0x92, 0x50, 0x81, 0x38,
-	0x69, 0x64, 0x6d, 0x7c, 0x16, 0x6d, 0x4f, 0xf5, 0xbf, 0x25, 0xe1, 0xc3, 0x68, 0x28, 0x60, 0xfe,
-	0x9f, 0x45, 0xef, 0x8f, 0x55, 0xd1, 0xbb, 0xa9, 0x00, 0xa3, 0x3c, 0xe5, 0xd8, 0x08, 0xae, 0xc1,
-	0x72, 0x9f, 0x74, 0x57, 0x7a, 0x42, 0x84, 0x71, 0x66, 0xe3, 0xb3, 0x71, 0x06, 0x02, 0xa7, 0x19,
-	0x39, 0x6f, 0x68, 0xe6, 0xbf, 0x16, 0x62, 0x7f, 0x4f, 0x40, 0x3e, 0x32, 0x6f, 0x10, 0xdc, 0xfe,
-	0x5f, 0x3a, 0x31, 0x0f, 0xb3, 0x0c, 0x37, 0x2d, 0x12, 0xb8, 0x51, 0x0e, 0xf8, 0xac, 0xe9, 0xb4,
-	0xc9, 0x59, 0xf0, 0x9a, 0xcb, 0x01, 0xc7, 0xd3, 0x72, 0xad, 0xae, 0xed, 0x48, 0x4f, 0xa5, 0x8d,
-	0x70, 0x88, 0x36, 0x60, 0xee, 0x98, 0xf4, 0x78, 0x11, 0x12, 0x50, 0xfc, 0x91, 0x02, 0xcb, 0x03,
-	0xd2, 0xab, 0x13, 0x66, 0xa4, 0x8e, 0xc5, 0xaf, 0xda, 0x41, 0xe9, 0x29, 0x1c, 0xa4, 0x5f, 0x87,
-	0x74, 0xa4, 0xa5, 0x7a, 0x4f, 0x34, 0xd5, 0x7b, 0xa2, 0xbf, 0xd2, 0x60, 0x39, 0x46, 0x7f, 0x90,
-	0xa0, 0xbe, 0xe1, 0xf9, 0x2e, 0xba, 0x7d, 0x32, 0x45, 0x5d, 0x1d, 0x07, 0xcb, 0x88, 0xe9, 0xa3,
-	0x9b, 0x2a, 0xff, 0x7c, 0x3c, 0xde, 0x3f, 0x03, 0x7e, 0xd1, 0xff, 0x91, 0x80, 0xcc, 0xb7, 0x27,
-	0x16, 0xf2, 0x30, 0x6b, 0x99, 0xb6, 0xc9, 0xc4, 0x93, 0x9f, 0x34, 0xe4, 0x60, 0x24, 0x09, 0xa5,
-	0x47, 0x93, 0x90, 0xc2, 0xcb, 0xa0, 0xf4, 0x32, 0x83, 0xcb, 0xdb, 0xa4, 0x63, 0x3a, 0x71, 0xc2,
-	0x2f, 0xa4, 0xf6, 0x06, 0xcc, 0x85, 0x81, 0x29, 0x69, 0xbd, 0x36, 0x9e, 0xd6, 0x30, 0x34, 0xc3,
-	0x55, 0xfa, 0xbf, 0x35, 0xc8, 0xde, 0x76, 0x6d, 0xdb, 0x64, 0x17, 0x1b, 0x5b, 0x85, 0xc5, 0x98,
-	0x33, 0x1a, 0x66, 0x5b, 0xd8, 0x5c, 0xb8, 0x7f, 0xc9, 0xc8, 0xc6, 0xe6, 0x77, 0xdb, 0xe8, 0x27,
-	0xb0, 0x42, 0x4d, 0xa7, 0x63, 0x11, 0x59, 0x8c, 0xc6, 0x7c, 0x9f, 0x7c, 0x07, 0x90, 0xf7, 0x2f,
-	0x19, 0x79, 0xb9, 0x0d, 0xaf, 0x4b, 0x63, 0x51, 0xf0, 0x15, 0xa4, 0xc3, 0xae, 0x83, 0xbf, 0xe3,
-	0x3c, 0xf0, 0xaf, 0x28, 0x76, 0xdc, 0x0f, 0x74, 0x8c, 0xbe, 0xf6, 0x76, 0x76, 0x20, 0x14, 0xf5,
-	0x27, 0xb0, 0x18, 0x1e, 0x3e, 0xb8, 0x55, 0x3b, 0x90, 0x6b, 0x89, 0x99, 0x46, 0xd4, 0x19, 0x09,
-	0x1a, 0xc6, 0x17, 0xd2, 0x4b, 0x72, 0x4d, 0x34, 0xa1, 0x1b, 0xb0, 0x64, 0xb8, 0x96, 0xd5, 0xc4,
-	0xad, 0xe3, 0x8b, 0x79, 0xbd, 0xa6, 0xe6, 0x75, 0x88, 0xd5, 0x8d, 0x5f, 0x2e, 0xc3, 0x5c, 0x5d,
-	0x1e, 0x0f, 0xfd, 0x81, 0xbb, 0x2d, 0xde, 0x00, 0xa1, 0x55, 0x05, 0x03, 0xaa, 0x16, 0xa9, 0x38,
-	0xa6, 0x8c, 0xd5, 0x77, 0x7e, 0xf1, 0xcf, 0x7f, 0xbd, 0x4a, 0xdc, 0xd0, 0xb7, 0x78, 0xbb, 0xf5,
-	0xf3, 0xb0, 0xee, 0xfe, 0x81, 0xe7, 0xbb, 0x3f, 0x23, 0x2d, 0x46, 0xab, 0xe5, 0xaa, 0xe9, 0x50,
-	0x86, 0x9d, 0x16, 0xe1, 0xdf, 0xa1, 0x9c, 0x56, 0xcb, 0x2f, 0xab, 0x61, 0x01, 0xbc, 0xa5, 0x95,
-	0xd1, 0xaf, 0x35, 0x80, 0x7e, 0x17, 0x80, 0x3e, 0x57, 0x58, 0x1c, 0x69, 0x12, 0xc6, 0xe2, 0xba,
-	0x29, 0x70, 0x6d, 0xa1, 0x4d, 0x81, 0x8b, 0xd7, 0xc4, 0x13, 0x60, 0x8a, 0x20, 0x55, 0xcb, 0x2f,
-	0xd1, 0x9f, 0x34, 0x58, 0x88, 0xd7, 0xf9, 0x48, 0xf5, 0xfe, 0x28, 0xfa, 0x91, 0xe2, 0xea, 0x85,
-	0x7a, 0x32, 0x72, 0xf4, 0x6d, 0x81, 0xf1, 0x1b, 0x34, 0x05, 0x77, 0xe8, 0xb7, 0x1a, 0x64, 0x07,
-	0xba, 0x02, 0xa5, 0x5b, 0x55, 0x7d, 0x43, 0x71, 0x65, 0x24, 0x3c, 0x77, 0x6c, 0x8f, 0xf5, 0x42,
-	0xea, 0xca, 0x53, 0x51, 0x07, 0xfd, 0x12, 0x59, 0xe9, 0xcd, 0x91, 0x0a, 0xba, 0xa8, 0xca, 0x44,
-	0x86, 0xf8, 0x23, 0xa0, 0x4e, 0x98, 0xfe, 0x48, 0x80, 0x7a, 0xa0, 0xdf, 0x15, 0xa0, 0x02, 0x63,
-	0xef, 0x88, 0x6b, 0x8b, 0x44, 0x46, 0x79, 0xcc, 0xfd, 0x55, 0x83, 0x0f, 0x42, 0x18, 0xcc, 0x27,
-	0xd8, 0x36, 0x9d, 0xce, 0xe4, 0x70, 0xcf, 0xcd, 0xe7, 0xd8, 0xea, 0xa3, 0x7e, 0x2a, 0x50, 0x1f,
-	0xea, 0x07, 0xef, 0x03, 0x75, 0x0c, 0xe3, 0x96, 0x56, 0xfe, 0x52, 0x43, 0xbf, 0xd1, 0x60, 0x86,
-	0xe7, 0x53, 0xf4, 0xb1, 0x92, 0xba, 0x28, 0xd1, 0x5e, 0x40, 0xed, 0x03, 0x01, 0x72, 0x47, 0xbf,
-	0x39, 0x0d, 0x48, 0x9f, 0xe0, 0x36, 0x27, 0xf5, 0xb5, 0x06, 0xd9, 0x08, 0xe9, 0x44, 0xe0, 0x26,
-	0x22, 0xf2, 0x50, 0x60, 0x7c, 0xa8, 0xef, 0x4e, 0x83, 0x91, 0xc6, 0x71, 0x49, 0x0a, 0xdf, 0x68,
-	0x90, 0x1b, 0xce, 0xa1, 0xa8, 0xac, 0x40, 0x74, 0x4e, 0xa2, 0x2d, 0x5e, 0x50, 0x00, 0xe9, 0x4f,
-	0x04, 0xf0, 0x47, 0xfa, 0xde, 0x34, 0xc0, 0x9b, 0x43, 0xc6, 0x39, 0xd1, 0x7f, 0xd4, 0x20, 0x25,
-	0x33, 0x11, 0x2a, 0xa9, 0x1e, 0xf2, 0x78, 0x86, 0x2e, 0x7e, 0x3a, 0x46, 0x23, 0x78, 0x8c, 0xf6,
-	0x05, 0xd0, 0x7b, 0xfa, 0xf6, 0x34, 0x40, 0x65, 0x52, 0xe3, 0xf0, 0x7e, 0xaf, 0xc1, 0x7c, 0x98,
-	0xcf, 0x90, 0xae, 0x0a, 0x81, 0xc1, 0x64, 0x77, 0xee, 0x6b, 0x74, 0x20, 0x70, 0xed, 0xea, 0x77,
-	0xa6, 0x8a, 0xce, 0xc0, 0x18, 0x47, 0xf6, 0x46, 0x83, 0xc5, 0xc1, 0xd6, 0x0b, 0xad, 0x4d, 0xda,
-	0x9d, 0x15, 0x3f, 0x1f, 0x5b, 0x2e, 0x87, 0x5c, 0x1e, 0x09, 0xcc, 0x07, 0xfa, 0x8f, 0xa6, 0xc1,
-	0xec, 0x0d, 0x00, 0xe0, 0xc8, 0xff, 0xa2, 0x41, 0x76, 0xa0, 0xa9, 0x52, 0xbe, 0xf5, 0xaa, 0xb6,
-	0x6b, 0x42, 0xdc, 0xef, 0xe5, 0x96, 0x79, 0x71, 0xfb, 0x5b, 0x5a, 0x79, 0xfb, 0x77, 0x1a, 0x7c,
-	0xd8, 0x72, 0xed, 0x51, 0x04, 0xdb, 0x0b, 0x41, 0x71, 0x52, 0xe3, 0x2e, 0xaf, 0x69, 0x4f, 0x37,
-	0x03, 0x95, 0x8e, 0x6b, 0x61, 0xa7, 0x53, 0x71, 0xfd, 0x4e, 0xb5, 0x43, 0x1c, 0x11, 0x10, 0x55,
-	0x29, 0xc2, 0x9e, 0x49, 0x63, 0x7f, 0xf0, 0x7e, 0x1d, 0x7c, 0xfe, 0x39, 0x71, 0xf9, 0x9e, 0x5c,
-	0x7a, 0xdb, 0x72, 0xbb, 0xed, 0x4a, 0xb0, 0x6f, 0xe5, 0xf1, 0xfa, 0xdb, 0x50, 0xf2, 0x4c, 0x48,
-	0x9e, 0x05, 0x92, 0x67, 0x8f, 0xd7, 0x9b, 0x29, 0xb1, 0xf1, 0xf7, 0xfe, 0x13, 0x00, 0x00, 0xff,
-	0xff, 0x06, 0xd0, 0xcf, 0xc4, 0x6f, 0x17, 0x00, 0x00,
+	// 1832 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe4, 0x59, 0xcd, 0x6f, 0x1b, 0xc7,
+	0x15, 0xf7, 0x92, 0x12, 0x25, 0x3e, 0xea, 0x73, 0xc2, 0x48, 0x0c, 0xed, 0x26, 0xca, 0x26, 0x8e,
+	0x54, 0x02, 0x25, 0x63, 0xc5, 0x28, 0x1c, 0x25, 0x69, 0x1c, 0xd9, 0x8a, 0xed, 0x5a, 0xb2, 0xe8,
+	0xa5, 0xec, 0xa0, 0x81, 0x0b, 0x62, 0x44, 0x4e, 0x98, 0xad, 0xf6, 0x4b, 0x3b, 0x43, 0x43, 0x4c,
+	0x91, 0x4b, 0xd1, 0xde, 0x7a, 0x68, 0x1b, 0x14, 0x3d, 0xb4, 0xb7, 0xde, 0x8a, 0x1c, 0x0b, 0xe4,
+	0x56, 0x14, 0x28, 0x90, 0x43, 0x80, 0x9e, 0xfa, 0x2f, 0xf4, 0x6f, 0xe8, 0xa5, 0x97, 0x62, 0xbe,
+	0x96, 0x4b, 0x72, 0x44, 0x31, 0xa5, 0x13, 0xa0, 0xe8, 0x89, 0x3b, 0xf3, 0xde, 0xbc, 0xf9, 0xcd,
+	0xfb, 0xfd, 0xe6, 0xe3, 0x81, 0xf0, 0x52, 0x27, 0x0c, 0x3b, 0x1e, 0xa9, 0xd1, 0x08, 0x07, 0x01,
+	0x89, 0x6b, 0x4f, 0xaf, 0xe9, 0xcf, 0x6a, 0x14, 0x87, 0x2c, 0x44, 0xab, 0xd2, 0xa1, 0xaa, 0x7b,
+	0x9f, 0x5e, 0x2b, 0x5f, 0x51, 0x63, 0x70, 0xe4, 0xd6, 0x70, 0x10, 0x84, 0x0c, 0x33, 0x37, 0x0c,
+	0xa8, 0x1c, 0x50, 0xbe, 0xac, 0xac, 0xa2, 0x75, 0xdc, 0xfd, 0xa8, 0x46, 0xfc, 0x88, 0xf5, 0x94,
+	0xf1, 0xca, 0xb0, 0x91, 0xb2, 0xb8, 0xdb, 0x62, 0xca, 0xfa, 0xd2, 0xb0, 0x95, 0xb9, 0x3e, 0xa1,
+	0x0c, 0xfb, 0x91, 0x72, 0x58, 0x57, 0x0e, 0x71, 0xd4, 0xaa, 0x51, 0x86, 0x59, 0x97, 0x0e, 0xc5,
+	0x4d, 0x2d, 0xe3, 0x84, 0xf4, 0xb4, 0x75, 0x63, 0xd4, 0xea, 0x77, 0x25, 0x6a, 0xe5, 0x61, 0x8f,
+	0x7a, 0xc4, 0x84, 0x76, 0x3d, 0xd6, 0xa4, 0x44, 0xa3, 0x7b, 0x65, 0xd4, 0x87, 0xc5, 0x38, 0xa0,
+	0xb8, 0x95, 0x0a, 0x64, 0x00, 0xc2, 0x7a, 0x11, 0x91, 0x56, 0xfb, 0x63, 0x28, 0xde, 0x8a, 0x09,
+	0x66, 0xa4, 0x41, 0x28, 0x75, 0xc3, 0xc0, 0x21, 0xa7, 0x5d, 0x42, 0x19, 0x2a, 0xc3, 0x7c, 0x1b,
+	0x33, 0x7c, 0x8c, 0x29, 0x29, 0x59, 0x1b, 0xd6, 0x56, 0xde, 0x49, 0xda, 0xe8, 0x3a, 0xcc, 0x51,
+	0xe9, 0x5d, 0xca, 0x6c, 0x58, 0x5b, 0x85, 0xed, 0x72, 0x75, 0x84, 0x92, 0xaa, 0x8e, 0xa7, 0x5d,
+	0xed, 0xcf, 0x33, 0x30, 0xa7, 0x3a, 0x11, 0x82, 0x99, 0x00, 0xfb, 0x3a, 0xb2, 0xf8, 0x46, 0x3f,
+	0x80, 0x9c, 0x87, 0x8f, 0x89, 0x47, 0x4b, 0x99, 0x8d, 0xec, 0x56, 0x61, 0xfb, 0xb5, 0xf3, 0x83,
+	0x56, 0xf7, 0x85, 0xe3, 0x5e, 0xc0, 0xe2, 0x9e, 0xa3, 0x46, 0xa1, 0xb7, 0xa0, 0xd0, 0x12, 0x2b,
+	0x69, 0x72, 0x8e, 0x4a, 0xd9, 0x41, 0x64, 0x9a, 0xc0, 0xea, 0x91, 0x26, 0xd0, 0x01, 0xe9, 0xce,
+	0x3b, 0xd0, 0x23, 0x78, 0x01, 0x47, 0x51, 0x1c, 0x9e, 0xb9, 0x3e, 0x8f, 0xe0, 0x61, 0xca, 0x9a,
+	0x5d, 0xaa, 0x42, 0xcd, 0x5c, 0x18, 0x6a, 0x2d, 0x35, 0x78, 0x1f, 0x53, 0xf6, 0x88, 0x8a, 0xb0,
+	0xe5, 0x37, 0xa1, 0x90, 0x82, 0x8a, 0x56, 0x20, 0x7b, 0x42, 0x7a, 0x6a, 0xd5, 0xfc, 0x13, 0x15,
+	0x61, 0xf6, 0x29, 0xf6, 0xba, 0x44, 0x24, 0x32, 0xef, 0xc8, 0xc6, 0x4e, 0xe6, 0x86, 0x65, 0x6f,
+	0xc2, 0xea, 0x1d, 0xc2, 0x86, 0x58, 0x31, 0xe4, 0xcd, 0xfe, 0x85, 0x05, 0xcf, 0xed, 0xbb, 0x54,
+	0xbb, 0xd2, 0x49, 0x18, 0xbc, 0x0c, 0xf9, 0x08, 0x77, 0x48, 0x93, 0xba, 0x9f, 0xc8, 0xa9, 0x67,
+	0x9d, 0x79, 0xde, 0xd1, 0x70, 0x3f, 0x21, 0xe8, 0x3b, 0x00, 0xc2, 0xc8, 0xc2, 0x13, 0x12, 0x88,
+	0x3c, 0xe6, 0x1d, 0xe1, 0x7e, 0xc4, 0x3b, 0xd0, 0x1a, 0xe4, 0x3e, 0x72, 0x3d, 0x46, 0x62, 0x91,
+	0x97, 0xbc, 0xa3, 0x5a, 0xf6, 0x53, 0x28, 0x0e, 0xc2, 0xa0, 0x51, 0x18, 0x50, 0x82, 0xbe, 0x0f,
+	0xf3, 0x4a, 0x02, 0xb4, 0x64, 0x09, 0x66, 0xc7, 0xc9, 0x25, 0xf1, 0x45, 0xaf, 0xc1, 0x72, 0x40,
+	0xce, 0x58, 0x33, 0x85, 0x45, 0x26, 0x69, 0x91, 0x77, 0xd7, 0x35, 0x1e, 0xbb, 0x02, 0xc5, 0xdb,
+	0xc4, 0x23, 0x23, 0x0a, 0x36, 0xe5, 0xea, 0xab, 0x19, 0x58, 0xdd, 0x3b, 0x23, 0xad, 0x2e, 0x23,
+	0x8d, 0x53, 0x4f, 0x7b, 0x96, 0xfa, 0x7a, 0x96, 0xce, 0xba, 0x89, 0xee, 0x42, 0x21, 0xb5, 0xa1,
+	0x94, 0xda, 0x4d, 0xc2, 0x3c, 0xea, 0x7b, 0x35, 0x88, 0x47, 0x5a, 0x2c, 0x8c, 0x9d, 0xf4, 0x50,
+	0x4e, 0x3d, 0x3d, 0xf5, 0x54, 0x36, 0xf9, 0x27, 0xaa, 0x41, 0x2e, 0xc2, 0x31, 0xf6, 0xa9, 0xd2,
+	0xd7, 0xfa, 0x88, 0xbe, 0x1a, 0xe2, 0x24, 0x72, 0x94, 0x1b, 0x7a, 0x04, 0x05, 0xf1, 0xd5, 0xe4,
+	0xdb, 0x97, 0x96, 0x66, 0x45, 0x2e, 0xaf, 0x1b, 0xc0, 0x8c, 0xac, 0xb0, 0x5a, 0xe7, 0xe3, 0x8e,
+	0xf8, 0x30, 0xb9, 0x67, 0x20, 0x4a, 0x3a, 0xd0, 0xcb, 0xb0, 0xc0, 0x0f, 0x16, 0x5f, 0x27, 0x39,
+	0xb7, 0x61, 0x6d, 0x2d, 0x38, 0x05, 0xd9, 0x27, 0x29, 0x3f, 0x00, 0x38, 0xed, 0x92, 0xb8, 0xd7,
+	0xf4, 0xc3, 0x36, 0x29, 0xcd, 0x6d, 0x58, 0x5b, 0x4b, 0xdb, 0xd5, 0x89, 0x26, 0x7e, 0xc8, 0x87,
+	0x1d, 0x84, 0x6d, 0xe2, 0xe4, 0x4f, 0xf5, 0x27, 0xda, 0x84, 0xe5, 0x08, 0xc7, 0xcc, 0xe5, 0x89,
+	0x51, 0x93, 0xce, 0x8b, 0x49, 0x97, 0x92, 0x6e, 0x39, 0x6f, 0x11, 0x66, 0x29, 0x39, 0x0d, 0xc2,
+	0x52, 0x7e, 0xc3, 0xda, 0xca, 0x3a, 0xb2, 0x51, 0x7e, 0x0c, 0xcb, 0x43, 0xeb, 0x31, 0x6c, 0xac,
+	0xef, 0xa5, 0x37, 0x56, 0x2a, 0xb9, 0x69, 0xce, 0x7a, 0x11, 0x49, 0xef, 0xb8, 0x2a, 0xe4, 0x13,
+	0xb8, 0x08, 0x20, 0xf7, 0xe0, 0xd0, 0x39, 0x78, 0x6f, 0x7f, 0xe5, 0x12, 0x9a, 0x87, 0x99, 0xfa,
+	0xfe, 0x7b, 0x0f, 0x56, 0x2c, 0x54, 0x80, 0xb9, 0xba, 0x73, 0xf8, 0xfe, 0xbd, 0xfd, 0xbd, 0x95,
+	0x8c, 0xfd, 0xaf, 0x2c, 0xac, 0xa9, 0x15, 0xef, 0x62, 0xd6, 0xfa, 0xf8, 0xb6, 0xff, 0xad, 0x2a,
+	0xaa, 0x01, 0xc0, 0x2f, 0x1c, 0xe2, 0x93, 0x80, 0xd1, 0x52, 0x56, 0xa8, 0xe1, 0x8d, 0xf3, 0x49,
+	0x19, 0x82, 0x58, 0x6d, 0xe8, 0xb1, 0x4e, 0x2a, 0x4c, 0x3f, 0xe3, 0x33, 0xe9, 0x8c, 0xff, 0x32,
+	0x03, 0xf9, 0xc4, 0x5f, 0x4b, 0xd9, 0x32, 0x49, 0x39, 0x33, 0x99, 0x94, 0xdb, 0x83, 0x52, 0x96,
+	0xe0, 0x6f, 0xfd, 0x17, 0xe0, 0xc7, 0x29, 0xfb, 0x1b, 0x13, 0xca, 0xcf, 0x2d, 0x58, 0x1f, 0x01,
+	0xa6, 0x4e, 0xbb, 0x77, 0xa0, 0xd0, 0xbf, 0xa6, 0xf5, 0x81, 0x77, 0xc5, 0x10, 0xd4, 0x11, 0x5e,
+	0x0d, 0xc2, 0x1c, 0x88, 0xf5, 0x27, 0x45, 0x15, 0xc8, 0xc9, 0x57, 0x84, 0x82, 0x83, 0xf4, 0xc8,
+	0x38, 0x6a, 0x89, 0x55, 0x77, 0xa9, 0xa3, 0x3c, 0xec, 0x13, 0x58, 0xa9, 0xeb, 0xfd, 0x72, 0x18,
+	0x89, 0x07, 0x0f, 0x7a, 0x1d, 0x8a, 0xfd, 0xad, 0xc5, 0x4f, 0xf7, 0xe6, 0x71, 0x8f, 0x11, 0x2a,
+	0x16, 0x9c, 0x75, 0x50, 0x62, 0xe3, 0x07, 0xfd, 0x2e, 0xb7, 0xa0, 0xab, 0xb0, 0xe4, 0xe3, 0xb3,
+	0x66, 0x62, 0x91, 0x33, 0x67, 0x9d, 0x45, 0x1f, 0x9f, 0x25, 0xe1, 0xa9, 0xfd, 0xb7, 0x2c, 0x3c,
+	0x9f, 0x34, 0xc5, 0x36, 0xf9, 0x1f, 0x3b, 0x3d, 0x7f, 0x64, 0x3a, 0x3d, 0x6f, 0x18, 0xc0, 0x18,
+	0x57, 0x39, 0xf6, 0x04, 0xad, 0xc3, 0x6a, 0x3f, 0xe9, 0xa1, 0x64, 0x42, 0x1c, 0xa3, 0x85, 0xed,
+	0x57, 0xc6, 0x4d, 0xa0, 0x48, 0x73, 0x56, 0xa2, 0xa1, 0x9e, 0x6f, 0x4c, 0xb9, 0x5f, 0x66, 0xa0,
+	0x98, 0x4c, 0xef, 0x10, 0xdc, 0xfe, 0x36, 0x49, 0x2c, 0xc2, 0x2c, 0xc3, 0xc7, 0x1e, 0x51, 0x34,
+	0xca, 0x06, 0xef, 0x75, 0x83, 0x36, 0x39, 0x53, 0xaf, 0x09, 0xd9, 0xe0, 0x78, 0x5a, 0xa1, 0xd7,
+	0xf5, 0x03, 0xc9, 0x54, 0xde, 0xd1, 0x4d, 0xb4, 0x0d, 0x73, 0x27, 0xa4, 0xc7, 0x77, 0x97, 0x4a,
+	0xf1, 0x0b, 0x06, 0x2c, 0xf7, 0x49, 0x8f, 0xef, 0xac, 0xdc, 0x89, 0xf8, 0x35, 0x13, 0x94, 0x9f,
+	0x82, 0x20, 0xfb, 0x3a, 0xe4, 0x13, 0x2f, 0xd3, 0x7d, 0x66, 0x99, 0xee, 0x33, 0xfb, 0x33, 0x0b,
+	0x56, 0x53, 0xe9, 0x57, 0x47, 0xc6, 0xdb, 0xfc, 0xbd, 0x95, 0xec, 0xbe, 0xf3, 0x4f, 0x8c, 0xfe,
+	0xc8, 0x94, 0x3f, 0xba, 0x69, 0xe2, 0xe7, 0xc5, 0xf1, 0xfc, 0x0c, 0xf0, 0x62, 0xff, 0x3d, 0x03,
+	0x85, 0xff, 0x1f, 0x2d, 0x14, 0x61, 0xd6, 0x73, 0x7d, 0x97, 0x89, 0x27, 0x47, 0xd6, 0x91, 0x8d,
+	0x91, 0x47, 0x50, 0x7e, 0xf4, 0x11, 0x64, 0x60, 0x19, 0x8c, 0x2c, 0x33, 0x58, 0xdf, 0x25, 0x1d,
+	0x37, 0x48, 0x27, 0xfc, 0xc2, 0xd4, 0xbe, 0x0b, 0x73, 0x5a, 0x98, 0x32, 0xad, 0x57, 0xc7, 0xa7,
+	0x55, 0x4b, 0x53, 0x8f, 0xb2, 0xff, 0x6d, 0xc1, 0xe2, 0xad, 0xd0, 0xf7, 0x5d, 0x76, 0xf1, 0x64,
+	0x9b, 0xb0, 0x94, 0x22, 0xa3, 0xe9, 0xb6, 0xc5, 0x9c, 0x0b, 0x77, 0x2f, 0x39, 0x8b, 0xa9, 0xfe,
+	0x7b, 0x6d, 0xf4, 0x63, 0x58, 0xa3, 0x6e, 0xd0, 0xf1, 0x88, 0x2c, 0x86, 0x52, 0xdc, 0x67, 0xbf,
+	0x06, 0xc8, 0xbb, 0x97, 0x9c, 0xa2, 0x0c, 0xc3, 0xeb, 0xa2, 0x94, 0x0a, 0xde, 0x84, 0xbc, 0xae,
+	0x7a, 0xf9, 0x39, 0xce, 0x85, 0x7f, 0xd9, 0x10, 0xf1, 0x40, 0xf9, 0x38, 0x7d, 0xef, 0xdd, 0xc5,
+	0x01, 0x29, 0xda, 0x1f, 0xc0, 0x92, 0x5e, 0xbc, 0xda, 0x55, 0x7b, 0xb0, 0xd2, 0x12, 0x3d, 0xcd,
+	0xa4, 0x64, 0x17, 0x69, 0x18, 0x5f, 0xc8, 0x2d, 0xcb, 0x31, 0x49, 0x87, 0xed, 0xc0, 0xb2, 0x13,
+	0x7a, 0xde, 0x31, 0x6e, 0x9d, 0x5c, 0x9c, 0xd7, 0xab, 0xe6, 0xbc, 0x0e, 0x65, 0x75, 0xfb, 0x4b,
+	0x04, 0x73, 0x0d, 0xb9, 0x3c, 0xf4, 0x7b, 0x4e, 0x5b, 0xba, 0x00, 0x47, 0x9b, 0x86, 0x0c, 0x98,
+	0x4a, 0xf4, 0xf2, 0x98, 0x32, 0xca, 0xde, 0xfb, 0xd9, 0x3f, 0xfe, 0xf9, 0x59, 0xe6, 0x5d, 0x7b,
+	0x87, 0x97, 0xfb, 0x3f, 0xd5, 0x75, 0xdf, 0x3b, 0x51, 0x1c, 0xfe, 0x84, 0xb4, 0x18, 0xad, 0x55,
+	0x6a, 0x6e, 0x40, 0x19, 0x0e, 0x5a, 0x84, 0x7f, 0x6b, 0x3b, 0xad, 0x55, 0x3e, 0xad, 0xe9, 0x02,
+	0x6c, 0xc7, 0xaa, 0xa0, 0x5f, 0x59, 0x00, 0xfd, 0x2a, 0x14, 0xbd, 0x6a, 0x98, 0x71, 0xa4, 0x48,
+	0x1d, 0x8b, 0xeb, 0xa6, 0xc0, 0xb5, 0x83, 0x6e, 0x08, 0x5c, 0xbc, 0x26, 0x9b, 0x00, 0x53, 0x02,
+	0xa9, 0x56, 0xf9, 0x14, 0xfd, 0xd1, 0x82, 0x85, 0x74, 0x9d, 0x89, 0x4c, 0xe7, 0x8f, 0xa1, 0x1e,
+	0x2e, 0x6f, 0x5e, 0xe8, 0x27, 0x95, 0x63, 0xef, 0x0a, 0x8c, 0x6f, 0xa3, 0x29, 0x72, 0x87, 0x7e,
+	0x63, 0xc1, 0xe2, 0x40, 0x55, 0x6a, 0xa4, 0xd5, 0x54, 0xb7, 0x96, 0xd7, 0x46, 0xe4, 0xb9, 0xe7,
+	0x47, 0xac, 0xa7, 0x53, 0x57, 0x99, 0x2a, 0x75, 0xd0, 0x2f, 0xd1, 0x8c, 0x6c, 0x8e, 0x54, 0x70,
+	0xe5, 0xb1, 0x6f, 0x57, 0xfb, 0xa1, 0x00, 0x75, 0xdf, 0x7e, 0x5f, 0x80, 0x52, 0x93, 0x7d, 0x4d,
+	0x5c, 0x3b, 0x24, 0x99, 0x94, 0x6b, 0xee, 0x2f, 0x16, 0x3c, 0xa7, 0x61, 0xb0, 0x98, 0x60, 0xdf,
+	0x0d, 0x3a, 0x93, 0xc3, 0x3d, 0xf7, 0x3e, 0xc7, 0x5e, 0x1f, 0xf5, 0x87, 0x02, 0xf5, 0x91, 0x7d,
+	0xf8, 0x2c, 0x50, 0xa7, 0x30, 0xee, 0x58, 0x95, 0xd7, 0x2d, 0xf4, 0x57, 0x0b, 0x96, 0x87, 0xca,
+	0x03, 0xf4, 0xdd, 0x89, 0x6b, 0x9b, 0x72, 0x65, 0x12, 0x57, 0x25, 0xd5, 0xc7, 0x62, 0x21, 0x75,
+	0xfb, 0xfe, 0x33, 0x58, 0x88, 0x0e, 0xce, 0x39, 0xf8, 0xb5, 0x05, 0x33, 0xfc, 0x49, 0x80, 0x5e,
+	0x34, 0xb2, 0x9f, 0xbc, 0x15, 0x2e, 0x50, 0xc7, 0x7d, 0x01, 0x6f, 0xcf, 0xbe, 0x39, 0x0d, 0xbc,
+	0x98, 0xe0, 0x36, 0xc7, 0xf4, 0xb9, 0x05, 0x8b, 0x49, 0xb2, 0x27, 0x02, 0x37, 0x91, 0x16, 0x8e,
+	0x04, 0xc6, 0x07, 0xf6, 0xbd, 0x69, 0x30, 0xd2, 0x34, 0x2e, 0xa9, 0x82, 0x2f, 0x2c, 0x58, 0x19,
+	0x7e, 0x06, 0x20, 0x13, 0xb7, 0xe7, 0xbc, 0x15, 0xca, 0x17, 0xbc, 0xe1, 0xec, 0x0f, 0x04, 0xf0,
+	0x87, 0xf6, 0xfe, 0x34, 0xc0, 0x8f, 0x87, 0x26, 0xe7, 0x89, 0xfe, 0x83, 0x05, 0x39, 0x79, 0x99,
+	0xa2, 0x0d, 0xd3, 0x5d, 0x94, 0x7e, 0x64, 0x94, 0x5f, 0x1e, 0xe3, 0xa1, 0x44, 0x7a, 0x20, 0x80,
+	0xde, 0xb1, 0x77, 0xa7, 0x01, 0x2a, 0xef, 0x65, 0x0e, 0xef, 0x77, 0x16, 0xcc, 0xeb, 0x2b, 0x19,
+	0xd9, 0x26, 0x09, 0x0c, 0xde, 0xd7, 0xe7, 0x1e, 0xa8, 0x87, 0x02, 0xd7, 0x3d, 0xfb, 0xf6, 0x54,
+	0xea, 0x54, 0x93, 0x71, 0x64, 0x5f, 0x58, 0xb0, 0x34, 0x58, 0x3d, 0xa2, 0xad, 0x49, 0x0b, 0xcc,
+	0xf2, 0xab, 0x63, 0x5f, 0xfc, 0x3a, 0x97, 0x8f, 0x04, 0xe6, 0x43, 0xfb, 0x87, 0xd3, 0x60, 0x8e,
+	0x06, 0x00, 0x70, 0xe4, 0x7f, 0xb6, 0x60, 0x71, 0xa0, 0x2e, 0x34, 0x5e, 0x57, 0xa6, 0xca, 0x71,
+	0x42, 0xdc, 0xcf, 0x64, 0x97, 0x45, 0xe9, 0xf9, 0x77, 0xac, 0xca, 0xee, 0x6f, 0x2d, 0x78, 0xbe,
+	0x15, 0xfa, 0xa3, 0x08, 0x76, 0x17, 0xd4, 0xfb, 0xaa, 0xce, 0x29, 0xaf, 0x5b, 0x1f, 0xde, 0x50,
+	0x2e, 0x9d, 0xd0, 0xc3, 0x41, 0xa7, 0x1a, 0xc6, 0x9d, 0x5a, 0x87, 0x04, 0x42, 0x10, 0x35, 0x69,
+	0xc2, 0x91, 0x4b, 0x53, 0xff, 0x91, 0xbc, 0xa5, 0x3e, 0xff, 0x94, 0x59, 0xbf, 0x23, 0x87, 0xde,
+	0xf2, 0xc2, 0x6e, 0xbb, 0xaa, 0xe2, 0x56, 0x1f, 0x5f, 0xfb, 0x4a, 0x5b, 0x9e, 0x08, 0xcb, 0x13,
+	0x65, 0x79, 0xf2, 0xf8, 0xda, 0x71, 0x4e, 0x04, 0x7e, 0xe3, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff,
+	0x33, 0x44, 0xce, 0x51, 0xcb, 0x1a, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1564,7 +1771,9 @@ type SpannerClient interface {
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	// Lists all sessions in a given database.
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
-	// Ends a session, releasing server resources associated with it.
+	// Ends a session, releasing server resources associated with it. This will
+	// asynchronously trigger cancellation of any operations that are running with
+	// this session.
 	DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Executes an SQL statement, returning all results in a single reply. This
 	// method cannot be used to return a result set larger than 10 MiB;
@@ -1573,39 +1782,63 @@ type SpannerClient interface {
 	//
 	// Operations inside read-write transactions might return `ABORTED`. If
 	// this occurs, the application should restart the transaction from
-	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more details.
+	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more
+	// details.
 	//
 	// Larger result sets can be fetched in streaming fashion by calling
-	// [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] instead.
+	// [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql]
+	// instead.
 	ExecuteSql(ctx context.Context, in *ExecuteSqlRequest, opts ...grpc.CallOption) (*ResultSet, error)
-	// Like [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], except returns the result
-	// set as a stream. Unlike [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], there
-	// is no limit on the size of the returned result set. However, no
-	// individual row in the result set can exceed 100 MiB, and no
-	// column value can exceed 10 MiB.
+	// Like [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], except returns the
+	// result set as a stream. Unlike
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], there is no limit on
+	// the size of the returned result set. However, no individual row in the
+	// result set can exceed 100 MiB, and no column value can exceed 10 MiB.
 	ExecuteStreamingSql(ctx context.Context, in *ExecuteSqlRequest, opts ...grpc.CallOption) (Spanner_ExecuteStreamingSqlClient, error)
+	// Executes a batch of SQL DML statements. This method allows many statements
+	// to be run with lower latency than submitting them sequentially with
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].
+	//
+	// Statements are executed in order, sequentially.
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse] will contain a
+	// [ResultSet][google.spanner.v1.ResultSet] for each DML statement that has successfully executed. If a
+	// statement fails, its error status will be returned as part of the
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse]. Execution will
+	// stop at the first failed statement; the remaining statements will not run.
+	//
+	// ExecuteBatchDml is expected to return an OK status with a response even if
+	// there was an error while processing one of the DML statements. Clients must
+	// inspect response.status to determine if there were any errors while
+	// processing the request.
+	//
+	// See more details in
+	// [ExecuteBatchDmlRequest][Spanner.ExecuteBatchDmlRequest] and
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse].
+	ExecuteBatchDml(ctx context.Context, in *ExecuteBatchDmlRequest, opts ...grpc.CallOption) (*ExecuteBatchDmlResponse, error)
 	// Reads rows from the database using key lookups and scans, as a
 	// simple key/value style alternative to
-	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].  This method cannot be used to
-	// return a result set larger than 10 MiB; if the read matches more
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].  This method cannot be
+	// used to return a result set larger than 10 MiB; if the read matches more
 	// data than that, the read fails with a `FAILED_PRECONDITION`
 	// error.
 	//
 	// Reads inside read-write transactions might return `ABORTED`. If
 	// this occurs, the application should restart the transaction from
-	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more details.
+	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more
+	// details.
 	//
 	// Larger result sets can be yielded in streaming fashion by calling
 	// [StreamingRead][google.spanner.v1.Spanner.StreamingRead] instead.
 	Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*ResultSet, error)
-	// Like [Read][google.spanner.v1.Spanner.Read], except returns the result set as a
-	// stream. Unlike [Read][google.spanner.v1.Spanner.Read], there is no limit on the
-	// size of the returned result set. However, no individual row in
+	// Like [Read][google.spanner.v1.Spanner.Read], except returns the result set
+	// as a stream. Unlike [Read][google.spanner.v1.Spanner.Read], there is no
+	// limit on the size of the returned result set. However, no individual row in
 	// the result set can exceed 100 MiB, and no column value can exceed
 	// 10 MiB.
 	StreamingRead(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (Spanner_StreamingReadClient, error)
 	// Begins a new transaction. This step can often be skipped:
-	// [Read][google.spanner.v1.Spanner.Read], [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] and
+	// [Read][google.spanner.v1.Spanner.Read],
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] and
 	// [Commit][google.spanner.v1.Spanner.Commit] can begin a new transaction as a
 	// side-effect.
 	BeginTransaction(ctx context.Context, in *BeginTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
@@ -1620,8 +1853,9 @@ type SpannerClient interface {
 	Commit(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitResponse, error)
 	// Rolls back a transaction, releasing any locks it holds. It is a good
 	// idea to call this for any transaction that includes one or more
-	// [Read][google.spanner.v1.Spanner.Read] or [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] requests and
-	// ultimately decides not to commit.
+	// [Read][google.spanner.v1.Spanner.Read] or
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] requests and ultimately
+	// decides not to commit.
 	//
 	// `Rollback` returns `OK` if it successfully aborts the transaction, the
 	// transaction was already aborted, or the transaction is not
@@ -1629,10 +1863,11 @@ type SpannerClient interface {
 	Rollback(ctx context.Context, in *RollbackRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Creates a set of partition tokens that can be used to execute a query
 	// operation in parallel.  Each of the returned partition tokens can be used
-	// by [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] to specify a subset
-	// of the query result to read.  The same session and read-only transaction
-	// must be used by the PartitionQueryRequest used to create the
-	// partition tokens and the ExecuteSqlRequests that use the partition tokens.
+	// by [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] to
+	// specify a subset of the query result to read.  The same session and
+	// read-only transaction must be used by the PartitionQueryRequest used to
+	// create the partition tokens and the ExecuteSqlRequests that use the
+	// partition tokens.
 	//
 	// Partition tokens become invalid when the session used to create them
 	// is deleted, is idle for too long, begins a new transaction, or becomes too
@@ -1641,12 +1876,13 @@ type SpannerClient interface {
 	PartitionQuery(ctx context.Context, in *PartitionQueryRequest, opts ...grpc.CallOption) (*PartitionResponse, error)
 	// Creates a set of partition tokens that can be used to execute a read
 	// operation in parallel.  Each of the returned partition tokens can be used
-	// by [StreamingRead][google.spanner.v1.Spanner.StreamingRead] to specify a subset of the read
-	// result to read.  The same session and read-only transaction must be used by
-	// the PartitionReadRequest used to create the partition tokens and the
-	// ReadRequests that use the partition tokens.  There are no ordering
-	// guarantees on rows returned among the returned partition tokens, or even
-	// within each individual StreamingRead call issued with a partition_token.
+	// by [StreamingRead][google.spanner.v1.Spanner.StreamingRead] to specify a
+	// subset of the read result to read.  The same session and read-only
+	// transaction must be used by the PartitionReadRequest used to create the
+	// partition tokens and the ReadRequests that use the partition tokens.  There
+	// are no ordering guarantees on rows returned among the returned partition
+	// tokens, or even within each individual StreamingRead call issued with a
+	// partition_token.
 	//
 	// Partition tokens become invalid when the session used to create them
 	// is deleted, is idle for too long, begins a new transaction, or becomes too
@@ -1738,6 +1974,15 @@ func (x *spannerExecuteStreamingSqlClient) Recv() (*PartialResultSet, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *spannerClient) ExecuteBatchDml(ctx context.Context, in *ExecuteBatchDmlRequest, opts ...grpc.CallOption) (*ExecuteBatchDmlResponse, error) {
+	out := new(ExecuteBatchDmlResponse)
+	err := c.cc.Invoke(ctx, "/google.spanner.v1.Spanner/ExecuteBatchDml", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *spannerClient) Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*ResultSet, error) {
@@ -1854,7 +2099,9 @@ type SpannerServer interface {
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	// Lists all sessions in a given database.
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
-	// Ends a session, releasing server resources associated with it.
+	// Ends a session, releasing server resources associated with it. This will
+	// asynchronously trigger cancellation of any operations that are running with
+	// this session.
 	DeleteSession(context.Context, *DeleteSessionRequest) (*empty.Empty, error)
 	// Executes an SQL statement, returning all results in a single reply. This
 	// method cannot be used to return a result set larger than 10 MiB;
@@ -1863,39 +2110,63 @@ type SpannerServer interface {
 	//
 	// Operations inside read-write transactions might return `ABORTED`. If
 	// this occurs, the application should restart the transaction from
-	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more details.
+	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more
+	// details.
 	//
 	// Larger result sets can be fetched in streaming fashion by calling
-	// [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] instead.
+	// [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql]
+	// instead.
 	ExecuteSql(context.Context, *ExecuteSqlRequest) (*ResultSet, error)
-	// Like [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], except returns the result
-	// set as a stream. Unlike [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], there
-	// is no limit on the size of the returned result set. However, no
-	// individual row in the result set can exceed 100 MiB, and no
-	// column value can exceed 10 MiB.
+	// Like [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], except returns the
+	// result set as a stream. Unlike
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql], there is no limit on
+	// the size of the returned result set. However, no individual row in the
+	// result set can exceed 100 MiB, and no column value can exceed 10 MiB.
 	ExecuteStreamingSql(*ExecuteSqlRequest, Spanner_ExecuteStreamingSqlServer) error
+	// Executes a batch of SQL DML statements. This method allows many statements
+	// to be run with lower latency than submitting them sequentially with
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].
+	//
+	// Statements are executed in order, sequentially.
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse] will contain a
+	// [ResultSet][google.spanner.v1.ResultSet] for each DML statement that has successfully executed. If a
+	// statement fails, its error status will be returned as part of the
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse]. Execution will
+	// stop at the first failed statement; the remaining statements will not run.
+	//
+	// ExecuteBatchDml is expected to return an OK status with a response even if
+	// there was an error while processing one of the DML statements. Clients must
+	// inspect response.status to determine if there were any errors while
+	// processing the request.
+	//
+	// See more details in
+	// [ExecuteBatchDmlRequest][Spanner.ExecuteBatchDmlRequest] and
+	// [ExecuteBatchDmlResponse][Spanner.ExecuteBatchDmlResponse].
+	ExecuteBatchDml(context.Context, *ExecuteBatchDmlRequest) (*ExecuteBatchDmlResponse, error)
 	// Reads rows from the database using key lookups and scans, as a
 	// simple key/value style alternative to
-	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].  This method cannot be used to
-	// return a result set larger than 10 MiB; if the read matches more
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql].  This method cannot be
+	// used to return a result set larger than 10 MiB; if the read matches more
 	// data than that, the read fails with a `FAILED_PRECONDITION`
 	// error.
 	//
 	// Reads inside read-write transactions might return `ABORTED`. If
 	// this occurs, the application should restart the transaction from
-	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more details.
+	// the beginning. See [Transaction][google.spanner.v1.Transaction] for more
+	// details.
 	//
 	// Larger result sets can be yielded in streaming fashion by calling
 	// [StreamingRead][google.spanner.v1.Spanner.StreamingRead] instead.
 	Read(context.Context, *ReadRequest) (*ResultSet, error)
-	// Like [Read][google.spanner.v1.Spanner.Read], except returns the result set as a
-	// stream. Unlike [Read][google.spanner.v1.Spanner.Read], there is no limit on the
-	// size of the returned result set. However, no individual row in
+	// Like [Read][google.spanner.v1.Spanner.Read], except returns the result set
+	// as a stream. Unlike [Read][google.spanner.v1.Spanner.Read], there is no
+	// limit on the size of the returned result set. However, no individual row in
 	// the result set can exceed 100 MiB, and no column value can exceed
 	// 10 MiB.
 	StreamingRead(*ReadRequest, Spanner_StreamingReadServer) error
 	// Begins a new transaction. This step can often be skipped:
-	// [Read][google.spanner.v1.Spanner.Read], [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] and
+	// [Read][google.spanner.v1.Spanner.Read],
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] and
 	// [Commit][google.spanner.v1.Spanner.Commit] can begin a new transaction as a
 	// side-effect.
 	BeginTransaction(context.Context, *BeginTransactionRequest) (*Transaction, error)
@@ -1910,8 +2181,9 @@ type SpannerServer interface {
 	Commit(context.Context, *CommitRequest) (*CommitResponse, error)
 	// Rolls back a transaction, releasing any locks it holds. It is a good
 	// idea to call this for any transaction that includes one or more
-	// [Read][google.spanner.v1.Spanner.Read] or [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] requests and
-	// ultimately decides not to commit.
+	// [Read][google.spanner.v1.Spanner.Read] or
+	// [ExecuteSql][google.spanner.v1.Spanner.ExecuteSql] requests and ultimately
+	// decides not to commit.
 	//
 	// `Rollback` returns `OK` if it successfully aborts the transaction, the
 	// transaction was already aborted, or the transaction is not
@@ -1919,10 +2191,11 @@ type SpannerServer interface {
 	Rollback(context.Context, *RollbackRequest) (*empty.Empty, error)
 	// Creates a set of partition tokens that can be used to execute a query
 	// operation in parallel.  Each of the returned partition tokens can be used
-	// by [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] to specify a subset
-	// of the query result to read.  The same session and read-only transaction
-	// must be used by the PartitionQueryRequest used to create the
-	// partition tokens and the ExecuteSqlRequests that use the partition tokens.
+	// by [ExecuteStreamingSql][google.spanner.v1.Spanner.ExecuteStreamingSql] to
+	// specify a subset of the query result to read.  The same session and
+	// read-only transaction must be used by the PartitionQueryRequest used to
+	// create the partition tokens and the ExecuteSqlRequests that use the
+	// partition tokens.
 	//
 	// Partition tokens become invalid when the session used to create them
 	// is deleted, is idle for too long, begins a new transaction, or becomes too
@@ -1931,12 +2204,13 @@ type SpannerServer interface {
 	PartitionQuery(context.Context, *PartitionQueryRequest) (*PartitionResponse, error)
 	// Creates a set of partition tokens that can be used to execute a read
 	// operation in parallel.  Each of the returned partition tokens can be used
-	// by [StreamingRead][google.spanner.v1.Spanner.StreamingRead] to specify a subset of the read
-	// result to read.  The same session and read-only transaction must be used by
-	// the PartitionReadRequest used to create the partition tokens and the
-	// ReadRequests that use the partition tokens.  There are no ordering
-	// guarantees on rows returned among the returned partition tokens, or even
-	// within each individual StreamingRead call issued with a partition_token.
+	// by [StreamingRead][google.spanner.v1.Spanner.StreamingRead] to specify a
+	// subset of the read result to read.  The same session and read-only
+	// transaction must be used by the PartitionReadRequest used to create the
+	// partition tokens and the ReadRequests that use the partition tokens.  There
+	// are no ordering guarantees on rows returned among the returned partition
+	// tokens, or even within each individual StreamingRead call issued with a
+	// partition_token.
 	//
 	// Partition tokens become invalid when the session used to create them
 	// is deleted, is idle for too long, begins a new transaction, or becomes too
@@ -2058,6 +2332,24 @@ type spannerExecuteStreamingSqlServer struct {
 
 func (x *spannerExecuteStreamingSqlServer) Send(m *PartialResultSet) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func _Spanner_ExecuteBatchDml_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecuteBatchDmlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpannerServer).ExecuteBatchDml(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.spanner.v1.Spanner/ExecuteBatchDml",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpannerServer).ExecuteBatchDml(ctx, req.(*ExecuteBatchDmlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Spanner_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -2212,6 +2504,10 @@ var _Spanner_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExecuteSql",
 			Handler:    _Spanner_ExecuteSql_Handler,
+		},
+		{
+			MethodName: "ExecuteBatchDml",
+			Handler:    _Spanner_ExecuteBatchDml_Handler,
 		},
 		{
 			MethodName: "Read",

@@ -19,6 +19,9 @@ external source.
 CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
 
+Please note that to use this auth method, `tls_disable` must be false in the Vault 
+configuration. This is because the certificates are sent through TLS communication itself.
+
 ## Revocation Checking
 
 Since Vault 0.4, the method supports revocation checking.
@@ -91,7 +94,7 @@ $ curl \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \
-    http://127.0.0.1:8200/v1/auth/cert/login
+    https://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ## Configuration

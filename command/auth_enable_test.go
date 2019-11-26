@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
@@ -163,15 +163,25 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		modFile, err := ioutil.ReadFile("../go.mod")
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, p := range plugins {
-			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
-				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-auth-"))
+		modLines := strings.Split(string(modFile), "\n")
+		for _, p := range modLines {
+			splitLine := strings.Split(strings.TrimSpace(p), " ")
+			if len(splitLine) == 0 {
+				continue
+			}
+			potPlug := strings.TrimPrefix(splitLine[0], "github.com/hashicorp/")
+			if strings.HasPrefix(potPlug, "vault-plugin-auth-") {
+				backends = append(backends, strings.TrimPrefix(potPlug, "vault-plugin-auth-"))
 			}
 		}
+		// Since "pcf" plugin in the Vault registry is also pointed at the "vault-plugin-auth-cf"
+		// repository, we need to manually append it here so it'll tie out with our expected number
+		// of credential backends.
+		backends = append(backends, "pcf")
 
 		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
 		// is treated as special and excluded from the registry.

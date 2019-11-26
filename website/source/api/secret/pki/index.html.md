@@ -455,12 +455,12 @@ can be set in a CSR are supported.
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
-- `format` `(string: "")` – Specifies the format for returned data. This can be
+- `format` `(string: "pem")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
   (if exported) and CSR, concatenated.
 
-- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+- `private_key_format` `(string: "der")` – Specifies the format for marshaling the
   private key. Defaults to `der` which will return either base64-encoded DER or
   PEM-encoded DER, depending on the value of `format`. The other option is
   `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
@@ -469,7 +469,7 @@ can be set in a CSR are supported.
   or `ec`.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
-  changed to a valid value if the `key_type` is `ec`.
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -523,7 +523,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/pki/intermediate/generate/internal
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/exported
 ```
 
 ```json
@@ -545,7 +545,8 @@ $ curl \
 
 This endpoint allows submitting the signed CA certificate corresponding to a
 private key generated via `/pki/intermediate/generate`. The certificate should
-be submitted in PEM format; see the documentation for `/pki/config/ca` for some
+be submitted in PEM format; see the documentation for
+[/pki/config/ca](/api/secret/pki/index.html#submit-ca-information) for some
 hints on submitting.
 
 | Method   | Path                         |
@@ -816,9 +817,7 @@ request is denied.
   1024 bits for RSA keys).
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use for the
-  generated keys. This will need to be changed for `ec` keys. See
-  https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
-  lengths for `ec`.
+  generated keys. This will need to be changed for `ec` keys, e.g., 224 or 521.
 
 - `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
   Specifies the allowed key usage constraint on issued certificates. Valid 
@@ -952,7 +951,7 @@ $ curl \
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
-    "allow_uri_sans": ["example.com","spiffe://*"],
+    "allowed_uri_sans": ["example.com","spiffe://*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -1083,8 +1082,8 @@ overwrite the existing cert/key with new values.
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
 
-- `key_bits` `(int: 2048)` – Specifies the number of bits to use. Must be
-  changed to a valid value if the `key_type` is `ec`.
+- `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
+  changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
 
 - `max_path_length` `(int: -1)` – Specifies the maximum path length to encode in
   the generated certificate. `-1` means no limit. Unless the signing certificate

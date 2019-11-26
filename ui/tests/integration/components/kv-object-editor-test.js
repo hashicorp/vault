@@ -12,14 +12,6 @@ const component = create(kvObjectEditor);
 module('Integration | Component | kv object editor', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders with no initial value', async function(assert) {
     let spy = sinon.spy();
     this.set('onChange', spy);

@@ -9,11 +9,10 @@
       <div class="column is-10">
         {{#link-to "vault.cluster.access.identity.aliases.show" item.id "details"
           class="has-text-black has-text-weight-semibold"
-          }}{{i-con
-            glyph='role'
-            size=14
-            class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
+          }}<Icon
+              @glyph="user-square-outline"
+              class="has-text-grey-light"
+            /><span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
         <div class="has-text-grey">
           {{item.id}}
         </div>

@@ -1,9 +1,10 @@
 import Ember from 'ember';
-import { resolve } from 'rsvp';
+import { resolve, reject } from 'rsvp';
 import { assign } from '@ember/polyfills';
-import $ from 'jquery';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
+
+import fetch from 'fetch';
 import { getOwner } from '@ember/application';
 import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
@@ -12,14 +13,14 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
-const ROOT_PREFIX = '🗝';
+const ROOT_PREFIX = '_root_';
 const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
-  namespace: service(),
+  namespaceService: service('namespace'),
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   init() {
@@ -86,7 +87,20 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    return $.ajax(assign(defaults, options));
+    let opts = assign(defaults, options);
+
+    return fetch(url, {
+      method: opts.method || 'GET',
+      headers: opts.headers || {},
+    }).then(response => {
+      if (response.status === 204) {
+        return resolve();
+      } else if (response.status >= 200 && response.status < 300) {
+        return resolve(response.json());
+      } else {
+        return reject();
+      }
+    });
   },
 
   renewCurrentToken() {
@@ -115,7 +129,7 @@ export default Service.extend({
   persistAuthData() {
     let [firstArg, resp] = arguments;
     let tokens = this.get('tokens');
-    let currentNamespace = this.get('namespace.path') || '';
+    let currentNamespace = this.get('namespaceService.path') || '';
     let tokenName;
     let options;
     let backend;
@@ -296,29 +310,27 @@ export default Service.extend({
     if (this.environment() === 'development') {
       return;
     }
+
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
-      if (data.policies.includes('root')) {
+      if (data && data.policies.includes('root')) {
         this.removeTokenData(key);
       }
     });
   },
 
-  authenticate(/*{clusterId, backend, data}*/) {
+  async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
-    return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path')).then(
-        authData => {
-          return this.get('permissions')
-            .getPaths.perform()
-            .then(() => {
-              return authData;
-            });
-        }
-      );
-    });
+    let resp = await adapter.authenticate(options);
+    let authData = await this.persistAuthData(
+      options,
+      resp.auth || resp.data,
+      this.get('namespaceService.path')
+    );
+    await this.get('permissions').getPaths.perform();
+    return authData;
   },
 
   deleteCurrentToken() {

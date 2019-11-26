@@ -134,7 +134,7 @@ Lastly, Vault supports using a [Two-man
 rule](https://en.wikipedia.org/wiki/Two-man_rule) for unsealing using [Shamir's
 Secret Sharing
 technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).  When Vault
-is started, it starts in an _sealed_ state. This means that the encryption key
+is started, it starts in a _sealed_ state. This means that the encryption key
 needed to read and write from the storage backend is not yet known. The process
 of unsealing requires providing the master key so that the encryption key can
 be retrieved. The risk of distributing the master key is that a single

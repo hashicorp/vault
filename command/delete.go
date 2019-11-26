@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -13,6 +15,8 @@ var _ cli.CommandAutocomplete = (*DeleteCommand)(nil)
 
 type DeleteCommand struct {
 	*BaseCommand
+
+	testStdin io.Reader // for tests
 }
 
 func (c *DeleteCommand) Synopsis() string {
@@ -69,10 +73,7 @@ func (c *DeleteCommand) Run(args []string) int {
 	args = f.Args()
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
-		return 1
-	case len(args) > 1:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected at least 1, got %d)", len(args)))
 		return 1
 	}
 
@@ -82,9 +83,21 @@ func (c *DeleteCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Pull our fake stdin if needed
+	stdin := (io.Reader)(os.Stdin)
+	if c.testStdin != nil {
+		stdin = c.testStdin
+	}
+
 	path := sanitizePath(args[0])
 
-	secret, err := client.Logical().Delete(path)
+	data, err := parseArgsDataStringLists(stdin, args[1:])
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
+		return 1
+	}
+
+	secret, err := client.Logical().DeleteWithData(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		if secret != nil {

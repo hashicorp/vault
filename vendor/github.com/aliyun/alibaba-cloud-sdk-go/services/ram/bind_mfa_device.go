@@ -77,9 +77,9 @@ func (client *Client) BindMFADeviceWithCallback(request *BindMFADeviceRequest, c
 type BindMFADeviceRequest struct {
 	*requests.RpcRequest
 	SerialNumber        string `position:"Query" name:"SerialNumber"`
-	UserName            string `position:"Query" name:"UserName"`
-	AuthenticationCode1 string `position:"Query" name:"AuthenticationCode1"`
 	AuthenticationCode2 string `position:"Query" name:"AuthenticationCode2"`
+	AuthenticationCode1 string `position:"Query" name:"AuthenticationCode1"`
+	UserName            string `position:"Query" name:"UserName"`
 }
 
 // BindMFADeviceResponse is the response struct for api BindMFADevice

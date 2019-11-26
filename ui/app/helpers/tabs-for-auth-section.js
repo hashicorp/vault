@@ -1,4 +1,6 @@
 import { helper as buildHelper } from '@ember/component/helper';
+import { pluralize } from 'ember-inflector';
+import { capitalize } from '@ember/string';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -73,19 +75,32 @@ const TABS_FOR_SETTINGS = {
 
 const TABS_FOR_SHOW = {};
 
-export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
+export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
-
   if (sectionType === 'authSettings') {
-    tabs = (TABS_FOR_SETTINGS[methodType] || []).slice();
+    tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
       label: 'Method Options',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'options'],
     });
     return tabs;
   }
+  if (paths || model.paths) {
+    if (model.paths) {
+      paths = model.paths.paths.filter(path => path.navigation);
+    }
 
-  tabs = (TABS_FOR_SHOW[methodType] || []).slice();
+    // TODO: we're unsure if we actually need compact here
+    // but are leaving it just in case OpenAPI ever returns an empty thing
+    tabs = paths.compact().map(path => {
+      return {
+        label: capitalize(pluralize(path.itemName)),
+        routeParams: ['vault.cluster.access.method.item.list', path.itemType],
+      };
+    });
+  } else {
+    tabs = (TABS_FOR_SHOW[model.type] || []).slice();
+  }
   tabs.push({
     label: 'Configuration',
     routeParams: ['vault.cluster.access.method.section', 'configuration'],

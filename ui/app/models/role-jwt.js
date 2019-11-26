@@ -1,6 +1,6 @@
 import DS from 'ember-data';
 import { computed } from '@ember/object';
-import parseURL from 'vault/utils/parse-url';
+import parseURL from 'core/utils/parse-url';
 const { attr } = DS;
 
 const DOMAIN_STRINGS = {

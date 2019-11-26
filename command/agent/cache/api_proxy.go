@@ -36,15 +36,29 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 	client.SetToken(req.Token)
+
+	// http.Transport will transparently request gzip and decompress the response, but only if
+	// the client doesn't manually set the header. Removing any Accept-Encoding header allows the
+	// transparent compression to occur.
+	req.Request.Header.Del("Accept-Encoding")
 	client.SetHeaders(req.Request.Header)
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody
 
+	query := req.Request.URL.Query()
+	if len(query) != 0 {
+		fwReq.Params = query
+	}
+
 	// Make the request to Vault and get the response
-	ap.logger.Info("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
+	ap.logger.Info("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
+	if resp == nil && err != nil {
+		// We don't want to cache nil responses, so we simply return the error
+		return nil, err
+	}
 
 	// Before error checking from the request call, we'd want to initialize a SendResponse to
 	// potentially return

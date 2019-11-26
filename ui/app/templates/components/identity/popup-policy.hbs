@@ -12,19 +12,14 @@
         {{/link-to}}
       </li>
       <li class="action">
-        {{#confirm-action
-          confirmButtonClasses="button is-primary"
-          confirmButtonText="Remove"
-          buttonClasses="link is-destroy"
-          onConfirmAction=(action "performTransaction" model policyName)
-          confirmMessage=(concat "Are you sure you want to remove " policyName "?")
-          showConfirm=(get this (concat "shouldDelete-" (dot-to-dash policyName)))
-          class=(if (get this (concat "shouldDelete-" (dot-to-dash policyName))) "message is-block is-warning is-outline")
-          containerClasses="message-body is-block"
-          messageClasses="is-block"
-        }}
+        <ConfirmAction
+          @buttonClasses="link is-destroy"
+          @confirmButtonText="Remove"
+          @confirmMessage="This policy may affect permissions to access Vault data."
+          @onConfirmAction={{action "performTransaction" model policyName}}
+        >
           Remove from {{model.identityType}}
-        {{/confirm-action}}
+        </ConfirmAction>
       </li>
     </ul>
   </nav>

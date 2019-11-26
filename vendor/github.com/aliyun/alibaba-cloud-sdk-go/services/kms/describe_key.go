@@ -76,8 +76,7 @@ func (client *Client) DescribeKeyWithCallback(request *DescribeKeyRequest, callb
 // DescribeKeyRequest is the request struct for api DescribeKey
 type DescribeKeyRequest struct {
 	*requests.RpcRequest
-	KeyId    string `position:"Query" name:"KeyId"`
-	STSToken string `position:"Query" name:"STSToken"`
+	KeyId string `position:"Query" name:"KeyId"`
 }
 
 // DescribeKeyResponse is the response struct for api DescribeKey

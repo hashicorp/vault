@@ -1,7 +1,7 @@
 <SplashPage as |Page|>
   <Page.header>
     <h1 class="title is-4">
-     Disaster Recovery Secondary is&nbsp;enabled
+     Disaster Recovery secondary is&nbsp;enabled
     </h1>
   </Page.header>
   <Page.content>
@@ -28,7 +28,7 @@
       <AlertBanner
         @type="warning"
         @title="Caution"
-        @message="Vault replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected."
+        @message="Vault Replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected."
         @class="unseal-warning"
         data-test-cluster-status
       />
@@ -54,7 +54,7 @@
       >
         <p>
           Generate an Operation Token by entering a portion of the master key.
-          Once all portions are entered, the generated operation token may be used to manage your Seondary Disaster Recovery cluster.
+          Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
         </p>
       </ShamirFlow>
     {{/unless}}

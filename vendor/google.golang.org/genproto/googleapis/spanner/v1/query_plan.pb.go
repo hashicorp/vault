@@ -5,10 +5,11 @@ package spanner
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -20,10 +21,10 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// The kind of [PlanNode][google.spanner.v1.PlanNode]. Distinguishes between the two different kinds of
-// nodes that can appear in a query plan.
+// The kind of [PlanNode][google.spanner.v1.PlanNode]. Distinguishes between
+// the two different kinds of nodes that can appear in a query plan.
 type PlanNode_Kind int32
 
 const (
@@ -60,21 +61,24 @@ func (PlanNode_Kind) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_14e5ab0c0507d181, []int{0, 0}
 }
 
-// Node information for nodes appearing in a [QueryPlan.plan_nodes][google.spanner.v1.QueryPlan.plan_nodes].
+// Node information for nodes appearing in a
+// [QueryPlan.plan_nodes][google.spanner.v1.QueryPlan.plan_nodes].
 type PlanNode struct {
-	// The `PlanNode`'s index in [node list][google.spanner.v1.QueryPlan.plan_nodes].
+	// The `PlanNode`'s index in [node
+	// list][google.spanner.v1.QueryPlan.plan_nodes].
 	Index int32 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
 	// Used to determine the type of node. May be needed for visualizing
 	// different kinds of nodes differently. For example, If the node is a
-	// [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] node, it will have a condensed representation
-	// which can be used to directly embed a description of the node in its
-	// parent.
+	// [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] node, it will have a
+	// condensed representation which can be used to directly embed a description
+	// of the node in its parent.
 	Kind PlanNode_Kind `protobuf:"varint,2,opt,name=kind,proto3,enum=google.spanner.v1.PlanNode_Kind" json:"kind,omitempty"`
 	// The display name for the node.
 	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// List of child node `index`es and their relationship to this parent.
 	ChildLinks []*PlanNode_ChildLink `protobuf:"bytes,4,rep,name=child_links,json=childLinks,proto3" json:"child_links,omitempty"`
-	// Condensed representation for [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] nodes.
+	// Condensed representation for
+	// [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] nodes.
 	ShortRepresentation *PlanNode_ShortRepresentation `protobuf:"bytes,5,opt,name=short_representation,json=shortRepresentation,proto3" json:"short_representation,omitempty"`
 	// Attributes relevant to the node contained in a group of key-value pairs.
 	// For example, a Parameter Reference node could have the following
@@ -179,14 +183,14 @@ type PlanNode_ChildLink struct {
 	// of the child being an output variable, to represent the tag associated
 	// with the output variable.
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	// Only present if the child node is [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] and corresponds
-	// to an output variable of the parent node. The field carries the name of
-	// the output variable.
-	// For example, a `TableScan` operator that reads rows from a table will
-	// have child links to the `SCALAR` nodes representing the output variables
-	// created for each column that is read by the operator. The corresponding
-	// `variable` fields will be set to the variable names assigned to the
-	// columns.
+	// Only present if the child node is
+	// [SCALAR][google.spanner.v1.PlanNode.Kind.SCALAR] and corresponds to an
+	// output variable of the parent node. The field carries the name of the
+	// output variable. For example, a `TableScan` operator that reads rows from
+	// a table will have child links to the `SCALAR` nodes representing the
+	// output variables created for each column that is read by the operator.
+	// The corresponding `variable` fields will be set to the variable names
+	// assigned to the columns.
 	Variable             string   `protobuf:"bytes,3,opt,name=variable,proto3" json:"variable,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -297,8 +301,8 @@ func (m *PlanNode_ShortRepresentation) GetSubqueries() map[string]int32 {
 // Contains an ordered list of nodes appearing in the query plan.
 type QueryPlan struct {
 	// The nodes in the query plan. Plan nodes are returned in pre-order starting
-	// with the plan root. Each [PlanNode][google.spanner.v1.PlanNode]'s `id` corresponds to its index in
-	// `plan_nodes`.
+	// with the plan root. Each [PlanNode][google.spanner.v1.PlanNode]'s `id`
+	// corresponds to its index in `plan_nodes`.
 	PlanNodes            []*PlanNode `protobuf:"bytes,1,rep,name=plan_nodes,json=planNodes,proto3" json:"plan_nodes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`

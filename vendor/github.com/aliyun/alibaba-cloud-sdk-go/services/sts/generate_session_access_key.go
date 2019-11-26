@@ -91,7 +91,7 @@ func CreateGenerateSessionAccessKeyRequest() (request *GenerateSessionAccessKeyR
 	request = &GenerateSessionAccessKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Sts", "2015-04-01", "GenerateSessionAccessKey", "", "")
+	request.InitWithApiInfo("Sts", "2015-04-01", "GenerateSessionAccessKey", "sts", "openAPI")
 	return
 }
 

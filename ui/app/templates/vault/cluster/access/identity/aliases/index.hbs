@@ -16,11 +16,10 @@
             "details"
             class="is-block has-text-black has-text-weight-semibold"
             data-test-identity-link=item.id
-          }}{{i-con
-              glyph="role"
-              size=14
+          }}<Icon
+              @glyph="user-square-outline"
               class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
+            /><span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
           <div class="has-text-grey">
             {{item.id}}
           </div>
@@ -51,7 +50,7 @@
       Create {{identityType}}
     {{/link-to}}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
-      Learn More
+      Learn more
     </LearnLink>
   </EmptyState>
 {{/if}}

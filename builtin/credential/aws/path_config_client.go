@@ -4,50 +4,50 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathConfigClient(b *backend) *framework.Path {
+func (b *backend) pathConfigClient() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/client$",
 		Fields: map[string]*framework.FieldSchema{
-			"access_key": &framework.FieldSchema{
+			"access_key": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "AWS Access Key ID for the account used to make AWS API requests.",
 			},
 
-			"secret_key": &framework.FieldSchema{
+			"secret_key": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "AWS Secret Access Key for the account used to make AWS API requests.",
 			},
 
-			"endpoint": &framework.FieldSchema{
+			"endpoint": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS EC2 API calls.",
 			},
 
-			"iam_endpoint": &framework.FieldSchema{
+			"iam_endpoint": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS IAM API calls.",
 			},
 
-			"sts_endpoint": &framework.FieldSchema{
+			"sts_endpoint": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
 
-			"iam_server_id_header_value": &framework.FieldSchema{
+			"iam_server_id_header_value": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
-			"max_retries": &framework.FieldSchema{
+			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
@@ -56,11 +56,19 @@ func pathConfigClient(b *backend) *framework.Path {
 
 		ExistenceCheck: b.pathConfigClientExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigClientCreateUpdate,
-			logical.UpdateOperation: b.pathConfigClientCreateUpdate,
-			logical.DeleteOperation: b.pathConfigClientDelete,
-			logical.ReadOperation:   b.pathConfigClientRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientCreateUpdate,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientDelete,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigClientRead,
+			},
 		},
 
 		HelpSynopsis:    pathConfigClientHelpSyn,

@@ -73,8 +73,8 @@ an ACL token to use with the `token` parameter. Vault must have a management
 type token so that it can create and revoke ACL tokens.
 
 The next step is to configure a role. A role is a logical name that maps
-to a set of policy names used to generate those credentials. For example, lets create
-an "monitoring" role that maps to a "readonly" policy:
+to a set of policy names used to generate those credentials. For example, let's create
+a "monitoring" role that maps to a "readonly" policy:
 
 ```
 $ vault write nomad/role/monitoring policies=readonly

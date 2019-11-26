@@ -10,7 +10,7 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create") }}
+      {{#if (eq mode "create")}}
         Create an AWS Role
       {{else if (eq mode 'edit')}}
         Edit AWS Role <code>{{model.id}}</code>
@@ -19,39 +19,43 @@
       {{/if}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      {{#if (eq mode "show") }}
-        {{#if (or model.canUpdate model.canDelete)}}
-          <div class="control">
-            {{#secret-link
-              secret=model.id
-              mode="edit"
-              replace=true
-              class="button has-icon-right is-ghost is-compact"
-              }}
-              Edit role
-              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-        {{#if model.canGenerate}}
-          <div class="control">
-            {{#secret-link
-              mode="credentials"
-              secret=model.id
-              class="button has-icon-right is-ghost is-compact"
-              data-test-backend-credentials="iam"
-            }}
-             Generate credentials
-             {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-      {{/if}}
-    </div>
-  </p.levelRight>
 </PageHeader>
+
+{{#if (eq mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if model.canGenerate}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="credentials"
+          @data-test-backend-credentials="iam"
+        >
+          Generate credentials
+        </ToolbarSecretLink>
+      {{/if}}
+      {{#if (and model.canGenerate (or model.canDelete model.canEdit))}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+      {{/if}}
+      {{#if model.canEdit}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="edit"
+          @replace=true
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
 
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
   {{partial 'partials/role-aws/form'}}

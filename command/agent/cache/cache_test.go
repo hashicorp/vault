@@ -19,11 +19,11 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/sink/mock"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -34,10 +34,22 @@ path "*" {
 `
 
 // setupClusterAndAgent is a helper func used to set up a test cluster and
-// caching agent. It returns a cleanup func that should be deferred immediately
-// along with two clients, one for direct cluster communication and another to
-// talk to the caching agent.
+// caching agent against the active node. It returns a cleanup func that should
+// be deferred immediately along with two clients, one for direct cluster
+// communication and another to talk to the caching agent.
 func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, false)
+}
+
+// setupClusterAndAgentOnStandby is a helper func used to set up a test cluster
+// and caching agent against a standby node. It returns a cleanup func that
+// should be deferred immediately along with two clients, one for direct cluster
+// communication and another to talk to the caching agent.
+func setupClusterAndAgentOnStandby(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, true)
+}
+
+func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool) (func(), *api.Client, *api.Client, *LeaseCache) {
 	t.Helper()
 
 	if ctx == nil {
@@ -70,21 +82,30 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 
-	// clusterClient is the client that is used to talk directly to the cluster.
-	clusterClient := cores[0].Client
+	activeClient := cores[0].Client
+	standbyClient := cores[1].Client
+
+	// clienToUse is the client for the agent to point to.
+	clienToUse := activeClient
+	if onStandby {
+		clienToUse = standbyClient
+	}
 
 	// Add an admin policy
-	if err := clusterClient.Sys().PutPolicy("admin", policyAdmin); err != nil {
+	if err := activeClient.Sys().PutPolicy("admin", policyAdmin); err != nil {
 		t.Fatal(err)
 	}
 
 	// Set up the userpass auth backend and an admin user. Used for getting a token
 	// for the agent later down in this func.
-	clusterClient.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+	err := activeClient.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	_, err := clusterClient.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
+	_, err = activeClient.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 		"policies": []string{"admin"},
 	})
@@ -94,7 +115,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 
 	// Set up env vars for agent consumption
 	origEnvVaultAddress := os.Getenv(api.EnvVaultAddress)
-	os.Setenv(api.EnvVaultAddress, clusterClient.Address())
+	os.Setenv(api.EnvVaultAddress, clienToUse.Address())
 
 	origEnvVaultCACert := os.Getenv(api.EnvVaultCACert)
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
@@ -108,7 +129,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 
 	// Create the API proxier
 	apiProxy, err := NewAPIProxy(&APIProxyConfig{
-		Client: clusterClient,
+		Client: clienToUse,
 		Logger: cacheLogger.Named("apiproxy"),
 	})
 	if err != nil {
@@ -118,7 +139,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      clusterClient,
+		Client:      clienToUse,
 		BaseContext: ctx,
 		Proxier:     apiProxy,
 		Logger:      cacheLogger.Named("leasecache"),
@@ -142,7 +163,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	go server.Serve(listener)
 
 	// testClient is the client that is used to talk to the agent for proxying/caching behavior.
-	testClient, err := clusterClient.Clone()
+	testClient, err := activeClient.Clone()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +192,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 		listener.Close()
 	}
 
-	return cleanup, clusterClient, testClient, leaseCache
+	return cleanup, clienToUse, testClient, leaseCache
 }
 
 func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expected map[string]string, leaseCache *LeaseCache) {

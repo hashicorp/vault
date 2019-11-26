@@ -931,8 +931,11 @@ func (s *Session) readReply(beforeRead beforeRead) error {
 		}
 		cnt := s.rd.Cnt()
 
-		if cnt != int(s.ph.bufferLength) {
-			outLogger.Printf("+++ partLenght: %d - not equal read byte amount: %d", s.ph.bufferLength, cnt)
+		switch {
+		case cnt < int(s.ph.bufferLength): // protocol buffer length > read bytes -> skip the unread bytes
+			s.rd.Skip(int(s.ph.bufferLength) - cnt)
+		case cnt > int(s.ph.bufferLength): // read bytes > protocol buffer length -> should never happen
+			return fmt.Errorf("protocol error: read bytes %d > buffer length %d", cnt, s.ph.bufferLength)
 		}
 
 		if i != lastPart { // not last part

@@ -12,13 +12,16 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
-func environmentForCleanupClient(name string) (azure.Environment, error) {
+func environmentForCleanupClient(name string, armUrl string) (azure.Environment, error) {
+	if armUrl != "" {
+		return azure.EnvironmentFromURL(armUrl)
+	}
 	if name == "" {
-		return azure.EnvironmentFromName("AzurePublicCloud")
+		name = "AzurePublicCloud"
 	}
 	return azure.EnvironmentFromName(name)
 }
@@ -32,11 +35,12 @@ func TestAzureBackend(t *testing.T) {
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
+	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentUrl)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -46,10 +50,11 @@ func TestAzureBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
-		"container":   name,
-		"accountName": accountName,
-		"accountKey":  accountKey,
-		"environment": environmentName,
+		"container":    name,
+		"accountName":  accountName,
+		"accountKey":   accountKey,
+		"environment":  environmentName,
+		"arm_endpoint": environmentUrl,
 	}, logger)
 
 	defer func() {
@@ -75,11 +80,12 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
+	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentUrl)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -89,10 +95,11 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
-		"container":   name,
-		"accountName": accountName,
-		"accountKey":  accountKey,
-		"environment": environmentName,
+		"container":    name,
+		"accountName":  accountName,
+		"accountKey":   accountKey,
+		"environment":  environmentName,
+		"arm_endpoint": environmentUrl,
 	}, logger)
 
 	defer func() {

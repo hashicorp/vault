@@ -10,7 +10,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 const aliCloudTestKeyID = "foo"

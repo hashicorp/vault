@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // getRawClientConfig creates a aws-sdk-go config, which is used to create client
@@ -94,7 +94,11 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		return nil, err
 	}
 	if stsRole != "" {
-		assumedCredentials := stscreds.NewCredentials(session.New(stsConfig), stsRole)
+		sess, err := session.NewSession(stsConfig)
+		if err != nil {
+			return nil, err
+		}
+		assumedCredentials := stscreds.NewCredentials(sess, stsRole)
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
 			return nil, err
@@ -102,7 +106,11 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		config.Credentials = assumedCredentials
 	} else {
 		if b.defaultAWSAccountID == "" {
-			client := sts.New(session.New(stsConfig))
+			sess, err := session.NewSession(stsConfig)
+			if err != nil {
+				return nil, err
+			}
+			client := sts.New(sess)
 			if client == nil {
 				return nil, errwrap.Wrapf("could not obtain sts client: {{err}}", err)
 			}
@@ -214,7 +222,11 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create a new EC2 client object, cache it and return the same
-	client := ec2.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := ec2.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain ec2 client")
 	}
@@ -263,7 +275,11 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create a new IAM client object, cache it and return the same
-	client := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := iam.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}

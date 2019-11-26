@@ -17,8 +17,8 @@ package ram
 
 // LoginProfile is a nested struct in ram response
 type LoginProfile struct {
-	CreateDate            string `json:"CreateDate" xml:"CreateDate"`
 	MFABindRequired       bool   `json:"MFABindRequired" xml:"MFABindRequired"`
+	CreateDate            string `json:"CreateDate" xml:"CreateDate"`
 	UserName              string `json:"UserName" xml:"UserName"`
 	PasswordResetRequired bool   `json:"PasswordResetRequired" xml:"PasswordResetRequired"`
 }

@@ -3,11 +3,13 @@ package pki
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"strings"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
@@ -121,5 +123,38 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 		if err != nil || certEntry == nil {
 			t.Fatalf("error on %s: err: %v, entry: %v", name, err, certEntry)
 		}
+	}
+}
+
+// Demonstrate that multiple OUs in the name are handled in an
+// order-preserving way.
+func TestPki_MultipleOUs(t *testing.T) {
+	var b backend
+	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+
+	apiData := &framework.FieldData{
+		Schema: fields,
+		Raw: map[string]interface{}{
+			"cn":  "example.com",
+			"ttl": 3600,
+		},
+	}
+	input := &inputBundle{
+		apiData: apiData,
+		role: &roleEntry{
+			MaxTTL: 3600,
+			OU:     []string{"Z", "E", "V"},
+		},
+	}
+	cb, err := generateCreationBundle(&b, input, nil, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	expected := []string{"Z", "E", "V"}
+	actual := cb.Params.Subject.OrganizationalUnit
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Expected %v, got %v", expected, actual)
 	}
 }

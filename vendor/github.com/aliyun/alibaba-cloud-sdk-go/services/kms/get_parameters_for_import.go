@@ -77,7 +77,6 @@ func (client *Client) GetParametersForImportWithCallback(request *GetParametersF
 type GetParametersForImportRequest struct {
 	*requests.RpcRequest
 	KeyId             string `position:"Query" name:"KeyId"`
-	STSToken          string `position:"Query" name:"STSToken"`
 	WrappingAlgorithm string `position:"Query" name:"WrappingAlgorithm"`
 	WrappingKeySpec   string `position:"Query" name:"WrappingKeySpec"`
 }

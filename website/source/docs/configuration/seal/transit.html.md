@@ -64,8 +64,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   This may also be supplied using the `VAULT_NAMESPACE` environment variable.
 
 - `disable_renewal` `(string: "false")`: Disables the automatic renewal of the token
-  in case the lifecyle of the token is managed with some other mechanism outside of
-  Vault, such as Vault Agent.  This may also be specfied using the
+  in case the lifecycle of the token is managed with some other mechanism outside of
+  Vault, such as Vault Agent.  This may also be specified using the
   `VAULT_TRANSIT_SEAL_DISABLE_RENEWAL` environment variable.
 
 - `tls_ca_cert` `(string: "")`: Specifies the path to the CA certificate file used
@@ -87,7 +87,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates.
   Using this option is highly discouraged and decreases the security of data
   transmissions to and from the Vault server.  This may also be specified using the
-  `VAULT_TLS_SKIP_VERIFY` environment variable.
+  `VAULT_SKIP_VERIFY` environment variable.
 
 ## Authentication
 
@@ -116,3 +116,8 @@ path "<mount path>/decrypt/<key name>" {
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints.  See
 [doc](/api/secret/transit/index.html#rotate-key). Old keys must not be disabled or deleted and are
 used to decrypt older data.
+
+## Learn
+
+Refer to the [Auto-unseal using Transit Secrets Engine](https://learn.hashicorp.com/vault/operations/autounseal-transit)
+guide for a step-by-step tutorial.

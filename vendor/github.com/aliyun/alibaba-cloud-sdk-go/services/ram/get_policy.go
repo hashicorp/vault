@@ -83,8 +83,9 @@ type GetPolicyRequest struct {
 // GetPolicyResponse is the response struct for api GetPolicy
 type GetPolicyResponse struct {
 	*responses.BaseResponse
-	RequestId string `json:"RequestId" xml:"RequestId"`
-	Policy    Policy `json:"Policy" xml:"Policy"`
+	RequestId            string               `json:"RequestId" xml:"RequestId"`
+	Policy               Policy               `json:"Policy" xml:"Policy"`
+	DefaultPolicyVersion DefaultPolicyVersion `json:"DefaultPolicyVersion" xml:"DefaultPolicyVersion"`
 }
 
 // CreateGetPolicyRequest creates a request to invoke GetPolicy API

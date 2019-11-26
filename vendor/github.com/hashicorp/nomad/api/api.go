@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
 )
 
@@ -26,7 +26,7 @@ var (
 	ClientConnTimeout = 1 * time.Second
 )
 
-// QueryOptions are used to parameterize a query
+// QueryOptions are used to parametrize a query
 type QueryOptions struct {
 	// Providing a datacenter overwrites the region provided
 	// by the Config
@@ -57,7 +57,7 @@ type QueryOptions struct {
 	AuthToken string
 }
 
-// WriteOptions are used to parameterize a write
+// WriteOptions are used to parametrize a write
 type WriteOptions struct {
 	// Providing a datacenter overwrites the region provided
 	// by the Config

@@ -47,7 +47,7 @@ export default Component.extend({
     const showCurrent = this.get('showCurrent');
     const ancestors = utils.ancestorKeysForKey(baseKey);
     const parts = utils.keyPartsForKey(baseKey);
-    if (!ancestors) {
+    if (ancestors.length === 0) {
       crumbs.push({
         label: baseKey,
         text: this.stripTrailingSlash(baseKey),

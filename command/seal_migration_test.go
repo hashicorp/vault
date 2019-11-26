@@ -9,17 +9,18 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/physical"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 func TestSealMigration(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
 	phys, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +29,7 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal()
+	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
 	coreConfig := &vault.CoreConfig{
 		Seal:            shamirSeal,
 		Physical:        phys,
@@ -46,8 +47,8 @@ func TestSealMigration(t *testing.T) {
 	var keys []string
 	var rootToken string
 
-	// First: start up as normal with shamir seal, init it
 	{
+		logger.Info("integ: start up as normal with shamir seal, init it")
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -72,9 +73,9 @@ func TestSealMigration(t *testing.T) {
 		cluster.Cores = nil
 	}
 
-	// Second: start up as normal with shamir seal and unseal, make sure
-	// everything is normal
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: start up as normal with shamir seal and unseal, make sure everything is normal")
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -102,8 +103,9 @@ func TestSealMigration(t *testing.T) {
 
 	var autoSeal vault.Seal
 
-	// Third: create an autoseal and activate migration
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: creating an autoseal and activating migration")
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -113,7 +115,7 @@ func TestSealMigration(t *testing.T) {
 		newSeal := vault.NewAutoSeal(seal.NewTestSeal(nil))
 		newSeal.SetCore(core)
 		autoSeal = newSeal
-		if err := adjustCoreForSealMigration(core, newSeal, nil); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, newSeal, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -146,8 +148,9 @@ func TestSealMigration(t *testing.T) {
 		cluster.Cores = nil
 	}
 
-	// Fourth: verify autoseal and recovery key usage
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: verify autoseal and recovery key usage")
 		coreConfig.Seal = autoSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
@@ -201,8 +204,9 @@ func TestSealMigration(t *testing.T) {
 	altTestSeal.Type = "test-alternate"
 	altSeal := vault.NewAutoSeal(altTestSeal)
 
-	// Fifth: migrate from auto-seal to auto-seal
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: migrate from auto-seal to auto-seal")
 		coreConfig.Seal = autoSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
@@ -210,7 +214,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(core, altSeal, autoSeal); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, altSeal, autoSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -238,9 +242,9 @@ func TestSealMigration(t *testing.T) {
 		cluster.Cores = nil
 	}
 
-	// Sixth: create an Shamir seal and activate migration. Verify it doesn't work
-	// if disabled isn't set.
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: create a Shamir seal and activate migration; verify it doesn't work if disabled isn't set.")
 		coreConfig.Seal = altSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
@@ -248,7 +252,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(core, shamirSeal, altSeal); err != nil {
+		if err := adjustCoreForSealMigration(logger, core, shamirSeal, altSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -281,12 +285,9 @@ func TestSealMigration(t *testing.T) {
 		cluster.Cores = nil
 	}
 
-	if entry, err := phys.Get(ctx, vault.StoredBarrierKeysPath); err != nil || entry != nil {
-		t.Fatalf("expected nil error and nil entry, got error %#v and entry %#v", err, entry)
-	}
-
-	// Seventh: verify autoseal is off and the expected key shares work
 	{
+		logger.SetLevel(hclog.Trace)
+		logger.Info("integ: verify autoseal is off and the expected key shares work")
 		coreConfig.Seal = shamirSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()

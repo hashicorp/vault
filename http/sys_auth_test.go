@@ -27,8 +27,9 @@ func TestSysAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"token/": map[string]interface{}{
-				"description": "token based credentials",
-				"type":        "token",
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -41,8 +42,9 @@ func TestSysAuth(t *testing.T) {
 			},
 		},
 		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -62,8 +64,14 @@ func TestSysAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
+
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
@@ -95,8 +103,9 @@ func TestSysEnableAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
-				"description": "foo",
-				"type":        "noop",
+				"description":             "foo",
+				"type":                    "noop",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -108,8 +117,9 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":   map[string]interface{}{},
 			},
 			"token/": map[string]interface{}{
-				"description": "token based credentials",
-				"type":        "token",
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -122,8 +132,9 @@ func TestSysEnableAuth(t *testing.T) {
 			},
 		},
 		"foo/": map[string]interface{}{
-			"description": "foo",
-			"type":        "noop",
+			"description":             "foo",
+			"type":                    "noop",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -135,8 +146,9 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":   map[string]interface{}{},
 		},
 		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -156,8 +168,14 @@ func TestSysEnableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
+
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
@@ -198,11 +216,12 @@ func TestSysDisableAuth(t *testing.T) {
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
-				"description": "token based credentials",
-				"type":        "token",
-				"local":       false,
-				"seal_wrap":   false,
-				"options":     interface{}(nil),
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
+				"local":                   false,
+				"seal_wrap":               false,
+				"options":                 interface{}(nil),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -212,11 +231,12 @@ func TestSysDisableAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"description": "token based credentials",
-			"type":        "token",
-			"local":       false,
-			"seal_wrap":   false,
-			"options":     interface{}(nil),
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
+			"local":                   false,
+			"seal_wrap":               false,
+			"options":                 interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -227,8 +247,14 @@ func TestSysDisableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
+
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {

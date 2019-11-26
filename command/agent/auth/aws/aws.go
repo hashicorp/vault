@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/helper/awsutil"
 )
 
 const (
@@ -45,6 +46,7 @@ type awsMethod struct {
 	mountPath   string
 	role        string
 	headerValue string
+	region      string
 
 	// These are used to share the latest creds safely across goroutines.
 	credLock  sync.Mutex
@@ -70,6 +72,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		mountPath:  conf.MountPath,
 		credsFound: make(chan struct{}),
 		stopCh:     make(chan struct{}),
+		region:     awsutil.DefaultRegion,
 	}
 
 	typeRaw, ok := conf.Config["type"]
@@ -131,6 +134,22 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		a.headerValue, ok = headerValueRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'header_value' value into string")
+		}
+	}
+
+	nonceRaw, ok := conf.Config["nonce"]
+	if ok {
+		a.nonce, ok = nonceRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'nonce' value into string")
+		}
+	}
+
+	regionRaw, ok := conf.Config["region"]
+	if ok {
+		a.region, ok = regionRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'region' value into string")
 		}
 	}
 
@@ -238,7 +257,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue)
+		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, a.region)
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return
@@ -271,7 +290,7 @@ func (a *awsMethod) pollForCreds(accessKey, secretKey, sessionToken string, freq
 			return
 		case <-ticker.C:
 			if err := a.checkCreds(accessKey, secretKey, sessionToken); err != nil {
-				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
+				a.logger.Warn("unable to retrieve current creds, retaining last creds", "error", err)
 			}
 		}
 	}

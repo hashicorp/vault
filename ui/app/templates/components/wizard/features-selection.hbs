@@ -4,7 +4,7 @@
   </h2>
   <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below.</p>
   <div class="access-information">
-    <ICon @glyph="information-circled" class="has-text-info"/>
+    <Icon @glyph="info-circle-fill" class="has-text-info"/>
     <p>Vault only shows links to pages that you have access to based on your policies. Contact your administrator if you need access changes.</p>
   </div>
   {{#if (or (has-feature "Performance Replication") (has-feature "DR Replication")) }}
@@ -27,8 +27,8 @@
          />
         <label for="feature-{{feature.key}}">{{feature.name}}</label>
         <button type="button" class="button is-ghost icon is-pulled-right" onclick={{action (toggle (concat feature.key "-isOpen") this)}}>
-          <ICon
-            @glyph={{if (get this (concat feature.key "-isOpen")) "chevron-up" "chevron-down"}}
+          <Chevron
+            @direction={{if (get this (concat feature.key "-isOpen")) "up" "down"}}
             @class="has-text-grey auto-width is-paddingless is-flex-column"
           />
         </button>
@@ -58,7 +58,7 @@
         Start
       </button>
       {{#if selectedFeatures}}
-        <span class="time-estimate"><ICon @glyph="stopwatch" @class="has-text-grey auto-width is-paddingless is-flex-column"/>About {{estimatedTime}} minutes</span>
+        <span class="time-estimate"><Icon @glyph="stopwatch" class="has-text-grey" aria-hidden="true" />About {{estimatedTime}} minutes</span>
       {{/if}}
     </span>
   </form>

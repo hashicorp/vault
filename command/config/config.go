@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/hclutil"
+	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	homedir "github.com/mitchellh/go-homedir"
 )
 

@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 )
 
 func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
@@ -82,7 +82,8 @@ func TestCore_GenerateRoot_Init(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	testCore_GenerateRoot_Init_Common(t, c)
 
-	bc, rc := TestSealDefConfigs()
+	bc := &SealConfig{SecretShares: 5, SecretThreshold: 3, StoredShares: 1}
+	rc := &SealConfig{SecretShares: 5, SecretThreshold: 3}
 	c, _, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
 	testCore_GenerateRoot_Init_Common(t, c)
 }

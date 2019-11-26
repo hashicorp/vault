@@ -3,22 +3,22 @@
     <h1 class="title is-3" data-test-mount-form-header="true">
       {{#if showEnable}}
         {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
-          <ICon
-            @size="24"
-            @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}}
-            @class="has-text-grey-light"
+          <Icon
+            @glyph={{or typeInfo.glyph typeInfo.type}}
+            @size="l"
+            class="has-text-grey-light"
            />
 
           {{#if (eq mountType "auth")}}
-            {{concat "Enable " typeInfo.displayName " authentication method"}}
+            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{else}}
-            {{concat "Enable " typeInfo.displayName " secrets engine"}}
+            {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{/if}}
         {{/with}}
       {{else if (eq mountType "auth")}}
-        Enable an authentication method
+        Enable an Authentication Method
       {{else}}
-        Enable a secrets engine
+        Enable a Secrets Engine
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -27,7 +27,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder
       @mode="enable"
-      @noun={{if (eq mountType "auth") "auth method" "secret engine"}}
+      @noun={{if (eq mountType "auth") "Auth Method" "Secret Engine"}}
      />
 
     {{message-error model=mountModel}}
@@ -56,11 +56,10 @@
               data-test-mount-type-radio
               data-test-mount-type={{type.type}}
             >
-              <ICon
-                @size="36"
-                @excludeIconClass={{true}}
-                @glyph={{concat "enable/" (or type.glyph type.type)}}
-                @class="has-text-grey-light"
+              <Icon
+                @glyph={{or type.glyph type.type}}
+                @size="xl"
+                class="has-text-grey-light"
                />
 
               {{type.displayName}}

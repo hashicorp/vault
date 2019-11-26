@@ -11,11 +11,11 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *versionedKVBackend) perfSecondaryCheck() bool {
@@ -232,6 +232,14 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		}
 
 		b.Logger().Info("upgrading keys finished")
+
+		// We do this now so that we ensure it's written by the primary before
+		// secondaries unblock
+		b.l.Lock()
+		if _, err = b.policy(ctx, s); err != nil {
+			b.Logger().Error("error checking/creating policy after upgrade", "error", err)
+		}
+		b.l.Unlock()
 
 		// Write upgrade done value
 		upgradeInfo.Done = true

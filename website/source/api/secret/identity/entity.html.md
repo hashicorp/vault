@@ -35,7 +35,7 @@ This endpoint creates or updates an Entity.
 ```json
 {
   "metadata": {
-  "organization": "hashicorp",
+    "organization": "hashicorp",
     "team": "vault"
   },
   "policies": ["eng-dev", "infra-dev"]
@@ -134,7 +134,7 @@ This endpoint is used to update an existing entity.
 {
   "name":"updatedEntityName",
   "metadata": {
-  "organization": "hashi",
+    "organization": "hashicorp",
     "team": "nomad"
   },
   "policies": ["eng-developers", "infra-developers"]
@@ -243,7 +243,7 @@ This endpoint is used to create or update an entity by a given name.
 ```json
 {
   "metadata": {
-  "organization": "hashi",
+    "organization": "hashicorp",
     "team": "nomad"
   },
   "policies": ["eng-developers", "infra-developers"]
@@ -306,7 +306,7 @@ $ curl \
     "last_update_time": "2018-09-19T17:20:27.705389973Z",
     "merged_entity_ids": null,
     "metadata": {
-      "organization": "hashi",
+      "organization": "hashicorp",
       "team": "nomad"
     },
     "name": "testentityname",

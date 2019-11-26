@@ -1,0 +1,111 @@
+{{#if (eq display 'menu')}}
+  <div class="level is-mobile">
+    <div class="level-left is-flex-1">
+      {{#if replicationUnsupported}}
+        Unsupported
+      {{else if replicationEnabled}}
+        <span>
+          {{capitalize modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <small>
+            <code>
+              {{secondaryId}}
+            </code>
+          </small>
+        {{/if}}
+        <small>
+          <code>
+            {{clusterIdDisplay}}
+          </code>
+        </small>
+        {{else if (and (eq mode 'performance') (not (has-feature "Performance Replication")))}}
+        Learn more
+      {{else if auth.currentToken}}
+        Enable {{if (eq mode 'performance') 'Performance' 'DR'}}
+      {{else}}
+        Not enabled
+      {{/if}}
+    </div>
+    <div class="level-right">
+      {{#if replicationEnabled}}
+        {{#if (get cluster (concat mode 'StateGlyph'))}}
+          <span class="has-text-success">
+            <Icon
+              aria-hidden="true"
+              @glyph={{get cluster (concat mode 'StateGlyph')}}
+            />
+          </span>
+        {{else if syncProgress}}
+          <progress value="{{syncProgressPercent}}" max="100" class="progress is-small is-narrow is-info">
+            {{syncProgress.progress}} of {{syncProgress.total}} keys
+          </progress>
+        {{/if}}
+      {{else}}
+        <Icon
+          aria-label="Replication not enabled"
+          @glyph="minus-circle-outline"
+          class="has-text-grey-light"
+        />
+      {{/if}}
+    </div>
+  </div>
+{{else}}
+  <div class="level-left is-flex-1">
+    <div>
+      {{#if (and (eq mode 'performance') (not (has-feature "Performance Replication")))}}
+        <p>
+          Performance Replication is a feature of Vault Enterprise Premium.
+        </p>
+        <p class="has-text-centered">
+          <a
+            href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
+            class="button is-ghost has-icon-right"
+            data-test-upgrade-link="true"
+          >
+            Learn more
+            <Chevron />
+          </a>
+        </p>
+      {{else if replicationEnabled}}
+        <h5 class="title is-7 is-uppercase is-marginless">
+          Enabled
+        </h5>
+        <span class="has-text-grey">
+          {{capitalize modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <span class="tag">
+            <code>
+              {{secondaryId}}
+            </code>
+          </span>
+        {{/if}}
+        <span class="tag">
+          <code>
+            {{clusterIdDisplay}}
+          </code>
+        </span>
+      {{else}}
+        <p class="help has-text-grey-dark">
+          {{#if (eq mode 'dr')}}
+            DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
+          {{else}}
+            Performance Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+          {{/if}}
+        </p>
+      {{/if}}
+    </div>
+  </div>
+  <div class="level-right">
+    {{#if replicationDisabled}}
+      {{#link-to "vault.cluster.replication.mode.index" cluster.name mode class="button is-primary"}}
+        Enable
+      {{/link-to}}
+    {{else if (eq mode 'dr')}}
+      {{cluster.drReplicationStateDisplay}}
+    {{else if (eq mode 'performance')}}
+      {{cluster.perfReplicationStateDisplay}}
+    {{/if}}
+  </div>
+{{/if}}

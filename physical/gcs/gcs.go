@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
@@ -148,7 +148,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		logger.Warn("specifying credentials_file as an option is " +
 			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
 			"variable or instance credentials instead.")
-		opts = append(opts, option.WithServiceAccountFile(credentialsFile))
+		opts = append(opts, option.WithCredentialsFile(credentialsFile))
 	}
 
 	ctx := context.Background()
@@ -158,9 +158,9 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		bucket:    bucket,
-		haEnabled: haEnabled,
-
+		bucket:     bucket,
+		haEnabled:  haEnabled,
+		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,

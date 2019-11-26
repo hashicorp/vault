@@ -9,9 +9,12 @@ import (
 
 	"crypto/tls"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/go-test/deep"
+	sockaddr "github.com/hashicorp/go-sockaddr"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -20,7 +23,7 @@ const (
 	testSysMaxTTL = time.Hour * 20
 )
 
-func TestBackend_TTL(t *testing.T) {
+func TestBackend_CRUD(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
@@ -39,12 +42,22 @@ func TestBackend_TTL(t *testing.T) {
 		t.Fatalf("failed to create backend")
 	}
 
+	localhostSockAddr, err := sockaddr.NewSockAddr("127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use new token_ forms
 	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Path:      "users/testuser",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"password": "testpassword",
+			"password":          "testpassword",
+			"token_ttl":         5,
+			"token_max_ttl":     10,
+			"token_policies":    []string{"foo"},
+			"token_bound_cidrs": []string{"127.0.0.1"},
 		},
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -59,17 +72,32 @@ func TestBackend_TTL(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
-	if resp.Data["ttl"].(float64) != 0 && resp.Data["max_ttl"].(float64) != 0 {
-		t.Fatalf("bad: ttl and max_ttl are not set correctly")
+	if resp.Data["token_ttl"].(int64) != 5 && resp.Data["token_max_ttl"].(int64) != 10 {
+		t.Fatalf("bad: token_ttl and token_max_ttl are not set correctly")
+	}
+	if diff := deep.Equal(resp.Data["token_policies"], []string{"foo"}); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+		t.Fatal(diff)
 	}
 
+	localhostSockAddr, err = sockaddr.NewSockAddr("127.0.1.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use the old forms and verify that they zero out the new ones and then
+	// the new ones read with the expected value
 	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Path:      "users/testuser",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"ttl":     "5m",
-			"max_ttl": "10m",
+			"ttl":         "5m",
+			"max_ttl":     "10m",
+			"policies":    []string{"bar"},
+			"bound_cidrs": []string{"127.0.1.1"},
 		},
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -84,8 +112,23 @@ func TestBackend_TTL(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
-	if resp.Data["ttl"].(float64) != 300 && resp.Data["max_ttl"].(float64) != 600 {
+	if resp.Data["ttl"].(int64) != 300 && resp.Data["max_ttl"].(int64) != 600 {
 		t.Fatalf("bad: ttl and max_ttl are not set correctly")
+	}
+	if resp.Data["token_ttl"].(int64) != 300 && resp.Data["token_max_ttl"].(int64) != 600 {
+		t.Fatalf("bad: token_ttl and token_max_ttl are not set correctly")
+	}
+	if diff := deep.Equal(resp.Data["policies"], []string{"bar"}); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(resp.Data["token_policies"], []string{"bar"}); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(resp.Data["bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(resp.Data["token_bound_cidrs"], []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{localhostSockAddr}}); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -316,5 +359,59 @@ func testAccStepReadUser(t *testing.T, name string, policies string) logicaltest
 
 			return nil
 		},
+	}
+}
+
+func TestBackend_UserUpgrade(t *testing.T) {
+	s := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+
+	ctx := context.Background()
+
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	foo := &UserEntry{
+		Policies:   []string{"foo"},
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+	}
+
+	entry, err := logical.StorageEntryJSON("user/foo", foo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userEntry, err := b.user(ctx, s, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exp := &UserEntry{
+		Policies:   []string{"foo"},
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		TokenParams: tokenutil.TokenParams{
+			TokenPolicies:   []string{"foo"},
+			TokenTTL:        time.Second,
+			TokenMaxTTL:     time.Second,
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		},
+	}
+	if diff := deep.Equal(userEntry, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }

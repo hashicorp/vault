@@ -1,35 +1,29 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 type consulConf map[string]string
 
 var (
-	addrCount     int = 0
-	testImagePull sync.Once
+	addrCount int = 0
 )
-
-func testHostIP() string {
-	a := addrCount
-	addrCount++
-	return fmt.Sprintf("127.0.0.%d", a)
-}
 
 func testConsulBackend(t *testing.T) *ConsulBackend {
 	return testConsulBackendConfig(t, &consulConf{})
@@ -238,6 +232,42 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			consistencyMode: "strong",
 		},
 		{
+			name: "Unix socket",
+			consulConfig: map[string]string{
+				"address": "unix:///tmp/.consul.http.sock",
+			},
+			address: "/tmp/.consul.http.sock",
+			scheme:  "http", // Default, not overridden?
+
+			// Defaults
+			checkTimeout:    5 * time.Second,
+			redirectAddr:    "http://127.0.0.1:8200",
+			path:            "vault/",
+			service:         "vault",
+			token:           "",
+			max_parallel:    4,
+			disableReg:      false,
+			consistencyMode: "default",
+		},
+		{
+			name: "Scheme in address",
+			consulConfig: map[string]string{
+				"address": "https://127.0.0.2:5000",
+			},
+			address: "127.0.0.2:5000",
+			scheme:  "https",
+
+			// Defaults
+			checkTimeout:    5 * time.Second,
+			redirectAddr:    "http://127.0.0.1:8200",
+			path:            "vault/",
+			service:         "vault",
+			token:           "",
+			max_parallel:    4,
+			disableReg:      false,
+			consistencyMode: "default",
+		},
+		{
 			name: "check timeout too short",
 			fail: true,
 			consulConfig: map[string]string{
@@ -293,6 +323,20 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		if test.consistencyMode != c.consistencyMode {
 			t.Errorf("bad consistency_mode value: %v != %v", test.consistencyMode, c.consistencyMode)
+		}
+
+		// The configuration stored in the Consul "client" object is not exported, so
+		// we either have to skip validating it, or add a method to export it, or use reflection.
+		consulConfig := reflect.Indirect(reflect.ValueOf(c.client)).FieldByName("config")
+		consulConfigScheme := consulConfig.FieldByName("Scheme").String()
+		consulConfigAddress := consulConfig.FieldByName("Address").String()
+
+		if test.scheme != consulConfigScheme {
+			t.Errorf("bad scheme value: %v != %v", test.scheme, consulConfigScheme)
+		}
+
+		if test.address != consulConfigAddress {
+			t.Errorf("bad address value: %v != %v", test.address, consulConfigAddress)
 		}
 
 		// FIXME(sean@): Unable to test max_parallel
@@ -492,20 +536,17 @@ func TestConsul_serviceID(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := prepareTestContainer(t)
-		if cid != "" {
-			defer cleanupTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -532,21 +573,89 @@ func TestConsulBackend(t *testing.T) {
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
-func TestConsulHABackend(t *testing.T) {
-	var token string
+func TestConsul_TooLarge(t *testing.T) {
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := prepareTestContainer(t)
-		if cid != "" {
-			defer cleanupTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
+	client, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+	defer func() {
+		client.KV().DeleteTree(randPath, nil)
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewConsulBackend(map[string]string{
+		"address":      conf.Address,
+		"path":         randPath,
+		"max_parallel": "256",
+		"token":        conf.Token,
+	}, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	zeros := make([]byte, 600000, 600000)
+	n, err := rand.Read(zeros)
+	if n != 600000 {
+		t.Fatalf("expected 500k zeros, read %d", n)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Put(context.Background(), &physical.Entry{
+		Key:   "foo",
+		Value: zeros,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
+
+	err = b.(physical.Transactional).Transaction(context.Background(), []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: zeros,
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
+}
+
+func TestConsulHABackend(t *testing.T) {
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
+	}
+
+	conf := api.DefaultConfig()
+	conf.Address = addr
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -587,63 +696,5 @@ func TestConsulHABackend(t *testing.T) {
 	}
 	if host == "" {
 		t.Fatalf("bad addr: %v", host)
-	}
-}
-
-func prepareTestContainer(t *testing.T) (cid dockertest.ContainerID, retAddress string) {
-	if os.Getenv("CONSUL_HTTP_ADDR") != "" {
-		return "", os.Getenv("CONSUL_HTTP_ADDR")
-	}
-
-	// Without this the checks for whether the container has started seem to
-	// never actually pass. There's really no reason to expose the test
-	// containers, so don't.
-	dockertest.BindDockerToLocalhost = "yep"
-
-	testImagePull.Do(func() {
-		dockertest.Pull(dockertest.ConsulImageName)
-	})
-
-	try := 0
-	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
-		try += 1
-		// Build a client and verify that the credentials work
-		config := api.DefaultConfig()
-		config.Address = connAddress
-		config.Token = dockertest.ConsulACLMasterToken
-		client, err := api.NewClient(config)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		_, err = client.KV().Put(&api.KVPair{
-			Key:   "setuptest",
-			Value: []byte("setuptest"),
-		}, nil)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		retAddress = connAddress
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to consul: %v", connErr)
-	}
-
-	return
-}
-
-func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
-	err := cid.KillRemove()
-	if err != nil {
-		t.Fatal(err)
 	}
 }

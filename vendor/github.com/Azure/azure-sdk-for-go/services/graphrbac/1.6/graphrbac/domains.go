@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -43,6 +44,16 @@ func NewDomainsClientWithBaseURI(baseURI string, tenantID string) DomainsClient 
 // Parameters:
 // domainName - name of the domain.
 func (client DomainsClient) Get(ctx context.Context, domainName string) (result Domain, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DomainsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, domainName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DomainsClient", "Get", nil, "Failure preparing request")
@@ -108,6 +119,16 @@ func (client DomainsClient) GetResponder(resp *http.Response) (result Domain, er
 // Parameters:
 // filter - the filter to apply to the operation.
 func (client DomainsClient) List(ctx context.Context, filter string) (result DomainListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DomainsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListPreparer(ctx, filter)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DomainsClient", "List", nil, "Failure preparing request")

@@ -46,7 +46,7 @@ Download the source (you would probably use your own plugin):
 ```sh
 $ go get -f -u -d github.com/hashicorp/vault
 # ...
-$ cd $GOPATH/src/github.com/hashicorp/vault/logical/plugin/mock/mock-plugin
+$ cd $GOPATH/src/github.com/hashicorp/vault/sdk/plugin/mock/mock-plugin
 ```
 
 Compile the plugin:

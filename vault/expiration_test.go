@@ -15,12 +15,12 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 var (
@@ -528,6 +528,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	te := &logical.TokenEntry{
 		ID:          root.ID,
 		Path:        "auth/github/login",
+		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
 	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
@@ -559,6 +560,55 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	}
 	if out == nil {
 		t.Fatalf("missing token")
+	}
+}
+
+// Tests both the expiration function and the core function
+func TestExpiration_RegisterAuth_NoTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+	ctx := namespace.RootContext(nil)
+
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	auth := &logical.Auth{
+		ClientToken:   root.ID,
+		TokenPolicies: []string{"root"},
+	}
+
+	// First on core
+	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	auth.TokenPolicies[0] = "default"
+	err = c.RegisterAuth(ctx, 0, "auth/github/login", auth)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Now expiration
+	// Should work, root token with zero TTL
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/github/login",
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(ctx, te, auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Test non-root token with zero TTL
+	te.Policies = []string{"default"}
+	err = exp.RegisterAuth(ctx, te, auth)
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 

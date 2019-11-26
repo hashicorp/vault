@@ -28,10 +28,9 @@ $ curl \
 ```
 
 ### Sample Response
-
 ```json
 {
-  "aws": {
+  "aws/": {
     "type": "aws",
     "description": "AWS keys",
     "config": {
@@ -41,7 +40,7 @@ $ curl \
       "seal_wrap": false
     }
   },
-  "sys": {
+  "sys/": {
     "type": "system",
     "description": "system endpoint",
     "config": {
@@ -50,6 +49,28 @@ $ curl \
       "force_no_cache": false,
       "seal_wrap": false
     }
+  },
+  "data": {
+    "aws/": {
+      "type": "aws",
+      "description": "AWS keys",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
+    "sys/": {
+      "type": "system",
+      "description": "system endpoint",
+      "config": {
+        "default_lease_ttl": 0,
+        "max_lease_ttl": 0,
+        "force_no_cache": false,
+        "seal_wrap": false
+      }
+    },
   }
 }
 ```
@@ -106,12 +127,12 @@ This endpoint enables a new secrets engine at the given path.
   - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
     to whitelist, allowing a plugin to include them in the response.
 
-  - `options` `(map<string|string>: nil)` - Specifies mount type specific options
-    that are passed to the backend.
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend.
 
-    *Key/Value (KV)*
-    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
-      KV v2.
+  *Key/Value (KV)*
+  - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+    KV v2.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
@@ -122,6 +143,9 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
   values stored by the mount to be wrapped by the seal's encryption capability.
+  
+- `external_entropy_access` `(bool: false)` - Enable the secrets engine to access
+  Vault's external entropy source.
 
 ### Sample Payload
 

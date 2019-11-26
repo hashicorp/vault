@@ -6,7 +6,7 @@ sidebar_current: "docs-commands-operator-rotate"
 description: |-
   The "operator rotate" rotates the underlying encryption key which is used to
   secure data written to the storage backend. This installs a new key in the key
-  ring. This new key is used to encrypted new data, while older keys in the ring
+  ring. This new key is used to encrypt new data, while older keys in the ring
   are used to decrypt older data.
 ---
 

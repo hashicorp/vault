@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -264,16 +264,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Parse the CIDRs we should be binding the token to.
-	var tokenBoundCIDRStrings []string
-	if entry != nil {
-		tokenBoundCIDRStrings = entry.TokenBoundCIDRs
-	}
-	if len(tokenBoundCIDRStrings) == 0 {
-		tokenBoundCIDRStrings = role.TokenBoundCIDRs
-	}
-	tokenBoundCIDRs, err := parseutil.ParseAddrs(tokenBoundCIDRStrings)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	tokenBoundCIDRs := role.TokenBoundCIDRs
+	if entry != nil && len(entry.TokenBoundCIDRs) > 0 {
+		tokenBoundCIDRs, err = parseutil.ParseAddrs(entry.TokenBoundCIDRs)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	// For some reason, if metadata was set to nil while processing secret ID
@@ -286,32 +282,18 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	metadata["role_name"] = role.name
 
 	auth := &logical.Auth{
-		NumUses: role.TokenNumUses,
-		Period:  role.Period,
 		InternalData: map[string]interface{}{
 			"role_name": role.name,
 		},
 		Metadata: metadata,
-		Policies: role.Policies,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-			TTL:       role.TokenTTL,
-			MaxTTL:    role.TokenMaxTTL,
-		},
 		Alias: &logical.Alias{
 			Name: role.RoleID,
 		},
-		BoundCIDRs: tokenBoundCIDRs,
 	}
+	role.PopulateTokenAuth(auth)
 
-	switch role.TokenType {
-	case "default":
-		auth.TokenType = logical.TokenTypeDefault
-	case "batch":
-		auth.TokenType = logical.TokenTypeBatch
-	case "service":
-		auth.TokenType = logical.TokenTypeService
-	}
+	// Allow for overridden token bound CIDRs
+	auth.BoundCIDRs = tokenBoundCIDRs
 
 	return &logical.Response{
 		Auth: auth,
@@ -341,7 +323,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = role.TokenTTL
 	resp.Auth.MaxTTL = role.TokenMaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

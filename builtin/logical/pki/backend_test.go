@@ -28,11 +28,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/strutil"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
@@ -432,7 +432,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 }
 
 func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	expected := urlEntries{
+	expected := certutil.URLEntries{
 		IssuingCertificates: []string{
 			"http://example.com/ca1",
 			"http://example.com/ca2",
@@ -499,7 +499,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if resp.Data == nil {
 					return fmt.Errorf("no data returned")
 				}
-				var entries urlEntries
+				var entries certutil.URLEntries
 				err := mapstructure.Decode(resp.Data, &entries)
 				if err != nil {
 					return err
@@ -855,7 +855,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.OU, true)
+			expected := strutil.RemoveDuplicatesStable(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("error: returned certificate has OU of %s but %s was specified in the role", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -2170,7 +2170,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
-		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"alt_names":   "foobar.com,foo.foobar.com,bar.foobar.com",
 		"ttl":         "1h",
 	})
 	if err != nil {
@@ -2185,9 +2185,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 
@@ -2272,9 +2273,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 1 to check:\n%s", certStr)
@@ -2299,9 +2301,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 2 to check:\n%s", certStr)
@@ -2326,9 +2329,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if cert.IPAddresses[0].String() != "1.2.3.4" {
 		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
 	}
-	if cert.DNSNames[0] != "foobar.com" ||
-		cert.DNSNames[1] != "bar.foobar.com" ||
-		cert.DNSNames[2] != "foo.foobar.com" {
+	if len(cert.DNSNames) != 3 ||
+		cert.DNSNames[0] != "bar.foobar.com" ||
+		cert.DNSNames[1] != "foo.foobar.com" ||
+		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
 	t.Logf("certificate 3 to check:\n%s", certStr)

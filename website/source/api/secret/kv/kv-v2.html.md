@@ -20,7 +20,7 @@ possible to enable secrets engines at any location, please update your API calls
 accordingly.
 
 
-## Configure the KV Engine 
+## Configure the KV Engine
 
 This path configures backend level settings that are applied to every key in the
 key-value store.
@@ -34,17 +34,24 @@ key-value store.
 - `max_versions` `(int: 0)` – The number of versions to keep per key. This value
   applies to all keys, but a key's metadata setting can overwrite this value.
   Once a key has more than the configured allowed versions the oldest version
-  will be permanently deleted. Defaults to 10. 
+  will be permanently deleted. Defaults to 10.
 
 - `cas_required` `(bool: false)` – If true all keys will require the cas
   parameter to be set on all write requests.
+
+- `delete_version_after` `(string:"0s")` – If set, specifies the length
+  of time before a version is deleted.
+  Accepts [Go duration format string][duration-godoc].
+
+[duration-godoc]: https://golang.org/pkg/time/#ParseDuration
 
 ### Sample Payload
 
 ```json
 {
   "max_versions": 5,
-  "cas_required": false
+  "cas_required": false,
+  "delete_version_after": "3h25m19s"
 }
 ```
 
@@ -82,7 +89,8 @@ $ curl \
 {
   "data": {
     "cas_required": false,
-    "max_versions": 0
+    "max_versions": 0,
+    "delete_version_after": "3h25m19s"
   }
 }
 ```
@@ -143,11 +151,12 @@ have an ACL policy granting the `update` capability.
 ### Parameters
 
 - `options` `(Map: <optional>)` – An object that holds option settings.
+
     - `cas` `(int: <optional>)` - Set the "cas" value to use a Check-And-Set
       operation. If not set the write will be allowed. If set to 0 a write will
       only be allowed if the key doesn’t exist. If the index is non-zero the
       write will only be allowed if the key’s current version matches the
-      version specified in the cas parameter.  
+      version specified in the cas parameter.
 
 - `data` `(Map: <required>)` – The contents of the data map will be stored and
   returned on read.
@@ -264,6 +273,7 @@ This restores the data, allowing it to be returned on get requests.
 
 - `path` `(string: <required>)` – Specifies the path of the secret to undelete.
   This is specified as part of the URL.
+
 - `versions` `([]int: <required>)` - The versions to undelete. The versions will
   be restored and their data will be returned on normal get requests.
 
@@ -298,8 +308,9 @@ numbers from the key-value store.
 
 - `path` `(string: <required>)` – Specifies the path of the secret to destroy.
   This is specified as part of the URL.
+
 - `versions` `([]int: <required>)` - The versions to destroy. Their data will be
-  permanently deleted. 
+  permanently deleted.
 
 ### Sample Payload
 
@@ -429,18 +440,26 @@ have an ACL policy granting the `update` capability.
 - `max_versions` `(int: 0)` – The number of versions to keep per key. If not
   set, the backend’s configured max version is used. Once a key has more than
   the configured allowed versions the oldest version will be permanently
-  deleted. 
+  deleted.
 
 - `cas_required` `(bool: false)` – If true the key will require the cas
   parameter to be set on all write requests. If false, the backend’s
-  configuration will be used. 
+  configuration will be used.
+
+- `delete_version_after` `(string:"0s")` – Set the `delete_version_after` value
+  to a duration to specify the `deletion_time` for all new versions
+  written to this key. If not set, the backend's `delete_version_after` will be
+  used. If the value is greater than the backend's `delete_version_after`, the
+  backend's `delete_version_after` will be used. Accepts [Go duration
+  format string][duration-godoc].
 
 ### Sample Payload
 
 ```json
 {
   "max_versions": 5,
-  "cas_required": false	
+  "cas_required": false,
+  "delete_version_after": "3h25m19s"
 }
 ```
 
@@ -457,7 +476,7 @@ $ curl \
 ## Delete Metadata and All Versions
 
 This endpoint permanently deletes the key metadata and all version data for the
-specified key. All version history will be removed.  
+specified key. All version history will be removed.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |

@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 type TestSeal struct {
 	Type   string
 	secret []byte
+	keyId  string
 }
 
 var _ Access = (*TestSeal)(nil)
@@ -18,6 +19,7 @@ func NewTestSeal(secret []byte) *TestSeal {
 	return &TestSeal{
 		Type:   Test,
 		secret: secret,
+		keyId:  "static-key",
 	}
 }
 
@@ -34,7 +36,11 @@ func (t *TestSeal) SealType() string {
 }
 
 func (t *TestSeal) KeyID() string {
-	return "static-key"
+	return t.keyId
+}
+
+func (t *TestSeal) SetKeyID(k string) {
+	t.keyId = k
 }
 
 func (t *TestSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {

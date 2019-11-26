@@ -8,7 +8,8 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/kr/pretty"
 )
 
 func TestIdentityStore_CaseInsensitiveGroupAliasName(t *testing.T) {
@@ -358,7 +359,7 @@ func TestIdentityStore_GroupAliases_MemDBIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	txn := i.db.Txn(true)
@@ -430,5 +431,155 @@ func TestIdentityStore_GroupAliases_AliasOnInternalGroup(t *testing.T) {
 	}
 	if !resp.IsError() {
 		t.Fatalf("expected an error")
+	}
+}
+
+func TestIdentityStore_GroupAliasesUpdate(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, accessor1, c := testIdentityStoreWithGithubAuth(ctx, t)
+
+	ghme2 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github2/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err := c.enableCredential(ctx, ghme2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accessor2 := ghme2.Accessor
+
+	// Create two groups
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "external",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	groupID1 := resp.Data["id"].(string)
+
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "external",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	groupID2 := resp.Data["id"].(string)
+
+	// Create an alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group-alias",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"mount_accessor": accessor1,
+			"canonical_id":   groupID1,
+			"name":           "testalias",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasID := resp.Data["id"].(string)
+
+	// Ensure that reading the alias returns the right group
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group-alias/id/" + aliasID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName := resp.Data["name"].(string)
+	if aliasName != "testalias" {
+		t.Fatalf("bad alias name; expected: testalias, actual: %q", aliasName)
+	}
+	mountAccessor := resp.Data["mount_accessor"].(string)
+	if mountAccessor != accessor1 {
+		t.Fatalf("bad mount accessor; expected: %q, actual: %q", accessor1, mountAccessor)
+	}
+	canonicalID := resp.Data["canonical_id"].(string)
+	if canonicalID != groupID1 {
+		t.Fatalf("bad canonical name; expected: %q, actual: %q", groupID1, canonicalID)
+	}
+	// Ensure that reading the group returns the alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/id/" + groupID1,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName = resp.Data["alias"].(map[string]interface{})["name"].(string)
+	if aliasName != "testalias" {
+		t.Fatalf("bad alias name; expected: testalias, actual: %q", aliasName)
+	}
+
+	// Overwrite the alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group-alias/id/" + aliasID,
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"mount_accessor": accessor2,
+			"canonical_id":   groupID2,
+			"name":           "testalias2",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Ensure that reading the alias returns the right group
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group-alias/id/" + aliasID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName = resp.Data["name"].(string)
+	if aliasName != "testalias2" {
+		t.Fatalf("bad alias name; expected: testalias2, actual: %q", aliasName)
+	}
+	mountAccessor = resp.Data["mount_accessor"].(string)
+	if mountAccessor != accessor2 {
+		t.Fatalf("bad mount accessor; expected: %q, actual: %q", accessor2, mountAccessor)
+	}
+	canonicalID = resp.Data["canonical_id"].(string)
+	if canonicalID != groupID2 {
+		t.Fatalf("bad canonical name; expected: %q, actual: %q", groupID2, canonicalID)
+	}
+	// Ensure that reading the group returns the alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/id/" + groupID2,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName = resp.Data["alias"].(map[string]interface{})["name"].(string)
+	if aliasName != "testalias2" {
+		t.Fatalf("bad alias name; expected: testalias, actual: %q", aliasName)
+	}
+	// Ensure the old group does not
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/id/" + groupID1,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasInfo := resp.Data["alias"].(map[string]interface{})
+	if len(aliasInfo) > 0 {
+		t.Fatalf("still found alias with old group: %s", pretty.Sprint(resp.Data))
 	}
 }

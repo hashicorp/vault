@@ -3,10 +3,13 @@ package oss
 import (
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -21,39 +24,55 @@ import (
 //
 func (bucket Bucket) UploadFile(objectKey, filePath string, partSize int64, options ...Option) error {
 	if partSize < MinPartSize || partSize > MaxPartSize {
-		return errors.New("oss: part size invalid range (1024KB, 5GB]")
+		return errors.New("oss: part size invalid range (100KB, 5GB]")
 	}
 
-	cpConf, err := getCpConfig(options, filePath)
-	if err != nil {
-		return err
-	}
-
+	cpConf := getCpConfig(options)
 	routines := getRoutines(options)
 
-	if cpConf.IsEnable {
-		return bucket.uploadFileWithCp(objectKey, filePath, partSize, options, cpConf.FilePath, routines)
+	if cpConf != nil && cpConf.IsEnable {
+		cpFilePath := getUploadCpFilePath(cpConf, filePath, bucket.BucketName, objectKey)
+		if cpFilePath != "" {
+			return bucket.uploadFileWithCp(objectKey, filePath, partSize, options, cpFilePath, routines)
+		}
 	}
 
 	return bucket.uploadFile(objectKey, filePath, partSize, options, routines)
 }
 
+func getUploadCpFilePath(cpConf *cpConfig, srcFile, destBucket, destObject string) string {
+	if cpConf.FilePath == "" && cpConf.DirPath != "" {
+		dest := fmt.Sprintf("oss://%v/%v", destBucket, destObject)
+		absPath, _ := filepath.Abs(srcFile)
+		cpFileName := getCpFileName(absPath, dest)
+		cpConf.FilePath = cpConf.DirPath + string(os.PathSeparator) + cpFileName
+	}
+	return cpConf.FilePath
+}
+
 // ----- concurrent upload without checkpoint  -----
 
 // getCpConfig gets checkpoint configuration
-func getCpConfig(options []Option, filePath string) (*cpConfig, error) {
-	cpc := &cpConfig{}
+func getCpConfig(options []Option) *cpConfig {
 	cpcOpt, err := findOption(options, checkpointConfig, nil)
 	if err != nil || cpcOpt == nil {
-		return cpc, err
+		return nil
 	}
 
-	cpc = cpcOpt.(*cpConfig)
-	if cpc.IsEnable && cpc.FilePath == "" {
-		cpc.FilePath = filePath + CheckpointFileSuffix
-	}
+	return cpcOpt.(*cpConfig)
+}
 
-	return cpc, nil
+// getCpFileName return the name of the checkpoint file
+func getCpFileName(src, dest string) string {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte(src))
+	srcCheckSum := hex.EncodeToString(md5Ctx.Sum(nil))
+
+	md5Ctx.Reset()
+	md5Ctx.Write([]byte(dest))
+	destCheckSum := hex.EncodeToString(md5Ctx.Sum(nil))
+
+	return fmt.Sprintf("%v-%v.cp", srcCheckSum, destCheckSum)
 }
 
 // getRoutines gets the routine count. by default it's 1.
@@ -71,6 +90,16 @@ func getRoutines(options []Option) int {
 	}
 
 	return rs
+}
+
+// getPayer return the payer of the request
+func getPayer(options []Option) string {
+	payerOpt, err := findOption(options, HTTPHeaderOSSRequester, nil)
+	if err != nil || payerOpt == nil {
+		return ""
+	}
+
+	return payerOpt.(string)
 }
 
 // getProgressListener gets the progress callback
@@ -96,6 +125,7 @@ type workerArg struct {
 	bucket   *Bucket
 	filePath string
 	imur     InitiateMultipartUploadResult
+	options  []Option
 	hook     uploadPartHook
 }
 
@@ -106,7 +136,7 @@ func worker(id int, arg workerArg, jobs <-chan FileChunk, results chan<- UploadP
 			failed <- err
 			break
 		}
-		part, err := arg.bucket.UploadPartFromFile(arg.imur, arg.filePath, chunk.Offset, chunk.Size, chunk.Number)
+		part, err := arg.bucket.UploadPartFromFile(arg.imur, arg.filePath, chunk.Offset, chunk.Size, chunk.Number, arg.options...)
 		if err != nil {
 			failed <- err
 			break
@@ -145,6 +175,12 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 		return err
 	}
 
+	payerOptions := []Option{}
+	payer := getPayer(options)
+	if payer != "" {
+		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
+	}
+
 	// Initialize the multipart upload
 	imur, err := bucket.InitiateMultipartUpload(objectKey, options...)
 	if err != nil {
@@ -162,7 +198,7 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 	publishProgress(listener, event)
 
 	// Start the worker coroutine
-	arg := workerArg{&bucket, filePath, imur, uploadPartHooker}
+	arg := workerArg{&bucket, filePath, imur, payerOptions, uploadPartHooker}
 	for w := 1; w <= routines; w++ {
 		go worker(w, arg, jobs, results, failed, die)
 	}
@@ -185,7 +221,7 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 			close(die)
 			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes)
 			publishProgress(listener, event)
-			bucket.AbortMultipartUpload(imur)
+			bucket.AbortMultipartUpload(imur, payerOptions...)
 			return err
 		}
 
@@ -198,9 +234,9 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 	publishProgress(listener, event)
 
 	// Complete the multpart upload
-	_, err = bucket.CompleteMultipartUpload(imur, parts)
+	_, err = bucket.CompleteMultipartUpload(imur, parts, payerOptions...)
 	if err != nil {
-		bucket.AbortMultipartUpload(imur)
+		bucket.AbortMultipartUpload(imur, payerOptions...)
 		return err
 	}
 	return nil
@@ -397,10 +433,10 @@ func prepare(cp *uploadCheckpoint, objectKey, filePath string, partSize int64, b
 }
 
 // complete completes the multipart upload and deletes the local CP files
-func complete(cp *uploadCheckpoint, bucket *Bucket, parts []UploadPart, cpFilePath string) error {
+func complete(cp *uploadCheckpoint, bucket *Bucket, parts []UploadPart, cpFilePath string, options []Option) error {
 	imur := InitiateMultipartUploadResult{Bucket: bucket.BucketName,
 		Key: cp.ObjectKey, UploadID: cp.UploadID}
-	_, err := bucket.CompleteMultipartUpload(imur, parts)
+	_, err := bucket.CompleteMultipartUpload(imur, parts, options...)
 	if err != nil {
 		return err
 	}
@@ -411,6 +447,12 @@ func complete(cp *uploadCheckpoint, bucket *Bucket, parts []UploadPart, cpFilePa
 // uploadFileWithCp handles concurrent upload with checkpoint
 func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64, options []Option, cpFilePath string, routines int) error {
 	listener := getProgressListener(options)
+
+	payerOptions := []Option{}
+	payer := getPayer(options)
+	if payer != "" {
+		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
+	}
 
 	// Load CP data
 	ucp := uploadCheckpoint{}
@@ -444,7 +486,7 @@ func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64
 	publishProgress(listener, event)
 
 	// Start the workers
-	arg := workerArg{&bucket, filePath, imur, uploadPartHooker}
+	arg := workerArg{&bucket, filePath, imur, payerOptions, uploadPartHooker}
 	for w := 1; w <= routines; w++ {
 		go worker(w, arg, jobs, results, failed, die)
 	}
@@ -479,6 +521,6 @@ func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64
 	publishProgress(listener, event)
 
 	// Complete the multipart upload
-	err = complete(&ucp, &bucket, ucp.allParts(), cpFilePath)
+	err = complete(&ucp, &bucket, ucp.allParts(), cpFilePath, payerOptions)
 	return err
 }

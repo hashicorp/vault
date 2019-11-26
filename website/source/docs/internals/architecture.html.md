@@ -58,7 +58,7 @@ clarify what is being discussed:
   password to authenticate the user. Alternatively, the `github` auth method
   allows users to authenticate via GitHub.
 
-- **Client Token** - A client token (aka "Vault Token") is a conceptually
+- **Client Token** - A client token (aka "Vault Token") is conceptually
   similar to a session cookie on a web site. Once a user authenticates, Vault
   returns a client token which is used for future requests. The token is used by
   Vault to verify the identity of the client and to enforce the applicable ACL

@@ -76,8 +76,7 @@ func (client *Client) DisableKeyWithCallback(request *DisableKeyRequest, callbac
 // DisableKeyRequest is the request struct for api DisableKey
 type DisableKeyRequest struct {
 	*requests.RpcRequest
-	KeyId    string `position:"Query" name:"KeyId"`
-	STSToken string `position:"Query" name:"STSToken"`
+	KeyId string `position:"Query" name:"KeyId"`
 }
 
 // DisableKeyResponse is the response struct for api DisableKey

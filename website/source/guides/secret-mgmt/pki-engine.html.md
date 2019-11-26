@@ -320,7 +320,7 @@ generated certificate as `intermediate.cert.pem`:
 
     ```plaintext
     $ vault write -format=json pki/root/sign-intermediate csr=@pki_intermediate.csr \
-            format=pem_bundle \
+            format=pem_bundle ttl="43800h" \
             | jq -r '.data.certificate' > intermediate.cert.pem
     ```
 
@@ -384,7 +384,8 @@ certificate as `intermediate.cert.pem`.
     $ tee payload-int-cert.json <<EOF
     {
       "csr": "...",
-      "format": "pem_bundle"
+      "format": "pem_bundle",
+      "ttl": "43800h"
     }
     EOF
 
@@ -431,8 +432,8 @@ hours`**.
 1. Select **Configure**.
 1. Click **Configure CA**.
 1. Select **intermediate** from **CA Type** drop-down list.  
-1. Enter **`example.com Intermediate Authority`** in the **Common Name** field,
-and then click **Save**.
+1. Enter **`example.com Intermediate Authority`** in the **Common Name** field.
+1. Enter **`43800`** in the **TTL** field, choose **`hours`** and then click **Save**.
 1. Click **Copy CSR** and save it in a file, `pki_intermediate.csr`.
 1. Select **pki** from the **Secrets** tab to return to the root CA.
 1. Select **Configure** and then click **Sign intermediate**.

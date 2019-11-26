@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/sdk/logical";
+
+package logical;
+
+message PluginEnvironment {
+	// VaultVersion is the version of the Vault server
+	string vault_version = 1;
+}

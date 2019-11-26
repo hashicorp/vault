@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Issue 5729
@@ -196,8 +196,8 @@ func TestIdentityStore_AliasSameAliasNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected an error due to alias name not being unique")
+	if resp != nil {
+		t.Fatalf("expected no response since this modification should be idempotent")
 	}
 }
 
@@ -220,7 +220,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		Name: "testentityname",
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()

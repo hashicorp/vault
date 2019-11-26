@@ -161,8 +161,15 @@ FindKey:
 				continue
 			}
 			if !pk.key.PrivateKey.Encrypted {
+				if pk.key.PrivateKey.PrivateKey == nil {
+					// Key is stubbed
+					continue
+				}
 				if len(pk.encryptedKey.Key) == 0 {
-					pk.encryptedKey.Decrypt(pk.key.PrivateKey, config)
+					err := pk.encryptedKey.Decrypt(pk.key.PrivateKey, config)
+					if err != nil {
+						continue
+					}
 				}
 				if len(pk.encryptedKey.Key) == 0 {
 					continue

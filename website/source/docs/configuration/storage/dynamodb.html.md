@@ -131,7 +131,7 @@ resource "aws_dynamodb_table" "dynamodb-table" {
   write_capacity = 1
 	hash_key       = "Path"
 	range_key      = "Key"
-	attribute [
+	attribute      = [
 		{
 			name = "Path"
 			type = "S"
@@ -173,7 +173,7 @@ storage "dynamodb" {
 
 ### Enabling High Availability
 
-This example show enabling high availability for the DynamoDB storage backend.
+This example shows enabling high availability for the DynamoDB storage backend.
 
 ```hcl
 api_addr = "https://vault-leader.my-company.internal"

@@ -6,12 +6,29 @@ package storagepacker;
 
 import "google/protobuf/any.proto";
 
+// Item represents an entry that gets inserted into the storage packer
 message Item {
-  string id = 1;
-  google.protobuf.Any message = 2;
+	// ID must be provided by the caller; the same value, if used with GetItem,
+	// can be used to fetch the item. However, when iterating through a bucket,
+	// this ID will be an internal ID. In other words, outside of the use-case
+	// described above, the caller *must not* rely on this value to be
+	// consistent with what they passed in.
+	string id = 1;
+	// message is the contents of the item
+	google.protobuf.Any message = 2;
 }
 
+// Bucket is a construct to hold multiple items within itself. This
+// abstraction contains multiple buckets of the same kind within itself and
+// shares amont them the items that get inserted. When the bucket as a whole
+// gets too big to hold more items, the contained buckets gets pushed out only
+// to become independent buckets. Hence, this can grow infinitely in terms of
+// storage space for items that get inserted.
 message Bucket {
-  string key = 1;
-  repeated Item items = 2;
+	// Key is the storage path where the bucket gets stored
+	string key = 1;
+	// Items holds the items contained within this bucket. Used by v1.
+	repeated Item items = 2;
+	// ItemMap stores a mapping of item ID to message. Used by v2.
+	map <string, google.protobuf.Any> item_map = 3;
 }

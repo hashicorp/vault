@@ -37,20 +37,24 @@ module('Acceptance | auth', function(hooks) {
     let backends = supportedAuthBackends();
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth?with=token');
+    assert.equal(currentURL(), '/vault/auth');
     for (let backend of backends.reverse()) {
       await component.selectMethod(backend.type);
-      assert.equal(
-        currentURL(),
-        `/vault/auth?with=${backend.type}`,
-        `has the correct URL for ${backend.type}`
-      );
+      if (backend.type === 'token') {
+        assert.equal(currentURL(), `/vault/auth`, `has the correct URL for ${backend.type}`);
+      } else {
+        assert.equal(
+          currentURL(),
+          `/vault/auth?with=${backend.type}`,
+          `has the correct URL for ${backend.type}`
+        );
+      }
     }
   });
 
   test('it clears token when changing selected auth method', async function(assert) {
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth?with=token');
+    assert.equal(currentURL(), '/vault/auth');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.equal(component.tokenValue, '', 'it clears the token value when toggling methods');
@@ -73,7 +77,7 @@ module('Acceptance | auth', function(hooks) {
       let body = JSON.parse(lastRequest.requestBody);
       if (backend.type === 'token') {
         assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
+          Object.keys(lastRequest.requestHeaders).includes('x-vault-token'),
           'token uses vault token header'
         );
       } else if (backend.type === 'github') {

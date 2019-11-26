@@ -95,7 +95,7 @@ path "secret/foo" {
 ```
 
 When this policy is assigned to a token, the token can read from `"secret/foo"`.
-However, the token could not update or delete `"secret/foo"`, since the
+However, the token cannot update or delete `"secret/foo"`, since the
 capabilities do not allow it. Because policies are **deny by default**, the
 token would have no other access in Vault.
 
@@ -280,7 +280,7 @@ If you wanted to create a shared section of KV that is associated with entities 
 group.
 
 ```ruby
-# In the example below, the group ID maps a group and the path 
+# In the example below, the group ID maps a group and the path
 path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
   capabilities = ["create", "update", "read", "delete"]
 }
@@ -455,7 +455,7 @@ wrapping mandatory for a particular path.
     wrapped response.
 
 ```ruby
-# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second. 
+# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second.
 # This also sets this path's wrapped response maximum allowed TTL to 90 seconds.
 path "auth/approle/role/my-role/secret-id" {
     capabilities = ["create", "update"]
@@ -682,3 +682,11 @@ new set of policies.
 However, the _contents_ of policies are parsed in real-time whenever the token is used.
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
+
+
+## Learn
+
+Refer to the following tutorials for further learning:
+
+- [Vault Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-policies)
+- [ACL Policy Path Templating](https://learn.hashicorp.com/vault/identity-access-management/policy-templating)

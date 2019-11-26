@@ -112,7 +112,11 @@ perform limited actions:
 
 1. Look up a token's properties (not including the actual token ID)
 2. Look up a token's capabilities on a path
-3. Revoke the token
+3. Renew the token
+4. Revoke the token
+
+The token _making the call_, *not* the token associated with the accessor, must
+have appropriate permissions for these functions.
 
 There are many useful workflows around token accessors. As an example, a
 service that creates tokens on behalf of another service (such as the
@@ -157,7 +161,7 @@ and can change from renewal to renewal, so the value cannot be displayed when a
 token's information is looked up. It is based on a combination of factors:
 
 1. The system max TTL, which is 32 days but can be changed in Vault's
-   configuration file
+   configuration file.
 2. The max TTL set on a mount using [mount
    tuning](/api/system/mounts.html). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
@@ -235,7 +239,7 @@ There are currently two types of tokens.
 
 Service tokens are what users will generally think of as "normal" Vault tokens.
 They support all features, such as renewal, revocation, creating child tokens,
-and more. The are correspondingly heavyweight to create and track.
+and more. They are correspondingly heavyweight to create and track.
 
 ### Batch Tokens
 

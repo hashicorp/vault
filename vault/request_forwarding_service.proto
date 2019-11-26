@@ -14,12 +14,17 @@ message EchoRequest {
 	// ClusterAddrs is used to send up a list of cluster addresses to a dr
 	// primary from a dr secondary
 	repeated string cluster_addrs = 3;
+    
+	uint64 raft_applied_index = 4;
+	string raft_node_id = 5;
 }
 
 message EchoReply {
 	string message = 1;
 	repeated string cluster_addrs = 2;
 	uint32 replication_state = 3;
+	uint64 raft_applied_index = 4;
+	string raft_node_id = 5;
 }
 
 message ClientKey {

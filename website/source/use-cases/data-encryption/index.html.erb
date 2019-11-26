@@ -1,0 +1,83 @@
+<%= partial "partials/subnav" %>
+
+<div class='g-section-block page-wrap'>
+
+  <%-# Header / Buttons -%>
+
+  <section class='g-container'>
+    <hashi-section-header
+      headline="Encrypt Application Data in Low Trust Networks"
+      description="Keep application data secure with one centralized workflow to encrypt data in flight and at rest"
+      use_h1="true"
+    ></hashi-section-header>
+
+    <div class='button-container'>
+      <hashi-button
+        title="Download"
+        url="/downloads.html"
+      ></hashi-button>
+      <hashi-button
+        title="Get Started"
+        url="/intro"
+        classes="dark-outline"
+      ></hashi-button>
+    </div>
+  </section>
+
+  <%-# Before After Diagram -%>
+
+  <section>
+    <div class="g-container">
+      <hashi-before-after _data='<%= encode({
+        before_image: {
+          url: "https://www.datocms-assets.com/2885/1539885046-data-protectionchallenge.svg",
+          format: "svg"
+        },
+        before_headline: "The Challenge",
+        before_content: "All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly",
+        after_image: {
+          url: "https://www.datocms-assets.com/2885/1539885039-data-protectionsolution.svg",
+          format: "svg"
+        },
+        after_headline: "The Solution",
+        after_content: "Vault provides encryption as a service with centralized key management to simplify encrypting data in transit and at rest across clouds and data centers"
+      }) %>'></hashi-before-after>
+    </div>
+  </section>
+
+  <%-# Features / Text And Content -%>
+
+  <section class='g-container pad-bottom'>
+    <hashi-section-header headline="Encryption Features"></hashi-section-header>
+
+    <hashi-text-and-content _data='<%= encode({
+        text: "### API-driven Encryption
+
+Encrypt application data during transit and rest with AES 256-bit CBC data encryption and TLS in transit.",
+        content: {
+          item_type: "sbc_image",
+          image: {
+            url: "https://www.datocms-assets.com/2885/1539314348-eaas.png",
+            format: "png"
+          }
+        }
+    }) %>'></hashi-text-and-content>
+
+    <hashi-text-and-content _data='<%= encode({
+        reverse_direction: true,
+        text: "### Encryption Key Rolling
+
+Update and roll new keys throughout distributed infrastructure while retaining the ability to decrypt encrypted data",
+        content: {
+          item_type: "sbc_image",
+          image: {
+            url: "https://www.datocms-assets.com/2885/1539314609-encryption-key-rolling.png",
+            format: "png"
+          }
+        }
+}) %>'></hashi-text-and-content>
+  </section>
+
+  <%= partial "partials/use-case-cta-section" %>
+
+</div>

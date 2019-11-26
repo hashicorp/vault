@@ -16,19 +16,17 @@ module('Integration | Component | mount backend form', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
     this.server = apiStub();
   });
 
   hooks.afterEach(function() {
-    component.removeContext();
     this.server.shutdown();
   });
 
   test('it renders', async function(assert) {
     await render(hbs`{{mount-backend-form}}`);
-    assert.equal(component.header, 'Enable an authentication method', 'renders auth header in default state');
+    assert.equal(component.header, 'Enable an Authentication Method', 'renders auth header in default state');
     assert.ok(component.types.length > 0, 'renders type picker');
   });
 

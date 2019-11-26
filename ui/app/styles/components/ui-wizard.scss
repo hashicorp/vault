@@ -70,19 +70,13 @@
 
 .wizard-header {
   border-bottom: $light-border;
-  padding: 0 $size-4 $size-8 2rem;
+  padding: 0 $size-4 $size-8 0;
   margin: $size-4 0;
   position: relative;
 
   @include until($tablet) {
     margin-top: 0;
     padding-top: 0;
-  }
-
-  .title .icon {
-    left: 0;
-    position: absolute;
-    top: 0;
   }
 }
 
@@ -117,10 +111,6 @@
 
   .title {
     color: $white;
-
-    .icon {
-      top: -0.1rem;
-    }
   }
 
   .wizard-header {
@@ -152,12 +142,6 @@
     font-size: $size-7;
     font-weight: $font-weight-semibold;
   }
-}
-
-.wizard-section .title .icon {
-  height: auto;
-  margin-right: $size-11;
-  width: auto;
 }
 
 .wizard-section:last-of-type {
@@ -236,6 +220,7 @@
   transform: translate(-50%, -50%);
   width: $wizard-progress-check-size;
   z-index: 10;
+  margin: 0 !important;
 }
 
 .feature-progress-container .feature-check {
@@ -258,10 +243,10 @@
   }
 }
 
-.incomplete-check svg {
-  fill: $ui-gray-200;
+.incomplete-check {
+  color: $ui-gray-200;
 }
 
-.completed-check svg {
-  fill: $green;
+.completed-check {
+  color: $green;
 }

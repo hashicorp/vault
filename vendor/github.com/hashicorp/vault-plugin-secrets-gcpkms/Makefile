@@ -5,6 +5,8 @@ NAME       = $(shell go run version/cmd/main.go name)
 VERSION    = $(shell go run version/cmd/main.go version)
 COMMIT     = $(shell git rev-parse --short HEAD)
 
+GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+
 LDFLAGS = \
 	-s \
 	-w \
@@ -18,6 +20,9 @@ XC_EXCLUDE =
 
 # default is the default make command
 default: test
+
+fmt:
+	gofmt -w $(GOFMT_FILES)
 
 # deps updates the project deps using golang/dep
 deps:

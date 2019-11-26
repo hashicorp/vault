@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // StarredRepository is returned by ListStarred.
@@ -85,9 +84,8 @@ func (s *ActivityService) ListStarred(ctx context.Context, user string, opt *Act
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when APIs fully launch
-	acceptHeaders := []string{mediaTypeStarringPreview, mediaTypeTopicsPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	// TODO: remove custom Accept header when this API fully launches
+	req.Header.Set("Accept", mediaTypeStarringPreview)
 
 	var repos []*StarredRepository
 	resp, err := s.client.Do(ctx, req, &repos)

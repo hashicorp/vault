@@ -269,3 +269,8 @@ func (p *WorkerPool) stop(wait bool) {
 	close(p.taskQueue)
 	<-p.stoppedChan
 }
+
+// WaitingQueueSize will return the size of the waiting queue
+func (p *WorkerPool) WaitingQueueSize() int {
+	return p.waitingQueue.Len()
+}

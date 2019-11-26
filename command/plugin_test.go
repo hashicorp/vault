@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 // testPluginDir creates a temporary directory suitable for holding plugins.

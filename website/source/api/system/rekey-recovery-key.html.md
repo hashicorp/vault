@@ -142,14 +142,14 @@ fingerprint to hex-encoded PGP-encrypted key.
 
 | Method   | Path                                      |
 | :---------------------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey-recovery-key/backup`          |
+| `GET`    | `/sys/rekey/recovery-key-backup`          |
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey/recovery-key-backup
 ```
 
 ### Sample Response
@@ -169,7 +169,7 @@ This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 
 | Method   | Path                                      |
 | :---------------------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey-recovery-key/backup`          |
+| `DELETE` | `/sys/rekey/recovery-key-backup`          |
 
 ### Sample Request
 
@@ -177,7 +177,7 @@ This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey/recovery-key-backup
 ```
 
 ## Submit Key

@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -21,23 +22,34 @@ const (
 	credentialTypeSP = 0
 )
 
-// Role is a Vault role construct that maps to Azure roles or Applications
-type Role struct {
+// roleEntry is a Vault role construct that maps to Azure roles or Applications
+type roleEntry struct {
 	CredentialType      int           `json:"credential_type"` // Reserved. Always SP at this time.
-	AzureRoles          []*azureRole  `json:"azure_roles"`
+	AzureRoles          []*AzureRole  `json:"azure_roles"`
+	AzureGroups         []*AzureGroup `json:"azure_groups"`
 	ApplicationID       string        `json:"application_id"`
 	ApplicationObjectID string        `json:"application_object_id"`
 	TTL                 time.Duration `json:"ttl"`
 	MaxTTL              time.Duration `json:"max_ttl"`
 }
 
-// azureRole is an Azure Role (https://docs.microsoft.com/en-us/azure/role-based-access-control/overview) applied
+// AzureRole is an Azure Role (https://docs.microsoft.com/en-us/azure/role-based-access-control/overview) applied
 // to a scope. RoleName and RoleID are both traits of the role. RoleID is the unique identifier, but RoleName is
 // more useful to a human (thought it is not unique).
-type azureRole struct {
+type AzureRole struct {
 	RoleName string `json:"role_name"` // e.g. Owner
 	RoleID   string `json:"role_id"`   // e.g. /subscriptions/e0a207b2-.../providers/Microsoft.Authorization/roleDefinitions/de139f84-...
 	Scope    string `json:"scope"`     // e.g. /subscriptions/e0a207b2-...
+}
+
+// AzureGroup is an Azure Active Directory Group
+// (https://docs.microsoft.com/en-us/azure/role-based-access-control/overview).
+// GroupName and ObjectID are both traits of the group. ObjectID is the unique
+// identifier, but GroupName is more useful to a human (though it is not
+// unique).
+type AzureGroup struct {
+	GroupName string `json:"group_name"` // e.g. MyGroup
+	ObjectID  string `json:"object_id"`  // e.g. 90820a30-352d-400f-89e5-2ca74ac14333
 }
 
 func pathsRole(b *azureSecretBackend) []*framework.Path {
@@ -56,6 +68,10 @@ func pathsRole(b *azureSecretBackend) []*framework.Path {
 				"azure_roles": {
 					Type:        framework.TypeString,
 					Description: "JSON list of Azure roles to assign.",
+				},
+				"azure_groups": {
+					Type:        framework.TypeString,
+					Description: "JSON list of Azure groups to add the service principal to.",
 				},
 				"ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -95,9 +111,14 @@ func pathsRole(b *azureSecretBackend) []*framework.Path {
 //
 // Dynamic Service Principal:
 //   Azure roles are checked for existence. The Azure role lookup step will allow the
-//   operator to provide a role name or ID.  ID is unambigious and will be used if provided.
+//   operator to provide a role name or ID. ID is unambigious and will be used if provided.
 //   Given just role name, a search will be performed and if exactly one match is found,
 //   that role will be used.
+
+//   Azure groups are checked for existence. The Azure groups lookup step will allow the
+//   operator to provide a groups name or ID. ID is unambigious and will be used if provided.
+//   Given just group name, a search will be performed and if exactly one match is found,
+//   that group will be used.
 //
 // Static Service Principal:
 //   The provided Application Object ID is checked for existence.
@@ -120,7 +141,7 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 		if req.Operation == logical.UpdateOperation {
 			return nil, errors.New("role entry not found during update operation")
 		}
-		role = &Role{
+		role = &roleEntry{
 			CredentialType: credentialTypeSP,
 		}
 	}
@@ -155,17 +176,29 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 		role.ApplicationID = to.String(app.AppID)
 	}
 
-	// update and verify Azure roles, including looking up each role by ID or name.
+	// Parse the Azure roles
 	if roles, ok := d.GetOk("azure_roles"); ok {
-		parsedRoles := make([]*azureRole, 0) // non-nil to avoid a "missing roles" error later
+		parsedRoles := make([]*AzureRole, 0) // non-nil to avoid a "missing roles" error later
 
 		err := jsonutil.DecodeJSON([]byte(roles.(string)), &parsedRoles)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing Azure roles '%s': %s", roles.(string), err.Error())), nil
+			return logical.ErrorResponse("error parsing Azure roles '%s': %s", roles.(string), err.Error()), nil
 		}
 		role.AzureRoles = parsedRoles
 	}
 
+	// Parse the Azure groups
+	if groups, ok := d.GetOk("azure_groups"); ok {
+		parsedGroups := make([]*AzureGroup, 0) // non-nil to avoid a "missing groups" error later
+
+		err := jsonutil.DecodeJSON([]byte(groups.(string)), &parsedGroups)
+		if err != nil {
+			return logical.ErrorResponse("error parsing Azure groups '%s': %s", groups.(string), err.Error()), nil
+		}
+		role.AzureGroups = parsedGroups
+	}
+
+	// update and verify Azure roles, including looking up each role by ID or name.
 	roleSet := make(map[string]bool)
 	for _, r := range role.AzureRoles {
 		var roleDef authorization.RoleDefinition
@@ -173,7 +206,7 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 			roleDef, err = client.provider.GetRoleByID(ctx, r.RoleID)
 			if err != nil {
 				if strings.Contains(err.Error(), "RoleDefinitionDoesNotExist") {
-					return logical.ErrorResponse(fmt.Sprintf("no role found for role_id: '%s'", r.RoleID)), nil
+					return logical.ErrorResponse("no role found for role_id: '%s'", r.RoleID), nil
 				}
 				return nil, errwrap.Wrapf("unable to lookup Azure role: {{err}}", err)
 			}
@@ -183,9 +216,9 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 				return nil, errwrap.Wrapf("unable to lookup Azure role: {{err}}", err)
 			}
 			if l := len(defs); l == 0 {
-				return logical.ErrorResponse(fmt.Sprintf("no role found for role_name: '%s'", r.RoleName)), nil
+				return logical.ErrorResponse("no role found for role_name: '%s'", r.RoleName), nil
 			} else if l > 1 {
-				return logical.ErrorResponse(fmt.Sprintf("multiple matches found for role_name: '%s'. Specify role by ID instead.", r.RoleName)), nil
+				return logical.ErrorResponse("multiple matches found for role_name: '%s'. Specify role by ID instead.", r.RoleName), nil
 			}
 			roleDef = defs[0]
 		}
@@ -197,13 +230,48 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 
 		rsKey := r.RoleID + "||" + r.Scope
 		if roleSet[rsKey] {
-			return logical.ErrorResponse(fmt.Sprintf("duplicate role_id and scope: '%s', '%s'", r.RoleID, r.Scope)), nil
+			return logical.ErrorResponse("duplicate role_id and scope: '%s', '%s'", r.RoleID, r.Scope), nil
 		}
 		roleSet[rsKey] = true
 	}
 
-	if role.ApplicationObjectID == "" && len(role.AzureRoles) == 0 {
-		return logical.ErrorResponse("either Azure role definitions or an Application Object ID must be provided"), nil
+	// update and verify Azure groups, including looking up each group by ID or name.
+	groupSet := make(map[string]bool)
+	for _, r := range role.AzureGroups {
+		var groupDef graphrbac.ADGroup
+		if r.ObjectID != "" {
+			groupDef, err = client.provider.GetGroup(ctx, r.ObjectID)
+			if err != nil {
+				if strings.Contains(err.Error(), "Request_ResourceNotFound") {
+					return logical.ErrorResponse("no group found for object_id: '%s'", r.ObjectID), nil
+				}
+				return nil, errwrap.Wrapf("unable to lookup Azure group: {{err}}", err)
+			}
+		} else {
+			defs, err := client.findGroups(ctx, r.GroupName)
+			if err != nil {
+				return nil, errwrap.Wrapf("unable to lookup Azure group: {{err}}", err)
+			}
+			if l := len(defs); l == 0 {
+				return logical.ErrorResponse("no group found for group_name: '%s'", r.GroupName), nil
+			} else if l > 1 {
+				return logical.ErrorResponse("multiple matches found for group_name: '%s'. Specify group by ObjectID instead.", r.GroupName), nil
+			}
+			groupDef = defs[0]
+		}
+
+		groupDefID := to.String(groupDef.ObjectID)
+		groupDefName := to.String(groupDef.DisplayName)
+		r.GroupName, r.ObjectID = groupDefName, groupDefID
+
+		if groupSet[r.ObjectID] {
+			return logical.ErrorResponse("duplicate object_id '%s'", r.ObjectID), nil
+		}
+		groupSet[r.ObjectID] = true
+	}
+
+	if role.ApplicationObjectID == "" && len(role.AzureRoles) == 0 && len(role.AzureGroups) == 0 {
+		return logical.ErrorResponse("either Azure role definitions, group definitions, or an Application Object ID must be provided"), nil
 	}
 
 	// save role
@@ -232,6 +300,7 @@ func (b *azureSecretBackend) pathRoleRead(ctx context.Context, req *logical.Requ
 	data["ttl"] = r.TTL / time.Second
 	data["max_ttl"] = r.MaxTTL / time.Second
 	data["azure_roles"] = r.AzureRoles
+	data["azure_groups"] = r.AzureGroups
 	data["application_object_id"] = r.ApplicationObjectID
 
 	return &logical.Response{
@@ -270,7 +339,7 @@ func (b *azureSecretBackend) pathRoleExistenceCheck(ctx context.Context, req *lo
 	return role != nil, nil
 }
 
-func saveRole(ctx context.Context, s logical.Storage, c *Role, name string) error {
+func saveRole(ctx context.Context, s logical.Storage, c *roleEntry, name string) error {
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("%s/%s", rolesStoragePath, name), c)
 	if err != nil {
 		return err
@@ -279,7 +348,7 @@ func saveRole(ctx context.Context, s logical.Storage, c *Role, name string) erro
 	return s.Put(ctx, entry)
 }
 
-func getRole(ctx context.Context, name string, s logical.Storage) (*Role, error) {
+func getRole(ctx context.Context, name string, s logical.Storage) (*roleEntry, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("%s/%s", rolesStoragePath, name))
 	if err != nil {
 		return nil, err
@@ -289,7 +358,7 @@ func getRole(ctx context.Context, name string, s logical.Storage) (*Role, error)
 		return nil, nil
 	}
 
-	role := new(Role)
+	role := new(roleEntry)
 	if err := entry.DecodeJSON(role); err != nil {
 		return nil, err
 	}
@@ -305,13 +374,16 @@ of Azure roles, which are used to control permissions to Azure resources.
 If the backend is mounted at "azure", you would create a Vault role at "azure/roles/my_role",
 and request credentials from "azure/creds/my_role".
 
-Each Vault role is configured with the standard ttl parameters and either a list of Azure
-roles and scopes, or an Application Object ID. Any Azure roles will be fetched during the
-Vault role creation and must exist for the request to succeed. Similarly, the Application
-Object ID will be verified if provided. When a used requests credentials against the Vault
-role, a new password will be created for the Application if an Application Object ID was
-configured. Otherwise, a new service principal will be created and the configured set of
-Azure roles are assigned to it.
+Each Vault role is configured with the standard ttl parameters and either an
+Application Object ID or a combination of Azure groups to make the service
+principal a member of, and Azure roles and scopes to assign the service
+principal to. During the Vault role creation, any set Azure role, group, or
+Object ID will be fetched and verified, and therefore must exist for the request
+to succeed. When a user requests credentials against the Vault role, a new
+password will be created for the Application if an Application Object ID was
+configured. Otherwise, a new service principal will be created and the
+configured set of Azure roles are assigned to it and it will be added to the
+configured groups.
 `
 const roleListHelpSyn = `List existing roles.`
 const roleListHelpDesc = `List existing roles by name.`

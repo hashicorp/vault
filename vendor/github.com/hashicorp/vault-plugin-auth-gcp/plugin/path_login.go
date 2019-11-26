@@ -10,10 +10,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
@@ -22,6 +23,7 @@ import (
 
 const (
 	expectedJwtAudTemplate string = "vault/%s"
+	jwtExpToleranceSec            = 60
 )
 
 func pathLogin(b *GcpAuthBackend) *framework.Path {
@@ -59,6 +61,16 @@ func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, da
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if len(loginInfo.Role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, loginInfo.Role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	roleType := loginInfo.Role.RoleType
@@ -101,9 +113,9 @@ func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.Period = role.Period
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
+	resp.Auth.Period = role.TokenPeriod
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
 	return resp, nil
 }
 
@@ -213,11 +225,12 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 			Key:       keyId,
 		})
 		if err != nil {
+			saErr := err
 			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
 			key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
 			if err != nil {
 				return nil, errwrap.Wrapf(
-					fmt.Sprintf("could not find service account key or Google Oauth cert with given 'kid' id %s: {{err}}", keyId),
+					fmt.Sprintf("%s or could not find Google Oauth cert with given 'kid' id %s: {{err}}", saErr.Error(), keyId),
 					err)
 			}
 			return key, nil
@@ -257,10 +270,17 @@ func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string) (
 
 func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
 	exp := c.Expiry.Time()
-	if exp.IsZero() || exp.Before(time.Now()) {
+	tolDelt := time.Second * jwtExpToleranceSec
+	// Compare expiration to current time with tolerance
+	if exp.IsZero() || exp.Before(time.Now().Add(-tolDelt)) {
 		return errors.New("JWT is expired or does not have proper 'exp' claim")
-	} else if exp.After(time.Now().Add(time.Minute * time.Duration(maxJwtExpMaxMinutes))) {
-		return fmt.Errorf("JWT must expire in %d minutes", maxJwtExpMaxMinutes)
+	}
+
+	// Compare expiration to max expiration with tolerance
+	allowedDelta := time.Minute*time.Duration(maxJwtExpMaxMinutes) + tolDelt
+	expIn := exp.Sub(time.Now())
+	if expIn > allowedDelta {
+		return fmt.Errorf("JWT must expire in %d minutes, expires in %v", maxJwtExpMaxMinutes, expIn)
 	}
 
 	sub := c.Subject
@@ -325,22 +345,20 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period: role.Period,
-			Alias: &logical.Alias{
-				Name: serviceAccount.UniqueId,
-			},
-			Policies:    role.Policies,
-			Metadata:    authMetadata(loginInfo, serviceAccount),
-			DisplayName: serviceAccount.Email,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
+	auth := &logical.Auth{
+		Alias: &logical.Alias{
+			Name: serviceAccount.UniqueId,
 		},
+		Metadata:    authMetadata(loginInfo, serviceAccount),
+		DisplayName: serviceAccount.Email,
 	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
+	}
+
 	if role.AddGroupAliases {
 		crmClient, err := b.CRMClient(req.Storage)
 		if err != nil {
@@ -473,22 +491,19 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 			loginInfo.EmailOrId, err)), nil
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{},
-			Period:       role.Period,
-			Alias: &logical.Alias{
-				Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
-			},
-			Policies:    role.Policies,
-			Metadata:    authMetadata(loginInfo, serviceAccount),
-			DisplayName: instance.Name,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{},
+		Alias: &logical.Alias{
+			Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
 		},
+		Metadata:    authMetadata(loginInfo, serviceAccount),
+		DisplayName: instance.Name,
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	if role.AddGroupAliases {
@@ -648,6 +663,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, project strin
 
 	return AuthorizeGCE(ctx, &AuthorizeGCEInput{
 		client: &gcpClient{
+			logger:     b.Logger(),
 			computeSvc: computeClient,
 			iamSvc:     iamClient,
 		},

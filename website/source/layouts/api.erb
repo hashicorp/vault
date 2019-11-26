@@ -25,6 +25,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'elasticdb',
                   'influxdb',
                   'hanadb',
                   'mongodb',
@@ -36,6 +37,7 @@
               },
               { category: 'gcp' },
               { category: 'gcpkms' },
+              { category: 'kmip' },
               {
                 category: 'kv',
                 content: ['kv-v1', 'kv-v2']
@@ -46,6 +48,7 @@
                   'entity-alias',
                   'group',
                   'group-alias',
+                  'tokens',
                   'lookup'
                 ]
               },
@@ -65,15 +68,17 @@
           }, {
             category: 'auth',
             content: [
-            { category: 'approle' },
             { category: 'alicloud' },
+            { category: 'approle' },
             { category: 'aws' },
             { category: 'azure' },
+            { category: 'cf' },
             { category: 'github' },
             { category: 'gcp' },
             { category: 'jwt' },
             { category: 'kubernetes' },
             { category: 'ldap' },
+            { category: 'oci' },
             { category: 'okta' },
             { category: 'radius' },
             { category: 'cert' },
@@ -93,10 +98,12 @@
               'config-auditing',
               'config-control-group',
               'config-cors',
+              'config-state',
               'config-ui',
               'control-group',
               'generate-root',
               'health',
+              'host-info',
               'init',
               'internal-specs-openapi',
               'internal-ui-mounts',
@@ -120,6 +127,7 @@
               'plugins-catalog',
               'policy',
               'policies',
+              'pprof',
               'raw',
               'rekey',
               'rekey-recovery-key',
@@ -134,7 +142,14 @@
               'rotate',
               'seal',
               'seal-status',
+              'sealwrap-rewrap',
               'step-down',
+              {
+                category: 'storage',
+                content: [
+                  'raft'
+                ]
+              },
               'tools',
               'unseal',
               'wrapping-lookup',
@@ -148,7 +163,7 @@
     </div>
   <% end %>
 
-  <article class='g-content vault'>
+  <article class='g-content g-type-long-body vault'>
     <%= yield %>
   </article>
 <% end %>

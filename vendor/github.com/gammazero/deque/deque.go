@@ -103,8 +103,8 @@ func (q *Deque) Back() interface{} {
 // call panics.
 //
 // The purpose of At is to allow Deque to serve as a more general purpose
-// circular buffer, where items are only added to and removed from the the ends
-// of the deque, but may be read from any place within the deque.  Consider the
+// circular buffer, where items are only added to and removed from the ends of
+// the deque, but may be read from any place within the deque.  Consider the
 // case of a fixed-size circular log buffer: A new entry is pushed onto one end
 // and when full the oldest is popped from the other end.  All the log entries
 // in the buffer must be readable without altering the buffer contents.

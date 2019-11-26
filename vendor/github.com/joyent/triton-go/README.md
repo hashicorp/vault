@@ -1,7 +1,7 @@
 # triton-go
 
-`triton-go` is an idiomatic library exposing a client SDK for Go applications
-using Joyent's Triton Compute and Storage (Manta) APIs.
+`triton-go` is a client SDK for Go applications using Joyent's Triton Compute
+and Object Storage (Manta) APIs.
 
 [![Build Status](https://travis-ci.org/joyent/triton-go.svg?branch=master)](https://travis-ci.org/joyent/triton-go) [![Go Report Card](https://goreportcard.com/badge/github.com/joyent/triton-go)](https://goreportcard.com/report/github.com/joyent/triton-go)
 

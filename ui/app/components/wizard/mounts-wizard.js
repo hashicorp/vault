@@ -56,11 +56,11 @@ export default Component.extend({
   actionText: computed('mountSubtype', function() {
     switch (this.get('mountSubtype')) {
       case 'aws':
-        return 'Generate Credential';
+        return 'Generate credential';
       case 'ssh':
-        return 'Sign Keys';
+        return 'Sign keys';
       case 'pki':
-        return 'Generate Certificate';
+        return 'Generate certificate';
       default:
         return null;
     }

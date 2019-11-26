@@ -35,6 +35,25 @@ advertise the correct address to other nodes.
   they need to hop through a TCP load balancer or some other scheme in order to
   talk.
 
+- `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
+  wait for the next request when keep-alives are enabled. If `http_idle_timeout`
+  is zero, the value of `http_read_timeout` is used. If both are zero, the value
+  of `http_read_header_timeout` is used. This is specified using a label suffix
+  like `"30s"` or `"1h"`.
+
+- `http_read_header_timeout` `(string: "10s")` - Specifies the amount of time
+  allowed to read request headers. This is specified using a label suffix like
+  `"30s"` or `"1h"`.
+
+- `http_read_timeout` `(string: "30s")` - Specifies the maximum duration for
+  reading the entire request, including the body. This is specified using a
+  label suffix like `"30s"` or `"1h"`.
+
+- `http_write_timeout` `string: "0")` - Specifies the maximum duration before
+  timing out writes of the response and is reset whenever a new request's header
+  is read. The default value of `"0"` means inifinity. This is specified using a
+  label suffix like `"30s"` or `"1h"`.
+
 - `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
   request size, in bytes. Defaults to 32 MB. Specifying a number less than or
   equal to `0` turns off limiting altogether.
@@ -121,6 +140,11 @@ advertise the correct address to other nodes.
   there is no X-Forwarded-For header or it is empty, the client address will be
   used as-is, rather than the client connection rejected.
 
+### `telemetry` Parameters
+
+- `unauthenticated_metrics_access` `(string: "false")` - If set to true, allows
+  unauthenticated access to the `/v1/sys/metrics` endpoint. 
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS
@@ -150,6 +174,18 @@ listener "tcp" {
 # Advertise the non-loopback interface
 api_addr = "https://10.0.0.5:8200"
 cluster_addr = "https://10.0.0.5:8201"
+```
+
+### Configuring unauthenticated metrics access 
+
+This example shows enabling unauthenticated metrics access.
+
+```hcl
+listener "tcp" {
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+}
 ```
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go

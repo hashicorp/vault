@@ -53,12 +53,10 @@ module('Acceptance | secrets/pki/create', function(hooks) {
   });
 
   test('it deletes a role', async function(assert) {
-    await mountAndNav(assert);
+    const path = await mountAndNav(assert);
     await editPage.createRole('role', 'example.com');
-    await showPage.edit();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.edit', 'navs to the edit page');
-
-    await editPage.deleteRole();
+    await showPage.visit({ backend: path, id: 'role' });
+    await showPage.deleteRole();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects to list page');
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });

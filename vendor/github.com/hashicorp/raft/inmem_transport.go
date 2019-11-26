@@ -135,6 +135,19 @@ func (i *InmemTransport) InstallSnapshot(id ServerID, target ServerAddress, args
 	return nil
 }
 
+// TimeoutNow implements the Transport interface.
+func (i *InmemTransport) TimeoutNow(id ServerID, target ServerAddress, args *TimeoutNowRequest, resp *TimeoutNowResponse) error {
+	rpcResp, err := i.makeRPC(target, args, nil, 10*i.timeout)
+	if err != nil {
+		return err
+	}
+
+	// Copy the result back
+	out := rpcResp.Response.(*TimeoutNowResponse)
+	*resp = *out
+	return nil
+}
+
 func (i *InmemTransport) makeRPC(target ServerAddress, args interface{}, r io.Reader, timeout time.Duration) (rpcResp RPCResponse, err error) {
 	i.RLock()
 	peer, ok := i.peers[target]
@@ -147,10 +160,16 @@ func (i *InmemTransport) makeRPC(target ServerAddress, args interface{}, r io.Re
 
 	// Send the RPC over
 	respCh := make(chan RPCResponse)
-	peer.consumerCh <- RPC{
+	req := RPC{
 		Command:  args,
 		Reader:   r,
 		RespChan: respCh,
+	}
+	select {
+	case peer.consumerCh <- req:
+	case <-time.After(timeout):
+		err = fmt.Errorf("send timed out")
+		return
 	}
 
 	// Wait for a response

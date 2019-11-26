@@ -1,51 +1,44 @@
 package testhelpers
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/http"
-	"sync"
+	"net/url"
+	"sync/atomic"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/consts"
+	raftlib "github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
-	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/mitchellh/go-testing-interface"
 )
 
-type ReplicatedTestClusters struct {
-	PerfPrimaryCluster     *vault.TestCluster
-	PerfSecondaryCluster   *vault.TestCluster
-	PerfPrimaryDRCluster   *vault.TestCluster
-	PerfSecondaryDRCluster *vault.TestCluster
-}
+type GenerateRootKind int
 
-func (r *ReplicatedTestClusters) Cleanup() {
-	r.PerfPrimaryCluster.Cleanup()
-	r.PerfSecondaryCluster.Cleanup()
-	if r.PerfPrimaryDRCluster != nil {
-		r.PerfPrimaryDRCluster.Cleanup()
-	}
-	if r.PerfSecondaryDRCluster != nil {
-		r.PerfSecondaryDRCluster.Cleanup()
-	}
-}
+const (
+	GenerateRootRegular GenerateRootKind = iota
+	GenerateRootDR
+	GenerateRecovery
+)
 
 // Generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, drToken bool) string {
-	token, err := GenerateRootWithError(t, cluster, drToken)
+func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+	t.Helper()
+	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return token
 }
 
-func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool) (string, error) {
+func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
+	t.Helper()
 	// If recovery keys supported, use those to perform root token generation instead
 	var keys [][]byte
 	if cluster.Cores[0].SealAccess().RecoveryKeySupported() {
@@ -53,13 +46,18 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 	} else {
 		keys = cluster.BarrierKeys
 	}
-
 	client := cluster.Cores[0].Client
-	f := client.Sys().GenerateRootInit
-	if drToken {
-		f = client.Sys().GenerateDROperationTokenInit
+
+	var err error
+	var status *api.GenerateRootStatusResponse
+	switch kind {
+	case GenerateRootRegular:
+		status, err = client.Sys().GenerateRootInit("", "")
+	case GenerateRootDR:
+		status, err = client.Sys().GenerateDROperationTokenInit("", "")
+	case GenerateRecovery:
+		status, err = client.Sys().GenerateRecoveryOperationTokenInit("", "")
 	}
-	status, err := f("", "")
 	if err != nil {
 		return "", err
 	}
@@ -74,11 +72,16 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 		if i >= status.Required {
 			break
 		}
-		f := client.Sys().GenerateRootUpdate
-		if drToken {
-			f = client.Sys().GenerateDROperationTokenUpdate
+
+		strKey := base64.StdEncoding.EncodeToString(key)
+		switch kind {
+		case GenerateRootRegular:
+			status, err = client.Sys().GenerateRootUpdate(strKey, status.Nonce)
+		case GenerateRootDR:
+			status, err = client.Sys().GenerateDROperationTokenUpdate(strKey, status.Nonce)
+		case GenerateRecovery:
+			status, err = client.Sys().GenerateRecoveryOperationTokenUpdate(strKey, status.Nonce)
 		}
-		status, err = f(base64.StdEncoding.EncodeToString(key), status.Nonce)
 		if err != nil {
 			return "", err
 		}
@@ -111,30 +114,49 @@ func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
-func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) error {
+func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
 	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
-			return fmt.Errorf("timeout waiting for core to seal")
+			t.Fatal("timeout waiting for core to seal")
 		}
 		if core.Core.Sealed() {
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return nil
 }
 
 func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	t.Helper()
-	for _, core := range c.Cores {
-		EnsureCoreUnsealed(t, c, core)
+	for i, core := range c.Cores {
+		err := AttemptUnsealCore(c, core)
+		if err != nil {
+			t.Fatalf("failed to unseal core %d: %v", i, err)
+		}
 	}
 }
-func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+
+func AttemptUnsealCores(c *vault.TestCluster) error {
+	for i, core := range c.Cores {
+		err := AttemptUnsealCore(c, core)
+		if err != nil {
+			return fmt.Errorf("failed to unseal core %d: %v", i, err)
+		}
+	}
+	return nil
+}
+
+func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error {
 	if !core.Sealed() {
-		return
+		return nil
+	}
+
+	core.SealAccess().ClearCaches(context.Background())
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
+		return err
 	}
 
 	client := core.Client
@@ -145,326 +167,37 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 			// Sometimes when we get here it's already unsealed on its own
 			// and then this fails for DR secondaries so check again
 			if core.Sealed() {
-				t.Fatal(err)
+				return err
+			} else {
+				return nil
 			}
-			break
 		}
 		if statusResp == nil {
-			t.Fatal("nil status response during unseal")
+			return fmt.Errorf("nil status response during unseal")
 		}
 		if !statusResp.Sealed {
 			break
 		}
 	}
 	if core.Sealed() {
-		t.Fatal("core is still sealed")
+		return fmt.Errorf("core is still sealed")
 	}
+	return nil
 }
 
-func EnsureCoreIsPerfStandby(t testing.T, core *vault.TestClusterCore) {
-	t.Helper()
-	start := time.Now()
-	for {
-		health, err := core.Client.Sys().Health()
+func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	activeCore := DeriveActiveCore(t, cluster)
+
+	for i := 0; i < 30; i++ {
+		leaderResp, err := activeCore.Client.Sys().Leader()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if health.PerformanceStandby {
-			break
+		if !leaderResp.IsSelf {
+			t.Fatal("unstable active node")
 		}
-		time.Sleep(time.Millisecond * 500)
-		if time.Now().After(start.Add(time.Second * 60)) {
-			t.Fatal("did not become a perf standby")
-		}
+		time.Sleep(200 * time.Millisecond)
 	}
-}
-
-func WaitForReplicationState(t testing.T, c *vault.Core, state consts.ReplicationState) {
-	timeout := time.Now().Add(10 * time.Second)
-	for {
-		if time.Now().After(timeout) {
-			t.Fatalf("timeout waiting for core to have state %d", uint32(state))
-		}
-		state := c.ReplicationState()
-		if state.HasState(state) {
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
-}
-
-func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) (*vault.TestCluster, *vault.TestClusterCore) {
-	if conf.Physical != nil || conf.HAPhysical != nil {
-		t.Fatalf("conf.Physical and conf.HAPhysical cannot be specified")
-	}
-	if opts.Logger == nil {
-		t.Fatalf("opts.Logger must be specified")
-	}
-
-	inm, err := inmem.NewTransactionalInmem(nil, opts.Logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inmha, err := inmem.NewInmemHA(nil, opts.Logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coreConfig := *conf
-	coreConfig.Physical = inm
-	coreConfig.HAPhysical = inmha.(physical.HABackend)
-
-	cluster := vault.NewTestCluster(t, &coreConfig, opts)
-	cluster.Start()
-
-	cores := cluster.Cores
-	core := cores[0]
-
-	vault.TestWaitActive(t, core.Core)
-
-	return cluster, core
-}
-
-func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.HandlerProperties) http.Handler) (*vault.TestCluster, *vault.TestClusterCore) {
-	return ConfClusterAndCore(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
-		Logger:      logger,
-		HandlerFunc: handlerFunc,
-	})
-}
-
-func GetPerfReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
-	ret := &ReplicatedTestClusters{}
-
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: log.Trace,
-	})
-	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
-
-	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
-
-	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"), handlerFunc)
-
-	SetupTwoClusterPerfReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster)
-
-	// Wait until poison pills have been read
-	time.Sleep(45 * time.Second)
-	EnsureCoresUnsealed(t, ret.PerfPrimaryCluster)
-	EnsureCoresUnsealed(t, ret.PerfSecondaryCluster)
-
-	return ret
-}
-
-func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
-	ret := &ReplicatedTestClusters{}
-
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: log.Trace,
-	})
-	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
-
-	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
-
-	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"), handlerFunc)
-
-	ret.PerfPrimaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri-dr"), handlerFunc)
-
-	ret.PerfSecondaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec-dr"), handlerFunc)
-
-	SetupFourClusterReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster, ret.PerfPrimaryDRCluster, ret.PerfSecondaryDRCluster)
-
-	// Wait until poison pills have been read
-	time.Sleep(45 * time.Second)
-	EnsureCoresUnsealed(t, ret.PerfPrimaryCluster)
-	EnsureCoresUnsealed(t, ret.PerfSecondaryCluster)
-	EnsureCoresUnsealed(t, ret.PerfPrimaryDRCluster)
-	EnsureCoresUnsealed(t, ret.PerfSecondaryDRCluster)
-
-	return ret
-}
-
-func SetupTwoClusterPerfReplication(t testing.T, perfPrimary, perfSecondary *vault.TestCluster) {
-	// Enable performance primary
-	_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/enable", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationPerformancePrimary)
-
-	// get performance token
-	secret, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/secondary-token", map[string]interface{}{
-		"id": "1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	token := secret.WrapInfo.Token
-
-	// enable performance secondary
-	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
-		"token":   token,
-		"ca_file": perfPrimary.CACertPEMFile,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationPerformanceSecondary)
-	time.Sleep(time.Second * 3)
-	perfSecondary.BarrierKeys = perfPrimary.BarrierKeys
-
-	EnsureCoresUnsealed(t, perfSecondary)
-	rootToken := GenerateRoot(t, perfSecondary, false)
-	perfSecondary.Cores[0].Client.SetToken(rootToken)
-	for _, core := range perfSecondary.Cores {
-		core.Client.SetToken(rootToken)
-	}
-}
-
-func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDRSecondary, perfSecondaryDRSecondary *vault.TestCluster) {
-	var perfToken string
-	var drToken string
-
-	// Setup perf-primary
-	{
-		// Enable performance primary
-		_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/enable", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationPerformancePrimary)
-		// get performance token
-		secret, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/secondary-token", map[string]interface{}{
-			"id": "perf-secondary",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		perfToken = secret.WrapInfo.Token
-
-		// Enable dr primary
-		_, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationDRPrimary)
-
-		// get dr token
-		secret, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
-			"id": "primary-dr-secondary",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		drToken = secret.WrapInfo.Token
-		if drToken == "" {
-			t.Fatal("empty token retrieved")
-		}
-	}
-
-	WaitForActiveNode(t, perfPrimary)
-
-	// Setup perf-secondary
-	var perfSecondaryRootToken string
-	var perfSecondaryDRToken string
-	{
-		// enable performace secondary
-		_, err := perfSecondary.Cores[0].Client.Logical().Write("sys/replication/secondary/enable", map[string]interface{}{
-			"token":   perfToken,
-			"ca_file": perfPrimary.CACertPEMFile,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationPerformanceSecondary)
-		perfSecondary.BarrierKeys = perfPrimary.BarrierKeys
-
-		// We want to make sure we unseal all the nodes so we first need to wait
-		// until two of the nodes seal due to the poison pill being written
-		WaitForNCoresSealed(t, perfSecondary, 2)
-		EnsureCoresUnsealed(t, perfSecondary)
-		perfSecondaryRootToken = GenerateRoot(t, perfSecondary, false)
-		perfSecondary.Cores[0].Client.SetToken(perfSecondaryRootToken)
-
-		// Enable dr primary on perf secondary
-		_, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationDRPrimary)
-
-		// get dr token from perf secondary
-		secret, err := perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
-			"id": "secondary-dr-secondary",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		perfSecondaryDRToken = secret.WrapInfo.Token
-		if perfSecondaryDRToken == "" {
-			t.Fatal("empty token retrieved")
-		}
-	}
-
-	WaitForActiveNode(t, perfSecondary)
-	// Setup pref-primary's dr secondary using "drToken"
-	{
-		// enable dr secondary
-		_, err := perfDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
-			"token":   drToken,
-			"ca_file": perfPrimary.CACertPEMFile,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
-		perfDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
-
-		// We want to make sure we unseal all the nodes so we first need to wait
-		// until two of the nodes seal due to the poison pill being written
-		WaitForNCoresSealed(t, perfDRSecondary, 2)
-		EnsureCoresUnsealed(t, perfDRSecondary)
-
-		perfDRSecondary.Cores[0].Client.SetToken(perfPrimary.Cores[0].Client.Token())
-	}
-
-	WaitForActiveNode(t, perfDRSecondary)
-	time.Sleep(1 * time.Second)
-	// Setup pref-primary's dr secondary using "perfSecondaryDRToken"
-	{
-		// enable dr secondary
-		_, err := perfSecondaryDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
-			"token":   perfSecondaryDRToken,
-			"ca_file": perfSecondary.CACertPEMFile,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		WaitForReplicationState(t, perfSecondaryDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
-		perfSecondaryDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
-
-		// We want to make sure we unseal all the nodes so we first need to wait
-		// until two of the nodes seal due to the poison pill being written
-		WaitForNCoresSealed(t, perfSecondaryDRSecondary, 2)
-		EnsureCoresUnsealed(t, perfSecondaryDRSecondary)
-
-		perfSecondaryDRSecondary.Cores[0].Client.SetToken(perfSecondaryRootToken)
-	}
-
-	WaitForActiveNode(t, perfSecondaryDRSecondary)
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
@@ -484,8 +217,43 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	return nil
 }
 
+func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+	cores := make([]*vault.TestClusterCore, 0, 2)
+	for _, core := range cluster.Cores {
+		leaderResp, err := core.Client.Sys().Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !leaderResp.IsSelf {
+			cores = append(cores, core)
+		}
+	}
+
+	return cores
+}
+
+func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		unsealed := 0
+		for _, core := range cluster.Cores {
+			if !core.Core.Sealed() {
+				unsealed++
+			}
+		}
+
+		if unsealed >= n {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("%d cores were not sealed", n)
+}
+
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
-	for i := 0; i < 10; i++ {
+	t.Helper()
+	for i := 0; i < 60; i++ {
 		sealed := 0
 		for _, core := range cluster.Cores {
 			if core.Core.Sealed() {
@@ -503,7 +271,8 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 }
 
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
-	for i := 0; i < 10; i++ {
+	t.Helper()
+	for i := 0; i < 30; i++ {
 		for _, core := range cluster.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				return core
@@ -515,4 +284,123 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 
 	t.Fatalf("node did not become active")
 	return nil
+}
+
+func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
+	t.Helper()
+	cluster.Logger.Info("rekeying cluster", "recovery", recovery)
+	client := cluster.Cores[0].Client
+
+	initFunc := client.Sys().RekeyInit
+	if recovery {
+		initFunc = client.Sys().RekeyRecoveryKeyInit
+	}
+	init, err := initFunc(&api.RekeyInitRequest{
+		SecretShares:    5,
+		SecretThreshold: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var statusResp *api.RekeyUpdateResponse
+	var keys = cluster.BarrierKeys
+	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() {
+		keys = cluster.RecoveryKeys
+	}
+
+	updateFunc := client.Sys().RekeyUpdate
+	if recovery {
+		updateFunc = client.Sys().RekeyRecoveryKeyUpdate
+	}
+	for j := 0; j < len(keys); j++ {
+		statusResp, err = updateFunc(base64.StdEncoding.EncodeToString(keys[j]), init.Nonce)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if statusResp == nil {
+			t.Fatal("nil status response during unseal")
+		}
+		if statusResp.Complete {
+			break
+		}
+	}
+	cluster.Logger.Info("cluster rekeyed", "recovery", recovery)
+
+	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() && !recovery {
+		return nil
+	}
+	if len(statusResp.KeysB64) != 5 {
+		t.Fatal("wrong number of keys")
+	}
+
+	newKeys := make([][]byte, 5)
+	for i, key := range statusResp.KeysB64 {
+		newKeys[i], err = base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return newKeys
+}
+
+type TestRaftServerAddressProvider struct {
+	Cluster *vault.TestCluster
+}
+
+func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+	for _, core := range p.Cluster.Cores {
+		if core.NodeID == string(id) {
+			parsed, err := url.Parse(core.ClusterAddr())
+			if err != nil {
+				return "", err
+			}
+
+			return raftlib.ServerAddress(parsed.Host), nil
+		}
+	}
+
+	return "", errors.New("could not find cluster addr")
+}
+
+func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	// Seal the leader so we can install an address provider
+	{
+		EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	// Join core1
+	{
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+
+	// Join core2
+	{
+		core := cluster.Cores[2]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+
+	WaitForNCoresUnsealed(t, cluster, 3)
 }

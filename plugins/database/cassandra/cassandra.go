@@ -8,11 +8,10 @@ import (
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const (
@@ -62,7 +61,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -130,7 +129,7 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 			err = session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": username,
 				"password": password,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 			if err != nil {
 				for _, stmt := range rollbackCQL {
 					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
@@ -141,7 +140,7 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 
 						session.Query(dbutil.QueryHelper(query, map[string]string{
 							"username": username,
-						})).Exec()
+						})).WithContext(ctx).Exec()
 					}
 				}
 				return "", "", err
@@ -186,7 +185,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 
 			err := session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": username,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 
 			result = multierror.Append(result, err)
 		}
@@ -226,7 +225,7 @@ func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []stri
 			err := session.Query(dbutil.QueryHelper(query, map[string]string{
 				"username": c.Username,
 				"password": password,
-			})).Exec()
+			})).WithContext(ctx).Exec()
 
 			result = multierror.Append(result, err)
 		}

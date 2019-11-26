@@ -26,12 +26,13 @@ model for metrics collection.
 - `format` `(string: "")` – Specifies the format used for the returned metrics. The
   default metrics format is JSON. Setting `format` to `prometheus` will return the
   metrics in [Prometheus format](https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format).
-  
+
 ### Sample Request
 
 ```
-$ curl -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
-    http://127.0.0.1:8200/v1/sys/metrics?format=prometheus
+$ curl \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/metrics?format=prometheus'
 ```
 
 ### Sample Response
@@ -66,4 +67,5 @@ vault_barrier_get{quantile="0.9"} 0.011938000097870827
 vault_barrier_get{quantile="0.99"} 0.011938000097870827
 vault_barrier_get_sum 0.1814980012131855
 vault_barrier_get_count 36
+...
 ```

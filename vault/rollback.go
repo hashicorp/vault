@@ -11,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -166,9 +166,6 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
-	if m.logger.IsDebug() {
-		m.logger.Debug("attempting rollback", "path", fullPath)
-	}
 
 	defer func() {
 		rs.lastError = err
@@ -181,9 +178,11 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
+		m.logger.Error("rollback failed to derive namespace from context", "path", fullPath)
 		return err
 	}
 	if ns == nil {
+		m.logger.Error("rollback found no namespace", "path", fullPath)
 		return namespace.ErrNoNamespace
 	}
 
@@ -224,7 +223,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 	var cancelFunc context.CancelFunc
 	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
-	_, err = m.router.Route(ctx, req)
+	resp, err := m.router.Route(ctx, req)
 	if grabStatelock && releaseLock {
 		m.core.stateLock.RUnlock()
 	}
@@ -236,7 +235,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 		err = nil
 	}
 	// If we failed due to read-only storage, we can't do anything; ignore
-	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+	if (err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error())) ||
+		(resp.IsError() && strings.Contains(resp.Error().Error(), logical.ErrReadOnly.Error())) {
 		err = nil
 	}
 	if err != nil {
@@ -260,7 +260,7 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	rs := m.startOrLookupRollback(ctx, fullPath, false)
 
 	// Since we have the statelock held, tell any inflight rollback to give up
-	// trying to aquire it. This will prevent deadlocks in the case where we
+	// trying to acquire it. This will prevent deadlocks in the case where we
 	// have the write lock. In the case where it was waiting to grab
 	// a read lock it will then simply continue with the rollback
 	// operation under the protection of our write lock.

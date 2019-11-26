@@ -33,9 +33,10 @@ export default Service.extend({
           namespace: userRoot,
         },
       });
+      let keys = ns.data.keys || [];
       this.set(
         'accessibleNamespaces',
-        ns.data.keys.map(n => {
+        keys.map(n => {
           let fullNS = n;
           // if the user's root isn't '', then we need to construct
           // the paths so they connect to the user root to the list
@@ -51,4 +52,8 @@ export default Service.extend({
       //do nothing here
     }
   }).drop(),
+
+  reset() {
+    this.set('accessibleNamespaces', null);
+  },
 });

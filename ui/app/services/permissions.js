@@ -4,8 +4,8 @@ import { task } from 'ember-concurrency';
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
-    entities: 'identity/entities',
-    groups: 'identity/groups',
+    entities: 'identity/entity/id',
+    groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
     namespaces: 'sys/namespaces',
     'control-groups': 'sys/control-group/',
@@ -27,24 +27,29 @@ const API_PATHS = {
     replication: 'sys/replication',
     license: 'sys/license',
     seal: 'sys/seal',
+    raft: 'sys/storage/raft/configuration',
+  },
+  metrics: {
+    requests: 'sys/internal/counters/requests',
   },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/auth': ['vault.cluster.access.methods'],
-  'identity/entities': ['vault.cluster.access.identity', 'entities'],
-  'identity/groups': ['vault.cluster.access.identity', 'groups'],
+  'identity/entity/id': ['vault.cluster.access.identity', 'entities'],
+  'identity/group/id': ['vault.cluster.access.identity', 'groups'],
   'sys/leases/lookup': ['vault.cluster.access.leases'],
   'sys/namespaces': ['vault.cluster.access.namespaces'],
   'sys/control-group/': ['vault.cluster.access.control-groups'],
 };
 
 /*
-  The Permissions service is used to gate top navigation and sidebar items. It fetches
-  a users' policy from the resultant-acl endpoint and stores their allowed exact and glob
-  paths as state. It also has methods for checking whether a user has permission for a given
-  path.
+  The Permissions service is used to gate top navigation and sidebar items.
+  It fetches a users' policy from the resultant-acl endpoint and stores their
+  allowed exact and glob paths as state. It also has methods for checking whether
+  a user has permission for a given path.
 */
+
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
@@ -84,7 +89,10 @@ export default Service.extend({
 
   hasNavPermission(navItem, routeParams) {
     if (routeParams) {
-      return this.hasPermission(API_PATHS[navItem][routeParams]);
+      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+      let capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
+
+      return this.hasPermission(API_PATHS[navItem][routeParams], capability);
     }
     return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
   },
@@ -141,7 +149,8 @@ export default Service.extend({
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
       });
       const hasMatchingPath =
-        (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+        (matchingPath && !this.isDenied(globPaths[matchingPath])) ||
+        Object.prototype.hasOwnProperty.call(globPaths, '');
 
       if (matchingPath && capability) {
         return this.hasCapability(globPaths[matchingPath], capability) && hasMatchingPath;

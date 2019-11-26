@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -44,13 +45,15 @@ Usage: vault path-help [options] PATH
 
   Each secret engine produces different help output.
 
+  If -format is specified as JSON, the output will be in OpenAPI format.
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *PathHelpCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PathHelpCommand) AutocompleteArgs() complete.Predictor {
@@ -97,6 +100,17 @@ func (c *PathHelpCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(help.Help)
+	switch c.flagFormat {
+	case "json":
+		b, err := json.Marshal(help.OpenAPI)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error marshaling OpenAPI: %s", err))
+			return 2
+		}
+		c.UI.Output(string(b))
+	default:
+		c.UI.Output(help.Help)
+	}
+
 	return 0
 }

@@ -3,14 +3,15 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -24,7 +25,19 @@ type signOutcome struct {
 	keyValid  bool
 }
 
-func TestTransit_SignVerify_P256(t *testing.T) {
+func TestTransit_SignVerify_ECDSA(t *testing.T) {
+	t.Run("256", func(t *testing.T) {
+		testTransit_SignVerify_ECDSA(t, 256)
+	})
+	t.Run("384", func(t *testing.T) {
+		testTransit_SignVerify_ECDSA(t, 384)
+	})
+	t.Run("521", func(t *testing.T) {
+		testTransit_SignVerify_ECDSA(t, 521)
+	})
+}
+
+func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	b, storage := createBackendWithSysView(t)
 
 	// First create a key
@@ -33,7 +46,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 		Data: map[string]interface{}{
-			"type": "ecdsa-p256",
+			"type": fmt.Sprintf("ecdsa-p%d", bits),
 		},
 	}
 	_, err := b.HandleRequest(context.Background(), req)
@@ -45,42 +58,84 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Useful code to output a key for openssl verification
 	/*
-		{
-			key := p.Keys[p.LatestVersion]
+		if bits == 384 {
+			var curve elliptic.Curve
+			switch bits {
+			case 521:
+				curve = elliptic.P521()
+			case 384:
+				curve = elliptic.P384()
+			default:
+				curve = elliptic.P256()
+			}
+			key := p.Keys[strconv.Itoa(p.LatestVersion)]
 			keyBytes, _ := x509.MarshalECPrivateKey(&ecdsa.PrivateKey{
 				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P256(),
-					X:     key.X,
-					Y:     key.Y,
+					Curve: curve,
+					X:     key.EC_X,
+					Y:     key.EC_Y,
 				},
-				D: key.D,
+				D: key.EC_D,
 			})
 			pemBlock := &pem.Block{
 				Type:  "EC PRIVATE KEY",
 				Bytes: keyBytes,
 			}
 			pemBytes := pem.EncodeToMemory(pemBlock)
-			t.Fatalf("X: %s, Y: %s, D: %s, marshaled: %s", key.X.Text(16), key.Y.Text(16), key.D.Text(16), string(pemBytes))
+			t.Fatalf("X: %s, Y: %s, D: %s, marshaled: %s", key.EC_X.Text(16), key.EC_Y.Text(16), key.EC_D.Text(16), string(pemBytes))
 		}
 	*/
 
+	var xString, yString, dString string
+	switch bits {
+	case 384:
+		xString = "703457a84e48bfcb037cfb509f1870d2aa5b74c109c2f24624ab21444492575229f8711453e5c656dab596b4e26db30e"
+		yString = "411c5b7092a893dc8b7af39de3d21d1c26f45b27616baeac4c479ef3c9f21c194b5ac501dee47ba2b2cb243a54256524"
+		dString = "3de3e4fd2ecbc490e956f41f5003a1e57a84763cec7b722fa3427cf461a1148ea4d5206023bcce0422289f6633730759"
+		/*
+			-----BEGIN EC PRIVATE KEY-----
+			MIGkAgEBBDA94+T9LsvEkOlW9B9QA6HleoR2POx7ci+jQnz0YaEUjqTVIGAjvM4E
+			IiifZjNzB1mgBwYFK4EEACKhZANiAARwNFeoTki/ywN8+1CfGHDSqlt0wQnC8kYk
+			qyFERJJXUin4cRRT5cZW2rWWtOJtsw5BHFtwkqiT3It6853j0h0cJvRbJ2FrrqxM
+			R57zyfIcGUtaxQHe5HuissskOlQlZSQ=
+			-----END EC PRIVATE KEY-----
+		*/
+	case 521:
+		xString = "1913f75fc044fe5d1f871c2629a377462fd819b174a41d3ec7d04ebd5ae35475ff8de544f4e19a9aa6b16a8f67af479be6884e00ca3147dc24d5924d66ac395e04b"
+		yString = "4919406b90d8323fdb5c9c4f48259c56ebcea37b40ad1a82bbbfad62a9b9c2dce515772274b84725471c7d0b7c62e10c23296b1a9d2b2586ada67735ff5d9fffc4"
+		dString = "1867d0fcd9bac4c5821b70a6b13117499438f8c274579c0aba254fbd85fa98892c3608576197d5534366a9aab0f904155bec46d800d23a57f7f053d91526568b09"
+		/*
+			-----BEGIN EC PRIVATE KEY-----
+			MIHcAgEBBEIAGGfQ/Nm6xMWCG3CmsTEXSZQ4+MJ0V5wKuiVPvYX6mIksNghXYZfV
+			U0Nmqaqw+QQVW+xG2ADSOlf38FPZFSZWiwmgBwYFK4EEACOhgYkDgYYABAGRP3X8
+			BE/l0fhxwmKaN3Ri/YGbF0pB0+x9BOvVrjVHX/jeVE9OGamqaxao9nr0eb5ohOAM
+			oxR9wk1ZJNZqw5XgSwBJGUBrkNgyP9tcnE9IJZxW686je0CtGoK7v61iqbnC3OUV
+			dyJ0uEclRxx9C3xi4QwjKWsanSslhq2mdzX/XZ//xA==
+			-----END EC PRIVATE KEY-----
+		*/
+	default:
+		xString = "7336010a6da5935113d26d9ea4bb61b3b8d102c9a8083ed432f9b58fd7e80686"
+		yString = "4040aa31864691a8a9e7e3ec9250e85425b797ad7be34ba8df62bfbad45ebb0e"
+		dString = "99e5569be8683a2691dfc560ca9dfa71e887867a3af60635a08a3e3655aba3ef"
+	}
+
 	keyEntry := p.Keys[strconv.Itoa(p.LatestVersion)]
-	_, ok := keyEntry.EC_X.SetString("7336010a6da5935113d26d9ea4bb61b3b8d102c9a8083ed432f9b58fd7e80686", 16)
+	_, ok := keyEntry.EC_X.SetString(xString, 16)
 	if !ok {
 		t.Fatal("could not set X")
 	}
-	_, ok = keyEntry.EC_Y.SetString("4040aa31864691a8a9e7e3ec9250e85425b797ad7be34ba8df62bfbad45ebb0e", 16)
+	_, ok = keyEntry.EC_Y.SetString(yString, 16)
 	if !ok {
 		t.Fatal("could not set Y")
 	}
-	_, ok = keyEntry.EC_D.SetString("99e5569be8683a2691dfc560ca9dfa71e887867a3af60635a08a3e3655aba3ef", 16)
+	_, ok = keyEntry.EC_D.SetString(dString, 16)
 	if !ok {
 		t.Fatal("could not set D")
 	}
@@ -157,7 +212,14 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	verifyRequest(req, true, "", sig[0:len(sig)-2])
 
 	// Test a signature generated with the same key by openssl
-	sig = `vault:v1:MEUCIAgnEl9V8P305EBAlz68Nq4jZng5fE8k6MactcnlUw9dAiEAvJVePg3dazW6MaW7lRAVtEz82QJDVmR98tXCl8Pc7DA=`
+	switch bits {
+	case 384:
+		sig = `vault:v1:MGUCMHHZLRN/3ehWuWACfSCMLtFtNEAdx6Rkwon2Lx6FWCyXCXqH6A8Pz8er0Qkgvm2ElQIxAO922LmUeYzHmDSfC5is/TjFu3b4Fb+1XtoBXncc2u4t2vSuTAxEv7WMh2D2YDdxeA==`
+	case 521:
+		sig = `vault:v1:MIGIAkIBYhspOgSs/K/NUWtlBN+CfYe1IVFpUbQNSqdjT7s+QKcr6GKmdGLIQAXw0q6K0elBgzi1wgLjxwdscwMeW7tm/QQCQgDzdITGlUEd9Z7DOfLCnDP4X8pGsfO60Tvsh/BN44drZsHLtXYBXLczB/XZfIWAsPMuI5F7ExwVNbmQP0FBVri/QQ==`
+	default:
+		sig = `vault:v1:MEUCIAgnEl9V8P305EBAlz68Nq4jZng5fE8k6MactcnlUw9dAiEAvJVePg3dazW6MaW7lRAVtEz82QJDVmR98tXCl8Pc7DA=`
+	}
 	verifyRequest(req, false, "", sig)
 
 	// Test algorithm selection in the path
@@ -212,11 +274,11 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	signRequest(req, true, "")
 
 	// Rotate and set min decryption version
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +378,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	fooP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +386,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	barP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "bar",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,11 +566,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	sig = signRequest(req, true, "bar")
 
 	// Rotate and set min decryption version
-	err = fooP.Rotate(context.Background(), storage)
+	err = fooP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fooP.Rotate(context.Background(), storage)
+	err = fooP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -516,11 +578,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	if err = fooP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(context.Background(), storage)
+	err = barP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(context.Background(), storage)
+	err = barP.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}

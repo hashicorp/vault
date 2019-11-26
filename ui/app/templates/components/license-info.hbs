@@ -13,7 +13,7 @@
       data-test-cluster-status
       data-test-warning-text
     />
-    <span class="title is-5" data-test-temp-license>Temporary License</span>
+    <span class="title is-5" data-test-temp-license>Temporary license</span>
     <form {{action "saveModel" text on="submit"}}>
       <div class="box is-shadowless is-fullwidth is-marginless">
         <div class="field">
@@ -71,10 +71,20 @@
     {{#each featuresInfo as |info|}}
       {{#info-table-row label=info.name value=(if info.active "Active" "Not Active") data-test-feature-row="data-test-feature-row"}}
         {{#if info.active}}
-        <ICon @size=28 @glyph="true" /> <span data-test-feature-status>Active {{#if info.count}}&mdash;
+        <Icon
+          @glyph="check-circle-outline"
+          @size="l"
+          class="icon-true"
+          aria-hidden="true"
+        /><span data-test-feature-status>Active {{#if info.count}}&mdash;
          {{info.count}} standby nodes allotted{{/if}}</span>
         {{else}}
-          <ICon @size=28 @glyph="false" /> <span data-test-feature-status>Not Active</span>
+          <Icon
+            @glyph="cancel-circle-outline"
+            @size="l"
+            class="icon-false"
+            aria-hidden="true"
+          /><span data-test-feature-status>Not Active</span>
         {{/if}}
       {{/info-table-row}}
     {{/each}}

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -134,6 +135,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,
 			Ui: &cli.BasicUi{
+				Reader:      bufio.NewReader(os.Stdin),
 				Writer:      runOpts.Stdout,
 				ErrorWriter: uiErrWriter,
 			},
@@ -146,6 +148,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,
 			Ui: &cli.BasicUi{
+				Reader: bufio.NewReader(os.Stdin),
 				Writer: runOpts.Stdout,
 			},
 		},

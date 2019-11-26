@@ -3,13 +3,14 @@ import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import DS from 'ember-data';
+import AdapterFetch from 'ember-fetch/mixins/adapter-fetch';
 import fetch from 'fetch';
 import config from '../config/environment';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
-export default DS.RESTAdapter.extend({
+export default DS.RESTAdapter.extend(AdapterFetch, {
   auth: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
@@ -63,7 +64,7 @@ export default DS.RESTAdapter.extend({
     let options = passedOptions;
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
-    // if we have a control group token that matches the intendedUrl,
+    // if we have a Control Group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
     // To do this, we rewrite the function args
@@ -100,11 +101,13 @@ export default DS.RESTAdapter.extend({
     return fetch(url, {
       method: type || 'GET',
       headers: opts.headers || {},
+      body: opts.body,
+      signal: opts.signal,
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
       } else {
-        return RSVP.reject();
+        return RSVP.reject(response);
       }
     });
   },

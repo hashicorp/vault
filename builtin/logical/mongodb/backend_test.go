@@ -4,72 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 var (
 	testImagePull sync.Once
 )
-
-func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURI string) {
-	if os.Getenv("MONGODB_URI") != "" {
-		return "", os.Getenv("MONGODB_URI")
-	}
-
-	// Without this the checks for whether the container has started seem to
-	// never actually pass. There's really no reason to expose the test
-	// containers, so don't.
-	dockertest.BindDockerToLocalhost = "yep"
-
-	testImagePull.Do(func() {
-		dockertest.Pull(dockertest.MongoDBImageName)
-	})
-
-	cid, connErr := dockertest.ConnectToMongoDB(60, 500*time.Millisecond, func(connURI string) bool {
-		connURI = "mongodb://" + connURI
-		// This will cause a validation to run
-		resp, err := b.HandleRequest(context.Background(), &logical.Request{
-			Storage:   s,
-			Operation: logical.UpdateOperation,
-			Path:      "config/connection",
-			Data: map[string]interface{}{
-				"uri": connURI,
-			},
-		})
-		if err != nil || (resp != nil && resp.IsError()) {
-			// It's likely not up and running yet, so return false and try again
-			return false
-		}
-		if resp == nil {
-			t.Fatal("expected warning")
-		}
-
-		retURI = connURI
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to database: %v", connErr)
-	}
-
-	return
-}
-
-func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
-	err := cid.KillRemove()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -112,10 +59,8 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURI := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
 	}
@@ -138,10 +83,8 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURI := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
 	}
@@ -166,10 +109,8 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURI := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
 	}

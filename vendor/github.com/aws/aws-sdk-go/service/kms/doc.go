@@ -6,7 +6,7 @@
 // AWS Key Management Service (AWS KMS) is an encryption and key management
 // web service. This guide describes the AWS KMS operations that you can call
 // programmatically. For general information about AWS KMS, see the AWS Key
-// Management Service Developer Guide (http://docs.aws.amazon.com/kms/latest/developerguide/).
+// Management Service Developer Guide (https://docs.aws.amazon.com/kms/latest/developerguide/).
 //
 // AWS provides SDKs that consist of libraries and sample code for various programming
 // languages and platforms (Java, Ruby, .Net, macOS, Android, etc.). The SDKs
@@ -34,7 +34,7 @@
 // Token Service to generate temporary security credentials that you can use
 // to sign requests.
 //
-// All AWS KMS operations require Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+// All AWS KMS operations require Signature Version 4 (https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
 //
 // Logging API Requests
 //
@@ -43,21 +43,21 @@
 // you specify. By using the information collected by CloudTrail, you can determine
 // what requests were made to AWS KMS, who made the request, when it was made,
 // and so on. To learn more about CloudTrail, including how to turn it on and
-// find your log files, see the AWS CloudTrail User Guide (http://docs.aws.amazon.com/awscloudtrail/latest/userguide/).
+// find your log files, see the AWS CloudTrail User Guide (https://docs.aws.amazon.com/awscloudtrail/latest/userguide/).
 //
 // Additional Resources
 //
 // For more information about credentials and request signing, see the following:
 //
-//    * AWS Security Credentials (http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
+//    * AWS Security Credentials (https://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
 //    - This topic provides general information about the types of credentials
 //    used for accessing AWS.
 //
-//    * Temporary Security Credentials (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
+//    * Temporary Security Credentials (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
 //    - This section of the IAM User Guide describes how to create and use temporary
 //    security credentials.
 //
-//    * Signature Version 4 Signing Process (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html)
+//    * Signature Version 4 Signing Process (https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html)
 //    - This set of topics walks you through the process of signing a request
 //    using an access key ID and a secret access key.
 //

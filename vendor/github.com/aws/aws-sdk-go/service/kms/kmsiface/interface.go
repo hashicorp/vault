@@ -64,9 +64,17 @@ type KMSAPI interface {
 	CancelKeyDeletionWithContext(aws.Context, *kms.CancelKeyDeletionInput, ...request.Option) (*kms.CancelKeyDeletionOutput, error)
 	CancelKeyDeletionRequest(*kms.CancelKeyDeletionInput) (*request.Request, *kms.CancelKeyDeletionOutput)
 
+	ConnectCustomKeyStore(*kms.ConnectCustomKeyStoreInput) (*kms.ConnectCustomKeyStoreOutput, error)
+	ConnectCustomKeyStoreWithContext(aws.Context, *kms.ConnectCustomKeyStoreInput, ...request.Option) (*kms.ConnectCustomKeyStoreOutput, error)
+	ConnectCustomKeyStoreRequest(*kms.ConnectCustomKeyStoreInput) (*request.Request, *kms.ConnectCustomKeyStoreOutput)
+
 	CreateAlias(*kms.CreateAliasInput) (*kms.CreateAliasOutput, error)
 	CreateAliasWithContext(aws.Context, *kms.CreateAliasInput, ...request.Option) (*kms.CreateAliasOutput, error)
 	CreateAliasRequest(*kms.CreateAliasInput) (*request.Request, *kms.CreateAliasOutput)
+
+	CreateCustomKeyStore(*kms.CreateCustomKeyStoreInput) (*kms.CreateCustomKeyStoreOutput, error)
+	CreateCustomKeyStoreWithContext(aws.Context, *kms.CreateCustomKeyStoreInput, ...request.Option) (*kms.CreateCustomKeyStoreOutput, error)
+	CreateCustomKeyStoreRequest(*kms.CreateCustomKeyStoreInput) (*request.Request, *kms.CreateCustomKeyStoreOutput)
 
 	CreateGrant(*kms.CreateGrantInput) (*kms.CreateGrantOutput, error)
 	CreateGrantWithContext(aws.Context, *kms.CreateGrantInput, ...request.Option) (*kms.CreateGrantOutput, error)
@@ -84,9 +92,17 @@ type KMSAPI interface {
 	DeleteAliasWithContext(aws.Context, *kms.DeleteAliasInput, ...request.Option) (*kms.DeleteAliasOutput, error)
 	DeleteAliasRequest(*kms.DeleteAliasInput) (*request.Request, *kms.DeleteAliasOutput)
 
+	DeleteCustomKeyStore(*kms.DeleteCustomKeyStoreInput) (*kms.DeleteCustomKeyStoreOutput, error)
+	DeleteCustomKeyStoreWithContext(aws.Context, *kms.DeleteCustomKeyStoreInput, ...request.Option) (*kms.DeleteCustomKeyStoreOutput, error)
+	DeleteCustomKeyStoreRequest(*kms.DeleteCustomKeyStoreInput) (*request.Request, *kms.DeleteCustomKeyStoreOutput)
+
 	DeleteImportedKeyMaterial(*kms.DeleteImportedKeyMaterialInput) (*kms.DeleteImportedKeyMaterialOutput, error)
 	DeleteImportedKeyMaterialWithContext(aws.Context, *kms.DeleteImportedKeyMaterialInput, ...request.Option) (*kms.DeleteImportedKeyMaterialOutput, error)
 	DeleteImportedKeyMaterialRequest(*kms.DeleteImportedKeyMaterialInput) (*request.Request, *kms.DeleteImportedKeyMaterialOutput)
+
+	DescribeCustomKeyStores(*kms.DescribeCustomKeyStoresInput) (*kms.DescribeCustomKeyStoresOutput, error)
+	DescribeCustomKeyStoresWithContext(aws.Context, *kms.DescribeCustomKeyStoresInput, ...request.Option) (*kms.DescribeCustomKeyStoresOutput, error)
+	DescribeCustomKeyStoresRequest(*kms.DescribeCustomKeyStoresInput) (*request.Request, *kms.DescribeCustomKeyStoresOutput)
 
 	DescribeKey(*kms.DescribeKeyInput) (*kms.DescribeKeyOutput, error)
 	DescribeKeyWithContext(aws.Context, *kms.DescribeKeyInput, ...request.Option) (*kms.DescribeKeyOutput, error)
@@ -99,6 +115,10 @@ type KMSAPI interface {
 	DisableKeyRotation(*kms.DisableKeyRotationInput) (*kms.DisableKeyRotationOutput, error)
 	DisableKeyRotationWithContext(aws.Context, *kms.DisableKeyRotationInput, ...request.Option) (*kms.DisableKeyRotationOutput, error)
 	DisableKeyRotationRequest(*kms.DisableKeyRotationInput) (*request.Request, *kms.DisableKeyRotationOutput)
+
+	DisconnectCustomKeyStore(*kms.DisconnectCustomKeyStoreInput) (*kms.DisconnectCustomKeyStoreOutput, error)
+	DisconnectCustomKeyStoreWithContext(aws.Context, *kms.DisconnectCustomKeyStoreInput, ...request.Option) (*kms.DisconnectCustomKeyStoreOutput, error)
+	DisconnectCustomKeyStoreRequest(*kms.DisconnectCustomKeyStoreInput) (*request.Request, *kms.DisconnectCustomKeyStoreOutput)
 
 	EnableKey(*kms.EnableKeyInput) (*kms.EnableKeyOutput, error)
 	EnableKeyWithContext(aws.Context, *kms.EnableKeyInput, ...request.Option) (*kms.EnableKeyOutput, error)
@@ -207,6 +227,10 @@ type KMSAPI interface {
 	UpdateAlias(*kms.UpdateAliasInput) (*kms.UpdateAliasOutput, error)
 	UpdateAliasWithContext(aws.Context, *kms.UpdateAliasInput, ...request.Option) (*kms.UpdateAliasOutput, error)
 	UpdateAliasRequest(*kms.UpdateAliasInput) (*request.Request, *kms.UpdateAliasOutput)
+
+	UpdateCustomKeyStore(*kms.UpdateCustomKeyStoreInput) (*kms.UpdateCustomKeyStoreOutput, error)
+	UpdateCustomKeyStoreWithContext(aws.Context, *kms.UpdateCustomKeyStoreInput, ...request.Option) (*kms.UpdateCustomKeyStoreOutput, error)
+	UpdateCustomKeyStoreRequest(*kms.UpdateCustomKeyStoreInput) (*request.Request, *kms.UpdateCustomKeyStoreOutput)
 
 	UpdateKeyDescription(*kms.UpdateKeyDescriptionInput) (*kms.UpdateKeyDescriptionOutput, error)
 	UpdateKeyDescriptionWithContext(aws.Context, *kms.UpdateKeyDescriptionInput, ...request.Option) (*kms.UpdateKeyDescriptionOutput, error)

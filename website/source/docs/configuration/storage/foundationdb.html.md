@@ -19,7 +19,7 @@ accompanying the backend's source in the Vault source tree.
 
 - **High Availability** – the FoundationDB storage backend supports high
   availability. The HA implementation relies on the clocks of the Vault
-  nodes inside the cluster being properly sychronized; clock skews are
+  nodes inside the cluster being properly synchronized; clock skews are
   susceptible to cause contention on the locks.
 
 - **Community Supported** – the FoundationDB storage backend is supported

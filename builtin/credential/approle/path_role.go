@@ -9,17 +9,21 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // roleStorageEntry stores all the options that are set on an role
 type roleStorageEntry struct {
+	tokenutil.TokenParams
+
 	// Name of the role. This field is not persisted on disk. After the role is
 	// read out of disk, the sanitized version of name is set in this field for
 	// subsequent use of role name elsewhere.
@@ -33,7 +37,7 @@ type roleStorageEntry struct {
 	// of the role
 	HMACKey string `json:"hmac_key" mapstructure:"hmac_key"`
 
-	// Policies that are to be required by the token to access this role
+	// Policies that are to be required by the token to access this role. Deprecated.
 	Policies []string `json:"policies" mapstructure:"policies"`
 
 	// Number of times the SecretID generated against this role can be
@@ -43,15 +47,6 @@ type roleStorageEntry struct {
 	// Duration (less than the backend mount's max TTL) after which a
 	// SecretID generated against the role will expire
 	SecretIDTTL time.Duration `json:"secret_id_ttl" mapstructure:"secret_id_ttl"`
-
-	// TokenNumUses defines the number of allowed uses of the token issued
-	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses"`
-
-	// Duration before which an issued token must be renewed
-	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
-
-	// Duration after which an issued token should not be allowed to be renewed
-	TokenMaxTTL time.Duration `json:"token_max_ttl" mapstructure:"token_max_ttl"`
 
 	// A constraint, if set, requires 'secret_id' credential to be presented during login
 	BindSecretID bool `json:"bind_secret_id" mapstructure:"bind_secret_id"`
@@ -67,14 +62,11 @@ type roleStorageEntry struct {
 	// A constraint, if set, specifies the CIDR blocks from which logins should be allowed
 	SecretIDBoundCIDRs []string `json:"secret_id_bound_cidrs" mapstructure:"secret_id_bound_cidrs"`
 
-	// A constraint, if set, specifies the CIDR blocks from which token use should be allowed
-	TokenBoundCIDRs []string `json:"token_bound_cidrs" mapstructure:"token_bound_cidrs"`
-
 	// Period, if set, indicates that the token generated using this role
 	// should never expire. The token should be renewed within the duration
-	// specified by this value. The renewal duration will be fixed if the
-	// value is not modified on the role. If the `Period` in the role is modified,
-	// a token will pick up the new value during its next renewal.
+	// specified by this value. The renewal duration will be fixed if the value
+	// is not modified on the role. If the `Period` in the role is modified, a
+	// token will pick up the new value during its next renewal. Deprecated.
 	Period time.Duration `json:"period" mapstructure:"period"`
 
 	// LowerCaseRoleName enforces the lower casing of role names for all the
@@ -84,9 +76,6 @@ type roleStorageEntry struct {
 	// SecretIDPrefix is the storage prefix for persisting secret IDs. This
 	// differs based on whether the secret IDs are cluster local or not.
 	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix"`
-
-	// TokenType is the type of token to generate
-	TokenType string `json:"token_type" mapstructure:"token_type"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -116,7 +105,83 @@ type roleIDStorageEntry struct {
 // role/<role_name>/secret-id-accessor/lookup - For reading secret_id using accessor
 // role/<role_name>/secret-id-accessor/destroy - For deleting secret_id using accessor
 func rolePaths(b *backend) []*framework.Path {
+	defTokenFields := tokenutil.TokenFields()
+
+	p := &framework.Path{
+		Pattern: "role/" + framework.GenericNameRegex("role_name"),
+		Fields: map[string]*framework.FieldSchema{
+			"role_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the role.",
+			},
+			"bind_secret_id": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
+			},
+
+			"bound_cidr_list": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `Use "secret_id_bound_cidrs" instead.`,
+				Deprecated:  true,
+			},
+
+			"secret_id_bound_cidrs": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can perform the login operation.`,
+			},
+
+			"policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
+			},
+
+			"secret_id_num_uses": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `Number of times a SecretID can access the role, after which the SecretID
+will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
+			},
+
+			"secret_id_ttl": &framework.FieldSchema{
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in seconds after which the issued SecretID should expire. Defaults
+to 0, meaning no expiration.`,
+			},
+
+			"period": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
+			},
+
+			"role_id": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Identifier of the role. Defaults to a UUID.",
+			},
+
+			"local_secret_ids": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `If set, the secret IDs generated using this role will be cluster local. This
+can only be set during role creation and once set, it can't be reset later.`,
+			},
+		},
+		ExistenceCheck: b.pathRoleExistenceCheck,
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.pathRoleCreateUpdate,
+			logical.UpdateOperation: b.pathRoleCreateUpdate,
+			logical.ReadOperation:   b.pathRoleRead,
+			logical.DeleteOperation: b.pathRoleDelete,
+		},
+		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
+		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
+	}
+
+	tokenutil.AddTokenFields(p.Fields)
+
 	return []*framework.Path{
+		p,
 		&framework.Path{
 			Pattern: "role/?",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -124,96 +189,6 @@ func rolePaths(b *backend) []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
-		},
-		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name"),
-			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
-				"bind_secret_id": &framework.FieldSchema{
-					Type:        framework.TypeBool,
-					Default:     true,
-					Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
-				},
-				// Deprecated
-				"bound_cidr_list": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
-of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
-				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
-				},
-				"token_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can use the returned token.`,
-				},
-				"policies": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Default:     "default",
-					Description: "Comma separated list of policies on the role.",
-				},
-				"secret_id_num_uses": &framework.FieldSchema{
-					Type: framework.TypeInt,
-					Description: `Number of times a SecretID can access the role, after which the SecretID
-will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
-				},
-				"secret_id_ttl": &framework.FieldSchema{
-					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
-to 0, meaning no expiration.`,
-				},
-				"token_num_uses": &framework.FieldSchema{
-					Type:        framework.TypeInt,
-					Description: `Number of times issued tokens can be used`,
-				},
-				"token_ttl": &framework.FieldSchema{
-					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fall back to the system/mount defaults.`,
-				},
-				"token_max_ttl": &framework.FieldSchema{
-					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which the issued token should not be allowed to
-be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
-				},
-				"period": &framework.FieldSchema{
-					Type:    framework.TypeDurationSecond,
-					Default: 0,
-					Description: `If set, indicates that the token generated using this role
-should never expire. The token should be renewed within the
-duration specified by this value. At each renewal, the token's
-TTL will be set to the value of this parameter.`,
-				},
-				"role_id": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Identifier of the role. Defaults to a UUID.",
-				},
-				"local_secret_ids": &framework.FieldSchema{
-					Type: framework.TypeBool,
-					Description: `If set, the secret IDs generated using this role will be cluster local. This
-can only be set during role creation and once set, it can't be reset later.`,
-				},
-				"token_type": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Default:     "default",
-					Description: `The type of token to generate ("service" or "batch"), or "default" to use the default`,
-				},
-			},
-			ExistenceCheck: b.pathRoleExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathRoleCreateUpdate,
-				logical.UpdateOperation: b.pathRoleCreateUpdate,
-				logical.ReadOperation:   b.pathRoleRead,
-				logical.DeleteOperation: b.pathRoleDelete,
-			},
-			HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
-			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
@@ -238,8 +213,12 @@ can only be set during role creation and once set, it can't be reset later.`,
 				},
 				"policies": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Default:     "default",
-					Description: "Comma separated list of policies on the role.",
+					Description: tokenutil.DeprecationText("token_policies"),
+					Deprecated:  true,
+				},
+				"token_policies": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: defTokenFields["token_policies"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -285,7 +264,7 @@ IP addresses which can perform the login operation.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.UpdateOperation: b.pathRoleSecretIDBoundCIDRUpdate,
 				logical.ReadOperation:   b.pathRoleSecretIDBoundCIDRRead,
 				logical.DeleteOperation: b.pathRoleSecretIDBoundCIDRDelete,
 			},
@@ -300,13 +279,12 @@ IP addresses which can perform the login operation.`,
 					Description: "Name of the role.",
 				},
 				"token_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can use the returned token.`,
+					Type:        framework.TypeCommaStringSlice,
+					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.UpdateOperation: b.pathRoleTokenBoundCIDRUpdate,
 				logical.ReadOperation:   b.pathRoleTokenBoundCIDRRead,
 				logical.DeleteOperation: b.pathRoleTokenBoundCIDRDelete,
 			},
@@ -383,12 +361,13 @@ to 0, meaning no expiration.`,
 					Description: "Name of the role.",
 				},
 				"period": &framework.FieldSchema{
-					Type:    framework.TypeDurationSecond,
-					Default: 0,
-					Description: `If set, indicates that the token generated using this role
-should never expire. The token should be renewed within the
-duration specified by this value. At each renewal, the token's
-TTL will be set to the value of this parameter.`,
+					Type:        framework.TypeDurationSecond,
+					Description: tokenutil.DeprecationText("token_period"),
+					Deprecated:  true,
+				},
+				"token_period": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Description: defTokenFields["token_period"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -408,7 +387,7 @@ TTL will be set to the value of this parameter.`,
 				},
 				"token_num_uses": &framework.FieldSchema{
 					Type:        framework.TypeInt,
-					Description: `Number of times issued tokens can be used`,
+					Description: defTokenFields["token_num_uses"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -427,9 +406,8 @@ TTL will be set to the value of this parameter.`,
 					Description: "Name of the role.",
 				},
 				"token_ttl": &framework.FieldSchema{
-					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fall back to the system/mount defaults.`,
+					Type:        framework.TypeDurationSecond,
+					Description: defTokenFields["token_ttl"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -448,9 +426,8 @@ to 0, in which case the value will fall back to the system/mount defaults.`,
 					Description: "Name of the role.",
 				},
 				"token_max_ttl": &framework.FieldSchema{
-					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which the issued token should not be allowed to
-be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
+					Type:        framework.TypeDurationSecond,
+					Description: defTokenFields["token_max_ttl"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -500,9 +477,8 @@ list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
 				"token_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+					Type:        framework.TypeCommaStringSlice,
+					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -847,6 +823,14 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
+	if role.TokenPeriod == 0 && role.Period > 0 {
+		role.TokenPeriod = role.Period
+	}
+
+	if len(role.TokenPolicies) == 0 && len(role.Policies) > 0 {
+		role.TokenPolicies = role.Policies
+	}
+
 	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), &role)
 		if err != nil {
@@ -902,6 +886,24 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), logical.ErrUnsupportedPath
 	}
 
+	var resp *logical.Response
+
+	// Handle a backwards compat case
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		switch tokenTypeRaw.(string) {
+		case "default-service":
+			data.Raw["token_type"] = "service"
+			resp.AddWarning("default-service has no useful meaning; adjusting to service")
+		case "default-batch":
+			data.Raw["token_type"] = "batch"
+			resp.AddWarning("default-batch has no useful meaning; adjusting to batch")
+		}
+	}
+
+	if err := role.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
 	localSecretIDsRaw, ok := data.GetOk("local_secret_ids")
 	if ok {
 		switch {
@@ -949,36 +951,6 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
-	if boundCIDRListRaw, ok := data.GetOk("token_bound_cidrs"); ok {
-		role.TokenBoundCIDRs = boundCIDRListRaw.([]string)
-	}
-
-	if len(role.TokenBoundCIDRs) != 0 {
-		valid, err := cidrutil.ValidateCIDRListSlice(role.TokenBoundCIDRs)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse("invalid CIDR blocks"), nil
-		}
-	}
-
-	if policiesRaw, ok := data.GetOk("policies"); ok {
-		role.Policies = policyutil.ParsePolicies(policiesRaw)
-	} else if req.Operation == logical.CreateOperation {
-		role.Policies = policyutil.ParsePolicies(data.Get("policies"))
-	}
-
-	periodRaw, ok := data.GetOk("period")
-	if ok {
-		role.Period = time.Second * time.Duration(periodRaw.(int))
-	} else if req.Operation == logical.CreateOperation {
-		role.Period = time.Second * time.Duration(data.Get("period").(int))
-	}
-	if role.Period > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
-	}
-
 	if secretIDNumUsesRaw, ok := data.GetOk("secret_id_num_uses"); ok {
 		role.SecretIDNumUses = secretIDNumUsesRaw.(int)
 	} else if req.Operation == logical.CreateOperation {
@@ -994,59 +966,21 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		role.SecretIDTTL = time.Second * time.Duration(data.Get("secret_id_ttl").(int))
 	}
 
-	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
-		role.TokenNumUses = tokenNumUsesRaw.(int)
-	} else if req.Operation == logical.CreateOperation {
-		role.TokenNumUses = data.Get("token_num_uses").(int)
-	}
-	if role.TokenNumUses < 0 {
-		return logical.ErrorResponse("token_num_uses cannot be negative"), nil
-	}
-
-	if tokenTTLRaw, ok := data.GetOk("token_ttl"); ok {
-		role.TokenTTL = time.Second * time.Duration(tokenTTLRaw.(int))
-	} else if req.Operation == logical.CreateOperation {
-		role.TokenTTL = time.Second * time.Duration(data.Get("token_ttl").(int))
-	}
-
-	if tokenMaxTTLRaw, ok := data.GetOk("token_max_ttl"); ok {
-		role.TokenMaxTTL = time.Second * time.Duration(tokenMaxTTLRaw.(int))
-	} else if req.Operation == logical.CreateOperation {
-		role.TokenMaxTTL = time.Second * time.Duration(data.Get("token_max_ttl").(int))
-	}
-
-	tokenType := role.TokenType
-	if tokenTypeRaw, ok := data.GetOk("token_type"); ok {
-		tokenType = tokenTypeRaw.(string)
-		switch tokenType {
-		case "":
-			tokenType = "default"
-		case "service", "batch", "default":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenType)), nil
+	// handle upgrade cases
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
-	} else if req.Operation == logical.CreateOperation {
-		tokenType = data.Get("token_type").(string)
-	}
-	role.TokenType = tokenType
 
-	if role.TokenType == "batch" {
-		if role.Period != 0 {
-			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
-		}
-		if role.TokenNumUses != 0 {
-			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with limited use count"), nil
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
-	// Check that the TokenTTL value provided is less than the TokenMaxTTL.
-	// Sanitizing the TTL and MaxTTL is not required now and can be performed
-	// at credential issue time.
-	if role.TokenMaxTTL > time.Duration(0) && role.TokenTTL > role.TokenMaxTTL {
-		return logical.ErrorResponse("token_ttl should not be greater than token_max_ttl"), nil
+	if role.Period > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
-	var resp *logical.Response
 	if role.TokenMaxTTL > b.System().MaxLeaseTTL() {
 		resp = &logical.Response{}
 		resp.AddWarning("token_max_ttl is greater than the backend mount's maximum TTL value; issued tokens' max TTL value will be truncated")
@@ -1079,25 +1013,24 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	respData := map[string]interface{}{
-		"bind_secret_id": role.BindSecretID,
-		// TODO - remove this deprecated field in future versions,
-		// and its associated warning below.
-		"bound_cidr_list":       role.SecretIDBoundCIDRs,
+		"bind_secret_id":        role.BindSecretID,
 		"secret_id_bound_cidrs": role.SecretIDBoundCIDRs,
-		"token_bound_cidrs":     role.TokenBoundCIDRs,
-		"period":                role.Period / time.Second,
-		"policies":              role.Policies,
 		"secret_id_num_uses":    role.SecretIDNumUses,
 		"secret_id_ttl":         role.SecretIDTTL / time.Second,
-		"token_max_ttl":         role.TokenMaxTTL / time.Second,
-		"token_num_uses":        role.TokenNumUses,
-		"token_ttl":             role.TokenTTL / time.Second,
 		"local_secret_ids":      false,
-		"token_type":            role.TokenType,
 	}
+	role.PopulateTokenData(respData)
 
 	if role.SecretIDPrefix == secretIDLocalPrefix {
 		respData["local_secret_ids"] = true
+	}
+
+	// Backwards compat data
+	if role.Period != 0 {
+		respData["period"] = role.Period / time.Second
+	}
+	if len(role.Policies) > 0 {
+		respData["policies"] = role.Policies
 	}
 
 	resp := &logical.Response{
@@ -1107,7 +1040,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	if err := validateRoleConstraints(role); err != nil {
 		resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
 	}
-	resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed in favor of "secret_id_bound_cidrs".`)
 
 	// For sanity, verify that the index still exists. If the index is missing,
 	// add one and return a warning so it can be reported.
@@ -1256,7 +1188,7 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 }
 
 func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
-	return map[string]interface{}{
+	ret := map[string]interface{}{
 		"secret_id_accessor": entry.SecretIDAccessor,
 		"secret_id_num_uses": entry.SecretIDNumUses,
 		"secret_id_ttl":      entry.SecretIDTTL / time.Second,
@@ -1267,6 +1199,10 @@ func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
 		"cidr_list":          entry.CIDRList,
 		"token_bound_cidrs":  entry.TokenBoundCIDRs,
 	}
+	if len(entry.TokenBoundCIDRs) == 0 {
+		ret["token_bound_cidrs"] = []string{}
+	}
+	return ret
 }
 
 func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1444,6 +1380,24 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 }
 
 func (b *backend) pathRoleBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "token_bound_cidrs")
+	delete(data.Raw, "secret_id_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleSecretIDBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "bound_cidr_list")
+	delete(data.Raw, "token_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleTokenBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	delete(data.Raw, "bound_cidr_list")
+	delete(data.Raw, "secret_id_bound_cidrs")
+	return b.pathRoleBoundCIDRUpdateCommon(ctx, req, data)
+}
+
+func (b *backend) pathRoleBoundCIDRUpdateCommon(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1462,23 +1416,26 @@ func (b *backend) pathRoleBoundCIDRUpdate(ctx context.Context, req *logical.Requ
 		return nil, logical.ErrUnsupportedPath
 	}
 
-	var cidrs []string
 	if cidrsIfc, ok := data.GetFirst("secret_id_bound_cidrs", "bound_cidr_list"); ok {
-		cidrs = cidrsIfc.([]string)
+		cidrs := cidrsIfc.([]string)
+		if len(cidrs) == 0 {
+			return logical.ErrorResponse("missing bound_cidr_list"), nil
+		}
+		valid, err := cidrutil.ValidateCIDRListSlice(cidrs)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err).Error()), nil
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+		}
 		role.SecretIDBoundCIDRs = cidrs
+
 	} else if cidrsIfc, ok := data.GetOk("token_bound_cidrs"); ok {
-		cidrs = cidrsIfc.([]string)
+		cidrs, err := parseutil.ParseAddrs(cidrsIfc.([]string))
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("failed to parse token_bound_cidrs: {{err}}", err).Error()), nil
+		}
 		role.TokenBoundCIDRs = cidrs
-	}
-	if len(cidrs) == 0 {
-		return logical.ErrorResponse("missing bound_cidr_list"), nil
-	}
-	valid, err := cidrutil.ValidateCIDRListSlice(cidrs)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
-	}
-	if !valid {
-		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
 	}
 
 	return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
@@ -1559,15 +1516,15 @@ func (b *backend) pathRoleBoundCIDRDelete(ctx context.Context, req *logical.Requ
 		return nil, nil
 	}
 
-	// Deleting a field implies setting the value to it's default value.
 	switch fieldName {
 	case "bound_cidr_list":
-		role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").([]string)
+		role.BoundCIDRList = nil
 	case "secret_id_bound_cidrs":
-		role.SecretIDBoundCIDRs = data.GetDefaultOrZero("secret_id_bound_cidrs").([]string)
+		role.SecretIDBoundCIDRs = nil
 	case "token_bound_cidrs":
-		role.TokenBoundCIDRs = data.GetDefaultOrZero("token_bound_cidrs").([]string)
+		role.TokenBoundCIDRs = nil
 	}
+
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
@@ -1706,12 +1663,24 @@ func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Reque
 		return nil, logical.ErrUnsupportedPath
 	}
 
-	policiesRaw, ok := data.GetOk("policies")
+	policiesRaw, ok := data.GetOk("token_policies")
 	if !ok {
-		return logical.ErrorResponse("missing policies"), nil
+		policiesRaw, ok = data.GetOk("policies")
+		if ok {
+			role.Policies = policyutil.ParsePolicies(policiesRaw)
+			role.TokenPolicies = role.Policies
+		} else {
+			return logical.ErrorResponse("missing token_policies"), nil
+		}
+	} else {
+		role.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
+		_, ok = data.GetOk("policies")
+		if ok {
+			role.Policies = role.TokenPolicies
+		} else {
+			role.Policies = nil
+		}
 	}
-
-	role.Policies = policyutil.ParsePolicies(policiesRaw)
 
 	return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
 }
@@ -1734,10 +1703,20 @@ func (b *backend) pathRolePoliciesRead(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
+	p := role.TokenPolicies
+	if p == nil {
+		p = []string{}
+	}
+	d := map[string]interface{}{
+		"token_policies": p,
+	}
+
+	if len(role.Policies) > 0 {
+		d["policies"] = role.Policies
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"policies": role.Policies,
-		},
+		Data: d,
 	}, nil
 }
 
@@ -1759,7 +1738,8 @@ func (b *backend) pathRolePoliciesDelete(ctx context.Context, req *logical.Reque
 		return nil, nil
 	}
 
-	role.Policies = []string{}
+	role.TokenPolicies = nil
+	role.Policies = nil
 
 	return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
 }
@@ -1985,15 +1965,29 @@ func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request
 		return nil, logical.ErrUnsupportedPath
 	}
 
-	if periodRaw, ok := data.GetOk("period"); ok {
-		role.Period = time.Second * time.Duration(periodRaw.(int))
-		if role.Period > b.System().MaxLeaseTTL() {
-			return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	periodRaw, ok := data.GetOk("token_period")
+	if !ok {
+		periodRaw, ok = data.GetOk("period")
+		if ok {
+			role.Period = time.Second * time.Duration(periodRaw.(int))
+			role.TokenPeriod = role.Period
+		} else {
+			return logical.ErrorResponse("missing period"), nil
 		}
-		return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
 	} else {
-		return logical.ErrorResponse("missing period"), nil
+		role.TokenPeriod = time.Second * time.Duration(periodRaw.(int))
+		_, ok = data.GetOk("period")
+		if ok {
+			role.Period = role.TokenPeriod
+		} else {
+			role.Period = 0
+		}
 	}
+
+	if role.TokenPeriod > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	}
+	return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
 }
 
 func (b *backend) pathRolePeriodRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2014,10 +2008,16 @@ func (b *backend) pathRolePeriodRead(ctx context.Context, req *logical.Request, 
 		return nil, nil
 	}
 
+	d := map[string]interface{}{
+		"token_period": role.TokenPeriod / time.Second,
+	}
+
+	if role.Period > 0 {
+		d["period"] = role.Period / time.Second
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"period": role.Period / time.Second,
-		},
+		Data: d,
 	}, nil
 }
 
@@ -2039,7 +2039,8 @@ func (b *backend) pathRolePeriodDelete(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
-	role.Period = time.Second * time.Duration(data.GetDefaultOrZero("period").(int))
+	role.TokenPeriod = 0
+	role.Period = 0
 
 	return nil, b.setRoleEntry(ctx, req.Storage, role.name, role, "")
 }
@@ -2338,7 +2339,11 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		}
 	}
 	// Ensure that the token CIDRs on the secret ID are a subset of that of role's
-	if err := verifyCIDRRoleSecretIDSubset(secretIDTokenCIDRs, role.TokenBoundCIDRs); err != nil {
+	var roleCIDRs []string
+	for _, v := range role.TokenBoundCIDRs {
+		roleCIDRs = append(roleCIDRs, v.String())
+	}
+	if err := verifyCIDRRoleSecretIDSubset(secretIDTokenCIDRs, roleCIDRs); err != nil {
 		return nil, err
 	}
 

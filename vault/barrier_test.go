@@ -2,11 +2,12 @@ package vault
 
 import (
 	"context"
+	"crypto/rand"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func testBarrier(t *testing.T, b SecurityBarrier) {
@@ -49,7 +50,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Get a new key
-	key, err := b.GenerateKey()
+	key, err := b.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -69,12 +70,12 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Initialize the vault
-	if err := b.Initialize(context.Background(), key); err != nil {
+	if err := b.Initialize(context.Background(), key, nil, rand.Reader); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Double Initialize should fail
-	if err := b.Initialize(context.Background(), key); err != ErrBarrierAlreadyInit {
+	if err := b.Initialize(context.Background(), key, nil, rand.Reader); err != ErrBarrierAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -245,8 +246,8 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 
 func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -272,7 +273,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Rotate the encryption key
-	newTerm, err := b.Rotate(context.Background())
+	newTerm, err := b.Rotate(context.Background(), rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -351,8 +352,8 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 
 func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -370,7 +371,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Rekey to a new key
-	newKey, _ := b.GenerateKey()
+	newKey, _ := b.GenerateKey(rand.Reader)
 	err = b.Rekey(context.Background(), newKey)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -431,8 +432,8 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 
 func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
-	key, _ := b1.GenerateKey()
-	b1.Initialize(context.Background(), key)
+	key, _ := b1.GenerateKey(rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -443,7 +444,7 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	}
 
 	// Rotate the encryption key
-	newTerm, err := b1.Rotate(context.Background())
+	newTerm, err := b1.Rotate(context.Background(), rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -473,7 +474,7 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	}
 
 	// Rotate the encryption key
-	newTerm, err = b1.Rotate(context.Background())
+	newTerm, err = b1.Rotate(context.Background(), rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -502,8 +503,8 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 
 func testBarrier_Upgrade_Rekey(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
-	key, _ := b1.GenerateKey()
-	b1.Initialize(context.Background(), key)
+	key, _ := b1.GenerateKey(rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
 	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -514,7 +515,7 @@ func testBarrier_Upgrade_Rekey(t *testing.T, b1, b2 SecurityBarrier) {
 	}
 
 	// Rekey to a new key
-	newKey, _ := b1.GenerateKey()
+	newKey, _ := b1.GenerateKey(rand.Reader)
 	err = b1.Rekey(context.Background(), newKey)
 	if err != nil {
 		t.Fatalf("err: %v", err)

@@ -194,6 +194,10 @@ $ curl \
 | :------------------------| :------------------------ |
 | `GET`    | `/gcp/roleset/:name`     |
 
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
+
 ### Sample Request
 
 ```
@@ -234,10 +238,6 @@ $ curl \
 | `LIST`   | `/gcp/rolesets`          |
 
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/gcp/roleset`           |
-
 ### Sample Request
 
 ```
@@ -260,12 +260,33 @@ $ curl \
  }
 ```
 
+## Delete Roleset
+
+This endpoint deletes an existing roleset by the given name.
+
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `DELETE`    | `/gcp/roleset/:name`     |
+
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
+```
+
 ## Generate Secret (IAM Service Account Creds): OAuth2 Access Token
 
 
 | Method            | Path                            |
 | :-----------------------------  | :------------------------ |
-| `GET` | `POST`    | `/gcp/token/:roleset`           |
+| `GET` / `POST`    | `/gcp/token/:roleset`           |
 
 Generates an OAuth2 token with the scopes defined on the roleset. This OAuth access token can
 be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...`
@@ -284,7 +305,7 @@ do not apply.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://127.0.0.1:8200/v1/consul/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/token/my-token-roleset
 ```
 
 ### Sample Response
@@ -308,7 +329,7 @@ $ curl \
 
 | Method            | Path                            |
 | :-----------------------------  | :------------------------ |
-| `GET` | `POST`    | `/gcp/key/:roleset`             |
+| `GET` / `POST`    | `/gcp/key/:roleset`             |
 
 If using `GET` ('read'), the  optional parameters will be set to their defaults. Use `POST` if you
 want to specify different values for these params.
@@ -340,7 +361,7 @@ or the system default if config was not defined.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/key/my-key-roleset
 ```
 
 ```sh
@@ -348,7 +369,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/key/my-key-roleset
 ```
 
 ### Sample Response

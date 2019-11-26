@@ -39,6 +39,10 @@
   link: "/docs/plugin"
   title: "Plugin Backends"
 -
+  description: "Topics related to running Vault on specific platforms (such as Kubernetes)."
+  link: "/docs/platform"
+  title: "Platforms"
+-
   description: "Topics related to Vault Enterprise, Vault's premium varient for professional teams and organizations."
   link: "/docs/enterprise"
   title: "Vault Enterprise"

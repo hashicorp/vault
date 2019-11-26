@@ -116,6 +116,9 @@ These are common configuration values that live within the `method` block:
 
 - `mount_path` `(string: optional)` - The mount path of the method. If not
   specified, defaults to a value of `auth/<method type>`.
+  
+- `namespace` `(string: optional)` - The default namespace path for the mount.
+  If not specified, defaults to the root namespace. 
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token
   will be response-wrapped by the agent. This is more secure than wrapping by

@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathRole(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
@@ -26,28 +25,28 @@ func pathRole(b *backend) *framework.Path {
 			},
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Policies to be set on tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
 			"ttl": {
-				Type: framework.TypeDurationSecond,
-				Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fallback to the system/mount defaults.`,
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_ttl"),
+				Deprecated:  true,
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_max_ttl"),
+				Deprecated:  true,
 			},
 			"period": {
-				Type: framework.TypeDurationSecond,
-				Description: `
-If set, indicates that the token generated using this role should never expire.
-The token should be renewed within the duration specified by this value. At
-each renewal, the token's TTL will be set to the value of this parameter.`,
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
 			},
 			"bound_cidrs": {
-				Type: framework.TypeCommaStringSlice,
-				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenutil.DeprecationText("token_bound_cidrs"),
+				Deprecated:  true,
 			},
 		},
 		ExistenceCheck: b.operationRoleExistenceCheck,
@@ -60,6 +59,9 @@ IP addresses which can perform the login operation.`,
 		HelpSynopsis:    pathRoleSyn,
 		HelpDescription: pathRoleDesc,
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
 func pathListRole(b *backend) *framework.Path {
@@ -121,27 +123,36 @@ func (b *backend) operationRoleCreateUpdate(ctx context.Context, req *logical.Re
 		return nil, errors.New("the arn is required to create a role")
 	}
 
-	// None of the remaining fields are required.
-	if raw, ok := data.GetOk("policies"); ok {
-		role.Policies = raw.([]string)
+	// Get tokenutil fields
+	if err := role.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if raw, ok := data.GetOk("ttl"); ok {
-		role.TTL = time.Duration(raw.(int)) * time.Second
-	}
-	if raw, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Duration(raw.(int)) * time.Second
-	}
-	if raw, ok := data.GetOk("period"); ok {
-		role.Period = time.Duration(raw.(int)) * time.Second
-	}
-	boundCIDRs, err := parseutil.ParseAddrs(data.Get("bound_cidrs"))
-	if err != nil {
-		return nil, err
-	}
-	role.BoundCIDRs = boundCIDRs
 
-	if role.MaxTTL > 0 && role.TTL > role.MaxTTL {
-		return nil, errors.New("ttl exceeds max_ttl")
+	// Handle upgrade cases
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &role.TTL, &role.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &role.MaxTTL, &role.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "bound_cidrs", "token_bound_cidrs", &role.BoundCIDRs, &role.TokenBoundCIDRs); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	if role.TokenMaxTTL > 0 && role.TokenTTL > role.TokenMaxTTL {
+		return nil, errors.New("ttl exceeds max ttl")
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+roleName, role)
@@ -200,6 +211,23 @@ func readRole(ctx context.Context, s logical.Storage, roleName string) (*roleEnt
 	if err := role.DecodeJSON(result); err != nil {
 		return nil, err
 	}
+
+	if result.TokenTTL == 0 && result.TTL > 0 {
+		result.TokenTTL = result.TTL
+	}
+	if result.TokenMaxTTL == 0 && result.MaxTTL > 0 {
+		result.TokenMaxTTL = result.MaxTTL
+	}
+	if result.TokenPeriod == 0 && result.Period > 0 {
+		result.TokenPeriod = result.Period
+	}
+	if len(result.TokenPolicies) == 0 && len(result.Policies) > 0 {
+		result.TokenPolicies = result.Policies
+	}
+	if len(result.TokenBoundCIDRs) == 0 && len(result.BoundCIDRs) > 0 {
+		result.TokenBoundCIDRs = result.BoundCIDRs
+	}
+
 	return result, nil
 }
 

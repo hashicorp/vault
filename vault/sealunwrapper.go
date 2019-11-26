@@ -9,8 +9,8 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // NewSealUnwrapper creates a new seal unwrapper

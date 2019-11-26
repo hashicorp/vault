@@ -12,4 +12,9 @@ export default create({
   generateCertIsPresent: isPresent('[data-test-credentials-link]'),
   signCert: clickable('[data-test-sign-link]'),
   signCertIsPresent: isPresent('[data-test-sign-link]'),
+  deleteBtn: clickable('[data-test-role-delete] button'),
+  confirmBtn: clickable('[data-test-confirm-button]'),
+  deleteRole() {
+    return this.deleteBtn().confirmBtn();
+  },
 });

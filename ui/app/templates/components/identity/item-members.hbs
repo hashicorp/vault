@@ -9,13 +9,12 @@
     }}
       <div class="columns is-mobile">
         <div class="column is-10">
-          {{#link-to "vault.cluster.access.identity.show" "groups" gid "details" 
+          {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
             class="is-block has-text-black has-text-weight-semibold"
-          }}{{i-con
-              glyph='folder'
-              size=14
+          }}<Icon
+              @glyph="folder-outline"
               class="has-text-grey-light"
-              }}{{gid}}{{/link-to}}
+            />{{gid}}{{/link-to}}
         </div>
         <div class="column has-text-right">
           {{#if model.canEdit}}
@@ -37,11 +36,10 @@
         <div class="column is-10">
           {{#link-to "vault.cluster.access.identity.show" "entities" gid "details"
             class="is-block has-text-black has-text-weight-semibold"
-            }}{{i-con
-              glyph='role'
-              size=14
-              class="has-text-grey-light"
-              }}{{gid}}{{/link-to}}
+            }}<Icon
+                @glyph="user-square-outline"
+                class="has-text-grey-light"
+              />{{gid}}{{/link-to}}
         </div>
         <div class="column has-text-right">
           {{#if model.canEdit}}

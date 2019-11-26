@@ -10,8 +10,9 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 )
 
@@ -70,14 +71,14 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 	}
 
 	cleanup := func() {
-		pool.Purge(resource)
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	setup := func() error {
 		cluster := gocql.NewCluster("127.0.0.1")
 		p, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
 		cluster.Port = p
-		cluster.Timeout = 5 * time.Second
+		cluster.Timeout = 15 * time.Second
 		sess, err := cluster.CreateSession()
 		if err != nil {
 			return err

@@ -17,6 +17,6 @@ package sts
 
 // AssumedRoleUser is a nested struct in sts response
 type AssumedRoleUser struct {
-	Arn           string `json:"Arn" xml:"Arn"`
 	AssumedRoleId string `json:"AssumedRoleId" xml:"AssumedRoleId"`
+	Arn           string `json:"Arn" xml:"Arn"`
 }

@@ -1,3 +1,29 @@
+# 3.3.0 (December 1, 2018)
+
+## Features
+
+* Add CopyFromReader and CopyToWriter (Murat Kabilov)
+* Add MacaddrArray (Anthony Regeda)
+* Add float types to FieldDescription.Type (David Yamnitsky)
+* Add CheckedOutConnections helper method (MOZGIII)
+* Add host query parameter to support Unix sockets (Jörg Thalheim)
+* Custom cancelation hook for use with PostgreSQL-like databases (James Hartig)
+* Added LastStmtSent for safe retry logic (James Hartig)
+
+## Fixes
+
+* Do not silently ignore assign NULL to \*string
+* Fix issue with JSON and driver.Valuer conversion
+* Fix race with stdlib Driver.configs Open (Greg Curtis)
+
+## Changes
+
+* Connection pool uses connections in queue order instead of stack. This
+  minimized the time any connection is idle vs. any other connection.
+  (Anthony Regeda)
+* FieldDescription.Modifier is int32 instead of uint32
+* tls: stop sending ssl_renegotiation_limit in startup message (Tejas Manohar)
+
 # 3.2.0 (August 7, 2018)
 
 ## Features

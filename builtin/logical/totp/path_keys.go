@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
@@ -333,6 +333,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			Digits:      keyDigits,
 			Algorithm:   keyAlgorithm,
 			SecretSize:  uintKeySize,
+			Rand:        b.GetRandomReader(),
 		})
 		if err != nil {
 			return logical.ErrorResponse("an error occurred while generating a key"), err

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_HMAC(t *testing.T) {
@@ -29,7 +29,7 @@ func TestTransit_HMAC(t *testing.T) {
 	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestTransit_HMAC(t *testing.T) {
 	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	// Rotate
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +297,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 	}
 
 	// Rotate
-	err = p.Rotate(context.Background(), storage)
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}

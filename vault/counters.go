@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	requestCounterDatePathFormat = "2006/01"
 	countersPath                 = systemBarrierPrefix + "counters"
-	requestCountersRelPath       = "counters/requests/"
+	requestCountersPath          = "sys/counters/requests/"
 )
 
 type counters struct {
@@ -51,7 +51,7 @@ type DatedRequestCounter struct {
 // loadAllRequestCounters returns all request counters found in storage,
 // ordered by time (oldest first.)
 func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]DatedRequestCounter, error) {
-	view := c.systemBarrierView.SubView(requestCountersRelPath)
+	view := NewBarrierView(c.barrier, requestCountersPath)
 
 	datepaths, err := view.List(ctx, "")
 	if err != nil {
@@ -116,7 +116,7 @@ func (c *Core) loadCurrentRequestCounters(ctx context.Context, now time.Time) er
 // If nothing is found at that path, that isn't an error: a reference to a zero
 // RequestCounter is returned.
 func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*RequestCounter, error) {
-	view := c.systemBarrierView.SubView(requestCountersRelPath)
+	view := NewBarrierView(c.barrier, requestCountersPath)
 
 	out, err := view.Get(ctx, datepath)
 	if err != nil {
@@ -140,7 +140,7 @@ func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*Reque
 // we've entered a new month.
 // now should be the current time; it is a parameter to facilitate testing.
 func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) error {
-	view := c.systemBarrierView.SubView(requestCountersRelPath)
+	view := NewBarrierView(c.barrier, requestCountersPath)
 	requests := atomic.LoadUint64(c.counters.requests)
 	curDatePath := now.Format(requestCounterDatePathFormat)
 
@@ -172,4 +172,67 @@ func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) er
 	}
 
 	return nil
+}
+
+// ActiveTokens contains the number of active tokens.
+type ActiveTokens struct {
+	// ServiceTokens contains information about the number of active service
+	// tokens.
+	ServiceTokens TokenCounter `json:"service_tokens"`
+}
+
+// TokenCounter counts the number of tokens
+type TokenCounter struct {
+	// Total is the total number of tokens
+	Total int `json:"total"`
+}
+
+// countActiveTokens returns the number of active tokens
+func (c *Core) countActiveTokens(ctx context.Context) (*ActiveTokens, error) {
+
+	// Get all of the namespaces
+	ns := c.collectNamespaces()
+
+	// Count the tokens under each namespace
+	total := 0
+	for i := 0; i < len(ns); i++ {
+		ids, err := c.tokenStore.idView(ns[i]).List(ctx, "")
+		if err != nil {
+			return nil, err
+		}
+		total += len(ids)
+	}
+
+	return &ActiveTokens{
+		ServiceTokens: TokenCounter{
+			Total: total,
+		},
+	}, nil
+}
+
+// ActiveEntities contains the number of active entities.
+type ActiveEntities struct {
+	// Entities contains information about the number of active entities.
+	Entities EntityCounter `json:"entities"`
+}
+
+// EntityCounter counts the number of entities
+type EntityCounter struct {
+	// Total is the total number of entities
+	Total int `json:"total"`
+}
+
+// countActiveEntities returns the number of active entities
+func (c *Core) countActiveEntities(ctx context.Context) (*ActiveEntities, error) {
+
+	count, err := c.identityStore.countEntities()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ActiveEntities{
+		Entities: EntityCounter{
+			Total: count,
+		},
+	}, nil
 }

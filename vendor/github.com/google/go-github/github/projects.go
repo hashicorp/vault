@@ -18,18 +18,15 @@ type ProjectsService service
 
 // Project represents a GitHub Project.
 type Project struct {
-	ID         *int64     `json:"id,omitempty"`
-	URL        *string    `json:"url,omitempty"`
-	HTMLURL    *string    `json:"html_url,omitempty"`
-	ColumnsURL *string    `json:"columns_url,omitempty"`
-	OwnerURL   *string    `json:"owner_url,omitempty"`
-	Name       *string    `json:"name,omitempty"`
-	Body       *string    `json:"body,omitempty"`
-	Number     *int       `json:"number,omitempty"`
-	State      *string    `json:"state,omitempty"`
-	CreatedAt  *Timestamp `json:"created_at,omitempty"`
-	UpdatedAt  *Timestamp `json:"updated_at,omitempty"`
-	NodeID     *string    `json:"node_id,omitempty"`
+	ID        *int64     `json:"id,omitempty"`
+	URL       *string    `json:"url,omitempty"`
+	OwnerURL  *string    `json:"owner_url,omitempty"`
+	Name      *string    `json:"name,omitempty"`
+	Body      *string    `json:"body,omitempty"`
+	Number    *int       `json:"number,omitempty"`
+	CreatedAt *Timestamp `json:"created_at,omitempty"`
+	UpdatedAt *Timestamp `json:"updated_at,omitempty"`
+	NodeID    *string    `json:"node_id,omitempty"`
 
 	// The User object that generated the project.
 	Creator *User `json:"creator,omitempty"`
@@ -66,24 +63,15 @@ func (s *ProjectsService) GetProject(ctx context.Context, id int64) (*Project, *
 // ProjectsService.UpdateProject methods.
 type ProjectOptions struct {
 	// The name of the project. (Required for creation; optional for update.)
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 	// The body of the project. (Optional.)
-	Body *string `json:"body,omitempty"`
+	Body string `json:"body,omitempty"`
 
 	// The following field(s) are only applicable for update.
 	// They should be left with zero values for creation.
 
 	// State of the project. Either "open" or "closed". (Optional.)
-	State *string `json:"state,omitempty"`
-	// The permission level that all members of the project's organization
-	// will have on this project.
-	// Setting the organization permission is only available
-	// for organization projects. (Optional.)
-	OrganizationPermission *string `json:"organization_permission,omitempty"`
-	// Sets visibility of the project within the organization.
-	// Setting visibility is only available
-	// for organization projects.(Optional.)
-	Public *bool `json:"public,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 // UpdateProject updates a repository project.
@@ -130,9 +118,7 @@ func (s *ProjectsService) DeleteProject(ctx context.Context, id int64) (*Respons
 type ProjectColumn struct {
 	ID         *int64     `json:"id,omitempty"`
 	Name       *string    `json:"name,omitempty"`
-	URL        *string    `json:"url,omitempty"`
 	ProjectURL *string    `json:"project_url,omitempty"`
-	CardsURL   *string    `json:"cards_url,omitempty"`
 	CreatedAt  *Timestamp `json:"created_at,omitempty"`
 	UpdatedAt  *Timestamp `json:"updated_at,omitempty"`
 	NodeID     *string    `json:"node_id,omitempty"`

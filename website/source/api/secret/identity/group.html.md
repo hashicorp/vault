@@ -146,9 +146,9 @@ This endpoint is used to update an existing group.
 ```json
 {
   "name": "testgroupname",
-    "metadata": {
-      "hello": "everyone"
-    },
+  "metadata": {
+    "hello": "everyone"
+  },
   "policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```
@@ -261,9 +261,9 @@ This endpoint is used to create or update a group by its name.
 
 ```json
 {
-    "metadata": {
-      "hello": "everyone"
-    },
+  "metadata": {
+    "hello": "everyone"
+  },
   "policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```
