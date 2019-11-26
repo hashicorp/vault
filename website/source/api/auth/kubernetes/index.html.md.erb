@@ -39,6 +39,8 @@ access the Kubernetes API.
     JWTs. If a certificate is given, its public key will be
     extracted. Not every installation of Kubernetes exposes these
     keys.
+  - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
+    use `kubernetes.io/serviceaccount` as the default issuer.
 
 ### Sample Payload
 
@@ -107,6 +109,7 @@ entities attempting to login.
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed, both
   this and bound_service_account_names can not be set to "\*".
+- `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 
 <%= partial "partials/tokenfields" %>
 
@@ -191,7 +194,7 @@ $ curl \
 
 ### Sample Response
 
-```json  
+```json
 {
   "data": {
     "keys": [
