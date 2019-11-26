@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -88,9 +89,12 @@ type PostgreSQLLock struct {
 // API client, server address, credentials, and database.
 func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Get the PostgreSQL credentials to perform read/write operations.
-	connURL, ok := conf["connection_url"]
-	if !ok || connURL == "" {
-		return nil, fmt.Errorf("missing connection_url")
+	connURL := os.Getenv("CONNECTION_URL")
+	if connURL == "" {
+		connURL = conf["connection_url"]
+		if connURL == "" {
+			return nil, fmt.Errorf("missing connection_url")
+		}
 	}
 
 	unquoted_table, ok := conf["table"]
