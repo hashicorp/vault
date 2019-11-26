@@ -93,7 +93,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.12
+    - GO_VERSION: 1.13.4
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
@@ -223,7 +223,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.12
+    - GO_VERSION: 1.13.4
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
@@ -296,7 +296,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.12
+    - GO_VERSION: 1.13.4
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
@@ -340,14 +340,14 @@ workflows:
 #     - run:
 #         command: |
 #           set -x
-# 
+#
 #           # Install CircleCI CLI
 #           curl -sSL \\
 #               \"https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz\" \\
 #             | sudo tar --overwrite -xz \\
 #               -C /usr/local/bin \\
 #               \"circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci\"
-# 
+#
 #           # Split Go tests by prior test times
 #           package_names=$(go list \\
 #               -tags \"${GO_TAGS}\" \\
@@ -356,11 +356,11 @@ workflows:
 #             | grep -v /vendor/ \\
 #             | sort \\
 #             | circleci tests split --split-by=timings --timings-type=classname)
-# 
+#
 #           # Install gotestsum
 #           curl -sSL \"https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz\" \\
 #             | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
-# 
+#
 #           # Run tests
 #           make prep
 #           mkdir -p test-results/go-test
@@ -403,7 +403,7 @@ workflows:
 #           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
 #           echo \"export GOPATH='$GOPATH'\" >> \"$BASH_ENV\"
 #           echo \"export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'\" >> \"$BASH_ENV\"
-# 
+#
 #           echo \"$ go version\"
 #           go version
 #         name: Setup Go
@@ -418,7 +418,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
-#       GO_VERSION: 1.12.12
+#       GO_VERSION: 1.13.4
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
@@ -447,7 +447,7 @@ workflows:
 #           # Move dev UI assets to expected location
 #           rm -rf ./pkg
 #           mkdir ./pkg
-# 
+#
 #           # Build dev binary
 #           make bootstrap dev
 #         name: Build dev binary
@@ -529,7 +529,7 @@ workflows:
 #     - run:
 #         command: |
 #           set -x
-# 
+#
 #           # Install Chrome
 #           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \\
 #             | apt-key add -
@@ -539,10 +539,10 @@ workflows:
 #           apt-get -y install google-chrome-stable
 #           rm /etc/apt/sources.list.d/google-chrome.list
 #           rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-# 
+#
 #           # Add ./bin to the PATH so vault binary can be run by Ember tests
 #           export PATH=\"${PWD}/bin:${PATH}\"
-# 
+#
 #           # Run Ember tests
 #           cd ui
 #           mkdir -p test-results/qunit
