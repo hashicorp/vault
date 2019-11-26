@@ -265,16 +265,15 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 	newlockch := make(chan struct{})
 	go func() {
 		leaderCh2, err = newLock.Lock(stopCh)
-		newlockch <- struct{}{}
+		close(newlockch)
 	}()
 
 	select {
-	case <-newlockch:
-		// close and move on
-		close(newlockch)
 	case <-time.After(timeout):
 		t.Logf("giving up on lock attempt after %v", timeout)
 		close(stopCh)
+	case <-newlockch:
+		// pass through
 	}
 
 	// Attempt to lock should work
