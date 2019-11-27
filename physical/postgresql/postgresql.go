@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -195,6 +196,19 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	return m, nil
+}
+
+// connectionURL first check the environment variables for a connection URL. If
+// no connection URL exists in the environment variable, the Vault config file is
+// checked. If neither the environment variables or the config file set the connection
+// URL for the Postgres backend, because it is a required field, an error is returned.
+func connectionURL(conf map[string]string) string {
+	connURL := conf["connection_url"]
+	if envURL := os.Getenv("PG_CONNECTION_URL"); envURL != "" {
+		connURL = envURL
+	}
+
+	return connURL
 }
 
 // splitKey is a helper to split a full path key into individual
