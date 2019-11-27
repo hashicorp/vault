@@ -1,4 +1,4 @@
-## 1.3 (unreleased)
+## 1.3
 
 CHANGES:
 
