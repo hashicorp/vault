@@ -114,6 +114,67 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	}
 }
 
+func TestConnectionURL(t *testing.T) {
+	type input struct {
+		envar string
+		conf  map[string]string
+	}
+
+	var cases = map[string]struct {
+		want  string
+		input input
+	}{
+		"environment_variable_not_set_use_config_value": {
+			want: "abc",
+			input: input{
+				envar: "",
+				conf:  map[string]string{"connection_url": "abc"},
+			},
+		},
+
+		"no_value_connection_url_set_key_exists": {
+			want: "",
+			input: input{
+				envar: "",
+				conf:  map[string]string{"connection_url": ""},
+			},
+		},
+
+		"no_value_connection_url_set_key_doesnt_exist": {
+			want: "",
+			input: input{
+				envar: "",
+				conf:  map[string]string{},
+			},
+		},
+
+		"environment_variable_set": {
+			want: "abc",
+			input: input{
+				envar: "abc",
+				conf:  map[string]string{"connection_url": "def"},
+			},
+		},
+	}
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			// This is necessary to avoid always testing the branch where the env is set.
+			// As long the the env is set --- even if the value is "" --- `ok` returns true.
+			if tt.input.envar != "" {
+				os.Setenv("PG_CONNECTION_URL", tt.input.envar)
+				defer os.Setenv("PG_CONNECTION_URL", "")
+			}
+
+			got := connectionURL(tt.input.conf)
+
+			if got != tt.want {
+				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+			}
+		})
+	}
+}
+
 // Similar to testHABackend, but using internal implementation details to
 // trigger the lock failure scenario by setting the lock renew period for one
 // of the locks to a higher value than the lock TTL.
