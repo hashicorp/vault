@@ -950,7 +950,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return nil, logical.ErrReadOnly
 	}
 
-	// We return success when the mount does not exists to not expose if the
+	// We return success when the mount does not exist to not expose if the
 	// mount existed or not
 	match := b.Core.router.MatchingMount(ctx, path)
 	if match == "" || ns.Path+path != match {
@@ -1873,7 +1873,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 		return nil, logical.ErrReadOnly
 	}
 
-	// We return success when the mount does not exists to not expose if the
+	// We return success when the mount does not exist to not expose if the
 	// mount existed or not
 	match := b.Core.router.MatchingMount(ctx, fullPath)
 	if match == "" || ns.Path+fullPath != match {
