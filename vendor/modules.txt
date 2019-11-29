@@ -95,7 +95,7 @@ github.com/armon/go-proxyproto
 github.com/armon/go-radix
 # github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 github.com/asaskevich/govalidator
-# github.com/aws/aws-sdk-go v1.19.39
+# github.com/aws/aws-sdk-go v1.23.13
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/stscreds
