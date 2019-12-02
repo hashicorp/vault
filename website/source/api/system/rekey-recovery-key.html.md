@@ -287,7 +287,7 @@ along with the new nonce.
 
 | Method   | Path                                        |
 | :------------------------------------------ | :--------------------- |
-| `DELETE` | `/sys/rekey-recovery-key/verify`            | `200 (empty body)`     |
+| `DELETE` | `/sys/rekey-recovery-key/verify`            | 
 
 ### Sample Request
 
