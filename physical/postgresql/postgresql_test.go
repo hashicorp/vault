@@ -257,16 +257,26 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
 	stopCh := make(chan struct{})
 	timeout := time.Duration(lock.ttlSeconds)*time.Second + lock.retryInterval + time.Second
-	time.AfterFunc(timeout, func() {
+
+	var leaderCh2 <-chan struct{}
+	newlockch := make(chan struct{})
+	go func() {
+		leaderCh2, err = newLock.Lock(stopCh)
+		close(newlockch)
+	}()
+
+	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
+	select {
+	case <-time.After(timeout):
 		t.Logf("giving up on lock attempt after %v", timeout)
 		close(stopCh)
-	})
+	case <-newlockch:
+		// pass through
+	}
 
 	// Attempt to lock should work
-	leaderCh2, err := newLock.Lock(stopCh)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
