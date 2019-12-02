@@ -2270,6 +2270,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 	metricsConf := metrics.DefaultConfig("vault")
 	metricsConf.EnableHostname = !telConfig.DisableHostname
+	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
