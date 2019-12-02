@@ -16,6 +16,8 @@ import (
 const (
 	OpenMetricsMIMEType = "application/openmetrics-text"
 
+	PrometheusSchemaMIMEType = "prometheus/telemetry"
+
 	// ErrorContentType is the content type returned by an error response.
 	ErrorContentType = "text/plain"
 )
@@ -38,7 +40,14 @@ func FormatFromRequest(req *logical.Request) string {
 	if len(acceptHeaders) > 0 {
 		acceptHeader := acceptHeaders[0]
 		if strings.HasPrefix(acceptHeader, OpenMetricsMIMEType) {
-			return "prometheus"
+			return PrometheusMetricFormat
+		}
+
+		// Look for prometheus accept header
+		for _, header := range acceptHeaders {
+			if strings.Contains(header, PrometheusMetricFormat) {
+				return PrometheusMetricFormat
+			}
 		}
 	}
 	return ""
