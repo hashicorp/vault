@@ -206,7 +206,7 @@ func (b *Bucket) CreateBucketIfNotExists(key []byte) (*Bucket, error) {
 }
 
 // DeleteBucket deletes a bucket at the given key.
-// Returns an error if the bucket does not exists, or if the key represents a non-bucket value.
+// Returns an error if the bucket does not exist, or if the key represents a non-bucket value.
 func (b *Bucket) DeleteBucket(key []byte) error {
 	if b.tx.db == nil {
 		return ErrTxClosed
