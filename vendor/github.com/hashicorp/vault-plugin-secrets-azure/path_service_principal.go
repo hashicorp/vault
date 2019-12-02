@@ -69,7 +69,7 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 	}
 
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role '%s' does not exist", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role '%s' does not exists", roleName)), nil
 	}
 
 	var resp *logical.Response
