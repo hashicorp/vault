@@ -257,7 +257,6 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
 	stopCh := make(chan struct{})
 	timeout := time.Duration(lock.ttlSeconds)*time.Second + lock.retryInterval + time.Second
 
@@ -268,6 +267,7 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		close(newlockch)
 	}()
 
+	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
 	select {
 	case <-time.After(timeout):
 		t.Logf("giving up on lock attempt after %v", timeout)
