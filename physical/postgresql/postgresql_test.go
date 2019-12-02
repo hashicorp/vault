@@ -264,10 +264,6 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 	newlockch := make(chan struct{})
 	go func() {
 		leaderCh2, err = newLock.Lock(stopCh)
-		// Attempt to lock should work
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
 		close(newlockch)
 	}()
 
@@ -280,6 +276,10 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		// pass through
 	}
 
+	// Attempt to lock should work
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	if leaderCh2 == nil {
 		t.Fatalf("should get leader ch")
 	}
