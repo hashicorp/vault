@@ -68,7 +68,7 @@ $ helm install --name vault ./
 ```
 
 !> **IMPORTANT NOTE:** Vault Helm will not initialize and unseal Vault out of the box.  
-Initialization is required after installation followed by an unseal.  Vault can be 
+Initialization is required after installation followed by unsealing.  Vault can be 
 configured to auto-unseal using KMS providers such as 
 [Google Cloud Platform](/docs/platform/k8s/run.html#google-kms-auto-unseal).  This 
 allows the pods to auto-unseal if they're rescheduled in Kubernetes.
