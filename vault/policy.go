@@ -10,6 +10,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
@@ -271,40 +272,80 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	return &p, nil
 }
 
+func parseTemplatedString(text string, performTemplating bool, result *Policy, entity *identity.Entity, groups []*identity.Group) (string, error) {
+	// Check the path
+	if performTemplating {
+		_, templated, err := identity.PopulateString(identity.PopulateStringInput{
+			Mode:      identity.ACLTemplating,
+			String:    text,
+			Entity:    entity,
+			Groups:    groups,
+			Namespace: result.namespace,
+		})
+		return templated, err
+	} else {
+		hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
+			Mode:              identity.ACLTemplating,
+			ValidityCheckOnly: true,
+			String:            text,
+		})
+		if err != nil {
+			return text, errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+		}
+		if hasTemplating {
+			result.Templated = true
+		}
+		return text, err
+	}
+}
+
 func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {
 	paths := make([]*PathRules, 0, len(list.Items))
 	for _, item := range list.Items {
+		parseErrors := false
+		ast.Walk(item.Val, func(n ast.Node) (ast.Node, bool) {
+			switch i := n.(type) {
+			case *ast.ObjectKey:
+				if i.Token.Type != token.STRING {
+					break
+				}
+				val, err := parseTemplatedString(i.Token.Text, performTemplating, result, entity, groups)
+				if err != nil {
+					parseErrors = true
+					break
+				}
+				i.Token.Text = val
+				n = i
+			case *ast.LiteralType:
+				if i.Token.Type != token.STRING {
+					break
+				}
+				val, err := parseTemplatedString(i.Token.Text, performTemplating, result, entity, groups)
+				if err != nil {
+					parseErrors = true
+					break
+				}
+				i.Token.Text = val
+				n = i
+			}
+			return n, true
+		})
+
+		if parseErrors {
+			continue
+		}
+
 		key := "path"
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string)
 		}
 
-		// Check the path
-		if performTemplating {
-			_, templated, err := identity.PopulateString(identity.PopulateStringInput{
-				Mode:      identity.ACLTemplating,
-				String:    key,
-				Entity:    entity,
-				Groups:    groups,
-				Namespace: result.namespace,
-			})
-			if err != nil {
-				continue
-			}
-			key = templated
-		} else {
-			hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
-				Mode:              identity.ACLTemplating,
-				ValidityCheckOnly: true,
-				String:            key,
-			})
-			if err != nil {
-				return errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
-			}
-			if hasTemplating {
-				result.Templated = true
-			}
+		// The path itself must be templated separately from the body of the object
+		val, err := parseTemplatedString(key, performTemplating, result, entity, groups)
+		if err != nil {
+			continue
 		}
+		key = val
 
 		valid := []string{
 			"comment",

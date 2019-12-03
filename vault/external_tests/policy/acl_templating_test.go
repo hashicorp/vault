@@ -22,6 +22,14 @@ path "secret/{{ identity.entity.aliases.%s.name}}/*" {
 	capabilities = ["read", "create", "update"]
 
 }
+
+path "ssh/sign/self-login" {
+	capabilities = ["update"]
+	required_parameters = ["valid_principals"]
+	allowed_parameters = {
+		"valid_principals" = ["{{identity.entity.aliases.auth_ldap_abcdef01.name}}"]
+	}
+}
 `
 
 	goodPolicy2 := `
@@ -127,8 +135,8 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 
 	// Write in policies
-	goodPolicy1 = fmt.Sprintf(goodPolicy1, userpassAccessor)
-	goodPolicy2 = fmt.Sprintf(goodPolicy2, groupID)
+	goodPolicy1 = fmt.Sprintf(goodPolicy1)
+	goodPolicy2 = fmt.Sprintf(goodPolicy2)
 	err = client.Sys().PutPolicy("goodPolicy1", goodPolicy1)
 	if err != nil {
 		t.Fatal(err)
