@@ -162,8 +162,8 @@ func TestConnectionURL(t *testing.T) {
 			// This is necessary to avoid always testing the branch where the env is set.
 			// As long the the env is set --- even if the value is "" --- `ok` returns true.
 			if tt.input.envar != "" {
-				os.Setenv("PG_CONNECTION_URL", tt.input.envar)
-				defer os.Setenv("PG_CONNECTION_URL", "")
+				os.Setenv("VAULT_PG_CONNECTION_URL", tt.input.envar)
+				defer os.Unsetenv("VAULT_PG_CONNECTION_URL")
 			}
 
 			got := connectionURL(tt.input.conf)

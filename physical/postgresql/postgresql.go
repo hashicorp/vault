@@ -204,7 +204,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 // URL for the Postgres backend, because it is a required field, an error is returned.
 func connectionURL(conf map[string]string) string {
 	connURL := conf["connection_url"]
-	if envURL := os.Getenv("PG_CONNECTION_URL"); envURL != "" {
+	if envURL := os.Getenv("VAULT_PG_CONNECTION_URL"); envURL != "" {
 		connURL = envURL
 	}
 
