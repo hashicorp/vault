@@ -45,7 +45,7 @@ func FormatFromRequest(req *logical.Request) string {
 
 		// Look for prometheus accept header
 		for _, header := range acceptHeaders {
-			if strings.Contains(header, PrometheusMetricFormat) {
+			if strings.Contains(header, PrometheusSchemaMIMEType) {
 				return PrometheusMetricFormat
 			}
 		}
