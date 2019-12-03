@@ -33,8 +33,11 @@ This page demonstrates the Duo MFA on ACL'd paths of Vault.
     token/       token       auth_token_289703e9       n/a       system         system     replicated     token based credentials
     userpass/    userpass    auth_userpass_54b8e339    n/a       system         system     replicated     n/a
     ```
-
+    
 1. Configure Duo MFA:
+
+    _Note that the following values are **examples**._
+    You will have generated your own mount_accessor in the previous step and can follow [Duo's instructions](https://duo.com/docs/protecting-applications) to generate your own integration_key, secret_key, and api_hostname.
 
     ```text
     $ vault write sys/mfa/method/duo/my_duo \
