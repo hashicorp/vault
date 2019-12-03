@@ -94,7 +94,7 @@ LANGUAGE plpgsql;
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to PostgreSQL. The connection URL can also be
-  set using the `PG_CONNECTION_URL` environment variable. A full list of supported
+  set using the `VAULT_PG_CONNECTION_URL` environment variable. A full list of supported
   parameters can be found in [the pq library documentation][pglib]. For example
   connection string URLs, see the examples section below.
 
