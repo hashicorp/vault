@@ -10,6 +10,8 @@ IMPROVEMENTS:
   requests from hanging [AD-59]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
+* storage/postgresql: Add support for setting `connection_url` from enviornment 
+  variable `VAULT_PG_CONNECTION_URL` [GH-7937]
 
 BUG FIXES:
 
