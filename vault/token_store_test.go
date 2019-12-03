@@ -2963,6 +2963,9 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 			"mount_accessor": tokenMountAccessor,
 		},
 	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{

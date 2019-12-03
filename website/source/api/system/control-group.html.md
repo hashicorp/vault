@@ -15,7 +15,7 @@ This endpoint authorizes a control group request.
 
 | Method   | Path                           |
 | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/control-group/authorize`   | `200 (application/json)`     |
+| `POST`   | `/sys/control-group/authorize`   | 
 
 ### Parameters
 
@@ -55,7 +55,7 @@ This endpoint checks the status of a control group request.
 
 | Method   | Path                           |
 | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/control-group/request`   | `200 (application/json)`     |
+| `POST`   | `/sys/control-group/request`   | 
 
 ### Parameters
 
