@@ -49,7 +49,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -135,7 +135,7 @@ func testLoadConfigFile_json2(t *testing.T, entropy *Entropy) {
 
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -277,7 +277,7 @@ func testLoadConfigFile(t *testing.T) {
 
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -347,7 +347,7 @@ func testLoadConfigFile_json(t *testing.T) {
 
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},

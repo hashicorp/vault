@@ -155,7 +155,7 @@ func (b *Storage) GoString() string {
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
 	Type   string
-	Config map[string]interface{}
+	Config map[string]string
 }
 
 func (b *ServiceRegistration) GoString() string {
@@ -864,7 +864,7 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]interface{}
+	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
