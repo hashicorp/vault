@@ -23,7 +23,7 @@ This endpoint creates or updates a key definition.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------------------------------------------------------------------------------- |
-| `POST`   | `/totp/keys/:name`           | if generating a key and exported is true: `200 application/json` else: `204 (empty body)`      |
+| `POST`   | `/totp/keys/:name`           | 
 
 ### Parameters
 

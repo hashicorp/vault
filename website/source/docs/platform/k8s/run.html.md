@@ -67,7 +67,25 @@ $ helm install --name vault ./
 ...
 ```
 
-_That's it._ The Helm chart does everything to setup a Vault-on-Kubernetes deployment.
+!> **IMPORTANT NOTE:** Vault Helm will not initialize and unseal Vault automatically.  
+Initialization is required after installation followed by unsealing.  Vault can be 
+configured to auto-unseal using KMS providers such as 
+[Google Cloud Platform](/docs/platform/k8s/run.html#google-kms-auto-unseal).  This 
+allows the pods to auto unseal if they're rescheduled in Kubernetes.
+
+If standalone or HA mode are being used, the Vault pods must be initialized and unsealed.  
+For HA deployments, only one of the Vault pods needs to be initialized.
+
+```sh
+$ kubectl exec -ti vault-0 -- vault operator init
+$ kubectl exec -ti vault-0 -- vault operator unseal
+```
+
+For HA deployments, unseal the remaining pods:
+
+```sh
+$ kubectl exec -ti <NAME OF POD> -- vault operator unseal
+```
 
 ### Viewing the Vault UI
 
@@ -176,9 +194,11 @@ cluster is now upgraded!
 
 #### Google KMS Auto Unseal
 
+The following example demonstrates configuring Vault Helm to use 
+[Google KMS for Auto Unseal](/docs/configuration/seal/gcpckms.html).
+
 In order to authenticate and use KMS in Google Cloud, Vault Helm needs credentials.  The `credentials.json` 
 file will need to be mounted as a secret to the Vault container.
-
 
 ##### Create the Secret
 
@@ -201,7 +221,7 @@ global:
 
 server:
   extraEnvironmentVars:
-    GOOGLE_REGION: <REGION WHERE KMS IS LOCATED>
+    GOOGLE_REGION: global
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
@@ -224,7 +244,7 @@ server:
 
       seal "gcpckms" {
         project     = "<NAME OF PROJECT>"
-        region      = "<NAME OF REGION>"
+        region      = "global"
         key_ring    = "<NAME OF KEYRING>"
         crypto_key  = "<NAME OF KEY>"
       }
@@ -236,6 +256,9 @@ server:
 ```
 
 #### Amazon EKS Auto Unseal
+
+The following example demonstrates configuring Vault Helm to use 
+[AWS EKS for Auto Unseal](/docs/configuration/seal/awskms.html).
 
 In order to authenticate and use EKS in AWS, Vault Helm needs credentials.  The AWS access key 
 ID and key will be mounted as secret environment variables in the Vault pods.
