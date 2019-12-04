@@ -17,6 +17,8 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
+  a source during `operator migrate` operations [GH-7966]
 * ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
 
 ## 1.3 (November 14th, 2019)
