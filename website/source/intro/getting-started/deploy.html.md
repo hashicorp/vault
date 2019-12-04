@@ -105,9 +105,9 @@ For guidance on dealing with this issue, see the discussion of
 
 ## Initializing the Vault
 
-Initialization is the process configuring the Vault. This only happens once when
-the server is started against a new backend that has never been used with Vault
-before. When running in HA mode, this happens once _per cluster_, not _per
+Initialization is the process of configuring the Vault. This only happens once
+when the server is started against a new backend that has never been used with
+Vault before. When running in HA mode, this happens once _per cluster_, not _per
 server_.
 
 During initialization, the encryption keys are generated, unseal keys are
