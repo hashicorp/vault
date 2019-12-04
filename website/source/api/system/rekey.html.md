@@ -289,7 +289,7 @@ nonce.
 
 | Method   | Path                           |
 | :----------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey/verify`            | `200 (empty body)`     |
+| `DELETE` | `/sys/rekey/verify`            | 
 
 ### Sample Request
 
