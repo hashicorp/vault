@@ -193,8 +193,8 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
-	// serviceDiscovery is the ServiceRegistration network
-	serviceDiscovery sr.ServiceRegistration
+	// serviceRegistration is the ServiceRegistration network
+	serviceRegistration sr.ServiceRegistration
 
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
@@ -503,7 +503,7 @@ type CoreConfig struct {
 	// May be nil, which disables HA operations
 	HAPhysical physical.HABackend
 
-	ConfigServiceRegistration sr.ServiceRegistration
+	ServiceRegistration sr.ServiceRegistration
 
 	Seal Seal
 
@@ -575,7 +575,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AuditBackends:             c.AuditBackends,
 		Physical:                  c.Physical,
 		HAPhysical:                c.HAPhysical,
-		ConfigServiceRegistration: c.ConfigServiceRegistration,
+		ServiceRegistration:       c.ServiceRegistration,
 		Seal:                      c.Seal,
 		Logger:                    c.Logger,
 		DisableCache:              c.DisableCache,
@@ -603,13 +603,13 @@ func (c *CoreConfig) Clone() *CoreConfig {
 	}
 }
 
-// ServiceRegistration returns the config's ServiceRegistration, or nil if it does
+// GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
-func (c *CoreConfig) ServiceRegistration() sr.ServiceRegistration {
+func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 
 	// Check whether there is a ServiceRegistration explictly configured
-	if c.ConfigServiceRegistration != nil {
-		return c.ConfigServiceRegistration
+	if c.ServiceRegistration != nil {
+		return c.ServiceRegistration
 	}
 
 	// Check if HAPhysical is configured and implements ServiceRegistration
@@ -678,7 +678,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                      entCore{},
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
-		serviceDiscovery:             conf.ServiceRegistration(),
+		serviceRegistration:          conf.GetServiceRegistration(),
 		underlyingPhysical:           conf.Physical,
 		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
@@ -1375,8 +1375,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
-	if c.serviceDiscovery != nil {
-		if err := c.serviceDiscovery.NotifySealedStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
@@ -1676,8 +1676,8 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		return err
 	}
 
-	if c.serviceDiscovery != nil {
-		if err := c.serviceDiscovery.NotifySealedStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify sealed status", "error", err)
 			}

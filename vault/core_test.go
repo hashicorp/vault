@@ -2499,11 +2499,11 @@ func TestCore_ServiceRegistration(t *testing.T) {
 	}
 	const redirectAddr = "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		ConfigServiceRegistration: sr,
-		Physical:                  inm,
-		HAPhysical:                inmha.(physical.HABackend),
-		RedirectAddr:              redirectAddr,
-		DisableMlock:              true,
+		ServiceRegistration: sr,
+		Physical:            inm,
+		HAPhysical:          inmha.(physical.HABackend),
+		RedirectAddr:        redirectAddr,
+		DisableMlock:        true,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -1040,7 +1040,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
-		ConfigServiceRegistration: configSR,
+		ServiceRegistration:       configSR,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
@@ -1242,7 +1242,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// If ServiceRegistration is configured, then the backend must support HA
 	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
-	if (coreConfig.ConfigServiceRegistration != nil) && !isBackendHA {
+	if (coreConfig.ServiceRegistration != nil) && !isBackendHA {
 		c.UI.Output("service_registration is configured, but storage does not support HA")
 		return 1
 	}
@@ -1503,8 +1503,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-
-	if disc := coreConfig.ServiceRegistration(); disc != nil {
+	if disc := coreConfig.GetServiceRegistration(); disc != nil {
 		activeFunc := func() bool {
 			if isLeader, _, _, err := core.Leader(); err == nil {
 				return isLeader
