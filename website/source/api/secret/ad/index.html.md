@@ -35,6 +35,8 @@ text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once a
 ### Connection parameters
 
 * `url` (string, optional) - The LDAP server to connect to. Examples: `ldaps://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldaps://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.  Default is `ldap://127.0.0.1`.
+* `case_sensitive_names` `(bool: false)` – If set, user and group names assigned to policies within the backend will be case sensitive. Otherwise, names will be normalized to lower case. Case will still be preserved when sending the username to the LDAP server at login time; this is only for matching local user/group definitions.
+* `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for the connection when making requests against the server before returning back an error.
 * `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 * `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 * `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.

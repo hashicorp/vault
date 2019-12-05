@@ -225,6 +225,16 @@ cache {
 */
 
 func TestAgent_ExitAfterAuth(t *testing.T) {
+	t.Run("via_config", func(t *testing.T) {
+		testAgentExitAfterAuth(t, false)
+	})
+
+	t.Run("via_flag", func(t *testing.T) {
+		testAgentExitAfterAuth(t, true)
+	})
+}
+
+func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -313,8 +323,13 @@ func TestAgent_ExitAfterAuth(t *testing.T) {
 		logger.Trace("wrote test jwt", "path", in)
 	}
 
+	exitAfterAuthTemplText := "exit_after_auth = true"
+	if viaFlag {
+		exitAfterAuthTemplText = ""
+	}
+
 	config := `
-exit_after_auth = true
+%s
 
 auto_auth {
         method {
@@ -340,23 +355,37 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
 	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
 	}
 
-	// If this hangs forever until the test times out, exit-after-auth isn't
-	// working
-	ui, cmd := testAgentCommand(t, logger)
-	cmd.client = client
+	doneCh := make(chan struct{})
+	go func() {
+		ui, cmd := testAgentCommand(t, logger)
+		cmd.client = client
 
-	code := cmd.Run([]string{"-config", conf})
-	if code != 0 {
-		t.Errorf("expected %d to be %d", code, 0)
-		t.Logf("output from agent:\n%s", ui.OutputWriter.String())
-		t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+		args := []string{"-config", conf}
+		if viaFlag {
+			args = append(args, "-exit-after-auth")
+		}
+
+		code := cmd.Run(args)
+		if code != 0 {
+			t.Errorf("expected %d to be %d", code, 0)
+			t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+		}
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		break
+	case <-time.After(1 * time.Minute):
+		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
 	sink1Bytes, err := ioutil.ReadFile(sink1)
@@ -807,10 +836,26 @@ auto_auth {
 			// end and no longer be running. If we are not using exit_after_auth, then
 			// we need to shut down the command
 			if !tc.exitAfterAuth {
-				// We need to sleep to give Agent time to render the templates. Without this
-				// sleep, the test will attempt to read the temp dir before Agent has had time
-				// to render and will likely fail the test
-				time.Sleep(5 * time.Second)
+				// We need to poll for a bit to give Agent time to render the
+				// templates. Without this this, the test will attempt to read
+				// the temp dir before Agent has had time to render and will
+				// likely fail the test
+				tick := time.Tick(1 * time.Second)
+				timeout := time.After(30 * time.Second)
+				for {
+					select {
+					case <-timeout:
+						t.Error("timed out waiting for templates to render")
+					case <-tick:
+					}
+					// Check for files rendered in the directory and break
+					// early for shutdown if we do have all the files
+					// rendered
+					if testListFiles(t, tmpDir) == len(templatePaths) {
+						break
+					}
+				}
+
 				cmd.ShutdownCh <- struct{}{}
 			}
 			wg.Wait()
@@ -819,16 +864,22 @@ auto_auth {
 			// Perform the tests
 			//----------------------------------------------------
 
-			files, err := ioutil.ReadDir(tmpDir)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(files) != len(templatePaths) {
-				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), len(files))
+			if numFiles := testListFiles(t, tmpDir); numFiles != len(templatePaths) {
+				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
 			}
 		})
 	}
+}
+
+func testListFiles(t *testing.T, dir string) int {
+	t.Helper()
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return len(files)
 }
 
 // TestAgent_Template_ExitCounter tests that Vault Agent correctly renders all
