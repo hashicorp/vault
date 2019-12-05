@@ -986,7 +986,7 @@ func TestAwsVersion(t *testing.T) {
 	}
 }
 
-// This test was used to reproduces https://github.com/hashicorp/vault/issues/7418
+// This test was used to reproduce https://github.com/hashicorp/vault/issues/7418
 // and verify its fix.
 func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	t.Skip("skipping test because it hits real endpoints")

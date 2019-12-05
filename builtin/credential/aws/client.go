@@ -37,14 +37,19 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	endpoint := aws.String("")
 	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
-		// Override the default endpoint with the configured endpoint.
+		// Override the defaults with configured values.
 		switch {
 		case clientType == "ec2" && config.Endpoint != "":
 			endpoint = aws.String(config.Endpoint)
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
 		case clientType == "sts" && config.STSEndpoint != "":
-			endpoint = aws.String(config.STSEndpoint)
+			if config.STSEndpoint != "" {
+				endpoint = aws.String(config.STSEndpoint)
+			}
+			if config.STSRegion != "" {
+				region = config.STSRegion
+			}
 		}
 
 		credsConfig.AccessKey = config.AccessKey
@@ -265,6 +270,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
 	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
+
 	if err != nil {
 		return nil, err
 	}
