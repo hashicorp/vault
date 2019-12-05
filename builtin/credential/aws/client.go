@@ -43,7 +43,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 			endpoint = aws.String(config.Endpoint)
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
-		case clientType == "sts" && config.STSEndpoint != "":
+		case clientType == "sts":
 			if config.STSEndpoint != "" {
 				endpoint = aws.String(config.STSEndpoint)
 			}
