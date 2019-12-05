@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
+	csr "github.com/hashicorp/vault/serviceregistration/consul"
 )
 
 const (
@@ -30,8 +30,6 @@ const (
 	consistencyModeStrong = "strong"
 )
 
-type notifyEvent struct{}
-
 // Verify ConsulBackend satisfies the correct interfaces
 var _ physical.Backend = (*ConsulBackend)(nil)
 var _ physical.HABackend = (*ConsulBackend)(nil)
@@ -39,15 +37,11 @@ var _ physical.Lock = (*ConsulLock)(nil)
 var _ physical.Transactional = (*ConsulBackend)(nil)
 var _ sr.ServiceRegistration = (*ConsulBackend)(nil)
 
-var (
-	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-)
-
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ConsulBackend struct {
-	*ConsulServiceRegistration
+	*csr.ConsulServiceRegistration
 
 	path            string
 	kv              *api.KV
@@ -64,11 +58,11 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	// Create the ConsulServiceRegistration struct that we will embed in the
 	// ConsulBackend
-	sr, err := NewConsulServiceRegistration(conf, logger)
+	sreg, err := csr.NewConsulServiceRegistration(conf, logger)
 	if err != nil {
 		return nil, err
 	}
-	csr := sr.(*ConsulServiceRegistration)
+	csreg := sreg.(*csr.ConsulServiceRegistration)
 
 	// Get the path in Consul
 	path, ok := conf["path"]
@@ -140,10 +134,10 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	// Setup the backend
 	c := &ConsulBackend{
-		ConsulServiceRegistration: csr,
+		ConsulServiceRegistration: csreg,
 
 		path:            path,
-		kv:              csr.client.KV(),
+		kv:              csreg.Client.KV(),
 		permitPool:      physical.NewPermitPool(maxParInt),
 		consistencyMode: consistencyMode,
 
@@ -308,12 +302,12 @@ func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 		SessionTTL:     c.sessionTTL,
 		LockWaitTime:   c.lockWaitTime,
 	}
-	lock, err := c.client.LockOpts(opts)
+	lock, err := c.Client.LockOpts(opts)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create lock: {{err}}", err)
 	}
 	cl := &ConsulLock{
-		client:          c.client,
+		client:          c.Client,
 		key:             c.path + key,
 		lock:            lock,
 		consistencyMode: c.consistencyMode,
@@ -329,7 +323,7 @@ func (c *ConsulBackend) HAEnabled() bool {
 
 // DetectHostAddr is used to detect the host address by asking the Consul agent
 func (c *ConsulBackend) DetectHostAddr() (string, error) {
-	agent := c.client.Agent()
+	agent := c.Client.Agent()
 	self, err := agent.Self()
 	if err != nil {
 		return "", err

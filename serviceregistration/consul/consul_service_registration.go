@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,13 +52,20 @@ const (
 	reconcileTimeout = 60 * time.Second
 )
 
+type notifyEvent struct{}
+
 var _ sr.ServiceRegistration = (*ConsulServiceRegistration)(nil)
+
+var (
+	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+)
 
 // ConsulServiceRegistration is a ServiceRegistration that advertises the state of
 // Vault to Consul.
 type ConsulServiceRegistration struct {
+	Client *api.Client
+
 	logger              log.Logger
-	client              *api.Client
 	serviceLock         sync.RWMutex
 	redirectHost        string
 	redirectPort        int64
@@ -124,7 +133,7 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 			return nil, err
 		}
 
-		min, _ := DurationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
+		min, _ := durationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
 		if min < checkMinBuffer {
 			return nil, fmt.Errorf("consul check_timeout must be greater than %v", min)
 		}
@@ -194,8 +203,9 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 
 	// Setup the backend
 	c := &ConsulServiceRegistration{
+		Client: client,
+
 		logger:              logger,
-		client:              client,
 		serviceName:         service,
 		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
@@ -314,7 +324,7 @@ func (c *ConsulServiceRegistration) NotifySealedStateChange() error {
 }
 
 func (c *ConsulServiceRegistration) checkDuration() time.Duration {
-	return DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
+	return durationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
 func (c *ConsulServiceRegistration) RunServiceRegistration(waitGroup *sync.WaitGroup, shutdownCh sr.ShutdownChannel, redirectAddr string, activeFunc sr.ActiveFunction, sealedFunc sr.SealedFunction, perfStandbyFunc sr.PerformanceStandbyFunction) (err error) {
@@ -371,7 +381,7 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
-			reconcileTimer.Reset(reconcileTimeout - RandomStagger(reconcileTimeout/checkJitterFactor))
+			reconcileTimer.Reset(reconcileTimeout - randomStagger(reconcileTimeout/checkJitterFactor))
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
@@ -426,7 +436,7 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 
 	c.serviceLock.RLock()
 	defer c.serviceLock.RUnlock()
-	if err := c.client.Agent().ServiceDeregister(registeredServiceID); err != nil {
+	if err := c.Client.Agent().ServiceDeregister(registeredServiceID); err != nil {
 		if c.logger.IsWarn() {
 			c.logger.Warn("service deregistration failed", "error", err)
 		}
@@ -456,8 +466,8 @@ func (c *ConsulServiceRegistration) reconcileConsul(registeredServiceID string, 
 	sealed := sealedFunc()
 	perfStandby := perfStandbyFunc()
 
-	agent := c.client.Agent()
-	catalog := c.client.Catalog()
+	agent := c.Client.Agent()
+	catalog := c.Client.Catalog()
 
 	serviceID = c.serviceID()
 
@@ -540,7 +550,7 @@ func (c *ConsulServiceRegistration) reconcileConsul(registeredServiceID string, 
 // runCheck immediately pushes a TTL check.
 func (c *ConsulServiceRegistration) runCheck(sealed bool) error {
 	// Run a TTL check
-	agent := c.client.Agent()
+	agent := c.Client.Agent()
 	if !sealed {
 		return agent.PassTTL(c.checkID(), "Vault Unsealed")
 	} else {
@@ -594,4 +604,38 @@ func (c *ConsulServiceRegistration) setRedirectAddr(addr string) (err error) {
 	}
 
 	return nil
+}
+
+// durationMinusBuffer returns a duration, minus a buffer and jitter
+// subtracted from the duration.  This function is used primarily for
+// servicing Consul TTL Checks in advance of the TTL.
+func durationMinusBuffer(intv time.Duration, buffer time.Duration, jitter int64) time.Duration {
+	d := intv - buffer
+	if jitter == 0 {
+		d -= randomStagger(d)
+	} else {
+		d -= randomStagger(time.Duration(int64(d) / jitter))
+	}
+	return d
+}
+
+// durationMinusBufferDomain returns the domain of valid durations from a
+// call to durationMinusBuffer.  This function is used to check user
+// specified input values to durationMinusBuffer.
+func durationMinusBufferDomain(intv time.Duration, buffer time.Duration, jitter int64) (min time.Duration, max time.Duration) {
+	max = intv - buffer
+	if jitter == 0 {
+		min = max
+	} else {
+		min = max - time.Duration(int64(max)/jitter)
+	}
+	return min, max
+}
+
+// randomStagger returns an interval between 0 and the duration
+func randomStagger(intv time.Duration) time.Duration {
+	if intv == 0 {
+		return 0
+	}
+	return time.Duration(uint64(rand.Int63()) % uint64(intv))
 }
