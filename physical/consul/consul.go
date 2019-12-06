@@ -302,7 +302,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		kv:                  client.KV(),
 		permitPool:          physical.NewPermitPool(maxParInt),
 		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,

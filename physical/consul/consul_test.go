@@ -89,7 +89,7 @@ func TestConsul_ServiceTags(t *testing.T) {
 	consulConfig := map[string]string{
 		"path":                 "seaTech/",
 		"service":              "astronomy",
-		"service_tags":         "deadbeef, cafeefac, deadc0de, feedface",
+		"service_tags":         "deadbeef, cafeefac, deadc0de, Feedface",
 		"redirect_addr":        "http://127.0.0.2:8200",
 		"check_timeout":        "6s",
 		"address":              "127.0.0.2",
@@ -110,7 +110,7 @@ func TestConsul_ServiceTags(t *testing.T) {
 		t.Fatalf("failed to create physical Consul backend")
 	}
 
-	expected := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
+	expected := []string{"deadbeef", "cafeefac", "deadc0de", "Feedface"}
 	actual := c.fetchServiceTags(false, false)
 	if !strutil.EquivalentSlices(actual, append(expected, "standby")) {
 		t.Fatalf("bad: expected:%s actual:%s", append(expected, "standby"), actual)
