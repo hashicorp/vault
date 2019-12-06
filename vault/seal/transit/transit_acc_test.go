@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -17,7 +18,7 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.Skip()
 	}
-	cleanup, retAddress, token, mountPath, keyName, _ := transit.PrepareTestContainer(t)
+	cleanup, retAddress, token, mountPath, keyName, _ := docker.PrepareTestContainer(t)
 	defer cleanup()
 
 	sealConfig := map[string]string{
@@ -53,7 +54,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.Skip()
 	}
-	cleanup, retAddress, token, mountPath, keyName, tlsConfig := transit.PrepareTestContainer(t)
+	cleanup, retAddress, token, mountPath, keyName, tlsConfig := docker.PrepareTestContainer(t)
 	defer cleanup()
 
 	clientConfig := &api.Config{
