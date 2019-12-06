@@ -24,6 +24,8 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* replication: Add `generate-public-key` endpoint to list of allowed endpoints
+  for existing DR secondaries
 * secrets/pki: Prevent generating certificate on performance standby when storing
   [GH-7904]
 * storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
