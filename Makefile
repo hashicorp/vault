@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 	github.com/kardianos/govendor \
 	github.com/client9/misspell/cmd/misspell \
 	github.com/golangci/golangci-lint/cmd/golangci-lint
-GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
+GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor | grep -v testdata)
 
 GO_VERSION_MIN=1.12.7
 CGO_ENABLED?=0
@@ -136,7 +136,10 @@ bootstrap:
 update-plugins:
 	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
 
-static-assets:
+static-assets-dir:
+	@mkdir -p ./pkg/web_ui
+
+static-assets: static-assets-dir
 	@echo "--> Generating static assets"
 	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
 	@mv bindata_assetfs.go http
