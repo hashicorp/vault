@@ -4,7 +4,8 @@ IMPROVEMENTS:
 
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
-
+* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
+* secrets/gcp: Add support for rotating root keys [GCP-53]
 
 ## 1.3.1 (Unreleased)
 
@@ -16,8 +17,6 @@ IMPROVEMENTS:
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
-* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
-* secrets/gcp: Add support for rotating root keys [GCP-53]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
 
@@ -25,6 +24,8 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* secrets/pki: Prevent generating certificate on performance standby when storing
+  [GH-7904]
 * storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
   a source during `operator migrate` operations [GH-7966]
 * ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
