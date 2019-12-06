@@ -1,4 +1,12 @@
-## Next
+## 1.4 (Unreleased)
+
+IMPROVEMENTS:
+
+* core: Separate out service discovery interface from storage interface to allow
+  new types of service discovery not coupled to storage [GH-7887]
+
+
+## 1.3.1 (Unreleased)
 
 IMPROVEMENTS:
 
