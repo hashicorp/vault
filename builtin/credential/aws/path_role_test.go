@@ -988,6 +988,9 @@ func TestAwsVersion(t *testing.T) {
 
 // This test was used to reproduce https://github.com/hashicorp/vault/issues/7418
 // and verify its fix.
+// Please run it at least 3 times to ensure that passing tests are due to actually
+// passing, rather than the region being randomly chosen tying to the one in the
+// test through luck.
 func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	t.Skip("skipping test because it hits real endpoints")
 
@@ -1028,7 +1031,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 
 	data = map[string]interface{}{
 		"auth_type":               iamAuthType,
-		"bound_iam_principal_arn": "arn:aws:iam::123456789012:assumed-role/MyRole/foo",
+		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/MyRole",
 		"resolve_aws_unique_ids":  true,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{

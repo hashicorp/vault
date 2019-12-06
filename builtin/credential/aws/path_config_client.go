@@ -244,8 +244,6 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 			changedCreds = true
 			configEntry.STSRegion = stsRegionStr.(string)
 		}
-	} else if req.Operation == logical.CreateOperation {
-		configEntry.STSRegion = data.Get("sts_region").(string)
 	}
 
 	headerValStr, ok := data.GetOk("iam_server_id_header_value")
