@@ -1,0 +1,19 @@
+TEST_TIMEOUT?=45m
+EXTENDED_TEST_TIMEOUT=60m
+INTEG_TEST_TIMEOUT=120m
+VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
+EXTERNAL_TOOLS=\
+	golang.org/x/tools/cmd/goimports \
+	github.com/elazarl/go-bindata-assetfs/... \
+	github.com/hashicorp/go-bindata/... \
+	github.com/mitchellh/gox \
+	github.com/kardianos/govendor \
+	github.com/client9/misspell/cmd/misspell \
+	github.com/golangci/golangci-lint/cmd/golangci-lint
+
+GO_VERSION_MIN=1.12.7
+CGO_ENABLED?=0
+ifneq ($(FDB_ENABLED), )
+	CGO_ENABLED=1
+	BUILD_TAGS+=foundationdb
+endif
