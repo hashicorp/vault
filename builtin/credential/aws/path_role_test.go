@@ -2,6 +2,8 @@ package awsauth
 
 import (
 	"context"
+	"github.com/hashicorp/vault/helper/awsutil"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -992,7 +994,26 @@ func TestAwsVersion(t *testing.T) {
 // passing, rather than the region being randomly chosen tying to the one in the
 // test through luck.
 func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
-	t.Skip("skipping test because it hits real endpoints")
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
+
+	// ex. "arn:aws:iam::123456789012:role/MyRole"
+	assumableRoleArn := os.Getenv("AWS_ASSUMABLE_ROLE_ARN")
+	if assumableRoleArn == "" {
+		t.Skip("skipping because AWS_ASSUMABLE_ROLE_ARN is unset")
+	}
+
+	// Ensure aws credentials are available locally for testing.
+	credsConfig := &awsutil.CredentialsConfig{}
+	credsChain, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		t.SkipNow()
+	}
+	_, err = credsChain.Get()
+	if err != nil {
+		t.SkipNow()
+	}
 
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -1031,7 +1052,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 
 	data = map[string]interface{}{
 		"auth_type":               iamAuthType,
-		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/MyRole",
+		"bound_iam_principal_arn": assumableRoleArn,
 		"resolve_aws_unique_ids":  true,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
