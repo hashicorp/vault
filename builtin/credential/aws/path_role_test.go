@@ -2,13 +2,13 @@ package awsauth
 
 import (
 	"context"
-	"github.com/hashicorp/vault/helper/awsutil"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
