@@ -27,7 +27,7 @@ This endpoint configures the LDAP auth method.
 
 ### Parameters
 
-- `url` `(string: <required>)` – The LDAP server to connect to. Examples:
+- `url` `(string: ldap://127.0.0.1)` – The LDAP server to connect to. Examples:
   `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. Multiple URLs can be
   specified with commas, e.g. `ldap://ldap.myorg.com,ldap://ldap2.myorg.com`;
   these will be tried in-order.
@@ -36,6 +36,9 @@ This endpoint configures the LDAP auth method.
   names will be normalized to lower case. Case will still be preserved when
   sending the username to the LDAP server at login time; this is only for
   matching local user/group definitions.
+- `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for
+  the connection when making requests against the server before returning back
+  an error.
 - `starttls` `(bool: false)` – If true, issues a `StartTLS` command after
   establishing an unencrypted connection.
 - `tls_min_version` `(string: tls12)` – Minimum TLS version to use. Accepted
@@ -52,7 +55,7 @@ This endpoint configures the LDAP auth method.
   user search.
 - `userdn` `(string: "")` – Base DN under which to perform user search. Example:
   `ou=Users,dc=example,dc=com`
-- `userattr` `(string: "")` – Attribute on user attribute object matching the
+- `userattr` `(string: "cn")` – Attribute on user attribute object matching the
   username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
 - `discoverdn` `(bool: false)` – Use anonymous bind to discover the bind DN of a
   user.

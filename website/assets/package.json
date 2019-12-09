@@ -17,7 +17,7 @@
     "@hashicorp/hashi-docs-sitemap": "^0.1.6",
     "@hashicorp/hashi-footer": "^2.0.2",
     "@hashicorp/hashi-ga-form-fields": "1.0.2",
-    "@hashicorp/hashi-global-styles": "^2.0.1",
+    "@hashicorp/hashi-global-styles": "^2.0.3",
     "@hashicorp/hashi-hero": "^4.0.0",
     "@hashicorp/hashi-image": "1.0.5",
     "@hashicorp/hashi-linked-text-summary-list": "^1.0.1",

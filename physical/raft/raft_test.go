@@ -226,7 +226,7 @@ func TestRaft_Recovery(t *testing.T) {
 	type RecoveryPeer struct {
 		ID       string `json:"id"`
 		Address  string `json:"address"`
-		NonVoter bool   `json: non_voter`
+		NonVoter bool   `json:"non_voter"`
 	}
 
 	// Leave out node 1 during recovery
