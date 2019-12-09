@@ -32,10 +32,10 @@ for verifying inbound SPNEGO tokens.
 - `keytab` `(string: <required>)` – A base 64 representation of the contents
 of the Kerberos keytab that will be used for verifying inbound SPNEGO tokens.
 It should contain an entry matching the service account given. This can be
-created through the following command: "$ base64 vault.keytab > vault.keytab.base64".
+created through the following command: `$ base64 vault.keytab > vault.keytab.base64`.
 - `service_account` `(string: <required>)` – The service account associated
 with both the keytab entry and an LDAP service account created for Vault. Ex.:
-"vault_svc".
+`"vault_svc"`.
 
 ### Sample Request
 
@@ -269,12 +269,12 @@ $ curl \
 This endpoint returns the policies associated with a Kerberos LDAP group.
 
 | Method   | Path                           |
-| :---------------------------------------- |
+| :------- | :----------------------------- |
 | `GET`    | `/auth/kerberos/groups/:name`  |
 
 ### Parameters
 
-- `name` `(string: <required>)` – The name of the LDAP group
+- `name` `(string: <required>)` – The name of the LDAP group.
 
 ### Sample Request
 
@@ -305,13 +305,13 @@ $ curl \
 
 This endpoint creates or updates LDAP group policies.
 
-| Method   | Path                            |
-| :----------------------------------------- |
+| Method    | Path                           |
+| :-------- | :----------------------------- |
 | `POST`    | `/auth/kerberos/groups/:name`  |
 
 ### Parameters
 
-- `name` `(string: <required>)` – The name of the LDAP group
+- `name` `(string: <required>)` – The name of the LDAP group.
 - `policies` `(string: "")` – Comma-separated list of policies associated to the
   group.
 
@@ -338,12 +338,12 @@ $ curl \
 This endpoint deletes the LDAP group and policy association.
 
 | Method   | Path                           |
-| :---------------------------------------- |
+| :------- | :----------------------------- |
 | `DELETE` | `/auth/kerberos/groups/:name`  |
 
 ### Parameters
 
-- `name` `(string: <required>)` – The name of the LDAP group
+- `name` `(string: <required>)` – The name of the LDAP group.
 
 ### Sample Request
 
@@ -396,14 +396,6 @@ sWw
 | Method   | Path                         |
 | :------- | :--------------------------- |
 | `POST`   | `/auth/kerberos/login`       |
-
-- `keytab` `(string: <required>)` – A base 64 representation of the contents
-of the Kerberos keytab that will be used for verifying inbound SPNEGO tokens.
-It should contain an entry matching the service account given. This can be
-created through the following command: "$ base64 vault.keytab > vault.keytab.base64".
-- `service_account` `(string: <required>)` – The service account associated
-with both the keytab entry and an LDAP service account created for Vault. Ex.:
-"vault_svc".
 
 ### Sample Request
 
