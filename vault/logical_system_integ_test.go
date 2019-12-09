@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -99,6 +100,61 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 		// Wait for active so post-unseal takes place
 		// If it fails, it means unseal process failed
 		vault.TestWaitActive(t, core.Core)
+	}
+}
+
+func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+
+	files, err := ioutil.ReadDir(cluster.TempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	// Simulate removal of the plugin binary
+	var pluginBinFile string
+	for _, file := range files {
+		if strings.Contains(file.Name(), t.Name()) {
+			pluginBinFile = file.Name()
+			break
+		}
+	}
+
+	if pluginBinFile == "" {
+		t.Fatal("unable to find plugin binary in the plugin directory")
+	}
+
+	err = os.Remove(filepath.Join(cluster.TempDir, pluginBinFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unseal the cluster
+	cluster.UnsealCores(t)
+
+	// Make a request against on tune after it is removed
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/mounts/mock-0/tune")
+	req.ClientToken = core.Client.Token()
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 
