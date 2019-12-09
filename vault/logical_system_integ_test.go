@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -120,18 +119,19 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 		t.Fatalf("bad: response should not be nil")
 	}
 
-	files, err := ioutil.ReadDir(cluster.TempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
 
 	// Simulate removal of the plugin binary
+	files, err := ioutil.ReadDir(cluster.TempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var pluginBinFile string
 	for _, file := range files {
-		if strings.Contains(file.Name(), t.Name()) {
+		// We cannot determine the exact file name since it depends how the test
+		// is ran, so we use file stats to filter out what we want.
+		if !file.IsDir() && file.Mode().Perm() == os.FileMode(0755) {
 			pluginBinFile = file.Name()
 			break
 		}
