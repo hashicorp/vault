@@ -36,22 +36,25 @@ ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 var _ dbplugin.Database = &PostgreSQL{}
 
 // New implements builtinplugins.BuiltinFactory
-func New() (interface{}, error) {
-	db := new()
-	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
-	return dbType, nil
+func New(lowercaseUsername bool) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		db := new(lowercaseUsername)
+		// Wrap the plugin with middleware to sanitize errors
+		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+		return dbType, nil
+	}
 }
 
-func new() *PostgreSQL {
+func new(lowercaseUsername bool) *PostgreSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = postgreSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 8,
-		RoleNameLen:    8,
-		UsernameLen:    63,
-		Separator:      "-",
+		DisplayNameLen:    8,
+		RoleNameLen:       8,
+		UsernameLen:       63,
+		Separator:         "-",
+		LowercaseUsername: lowercaseUsername,
 	}
 
 	db := &PostgreSQL{
@@ -64,7 +67,19 @@ func new() *PostgreSQL {
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+	dbType, err := New(false)()
+	if err != nil {
+		return err
+	}
+
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+
+	return nil
+}
+
+// Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
+func RunRedshift(apiTLSConfig *api.TLSConfig) error {
+	dbType, err := New(true)()
 	if err != nil {
 		return err
 	}
