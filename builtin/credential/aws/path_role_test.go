@@ -998,7 +998,10 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 		t.Skip()
 	}
 
-	// ex. "arn:aws:iam::123456789012:role/MyRole"
+	/* ARN of an AWS role that Vault can query during testing.
+	   This role should exist in your current AWS account and your credentials
+	   should have iam:GetRole permissions to query it.
+	 */
 	assumableRoleArn := os.Getenv("AWS_ASSUMABLE_ROLE_ARN")
 	if assumableRoleArn == "" {
 		t.Skip("skipping because AWS_ASSUMABLE_ROLE_ARN is unset")
