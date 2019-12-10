@@ -2,15 +2,12 @@ package transit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-var ErrInvalidKeyName = errors.New("key names cannot be paths")
 
 func TestTransit_Restore(t *testing.T) {
 	// Test setup:
