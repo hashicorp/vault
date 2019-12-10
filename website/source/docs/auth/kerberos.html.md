@@ -153,10 +153,11 @@ communicate with the Kerberos environment.
 - `keytab_path` is the path to the `keytab` in which the entry lives for the
 entity authenticating to Vault.
 - `username` is the username for the entry _within_ the `keytab` to use for 
-logging into Kerberos.
+logging into Kerberos. This username must match a service account in LDAP.
 - `service` is the service principal name to use in obtaining a service ticket for
-gaining a SPNEGO token.
-- `realm` is the name of the Kerberos realm.
+gaining a SPNEGO token. This service must exist in LDAP.
+- `realm` is the name of the Kerberos realm. This realm must match the UPNDomain
+configured on the LDAP connection. This check is case-sensitive.
 
 ## Troubleshooting
 
