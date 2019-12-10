@@ -4,7 +4,7 @@ page_title: "Custom Plugin Backends"
 sidebar_title: "Plugin Backends"
 sidebar_current: "docs-plugin"
 description: |-
-  Plugin backends are mountable backends that are implemented unsing Vault's plugin system.
+  Plugin backends are mountable backends that are implemented using Vault's plugin system.
 ---
 
 # Custom Plugin Backends
@@ -48,25 +48,9 @@ $ vault secrets disable my-secrets
 
 # Upgrading Plugins
 
-Vault executes plugin binaries when they are configured and roles established
-around them. The binary cannot be modified or replaced while running, so
-upgrades cannot be performed by simply swapping the binary and updating the hash
-in the plugin catalog.
+Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
+page.
 
-Instead, you can restart or reload a plugin with the
-`sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
-replace or upgrade a Vault plugin binary:
-
-1. Register plugin_v1 to the catalog
-2. Mount the plugin backend
-3. Register plugin_v2 to the catalog under the same plugin name, but with
-updated command to run plugin_v2 and updated sha256 of plugin_v2
-4. Trigger a plugin reload with sys/plugins/reload/backend to reload all mounted
-backends using that plugin, or just a subset of the mounts using either the
-plugin or mounts parameter.
-
-Until step 4, the mount will still use plugin_v1, and when the reload is
-triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
 
 [api_addr]: /docs/configuration/index.html#api_addr
-[plugin_reload_api]: /api/system/plugins-reload-backend.html
+[upgrading_plugins]: /docs/upgrading/plugins.html
