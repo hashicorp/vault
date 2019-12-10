@@ -272,7 +272,7 @@ func TestBackend_Roles(t *testing.T) {
 						data[k] = interf
 
 					}
-					fmt.Printf("Step %d:\n%s %s err=%v %+v\n\n", i+1, v.Operation, v.Path, v.ErrorOk, data)
+					t.Logf("Step %d:\n%s %s err=%v %+v\n\n", i+1, v.Operation, v.Path, v.ErrorOk, data)
 				}
 			}
 
@@ -1063,7 +1063,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		default:
 			panic("invalid key type: " + keyType)
 		}
-		t.Logf("roleKeyBits=%d testBitSize=%d errorOk=%v", plan.roleKeyBits, testBitSize, plan.errorOk)
+		if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+			t.Logf("roleKeyBits=%d testBitSize=%d errorOk=%v", plan.roleKeyBits, testBitSize, plan.errorOk)
+		}
 
 		block, privKey := getCsr(keyType, testBitSize, csrTemplate)
 		plan.cert = strings.TrimSpace(string(pem.EncodeToMemory(block)))
@@ -1197,7 +1199,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	funcs := []interface{}{addCnTests, getCnCheck, getCountryCheck, getLocalityCheck, getNotBeforeCheck,
 		getOrganizationCheck, getOuCheck, getPostalCodeCheck, getRandCsr, getStreetAddressCheck,
 		getProvinceCheck}
-	t.Logf("funcs=%d", len(funcs))
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("funcs=%d", len(funcs))
+	}
 
 	// Common Name tests
 	{
@@ -2398,7 +2402,9 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
-	t.Logf("certificate 1 to check:\n%s", certStr)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("certificate 1 to check:\n%s", certStr)
+	}
 
 	// Valid for second possibility
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
@@ -2426,7 +2432,9 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
-	t.Logf("certificate 2 to check:\n%s", certStr)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("certificate 2 to check:\n%s", certStr)
+	}
 
 	// Valid for both
 	oid1, type1, val1 := "1.3.6.1.4.1.311.20.2.3", "utf8", "devops@nope.com"
@@ -2466,7 +2474,9 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
 		t.Errorf("unexpected otherNames: %v", diff)
 	}
-	t.Logf("certificate 3 to check:\n%s", certStr)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("certificate 3 to check:\n%s", certStr)
+	}
 }
 
 func TestBackend_AllowedSerialNumbers(t *testing.T) {
@@ -2570,7 +2580,9 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	if cert.Subject.SerialNumber != "f00bar" {
 		t.Fatalf("unexpected Subject SerialNumber %s", cert.Subject.SerialNumber)
 	}
-	t.Logf("certificate 1 to check:\n%s", certStr)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("certificate 1 to check:\n%s", certStr)
+	}
 
 	// Valid for second possibility
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
@@ -2589,7 +2601,9 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	if cert.Subject.SerialNumber != "b4rf00" {
 		t.Fatalf("unexpected Subject SerialNumber %s", cert.Subject.SerialNumber)
 	}
-	t.Logf("certificate 2 to check:\n%s", certStr)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		t.Logf("certificate 2 to check:\n%s", certStr)
+	}
 }
 
 func TestBackend_URI_SANs(t *testing.T) {

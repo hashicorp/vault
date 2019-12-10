@@ -230,7 +230,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		case errutil.InternalError:
 			return nil, err
 		default:
-			panic(fmt.Sprintf("unhandled err: %v", err))
+			return nil, errwrap.Wrapf("error signing/generating certificate: {{err}}", err)
 		}
 	}
 

@@ -354,12 +354,11 @@ func validateNames(data *inputBundle, names []string) string {
 // allowed, it will be returned as the second string. Empty strings + error
 // means everything is okay.
 func validateOtherSANs(data *inputBundle, requested map[string][]string) (string, string, error) {
-	for _, val := range data.role.AllowedOtherSANs {
-		if val == "*" {
-			// Anything is allowed
-			return "", "", nil
-		}
+	if len(data.role.AllowedOtherSANs) == 1 && data.role.AllowedOtherSANs[0] == "*" {
+		// Anything is allowed
+		return "", "", nil
 	}
+
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
 		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
