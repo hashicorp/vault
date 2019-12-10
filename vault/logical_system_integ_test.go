@@ -122,26 +122,11 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
 
-	// Simulate removal of the plugin binary
-	files, err := ioutil.ReadDir(cluster.TempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var pluginBinFile string
-	for _, file := range files {
-		// We cannot determine the exact file name since it depends how the test
-		// is ran, so we use file stats to filter out what we want.
-		if !file.IsDir() && file.Mode().Perm() == os.FileMode(0755) {
-			pluginBinFile = file.Name()
-			break
-		}
-	}
-
-	if pluginBinFile == "" {
-		t.Fatal("unable to find plugin binary in the plugin directory")
-	}
-
-	err = os.Remove(filepath.Join(cluster.TempDir, pluginBinFile))
+	// Simulate removal of the plugin binary. Use os.Args to determine file name
+	// since that's how we create the file for catalog registration in the test
+	// helper.
+	pluginFileName := filepath.Base(os.Args[0])
+	err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
 	if err != nil {
 		t.Fatal(err)
 	}
