@@ -71,5 +71,5 @@ See the page on [Vault use cases](/intro/use-cases.html) to see the
 multiple ways Vault can be used. Then see
 [how Vault compares to other software](/intro/vs/index.html)
 to see how it fits into your existing infrastructure. Finally, continue onwards with
-the [getting started guide](/intro/getting-started/install.html) to use
+the [getting started guide](/intro/getting-started/index.html) to use
 Vault to read, write, and create real secrets and see how it works in practice.

@@ -47,6 +47,13 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 			DisableClustering: true,
 		},
 
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
 		Telemetry: &Telemetry{
 			StatsdAddr:                 "bar",
 			StatsiteAddr:               "foo",
@@ -124,6 +131,13 @@ func testLoadConfigFile_json2(t *testing.T, entropy *Entropy) {
 				"bar": "baz",
 			},
 			DisableClustering: true,
+		},
+
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
 		},
 
 		CacheSize: 45678,
@@ -261,6 +275,13 @@ func testLoadConfigFile(t *testing.T) {
 			DisableClustering: true,
 		},
 
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
 		Telemetry: &Telemetry{
 			StatsdAddr:              "bar",
 			StatsiteAddr:            "foo",
@@ -322,6 +343,13 @@ func testLoadConfigFile_json(t *testing.T) {
 				"foo": "bar",
 			},
 			DisableClustering: true,
+		},
+
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
 		},
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
@@ -475,6 +503,9 @@ func testConfig_Sanitized(t *testing.T) {
 			"disable_clustering": false,
 			"redirect_addr":      "top_level_api_addr",
 			"type":               "consul",
+		},
+		"service_registration": map[string]interface{}{
+			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{
 			"circonus_api_app":                       "",
