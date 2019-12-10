@@ -1012,7 +1012,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 	_, err = credsChain.Get()
 	if err != nil {
