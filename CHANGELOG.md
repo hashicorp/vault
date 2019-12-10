@@ -24,6 +24,9 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* plugin: Fix a panic that could occur if a mount/auth entry was unable to
+  mount the plugin backend and a request that required the system view to be 
+  retrieved was made [GH-7991]
 * replication: Add `generate-public-key` endpoint to list of allowed endpoints
   for existing DR secondaries
 * secrets/pki: Prevent generating certificate on performance standby when storing

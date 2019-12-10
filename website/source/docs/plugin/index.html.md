@@ -4,7 +4,7 @@ page_title: "Custom Plugin Backends"
 sidebar_title: "Plugin Backends"
 sidebar_current: "docs-plugin"
 description: |-
-  Plugin backends are mountable backends that are implemented unsing Vault's plugin system.
+  Plugin backends are mountable backends that are implemented using Vault's plugin system.
 ---
 
 # Custom Plugin Backends
@@ -46,4 +46,11 @@ Disabling a plugin backend is the identical to disabling internal secrets engine
 $ vault secrets disable my-secrets
 ```
 
+# Upgrading Plugins
+
+Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
+page.
+
+
 [api_addr]: /docs/configuration/index.html#api_addr
+[upgrading_plugins]: /docs/upgrading/plugins.html
