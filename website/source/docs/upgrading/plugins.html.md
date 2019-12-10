@@ -28,9 +28,9 @@ replace or upgrade a Vault plugin binary:
 2. Mount the plugin backend
 3. Register plugin_v2 to the catalog under the same plugin name, but with
 updated command to run plugin_v2 and updated sha256 of plugin_v2
-4. Trigger a plugin reload with sys/plugins/reload/backend to reload all mounted
-backends using that plugin, or just a subset of the mounts using either the
-`plugin` or `mounts` parameter.
+4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+mounted backends using that plugin or a subset of the mounts using that plugin
+with either the `plugin` or `mounts` parameter respectively.
 
 Until step 4, the mount will still use plugin_v1, and when the reload is
 triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
