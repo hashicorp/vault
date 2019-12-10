@@ -5,7 +5,7 @@
         Unsupported
       {{else if replicationEnabled}}
         <span>
-          {{capitalize modeForUrl}}
+          {{concat (if (eq mode 'performance') 'Performance ' 'DR ') (capitalize modeForUrl)}}
         </span>
         {{#if secondaryId}}
           <small>
@@ -24,7 +24,9 @@
       {{else if auth.currentToken}}
         Enable {{if (eq mode 'performance') 'Performance' 'DR'}}
       {{else}}
-        Not enabled
+        <span class="has-text-grey-light">
+          {{if (eq mode 'performance') 'Performance' 'DR'}}
+        </span>
       {{/if}}
     </div>
     <div class="level-right">
