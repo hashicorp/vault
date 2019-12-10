@@ -1369,7 +1369,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	for !shutdownTriggered {
 		select {
 		case <-coreShutdownDoneCh:
-			c.UI.Output("==> Vault core was shutdown")
+			c.UI.Output("==> Vault core was shut down")
 			retCode = 1
 			shutdownTriggered = true
 		case <-c.ShutdownCh:
