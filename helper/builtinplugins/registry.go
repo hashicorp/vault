@@ -94,7 +94,8 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
-			"postgresql-database-plugin":    dbPostgres.New,
+			"postgresql-database-plugin":    dbPostgres.New(false),
+			"redshift-database-plugin":      dbPostgres.New(true),
 			"mssql-database-plugin":         dbMssql.New,
 			"cassandra-database-plugin":     dbCass.New,
 			"mongodb-database-plugin":       dbMongo.New,
