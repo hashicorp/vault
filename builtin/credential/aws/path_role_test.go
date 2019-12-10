@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/awsutil"
+	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -994,7 +995,7 @@ func TestAwsVersion(t *testing.T) {
 // passing, rather than the region being randomly chosen tying to the one in the
 // test through luck.
 func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
-	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+	if enabled := os.Getenv(vlttesting.TestEnvVar); enabled == "" {
 		t.Skip()
 	}
 
