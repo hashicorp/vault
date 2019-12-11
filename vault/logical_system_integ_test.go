@@ -102,6 +102,47 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	// Simulate removal of the plugin binary. Use os.Args to determine file name
+	// since that's how we create the file for catalog registration in the test
+	// helper.
+	pluginFileName := filepath.Base(os.Args[0])
+	err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unseal the cluster
+	cluster.UnsealCores(t)
+
+	// Make a request against on tune after it is removed
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/mounts/mock-0/tune")
+	req.ClientToken = core.Client.Token()
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer cluster.Cleanup()

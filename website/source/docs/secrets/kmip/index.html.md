@@ -141,14 +141,18 @@ KMIP operations.
 Supported KMIP operations:
 
 ```text
-operation_create
-operation_rekey
-operation_locate
-operation_get
 operation_activate
-operation_revoke
+operation_add_attribute
+operation_create
 operation_destroy
 operation_discover_versions
+operation_get
+operation_get_attribute_list
+operation_get_attributes
+operation_locate
+operation_register
+operation_rekey
+operation_revoke
 ```
 
 Additionally, there are two pseudo-operations that can be used to allow or deny

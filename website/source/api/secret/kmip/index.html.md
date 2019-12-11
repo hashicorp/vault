@@ -256,10 +256,14 @@ Creates or updates a role.
   `Discover Version` operation.
 - `operation_get` (`bool: false`) - Grant permission to use the KMIP 
   `Get` operation.
+- `operation_get_attribute_list` (`bool: false`) - Grant permission to use the KMIP 
+  `Get Attribute List` operation.
 - `operation_get_attributes` (`bool: false`) - Grant permission to use the KMIP 
   `Get Attributes` operation.
 - `operation_locate` (`bool: false`) - Grant permission to use the KMIP 
   `Locate` operation.
+- `operation_register` (`bool: false`) - Grant permission to use the KMIP 
+  `Register` operation.
 - `operation_rekey` (`bool: false`) - Grant permission to use the KMIP 
   `Rekey` operation.
 - `operation_revoke` (`bool: false`) - Grant permission to use the KMIP 
@@ -276,8 +280,10 @@ Creates or updates a role.
   "operation_destroy": true,
   "operation_discover_versions": true,
   "operation_get": true,
+  "operation_get_attribute_list": true,
   "operation_get_attributes": true,
   "operation_locate": true,
+  "operation_register": true,
   "operation_rekey": true,
   "operation_revoke": true
 }
@@ -326,8 +332,10 @@ $ curl \
     "operation_destroy": true,
     "operation_discover_versions": true,
     "operation_get": true,
+    "operation_get_attribute_list": true,
     "operation_get_attributes": true,
     "operation_locate": true,
+    "operation_register": true,
     "operation_rekey": true,
     "operation_revoke": true
   },

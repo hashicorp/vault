@@ -605,6 +605,7 @@ type IssueData struct {
 	AltNames   string `json:"alt_names" structs:"alt_names" mapstructure:"alt_names"`
 	IPSANs     string `json:"ip_sans" structs:"ip_sans" mapstructure:"ip_sans"`
 	CSR        string `json:"csr" structs:"csr" mapstructure:"csr"`
+	OtherSANs  string `json:"other_sans" structs:"other_sans" mapstructure:"other_sans"`
 }
 
 type URLEntries struct {
