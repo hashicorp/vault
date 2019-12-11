@@ -135,7 +135,7 @@
           </li>
         </ul>
       </nav>
-      {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary))}}
+      {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
         <hr />
         <nav class="menu">
           <div class="menu-label">
