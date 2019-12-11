@@ -276,8 +276,10 @@ Creates or updates a role.
   "operation_destroy": true,
   "operation_discover_versions": true,
   "operation_get": true,
+  "operation_get_attribute_list": true,
   "operation_get_attributes": true,
   "operation_locate": true,
+  "operation_register": true,
   "operation_rekey": true,
   "operation_revoke": true
 }
@@ -326,8 +328,10 @@ $ curl \
     "operation_destroy": true,
     "operation_discover_versions": true,
     "operation_get": true,
+    "operation_get_attribute_list": true,
     "operation_get_attributes": true,
     "operation_locate": true,
+    "operation_register": true,
     "operation_rekey": true,
     "operation_revoke": true
   },
