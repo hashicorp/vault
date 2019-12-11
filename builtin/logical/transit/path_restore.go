@@ -44,13 +44,11 @@ func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("'backup' must be supplied"), nil
 	}
 
+	// If a name is given, make sure it does not contain any slashes. The Transit
+	// secret engine does not allow sub-paths in key names
 	keyName := d.Get("name").(string)
-	// if a name is given, make sure it does not contain any slashes and look like
-	// a path
-	if keyName != "" {
-		if strings.Contains(keyName, "/") {
-			return nil, ErrInvalidKeyName
-		}
+	if strings.Contains(keyName, "/") {
+		return nil, ErrInvalidKeyName
 	}
 
 	return nil, b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
