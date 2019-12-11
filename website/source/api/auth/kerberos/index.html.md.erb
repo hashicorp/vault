@@ -130,7 +130,7 @@ This endpoint configures LDAP in the Kerberos auth method.
   user.
 - `deny_null_bind` `(bool: true)` – This option prevents users from bypassing
   authentication when providing an empty password.
-- `upndomain` `(string: "")` – The userPrincipalDomain used to construct the UPN
+- `upndomain` `(string: "")` – The _userPrincipalDomain_ used to construct the UPN
   string for the authenticating user. The constructed UPN will appear as
   `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind
   as `username@example.com`.
