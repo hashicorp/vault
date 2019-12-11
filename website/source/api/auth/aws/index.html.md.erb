@@ -56,7 +56,10 @@ capabilities, the credentials are fetched automatically.
 - `iam_endpoint` `(string: "")` - URL to override the default generated endpoint
   for making AWS IAM API calls.
 - `sts_endpoint` `(string: "")` - URL to override the default generated endpoint
-  for making AWS STS API calls.
+  for making AWS STS API calls. If set, `sts_region` should also be set.
+- `sts_region` `(string: "")` - Region to override the default region for making
+  AWS STS API calls. Should only be set if `sts_endpoint` is set. If so, should
+  be set to the region in which the custom `sts_endpoint` resides.
 - `iam_server_id_header_value` `(string: "")` - The value to require in the
   `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
   are used in the iam auth method. If not set, then no value is required or
@@ -110,6 +113,7 @@ $ curl \
     "endpoint": "",
     "iam_endpoint": "",
     "sts_endpoint": "",
+    "sts_region": "",
     "iam_server_id_header_value": ""
   }
 }
