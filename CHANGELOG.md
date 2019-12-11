@@ -17,6 +17,7 @@ IMPROVEMENTS:
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
+* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
 
