@@ -336,6 +336,39 @@ github.com/hashicorp/go-syslog
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.0
 github.com/hashicorp/go-version
+# github.com/hashicorp/gokrb5 v7.3.1-0.20191209171754-1a6fa9886ec3+incompatible
+github.com/hashicorp/gokrb5/client
+github.com/hashicorp/gokrb5/config
+github.com/hashicorp/gokrb5/keytab
+github.com/hashicorp/gokrb5/service
+github.com/hashicorp/gokrb5/spnego
+github.com/hashicorp/gokrb5/credentials
+github.com/hashicorp/gokrb5/crypto
+github.com/hashicorp/gokrb5/crypto/etype
+github.com/hashicorp/gokrb5/iana/errorcode
+github.com/hashicorp/gokrb5/iana/flags
+github.com/hashicorp/gokrb5/iana/keyusage
+github.com/hashicorp/gokrb5/iana/nametype
+github.com/hashicorp/gokrb5/iana/patype
+github.com/hashicorp/gokrb5/kadmin
+github.com/hashicorp/gokrb5/krberror
+github.com/hashicorp/gokrb5/messages
+github.com/hashicorp/gokrb5/types
+github.com/hashicorp/gokrb5/iana/etypeID
+github.com/hashicorp/gokrb5/asn1tools
+github.com/hashicorp/gokrb5/gssapi
+github.com/hashicorp/gokrb5/iana/chksumtype
+github.com/hashicorp/gokrb5/iana/msgtype
+github.com/hashicorp/gokrb5/crypto/common
+github.com/hashicorp/gokrb5/crypto/rfc3961
+github.com/hashicorp/gokrb5/crypto/rfc3962
+github.com/hashicorp/gokrb5/crypto/rfc4757
+github.com/hashicorp/gokrb5/crypto/rfc8009
+github.com/hashicorp/gokrb5/iana
+github.com/hashicorp/gokrb5/iana/adtype
+github.com/hashicorp/gokrb5/iana/asnAppTag
+github.com/hashicorp/gokrb5/pac
+github.com/hashicorp/gokrb5/iana/addrtype
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
@@ -380,6 +413,8 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
 github.com/hashicorp/vault-plugin-auth-jwt
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.1
+github.com/hashicorp/vault-plugin-auth-kerberos
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190925162726-2e5b0b8184e6
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
@@ -403,9 +438,9 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.5-0.20191108163347-bdd38fca2cff => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20191208020111-805a0bc9b460 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191112033314-390e96e22eb2 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191208020111-805a0bc9b460 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -463,6 +498,9 @@ github.com/jackc/pgx/pgio
 github.com/jackc/pgx/pgproto3
 github.com/jackc/pgx/pgtype
 github.com/jackc/pgx/chunkreader
+# github.com/jcmturner/gofork v1.0.0
+github.com/jcmturner/gofork/encoding/asn1
+github.com/jcmturner/gofork/x/crypto/pbkdf2
 # github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2
 github.com/jeffchao/backoff
 # github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -553,7 +591,7 @@ github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
 github.com/oracle/oci-go-sdk/objectstorage
 github.com/oracle/oci-go-sdk/keymanagement
-# github.com/ory/dockertest v3.3.4+incompatible
+# github.com/ory/dockertest v3.3.5+incompatible
 github.com/ory/dockertest
 github.com/ory/dockertest/docker
 github.com/ory/dockertest/docker/opts
@@ -635,7 +673,7 @@ github.com/shirou/gopsutil/net
 github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.3.0
+# github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
@@ -702,7 +740,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
-# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+# golang.org/x/crypto v0.0.0-20191106202628-ed6320f186d4
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
@@ -849,6 +887,15 @@ google.golang.org/grpc/internal/syscall
 gopkg.in/inf.v0
 # gopkg.in/ini.v1 v1.42.0
 gopkg.in/ini.v1
+# gopkg.in/jcmturner/aescts.v1 v1.0.1
+gopkg.in/jcmturner/aescts.v1
+# gopkg.in/jcmturner/dnsutils.v1 v1.0.1
+gopkg.in/jcmturner/dnsutils.v1
+# gopkg.in/jcmturner/goidentity.v3 v3.0.0
+gopkg.in/jcmturner/goidentity.v3
+# gopkg.in/jcmturner/rpc.v1 v1.1.0
+gopkg.in/jcmturner/rpc.v1/mstypes
+gopkg.in/jcmturner/rpc.v1/ndr
 # gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 gopkg.in/mgo.v2
 gopkg.in/mgo.v2/bson
