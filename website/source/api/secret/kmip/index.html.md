@@ -256,10 +256,14 @@ Creates or updates a role.
   `Discover Version` operation.
 - `operation_get` (`bool: false`) - Grant permission to use the KMIP 
   `Get` operation.
+- `operation_get_attribute_list` (`bool: false`) - Grant permission to use the KMIP 
+  `Get Attribute List` operation.
 - `operation_get_attributes` (`bool: false`) - Grant permission to use the KMIP 
   `Get Attributes` operation.
 - `operation_locate` (`bool: false`) - Grant permission to use the KMIP 
   `Locate` operation.
+- `operation_register` (`bool: false`) - Grant permission to use the KMIP 
+  `Register` operation.
 - `operation_rekey` (`bool: false`) - Grant permission to use the KMIP 
   `Rekey` operation.
 - `operation_revoke` (`bool: false`) - Grant permission to use the KMIP 
