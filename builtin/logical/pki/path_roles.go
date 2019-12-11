@@ -575,14 +575,17 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
-	otherSANs := data.Get("allowed_other_sans").([]string)
-	if len(otherSANs) > 0 {
-		_, err := parseOtherSANs(otherSANs)
+	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
+	switch {
+	case len(allowedOtherSANs) == 0:
+	case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
+	default:
+		_, err := parseOtherSANs(allowedOtherSANs)
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
 		}
-		entry.AllowedOtherSANs = otherSANs
 	}
+	entry.AllowedOtherSANs = allowedOtherSANs
 
 	// no_store implies generate_lease := false
 	if entry.NoStore {
