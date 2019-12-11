@@ -378,8 +378,6 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190930204802-acfd134850c2 
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190930204802-acfd134850c2/go.mod h1:j0hMnnTD44zXGQhLM1jarYDaTmSp6OPiOzgFQ6mNgzc=
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2 h1:Oi9HO9/JItId2XYLEoTIW9Wcfg5sblxxO5Nr7ln1jnk=
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2/go.mod h1:Ti2NPndKhSGpSL6gWg11n7TkmuI7318BIPeojayIVRU=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.0.0-20191209193128-e7680d2ebcaa h1:+mDRR1AGmp/SmKr17nnkIGWxeP7X59cz05BN1IhbMrY=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.0.0-20191209193128-e7680d2ebcaa/go.mod h1:w86spj0Uf45A/F1DqsPn/r3w+VColv+yC0CEZCrv5s0=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.1 h1:yFjNLRr4PqUgIa6rgvkP/lFtNu0sC9tIqbsKz3ulCsQ=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.1/go.mod h1:w86spj0Uf45A/F1DqsPn/r3w+VColv+yC0CEZCrv5s0=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190925162726-2e5b0b8184e6 h1:WgxwYXCuZJtU/oIDah4A99+MuqzzL/oGQu9421IYZ6M=
@@ -836,6 +834,7 @@ google.golang.org/grpc v1.22.0 h1:J0UbZOIrCAl+fpTOf8YLs4dJo8L/owV4LYVtAXQoPkw=
 google.golang.org/grpc v1.22.0/go.mod h1:Y5yQAOtifL1yxbo5wqy6BxZv8vAUGQwXBOALyacEbxg=
 gopkg.in/airbrake/gobrake.v2 v2.0.9/go.mod h1:/h5ZAUhDkGaJfjzjKLSjv6zCL6O0LLBxU4K+aSYdM/U=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
+gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d h1:TxyelI5cVkbREznMhfzycHdkp5cLA7DpE+GKjSslYhM=
 gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d/go.mod h1:cuepJuh7vyXfUyUwEgHQXw849cJrilpS5NeIjOWESAw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
@@ -857,6 +856,7 @@ gopkg.in/jcmturner/goidentity.v3 v3.0.0 h1:1duIyWiTaYvVx3YX2CYtpJbUFd7/UuPYCfgXt
 gopkg.in/jcmturner/goidentity.v3 v3.0.0/go.mod h1:oG2kH0IvSYNIu80dVAyu/yoefjq1mNfM5bm88whjWx4=
 gopkg.in/jcmturner/rpc.v1 v1.1.0 h1:QHIUxTX1ISuAv9dD2wJ9HWQVuWDX/Zc0PfeC2tjc4rU=
 gopkg.in/jcmturner/rpc.v1 v1.1.0/go.mod h1:YIdkC4XfD6GXbzje11McwsDuOlZQSb9W4vfLvuNnlv8=
+gopkg.in/ldap.v3 v3.0.3 h1:YKRHW/2sIl05JsCtx/5ZuUueFuJyoj/6+DGXe3wp6ro=
 gopkg.in/ldap.v3 v3.0.3/go.mod h1:oxD7NyBuxchC+SgJDE1Q5Od05eGt29SDQVBmV+HYbzw=
 gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce h1:xcEWjVhvbDy+nHP67nPDDpbYrY+ILlfndk4bRioVHaU=
 gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce/go.mod h1:yeKp02qBN3iKW1OzL3MGk2IdtZzaj7SFntXj72NppTA=
