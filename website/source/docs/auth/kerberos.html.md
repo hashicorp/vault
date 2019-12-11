@@ -91,7 +91,7 @@ requests:
 
 ```text
 $ vault write auth/kerberos/config \
-    keytab=@vault_svc.keytab.base64 \
+    keytab=@vault.keytab.base64 \
     service_account="vault_svc"
 ```
    
