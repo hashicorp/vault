@@ -619,7 +619,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			currentCycle = currentCycle + 1
 
 			// sleep until we are in the next cycle - where a next run will happen
-			v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
+			v, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
 			nextRun := v.(time.Time)
 			now := time.Now()
 			diff := nextRun.Sub(now)
@@ -1012,7 +1012,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 func TestOIDC_Flush(t *testing.T) {
 	c := newOIDCCache()
 	ns := []*namespace.Namespace{
-		nilNamespace, //ns[0] is nilNamespace
+		noNamespace, //ns[0] is nilNamespace
 		&namespace.Namespace{ID: "ns1"},
 		&namespace.Namespace{ID: "ns2"},
 	}
