@@ -315,7 +315,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.Flush(nil)
+		i.oidcCache.Flush(nilNamespace)
 	}
 }
 
