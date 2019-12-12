@@ -188,9 +188,19 @@ BUG FIXES:
 
 SECURITY:
 
- * In a non-root namespace, revocation of a token scoped to a non-root namespace did not trigger the expected revocation of dynamic secret leases associated with that token. As a result, dynamic secret leases in non-root namespaces may outlive the token that created them.  This vulnerability, CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
- * Disaster Recovery secondary clusters did not delete already-replicated data after a mount filter has been created on an upstream Performance secondary cluster. As a result, encrypted secrets may remain replicated on a Disaster Recovery secondary cluster after application of a mount filter excluding those secrets from replication. This vulnerability, CVE-2019-18617, affects Vault Enterprise 0.8 and newer.
- * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which corresponds to CVE-2019-17596.
+ * In a non-root namespace, revocation of a token scoped to a non-root
+   namespace did not trigger the expected revocation of dynamic secret leases
+   associated with that token. As a result, dynamic secret leases in non-root
+   namespaces may outlive the token that created them.  This vulnerability,
+   CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
+ * Disaster Recovery secondary clusters did not delete already-replicated data
+   after a mount filter has been created on an upstream Performance secondary
+   cluster. As a result, encrypted secrets may remain replicated on a Disaster
+   Recovery secondary cluster after application of a mount filter excluding
+   those secrets from replication. This vulnerability, CVE-2019-18617, affects
+   Vault Enterprise 0.8 and newer.
+ * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which
+   corresponds to CVE-2019-17596.
 
 CHANGES: 
 
@@ -209,6 +219,8 @@ BUG FIXES:
 
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix panic when pgp keys list is empty [GH-7546]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  * core: add hook for initializing seals for migration [GH-7666]
  * core (enterprise): Migrating from one auto unseal method to another never
    worked on enterprise, now it does.
@@ -223,8 +235,6 @@ BUG FIXES:
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
    viewed in the UI [GH-7504]
- * cli: Command timeouts are now always specified solely by the
-   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
 
 ## 1.2.3 (September 12, 2019)
 
