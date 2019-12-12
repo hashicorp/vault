@@ -524,6 +524,20 @@ func (c *AgentCommand) Run(args []string) int {
 	// Listen for signals
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
+	if len(config.Templates) > 0 && len(sinks) == 0 {
+		c.logger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+		inmemSink, err := inmem.New(&sink.SinkConfig{
+			Logger: c.logger,
+		}, nil)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+			return 1
+		}
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: c.logger,
+			Sink:   inmemSink,
+		})
+	}
 
 	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers

@@ -153,10 +153,8 @@ func LoadConfig(path string) (*Config, error) {
 		}
 	}
 
-	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
-		}
+	if err := validateSinks(result); err != nil {
+		return nil, errwrap.Wrapf("error validating Agent configuration: {{err}}", err)
 	}
 
 	err = parseVault(&result, list)
@@ -165,6 +163,21 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return &result, nil
+}
+
+func validateSinks(c Config) error {
+	if c.AutoAuth != nil {
+		if len(c.AutoAuth.Sinks) == 0 {
+			if len(c.Templates) > 0 {
+				return nil
+			}
+			if c.Cache == nil || !c.Cache.UseAutoAuthToken {
+				return fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+			}
+		}
+	}
+
+	return nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {
