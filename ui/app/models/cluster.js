@@ -72,7 +72,7 @@ export default DS.Model.extend({
   }),
 
   stateGlyph(state) {
-    const glyph = 'check-circled-outline';
+    const glyph = 'check-circle-outline';
 
     const glyphs = {
       'stream-wals': 'android-sync',
