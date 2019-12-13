@@ -450,8 +450,9 @@ can be set in a CSR are supported.
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
-  must match values specified on the role in `allowed_other_sans` (globbing
-  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules). 
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
@@ -612,8 +613,9 @@ need to request a new certificate.**
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
-  must match values specified on the role in `allowed_other_sans` (globbing
-  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules). 
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
@@ -791,12 +793,11 @@ request is denied.
   `spiffe://hostname/*`).
 
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
-  SANs. This field supports globbing. The format is the same as OpenSSL:
-  `<oid>;<type>:<value>` where the only current valid type is `UTF8` (or
-  `UTF-8`). This can be a comma-delimited list or a JSON string slice. All
-  values, including globbing values, must use the correct syntax, with the
-  exception being a single `*` which allows any OID and any value (but type
-  must still be UTF8).
+  SANs.  This can be a comma-delimited list or a JSON string slice, where 
+  each element has the same format as OpenSSL: `<oid>;<type>:<value>`, but 
+  the only valid type is `UTF8` or `UTF-8`.  The `value` part of an element
+  may be a `*` to allow any value with that OID.
+  Alternatively, specifying a single `*` will allow any `other_sans` input.
 
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
@@ -952,6 +953,7 @@ $ curl \
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
     "allowed_uri_sans": ["example.com","spiffe://*"],
+    "allowed_other_sans": ["1.3.6.1.4.1.311.20.2.3;utf8:devops@example.com","1.3.6.1.4.1.311.20.2.4;UTF-8:*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -1059,8 +1061,9 @@ overwrite the existing cert/key with new values.
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
-  must match values specified on the role in `allowed_other_sans` (globbing
-  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules). 
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
@@ -1217,8 +1220,9 @@ verbatim.
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
-  must match values specified on the role in `allowed_other_sans` (globbing
-  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules). 
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
@@ -1409,8 +1413,9 @@ root CA need be in a client's trust store.
   not match role policy, the entire request will be denied.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
-  must match values specified on the role in `allowed_other_sans` (globbing
-  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules). 
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
