@@ -18,14 +18,15 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.Skip()
 	}
-	cleanup, retAddress, token, mountPath, keyName, _ := docker.PrepareTestContainer(t)
-	defer cleanup()
+	vault := docker.PrepareTestVaultContainer(t)
+	defer vault.Cleanup()
+	vault.MountTransit(t)
 
 	sealConfig := map[string]string{
-		"address":    retAddress,
-		"token":      token,
-		"mount_path": mountPath,
-		"key_name":   keyName,
+		"address":    vault.RetAddress,
+		"token":      vault.Token,
+		"mount_path": vault.MountPath,
+		"key_name":   vault.KeyName,
 	}
 	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err := s.SetConfig(sealConfig)
@@ -54,13 +55,14 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.Skip()
 	}
-	cleanup, retAddress, token, mountPath, keyName, tlsConfig := docker.PrepareTestContainer(t)
-	defer cleanup()
+	vault := docker.PrepareTestVaultContainer(t)
+	defer vault.Cleanup()
+	vault.MountTransit(t)
 
 	clientConfig := &api.Config{
-		Address: retAddress,
+		Address: vault.RetAddress,
 	}
-	if err := clientConfig.ConfigureTLS(tlsConfig); err != nil {
+	if err := clientConfig.ConfigureTLS(vault.TLSConfig); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -68,7 +70,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	remoteClient.SetToken(token)
+	remoteClient.SetToken(vault.Token)
 
 	req := &api.TokenCreateRequest{
 		Period: "5s",
@@ -79,10 +81,10 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 
 	sealConfig := map[string]string{
-		"address":    retAddress,
+		"address":    vault.RetAddress,
 		"token":      rsp.Auth.ClientToken,
-		"mount_path": mountPath,
-		"key_name":   keyName,
+		"mount_path": vault.MountPath,
+		"key_name":   vault.KeyName,
 	}
 	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err = s.SetConfig(sealConfig)

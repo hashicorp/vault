@@ -12,6 +12,16 @@ import (
 	"github.com/ory/dockertest"
 )
 
+type TestVaultContainer struct {
+	Cleanup    func()
+	RetAddress string
+	Token      string
+	MountPath  string
+	KeyName    string
+	TLSConfig  *api.TLSConfig
+	Pool       *dockertest.Pool
+}
+
 func CleanupResource(t testing.T, pool *dockertest.Pool, resource *dockertest.Resource) {
 	var err error
 	for i := 0; i < 10; i++ {
@@ -28,21 +38,23 @@ func CleanupResource(t testing.T, pool *dockertest.Pool, resource *dockertest.Re
 	t.Fatalf("Failed to cleanup local container: %s", err)
 }
 
-func PrepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, mountPath, keyName string, tlsConfig *api.TLSConfig) {
-	testToken, err := uuid.GenerateUUID()
+func PrepareTestVaultContainer(t *testing.T) *TestVaultContainer {
+	ret := &TestVaultContainer{}
+	var err error
+	ret.Token, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	testMountPath, err := uuid.GenerateUUID()
+	ret.MountPath, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	testKeyName, err := uuid.GenerateUUID()
+	ret.KeyName, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	pool, err := dockertest.NewPool("")
+	ret.Pool, err = dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
@@ -50,52 +62,54 @@ func PrepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "vault",
 		Tag:        "latest",
-		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", testToken),
+		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", ret.Token),
 			"-dev-listen-address=0.0.0.0:8200"},
 	}
-	resource, err := pool.RunWithOptions(dockerOptions)
+	resource, err := ret.Pool.RunWithOptions(dockerOptions)
 	if err != nil {
 		t.Fatalf("Could not start local Vault docker container: %s", err)
 	}
 
-	cleanup = func() {
-		CleanupResource(*t, pool, resource)
+	ret.Cleanup = func() {
+		CleanupResource(*t, ret.Pool, resource)
 	}
 
-	retAddress = fmt.Sprintf("http://127.0.0.1:%s", resource.GetPort("8200/tcp"))
-	tlsConfig = &api.TLSConfig{
+	ret.RetAddress = fmt.Sprintf("http://127.0.0.1:%s", resource.GetPort("8200/tcp"))
+	ret.TLSConfig = &api.TLSConfig{
 		Insecure: true,
 	}
 
+	return ret
+}
+
+func (tv *TestVaultContainer) MountTransit(t *testing.T) {
 	// exponential backoff-retry
-	if err = pool.Retry(func() error {
+	if err := tv.Pool.Retry(func() error {
 		vaultConfig := api.DefaultConfig()
-		vaultConfig.Address = retAddress
-		if err := vaultConfig.ConfigureTLS(tlsConfig); err != nil {
+		vaultConfig.Address = tv.RetAddress
+		if err := vaultConfig.ConfigureTLS(tv.TLSConfig); err != nil {
 			return err
 		}
 		vault, err := api.NewClient(vaultConfig)
 		if err != nil {
 			return err
 		}
-		vault.SetToken(testToken)
+		vault.SetToken(tv.Token)
 
-		// Set up transit
-		if err := vault.Sys().Mount(testMountPath, &api.MountInput{
+		// Set up mount
+		if err := vault.Sys().Mount(tv.MountPath, &api.MountInput{
 			Type: "transit",
 		}); err != nil {
 			return err
 		}
-
 		// Create default aesgcm key
-		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", testKeyName), map[string]interface{}{}); err != nil {
+		if _, err := vault.Logical().Write(path.Join(tv.MountPath, "keys", tv.KeyName), map[string]interface{}{}); err != nil {
 			return err
 		}
 
 		return nil
 	}); err != nil {
-		cleanup()
+		tv.Cleanup()
 		t.Fatalf("Could not connect to vault: %s", err)
 	}
-	return cleanup, retAddress, testToken, testMountPath, testKeyName, tlsConfig
 }
