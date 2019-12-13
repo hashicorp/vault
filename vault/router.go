@@ -416,7 +416,7 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
-	if !ok {
+	if !ok || raw.(*routeEntry).backend == nil {
 		return nil
 	}
 	return raw.(*routeEntry).backend.System()

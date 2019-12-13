@@ -1,8 +1,8 @@
 ---
 layout: "docs"
-page_title: "Vault Agent Templates"
-sidebar_title: "TemplatesAuto-Auth"
-sidebar_current: "docs-agent-templates"
+page_title: "Vault Agent Template"
+sidebar_title: "Templates"
+sidebar_current: "docs-agent-template"
 description: |-
   Vault Agent's Template functionality allows Vault secrets to be rendered to files 
   using Consul Template markup.
@@ -11,7 +11,7 @@ description: |-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files 
-using Consul Template markup.
+using [Consul Template markup](https://github.com/hashicorp/consul-template#templating-language).
 
 ## Functionality
 
@@ -48,7 +48,7 @@ exit code. Vault Agent is not a replacement for a process monitor or init system
 - `command_timeout` `(object: optional)` - This is the maximum amount of time to 
 wait for the optional command to return. Default is 30s.
 - `error_on_missing_key` `(object: optional)` - Exit with an error when accessing 
-a struct or map field/key that does notexist. The default behavior will print "<no value>" 
+a struct or map field/key that does notexist. The default behavior will print `<no value>` 
 when accessing a field that does not exist. It is highly recommended you set this 
 to "true". 
 - `perms` `(object: optional)` - This is the permission to render the file. If 
@@ -73,7 +73,7 @@ a new template to disk and triggering a command, separated by a colon (`:`).
 
 ## Example Template
 
-Template with Vault Agent requires the use of the `secret` function from Consul Template.  
+Template with Vault Agent requires the use of the `secret` [function from Consul Template](https://github.com/hashicorp/consul-template#secret).  
 The following is an example of a template that retrieves a generic secret from Vault's 
 KV store:
 
