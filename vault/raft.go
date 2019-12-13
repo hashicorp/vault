@@ -744,7 +744,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 				if err == nil {
 					return
 				}
-				c.logger.Error("retry raft join after 5 seconds", "error", err)
+				c.logger.Error("failed to join raft cluster", "error", err, "retry", "5s")
 				time.Sleep(time.Second * 5)
 			}
 		}()
