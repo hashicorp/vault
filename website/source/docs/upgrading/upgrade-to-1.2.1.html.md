@@ -1,0 +1,24 @@
+---
+layout: "docs"
+page_title: "Upgrading to Vault 1.2.1 - Guides"
+sidebar_title: "Upgrade to 1.2.1"
+sidebar_current: "docs-upgrading-to-1.2.1"
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.2.1. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.2.1 compared to 1.2.0. Please read it carefully.
+
+## Known Issues
+
+### AppRole Upgrade Issue
+
+Vault 1.2.1 contains a known issue where an existing AppRole role
+may not be read or updated under a specific scenario. The role in 
+question needs to have been created before Vault 1.0.0, and then updated 
+between 1.0.0 and 1.1.5. If using AppRole, do not upgrade to until 
+his issue is fixed in 1.2.2.

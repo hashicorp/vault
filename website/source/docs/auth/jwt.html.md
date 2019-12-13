@@ -136,8 +136,8 @@ be set up depending on the installation.
 
 If you plan to support authentication via `vault login -method=oidc`, a localhost redirect URI
 must be set. This can usually be: `http://localhost:8250/oidc/callback`. Logins via the CLI may
-specify a different listening port if needed, and a URI with this port must match one of the
-configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
+specify a different host and/or listening port if needed, and a URI with this host/port must match one
+of the configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
 
 **Vault UI**
 
@@ -160,8 +160,7 @@ they must be added as query parameters, for example:
 ### OIDC Login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI. The default local listening port is 8250. This
-can be changed with the `port` option.
+different path, specify `-path=/my-path` in the CLI.
 
 ```text
 $ vault login -method=oidc port=8400 role=test
@@ -173,6 +172,11 @@ Complete the login via your OIDC provider. Launching browser to:
 
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
+
+The callback listener may be customized with the following optional parameters:
+
+* `callbackhost` (default: "localhost")
+* `port` (default: 8250)
 
 ### OIDC Provider Configuration
 
@@ -201,7 +205,11 @@ construct a simple `curl` implicit grant request to obtain a JWT that you can in
 of how to decode the JWT (in this case located in the "access_token" field of a JSON response):
 
 `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
-
+- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt/index.html#verbose_oidc_logging) role
+option is available which will log the received OIDC token if debug-level logging is enabled. This can
+be helpful when debugging provider setup and verifying that the received claims are what you expect.
+Since claims data is logged verbatim and may contain sensitive information, this option should not be
+used in production.
 
 ## JWT Authentication
 

@@ -73,10 +73,28 @@ module('Unit | Lib | console helpers', function() {
       name: 'write with unmatched quotes',
       command: `vault write \
       auth/token/create \
-      policies='foo
+      policies="'foo"
       `,
       expected: ['write', [], 'auth/token/create', ["policies='foo"]],
     },
+    {
+      name: 'write with shell characters',
+      /* eslint-disable no-useless-escape */
+      command: `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" default_ttl=1h max_ttl=24h
+      `,
+      expected: [
+        'write',
+        [],
+        'database/roles/api-prod',
+        [
+          'db_name=apiprod',
+          `creation_statements=CREATE ROLE {{name}} WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{name}};`,
+          'default_ttl=1h',
+          'max_ttl=24h',
+        ],
+      ],
+    },
+
     {
       name: 'read with field',
       command: `vault read -field=access_key aws/creds/my-role`,

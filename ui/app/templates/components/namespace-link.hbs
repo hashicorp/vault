@@ -1,11 +1,13 @@
-{{#link-to "vault.cluster.secrets" (query-params namespace=normalizedNamespace)
-  class=(concat "is-block " class)
-}}
+<LinkTo
+  @params={{array "vault.cluster.secrets" (query-params namespace=this.normalizedNamespace)}}
+  class={{concat "is-block " class}}
+  data-test-namespace-link={{this.normalizedNamespace}}
+  >
   {{#if (has-block)}}
     {{yield}}
   {{else}}
     <div class="level is-mobile">
-      <span class="level-left">{{namespaceDisplay}}</span>
+      <span class="level-left">{{this.namespaceDisplay}}</span>
       <span class="level-right">
         <button type="button" class="button is-ghost icon">
           <Chevron @isButton={{true}} class="has-text-grey" />
@@ -13,4 +15,4 @@
       </span>
     </div>
   {{/if}}
-{{/link-to}}
+</LinkTo>

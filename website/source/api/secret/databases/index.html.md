@@ -300,7 +300,7 @@ $ curl \
 ```json
 {
     "data": {
-		"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"], "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
+		"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';", "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
 		"db_name": "mysql",
 		"default_ttl": 3600,
 		"max_ttl": 86400,

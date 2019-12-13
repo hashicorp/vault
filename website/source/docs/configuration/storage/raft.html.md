@@ -15,6 +15,9 @@ description: |-
 
 # Raft Storage Backend
 
+~> **NOTE:** Vault's Integrated Storage is currently a ***Beta***
+feature and not recommended for deployment in production.
+
 The Raft storage backend is used to persist Vault's data. Unlike other storage
 backends, Raft storage does not operate from a single source of data. Instead
 all the nodes in a Vault cluster will have a replicated copy of Vault's data.
@@ -41,7 +44,9 @@ cluster_addr = "http://127.0.0.1:8201"
 
 - `path` `(string: "")` – The file system path where all the Vault data gets
   stored.
+  This value can be overridden by setting the `VAULT_RAFT_PATH` environment variable.
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
+  This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
 
 [raft]: https://raft.github.io/ "The Raft Consensus Algorithm"

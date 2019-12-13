@@ -19,15 +19,15 @@ Vault instance.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `HEAD`   | `/sys/health`                | `000 (empty body)`     |
-| `GET`    | `/sys/health`                | `000 application/json` |
+| `HEAD`   | `/sys/health`                | 
+| `GET`    | `/sys/health`                | 
 
 The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
-- `472` if data recovery mode replication secondary and active
-- `473` if performance standby 
+- `472` if disaster recovery mode replication secondary and active
+- `473` if performance standby
 - `501` if not initialized
 - `503` if sealed
 
@@ -35,12 +35,12 @@ The default status codes are:
 
 - `standbyok` `(bool: false)` – Specifies if being a standby should still return
   the active status code instead of the standby status code. This is useful when
-  Vault is behind a non-configurable load balance that just wants a 200-level
+  Vault is behind a non-configurable load balancer that just wants a 200-level
   response. This will not apply if the node is a performance standby.
-  
+
 - `perfstandbyok` `(bool: false)` – Specifies if being a performance standby should
   still return the active status code instead of the performance standby status code.
-  This is useful when Vault is behind a non-configurable load balance that just wants
+  This is useful when Vault is behind a non-configurable load balancer that just wants
   a 200-level response.
 
 - `activecode` `(int: 200)` – Specifies the status code that should be returned

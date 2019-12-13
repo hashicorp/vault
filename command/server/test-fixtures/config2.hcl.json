@@ -25,6 +25,11 @@
       "disable_clustering": "true"
     }
   },
+  "service_registration":{
+    "consul":{
+      "foo":"bar"
+    }
+  },
   "cache_size": 45678,
   "telemetry":{
     "statsd_address":"bar",
@@ -44,5 +49,10 @@
     "circonus_broker_id": "0",
     "circonus_broker_select_tag": "dc:sfo",
     "prometheus_retention_time": "30s"
+  },
+  "entropy": {
+    "seal": {
+      "mode": "augmentation"
+    }
   }
 }

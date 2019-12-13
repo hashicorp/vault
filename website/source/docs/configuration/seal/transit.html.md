@@ -87,7 +87,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates.
   Using this option is highly discouraged and decreases the security of data
   transmissions to and from the Vault server.  This may also be specified using the
-  `VAULT_TLS_SKIP_VERIFY` environment variable.
+  `VAULT_SKIP_VERIFY` environment variable.
 
 ## Authentication
 
@@ -116,3 +116,8 @@ path "<mount path>/decrypt/<key name>" {
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints.  See
 [doc](/api/secret/transit/index.html#rotate-key). Old keys must not be disabled or deleted and are
 used to decrypt older data.
+
+## Learn
+
+Refer to the [Auto-unseal using Transit Secrets Engine](https://learn.hashicorp.com/vault/operations/autounseal-transit)
+guide for a step-by-step tutorial.

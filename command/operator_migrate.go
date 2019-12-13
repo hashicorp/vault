@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
@@ -41,6 +43,7 @@ type OperatorMigrateCommand struct {
 type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
+	ClusterAddr        string          `hcl:"cluster_addr"`
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -155,7 +158,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return nil
 	}
 
-	to, err := c.newBackend(config.StorageDestination.Type, config.StorageDestination.Config)
+	to, err := c.createDestinationBackend(config.StorageDestination.Type, config.StorageDestination.Config, config)
 	if err != nil {
 		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
 	}
@@ -226,6 +229,46 @@ func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string)
 	}
 
 	return factory(conf, c.logger)
+}
+
+func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[string]string, config *migratorConfig) (physical.Backend, error) {
+	storage, err := c.newBackend(kind, conf)
+	if err != nil {
+		return nil, err
+	}
+
+	switch kind {
+	case "raft":
+		if len(config.ClusterAddr) == 0 {
+			return nil, errors.New("cluster_addr config not set")
+		}
+
+		raftStorage, ok := storage.(*raft.RaftBackend)
+		if !ok {
+			return nil, errors.New("wrong storage type for raft backend")
+		}
+
+		parsedClusterAddr, err := url.Parse(config.ClusterAddr)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+		}
+		if err := raftStorage.Bootstrap(context.Background(), []raft.Peer{
+			{
+				ID:      raftStorage.NodeID(),
+				Address: parsedClusterAddr.Host,
+			},
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+		}
+
+		if err := raftStorage.SetupCluster(context.Background(), raft.SetupOpts{
+			StartAsLeader: true,
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+		}
+	}
+
+	return storage, nil
 }
 
 // loadMigratorConfig loads the configuration at the given path

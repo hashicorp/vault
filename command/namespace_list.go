@@ -21,13 +21,13 @@ func (c *NamespaceListCommand) Synopsis() string {
 
 func (c *NamespaceListCommand) Help() string {
 	helpText := `
-Usage: vault namespaces list [options]
+Usage: vault namespace list [options]
 
   Lists the enabled child namespaces.
 
   List all enabled child namespaces:
 
-      $ vault namespaces list
+      $ vault namespace list
 
 ` + c.Flags().Help()
 
@@ -74,7 +74,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 
 	_, ok := extractListData(secret)
 	if Format(c.UI) != "table" {
-		if secret == nil || secret.Data != nil || !ok {
+		if secret == nil || secret.Data == nil || !ok {
 			OutputData(c.UI, map[string]interface{}{})
 			return 2
 		}

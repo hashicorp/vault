@@ -93,7 +93,8 @@ LANGUAGE plpgsql;
 ## `postgresql` Parameters
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
-  use to authenticate and connect to PostgreSQL. A full list of supported
+  use to authenticate and connect to PostgreSQL. The connection URL can also be
+  set using the `VAULT_PG_CONNECTION_URL` environment variable. A full list of supported
   parameters can be found in [the pq library documentation][pglib]. For example
   connection string URLs, see the examples section below.
 
@@ -110,6 +111,10 @@ LANGUAGE plpgsql;
   requests to PostgreSQL.
 
 - `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
+
+- `ha_table` `(string: "vault_ha_locks")` – Specifies the name of the table to use
+  for storing high availability information. This table must already exist (Vault
+  will not attempt to create it).
 
 ## `postgresql` Examples
 

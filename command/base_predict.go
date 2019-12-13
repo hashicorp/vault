@@ -157,6 +157,17 @@ func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
 	return NewPredict().VaultPolicies()
 }
 
+func (b *BaseCommand) PredictVaultDebugTargets() complete.Predictor {
+	return complete.PredictSet(
+		"config",
+		"host",
+		"metrics",
+		"pprof",
+		"replication-status",
+		"server-status",
+	)
+}
+
 // VaultFiles returns a predictor for Vault "files". This is a public API for
 // consumers, but you probably want BaseCommand.PredictVaultFiles instead.
 func (p *Predict) VaultFiles() complete.Predictor {

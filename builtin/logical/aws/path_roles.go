@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -36,7 +37,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("name"),
+		Pattern: "roles/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -60,8 +61,11 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"policy_arns": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+				Type: framework.TypeCommaStringSlice,
+				Description: fmt.Sprintf(`ARNs of AWS policies. Behavior varies by credential_type. When credential_type is
+%s, then it will attach the specified policies to the generated IAM user.
+When credential_type is %s or %s, the policies will be passed as the
+PolicyArns parameter, acting as a filter on permissions available.`, iamUserCred, assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Policy ARNs",
 				},
@@ -89,6 +93,14 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Max STS TTL",
+				},
+			},
+
+			"permissions_boundary_arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "ARN of an IAM policy to attach as a permissions boundary on IAM user credentials; only valid when credential_type is" + iamUserCred,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Permissions Boundary ARN",
 				},
 			},
 
@@ -212,12 +224,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with an explicit credential_type"), nil
 		}
-		credentialType := credentialTypeRaw.(string)
-		allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
-		if !strutil.StrListContains(allowedCredentialTypes, credentialType) {
-			return logical.ErrorResponse(fmt.Sprintf("unrecognized credential_type: %q, not one of %#v", credentialType, allowedCredentialTypes)), nil
-		}
-		roleEntry.CredentialTypes = []string{credentialType}
+		roleEntry.CredentialTypes = []string{credentialTypeRaw.(string)}
 	}
 
 	if roleArnsRaw, ok := d.GetOk("role_arns"); ok {
@@ -252,9 +259,6 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with default_sts_ttl"), nil
 		}
-		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
-			return logical.ErrorResponse(fmt.Sprintf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
-		}
 		roleEntry.DefaultSTSTTL = time.Duration(defaultSTSTTLRaw.(int)) * time.Second
 	}
 
@@ -262,10 +266,6 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with max_sts_ttl"), nil
 		}
-		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
-			return logical.ErrorResponse(fmt.Sprintf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
-		}
-
 		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
 	}
 
@@ -273,20 +273,15 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with user_path"), nil
 		}
-		if !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
-			return logical.ErrorResponse(fmt.Sprintf("user_path parameter only valid for %s credential type", iamUserCred)), nil
-		}
-		if !userPathRegex.MatchString(userPathRaw.(string)) {
-			return logical.ErrorResponse(fmt.Sprintf("The specified value for user_path is invalid. It must match '%s' regexp", userPathRegex.String())), nil
-		}
 
 		roleEntry.UserPath = userPathRaw.(string)
 	}
 
-	if roleEntry.MaxSTSTTL > 0 &&
-		roleEntry.DefaultSTSTTL > 0 &&
-		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
-		return logical.ErrorResponse(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`), nil
+	if permissionsBoundaryARNRaw, ok := d.GetOk("permissions_boundary_arn"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with permissions_boundary_arn"), nil
+		}
+		roleEntry.PermissionsBoundaryARN = permissionsBoundaryARNRaw.(string)
 	}
 
 	if legacyRole != "" {
@@ -299,15 +294,9 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.ProhibitFlexibleCredPath = false
 	}
 
-	if len(roleEntry.CredentialTypes) == 0 {
-		return logical.ErrorResponse("did not supply credential_type"), nil
-	}
-
-	if len(roleEntry.RoleArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) {
-		return logical.ErrorResponse(fmt.Sprintf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred)), nil
-	}
-	if len(roleEntry.PolicyArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
-		return logical.ErrorResponse(fmt.Sprintf("cannot supply policy_arns when credential_type isn't %s", iamUserCred)), nil
+	err = roleEntry.validate()
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error(s) validating supplied role data: %q", err)), nil
 	}
 
 	err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
@@ -440,6 +429,20 @@ func upgradeLegacyPolicyEntry(entry string) *awsRoleEntry {
 	return newRoleEntry
 }
 
+func validateAWSManagedPolicy(policyARN string) error {
+	parsedARN, err := arn.Parse(policyARN)
+	if err != nil {
+		return err
+	}
+	if parsedARN.Service != "iam" {
+		return fmt.Errorf("expected a service of iam but got %s", parsedARN.Service)
+	}
+	if !strings.HasPrefix(parsedARN.Resource, "policy/") {
+		return fmt.Errorf("expected a resource type of policy but got %s", parsedARN.Resource)
+	}
+	return nil
+}
+
 func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("empty role name")
@@ -471,23 +474,78 @@ type awsRoleEntry struct {
 	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string        `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
+	PermissionsBoundaryARN   string        `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 	respData := map[string]interface{}{
-		"credential_type": strings.Join(r.CredentialTypes, ","),
-		"policy_arns":     r.PolicyArns,
-		"role_arns":       r.RoleArns,
-		"policy_document": r.PolicyDocument,
-		"default_sts_ttl": int64(r.DefaultSTSTTL.Seconds()),
-		"max_sts_ttl":     int64(r.MaxSTSTTL.Seconds()),
-		"user_path":       r.UserPath,
+		"credential_type":          strings.Join(r.CredentialTypes, ","),
+		"policy_arns":              r.PolicyArns,
+		"role_arns":                r.RoleArns,
+		"policy_document":          r.PolicyDocument,
+		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
+		"user_path":                r.UserPath,
+		"permissions_boundary_arn": r.PermissionsBoundaryARN,
 	}
 
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData
 	}
 	return respData
+}
+
+func (r *awsRoleEntry) validate() error {
+	var errors *multierror.Error
+
+	if len(r.CredentialTypes) == 0 {
+		errors = multierror.Append(errors, fmt.Errorf("did not supply credential_type"))
+	}
+
+	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
+	for _, credType := range r.CredentialTypes {
+		if !strutil.StrListContains(allowedCredentialTypes, credType) {
+			errors = multierror.Append(errors, fmt.Errorf("unrecognized credential type: %s", credType))
+		}
+	}
+
+	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	}
+
+	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	}
+
+	if r.MaxSTSTTL > 0 &&
+		r.DefaultSTSTTL > 0 &&
+		r.DefaultSTSTTL > r.MaxSTSTTL {
+		errors = multierror.Append(errors, fmt.Errorf(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
+	}
+
+	if r.UserPath != "" {
+		if !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
+			errors = multierror.Append(errors, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
+		}
+		if !userPathRegex.MatchString(r.UserPath) {
+			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match '%s' regexp", userPathRegex.String()))
+		}
+	}
+
+	if r.PermissionsBoundaryARN != "" {
+		if !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
+			errors = multierror.Append(errors, fmt.Errorf("cannot supply permissions_boundary_arn when credential_type isn't %s", iamUserCred))
+		}
+		if err := validateAWSManagedPolicy(r.PermissionsBoundaryARN); err != nil {
+			errors = multierror.Append(fmt.Errorf("invalid permissions_boundary_arn parameter: %v", err))
+		}
+	}
+
+	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred))
+	}
+
+	return errors.ErrorOrNil()
 }
 
 func compactJSON(input string) (string, error) {

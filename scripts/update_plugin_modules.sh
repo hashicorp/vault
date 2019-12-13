@@ -20,7 +20,7 @@ do
 		git clone https://github.com/hashicorp/$plugin
 		cd $plugin
 		rm -rf vendor
-		go get github.com/hashicorp/vault/api@master
+		go get github.com/hashicorp/vault/api${API_BRANCH}
 		go mod tidy
 		go mod vendor
 		git add .
@@ -42,7 +42,7 @@ rm -rf vendor
 go mod vendor
 git add .
 git commit --allow-empty -m "Updating plugin deps"
-if [ ! -z $PUSH_COMMITS ]
+if [ ! -z $PUSH_VAULT_COMMIT ]
 then
 	git push
 fi

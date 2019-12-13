@@ -25,6 +25,7 @@
     {{#if model.updatePath.canUpdate}}
       <ToolbarLink
         @params={{array "role.edit" this.scope this.role}}
+        data-test-kmip-link-edit-role
       >
         Edit role
       </ToolbarLink>
@@ -33,4 +34,10 @@
 </Toolbar>
 <div class="box is-fullwidth is-sideless is-shadowless">
   <FieldGroupShow @model={{model}} @showAllFields={{false}} />
+  <div class="box is-fullwidth is-shadowless">
+    <h2 class="title is-5">
+      Allowed Operations
+    </h2>
+    <OperationFieldDisplay @model={{this.model}} />
+  </div>
 </div>

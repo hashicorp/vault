@@ -4,6 +4,7 @@ package prometheus
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 )
 
 var (
@@ -191,4 +193,59 @@ func (p *PrometheusSink) IncrCounterWithLabels(parts []string, val float32, labe
 	}
 	g.Add(float64(val))
 	p.updates[hash] = time.Now()
+}
+
+type PrometheusPushSink struct {
+	*PrometheusSink
+	pusher       *push.Pusher
+	address      string
+	pushInterval time.Duration
+	stopChan     chan struct{}
+}
+
+func NewPrometheusPushSink(address string, pushIterval time.Duration, name string) (*PrometheusPushSink, error) {
+
+	promSink := &PrometheusSink{
+		gauges:     make(map[string]prometheus.Gauge),
+		summaries:  make(map[string]prometheus.Summary),
+		counters:   make(map[string]prometheus.Counter),
+		updates:    make(map[string]time.Time),
+		expiration: 60 * time.Second,
+	}
+
+	pusher := push.New(address, name).Collector(promSink)
+
+	sink := &PrometheusPushSink{
+		promSink,
+		pusher,
+		address,
+		pushIterval,
+		make(chan struct{}),
+	}
+
+	sink.flushMetrics()
+	return sink, nil
+}
+
+func (s *PrometheusPushSink) flushMetrics() {
+	ticker := time.NewTicker(s.pushInterval)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				err := s.pusher.Push()
+				if err != nil {
+					log.Printf("[ERR] Error pushing to Prometheus! Err: %s", err)
+				}
+			case <-s.stopChan:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+func (s *PrometheusPushSink) Shutdown() {
+	close(s.stopChan)
 }

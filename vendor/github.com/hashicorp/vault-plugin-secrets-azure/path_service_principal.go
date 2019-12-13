@@ -91,7 +91,7 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 }
 
 // createSPSecret generates a new App/Service Principal.
-func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
+func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
 	// Create the App, which is the top level object to be tracked in the secret
 	// and deleted upon revocation. If any subsequent step fails, the App is deleted.
 	app, err := c.createApp(ctx)
@@ -115,21 +115,29 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, role
 		return nil, err
 	}
 
+	// Assign Azure group memberships to the new SP
+	if err := c.addGroupMemberships(ctx, sp, role.AzureGroups); err != nil {
+		c.deleteApp(ctx, appObjID)
+		return nil, err
+	}
+
 	data := map[string]interface{}{
 		"client_id":     appID,
 		"client_secret": password,
 	}
 	internalData := map[string]interface{}{
-		"app_object_id":       appObjID,
-		"role_assignment_ids": raIDs,
-		"role":                roleName,
+		"app_object_id":        appObjID,
+		"sp_object_id":         sp.ObjectID,
+		"role_assignment_ids":  raIDs,
+		"group_membership_ids": groupObjectIDs(role.AzureGroups),
+		"role":                 roleName,
 	}
 
 	return b.Secret(SecretTypeSP).Response(data, internalData), nil
 }
 
 // createStaticSPSecret adds a new password to the App associated with the role.
-func (b *azureSecretBackend) createStaticSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
+func (b *azureSecretBackend) createStaticSPSecret(ctx context.Context, c *client, roleName string, role *roleEntry) (*logical.Response, error) {
 	lock := locksutil.LockForKey(b.appLocks, role.ApplicationObjectID)
 	lock.Lock()
 	defer lock.Unlock()
@@ -184,11 +192,29 @@ func (b *azureSecretBackend) spRevoke(ctx context.Context, req *logical.Request,
 
 	appObjectID := appObjectIDRaw.(string)
 
+	// Get the service principal object ID. Only set if using dynamic service
+	// principals.
+	var spObjectID string
+	if spObjectIDRaw, ok := req.Secret.InternalData["sp_object_id"]; ok {
+		spObjectID = spObjectIDRaw.(string)
+	}
+
 	var raIDs []string
 	if req.Secret.InternalData["role_assignment_ids"] != nil {
 		for _, v := range req.Secret.InternalData["role_assignment_ids"].([]interface{}) {
 			raIDs = append(raIDs, v.(string))
 		}
+	}
+
+	var gmIDs []string
+	if req.Secret.InternalData["group_membership_ids"] != nil {
+		for _, v := range req.Secret.InternalData["group_membership_ids"].([]interface{}) {
+			gmIDs = append(gmIDs, v.(string))
+		}
+	}
+
+	if len(gmIDs) != 0 && spObjectID == "" {
+		return nil, errors.New("internal data 'sp_object_id' not found")
 	}
 
 	c, err := b.getClient(ctx, req.Storage)
@@ -199,6 +225,13 @@ func (b *azureSecretBackend) spRevoke(ctx context.Context, req *logical.Request,
 	// unassigning roles is effectively a garbage collection operation. Errors will be noted but won't fail the
 	// revocation process. Deleting the app, however, *is* required to consider the secret revoked.
 	if err := c.unassignRoles(ctx, raIDs); err != nil {
+		resp.AddWarning(err.Error())
+	}
+
+	// removing group membership is effectively a garbage collection
+	// operation. Errors will be noted but won't fail the revocation process.
+	// Deleting the app, however, *is* required to consider the secret revoked.
+	if err := c.removeGroupMemberships(ctx, spObjectID, gmIDs); err != nil {
 		resp.AddWarning(err.Error())
 	}
 

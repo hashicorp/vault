@@ -55,7 +55,7 @@ consumer of this secret must renew the lease within that time.
 When renewing the lease, the user can request a specific amount of time they
 want remaining on the lease, termed the `increment`. This is not an increment
 at the end of the current TTL; it is an increment _from the current time_. For
-example, `vault renew my-lease-id 3600` would request that the TTL of the lease
+example, `vault lease renew -increment=3600 my-lease-id` would request that the TTL of the lease
 be adjusted to 1 hour (3600 seconds). Having the increment be rooted at the
 current time instead of the end of the lease makes it easy for users to reduce
 the length of leases if they don't actually need credentials for the full

@@ -29,6 +29,10 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
+	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+}
+
+func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:  "raft",
 		Level: hclog.Trace,
@@ -56,9 +60,15 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 			t.Fatal(err)
 		}
 
-		err = backend.SetupCluster(context.Background(), nil, nil)
+		err = backend.SetupCluster(context.Background(), SetupOpts{})
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		for {
+			if backend.AppliedIndex() >= 2 {
+				break
+			}
 		}
 
 	}
@@ -216,7 +226,7 @@ func TestRaft_Recovery(t *testing.T) {
 	type RecoveryPeer struct {
 		ID       string `json:"id"`
 		Address  string `json:"address"`
-		NonVoter bool   `json: non_voter`
+		NonVoter bool   `json:"non_voter"`
 	}
 
 	// Leave out node 1 during recovery
@@ -255,9 +265,9 @@ func TestRaft_Recovery(t *testing.T) {
 	}
 
 	// Bring up the nodes again
-	raft1.SetupCluster(context.Background(), nil, nil)
-	raft2.SetupCluster(context.Background(), nil, nil)
-	raft4.SetupCluster(context.Background(), nil, nil)
+	raft1.SetupCluster(context.Background(), SetupOpts{})
+	raft2.SetupCluster(context.Background(), SetupOpts{})
+	raft4.SetupCluster(context.Background(), SetupOpts{})
 
 	peers, err := raft1.Peers(context.Background())
 	if err != nil {

@@ -13,11 +13,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathTidyIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathTidyIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/identity-whitelist$",
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 259200,
 				Description: `The amount of extra time that must have passed beyond the identity's
@@ -25,8 +25,10 @@ expiration, before it is removed from the backend storage.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidyIdentityWhitelistUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathTidyIdentityWhitelistUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathTidyIdentityWhitelistSyn,

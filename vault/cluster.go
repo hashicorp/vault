@@ -37,7 +37,8 @@ const (
 )
 
 var (
-	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForward          = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForwardLocalOnly = errors.New("cannot forward local-only request")
 )
 
 type ClusterLeaderParams struct {
@@ -204,7 +205,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		// Create a private key
 		if c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey) == nil {
 			c.logger.Debug("generating cluster private key")
-			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+			key, err := ecdsa.GenerateKey(elliptic.P521(), c.secureRandomReader)
 			if err != nil {
 				c.logger.Error("failed to generate local cluster key", "error", err)
 				return err
@@ -289,7 +290,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		return nil
 	}
 
-	if c.clusterListener != nil {
+	if c.getClusterListener() != nil {
 		c.logger.Warn("cluster listener is already started")
 		return nil
 	}
@@ -301,15 +302,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	c.clusterListener = cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener"))
+	c.clusterListener.Store(cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
 
-	err := c.clusterListener.Run(ctx)
+	err := c.getClusterListener().Run(ctx)
 	if err != nil {
 		return err
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0]))
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addrs()[0]))
 	}
 	return nil
 }
@@ -318,18 +319,28 @@ func (c *Core) ClusterAddr() string {
 	return c.clusterAddr.Load().(string)
 }
 
+func (c *Core) getClusterListener() *cluster.Listener {
+	cl := c.clusterListener.Load()
+	if cl == nil {
+		return nil
+	}
+	return cl.(*cluster.Listener)
+}
+
 // stopClusterListener stops any existing listeners during seal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
-	if c.clusterListener == nil {
+	clusterListener := c.getClusterListener()
+	if clusterListener == nil {
 		c.logger.Debug("clustering disabled, not stopping listeners")
 		return
 	}
 
 	c.logger.Info("stopping cluster listeners")
 
-	c.clusterListener.Stop()
-	c.clusterListener = nil
+	clusterListener.Stop()
+	var nilCL *cluster.Listener
+	c.clusterListener.Store(nilCL)
 
 	c.logger.Info("cluster listeners successfully shut down")
 }
@@ -350,11 +361,12 @@ func (c *Core) SetClusterHandler(handler http.Handler) {
 // NextProtos.
 func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		if c.clusterListener == nil {
+		clusterListener := c.getClusterListener()
+		if clusterListener == nil {
 			return nil, errors.New("clustering disabled")
 		}
 
-		tlsConfig, err := c.clusterListener.TLSConfig(ctx)
+		tlsConfig, err := clusterListener.TLSConfig(ctx)
 		if err != nil {
 			c.logger.Error("failed to get tls configuration", "error", err)
 			return nil, err

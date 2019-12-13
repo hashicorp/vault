@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -85,15 +86,15 @@ func Backend() *backend {
 	return b
 }
 
-// IAMClient returns a new IAM client. The client is cached.
-func (b *backend) IAMClient(s logical.Storage) (*iam.Service, error) {
+// IAMAdminClient returns a new IAM client. The client is cached.
+func (b *backend) IAMAdminClient(s logical.Storage) (*iam.Service, error) {
 	httpClient, err := b.HTTPClient(s)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create IAM HTTP client: {{err}}", err)
 	}
 
 	client, err := b.cache.Fetch("iam", cacheTime, func() (interface{}, error) {
-		client, err := iam.New(httpClient)
+		client, err := iam.NewService(context.Background(), option.WithHTTPClient(httpClient))
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to create IAM client: {{err}}", err)
 		}

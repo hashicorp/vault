@@ -34,6 +34,7 @@ export default function attachCapabilities(modelClass, capabilities) {
     return ret;
   }, {});
 
+  //TODO: move this to the application serializer and do it JIT instead of on app boot
   debug(`adding new relationships: ${capabilityKeys.join(', ')} to ${modelClass.toString()}`);
   modelClass.reopen(newRelationships);
   modelClass.reopenClass({

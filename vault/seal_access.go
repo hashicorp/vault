@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"fmt"
 )
 
 // SealAccess is a wrapper around Seal that exposes accessor methods
@@ -16,7 +15,7 @@ func NewSealAccess(seal Seal) *SealAccess {
 	return &SealAccess{seal: seal}
 }
 
-func (s *SealAccess) StoredKeysSupported() bool {
+func (s *SealAccess) StoredKeysSupported() StoredKeysSupport {
 	return s.seal.StoredKeysSupported()
 }
 
@@ -45,23 +44,4 @@ func (s *SealAccess) ClearCaches(ctx context.Context) {
 	if s.RecoveryKeySupported() {
 		s.seal.SetRecoveryConfig(ctx, nil)
 	}
-}
-
-type SealAccessTestingParams struct {
-	PretendToAllowStoredShares bool
-	PretendToAllowRecoveryKeys bool
-	PretendRecoveryKey         []byte
-}
-
-func (s *SealAccess) SetTestingParams(params *SealAccessTestingParams) error {
-	d, ok := s.seal.(*defaultSeal)
-	if !ok {
-		return fmt.Errorf("not a defaultseal")
-	}
-	d.PretendToAllowRecoveryKeys = params.PretendToAllowRecoveryKeys
-	d.PretendToAllowStoredShares = params.PretendToAllowStoredShares
-	if params.PretendRecoveryKey != nil {
-		d.PretendRecoveryKey = params.PretendRecoveryKey
-	}
-	return nil
 }

@@ -4,7 +4,7 @@ import EmberObject, { computed } from '@ember/object';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, click } from '@ember/test-helpers';
+import { click, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
@@ -15,6 +15,8 @@ const flash = Service.extend({
   success: sinon.stub(),
 });
 const namespace = Service.extend({});
+
+const fieldToCheckbox = field => ({ name: field, type: 'boolean' });
 
 const createModel = options => {
   let model = EmberObject.extend(COMPUTEDS, {
@@ -38,7 +40,7 @@ const createModel = options => {
       'tlsClientTtl',
     ],
     fields: computed('operationFields', function() {
-      return this.operationFields.map(field => ({ name: field, type: 'boolean' }));
+      return this.operationFields.map(fieldToCheckbox);
     }),
     destroyRecord() {
       return resolve();
@@ -69,15 +71,14 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
-    assert.dom('[name=role-display]:checked').hasValue('operationAll', 'defaults to all on new models');
+    assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
   test('it renders: operationAll', async function(assert) {
     let model = createModel({ operationAll: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
-
-    assert.dom('[name=role-display]:checked').hasValue('operationAll', 'sets operationAll');
+    assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
   test('it renders: operationNone', async function(assert) {
@@ -85,7 +86,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
-    assert.dom('[name=role-display]:checked').hasValue('operationNone', 'sets operationNone');
+    assert.dom('[data-test-input="operationNone"]').isNotChecked('sets operationNone');
   });
 
   test('it renders: choose operations', async function(assert) {
@@ -93,14 +94,15 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
-    assert.dom('[name=role-display]:checked').hasValue('choose', 'sets choose');
+    assert.dom('[data-test-input="operationNone"]').isChecked('sets operationNone');
+    assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
   });
 
   let savingTests = [
     [
       'setting operationAll',
       { operationNone: true, operationGet: true },
-      'operationAll',
+      'operationNone',
       {
         operationAll: true,
         operationNone: false,
@@ -108,7 +110,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
       },
       {
         operationGet: null,
-        operationNone: null,
+        operationNone: false,
       },
     ],
     [
@@ -123,16 +125,16 @@ module('Integration | Component | edit form kmip role', function(hooks) {
       {
         operationNone: true,
         operationCreate: null,
-        operationAll: null,
+        operationAll: false,
       },
     ],
 
     [
       'setting choose, and selecting an additional item',
       { operationAll: true, operationGet: true, operationCreate: true },
-      'choose,operationDestroy',
+      'operationAll,operationDestroy',
       {
-        operationAll: true,
+        operationAll: false,
         operationCreate: true,
         operationGet: true,
       },
@@ -140,8 +142,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
         operationGet: true,
         operationCreate: true,
         operationDestroy: true,
-        operationAll: null,
-        operationNone: null,
+        operationAll: false,
       },
     ],
   ];
@@ -159,7 +160,6 @@ module('Integration | Component | edit form kmip role', function(hooks) {
       for (let beforeStateKey of Object.keys(stateBeforeSave)) {
         assert.equal(model.get(beforeStateKey), stateBeforeSave[beforeStateKey], `sets ${beforeStateKey}`);
       }
-      assert.dom('[name=role-display]:checked').hasValue(clickTargets[0], `sets clickTargets[0]`);
 
       click('[data-test-edit-form-submit]');
 

@@ -1,14 +1,12 @@
-executor: go
+executor: go-machine
 steps:
+  - setup-go
   - checkout
-  - restore_go_cache
   - attach_workspace:
       at: .
   - run:
       name: Build dev binary
       command: |
-        set -eux -o pipefail
-
         # Move dev UI assets to expected location
         rm -rf ./pkg
         mkdir ./pkg

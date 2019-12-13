@@ -34,7 +34,7 @@
         <Item.content>
           {{list.item.id}}
         </Item.content>
-        <Item.menu>
+        <Item.menu as |m|>
           {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (contains targetNamespace accessibleNamespaces)}}
               <li class="action">
@@ -45,11 +45,11 @@
             {{/if}}
           {{/with}}
           <li class="action">
-            <ConfirmAction
-              @buttonClasses="link is-destroy"
+            <m.Message
+              @id={{list.item.id}}
               @confirmButtonText="Remove"
-              @confirmMessage="Any engines or mounts in this namespace will also be removed."
-              @onConfirmAction={{action
+              @message="Any engines or mounts in this namespace will also be removed."
+              @onConfirm={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
@@ -58,10 +58,7 @@
                   "There was an error deleting this namespace: "
                   (action "refreshNamespaceList")
                 )
-              }}
-            >
-              Delete
-            </ConfirmAction>
+              }} />
           </li>
         </Item.menu>
       </ListItem>

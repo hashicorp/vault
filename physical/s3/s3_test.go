@@ -34,12 +34,12 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	_, err = credsChain.Get()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	// If the variable is empty or doesn't exist, the default
@@ -97,6 +97,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	b, err := NewS3Backend(map[string]string{
 		"bucket":   bucket,
 		"kmsKeyId": kmsKeyId,
+		"path":     "test/vault",
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)

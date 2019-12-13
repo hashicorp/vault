@@ -77,7 +77,6 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       defaultValue: 30,
       fieldGroup: 'default',
     },
-
     superSecret: {
       type: 'string',
       editType: 'string',

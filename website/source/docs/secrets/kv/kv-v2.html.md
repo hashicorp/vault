@@ -394,6 +394,12 @@ See the commands below for more information:
 	Success! Data deleted (if it existed) at: secret/metadata/my-secret
     ```
 
+## Learn
+
+Refer to the [Versioned Key/Value Secrets
+Engine](https://learn.hashicorp.com/vault/secrets-management/sm-versioned-kv)
+guide for a step-by-step tutorial.
+
 ## API
 
 The KV secrets engine has a full HTTP API. Please see the

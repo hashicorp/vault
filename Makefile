@@ -2,12 +2,15 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
+export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
+
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	golang.org/x/tools/cmd/goimports \
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
@@ -16,7 +19,8 @@ EXTERNAL_TOOLS=\
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
-GO_VERSION_MIN=1.12.4
+
+GO_VERSION_MIN=1.12.7
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -47,12 +51,6 @@ dev-ui-mem: BUILD_TAGS+=memprofiler
 dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
-
-testtravis: BUILD_TAGS+=travis
-testtravis: test
-
-testracetravis: BUILD_TAGS+=travis
-testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
@@ -139,7 +137,10 @@ bootstrap:
 update-plugins:
 	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
 
-static-assets:
+static-assets-dir:
+	@mkdir -p ./pkg/web_ui
+
+static-assets: static-assets-dir
 	@echo "--> Generating static assets"
 	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
 	@mv bindata_assetfs.go http
@@ -242,6 +243,38 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack
+# GPG_KEY_VARS sets FPR to the fingerprint with no spaces and GIT_GPG_KEY_ID to a git compatible gpg key id.
+define GPG_KEY_VARS
+	FPR=$$(echo "$(RELEASE_GPG_KEY_FINGERPRINT)" | sed 's/ //g') && GIT_GPG_KEY_ID="0x$$(printf $$FPR | tail -c 16)"
+endef
+
+define FAIL_IF_GPG_KEY_MISSING
+	@$(GPG_KEY_VARS) && echo "Checking for key '$$FPR' (git key id: $$GIT_GPG_KEY_ID)"; \
+	gpg --list-secret-keys "$$FPR" >/dev/null 2>&1 || { \
+		echo "ERROR: Secret GPG key missing: $$FPR"; \
+		exit 1; \
+	}
+endef
+
+define FAIL_IF_UNCOMMITTED_CHANGES
+	@{ git diff --exit-code && git diff --cached --exit-code; } >/dev/null 2>&1 || { \
+		echo "ERROR: Uncommitted changes detected."; \
+		exit 1; \
+	}
+endef
+
+stage-commit:
+	$(FAIL_IF_GPG_KEY_MISSING)
+	$(FAIL_IF_UNCOMMITTED_CHANGES)
+	@[ -n "$(STAGE_VERSION)" ] || { echo "You must set STAGE_VERSION to the version in semver-like format."; exit 1; }
+	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: stage v$(STAGE_VERSION)' 
+
+publish-commit:
+	$(FAIL_IF_GPG_KEY_MISSING)
+	$(FAIL_IF_UNCOMMITTED_CHANGES)
+	@[ -n "$(PUBLISH_VERSION)" ] || { echo "You must set PUBLISH_VERSION to the version in semver-like format."; exit 1; }
+	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: publish v$(PUBLISH_VERSION)'
+
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets

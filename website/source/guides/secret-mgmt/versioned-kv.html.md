@@ -844,7 +844,7 @@ $ vault kv metadata put -cas-required=true secret/partner
 Once check-and-set is enabled, every write operation requires `cas` value to be
 passed. If you are sure that you want to overwrite the existing key-value, set
 `cas` to match the current version. Set `cas` to `0` if you want to write the
-secret _only if_ the key does not exists.
+secret _only if_ the key does not exist.
 
 **Example:**
 
@@ -896,7 +896,7 @@ $ curl --header "X-Vault-Token: ..." \
 Once check-and-set is enabled, every write operation requires `cas` value to be
 passed. If you are sure that you want to overwrite the existing key-value, set
 `cas` to match the current version. Set `cas` to `0` if you want to write the
-secret _only if_ the key does not exists.
+secret _only if_ the key does not exist.
 
 **Example:**
 

@@ -14,6 +14,12 @@ import (
 	"github.com/hashicorp/raft"
 )
 
+var (
+	// ChunkSize is the threshold used for breaking a large value into chunks.
+	// Defaults to the suggested max data size for the raft library.
+	ChunkSize = raft.SuggestedMaxDataSize
+)
+
 // errorFuture is used to return a static error.
 type errorFuture struct {
 	err error
@@ -72,15 +78,15 @@ func (m multiFuture) Response() interface{} {
 
 type ApplyFunc func(raft.Log, time.Duration) raft.ApplyFuture
 
-// ChunkingApply takes in a byte slice and chunks into
-// raft.SuggestedMaxDataSize (or less if EOF) chunks, calling Apply on each. It
-// requires a corresponding wrapper around the FSM to handle reconstructing on
-// the other end. Timeout will be the timeout for each individual operation,
-// not total. The return value is a future whose Error() will return only when
-// all underlying Apply futures have had Error() return. Note that any error
-// indicates that the entire operation will not be applied, assuming the
-// correct FSM wrapper is used. If extensions is passed in, it will be set as
-// the Extensions value on the Apply once all chunks are received.
+// ChunkingApply takes in a byte slice and chunks into ChunkSize (or less if
+// EOF) chunks, calling Apply on each. It requires a corresponding wrapper
+// around the FSM to handle reconstructing on the other end. Timeout will be the
+// timeout for each individual operation, not total. The return value is a
+// future whose Error() will return only when all underlying Apply futures have
+// had Error() return. Note that any error indicates that the entire operation
+// will not be applied, assuming the correct FSM wrapper is used. If extensions
+// is passed in, it will be set as the Extensions value on the Apply once all
+// chunks are received.
 func ChunkingApply(cmd, extensions []byte, timeout time.Duration, applyFunc ApplyFunc) raft.ApplyFuture {
 	// Generate a random op num via 64 random bits. These only have to be
 	// unique across _in flight_ chunk operations until a Term changes so
@@ -111,8 +117,8 @@ func ChunkingApply(cmd, extensions []byte, timeout time.Duration, applyFunc Appl
 			break
 		}
 
-		if remain > raft.SuggestedMaxDataSize {
-			remain = raft.SuggestedMaxDataSize
+		if remain > ChunkSize {
+			remain = ChunkSize
 		}
 
 		b := make([]byte, remain)

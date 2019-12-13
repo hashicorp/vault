@@ -11,8 +11,9 @@ import (
 	"net/url"
 	"strings"
 	"text/template"
+	"time"
 
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -83,6 +84,10 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			break
 		}
 		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
+	}
+
+	if timeout := cfg.RequestTimeout; timeout > 0 {
+		conn.SetTimeout(time.Duration(timeout) * time.Second)
 	}
 
 	return conn, retErr.ErrorOrNil()
@@ -205,7 +210,9 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	}
 
 	var renderedQuery bytes.Buffer
-	t.Execute(&renderedQuery, context)
+	if err := t.Execute(&renderedQuery, context); err != nil {
+		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{error}}", err)
+	}
 
 	if c.Logger.IsDebug() {
 		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
@@ -357,12 +364,12 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 		values := e.GetAttributeValues(cfg.GroupAttr)
 		if len(values) > 0 {
 			for _, val := range values {
-				groupCN := getCN(val)
+				groupCN := getCN(cfg, val)
 				ldapMap[groupCN] = true
 			}
 		} else {
 			// If groupattr didn't resolve, use self (enumerating group objects)
-			groupCN := getCN(e.DN)
+			groupCN := getCN(cfg, e.DN)
 			ldapMap[groupCN] = true
 		}
 	}
@@ -419,7 +426,7 @@ func EscapeLDAPValue(input string) string {
  * Given a non-conforming string (such as an already-extracted CN),
  * it will be returned as-is.
  */
-func getCN(dn string) string {
+func getCN(cfg *ConfigEntry, dn string) string {
 	parsedDN, err := ldap.ParseDN(dn)
 	if err != nil || len(parsedDN.RDNs) == 0 {
 		// It was already a CN, return as-is
@@ -428,8 +435,14 @@ func getCN(dn string) string {
 
 	for _, rdn := range parsedDN.RDNs {
 		for _, rdnAttr := range rdn.Attributes {
-			if strings.EqualFold(rdnAttr.Type, "CN") {
-				return rdnAttr.Value
+			if cfg.UsePre111GroupCNBehavior == nil || *cfg.UsePre111GroupCNBehavior {
+				if rdnAttr.Type == "CN" {
+					return rdnAttr.Value
+				}
+			} else {
+				if strings.EqualFold(rdnAttr.Type, "CN") {
+					return rdnAttr.Value
+				}
 			}
 		}
 	}

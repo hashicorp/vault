@@ -10,17 +10,17 @@ description: |-
 
 # KMIP Secrets Engine
 
-The KMIP secrets engine allows Vault to act as a KMIP server provider and handle
-the lifecycle of it KMIP managed objects. KMIP, which stands for [Key Management
-Interoperability Protocol](#kmip-spec), is a standardized protocol that allows
+The KMIP secrets engine allows Vault to act as a [Key Management
+Interoperability Protocol](#kmip-spec) (KMIP) server provider and handle
+the lifecycle of its KMIP managed objects. KMIP is a standardized protocol that allows
 services and applications to perform cryptographic operations without having to
-manage cryptographic material, otherwise known as manage objects, by delegating
+manage cryptographic material, otherwise known as managed objects, by delegating
 its storage and lifecycle to a key management server.
 
 ## Setup
 
 The KMIP secrets engine must be configured before it can start accepting KMIP
-requests. 
+requests.
 
 1. Enable the KMIP secrets engine
 
@@ -28,12 +28,12 @@ requests.
     $ vault secrets enable kmip
     Success! Enabled the kmip secrets engine at: kmip/
     ```
-    
+
 1. Configure the secrets engine with the desired listener addresses to use and
 TLS parameters, or leave unwritten to use default values
 
     ```text
-    $ vault write kmip/config listen_addrs=0.0.0.0:5696 
+    $ vault write kmip/config listen_addrs=0.0.0.0:5696
     ```
 
 ## Usage
@@ -42,7 +42,7 @@ TLS parameters, or leave unwritten to use default values
 
 The KMIP secrets engine uses the concept of scopes to partition KMIP managed
 object storage into multiple named buckets. Within a scope, roles can be created
-which dictates the set of allowed operations that the particular role can perform.
+which dictate the set of allowed operations that the particular role can perform.
 TLS client certificates can be generated for a role, which services and applications
 can then use when sending KMIP requests against Vault's KMIP secret engine.
 
@@ -53,24 +53,24 @@ allowed operations for it.
 1. Create a scope:
 
     ```text
-    $ vault write -f kmip/scope/my-service             
+    $ vault write -f kmip/scope/my-service
     Success! Data written to: kmip/scope/my-service
     ```
-    
+
 1. Create a role within the scope, specifying the set of operations to allow or
 deny.
 
     ```text
-    $ vault write kmip/scope/my-service/role/admin operation_all=true 
+    $ vault write kmip/scope/my-service/role/admin operation_all=true
       Success! Data written to: kmip/scope/my-service/role/admin
     ```
-    
+
 ### Client Certificate Generation
 
 Once a scope and role has been created, client certificates can be generated for
-that role. The client certificate then can be provided to applications and
-services that supports KMIP to establish communication with Vault's KMIP server.
-The certificate contains scope and role identifiers embedded in the certificate,
+that role. The client certificate can then be provided to applications and
+services that support KMIP to establish communication with Vault's KMIP server.
+Scope and role identifiers are embedded in the certificate,
 which will be used when evaluating permissions during a KMIP request.
 
 1. Generate a client certificate. This returns the CA Chain, the certificate,
@@ -141,14 +141,18 @@ KMIP operations.
 Supported KMIP operations:
 
 ```text
-operation_create
-operation_rekey
-operation_locate
-operation_get
 operation_activate
-operation_revoke
+operation_add_attribute
+operation_create
 operation_destroy
 operation_discover_versions
+operation_get
+operation_get_attribute_list
+operation_get_attributes
+operation_locate
+operation_register
+operation_rekey
+operation_revoke
 ```
 
 Additionally, there are two pseudo-operations that can be used to allow or deny
@@ -164,6 +168,12 @@ Pseudo-operations:
 operation_all
 operation_none
 ```
+
+## Learn
+
+Refer to the [KMIP Secrets Engine](https://learn.hashicorp.com/vault/secrets-management/kmip-engine)
+guide for a step-by-step tutorial.
+
 
 [kmip-spec]: http://docs.oasis-open.org/kmip/spec/v1.4/kmip-spec-v1.4.html
 [kmip-ops]: http://docs.oasis-open.org/kmip/spec/v1.4/os/kmip-spec-v1.4-os.html#_Toc490660840

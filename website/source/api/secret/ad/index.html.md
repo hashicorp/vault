@@ -34,7 +34,9 @@ text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once a
 
 ### Connection parameters
 
-* `url` (string, required) - The LDAP server to connect to. Examples: `ldaps://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldaps://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
+* `url` (string, optional) - The LDAP server to connect to. Examples: `ldaps://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldaps://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.  Default is `ldap://127.0.0.1`.
+* `case_sensitive_names` `(bool: false)` – If set, user and group names assigned to policies within the backend will be case sensitive. Otherwise, names will be normalized to lower case. Case will still be preserved when sending the username to the LDAP server at login time; this is only for matching local user/group definitions.
+* `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for the connection when making requests against the server before returning back an error.
 * `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 * `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 * `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
@@ -191,6 +193,222 @@ $ curl \
   "username": "my-application"
 }
 ```
+
+## Library management
+
+The `library` endpoint configures the sets of service accounts that Vault will offer for check-out.
+
+### Parameters
+
+* `name` (string: "", required): The name of the set of service accounts.
+* `service_account_names` (string: "", or list: [] required): The names of all the service accounts that can be 
+checked out from this set. These service accounts must only be used by Vault, and may only be in one set. These 
+service accounts must already exist in Active Directory.
+* `ttl` (duration: "24h", optional): The maximum amount of time a single check-out lasts before Vault 
+automatically checks it back in. Defaults to 24 hours. Setting it to zero reflects an unlimited lending period.
+* `max_ttl` (duration: "24h", optional): The maximum amount of time a check-out last with renewal before Vault 
+automatically checks it back in. Defaults to 24 hours. Setting it to zero reflects an unlimited lending period.
+* `disable_check_in_enforcement` (bool: false, optional): Disable enforcing that service accounts must be 
+checked in by the entity or client token that checked them out. Defaults to false.
+
+When adding a service account to the library, Vault verifies it already exists in Active Directory.
+
+| Method   | Path                    |
+| :------- | :---------------------- |
+| `LIST`   | `/ad/library`           |
+| `POST`   | `/ad/library/:set_name` |
+| `GET`    | `/ad/library/:set_name` |
+| `DELETE` | `/ad/library/:set_name` |
+
+### Sample Post Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/ad/library/accounting-team
+```
+
+### Sample Post Payload
+
+```json
+{
+  "service_account_names": ["fizz@example.com", "buzz@example.com"],
+  "ttl": "10h",
+  "max_ttl": "20h",
+  "disable_check_in_enforcement": false
+}
+```
+
+### Sample Get Response
+
+```json
+{
+  "service_account_names": ["fizz@example.com", "buzz@example.com"],
+  "ttl": "10h",
+  "max_ttl": "20h",
+  "disable_check_in_enforcement": false
+}
+```
+
+### Sample List Response
+
+Performing a `LIST` on the `/ad/library` endpoint will list the names of all the sets of service accounts Vault contains.
+
+```json
+[
+  "accounting-team"
+]
+```
+
+## Check-out management
+
+These endpoints help manage check-outs.
+
+### Check a credential out
+
+Returns a `200` if a credential is available, and a `400` if no credential is available.
+
+* `name` (string: "", required): The name of the set of service accounts.
+* `ttl` (duration: "", optional): The maximum amount of time a check-out lasts before Vault 
+automatically checks it back in. Setting it to zero reflects an unlimited lending period.
+Defaults to the set's `ttl`. If the requested `ttl` is higher than the set's, the set's will be used.
+
+| Method   | Path                              |
+| :------- | :-------------------------------- |
+| `POST`   | `/ad/library/:set_name/check-out` |
+
+### Sample Post Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/ad/library/accounting-team/check-out
+```
+
+### Sample Post Payload
+
+```json
+{
+  "ttl": "1h"
+}
+```
+
+### Sample Post Response
+```json
+{
+  "request_id": "364a17d4-e5ab-998b-ceee-b49929229e0c",
+  "lease_id": "ad/library/accounting-team/check-out/aoBsaBEI4PK96VnukubvYDlZ",
+  "renewable": true,
+  "lease_duration": 36000,
+  "data": {
+    "password": "?@09QW0KZ8DSBu3deIu7XLY1NZqzwhozmMAZ6v0IcZJGOjs5GvpVMvOeW7/duls2",
+    "service_account_name": "fizz@example.com"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+### Check a credential in
+
+By default, check-in must be called by the same entity or client token used for check-out.
+To disable this behavior, use the `disable_check_in_enforcement` toggle on the library set. Or, use
+the `ad/library/manage/:set_name/check-in` behavior to force check-in of the account. Access to the
+"manage" endpoint should only be granted to highly privileged Vault users, like Vault operators.
+
+If a caller attempts to check in a service account they're not authorized to check in, they will
+receive an error response. If they attempt to check in a service account they _are_ authorized to
+check in, but it's _already_ checked in, they will receive a successful response but the account
+will not be included in the `check_ins` listed. `check_ins` shows which service accounts were checked
+in _by this particular call_.
+
+* `name` (string: "", required): The name of the set of service accounts.
+* `service_account_names` (string: "", or list: [] optional): The names of all the service accounts to be
+checked in. May be omitted if only one is checked out. 
+
+| Method   | Path                                    |
+| :------- | :-------------------------------------- |
+| `POST`   | `/ad/library/:set_name/check-in`        |
+| `POST`   | `/ad/library/manage/:set_name/check-in` |
+
+### Sample Post Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/ad/library/accounting-team/check-in
+```
+
+### Sample Post Payload
+
+```json
+{
+  "service_account_names": ["fizz@example.com"]
+}
+```
+
+### Sample Post Response
+```json
+{
+  "request_id": "db45c714-3f68-b748-95bc-8f7467637a52",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "check_ins": ["fizz@example.com"]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+### Check the status of service accounts
+
+| Method   | Path                           |
+| :------- | :----------------------------- |
+| `GET`    | `/ad/library/:set_name/status` |
+
+### Sample Get Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/ad/library/accounting-team/status
+```
+
+### Sample Get Response
+```json
+{
+  "request_id": "9e44c8b5-d142-5867-2a11-49f3ba71215a",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "buzz@example.com": {
+      "available": true
+    },
+    "fizz@example.com": {
+      "available": false,
+      "borrower_client_token": "4c653e473bf7e27c6759fccc3def20c44d776279",
+      "borrower_entity_id": "631256b1-8523-9838-5501-d0a1e2cdad9c"
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
 ## Rotate Root Credentials
 
 Rotate the `bindpass` to a new one known only to Vault.

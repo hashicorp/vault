@@ -24,8 +24,9 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel] specifies how
-// cryptographic operations are performed.
+// [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel] specifies how cryptographic operations are performed.
+// For more information, see [Protection levels]
+// (https://cloud.google.com/kms/docs/algorithms#protection_levels).
 type ProtectionLevel int32
 
 const (
@@ -57,29 +58,25 @@ func (ProtectionLevel) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_e40e1384d35a80c5, []int{0}
 }
 
-// [CryptoKeyPurpose][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose]
-// describes the cryptographic capabilities of a
-// [CryptoKey][google.cloud.kms.v1.CryptoKey]. A given key can only be used
-// for the operations allowed by its purpose.
+// [CryptoKeyPurpose][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose] describes the cryptographic capabilities of a
+// [CryptoKey][google.cloud.kms.v1.CryptoKey]. A given key can only be used for the operations allowed by
+// its purpose. For more information, see
+// [Key purposes](https://cloud.google.com/kms/docs/algorithms#key_purposes).
 type CryptoKey_CryptoKeyPurpose int32
 
 const (
 	// Not specified.
 	CryptoKey_CRYPTO_KEY_PURPOSE_UNSPECIFIED CryptoKey_CryptoKeyPurpose = 0
-	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used
-	// with [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt] and
+	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used with
+	// [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt] and
 	// [Decrypt][google.cloud.kms.v1.KeyManagementService.Decrypt].
 	CryptoKey_ENCRYPT_DECRYPT CryptoKey_CryptoKeyPurpose = 1
-	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used
-	// with
-	// [AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign]
-	// and
+	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used with
+	// [AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign] and
 	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	CryptoKey_ASYMMETRIC_SIGN CryptoKey_CryptoKeyPurpose = 5
-	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used
-	// with
-	// [AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt]
-	// and
+	// [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used with
+	// [AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt] and
 	// [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 	CryptoKey_ASYMMETRIC_DECRYPT CryptoKey_CryptoKeyPurpose = 6
 )
@@ -106,16 +103,17 @@ func (CryptoKey_CryptoKeyPurpose) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_e40e1384d35a80c5, []int{1, 0}
 }
 
-// Attestion formats provided by the HSM.
+// Attestation formats provided by the HSM.
 type KeyOperationAttestation_AttestationFormat int32
 
 const (
+	// Not specified.
 	KeyOperationAttestation_ATTESTATION_FORMAT_UNSPECIFIED KeyOperationAttestation_AttestationFormat = 0
 	// Cavium HSM attestation compressed with gzip. Note that this format is
 	// defined by Cavium and subject to change at any time.
 	KeyOperationAttestation_CAVIUM_V1_COMPRESSED KeyOperationAttestation_AttestationFormat = 3
 	// Cavium HSM attestation V2 compressed with gzip. This is a new format
-	// Introduced in Cavium's version 3.2-08
+	// introduced in Cavium's version 3.2-08.
 	KeyOperationAttestation_CAVIUM_V2_COMPRESSED KeyOperationAttestation_AttestationFormat = 4
 )
 
@@ -139,18 +137,15 @@ func (KeyOperationAttestation_AttestationFormat) EnumDescriptor() ([]byte, []int
 	return fileDescriptor_e40e1384d35a80c5, []int{3, 0}
 }
 
-// The algorithm of the
-// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], indicating what
+// The algorithm of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], indicating what
 // parameters must be used for each cryptographic operation.
 //
 // The
 // [GOOGLE_SYMMETRIC_ENCRYPTION][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm.GOOGLE_SYMMETRIC_ENCRYPTION]
-// algorithm is usable with
-// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+// algorithm is usable with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 // [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 //
-// Algorithms beginning with "RSA_SIGN_" are usable with
-// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+// Algorithms beginning with "RSA_SIGN_" are usable with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 // [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN].
 //
 // The fields in the name after "RSA_SIGN_" correspond to the following
@@ -168,12 +163,14 @@ func (KeyOperationAttestation_AttestationFormat) EnumDescriptor() ([]byte, []int
 // The fields in the name after "RSA_DECRYPT_" correspond to the following
 // parameters: padding algorithm, modulus bit length, and digest algorithm.
 //
-// Algorithms beginning with "EC_SIGN_" are usable with
-// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
+// Algorithms beginning with "EC_SIGN_" are usable with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
 // [ASYMMETRIC_SIGN][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN].
 //
 // The fields in the name after "EC_SIGN_" correspond to the following
 // parameters: elliptic curve, digest algorithm.
+//
+// For more information, see [Key purposes and algorithms]
+// (https://cloud.google.com/kms/docs/algorithms).
 type CryptoKeyVersion_CryptoKeyVersionAlgorithm int32
 
 const (
@@ -187,18 +184,24 @@ const (
 	CryptoKeyVersion_RSA_SIGN_PSS_3072_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 3
 	// RSASSA-PSS 4096 bit key with a SHA256 digest.
 	CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 4
+	// RSASSA-PSS 4096 bit key with a SHA512 digest.
+	CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA512 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 15
 	// RSASSA-PKCS1-v1_5 with a 2048 bit key and a SHA256 digest.
 	CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 5
 	// RSASSA-PKCS1-v1_5 with a 3072 bit key and a SHA256 digest.
 	CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 6
 	// RSASSA-PKCS1-v1_5 with a 4096 bit key and a SHA256 digest.
 	CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 7
+	// RSASSA-PKCS1-v1_5 with a 4096 bit key and a SHA512 digest.
+	CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 16
 	// RSAES-OAEP 2048 bit key with a SHA256 digest.
 	CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 8
 	// RSAES-OAEP 3072 bit key with a SHA256 digest.
 	CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 9
 	// RSAES-OAEP 4096 bit key with a SHA256 digest.
 	CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 10
+	// RSAES-OAEP 4096 bit key with a SHA512 digest.
+	CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA512 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 17
 	// ECDSA on the NIST P-256 curve with a SHA256 digest.
 	CryptoKeyVersion_EC_SIGN_P256_SHA256 CryptoKeyVersion_CryptoKeyVersionAlgorithm = 12
 	// ECDSA on the NIST P-384 curve with a SHA384 digest.
@@ -211,12 +214,15 @@ var CryptoKeyVersion_CryptoKeyVersionAlgorithm_name = map[int32]string{
 	2:  "RSA_SIGN_PSS_2048_SHA256",
 	3:  "RSA_SIGN_PSS_3072_SHA256",
 	4:  "RSA_SIGN_PSS_4096_SHA256",
+	15: "RSA_SIGN_PSS_4096_SHA512",
 	5:  "RSA_SIGN_PKCS1_2048_SHA256",
 	6:  "RSA_SIGN_PKCS1_3072_SHA256",
 	7:  "RSA_SIGN_PKCS1_4096_SHA256",
+	16: "RSA_SIGN_PKCS1_4096_SHA512",
 	8:  "RSA_DECRYPT_OAEP_2048_SHA256",
 	9:  "RSA_DECRYPT_OAEP_3072_SHA256",
 	10: "RSA_DECRYPT_OAEP_4096_SHA256",
+	17: "RSA_DECRYPT_OAEP_4096_SHA512",
 	12: "EC_SIGN_P256_SHA256",
 	13: "EC_SIGN_P384_SHA384",
 }
@@ -227,12 +233,15 @@ var CryptoKeyVersion_CryptoKeyVersionAlgorithm_value = map[string]int32{
 	"RSA_SIGN_PSS_2048_SHA256":                 2,
 	"RSA_SIGN_PSS_3072_SHA256":                 3,
 	"RSA_SIGN_PSS_4096_SHA256":                 4,
+	"RSA_SIGN_PSS_4096_SHA512":                 15,
 	"RSA_SIGN_PKCS1_2048_SHA256":               5,
 	"RSA_SIGN_PKCS1_3072_SHA256":               6,
 	"RSA_SIGN_PKCS1_4096_SHA256":               7,
+	"RSA_SIGN_PKCS1_4096_SHA512":               16,
 	"RSA_DECRYPT_OAEP_2048_SHA256":             8,
 	"RSA_DECRYPT_OAEP_3072_SHA256":             9,
 	"RSA_DECRYPT_OAEP_4096_SHA256":             10,
+	"RSA_DECRYPT_OAEP_4096_SHA512":             17,
 	"EC_SIGN_P256_SHA256":                      12,
 	"EC_SIGN_P384_SHA384":                      13,
 }
@@ -245,8 +254,7 @@ func (CryptoKeyVersion_CryptoKeyVersionAlgorithm) EnumDescriptor() ([]byte, []in
 	return fileDescriptor_e40e1384d35a80c5, []int{4, 0}
 }
 
-// The state of a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion],
-// indicating if it can be used.
+// The state of a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], indicating if it can be used.
 type CryptoKeyVersion_CryptoKeyVersionState int32
 
 const (
@@ -254,16 +262,12 @@ const (
 	CryptoKeyVersion_CRYPTO_KEY_VERSION_STATE_UNSPECIFIED CryptoKeyVersion_CryptoKeyVersionState = 0
 	// This version is still being generated. It may not be used, enabled,
 	// disabled, or destroyed yet. Cloud KMS will automatically mark this
-	// version
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
-	// as soon as the version is ready.
+	// version [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] as soon as the version is ready.
 	CryptoKeyVersion_PENDING_GENERATION CryptoKeyVersion_CryptoKeyVersionState = 5
 	// This version may be used for cryptographic operations.
 	CryptoKeyVersion_ENABLED CryptoKeyVersion_CryptoKeyVersionState = 1
 	// This version may not be used, but the key material is still available,
-	// and the version can be placed back into the
-	// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
-	// state.
+	// and the version can be placed back into the [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] state.
 	CryptoKeyVersion_DISABLED CryptoKeyVersion_CryptoKeyVersionState = 2
 	// This version is destroyed, and the key material is no longer stored.
 	// A version may not leave this state once entered.
@@ -271,10 +275,17 @@ const (
 	// This version is scheduled for destruction, and will be destroyed soon.
 	// Call
 	// [RestoreCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.RestoreCryptoKeyVersion]
-	// to put it back into the
-	// [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED]
-	// state.
+	// to put it back into the [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED] state.
 	CryptoKeyVersion_DESTROY_SCHEDULED CryptoKeyVersion_CryptoKeyVersionState = 4
+	// This version is still being imported. It may not be used, enabled,
+	// disabled, or destroyed yet. Cloud KMS will automatically mark this
+	// version [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] as soon as the version is ready.
+	CryptoKeyVersion_PENDING_IMPORT CryptoKeyVersion_CryptoKeyVersionState = 6
+	// This version was not imported successfully. It may not be used, enabled,
+	// disabled, or destroyed. The submitted key material has been discarded.
+	// Additional details can be found in
+	// [CryptoKeyVersion.import_failure_reason][google.cloud.kms.v1.CryptoKeyVersion.import_failure_reason].
+	CryptoKeyVersion_IMPORT_FAILED CryptoKeyVersion_CryptoKeyVersionState = 7
 )
 
 var CryptoKeyVersion_CryptoKeyVersionState_name = map[int32]string{
@@ -284,6 +295,8 @@ var CryptoKeyVersion_CryptoKeyVersionState_name = map[int32]string{
 	2: "DISABLED",
 	3: "DESTROYED",
 	4: "DESTROY_SCHEDULED",
+	6: "PENDING_IMPORT",
+	7: "IMPORT_FAILED",
 }
 
 var CryptoKeyVersion_CryptoKeyVersionState_value = map[string]int32{
@@ -293,6 +306,8 @@ var CryptoKeyVersion_CryptoKeyVersionState_value = map[string]int32{
 	"DISABLED":                             2,
 	"DESTROYED":                            3,
 	"DESTROY_SCHEDULED":                    4,
+	"PENDING_IMPORT":                       6,
+	"IMPORT_FAILED":                        7,
 }
 
 func (x CryptoKeyVersion_CryptoKeyVersionState) String() string {
@@ -303,22 +318,17 @@ func (CryptoKeyVersion_CryptoKeyVersionState) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_e40e1384d35a80c5, []int{4, 1}
 }
 
-// A view for [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]s.
-// Controls the level of detail returned for
-// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] in
-// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions]
-// and
+// A view for [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]s. Controls the level of detail returned
+// for [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] in
+// [KeyManagementService.ListCryptoKeyVersions][google.cloud.kms.v1.KeyManagementService.ListCryptoKeyVersions] and
 // [KeyManagementService.ListCryptoKeys][google.cloud.kms.v1.KeyManagementService.ListCryptoKeys].
 type CryptoKeyVersion_CryptoKeyVersionView int32
 
 const (
-	// Default view for each
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. Does not
-	// include the
-	// [attestation][google.cloud.kms.v1.CryptoKeyVersion.attestation] field.
+	// Default view for each [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. Does not include
+	// the [attestation][google.cloud.kms.v1.CryptoKeyVersion.attestation] field.
 	CryptoKeyVersion_CRYPTO_KEY_VERSION_VIEW_UNSPECIFIED CryptoKeyVersion_CryptoKeyVersionView = 0
-	// Provides all fields in each
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], including the
+	// Provides all fields in each [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], including the
 	// [attestation][google.cloud.kms.v1.CryptoKeyVersion.attestation].
 	CryptoKeyVersion_FULL CryptoKeyVersion_CryptoKeyVersionView = 1
 )
@@ -341,15 +351,96 @@ func (CryptoKeyVersion_CryptoKeyVersionView) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_e40e1384d35a80c5, []int{4, 2}
 }
 
-// A [KeyRing][google.cloud.kms.v1.KeyRing] is a toplevel logical grouping of
-// [CryptoKeys][google.cloud.kms.v1.CryptoKey].
+// [ImportMethod][google.cloud.kms.v1.ImportJob.ImportMethod] describes the key wrapping method chosen for this
+// [ImportJob][google.cloud.kms.v1.ImportJob].
+type ImportJob_ImportMethod int32
+
+const (
+	// Not specified.
+	ImportJob_IMPORT_METHOD_UNSPECIFIED ImportJob_ImportMethod = 0
+	// This ImportMethod represents the CKM_RSA_AES_KEY_WRAP key wrapping
+	// scheme defined in the PKCS #11 standard. In summary, this involves
+	// wrapping the raw key with an ephemeral AES key, and wrapping the
+	// ephemeral AES key with a 3072 bit RSA key. For more details, see
+	// [RSA AES key wrap
+	// mechanism](http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc408226908).
+	ImportJob_RSA_OAEP_3072_SHA1_AES_256 ImportJob_ImportMethod = 1
+	// This ImportMethod represents the CKM_RSA_AES_KEY_WRAP key wrapping
+	// scheme defined in the PKCS #11 standard. In summary, this involves
+	// wrapping the raw key with an ephemeral AES key, and wrapping the
+	// ephemeral AES key with a 4096 bit RSA key. For more details, see
+	// [RSA AES key wrap
+	// mechanism](http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc408226908).
+	ImportJob_RSA_OAEP_4096_SHA1_AES_256 ImportJob_ImportMethod = 2
+)
+
+var ImportJob_ImportMethod_name = map[int32]string{
+	0: "IMPORT_METHOD_UNSPECIFIED",
+	1: "RSA_OAEP_3072_SHA1_AES_256",
+	2: "RSA_OAEP_4096_SHA1_AES_256",
+}
+
+var ImportJob_ImportMethod_value = map[string]int32{
+	"IMPORT_METHOD_UNSPECIFIED":  0,
+	"RSA_OAEP_3072_SHA1_AES_256": 1,
+	"RSA_OAEP_4096_SHA1_AES_256": 2,
+}
+
+func (x ImportJob_ImportMethod) String() string {
+	return proto.EnumName(ImportJob_ImportMethod_name, int32(x))
+}
+
+func (ImportJob_ImportMethod) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_e40e1384d35a80c5, []int{6, 0}
+}
+
+// The state of the [ImportJob][google.cloud.kms.v1.ImportJob], indicating if it can be used.
+type ImportJob_ImportJobState int32
+
+const (
+	// Not specified.
+	ImportJob_IMPORT_JOB_STATE_UNSPECIFIED ImportJob_ImportJobState = 0
+	// The wrapping key for this job is still being generated. It may not be
+	// used. Cloud KMS will automatically mark this job as
+	// [ACTIVE][google.cloud.kms.v1.ImportJob.ImportJobState.ACTIVE] as soon as the wrapping key is generated.
+	ImportJob_PENDING_GENERATION ImportJob_ImportJobState = 1
+	// This job may be used in
+	// [CreateCryptoKey][google.cloud.kms.v1.KeyManagementService.CreateCryptoKey] and
+	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion]
+	// requests.
+	ImportJob_ACTIVE ImportJob_ImportJobState = 2
+	// This job can no longer be used and may not leave this state once entered.
+	ImportJob_EXPIRED ImportJob_ImportJobState = 3
+)
+
+var ImportJob_ImportJobState_name = map[int32]string{
+	0: "IMPORT_JOB_STATE_UNSPECIFIED",
+	1: "PENDING_GENERATION",
+	2: "ACTIVE",
+	3: "EXPIRED",
+}
+
+var ImportJob_ImportJobState_value = map[string]int32{
+	"IMPORT_JOB_STATE_UNSPECIFIED": 0,
+	"PENDING_GENERATION":           1,
+	"ACTIVE":                       2,
+	"EXPIRED":                      3,
+}
+
+func (x ImportJob_ImportJobState) String() string {
+	return proto.EnumName(ImportJob_ImportJobState_name, int32(x))
+}
+
+func (ImportJob_ImportJobState) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_e40e1384d35a80c5, []int{6, 1}
+}
+
+// A [KeyRing][google.cloud.kms.v1.KeyRing] is a toplevel logical grouping of [CryptoKeys][google.cloud.kms.v1.CryptoKey].
 type KeyRing struct {
-	// Output only. The resource name for the
-	// [KeyRing][google.cloud.kms.v1.KeyRing] in the format
+	// Output only. The resource name for the [KeyRing][google.cloud.kms.v1.KeyRing] in the format
 	// `projects/*/locations/*/keyRings/*`.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Output only. The time at which this [KeyRing][google.cloud.kms.v1.KeyRing]
-	// was created.
+	// Output only. The time at which this [KeyRing][google.cloud.kms.v1.KeyRing] was created.
 	CreateTime           *timestamp.Timestamp `protobuf:"bytes,2,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
@@ -395,64 +486,53 @@ func (m *KeyRing) GetCreateTime() *timestamp.Timestamp {
 	return nil
 }
 
-// A [CryptoKey][google.cloud.kms.v1.CryptoKey] represents a logical key that
-// can be used for cryptographic operations.
+// A [CryptoKey][google.cloud.kms.v1.CryptoKey] represents a logical key that can be used for cryptographic
+// operations.
 //
-// A [CryptoKey][google.cloud.kms.v1.CryptoKey] is made up of one or more
-// [versions][google.cloud.kms.v1.CryptoKeyVersion], which represent the actual
-// key material used in cryptographic operations.
+// A [CryptoKey][google.cloud.kms.v1.CryptoKey] is made up of one or more [versions][google.cloud.kms.v1.CryptoKeyVersion], which
+// represent the actual key material used in cryptographic operations.
 type CryptoKey struct {
-	// Output only. The resource name for this
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] in the format
+	// Output only. The resource name for this [CryptoKey][google.cloud.kms.v1.CryptoKey] in the format
 	// `projects/*/locations/*/keyRings/*/cryptoKeys/*`.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Output only. A copy of the "primary"
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] that will be used
-	// by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt] when this
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] is given in
-	// [EncryptRequest.name][google.cloud.kms.v1.EncryptRequest.name].
+	// Output only. A copy of the "primary" [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] that will be used
+	// by [Encrypt][google.cloud.kms.v1.KeyManagementService.Encrypt] when this [CryptoKey][google.cloud.kms.v1.CryptoKey] is given
+	// in [EncryptRequest.name][google.cloud.kms.v1.EncryptRequest.name].
 	//
-	// The [CryptoKey][google.cloud.kms.v1.CryptoKey]'s primary version can be
-	// updated via
+	// The [CryptoKey][google.cloud.kms.v1.CryptoKey]'s primary version can be updated via
 	// [UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].
 	//
 	// All keys with [purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT]
-	// have a primary. For other keys, this field will be omitted.
+	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT] have a
+	// primary. For other keys, this field will be omitted.
 	Primary *CryptoKeyVersion `protobuf:"bytes,2,opt,name=primary,proto3" json:"primary,omitempty"`
 	// The immutable purpose of this [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	Purpose CryptoKey_CryptoKeyPurpose `protobuf:"varint,3,opt,name=purpose,proto3,enum=google.cloud.kms.v1.CryptoKey_CryptoKeyPurpose" json:"purpose,omitempty"`
-	// Output only. The time at which this
-	// [CryptoKey][google.cloud.kms.v1.CryptoKey] was created.
+	// Output only. The time at which this [CryptoKey][google.cloud.kms.v1.CryptoKey] was created.
 	CreateTime *timestamp.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	// At [next_rotation_time][google.cloud.kms.v1.CryptoKey.next_rotation_time],
-	// the Key Management Service will automatically:
+	// At [next_rotation_time][google.cloud.kms.v1.CryptoKey.next_rotation_time], the Key Management Service will automatically:
 	//
 	// 1. Create a new version of this [CryptoKey][google.cloud.kms.v1.CryptoKey].
 	// 2. Mark the new version as primary.
 	//
 	// Key rotations performed manually via
-	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion]
-	// and
+	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion] and
 	// [UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion]
-	// do not affect
-	// [next_rotation_time][google.cloud.kms.v1.CryptoKey.next_rotation_time].
+	// do not affect [next_rotation_time][google.cloud.kms.v1.CryptoKey.next_rotation_time].
 	//
 	// Keys with [purpose][google.cloud.kms.v1.CryptoKey.purpose]
-	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT]
-	// support automatic rotation. For other keys, this field must be omitted.
+	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT] support
+	// automatic rotation. For other keys, this field must be omitted.
 	NextRotationTime *timestamp.Timestamp `protobuf:"bytes,7,opt,name=next_rotation_time,json=nextRotationTime,proto3" json:"next_rotation_time,omitempty"`
 	// Controls the rate of automatic rotation.
 	//
 	// Types that are valid to be assigned to RotationSchedule:
 	//	*CryptoKey_RotationPeriod
 	RotationSchedule isCryptoKey_RotationSchedule `protobuf_oneof:"rotation_schedule"`
-	// A template describing settings for new
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] instances. The
-	// properties of new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// instances created by either
-	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion]
-	// or auto-rotation are controlled by this template.
+	// A template describing settings for new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] instances.
+	// The properties of new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] instances created by either
+	// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion] or
+	// auto-rotation are controlled by this template.
 	VersionTemplate *CryptoKeyVersionTemplate `protobuf:"bytes,11,opt,name=version_template,json=versionTemplate,proto3" json:"version_template,omitempty"`
 	// Labels with user-defined metadata. For more information, see
 	// [Labeling Keys](/kms/docs/labeling-keys).
@@ -567,27 +647,19 @@ func (*CryptoKey) XXX_OneofWrappers() []interface{} {
 	}
 }
 
-// A [CryptoKeyVersionTemplate][google.cloud.kms.v1.CryptoKeyVersionTemplate]
-// specifies the properties to use when creating a new
-// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], either manually
-// with
-// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion]
-// or automatically as a result of auto-rotation.
+// A [CryptoKeyVersionTemplate][google.cloud.kms.v1.CryptoKeyVersionTemplate] specifies the properties to use when creating
+// a new [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion], either manually with
+// [CreateCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.CreateCryptoKeyVersion] or
+// automatically as a result of auto-rotation.
 type CryptoKeyVersionTemplate struct {
-	// [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel] to use when creating
-	// a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] based on this
-	// template. Immutable. Defaults to
-	// [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE].
+	// [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel] to use when creating a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] based on
+	// this template. Immutable. Defaults to [SOFTWARE][google.cloud.kms.v1.ProtectionLevel.SOFTWARE].
 	ProtectionLevel ProtectionLevel `protobuf:"varint,1,opt,name=protection_level,json=protectionLevel,proto3,enum=google.cloud.kms.v1.ProtectionLevel" json:"protection_level,omitempty"`
-	// Required.
-	// [Algorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm]
-	// to use when creating a
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] based on this
-	// template.
+	// Required. [Algorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm] to use
+	// when creating a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] based on this template.
 	//
 	// For backwards compatibility, GOOGLE_SYMMETRIC_ENCRYPTION is implied if both
-	// this field is omitted and
-	// [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] is
+	// this field is omitted and [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose] is
 	// [ENCRYPT_DECRYPT][google.cloud.kms.v1.CryptoKey.CryptoKeyPurpose.ENCRYPT_DECRYPT].
 	Algorithm            CryptoKeyVersion_CryptoKeyVersionAlgorithm `protobuf:"varint,3,opt,name=algorithm,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionAlgorithm" json:"algorithm,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                                   `json:"-"`
@@ -634,7 +706,9 @@ func (m *CryptoKeyVersionTemplate) GetAlgorithm() CryptoKeyVersion_CryptoKeyVers
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_ALGORITHM_UNSPECIFIED
 }
 
-// Contains an HSM-generated attestation about a key operation.
+// Contains an HSM-generated attestation about a key operation. For more
+// information, see [Verifying attestations]
+// (https://cloud.google.com/kms/docs/attest-key).
 type KeyOperationAttestation struct {
 	// Output only. The format of the attestation data.
 	Format KeyOperationAttestation_AttestationFormat `protobuf:"varint,4,opt,name=format,proto3,enum=google.cloud.kms.v1.KeyOperationAttestation_AttestationFormat" json:"format,omitempty"`
@@ -685,61 +759,60 @@ func (m *KeyOperationAttestation) GetContent() []byte {
 	return nil
 }
 
-// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] represents an
-// individual cryptographic key, and the associated key material.
+// A [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] represents an individual cryptographic key, and the
+// associated key material.
 //
-// An
-// [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED]
-// version can be used for cryptographic operations.
+// An [ENABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.ENABLED] version can be
+// used for cryptographic operations.
 //
 // For security reasons, the raw cryptographic key material represented by a
-// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] can never be viewed
-// or exported. It can only be used to encrypt, decrypt, or sign data when an
-// authorized user or application invokes Cloud KMS.
+// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] can never be viewed or exported. It can only be used to
+// encrypt, decrypt, or sign data when an authorized user or application invokes
+// Cloud KMS.
 type CryptoKeyVersion struct {
-	// Output only. The resource name for this
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the format
+	// Output only. The resource name for this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in the format
 	// `projects/*/locations/*/keyRings/*/cryptoKeys/*/cryptoKeyVersions/*`.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// The current state of the
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// The current state of the [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	State CryptoKeyVersion_CryptoKeyVersionState `protobuf:"varint,3,opt,name=state,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionState" json:"state,omitempty"`
-	// Output only. The [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel]
-	// describing how crypto operations are performed with this
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
+	// Output only. The [ProtectionLevel][google.cloud.kms.v1.ProtectionLevel] describing how crypto operations are
+	// performed with this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion].
 	ProtectionLevel ProtectionLevel `protobuf:"varint,7,opt,name=protection_level,json=protectionLevel,proto3,enum=google.cloud.kms.v1.ProtectionLevel" json:"protection_level,omitempty"`
-	// Output only. The
-	// [CryptoKeyVersionAlgorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm]
-	// that this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
-	// supports.
+	// Output only. The [CryptoKeyVersionAlgorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm] that this
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] supports.
 	Algorithm CryptoKeyVersion_CryptoKeyVersionAlgorithm `protobuf:"varint,10,opt,name=algorithm,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionAlgorithm" json:"algorithm,omitempty"`
 	// Output only. Statement that was generated and signed by the HSM at key
 	// creation time. Use this statement to verify attributes of the key as stored
 	// on the HSM, independently of Google. Only provided for key versions with
-	// [protection_level][google.cloud.kms.v1.CryptoKeyVersion.protection_level]
-	// [HSM][google.cloud.kms.v1.ProtectionLevel.HSM].
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersion.protection_level] [HSM][google.cloud.kms.v1.ProtectionLevel.HSM].
 	Attestation *KeyOperationAttestation `protobuf:"bytes,8,opt,name=attestation,proto3" json:"attestation,omitempty"`
-	// Output only. The time at which this
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] was created.
+	// Output only. The time at which this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] was created.
 	CreateTime *timestamp.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	// Output only. The time this
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s key material was
+	// Output only. The time this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s key material was
 	// generated.
 	GenerateTime *timestamp.Timestamp `protobuf:"bytes,11,opt,name=generate_time,json=generateTime,proto3" json:"generate_time,omitempty"`
-	// Output only. The time this
-	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s key material is
-	// scheduled for destruction. Only present if
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] is
+	// Output only. The time this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s key material is scheduled
+	// for destruction. Only present if [state][google.cloud.kms.v1.CryptoKeyVersion.state] is
 	// [DESTROY_SCHEDULED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED].
 	DestroyTime *timestamp.Timestamp `protobuf:"bytes,5,opt,name=destroy_time,json=destroyTime,proto3" json:"destroy_time,omitempty"`
 	// Output only. The time this CryptoKeyVersion's key material was
-	// destroyed. Only present if
-	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] is
+	// destroyed. Only present if [state][google.cloud.kms.v1.CryptoKeyVersion.state] is
 	// [DESTROYED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DESTROYED].
-	DestroyEventTime     *timestamp.Timestamp `protobuf:"bytes,6,opt,name=destroy_event_time,json=destroyEventTime,proto3" json:"destroy_event_time,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	DestroyEventTime *timestamp.Timestamp `protobuf:"bytes,6,opt,name=destroy_event_time,json=destroyEventTime,proto3" json:"destroy_event_time,omitempty"`
+	// Output only. The name of the [ImportJob][google.cloud.kms.v1.ImportJob] used to import this
+	// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. Only present if the underlying key material was
+	// imported.
+	ImportJob string `protobuf:"bytes,14,opt,name=import_job,json=importJob,proto3" json:"import_job,omitempty"`
+	// Output only. The time at which this [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]'s key material
+	// was imported.
+	ImportTime *timestamp.Timestamp `protobuf:"bytes,15,opt,name=import_time,json=importTime,proto3" json:"import_time,omitempty"`
+	// Output only. The root cause of an import failure. Only present if
+	// [state][google.cloud.kms.v1.CryptoKeyVersion.state] is
+	// [IMPORT_FAILED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.IMPORT_FAILED].
+	ImportFailureReason  string   `protobuf:"bytes,16,opt,name=import_failure_reason,json=importFailureReason,proto3" json:"import_failure_reason,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *CryptoKeyVersion) Reset()         { *m = CryptoKeyVersion{} }
@@ -830,8 +903,28 @@ func (m *CryptoKeyVersion) GetDestroyEventTime() *timestamp.Timestamp {
 	return nil
 }
 
-// The public key for a given
-// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. Obtained via
+func (m *CryptoKeyVersion) GetImportJob() string {
+	if m != nil {
+		return m.ImportJob
+	}
+	return ""
+}
+
+func (m *CryptoKeyVersion) GetImportTime() *timestamp.Timestamp {
+	if m != nil {
+		return m.ImportTime
+	}
+	return nil
+}
+
+func (m *CryptoKeyVersion) GetImportFailureReason() string {
+	if m != nil {
+		return m.ImportFailureReason
+	}
+	return ""
+}
+
+// The public key for a given [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]. Obtained via
 // [GetPublicKey][google.cloud.kms.v1.KeyManagementService.GetPublicKey].
 type PublicKey struct {
 	// The public key, encoded in PEM format. For more information, see the
@@ -840,9 +933,8 @@ type PublicKey struct {
 	// [Textual Encoding of Subject Public Key Info]
 	// (https://tools.ietf.org/html/rfc7468#section-13).
 	Pem string `protobuf:"bytes,1,opt,name=pem,proto3" json:"pem,omitempty"`
-	// The
-	// [Algorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm]
-	// associated with this key.
+	// The [Algorithm][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionAlgorithm] associated
+	// with this key.
 	Algorithm            CryptoKeyVersion_CryptoKeyVersionAlgorithm `protobuf:"varint,2,opt,name=algorithm,proto3,enum=google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionAlgorithm" json:"algorithm,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                                   `json:"-"`
 	XXX_unrecognized     []byte                                     `json:"-"`
@@ -888,6 +980,215 @@ func (m *PublicKey) GetAlgorithm() CryptoKeyVersion_CryptoKeyVersionAlgorithm {
 	return CryptoKeyVersion_CRYPTO_KEY_VERSION_ALGORITHM_UNSPECIFIED
 }
 
+// An [ImportJob][google.cloud.kms.v1.ImportJob] can be used to create [CryptoKeys][google.cloud.kms.v1.CryptoKey] and
+// [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] using pre-existing key material,
+// generated outside of Cloud KMS.
+//
+// When an [ImportJob][google.cloud.kms.v1.ImportJob] is created, Cloud KMS will generate a "wrapping key",
+// which is a public/private key pair. You use the wrapping key to encrypt (also
+// known as wrap) the pre-existing key material to protect it during the import
+// process. The nature of the wrapping key depends on the choice of
+// [import_method][google.cloud.kms.v1.ImportJob.import_method]. When the wrapping key generation
+// is complete, the [state][google.cloud.kms.v1.ImportJob.state] will be set to
+// [ACTIVE][google.cloud.kms.v1.ImportJob.ImportJobState.ACTIVE] and the [public_key][google.cloud.kms.v1.ImportJob.public_key]
+// can be fetched. The fetched public key can then be used to wrap your
+// pre-existing key material.
+//
+// Once the key material is wrapped, it can be imported into a new
+// [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion] in an existing [CryptoKey][google.cloud.kms.v1.CryptoKey] by calling
+// [ImportCryptoKeyVersion][google.cloud.kms.v1.KeyManagementService.ImportCryptoKeyVersion].
+// Multiple [CryptoKeyVersions][google.cloud.kms.v1.CryptoKeyVersion] can be imported with a single
+// [ImportJob][google.cloud.kms.v1.ImportJob]. Cloud KMS uses the private key portion of the wrapping key to
+// unwrap the key material. Only Cloud KMS has access to the private key.
+//
+// An [ImportJob][google.cloud.kms.v1.ImportJob] expires 3 days after it is created. Once expired, Cloud KMS
+// will no longer be able to import or unwrap any key material that was wrapped
+// with the [ImportJob][google.cloud.kms.v1.ImportJob]'s public key.
+//
+// For more information, see
+// [Importing a key](https://cloud.google.com/kms/docs/importing-a-key).
+type ImportJob struct {
+	// Output only. The resource name for this [ImportJob][google.cloud.kms.v1.ImportJob] in the format
+	// `projects/*/locations/*/keyRings/*/importJobs/*`.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Required and immutable. The wrapping method to be used for incoming
+	// key material.
+	ImportMethod ImportJob_ImportMethod `protobuf:"varint,2,opt,name=import_method,json=importMethod,proto3,enum=google.cloud.kms.v1.ImportJob_ImportMethod" json:"import_method,omitempty"`
+	// Required and immutable. The protection level of the [ImportJob][google.cloud.kms.v1.ImportJob]. This
+	// must match the
+	// [protection_level][google.cloud.kms.v1.CryptoKeyVersionTemplate.protection_level] of the
+	// [version_template][google.cloud.kms.v1.CryptoKey.version_template] on the [CryptoKey][google.cloud.kms.v1.CryptoKey] you
+	// attempt to import into.
+	ProtectionLevel ProtectionLevel `protobuf:"varint,9,opt,name=protection_level,json=protectionLevel,proto3,enum=google.cloud.kms.v1.ProtectionLevel" json:"protection_level,omitempty"`
+	// Output only. The time at which this [ImportJob][google.cloud.kms.v1.ImportJob] was created.
+	CreateTime *timestamp.Timestamp `protobuf:"bytes,3,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The time this [ImportJob][google.cloud.kms.v1.ImportJob]'s key material was generated.
+	GenerateTime *timestamp.Timestamp `protobuf:"bytes,4,opt,name=generate_time,json=generateTime,proto3" json:"generate_time,omitempty"`
+	// Output only. The time at which this [ImportJob][google.cloud.kms.v1.ImportJob] is scheduled for
+	// expiration and can no longer be used to import key material.
+	ExpireTime *timestamp.Timestamp `protobuf:"bytes,5,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
+	// Output only. The time this [ImportJob][google.cloud.kms.v1.ImportJob] expired. Only present if
+	// [state][google.cloud.kms.v1.ImportJob.state] is [EXPIRED][google.cloud.kms.v1.ImportJob.ImportJobState.EXPIRED].
+	ExpireEventTime *timestamp.Timestamp `protobuf:"bytes,10,opt,name=expire_event_time,json=expireEventTime,proto3" json:"expire_event_time,omitempty"`
+	// Output only. The current state of the [ImportJob][google.cloud.kms.v1.ImportJob], indicating if it can
+	// be used.
+	State ImportJob_ImportJobState `protobuf:"varint,6,opt,name=state,proto3,enum=google.cloud.kms.v1.ImportJob_ImportJobState" json:"state,omitempty"`
+	// Output only. The public key with which to wrap key material prior to
+	// import. Only returned if [state][google.cloud.kms.v1.ImportJob.state] is
+	// [ACTIVE][google.cloud.kms.v1.ImportJob.ImportJobState.ACTIVE].
+	PublicKey *ImportJob_WrappingPublicKey `protobuf:"bytes,7,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// Output only. Statement that was generated and signed by the key creator
+	// (for example, an HSM) at key creation time. Use this statement to verify
+	// attributes of the key as stored on the HSM, independently of Google.
+	// Only present if the chosen [ImportMethod][google.cloud.kms.v1.ImportJob.ImportMethod] is one with a protection
+	// level of [HSM][google.cloud.kms.v1.ProtectionLevel.HSM].
+	Attestation          *KeyOperationAttestation `protobuf:"bytes,8,opt,name=attestation,proto3" json:"attestation,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
+}
+
+func (m *ImportJob) Reset()         { *m = ImportJob{} }
+func (m *ImportJob) String() string { return proto.CompactTextString(m) }
+func (*ImportJob) ProtoMessage()    {}
+func (*ImportJob) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e40e1384d35a80c5, []int{6}
+}
+
+func (m *ImportJob) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImportJob.Unmarshal(m, b)
+}
+func (m *ImportJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImportJob.Marshal(b, m, deterministic)
+}
+func (m *ImportJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImportJob.Merge(m, src)
+}
+func (m *ImportJob) XXX_Size() int {
+	return xxx_messageInfo_ImportJob.Size(m)
+}
+func (m *ImportJob) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImportJob.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImportJob proto.InternalMessageInfo
+
+func (m *ImportJob) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *ImportJob) GetImportMethod() ImportJob_ImportMethod {
+	if m != nil {
+		return m.ImportMethod
+	}
+	return ImportJob_IMPORT_METHOD_UNSPECIFIED
+}
+
+func (m *ImportJob) GetProtectionLevel() ProtectionLevel {
+	if m != nil {
+		return m.ProtectionLevel
+	}
+	return ProtectionLevel_PROTECTION_LEVEL_UNSPECIFIED
+}
+
+func (m *ImportJob) GetCreateTime() *timestamp.Timestamp {
+	if m != nil {
+		return m.CreateTime
+	}
+	return nil
+}
+
+func (m *ImportJob) GetGenerateTime() *timestamp.Timestamp {
+	if m != nil {
+		return m.GenerateTime
+	}
+	return nil
+}
+
+func (m *ImportJob) GetExpireTime() *timestamp.Timestamp {
+	if m != nil {
+		return m.ExpireTime
+	}
+	return nil
+}
+
+func (m *ImportJob) GetExpireEventTime() *timestamp.Timestamp {
+	if m != nil {
+		return m.ExpireEventTime
+	}
+	return nil
+}
+
+func (m *ImportJob) GetState() ImportJob_ImportJobState {
+	if m != nil {
+		return m.State
+	}
+	return ImportJob_IMPORT_JOB_STATE_UNSPECIFIED
+}
+
+func (m *ImportJob) GetPublicKey() *ImportJob_WrappingPublicKey {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+func (m *ImportJob) GetAttestation() *KeyOperationAttestation {
+	if m != nil {
+		return m.Attestation
+	}
+	return nil
+}
+
+// The public key component of the wrapping key. For details of the type of
+// key this public key corresponds to, see the [ImportMethod][google.cloud.kms.v1.ImportJob.ImportMethod].
+type ImportJob_WrappingPublicKey struct {
+	// The public key, encoded in PEM format. For more information, see the [RFC
+	// 7468](https://tools.ietf.org/html/rfc7468) sections for [General
+	// Considerations](https://tools.ietf.org/html/rfc7468#section-2) and
+	// [Textual Encoding of Subject Public Key Info]
+	// (https://tools.ietf.org/html/rfc7468#section-13).
+	Pem                  string   `protobuf:"bytes,1,opt,name=pem,proto3" json:"pem,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ImportJob_WrappingPublicKey) Reset()         { *m = ImportJob_WrappingPublicKey{} }
+func (m *ImportJob_WrappingPublicKey) String() string { return proto.CompactTextString(m) }
+func (*ImportJob_WrappingPublicKey) ProtoMessage()    {}
+func (*ImportJob_WrappingPublicKey) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e40e1384d35a80c5, []int{6, 0}
+}
+
+func (m *ImportJob_WrappingPublicKey) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImportJob_WrappingPublicKey.Unmarshal(m, b)
+}
+func (m *ImportJob_WrappingPublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImportJob_WrappingPublicKey.Marshal(b, m, deterministic)
+}
+func (m *ImportJob_WrappingPublicKey) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImportJob_WrappingPublicKey.Merge(m, src)
+}
+func (m *ImportJob_WrappingPublicKey) XXX_Size() int {
+	return xxx_messageInfo_ImportJob_WrappingPublicKey.Size(m)
+}
+func (m *ImportJob_WrappingPublicKey) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImportJob_WrappingPublicKey.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImportJob_WrappingPublicKey proto.InternalMessageInfo
+
+func (m *ImportJob_WrappingPublicKey) GetPem() string {
+	if m != nil {
+		return m.Pem
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("google.cloud.kms.v1.ProtectionLevel", ProtectionLevel_name, ProtectionLevel_value)
 	proto.RegisterEnum("google.cloud.kms.v1.CryptoKey_CryptoKeyPurpose", CryptoKey_CryptoKeyPurpose_name, CryptoKey_CryptoKeyPurpose_value)
@@ -895,6 +1196,8 @@ func init() {
 	proto.RegisterEnum("google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionAlgorithm", CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, CryptoKeyVersion_CryptoKeyVersionAlgorithm_value)
 	proto.RegisterEnum("google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionState", CryptoKeyVersion_CryptoKeyVersionState_name, CryptoKeyVersion_CryptoKeyVersionState_value)
 	proto.RegisterEnum("google.cloud.kms.v1.CryptoKeyVersion_CryptoKeyVersionView", CryptoKeyVersion_CryptoKeyVersionView_name, CryptoKeyVersion_CryptoKeyVersionView_value)
+	proto.RegisterEnum("google.cloud.kms.v1.ImportJob_ImportMethod", ImportJob_ImportMethod_name, ImportJob_ImportMethod_value)
+	proto.RegisterEnum("google.cloud.kms.v1.ImportJob_ImportJobState", ImportJob_ImportJobState_name, ImportJob_ImportJobState_value)
 	proto.RegisterType((*KeyRing)(nil), "google.cloud.kms.v1.KeyRing")
 	proto.RegisterType((*CryptoKey)(nil), "google.cloud.kms.v1.CryptoKey")
 	proto.RegisterMapType((map[string]string)(nil), "google.cloud.kms.v1.CryptoKey.LabelsEntry")
@@ -902,6 +1205,8 @@ func init() {
 	proto.RegisterType((*KeyOperationAttestation)(nil), "google.cloud.kms.v1.KeyOperationAttestation")
 	proto.RegisterType((*CryptoKeyVersion)(nil), "google.cloud.kms.v1.CryptoKeyVersion")
 	proto.RegisterType((*PublicKey)(nil), "google.cloud.kms.v1.PublicKey")
+	proto.RegisterType((*ImportJob)(nil), "google.cloud.kms.v1.ImportJob")
+	proto.RegisterType((*ImportJob_WrappingPublicKey)(nil), "google.cloud.kms.v1.ImportJob.WrappingPublicKey")
 }
 
 func init() {
@@ -909,81 +1214,100 @@ func init() {
 }
 
 var fileDescriptor_e40e1384d35a80c5 = []byte{
-	// 1203 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0x5d, 0x6e, 0xdb, 0x46,
-	0x17, 0x0d, 0x25, 0xcb, 0xb2, 0xae, 0x9c, 0x98, 0x1e, 0xe7, 0x47, 0xf1, 0x17, 0x24, 0x86, 0x92,
-	0x0f, 0x35, 0x82, 0x54, 0x8a, 0x65, 0x27, 0x75, 0x1a, 0xb4, 0x01, 0x2d, 0x8d, 0x65, 0x56, 0x3f,
-	0x64, 0x87, 0xb4, 0x52, 0x07, 0x29, 0x08, 0x5a, 0x9e, 0x28, 0x82, 0xc5, 0x1f, 0x90, 0x94, 0x1a,
-	0x01, 0xdd, 0x46, 0x5f, 0xba, 0x81, 0x02, 0x5d, 0x43, 0x57, 0x90, 0x55, 0x74, 0x19, 0x79, 0x2c,
-	0x38, 0x1c, 0xda, 0x94, 0xcc, 0xd4, 0x49, 0x91, 0x27, 0xcd, 0xdc, 0x73, 0xcf, 0x99, 0xd1, 0xbd,
-	0x97, 0x87, 0x84, 0xfb, 0x03, 0xc7, 0x19, 0x8c, 0x68, 0xb5, 0x3f, 0x72, 0xc6, 0x27, 0xd5, 0x53,
-	0xcb, 0xaf, 0x4e, 0xb6, 0xaa, 0x1e, 0xf5, 0x9d, 0xb1, 0xd7, 0xa7, 0x7e, 0xc5, 0xf5, 0x9c, 0xc0,
-	0x41, 0x6b, 0x51, 0x52, 0x85, 0x25, 0x55, 0x4e, 0x2d, 0xbf, 0x32, 0xd9, 0x5a, 0xbf, 0xc3, 0x99,
-	0xa6, 0x3b, 0xac, 0x9a, 0xb6, 0xed, 0x04, 0x66, 0x30, 0x74, 0x6c, 0x4e, 0x59, 0xbf, 0xcb, 0x51,
-	0xb6, 0x3b, 0x1e, 0xbf, 0xa9, 0x9e, 0x8c, 0x3d, 0x96, 0xc0, 0xf1, 0x7b, 0xf3, 0x78, 0x30, 0xb4,
-	0xa8, 0x1f, 0x98, 0x96, 0x1b, 0x25, 0x94, 0x5f, 0x41, 0xbe, 0x45, 0xa7, 0x64, 0x68, 0x0f, 0x10,
-	0x82, 0x05, 0xdb, 0xb4, 0x68, 0x49, 0xd8, 0x10, 0x36, 0x0b, 0x84, 0xad, 0xd1, 0x73, 0x28, 0xf6,
-	0x3d, 0x6a, 0x06, 0xd4, 0x08, 0x89, 0xa5, 0xcc, 0x86, 0xb0, 0x59, 0xac, 0xad, 0x57, 0xf8, 0x45,
-	0x63, 0xd5, 0x8a, 0x1e, 0xab, 0x12, 0x88, 0xd2, 0xc3, 0x40, 0xf9, 0xef, 0x1c, 0x14, 0xea, 0xde,
-	0xd4, 0x0d, 0x9c, 0x16, 0x9d, 0xa6, 0xca, 0xbf, 0x80, 0xbc, 0xeb, 0x0d, 0x2d, 0xd3, 0x9b, 0x72,
-	0xe9, 0xff, 0x57, 0x52, 0x6a, 0x50, 0x39, 0x13, 0xe9, 0x51, 0xcf, 0x1f, 0x3a, 0x36, 0x89, 0x59,
-	0x48, 0x86, 0xbc, 0x3b, 0xf6, 0x5c, 0xc7, 0xa7, 0xa5, 0xec, 0x86, 0xb0, 0x79, 0xad, 0x56, 0xfd,
-	0x77, 0x81, 0xf3, 0x95, 0x1a, 0xd1, 0x48, 0xcc, 0x9f, 0xff, 0xab, 0xb9, 0xcf, 0xf9, 0xab, 0xe8,
-	0x00, 0x90, 0x4d, 0xdf, 0x05, 0x86, 0xc7, 0xfb, 0x13, 0x69, 0xe4, 0x2f, 0xd5, 0x10, 0x43, 0x16,
-	0xe1, 0x24, 0xa6, 0xd4, 0x80, 0x95, 0x33, 0x11, 0x97, 0x7a, 0x43, 0xe7, 0xa4, 0xb4, 0xc4, 0x64,
-	0x6e, 0x5f, 0x90, 0x69, 0xf0, 0x5e, 0x1f, 0x5c, 0x21, 0xd7, 0x62, 0x8e, 0xca, 0x28, 0xe8, 0x27,
-	0x10, 0x27, 0x51, 0xad, 0x8c, 0x80, 0x5a, 0xee, 0xc8, 0x0c, 0x68, 0xa9, 0xc8, 0x64, 0xbe, 0xfe,
-	0xa4, 0x0a, 0xeb, 0x9c, 0x44, 0x56, 0x26, 0xb3, 0x01, 0xb4, 0x07, 0x8b, 0x23, 0xf3, 0x98, 0x8e,
-	0xfc, 0x12, 0x6c, 0x64, 0x37, 0x8b, 0xb5, 0x87, 0x97, 0x14, 0xbc, 0xcd, 0x92, 0xb1, 0x1d, 0x78,
-	0x53, 0xc2, 0x99, 0xeb, 0xcf, 0xa0, 0x98, 0x08, 0x23, 0x11, 0xb2, 0xa7, 0x74, 0xca, 0x07, 0x23,
-	0x5c, 0xa2, 0xeb, 0x90, 0x9b, 0x98, 0xa3, 0x71, 0x34, 0x70, 0x05, 0x12, 0x6d, 0xbe, 0xcd, 0xec,
-	0x0a, 0xe5, 0x77, 0x20, 0xce, 0xb7, 0x10, 0x95, 0xe1, 0x6e, 0x9d, 0x1c, 0xa9, 0xba, 0x62, 0xb4,
-	0xf0, 0x91, 0xa1, 0x1e, 0x12, 0x55, 0xd1, 0xb0, 0x71, 0xd8, 0xd5, 0x54, 0x5c, 0x97, 0xf7, 0x65,
-	0xdc, 0x10, 0xaf, 0xa0, 0x35, 0x58, 0xc1, 0x5d, 0x96, 0x65, 0x34, 0x30, 0xfb, 0x15, 0x85, 0x30,
-	0x28, 0x69, 0x47, 0x9d, 0x0e, 0xd6, 0x89, 0x5c, 0x37, 0x34, 0xb9, 0xd9, 0x15, 0x73, 0xe8, 0x26,
-	0xa0, 0x44, 0x30, 0x4e, 0x5e, 0xdc, 0x5b, 0x83, 0xd5, 0xb3, 0xc6, 0xf8, 0xfd, 0xb7, 0xf4, 0x64,
-	0x3c, 0xa2, 0xe5, 0xf7, 0x02, 0x94, 0x3e, 0x56, 0x3b, 0xa4, 0x80, 0x18, 0xf6, 0x8a, 0xf6, 0x19,
-	0x67, 0x44, 0x27, 0x74, 0xc4, 0xfe, 0xe4, 0xb5, 0xda, 0x83, 0xd4, 0xa2, 0xa9, 0x67, 0xc9, 0xed,
-	0x30, 0x97, 0xac, 0xb8, 0xb3, 0x01, 0xf4, 0x33, 0x14, 0xcc, 0xd1, 0xc0, 0xf1, 0x86, 0xc1, 0x5b,
-	0x8b, 0xcf, 0xfb, 0x8b, 0x4f, 0x6a, 0xe7, 0x85, 0x80, 0x14, 0xcb, 0x90, 0x73, 0xc5, 0xf2, 0x07,
-	0x01, 0x6e, 0xb5, 0xe8, 0x54, 0x71, 0x69, 0x34, 0x57, 0x52, 0x10, 0x84, 0x63, 0x1a, 0x2e, 0x51,
-	0x0f, 0x16, 0xdf, 0x38, 0x9e, 0x65, 0x06, 0xa5, 0x05, 0x76, 0xee, 0xf7, 0xa9, 0xe7, 0x7e, 0x84,
-	0x5d, 0x49, 0xac, 0xf7, 0x99, 0x0a, 0xe1, 0x6a, 0xa8, 0x04, 0xf9, 0xbe, 0x63, 0x07, 0xd4, 0x0e,
-	0xd8, 0x13, 0xb7, 0x4c, 0xe2, 0x6d, 0xf9, 0x14, 0x56, 0x2f, 0xd0, 0xc2, 0x56, 0x4b, 0xba, 0x8e,
-	0x35, 0x5d, 0xd2, 0x65, 0xa5, 0x6b, 0xec, 0x2b, 0xa4, 0x23, 0xe9, 0x73, 0xad, 0x2e, 0xc1, 0xf5,
-	0xba, 0xd4, 0x93, 0x0f, 0x3b, 0x46, 0x6f, 0xcb, 0xa8, 0x2b, 0x1d, 0x95, 0x60, 0x4d, 0xc3, 0x0d,
-	0x31, 0x9b, 0x44, 0x6a, 0x49, 0x64, 0xa1, 0xfc, 0x07, 0x24, 0xe6, 0x8a, 0xd7, 0x28, 0xd5, 0xb1,
-	0x7e, 0x84, 0x5c, 0x78, 0xa3, 0xd8, 0x6e, 0x9e, 0xff, 0xb7, 0xf2, 0x6b, 0xa1, 0x04, 0x89, 0x94,
-	0x52, 0xc7, 0x24, 0xff, 0xc5, 0xc6, 0x04, 0xbe, 0xf4, 0x98, 0xa0, 0x2e, 0x14, 0xcd, 0xf3, 0xc6,
-	0x70, 0x77, 0x7a, 0xf4, 0x39, 0xf3, 0x40, 0x92, 0x02, 0xf3, 0xc6, 0xbb, 0xf0, 0x59, 0xc6, 0xfb,
-	0x02, 0xae, 0x0e, 0xa8, 0x1d, 0x1e, 0xc1, 0xe9, 0xc5, 0x4b, 0xe9, 0xcb, 0x31, 0x81, 0x09, 0x7c,
-	0x07, 0xcb, 0x27, 0xd4, 0x0f, 0x3c, 0x67, 0xfa, 0xa9, 0xbe, 0x5f, 0xe4, 0xf9, 0xb1, 0xf1, 0xc7,
-	0x74, 0x3a, 0xa1, 0x76, 0x10, 0x89, 0x2c, 0x5e, 0x6e, 0xfc, 0x9c, 0x85, 0x43, 0x12, 0x7b, 0x5b,
-	0xfe, 0x95, 0x85, 0xdb, 0x1f, 0xad, 0x3f, 0x7a, 0x04, 0x9b, 0x09, 0x8f, 0xeb, 0x61, 0xa2, 0x85,
-	0xf3, 0x2f, 0xb5, 0x9b, 0x0a, 0x91, 0xf5, 0x83, 0xce, 0xdc, 0x23, 0x70, 0x0f, 0xfe, 0xd7, 0x54,
-	0x94, 0x66, 0x1b, 0x1b, 0xe7, 0x4e, 0xc6, 0xed, 0x4f, 0x56, 0xba, 0xa2, 0x80, 0xee, 0x40, 0x89,
-	0x68, 0x12, 0xb3, 0x3c, 0x43, 0xd5, 0x34, 0xa3, 0xf6, 0x78, 0x67, 0xd7, 0xd0, 0x0e, 0xa4, 0xda,
-	0x93, 0xa7, 0x62, 0xe6, 0x02, 0xba, 0xfd, 0xf8, 0x9b, 0x5a, 0x8c, 0x66, 0x2f, 0xa0, 0x3b, 0x8f,
-	0x9f, 0x3d, 0x8d, 0xd1, 0x05, 0x74, 0x17, 0xd6, 0xcf, 0xd1, 0x56, 0x5d, 0xdb, 0x9a, 0xd1, 0xce,
-	0xa5, 0xe0, 0x49, 0xf5, 0xc5, 0x14, 0x3c, 0xa9, 0x9f, 0x47, 0x1b, 0x70, 0x27, 0xc4, 0xb9, 0x2f,
-	0x1b, 0x8a, 0x84, 0xd5, 0x99, 0x13, 0x96, 0x52, 0x33, 0x92, 0x67, 0x14, 0x52, 0x33, 0x92, 0xa7,
-	0x00, 0xba, 0x05, 0x6b, 0xb8, 0xce, 0x2f, 0x51, 0x7b, 0x72, 0x06, 0x2c, 0xcf, 0x00, 0xdb, 0xbb,
-	0x3b, 0x21, 0xb0, 0xbd, 0xbb, 0x23, 0x5e, 0x2d, 0xff, 0x2e, 0xc0, 0x8d, 0xd4, 0xc7, 0x1c, 0x6d,
-	0xc2, 0x83, 0x94, 0xd6, 0x85, 0x16, 0x36, 0xff, 0x92, 0xba, 0x09, 0x48, 0xc5, 0xdd, 0x86, 0xdc,
-	0x6d, 0x1a, 0x4d, 0xdc, 0xc5, 0x84, 0x99, 0x9c, 0x98, 0x43, 0x45, 0xc8, 0xe3, 0xae, 0xb4, 0xd7,
-	0xc6, 0x0d, 0x51, 0x40, 0xcb, 0xb0, 0xd4, 0x90, 0xb5, 0x68, 0x97, 0x41, 0x57, 0xa1, 0xd0, 0xc0,
-	0x9a, 0x4e, 0x94, 0x23, 0xe6, 0x70, 0x37, 0x60, 0x95, 0x6f, 0x0d, 0xad, 0x7e, 0x80, 0x1b, 0x87,
-	0x6d, 0x66, 0x6f, 0x32, 0x5c, 0x9f, 0xbf, 0x5b, 0x6f, 0x48, 0x7f, 0x41, 0x5f, 0xc1, 0xfd, 0x94,
-	0xab, 0xf5, 0x64, 0xfc, 0x72, 0xee, 0x66, 0x4b, 0xb0, 0xb0, 0x7f, 0xd8, 0x6e, 0x8b, 0x42, 0xf9,
-	0x57, 0x28, 0xa8, 0xe3, 0xe3, 0xd1, 0xb0, 0x1f, 0x7e, 0xd3, 0x89, 0x90, 0x75, 0xa9, 0x15, 0xbf,
-	0xb9, 0x5d, 0x6a, 0xcd, 0x7a, 0x4f, 0xe6, 0x4b, 0x7b, 0xcf, 0xc3, 0x1f, 0x60, 0x65, 0xce, 0xfe,
-	0xc2, 0x66, 0xaa, 0x44, 0xd1, 0x71, 0x9d, 0xbd, 0x11, 0xda, 0xb8, 0x87, 0xdb, 0x73, 0x97, 0x5f,
-	0x86, 0x25, 0x4d, 0xd9, 0xd7, 0x5f, 0x4a, 0x04, 0x8b, 0x02, 0xca, 0x43, 0xf6, 0x40, 0xeb, 0x88,
-	0x99, 0xbd, 0xdf, 0x04, 0xb8, 0xd5, 0x77, 0xac, 0xb4, 0xdb, 0xed, 0xad, 0xb6, 0x2c, 0x9f, 0xc4,
-	0x9f, 0xe7, 0xe1, 0x89, 0x8e, 0x2a, 0xbc, 0x7a, 0xca, 0x33, 0x07, 0xce, 0xc8, 0xb4, 0x07, 0x15,
-	0xc7, 0x1b, 0x54, 0x07, 0xd4, 0x66, 0x0f, 0x77, 0x35, 0x82, 0x4c, 0x77, 0xe8, 0xcf, 0x7c, 0xe3,
-	0x3f, 0x3f, 0xb5, 0xfc, 0x0f, 0x82, 0xf0, 0x67, 0x66, 0xad, 0x19, 0x71, 0xeb, 0xec, 0x94, 0x96,
-	0xe5, 0x57, 0x7a, 0x5b, 0xef, 0xe3, 0xe8, 0x6b, 0x16, 0x7d, 0xdd, 0xb2, 0xfc, 0xd7, 0xbd, 0xad,
-	0xe3, 0x45, 0xa6, 0xb8, 0xfd, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xbe, 0x5a, 0x5e, 0x75, 0x34,
-	0x0c, 0x00, 0x00,
+	// 1515 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x58, 0xdb, 0x72, 0xdb, 0xc6,
+	0x19, 0x0e, 0x48, 0x8a, 0x14, 0x7f, 0x52, 0x22, 0xb8, 0xb2, 0x63, 0x5a, 0x75, 0x1c, 0x0d, 0x93,
+	0x4c, 0x35, 0x69, 0x42, 0x9a, 0xf4, 0xa1, 0x4e, 0x3d, 0xad, 0x07, 0x22, 0x41, 0x09, 0xe2, 0x01,
+	0xe8, 0x02, 0xa2, 0xa3, 0x8c, 0x3b, 0x18, 0x88, 0x5a, 0xd3, 0xa8, 0x88, 0xc3, 0x00, 0xa0, 0x6a,
+	0xce, 0xf4, 0x35, 0x7a, 0xd7, 0xeb, 0x5e, 0xf4, 0x21, 0x3a, 0xd3, 0xdb, 0x3c, 0x45, 0x1f, 0x23,
+	0x97, 0x1d, 0x2c, 0x16, 0x14, 0x49, 0x41, 0x96, 0x14, 0xeb, 0x4a, 0x8b, 0xfd, 0xfe, 0xef, 0xfb,
+	0xf7, 0xf0, 0xef, 0xb7, 0x2b, 0xc2, 0x57, 0x63, 0xc7, 0x19, 0x4f, 0x48, 0x7d, 0x34, 0x71, 0xa6,
+	0xa7, 0xf5, 0x33, 0xcb, 0xaf, 0x9f, 0x37, 0xea, 0x1e, 0xf1, 0x9d, 0xa9, 0x37, 0x22, 0x7e, 0xcd,
+	0xf5, 0x9c, 0xc0, 0x41, 0x5b, 0x51, 0x50, 0x8d, 0x06, 0xd5, 0xce, 0x2c, 0xbf, 0x76, 0xde, 0xd8,
+	0x7e, 0xc4, 0x98, 0x86, 0x6b, 0xd6, 0x0d, 0xdb, 0x76, 0x02, 0x23, 0x30, 0x1d, 0x9b, 0x51, 0xb6,
+	0x1f, 0x33, 0x94, 0x7e, 0x9d, 0x4c, 0xdf, 0xd5, 0x4f, 0xa7, 0x1e, 0x0d, 0x60, 0xf8, 0x97, 0xab,
+	0x78, 0x60, 0x5a, 0xc4, 0x0f, 0x0c, 0xcb, 0x8d, 0x02, 0xaa, 0x3f, 0x41, 0xae, 0x4b, 0x66, 0xd8,
+	0xb4, 0xc7, 0x08, 0x41, 0xc6, 0x36, 0x2c, 0x52, 0xe1, 0x76, 0xb8, 0xdd, 0x3c, 0xa6, 0x6d, 0xf4,
+	0x0a, 0x0a, 0x23, 0x8f, 0x18, 0x01, 0xd1, 0x43, 0x62, 0x25, 0xb5, 0xc3, 0xed, 0x16, 0x9a, 0xdb,
+	0x35, 0x36, 0xd0, 0x58, 0xb5, 0xa6, 0xc5, 0xaa, 0x18, 0xa2, 0xf0, 0xb0, 0xa3, 0xfa, 0xbf, 0x35,
+	0xc8, 0xb7, 0xbc, 0x99, 0x1b, 0x38, 0x5d, 0x32, 0x4b, 0x94, 0x7f, 0x0d, 0x39, 0xd7, 0x33, 0x2d,
+	0xc3, 0x9b, 0x31, 0xe9, 0x6f, 0x6a, 0x09, 0x6b, 0x50, 0x9b, 0x8b, 0x0c, 0x89, 0xe7, 0x9b, 0x8e,
+	0x8d, 0x63, 0x16, 0x92, 0x20, 0xe7, 0x4e, 0x3d, 0xd7, 0xf1, 0x49, 0x25, 0xbd, 0xc3, 0xed, 0x6e,
+	0x36, 0xeb, 0x1f, 0x17, 0xb8, 0x68, 0x29, 0x11, 0x0d, 0xc7, 0xfc, 0xd5, 0xa9, 0xae, 0xdd, 0x66,
+	0xaa, 0xe8, 0x00, 0x90, 0x4d, 0x3e, 0x04, 0xba, 0xc7, 0xf6, 0x27, 0xd2, 0xc8, 0x5d, 0xab, 0xc1,
+	0x87, 0x2c, 0xcc, 0x48, 0x54, 0xa9, 0x0d, 0xa5, 0xb9, 0x88, 0x4b, 0x3c, 0xd3, 0x39, 0xad, 0xac,
+	0x53, 0x99, 0x87, 0x97, 0x64, 0xda, 0x6c, 0xaf, 0x0f, 0x3e, 0xc3, 0x9b, 0x31, 0x47, 0xa1, 0x14,
+	0xf4, 0x23, 0xf0, 0xe7, 0xd1, 0x5a, 0xe9, 0x01, 0xb1, 0xdc, 0x89, 0x11, 0x90, 0x4a, 0x81, 0xca,
+	0x7c, 0x7f, 0xa3, 0x15, 0xd6, 0x18, 0x09, 0x97, 0xce, 0x97, 0x3b, 0xd0, 0x1e, 0x64, 0x27, 0xc6,
+	0x09, 0x99, 0xf8, 0x15, 0xd8, 0x49, 0xef, 0x16, 0x9a, 0xdf, 0x5e, 0xb3, 0xe0, 0x3d, 0x1a, 0x2c,
+	0xda, 0x81, 0x37, 0xc3, 0x8c, 0xb9, 0xfd, 0x03, 0x14, 0x16, 0xba, 0x11, 0x0f, 0xe9, 0x33, 0x32,
+	0x63, 0x85, 0x11, 0x36, 0xd1, 0x3d, 0x58, 0x3b, 0x37, 0x26, 0xd3, 0xa8, 0xe0, 0xf2, 0x38, 0xfa,
+	0xf8, 0x43, 0xea, 0x25, 0x57, 0xfd, 0x00, 0xfc, 0xea, 0x16, 0xa2, 0x2a, 0x3c, 0x6e, 0xe1, 0x63,
+	0x45, 0x93, 0xf5, 0xae, 0x78, 0xac, 0x2b, 0x47, 0x58, 0x91, 0x55, 0x51, 0x3f, 0x1a, 0xa8, 0x8a,
+	0xd8, 0x92, 0x3a, 0x92, 0xd8, 0xe6, 0x3f, 0x43, 0x5b, 0x50, 0x12, 0x07, 0x34, 0x4a, 0x6f, 0x8b,
+	0xf4, 0x2f, 0xcf, 0x85, 0x9d, 0x82, 0x7a, 0xdc, 0xef, 0x8b, 0x1a, 0x96, 0x5a, 0xba, 0x2a, 0xed,
+	0x0f, 0xf8, 0x35, 0xf4, 0x39, 0xa0, 0x85, 0xce, 0x38, 0x38, 0xbb, 0xb7, 0x05, 0xe5, 0xf9, 0xc6,
+	0xf8, 0xa3, 0xf7, 0xe4, 0x74, 0x3a, 0x21, 0xd5, 0x9f, 0x39, 0xa8, 0x5c, 0xb5, 0x76, 0x48, 0x06,
+	0x3e, 0xdc, 0x2b, 0x32, 0xa2, 0x9c, 0x09, 0x39, 0x27, 0x13, 0x3a, 0xc9, 0xcd, 0xe6, 0xd7, 0x89,
+	0x8b, 0xa6, 0xcc, 0x83, 0x7b, 0x61, 0x2c, 0x2e, 0xb9, 0xcb, 0x1d, 0xe8, 0x2f, 0x90, 0x37, 0x26,
+	0x63, 0xc7, 0x33, 0x83, 0xf7, 0x16, 0xab, 0xf7, 0xd7, 0x37, 0xda, 0xce, 0x4b, 0x1d, 0x42, 0x2c,
+	0x83, 0x2f, 0x14, 0xab, 0xbf, 0x70, 0xf0, 0xa0, 0x4b, 0x66, 0xb2, 0x4b, 0xa2, 0xba, 0x12, 0x82,
+	0x20, 0x2c, 0xd3, 0xb0, 0x89, 0x86, 0x90, 0x7d, 0xe7, 0x78, 0x96, 0x11, 0x54, 0x32, 0x34, 0xef,
+	0x9f, 0x12, 0xf3, 0x5e, 0xc1, 0xae, 0x2d, 0xb4, 0x3b, 0x54, 0x05, 0x33, 0x35, 0x54, 0x81, 0xdc,
+	0xc8, 0xb1, 0x03, 0x62, 0x07, 0xf4, 0xc4, 0x15, 0x71, 0xfc, 0x59, 0x3d, 0x83, 0xf2, 0x25, 0x5a,
+	0xb8, 0xd5, 0x82, 0xa6, 0x89, 0xaa, 0x26, 0x68, 0x92, 0x3c, 0xd0, 0x3b, 0x32, 0xee, 0x0b, 0xda,
+	0xca, 0x56, 0x57, 0xe0, 0x5e, 0x4b, 0x18, 0x4a, 0x47, 0x7d, 0x7d, 0xd8, 0xd0, 0x5b, 0x72, 0x5f,
+	0xc1, 0xa2, 0xaa, 0x8a, 0x6d, 0x3e, 0xbd, 0x88, 0x34, 0x17, 0x91, 0x4c, 0xf5, 0x3f, 0xc5, 0x85,
+	0xba, 0x62, 0x6b, 0x94, 0xe8, 0x58, 0x7f, 0x86, 0xb5, 0x70, 0x44, 0xb1, 0xdd, 0xbc, 0xfa, 0x75,
+	0xcb, 0xaf, 0x86, 0x12, 0x38, 0x52, 0x4a, 0x2c, 0x93, 0xdc, 0x9d, 0x95, 0x09, 0xdc, 0x75, 0x99,
+	0xa0, 0x01, 0x14, 0x8c, 0x8b, 0x8d, 0x61, 0xee, 0xf4, 0xdd, 0x6d, 0xea, 0x01, 0x2f, 0x0a, 0xac,
+	0x1a, 0x6f, 0xe6, 0x56, 0xc6, 0xfb, 0x1a, 0x36, 0xc6, 0xc4, 0x0e, 0x53, 0x30, 0x7a, 0xe1, 0x5a,
+	0x7a, 0x31, 0x26, 0x50, 0x81, 0x3f, 0x42, 0xf1, 0x94, 0xf8, 0x81, 0xe7, 0xcc, 0x6e, 0xea, 0xfb,
+	0x05, 0x16, 0x1f, 0x1b, 0x7f, 0x4c, 0x27, 0xe7, 0xc4, 0x0e, 0x22, 0x91, 0xec, 0xf5, 0xc6, 0xcf,
+	0x58, 0x62, 0x48, 0xa2, 0x4a, 0x5f, 0x00, 0x98, 0x96, 0xeb, 0x78, 0x81, 0xfe, 0x57, 0xe7, 0xa4,
+	0xb2, 0x49, 0x6b, 0x2e, 0x1f, 0xf5, 0x1c, 0x3a, 0x27, 0xe1, 0x2a, 0x31, 0x98, 0x66, 0x28, 0x5d,
+	0xbf, 0x4a, 0x51, 0x38, 0xd5, 0x6e, 0xc2, 0x7d, 0x46, 0x7e, 0x67, 0x98, 0x93, 0xa9, 0x47, 0x74,
+	0x8f, 0x18, 0xbe, 0x63, 0x57, 0x78, 0x9a, 0x66, 0x2b, 0x02, 0x3b, 0x11, 0x86, 0x29, 0x54, 0xfd,
+	0x67, 0x06, 0x1e, 0x5e, 0x59, 0x0f, 0xe8, 0x3b, 0xd8, 0x5d, 0xf0, 0xdc, 0xa1, 0x88, 0xd5, 0xf0,
+	0x3c, 0x0a, 0xbd, 0x7d, 0x19, 0x4b, 0xda, 0x41, 0x7f, 0xe5, 0x48, 0x7e, 0x09, 0xbf, 0xd9, 0x97,
+	0xe5, 0xfd, 0x9e, 0xa8, 0x5f, 0x38, 0x2b, 0xb3, 0x63, 0x49, 0x1e, 0xf0, 0x1c, 0x7a, 0x04, 0x15,
+	0xac, 0x0a, 0xd4, 0x82, 0x75, 0x45, 0x55, 0xf5, 0xe6, 0x93, 0x67, 0x2f, 0x75, 0xf5, 0x40, 0x68,
+	0x3e, 0x7f, 0xc1, 0xa7, 0x2e, 0xa1, 0x4f, 0x9f, 0xfc, 0xbe, 0x19, 0xa3, 0xe9, 0x4b, 0xe8, 0xb3,
+	0x27, 0x3f, 0xbc, 0x88, 0xd1, 0xcc, 0x95, 0xe8, 0xf3, 0x46, 0x93, 0x2f, 0xa1, 0xc7, 0xb0, 0x7d,
+	0x81, 0x76, 0x5b, 0x6a, 0x63, 0x29, 0xf3, 0x5a, 0x02, 0xbe, 0x98, 0x3b, 0x9b, 0x80, 0x2f, 0x66,
+	0xcf, 0x7d, 0x04, 0x0f, 0xf3, 0xf3, 0x68, 0x07, 0x1e, 0x85, 0x38, 0xbb, 0x65, 0x74, 0x59, 0x10,
+	0x95, 0xa5, 0x11, 0xac, 0x27, 0x46, 0x2c, 0x8e, 0x21, 0x9f, 0x18, 0xb1, 0x38, 0x0a, 0xf8, 0x68,
+	0x44, 0x38, 0x8e, 0x32, 0x7a, 0x00, 0x5b, 0x62, 0x8b, 0x0d, 0xb3, 0xf9, 0x7c, 0x4e, 0x2d, 0x2e,
+	0x01, 0x4f, 0x5f, 0x3e, 0x0b, 0x81, 0xa7, 0x2f, 0x9f, 0xf1, 0x1b, 0xd5, 0xff, 0x72, 0x70, 0x3f,
+	0xd1, 0xd6, 0xd0, 0x2e, 0x7c, 0x9d, 0x50, 0x1a, 0xa1, 0x65, 0xaf, 0x5e, 0xca, 0x9f, 0x03, 0x52,
+	0xc4, 0x41, 0x5b, 0x1a, 0xec, 0xeb, 0xfb, 0xe2, 0x40, 0xc4, 0xd4, 0xd4, 0xf9, 0x35, 0x54, 0x80,
+	0x9c, 0x38, 0x10, 0xf6, 0x7a, 0x62, 0x9b, 0xe7, 0x50, 0x11, 0xd6, 0xdb, 0x92, 0x1a, 0x7d, 0xa5,
+	0xd0, 0x06, 0xe4, 0xdb, 0xa2, 0xaa, 0x61, 0xf9, 0x98, 0x3a, 0xfa, 0x7d, 0x28, 0xb3, 0x4f, 0x5d,
+	0x6d, 0x1d, 0x88, 0xed, 0xa3, 0x30, 0x2a, 0x83, 0x10, 0x6c, 0xc6, 0xc2, 0x52, 0x5f, 0x91, 0xb1,
+	0xc6, 0x67, 0x51, 0x19, 0x36, 0xa2, 0xb6, 0xde, 0x11, 0xa4, 0x30, 0x2c, 0x57, 0x95, 0xe0, 0xde,
+	0xea, 0x14, 0x86, 0x26, 0xf9, 0x1b, 0xfa, 0x2d, 0x7c, 0x95, 0x30, 0x83, 0xa1, 0x24, 0xbe, 0x59,
+	0x99, 0xc0, 0x3a, 0x64, 0x3a, 0x47, 0xbd, 0x1e, 0xcf, 0x55, 0xff, 0x0e, 0x79, 0x65, 0x7a, 0x32,
+	0x31, 0x47, 0xe1, 0x53, 0x97, 0x87, 0xb4, 0x4b, 0xac, 0xf8, 0x41, 0xe3, 0x12, 0x6b, 0xd9, 0x92,
+	0x53, 0x77, 0x7e, 0x73, 0xff, 0x2b, 0x07, 0x79, 0x69, 0x6e, 0x15, 0x49, 0xf7, 0x96, 0x02, 0x1b,
+	0xcc, 0x01, 0x2c, 0x12, 0xbc, 0x77, 0x4e, 0xd9, 0x20, 0x7e, 0x97, 0x38, 0x88, 0xb9, 0x14, 0x6b,
+	0xf5, 0x29, 0x05, 0x17, 0xcd, 0x85, 0xaf, 0xc4, 0x6b, 0x2b, 0xff, 0x29, 0xd7, 0xd6, 0xca, 0x3d,
+	0x90, 0xfe, 0xb4, 0x7b, 0x20, 0x73, 0xcb, 0x7b, 0xe0, 0x15, 0x14, 0xc8, 0x07, 0xd7, 0xf4, 0x6e,
+	0xfe, 0xfc, 0x8f, 0xc2, 0x29, 0xb9, 0x03, 0x65, 0x46, 0x5e, 0xb8, 0x04, 0xe0, 0x5a, 0x89, 0x52,
+	0x44, 0xba, 0xb8, 0x03, 0x5a, 0xf1, 0xeb, 0x22, 0x4b, 0x17, 0xf2, 0xfb, 0x1b, 0xed, 0xce, 0xa1,
+	0x73, 0xb2, 0xf2, 0x9e, 0x00, 0x97, 0x96, 0xa2, 0x1e, 0xbe, 0xaa, 0xa3, 0xff, 0x41, 0x9e, 0x5c,
+	0xa3, 0xf4, 0xc6, 0x33, 0x5c, 0xd7, 0xb4, 0xc7, 0xf3, 0x1a, 0xc6, 0x79, 0x77, 0x5e, 0xce, 0x77,
+	0x7c, 0xe1, 0x6f, 0x7f, 0x03, 0xe5, 0x4b, 0xf9, 0x2e, 0x9f, 0x99, 0xaa, 0x05, 0xc5, 0xc5, 0xf2,
+	0x43, 0x5f, 0xc0, 0x43, 0x76, 0x80, 0xfb, 0xa2, 0x76, 0x20, 0xb7, 0x57, 0xce, 0x22, 0xb3, 0xda,
+	0x25, 0x83, 0x6c, 0xe8, 0x82, 0xa8, 0xea, 0xa1, 0x93, 0x71, 0x4b, 0x78, 0x6c, 0x7e, 0x17, 0x78,
+	0xaa, 0x3a, 0x82, 0xcd, 0xe5, 0xf5, 0x0c, 0x6d, 0x93, 0x25, 0x3c, 0x94, 0xf7, 0x6e, 0x61, 0x60,
+	0x1c, 0x02, 0xc8, 0x0a, 0x2d, 0x4d, 0x1a, 0x8a, 0x7c, 0x8a, 0x9a, 0xd9, 0x8f, 0x8a, 0x84, 0x43,
+	0xbf, 0xfa, 0xf6, 0x10, 0x4a, 0x2b, 0xe7, 0x20, 0xcc, 0xa2, 0x60, 0x59, 0x13, 0x5b, 0xf4, 0x45,
+	0xdb, 0x13, 0x87, 0x62, 0x6f, 0x25, 0x4b, 0x11, 0xd6, 0x55, 0xb9, 0xa3, 0xbd, 0x11, 0xb0, 0xc8,
+	0x73, 0x28, 0x07, 0xe9, 0x03, 0xb5, 0xcf, 0xa7, 0xf6, 0xfe, 0xc1, 0xc1, 0x83, 0x91, 0x63, 0x25,
+	0xed, 0xc3, 0x5e, 0xb9, 0x6b, 0xf9, 0x38, 0xfe, 0x79, 0x21, 0xcc, 0xe8, 0x28, 0xdc, 0x4f, 0x2f,
+	0x58, 0xe4, 0xd8, 0x99, 0x18, 0xf6, 0xb8, 0xe6, 0x78, 0xe3, 0xfa, 0x98, 0xd8, 0xb4, 0x2e, 0xeb,
+	0x11, 0x64, 0xb8, 0xa6, 0xbf, 0xf4, 0x1b, 0xc5, 0xab, 0x33, 0xcb, 0xff, 0x85, 0xe3, 0xfe, 0x9d,
+	0xda, 0xda, 0x8f, 0xb8, 0x2d, 0x9a, 0xa5, 0x6b, 0xf9, 0xb5, 0x61, 0xe3, 0xe7, 0xb8, 0xf7, 0x2d,
+	0xed, 0x7d, 0xdb, 0xb5, 0xfc, 0xb7, 0xc3, 0xc6, 0x49, 0x96, 0x2a, 0x3e, 0xfd, 0x7f, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0xd6, 0x81, 0xe9, 0x01, 0xf4, 0x10, 0x00, 0x00,
 }

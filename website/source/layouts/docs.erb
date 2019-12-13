@@ -33,7 +33,8 @@
               'response-wrapping',
               'policies',
               'ha',
-              'pgp-gpg-keybase'
+              'pgp-gpg-keybase',
+              'recovery-mode'
             ]
           }, {
             category: 'configuration',
@@ -48,6 +49,7 @@
                   'awskms',
                   'azurekeyvault',
                   'gcpckms',
+                  'ocikms',
                   'pkcs11',
                   'transit'
                 ]
@@ -69,15 +71,22 @@
                   'manta',
                   'mssql',
                   'mysql',
+                  'oci-object-storage',
                   'postgresql',
                   'raft',
                   's3',
                   'swift',
                   'zookeeper'
                 ]
+              }, {
+                category: 'service-registration',
+                content: [
+                  'consul',
+                ]
               },
               'telemetry',
-              { category: 'ui' }
+              { category: 'ui' },
+              { category: 'entropy-augmentation' }
             ]
           }, {
             category: 'commands',
@@ -100,6 +109,7 @@
                 'tune'
               ]
             },
+            'debug',
             'delete',
             {
               category: 'kv',
@@ -182,6 +192,7 @@
               ]
             },
             'unwrap',
+            'version',
             'write',
             'token-helper'
             ]
@@ -198,10 +209,11 @@
                       'approle',
                       'aws',
                       'azure',
+                      'cert',
+                      'cf',
                       'gcp',
                       'jwt',
-                      'kubernetes',
-                      'pcf'
+                      'kubernetes'
                     ]
                   }, {
                     category: 'sinks',
@@ -209,7 +221,8 @@
                   }
                 ]
               },
-              { category: 'caching' }
+              { category: 'caching' },
+              { category: 'template' }
             ]
           },
           '----------------',
@@ -239,6 +252,7 @@
               },
               { category: 'gcp' },
               { category: 'gcpkms' },
+              { category: 'kmip' },
               {
                 category: 'kv',
                 content: ['kv-v1','kv-v2']
@@ -271,17 +285,19 @@
               'alicloud',
               'aws',
               'azure',
+              'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes',
               'github',
               'ldap',
+              'oci',
               'okta',
               'radius',
               'cert',
               'token',
               'userpass',
-              'pcf',
               '---------',
               'app-id',
               'mfa'
@@ -320,8 +336,28 @@
           },
           '----------------',
           {
+            category: 'platform',
+            content: [
+              {
+                category: 'k8s',
+                content: [
+                  'helm',
+                  'run'
+                ]
+              },
+              {
+                category: 'aws-mp',
+                content: [
+                  'run'
+                ]
+              }
+            ]
+          },
+          '----------------',
+          {
             category: 'upgrading',
             content: [
+              'plugins',
               'upgrade-to-0.5.0',
               'upgrade-to-0.5.1',
               'upgrade-to-0.6.0',
@@ -344,7 +380,12 @@
               'upgrade-to-0.11.6',
               'upgrade-to-1.0.0',
               'upgrade-to-1.1.0',
-              'upgrade-to-1.1.1'
+              'upgrade-to-1.1.1',
+              'upgrade-to-1.1.2',
+              'upgrade-to-1.2.0',
+              'upgrade-to-1.2.1',
+              'upgrade-to-1.2.4',
+              'upgrade-to-1.3.0'
             ]
           },
           '----------------',
@@ -356,6 +397,7 @@
                 category: 'hsm',
                 content: ['behavior', 'security']
               },
+              { category: 'entropy-augmentation' },
               { category: 'sealwrap' },
               { category: 'namespaces' },
               { category: 'performance-standby' },
@@ -380,7 +422,7 @@
     </div>
   <% end %>
 
-  <article class='g-content vault'>
+  <article class='g-content g-type-long-body vault'>
     <%= yield %>
   </article>
 <% end %>

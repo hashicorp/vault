@@ -8,7 +8,7 @@
           </span>
           {{#link-to
             "vault.cluster.access.method.item.list"
-            (pluralize itemType)
+            itemType
           }}
             {{pluralize itemType}}
           {{/link-to}}
@@ -36,14 +36,14 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}} @cancelButtonText="Cancel"
+        @confirmMessage={{concat "Are you sure you want to delete " itemType " " model.id "?"}} @cancelButtonText="Cancel"
         data-test-secret-delete="true">
         Delete
         {{itemType}}
       </ConfirmAction>
-      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" (pluralize itemType) model.id}}
+      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" itemType model.id}}
         @data-test-configure-link="true">
-        Edit {{itemType}}
+        Edit {{singularize itemType}}
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>

@@ -3,7 +3,7 @@ import { alias } from '@ember/object/computed';
 import { get, computed } from '@ember/object';
 import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
-import ReplicationActions from 'replication/mixins/replication-actions';
+import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
 
 const DEFAULTS = {

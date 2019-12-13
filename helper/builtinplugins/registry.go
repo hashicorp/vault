@@ -8,10 +8,12 @@ import (
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
+	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
-	credPCF "github.com/hashicorp/vault-plugin-auth-pcf"
+	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -72,14 +74,17 @@ func newRegistry() *registry {
 			"azure":      credAzure.Factory,
 			"centrify":   credCentrify.Factory,
 			"cert":       credCert.Factory,
+			"cf":         credCF.Factory,
 			"gcp":        credGcp.Factory,
 			"github":     credGitHub.Factory,
 			"jwt":        credJWT.Factory,
+			"kerberos":   credKerb.Factory,
 			"kubernetes": credKube.Factory,
 			"ldap":       credLdap.Factory,
+			"oci":        credOCI.Factory,
 			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
-			"pcf":        credPCF.Factory,
+			"pcf":        credCF.Factory, // Deprecated.
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},

@@ -11,6 +11,10 @@ const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+    'ember-service-worker': {
+      serviceWorkerScope: config.serviceWorkerScope,
+      skipWaitingOnMessage: true,
+    },
     svgJar: {
       //optimize: false,
       //paths: [],
@@ -23,13 +27,12 @@ module.exports = function(defaults) {
         return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
       },
     },
-
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
     },
     babel: {
-      plugins: ['transform-object-rest-spread'],
+      plugins: ['@babel/plugin-proposal-object-rest-spread'],
     },
     'ember-cli-babel': {
       includePolyfill: isTest || isProd || isCI,
@@ -50,12 +53,7 @@ module.exports = function(defaults) {
       browsers: ['defaults', 'ie 11'],
     },
     autoImport: {
-      webpack: {
-        // this makes `unsafe-eval` CSP unnecessary
-        // see https://github.com/ef4/ember-auto-import/issues/50
-        // and https://github.com/webpack/webpack/issues/5627
-        devtool: 'inline-source-map',
-      },
+      forbidEval: true,
     },
     'ember-test-selectors': {
       strip: isProd,
@@ -63,6 +61,9 @@ module.exports = function(defaults) {
     // https://github.com/ember-cli/ember-fetch/issues/204
     'ember-fetch': {
       preferNative: true,
+    },
+    'ember-composable-helpers': {
+      except: ['array'],
     },
   });
 
@@ -74,7 +75,7 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/lint.css');
   app.import('node_modules/codemirror/addon/lint/lint.js');
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
-  app.import('node_modules/text-encoder-lite/index.js');
+  app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
 

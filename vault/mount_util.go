@@ -18,6 +18,7 @@ func addFilterablePath(*Core, string)                                         {}
 func preprocessMount(*Core, *MountEntry, *BarrierView) (bool, error)          { return false, nil }
 func clearIgnoredPaths(context.Context, *Core, logical.Backend, string) error { return nil }
 func addLicenseCallback(*Core, logical.Backend)                               {}
+func runFilteredPathsEvaluation(context.Context, *Core) error                 { return nil }
 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {
@@ -41,3 +42,15 @@ func (e *MountEntry) ViewPath() string {
 }
 
 func verifyNamespace(*Core, *namespace.Namespace, *MountEntry) error { return nil }
+
+// mountEntrySysView creates a logical.SystemView from global and
+// mount-specific entries; because this should be called when setting
+// up a mountEntry, it doesn't check to ensure that me is not nil
+func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
+	return extendedSystemViewImpl{
+		dynamicSystemView{
+			core:       c,
+			mountEntry: entry,
+		},
+	}
+}

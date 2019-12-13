@@ -123,7 +123,7 @@ module('Integration | Component | form field', function(hooks) {
 
     await component.fields
       .objectAt(0)
-      .input('array')
+      .textarea('array')
       .change();
     assert.deepEqual(model.get('foo'), ['array'], 'sets the value on the model');
     assert.deepEqual(spy.args[0], ['foo', ['array']], 'onChange called with correct args');

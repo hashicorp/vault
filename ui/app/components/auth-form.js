@@ -47,43 +47,54 @@ export default Component.extend(DEFAULTS, {
   wrappedToken: null,
   // internal
   oldNamespace: null,
+
   didReceiveAttrs() {
     this._super(...arguments);
-    let token = this.get('wrappedToken');
-    let newMethod = this.get('selectedAuth');
-    let oldMethod = this.get('oldSelectedAuth');
+    let {
+      wrappedToken: token,
+      oldWrappedToken: oldToken,
+      oldNamespace: oldNS,
+      namespace: ns,
+      selectedAuth: newMethod,
+      oldSelectedAuth: oldMethod,
+    } = this;
 
-    let ns = this.get('namespace');
-    let oldNS = this.get('oldNamespace');
-    if (oldNS === null || oldNS !== ns) {
-      this.get('fetchMethods').perform();
-    }
-    this.set('oldNamespace', ns);
-    if (oldMethod && oldMethod !== newMethod) {
-      this.resetDefaults();
-    }
-    this.set('oldSelectedAuth', newMethod);
-
-    if (token) {
-      this.get('unwrapToken').perform(token);
-    }
+    next(() => {
+      if (!token && (oldNS === null || oldNS !== ns)) {
+        this.fetchMethods.perform();
+      }
+      this.set('oldNamespace', ns);
+      // we only want to trigger this once
+      if (token && !oldToken) {
+        this.unwrapToken.perform(token);
+        this.set('oldWrappedToken', token);
+      }
+      if (oldMethod && oldMethod !== newMethod) {
+        this.resetDefaults();
+      }
+      this.set('oldSelectedAuth', newMethod);
+    });
   },
 
   didRender() {
     this._super(...arguments);
-    let firstMethod = this.firstMethod();
     // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
     let activeEle = this.element.querySelector('li.is-active');
     if (activeEle) {
       activeEle.scrollIntoView();
     }
-    // set `with` to the first method
-    if (
-      (this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
-      (this.get('selectedAuth') && !this.get('selectedAuthBackend'))
-    ) {
-      this.set('selectedAuth', firstMethod);
-    }
+
+    next(() => {
+      let firstMethod = this.firstMethod();
+      // set `with` to the first method
+      if (
+        !this.wrappedToken &&
+        ((this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
+          (this.get('selectedAuth') && !this.get('selectedAuthBackend')))
+      ) {
+        this.set('selectedAuth', firstMethod);
+      }
+    });
   },
 
   firstMethod() {
@@ -98,18 +109,23 @@ export default Component.extend(DEFAULTS, {
   },
 
   selectedAuthIsPath: match('selectedAuth', /\/$/),
-  selectedAuthBackend: computed('methods', 'methods.[]', 'selectedAuth', 'selectedAuthIsPath', function() {
-    let methods = this.get('methods');
-    let selectedAuth = this.get('selectedAuth');
-    let keyIsPath = this.get('selectedAuthIsPath');
-    if (!methods) {
-      return {};
+  selectedAuthBackend: computed(
+    'wrappedToken',
+    'methods',
+    'methods.[]',
+    'selectedAuth',
+    'selectedAuthIsPath',
+    function() {
+      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+      if (!methods && !wrappedToken) {
+        return {};
+      }
+      if (keyIsPath) {
+        return methods.findBy('path', selectedAuth);
+      }
+      return BACKENDS.findBy('type', selectedAuth);
     }
-    if (keyIsPath) {
-      return methods.findBy('path', selectedAuth);
-    }
-    return BACKENDS.findBy('type', selectedAuth);
-  }),
+  ),
 
   providerPartialName: computed('selectedAuthBackend', function() {
     let type = this.get('selectedAuthBackend.type') || 'token';
@@ -146,9 +162,7 @@ export default Component.extend(DEFAULTS, {
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('token', response.auth.client_token);
-      next(() => {
-        this.send('doSubmit');
-      });
+      this.send('doSubmit');
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
@@ -192,12 +206,20 @@ export default Component.extend(DEFAULTS, {
 
   authenticate: task(function*(backendType, data) {
     let clusterId = this.cluster.id;
-    let targetRoute = this.redirectTo || 'vault.cluster';
     try {
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
       let { isRoot, namespace } = authResponse;
-      let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
+      let transition;
+      let { redirectTo } = this;
+      if (redirectTo) {
+        // reset the value on the controller because it's bound here
+        this.set('redirectTo', '');
+        // here we don't need the namespace because it will be encoded in redirectTo
+        transition = this.router.transitionTo(redirectTo);
+      } else {
+        transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
+      }
       // returning this w/then because if we keep it
       // in the task, it will get cancelled when the component in un-rendered
       yield transition.followRedirects().then(() => {
@@ -231,7 +253,7 @@ export default Component.extend(DEFAULTS, {
       let backendMeta = BACKENDS.find(
         b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
       );
-      let attributes = get(backendMeta || {}, 'formAttributes') || {};
+      let attributes = get(backendMeta || {}, 'formAttributes') || [];
 
       data = assign(data, this.getProperties(...attributes));
       if (passedData) {

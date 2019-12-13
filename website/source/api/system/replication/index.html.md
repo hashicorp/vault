@@ -48,6 +48,28 @@ depending on the number and size of objects in the data store.
 | :--------------------------- | :--------------------- |
 | `POST`   | `/sys/replication/reindex`   |
 
+### Parameters
+
+- `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key 
+   level check to diagnose issues. Defaults false.
+
+- `force` `(bool: false)` – Forces a complete re-indexing which only scans data 
+   available in the storage. Defaults false.
+
+- `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex 
+   process. This setting can be used to reduce the amount of time the tree is locked
+   during a reindex process. If this node is killed before the full tree has been 
+   asynchronously flushed the reindex may not have applied fully and a new reindex
+   may need to be done. Shutting down this node cleanly will cause the tree to be 
+   flushed prior to shutdown. Defaults false.
+
+### Sample Payload
+
+```json
+{}
+```
+
+### Sample Request
 ```
 $ curl \
     --header "X-Vault-Token: ..." \

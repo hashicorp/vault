@@ -51,14 +51,18 @@ values set here cannot be changed after key creation.
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
 
-    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+    - `aes128-gcm96` – AES-128 wrapped with GCM using a 96-bit nonce size AEAD
       (symmetric, supports derivation and convergent encryption)
+    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+      (symmetric, supports derivation and convergent encryption, default)
     - `chacha20-poly1305` – ChaCha20-Poly1305 AEAD (symmetric, supports
       derivation and convergent encryption)
     - `ed25519` – ED25519 (asymmetric, supports derivation). When using
       derivation, a sign operation with the same context will derive the same
       key and signature; this is a signing analogue to `convergent_encryption`.
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
+    - `ecdsa-p384` – ECDSA using the P-384 elliptic curve (asymmetric)
+    - `ecdsa-p521` – ECDSA using the P-521 elliptic curve (asymmetric)
     - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
     - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
@@ -66,7 +70,7 @@ values set here cannot be changed after key creation.
 
 ```json
 {
-  "type": "ecdsa-p256",
+  "type": "ed25519",
   "derived": true
 }
 ```
@@ -377,11 +381,25 @@ will be returned.
   all nonces are unique for a given context.  Failing to do so will severely
   impact the ciphertext's security.
 
+**NOTE:** All plaintext data **must be base64-encoded**. The reason for this
+requirement is that Vault does not require that the plaintext is "text". It
+could be a binary file such as a PDF or image. The easiest safe transport
+mechanism for this data as part of a JSON payload is to base64-encode it.
+
 ### Sample Payload
+
+Fist, encode the plaintext with base64:
+
+```sh
+$ base64 <<< "the quick brown fox"
+dGhlIHF1aWNrIGJyb3duIGZveAo=
+```
+
+Use the base64-encoded plaintext in the payload:
 
 ```json
 {
-  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
 }
 ```
 
@@ -406,7 +424,7 @@ $ curl \
 ```json
 {
   "data": {
-    "ciphertext": "vault:v1:abcdefgh"
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   }
 }
 ```
@@ -745,14 +763,14 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, if the parameter 'input' is also set, it will be 
-  ignored.  Responses are returned in the 'batch_results' array component of the 
-  'data' element of the response. If the input data value of an item is invalid, the 
-  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  When this parameter is set, if the parameter 'input' is also set, it will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
   describing the error. The format for batch_input is:
 
     ```json
@@ -870,14 +888,14 @@ supports signing.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, any supplied 'input' or 'context' parameters will be 
-  ignored.  Responses are returned in the 'batch_results' array component of the 
-  'data' element of the response. If the input data value of an item is invalid, the 
-  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  When this parameter is set, any supplied 'input' or 'context' parameters will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
   describing the error. The format for batch_input is:
 
     ```json
@@ -951,7 +969,7 @@ $ curl \
 
 ### Sample Payload with batch_input
 
- Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and 
+ Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and
  the response will include the derived public key for each item.
 ```
 {
@@ -1013,9 +1031,9 @@ data.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
   `input` or `batch_input` must be supplied.
-  
+
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
   supplied.
@@ -1025,13 +1043,13 @@ data.
   supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
-  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters 
+  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters
   will be ignored.  'batch_input' items should contain an 'input' parameter and
   either an 'hmac' or 'signature' parameter. All items in the batch must consistently
   supply either 'hmac' or 'signature' parameters.  It is an error for some items to
-  supply 'hmac' while others supply 'signature'. Responses are returned in the 
-  'batch_results' array component of the 'data' element of the response. If the 
-  input data value of an item is invalid, the corresponding item in the 'batch_results' 
+  supply 'hmac' while others supply 'signature'. Responses are returned in the
+  'batch_results' array component of the 'data' element of the response. If the
+  input data value of an item is invalid, the corresponding item in the 'batch_results'
   will have the key 'error' with a value describing the error. The format for batch_input is:
 
     ```json
@@ -1229,11 +1247,12 @@ keyring. Once trimmed, previous versions of the key cannot be recovered.
 
 ### Parameters
 
-- `min_version` `(int: <required>)` - The minimum version for the key ring. All
-  versions before this version will be permanently deleted. This value can at
-  most be equal to the lesser of `min_decryption_version` and
-  `min_encryption_version`. This is not allowed to be set when either
-  `min_encryption_version` or `min_decryption_version` is set to zero.
+- `min_available_version` `(int: <required>)` - The minimum available version
+  for the key ring. All versions before this version will be permanently
+  deleted. This value can at most be equal to the lesser of
+  `min_decryption_version` and `min_encryption_version`. This is not allowed to
+  be set when either `min_encryption_version` or `min_decryption_version` is set
+  to zero.
 
 ### Sample Payload
 

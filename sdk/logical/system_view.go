@@ -22,10 +22,6 @@ type SystemView interface {
 	// this value, as Vault will revoke them
 	MaxLeaseTTL() time.Duration
 
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	SudoPrivilege(ctx context.Context, path string, token string) bool
-
 	// Returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
 	// circumstances; a primary use-case is as a guard in revocation functions.

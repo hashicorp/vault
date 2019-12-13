@@ -674,6 +674,11 @@ The CA Chain returns all the intermediate authorities in the trust chain. The ro
 authority is not included since that will usually be trusted by the underlying
 OS.
 
+## Learn
+
+Refer to the [Build Your Own Certificate Authority (CA)](https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine)
+guide for a step-by-step tutorial.
+
 ## API
 
 The PKI secrets engine has a full HTTP API. Please see the

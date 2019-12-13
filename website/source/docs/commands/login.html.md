@@ -80,7 +80,7 @@ token_meta_username    my-username
 ~> Notice that the command option (`-method=userpass`) precedes the command
 argument (`username=my-username`).
 
-If a github auth method was enabled at the path "github-ent":
+If a github auth method was enabled at the path "github-prod":
 
 ```text
 $ vault login -method=github -path=github-prod

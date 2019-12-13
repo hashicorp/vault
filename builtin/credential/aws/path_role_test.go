@@ -2,11 +2,14 @@ package awsauth
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/awsutil"
+	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -757,13 +760,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if int64(resp.Data["ttl"].(int64)) != 10 {
+	if resp.Data["ttl"].(int64) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if int64(resp.Data["max_ttl"].(int64)) != 20 {
+	if resp.Data["max_ttl"].(int64) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if int64(resp.Data["period"].(int64)) != 30 {
+	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }
@@ -986,6 +989,90 @@ func TestAwsVersion(t *testing.T) {
 	}
 }
 
-func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
+// This test was used to reproduce https://github.com/hashicorp/vault/issues/7418
+// and verify its fix.
+// Please run it at least 3 times to ensure that passing tests are due to actually
+// passing, rather than the region being randomly chosen tying to the one in the
+// test through luck.
+func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
+	if enabled := os.Getenv(vlttesting.TestEnvVar); enabled == "" {
+		t.Skip()
+	}
+
+	/* ARN of an AWS role that Vault can query during testing.
+	   This role should exist in your current AWS account and your credentials
+	   should have iam:GetRole permissions to query it.
+	 */
+	assumableRoleArn := os.Getenv("AWS_ASSUMABLE_ROLE_ARN")
+	if assumableRoleArn == "" {
+		t.Skip("skipping because AWS_ASSUMABLE_ROLE_ARN is unset")
+	}
+
+	// Ensure aws credentials are available locally for testing.
+	credsConfig := &awsutil.CredentialsConfig{}
+	credsChain, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = credsChain.Get()
+	if err != nil {
+		t.SkipNow()
+	}
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// configure the client with an sts endpoint that should be used in creating the role
+	data := map[string]interface{}{
+		"sts_endpoint": "https://sts.eu-west-1.amazonaws.com",
+		// Note - if you comment this out, you can reproduce the error shown
+		// in the linked GH issue above. This essentially reproduces the problem
+		// we had when we didn't have an sts_region field.
+		"sts_region": "eu-west-1",
+	}
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "config/client",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+
+	data = map[string]interface{}{
+		"auth_type":               iamAuthType,
+		"bound_iam_principal_arn": assumableRoleArn,
+		"resolve_aws_unique_ids":  true,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/MyRoleName",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+}
+
+func resolveArnToFakeUniqueId(_ context.Context, _ logical.Storage, _ string) (string, error) {
 	return "FakeUniqueId1", nil
 }

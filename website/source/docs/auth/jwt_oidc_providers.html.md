@@ -48,10 +48,12 @@ to the jwt token and `groups_claim` should be set to `groups`.
 ### CLI setup instructions:
 You have to fill in the following values make sure to use the correct vault secret 
 path that matches the name of the authentication method such as /oidc/
+
    * oidc_client_id = Application Client ID
    * oidc_client_secret = Secret obtained from the Certificates & Secrets Section
    * default_role = default role the user will be using when connecting. (see the second command)
-   * oidc_discovery_url = Open ID endpoint retrieved from the App Registration wections.
+   * oidc_discovery_url = Open ID endpoint retrieved from the App Registration sections.
+
 ```
 vault write auth/oidc/config \
     oidc_client_id="your_client_id" \
@@ -102,7 +104,8 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 ## Okta
 
-1. Make sure an Authorization Server has been created.
+1. Make sure an Authorization Server has been created. The "Issuer" field shown on the Setting page
+  will be used as the `oidc_discovery_url`.
 1. Visit Applications > Add Application (Web).
 1. Configure Login redirect URIs. Save.
 1. Save client ID and secret.

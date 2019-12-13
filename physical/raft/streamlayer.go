@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	fmt "fmt"
+	"io"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -26,8 +27,8 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
-// RaftTLSKey is a single TLS keypair in the Keyring
-type RaftTLSKey struct {
+// TLSKey is a single TLS keypair in the Keyring
+type TLSKey struct {
 	// ID is a unique identifier for this Key
 	ID string `json:"id"`
 
@@ -52,12 +53,12 @@ type RaftTLSKey struct {
 	parsedKey  *ecdsa.PrivateKey
 }
 
-// RaftTLSKeyring is the set of keys that raft uses for network communication.
+// TLSKeyring is the set of keys that raft uses for network communication.
 // Only one key is used to dial at a time but both keys will be used to accept
 // connections.
-type RaftTLSKeyring struct {
+type TLSKeyring struct {
 	// Keys is the set of available key pairs
-	Keys []*RaftTLSKey `json:"keys"`
+	Keys []*TLSKey `json:"keys"`
 
 	// AppliedIndex is the earliest known raft index that safely contains the
 	// latest key in the keyring.
@@ -73,7 +74,7 @@ type RaftTLSKeyring struct {
 }
 
 // GetActive returns the active key.
-func (k *RaftTLSKeyring) GetActive() *RaftTLSKey {
+func (k *TLSKeyring) GetActive() *TLSKey {
 	if k.ActiveKeyID == "" {
 		return nil
 	}
@@ -86,8 +87,8 @@ func (k *RaftTLSKeyring) GetActive() *RaftTLSKey {
 	return nil
 }
 
-func GenerateTLSKey() (*RaftTLSKey, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P521(), reader)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +121,7 @@ func GenerateTLSKey() (*RaftTLSKey, error) {
 		return nil, errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
 	}
 
-	return &RaftTLSKey{
+	return &TLSKey{
 		ID:        host,
 		KeyType:   certutil.PrivateKeyTypeP521,
 		CertBytes: certBytes,
@@ -161,13 +162,13 @@ type raftLayer struct {
 	dialerFunc func(string, time.Duration) (net.Conn, error)
 
 	// TLS config
-	keyring       *RaftTLSKeyring
+	keyring       *TLSKeyring
 	baseTLSConfig *tls.Config
 }
 
 // NewRaftLayer creates a new raftLayer object. It parses the TLS information
 // from the network config.
-func NewRaftLayer(logger log.Logger, raftTLSKeyring *RaftTLSKeyring, clusterAddr net.Addr, baseTLSConfig *tls.Config) (*raftLayer, error) {
+func NewRaftLayer(logger log.Logger, raftTLSKeyring *TLSKeyring, clusterAddr net.Addr, baseTLSConfig *tls.Config) (*raftLayer, error) {
 	switch {
 	case clusterAddr == nil:
 		// Clustering disabled on the server, don't try to look for params
@@ -189,7 +190,7 @@ func NewRaftLayer(logger log.Logger, raftTLSKeyring *RaftTLSKeyring, clusterAddr
 	return layer, nil
 }
 
-func (l *raftLayer) setTLSKeyring(keyring *RaftTLSKeyring) error {
+func (l *raftLayer) setTLSKeyring(keyring *TLSKeyring) error {
 	// Fast path a noop update
 	if l.keyring != nil && l.keyring.Term == keyring.Term {
 		return nil

@@ -4,7 +4,12 @@ import ApplicationSerializer from './application';
 export default ApplicationSerializer.extend({
   secretDataPath: 'data',
   normalizeItems(payload, requestType) {
-    if (requestType !== 'queryRecord' && payload.data.keys && Array.isArray(payload.data.keys)) {
+    if (
+      requestType !== 'queryRecord' &&
+      payload.data &&
+      payload.data.keys &&
+      Array.isArray(payload.data.keys)
+    ) {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
       return payload.data.keys.map(secret => {

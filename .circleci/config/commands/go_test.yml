@@ -6,17 +6,9 @@ parameters:
 steps:
   - run:
       name: Run Go tests
-      no_output_timeout: 20m
+      no_output_timeout: 60m
       command: |
-        set -eux -o pipefail
-
-        # Install Go
-        curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-        sudo rm -rf /usr/local/go
-        sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-        rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-        export GOPATH=/go
-        export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+        set -x
 
         # Install CircleCI CLI
         curl -sSL \
@@ -48,7 +40,7 @@ steps:
           VAULT_ACC= \
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
-            -timeout=40m \
+            -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
             ${package_names}

@@ -14,7 +14,11 @@ description: |-
 The Azure storage backend is used to persist Vault's data in an
 [Azure Storage Container][azure-storage]. The storage container must already
 exist and the provided account credentials must have read and write permissions
-to the storage container.
+to the storage container. The storage account type must support block blobs. This
+currently includes the general purpose "Storage V2" type with _Standard_ performance
+(Premium will not work), as well as Premium "Block Blob Storage"
+([limited region availability](https://azure.microsoft.com/en-us/global-infrastructure/services/?products=storage&regions=all)).
+
 
 - **No High Availability** – the Azure storage backend does not support high
   availability.
@@ -48,6 +52,10 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `environment` `(string: "AzurePublicCloud")` - Specifies the cloud
    environment the storage account belongs to by way of the case-insensitive
    name defined in the [Azure Go SDK][azure-environment].
+
+- `arm_endpoint` `(string: "")` - Specifies the cloud environment
+  the storage account belongs to by way of the Azure Resource Manager endpoint
+  URL.
 
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.

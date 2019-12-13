@@ -2,7 +2,9 @@ package framework
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -15,6 +17,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/entropy"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -288,6 +291,17 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.logger = config.Logger
 	b.system = config.System
 	return nil
+}
+
+// GetRandomReader returns an io.Reader to use for generating key material in
+// backends. If the backend has access to an external entropy source it will
+// return that, otherwise it returns crypto/rand.Reader.
+func (b *Backend) GetRandomReader() io.Reader {
+	if sourcer, ok := b.System().(entropy.Sourcer); ok {
+		return entropy.NewReader(sourcer)
+	}
+
+	return rand.Reader
 }
 
 // Logger can be used to get the logger. If no logger has been set,
