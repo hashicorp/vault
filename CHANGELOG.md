@@ -36,7 +36,8 @@ BUG FIXES:
 * secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
 * storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
   a source during `operator migrate` operations [GH-7966]
-* ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
+* ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
+* ui: Fix status menu after demotion [GH-7997]
 
 ## 1.3 (November 14th, 2019)
 
