@@ -619,7 +619,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			currentCycle = currentCycle + 1
 
 			// sleep until we are in the next cycle - where a next run will happen
-			v, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
+			v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
 			nextRun := v.(time.Time)
 			now := time.Now()
 			diff := nextRun.Sub(now)
