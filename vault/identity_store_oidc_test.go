@@ -1063,6 +1063,22 @@ func TestOIDC_Flush(t *testing.T) {
 	verify(items, []*namespace.Namespace{ns[1], ns[2]}, []*namespace.Namespace{ns[0]})
 }
 
+func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
+	cache := newOIDCCache()
+
+	if _, _, err := cache.Get(nil, "foo"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if err := cache.SetDefault(nil, "foo", 42); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if err := cache.Flush(nil); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 // some helpers
 func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 	t.Helper()
