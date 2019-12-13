@@ -124,8 +124,10 @@ func TestRecovery(t *testing.T) {
 		cluster := vault.NewTestCluster(t, &conf, &opts)
 		cluster.BarrierKeys = keys
 		cluster.Start()
-		testhelpers.EnsureCoresUnsealed(t, cluster)
 		defer cluster.Cleanup()
+
+		testhelpers.EnsureCoresUnsealed(t, cluster)
+		vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 		client := cluster.Cores[0].Client
 		client.SetToken(rootToken)

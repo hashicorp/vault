@@ -78,6 +78,11 @@
                   'swift',
                   'zookeeper'
                 ]
+              }, {
+                category: 'service-registration',
+                content: [
+                  'consul',
+                ]
               },
               'telemetry',
               { category: 'ui' },
@@ -216,7 +221,8 @@
                   }
                 ]
               },
-              { category: 'caching' }
+              { category: 'caching' },
+              { category: 'template' }
             ]
           },
           '----------------',
@@ -282,6 +288,7 @@
               'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes',
               'github',
               'ldap',
@@ -334,8 +341,14 @@
               {
                 category: 'k8s',
                 content: [
-                  'helm',
-                  'run'
+                  {
+                    category: 'helm',
+                    content: [
+                      'run',
+                      'configuration',
+                      'examples'
+                    ]
+                  },
                 ]
               },
               {
@@ -350,6 +363,7 @@
           {
             category: 'upgrading',
             content: [
+              'plugins',
               'upgrade-to-0.5.0',
               'upgrade-to-0.5.1',
               'upgrade-to-0.6.0',

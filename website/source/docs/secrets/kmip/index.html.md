@@ -10,11 +10,11 @@ description: |-
 
 # KMIP Secrets Engine
 
-The KMIP secrets engine allows Vault to act as a KMIP server provider and handle
-the lifecycle of it KMIP managed objects. KMIP, which stands for [Key Management
-Interoperability Protocol](#kmip-spec), is a standardized protocol that allows
+The KMIP secrets engine allows Vault to act as a [Key Management
+Interoperability Protocol](#kmip-spec) (KMIP) server provider and handle
+the lifecycle of its KMIP managed objects. KMIP is a standardized protocol that allows
 services and applications to perform cryptographic operations without having to
-manage cryptographic material, otherwise known as manage objects, by delegating
+manage cryptographic material, otherwise known as managed objects, by delegating
 its storage and lifecycle to a key management server.
 
 ## Setup
@@ -42,7 +42,7 @@ TLS parameters, or leave unwritten to use default values
 
 The KMIP secrets engine uses the concept of scopes to partition KMIP managed
 object storage into multiple named buckets. Within a scope, roles can be created
-which dictates the set of allowed operations that the particular role can perform.
+which dictate the set of allowed operations that the particular role can perform.
 TLS client certificates can be generated for a role, which services and applications
 can then use when sending KMIP requests against Vault's KMIP secret engine.
 
@@ -53,7 +53,7 @@ allowed operations for it.
 1. Create a scope:
 
     ```text
-    $ vault write -f kmip/scope/my-service             
+    $ vault write -f kmip/scope/my-service
     Success! Data written to: kmip/scope/my-service
     ```
 
@@ -68,9 +68,9 @@ deny.
 ### Client Certificate Generation
 
 Once a scope and role has been created, client certificates can be generated for
-that role. The client certificate then can be provided to applications and
-services that supports KMIP to establish communication with Vault's KMIP server.
-The certificate contains scope and role identifiers embedded in the certificate,
+that role. The client certificate can then be provided to applications and
+services that support KMIP to establish communication with Vault's KMIP server.
+Scope and role identifiers are embedded in the certificate,
 which will be used when evaluating permissions during a KMIP request.
 
 1. Generate a client certificate. This returns the CA Chain, the certificate,
@@ -141,14 +141,18 @@ KMIP operations.
 Supported KMIP operations:
 
 ```text
-operation_create
-operation_rekey
-operation_locate
-operation_get
 operation_activate
-operation_revoke
+operation_add_attribute
+operation_create
 operation_destroy
 operation_discover_versions
+operation_get
+operation_get_attribute_list
+operation_get_attributes
+operation_locate
+operation_register
+operation_rekey
+operation_revoke
 ```
 
 Additionally, there are two pseudo-operations that can be used to allow or deny

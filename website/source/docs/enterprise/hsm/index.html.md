@@ -20,6 +20,8 @@ to provide three pieces of special functionality:
    allowing for automatic unsealing
  * [Seal Wrapping](/docs/enterprise/sealwrap/index.html) to provide FIPS
    KeyStorage-conforming functionality for Critical Security Parameters
+ * [Entropy Augmentation](/docs/enterprise/entropy-augmentation/index.html) to
+   allow Vault to sample entropy from an external cryptographic module.
 
 HSM support is available for devices that support PKCS#11 version 2.20+
 interfaces and provide integration libraries, and is currently available for

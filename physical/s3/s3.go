@@ -225,6 +225,11 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, err
 	}
 
+	// Strip path prefix
+	if s.path != "" {
+		key = strings.TrimPrefix(key, s.path+"/")
+	}
+
 	ent := &physical.Entry{
 		Key:   key,
 		Value: data.Bytes(),
@@ -266,8 +271,8 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	// Setup prefix
 	prefix = path.Join(s.path, prefix)
 
-	// Validate prefix is ending with a "/"
-	if !strings.HasSuffix(prefix, "/") {
+	// Validate prefix (if present) is ending with a "/"
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
 
