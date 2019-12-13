@@ -73,7 +73,11 @@ func (c *KVListCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	// Encode whitespaces to make sure they are not stripped
+	path := strings.ReplaceAll(args[0], " ", "%20")
+
+	// Sanitize path
+	path = ensureTrailingSlash(sanitizePath(path))
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
