@@ -15,6 +15,7 @@ IMPROVEMENTS:
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
 * secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]
