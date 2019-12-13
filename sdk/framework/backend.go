@@ -231,8 +231,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 			replState := b.System().ReplicationState()
 			props := op.Properties()
 
-			if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) ||
-				props.ForwardPerformanceSecondary && replState.HasState(consts.ReplicationPerformanceSecondary) {
+			if !b.System().LocalMount() && (props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) ||
+				props.ForwardPerformanceSecondary && replState.HasState(consts.ReplicationPerformanceSecondary)) {
 				return nil, logical.ErrReadOnly
 			}
 
