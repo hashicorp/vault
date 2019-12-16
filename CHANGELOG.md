@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
@@ -14,11 +16,8 @@ IMPROVEMENTS:
 * agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
-* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
-* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
-* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
 
@@ -35,6 +34,7 @@ BUG FIXES:
   retrieved was made [GH-7991]
 * replication: Add `generate-public-key` endpoint to list of allowed endpoints
   for existing DR secondaries
+* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]  
 * secrets/pki: Prevent generating certificate on performance standby when storing
   [GH-7904]
 * secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
