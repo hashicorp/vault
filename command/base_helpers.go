@@ -34,7 +34,7 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 
 // sanitizePath removes any leading or trailing things from a "path".
 func sanitizePath(s string) string {
-	return ensureNoTrailingSlash(ensureNoLeadingSlash(strings.TrimSpace(s)))
+	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
