@@ -1021,7 +1021,9 @@ func TestOIDC_Flush(t *testing.T) {
 	populateNs := func() {
 		for i := range ns {
 			for _, val := range []string{"keyA", "keyB", "keyC"} {
-				c.SetDefault(ns[i], val, struct{}{})
+				if err := c.SetDefault(ns[i], val, struct{}{}); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 	}
@@ -1052,13 +1054,17 @@ func TestOIDC_Flush(t *testing.T) {
 
 	// flushing ns1 should flush ns1 and nilNamespace but not ns2
 	populateNs()
-	c.Flush(ns[1])
+	if err := c.Flush(ns[1]); err != nil {
+		t.Fatal(err)
+	}
 	items := c.c.Items()
 	verify(items, []*namespace.Namespace{ns[2]}, []*namespace.Namespace{ns[0], ns[1]})
 
 	// flushing nilNamespace should flush nilNamespace but not ns1 or ns2
 	populateNs()
-	c.Flush(ns[0])
+	if err := c.Flush(ns[0]); err != nil {
+		t.Fatal(err)
+	}
 	items = c.c.Items()
 	verify(items, []*namespace.Namespace{ns[1], ns[2]}, []*namespace.Namespace{ns[0]})
 }

@@ -373,7 +373,9 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return resp, nil
 }
@@ -412,7 +414,9 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
 
-	i.oidcCache.SetDefault(ns, "config", &c)
+	if err := i.oidcCache.SetDefault(ns, "config", &c); err != nil {
+		return nil, err
+	}
 
 	return &c, nil
 }
@@ -423,8 +427,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
-
-	defer i.oidcCache.Flush(ns)
 
 	name := d.Get("name").(string)
 
@@ -500,6 +502,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
 	}
 
 	// store named key
@@ -598,7 +604,9 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -653,7 +661,9 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -708,7 +718,9 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "namedKeys/"+role.Key, key)
+		if err := i.oidcCache.SetDefault(ns, "namedKeys/"+role.Key, key); err != nil {
+			return nil, err
+		}
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
 	if !strutil.StrListContains(key.AllowedClientIDs, "*") && !strutil.StrListContains(key.AllowedClientIDs, role.ClientID) {
@@ -936,7 +948,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -1033,7 +1048,9 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "discoveryResponse", data)
+		if err := i.oidcCache.SetDefault(ns, "discoveryResponse", data); err != nil {
+			return nil, err
+		}
 	}
 
 	resp := &logical.Response{
@@ -1076,7 +1093,9 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "jwksResponse", data)
+		if err := i.oidcCache.SetDefault(ns, "jwksResponse", data); err != nil {
+			return nil, err
+		}
 	}
 
 	resp := &logical.Response{
@@ -1369,7 +1388,9 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		jwks.Keys = append(jwks.Keys, *key)
 	}
 
-	i.oidcCache.SetDefault(ns, "jwks", jwks)
+	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {
+		return nil, err
+	}
 
 	return jwks, nil
 }
@@ -1468,7 +1489,9 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	}
 
 	if didUpdate {
-		i.oidcCache.Flush(ns)
+		if err := i.oidcCache.Flush(ns); err != nil {
+			i.Logger().Error("error flushing oidc cache", "error", err)
+		}
 	}
 
 	return nextExpiration, nil
@@ -1570,7 +1593,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				i.Logger().Warn("error expiring OIDC public keys", "err", err)
 			}
 
-			i.oidcCache.Flush(noNamespace)
+			if err := i.oidcCache.Flush(noNamespace); err != nil {
+				i.Logger().Error("error flushing oidc cache", "err", err)
+			}
 
 			// re-run at the soonest expiration or rotation time
 			if nextRotation.Before(nextRun) {
@@ -1581,7 +1606,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				nextRun = nextExpiration
 			}
 		}
-		i.oidcCache.SetDefault(noNamespace, "nextRun", nextRun)
+		if err := i.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+			i.Logger().Error("error setting oidc cache", "err", err)
+		}
 	}
 }
 
