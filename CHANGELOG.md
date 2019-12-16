@@ -27,7 +27,7 @@ BUG FIXES:
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
 * auth/token: Fix panic when getting batch tokens on a performance standby from a role
-  that does not exist.
+  that does not exist [GH-8027]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
   retrieved was made [GH-7991]
