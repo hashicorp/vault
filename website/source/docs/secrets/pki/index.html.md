@@ -443,7 +443,7 @@ Successfully mounted 'pki' at 'pki_int'!
 #### Configure an Intermediate CA
 
 ```text
-$ vault secrets tune -max-lease-ttl=4380h pki_int
+$ vault secrets tune -max-lease-ttl=43800h pki_int
 Successfully tuned mount 'pki_int'!
 ```
 
