@@ -26,6 +26,8 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* auth/token: Fix panic when getting batch tokens on a performance standby from a role
+  that does not exist [GH-8027]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
   retrieved was made [GH-7991]
@@ -36,7 +38,8 @@ BUG FIXES:
 * secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
 * storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
   a source during `operator migrate` operations [GH-7966]
-* ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
+* ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
+* ui: Fix status menu after demotion [GH-7997]
 
 ## 1.3 (November 14th, 2019)
 
