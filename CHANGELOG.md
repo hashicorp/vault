@@ -42,6 +42,7 @@ BUG FIXES:
   a source during `operator migrate` operations [GH-7966]
 * ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
 * ui: Fix status menu after demotion [GH-7997]
+* ui: Fix select dropdowns in Safari when running Mojave [8023]
 
 ## 1.3 (November 14th, 2019)
 
