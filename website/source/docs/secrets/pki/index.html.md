@@ -453,7 +453,7 @@ value should be less than or equal to the root certificate authority.
 Now, we generate our intermediate certificate signing request:
 
 ```text
-$ vault write pki_int/intermediate/generate/internal common_name="myvault.com Intermediate Authority" ttl=4380h
+$ vault write pki_int/intermediate/generate/internal common_name="myvault.com Intermediate Authority" ttl=43800h
 Key Value
 csr -----BEGIN CERTIFICATE REQUEST-----
 MIICsjCCAZoCAQAwLTErMCkGA1UEAxMibXl2YXVsdC5jb20gSW50ZXJtZWRpYXRl
@@ -479,7 +479,7 @@ another certificate authority, in this case the root certificate authority
 generated in the first example.
 
 ```text
-$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle ttl=4380h
+$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle ttl=43800h
 Key             Value
 certificate     -----BEGIN CERTIFICATE-----
 MIIDZTCCAk2gAwIBAgIUENxQD7KIJi1zE/jEiYqAG1VC4NwwDQYJKoZIhvcNAQEL
