@@ -58,34 +58,34 @@ This example can be used to set up a single server Vault cluster using TLS.
 
 1. Create key & certificate using Kubernetes CA
 2. Store key & cert into [Kubernetes secrets store](https://kubernetes.io/docs/concepts/configuration/secret/)
-3. Configure helm chart to use kubernetes secret from step 2
+3. Configure helm chart to use Kubernetes secret from step 2
 
 ### 1. Create key & certificate using Kubernetes CA
 
-There are three variables that will be used in this example. Feel free to change them as you see fit.
+There are three variables that will be used in this example.
 
 ```bash
 # SERVICE is the name of the Vault service in Kubernetes.
-# It does not have to match the actual running service, though it may help for consistency
+# It does not have to match the actual running service, though it may help for consistency.
 SERVICE=vault-server-tls
 
-# NAMESPACE where the Vault service is running
+# NAMESPACE where the Vault service is running.
 NAMESPACE=vault-namespace
 
-# SECRET_NAME to create in the Kubernetes secrets store
+# SECRET_NAME to create in the Kubernetes secrets store.
 SECRET_NAME=vault-server-tls
 
-# TMPDIR is a temporary working directory
+# TMPDIR is a temporary working directory.
 TMPDIR=/tmp
 ```
 
-1. Create a key for Kubernetes to sign. We're using openssl here, but other tools can be used.
+1. Create a key for Kubernetes to sign.
 
     ```bash
     openssl genrsa -out ${TMPDIR}/vault.key 2048
     ```
 
-2. Create a Certificate Signing Request (CSR)
+2. Create a Certificate Signing Request (CSR).
 
     1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
@@ -107,7 +107,7 @@ TMPDIR=/tmp
         EOF
         ```
 
-    2. Create CSR
+    2. Create a CSR.
 
         ```bash
         openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
@@ -133,7 +133,7 @@ TMPDIR=/tmp
        ```
        -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
 
-    2. Send the CSR to Kubernetes
+    2. Send the CSR to Kubernetes.
 
         ```bash
         kubectl create -f ${TMPDIR}/csr.yaml
@@ -141,7 +141,7 @@ TMPDIR=/tmp
         -> If this process is automated, you may need to wait to ensure the CSR has been received and stored:
         `kubectl get csr ${CSR_NAME}`
 
-    3. Approve the CSR in Kubernetes
+    3. Approve the CSR in Kubernetes.
 
         ```bash
         kubectl certificate approve ${CSR_NAME}
@@ -149,7 +149,7 @@ TMPDIR=/tmp
 
 ### 2. Store key, cert, and Kubernetes CA into Kubernetes secrets store
 
-1. Retrieve the certificate
+1. Retrieve the certificate.
 
     ```bash
     serverCert=$(kubectl get csr ${csrName} -o jsonpath='{.status.certificate}')
@@ -157,19 +157,19 @@ TMPDIR=/tmp
    -> If this process is automated, you may need to wait to ensure the certificate has been created.
    If it hasn't, this will return an empty string.
 
-2. Write the certificate out to a file
+2. Write the certificate out to a file.
 
     ```bash
     echo "${serverCert}" | openssl base64 -d -A -out ${TMPDIR}/vault.crt
     ```
 
-3. Retrieve Kubernetes CA
+3. Retrieve Kubernetes CA.
 
     ```bash
     kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -D > ${TMPDIR}/vault.ca
     ```
 
-3. Store key, cert, and Kubernetes CA into kube secrets
+3. Store the key, cert, and Kubernetes CA into Kubernetes secrets.
 
     ```bash
     kubectl create secret generic ${SECRET_NAME} \
