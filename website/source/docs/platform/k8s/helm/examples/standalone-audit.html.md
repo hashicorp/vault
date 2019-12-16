@@ -1,0 +1,57 @@
+---
+layout: "docs"
+page_title: "Standalone Server with Audit Storage"
+sidebar_current: "docs-platform-k8s-examples-standalone-audit"
+sidebar_title: "Standalone Server with Audit Storage"
+description: |-
+  Describes how to set up a standalone Vault with audit storage
+---
+
+# Standalone Server with Audit Storage
+
+~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+
+The below `values.yaml` can be used to set up a single server Vault cluster with
+auditing enabled.
+
+```yaml
+global:
+  enabled: true
+  image: "vault:1.3.0"
+
+server:
+  standalone:
+    enabled: true
+    config: |
+      listener "tcp" {
+        tls_disable = true
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  service:
+    enabled: true
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+
+  auditStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+```
+
+After Vault has been deployed, initialized and unsealed, auditing can be enabled
+by running the following command against the Vault pod:
+
+```bash
+$ kubectl exec -ti <POD NAME> --  vault audit enable file file_path=/vault/audit/vault_audit.log
+```
