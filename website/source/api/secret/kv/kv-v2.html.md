@@ -101,8 +101,8 @@ $ curl \
 This endpoint retrieves the secret at the specified location.
 
 | Method   | Path                         |
-| :--------------------------- | :--------------------- |
-| `GET`    | `/secret/data/:path`         |
+| :--------------------------- | :------------------------------- |
+| `GET`    | `/secret/data/:path?version=:version-number`         |
 
 ### Parameters
 
@@ -116,7 +116,7 @@ This endpoint retrieves the secret at the specified location.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://127.0.0.1:8200/v1/secret/data/my-secret
+    https://127.0.0.1:8200/v1/secret/data/my-secret?version=2
 ```
 
 ### Sample Response
@@ -131,7 +131,7 @@ $ curl \
       "created_time": "2018-03-22T02:24:06.945319214Z",
       "deletion_time": "",
       "destroyed": false,
-      "version": 1
+      "version": 2
     }
   },
 }
