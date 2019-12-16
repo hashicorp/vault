@@ -106,6 +106,13 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Name: clientCerts[0].Subject.CommonName,
 		},
 	}
+
+	// Add any OU item from SubjectDN
+	for i, ou := range clientCerts[0].Subject.OrganizationalUnit {
+		k := fmt.Sprintf("org_unit_%d", i)
+		auth.Metadata[k] = ou
+	}
+
 	matched.Entry.PopulateTokenAuth(auth)
 
 	return &logical.Response{
