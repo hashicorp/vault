@@ -30,7 +30,7 @@ First, make sure that [docker](docker) is installed. It can be installed in many
 
 ### Running the Site Directly
 
-This site requires a recent version of ruby as well as nodejs to be installed in order to run. There are [many ways to install ruby](https://www.ruby-lang.org/en/documentation/installation/), we recommend [rbenv](rbenv), which has very clear installation instructions in its readme, linked here, and installing ruby version `2.4.3`. Once ruby has been installed, you will need to install `bundler` as well, using `gem install bundler`. Node is quite easy to install [via universal binary](node) or [homebrew](homebrew) if you are a mac user.
+This site requires a recent version of ruby as well as nodejs to be installed in order to run. There are [many ways to install ruby](https://www.ruby-lang.org/en/documentation/installation/), we recommend [rbenv](https://github.com/rbenv/rbenv), which has very clear installation instructions in its readme, linked here, and installing ruby version `2.4.3`. Once ruby has been installed, you will need to install `bundler` as well, using `gem install bundler`. Node is quite easy to install [via universal binary](node) or [homebrew](https://brew.sh/) if you are a mac user.
 
 Once ruby and node have been installed, within this directory, you can run `sh bootstrap.sh` to install all the dependencies needed to run the site, then run `middleman` to start the dev server.
 
