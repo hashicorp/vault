@@ -20,7 +20,7 @@ type RequestRetryer interface{}
 // A Config provides service configuration for service clients. By default,
 // all clients will use the defaults.DefaultConfig structure.
 //
-//     // Create Session with MaxRetry configuration to be shared by multiple
+//     // Create Session with MaxRetries configuration to be shared by multiple
 //     // service clients.
 //     sess := session.Must(session.NewSession(&aws.Config{
 //         MaxRetries: aws.Int(3),
@@ -246,12 +246,18 @@ type Config struct {
 	// Disabling this feature is useful when you want to use local endpoints
 	// for testing that do not support the modeled host prefix pattern.
 	DisableEndpointHostPrefix *bool
+
+	// STSRegionalEndpoint will enable regional or legacy endpoint resolving
+	STSRegionalEndpoint endpoints.STSRegionalEndpoint
+
+	// S3UsEast1RegionalEndpoint will enable regional or legacy endpoint resolving
+	S3UsEast1RegionalEndpoint endpoints.S3UsEast1RegionalEndpoint
 }
 
 // NewConfig returns a new Config pointer that can be chained with builder
 // methods to set multiple configuration values inline without using pointers.
 //
-//     // Create Session with MaxRetry configuration to be shared by multiple
+//     // Create Session with MaxRetries configuration to be shared by multiple
 //     // service clients.
 //     sess := session.Must(session.NewSession(aws.NewConfig().
 //         WithMaxRetries(3),
@@ -420,6 +426,20 @@ func (c *Config) MergeIn(cfgs ...*Config) {
 	}
 }
 
+// WithSTSRegionalEndpoint will set whether or not to use regional endpoint flag
+// when resolving the endpoint for a service
+func (c *Config) WithSTSRegionalEndpoint(sre endpoints.STSRegionalEndpoint) *Config {
+	c.STSRegionalEndpoint = sre
+	return c
+}
+
+// WithS3UsEast1RegionalEndpoint will set whether or not to use regional endpoint flag
+// when resolving the endpoint for a service
+func (c *Config) WithS3UsEast1RegionalEndpoint(sre endpoints.S3UsEast1RegionalEndpoint) *Config {
+	c.S3UsEast1RegionalEndpoint = sre
+	return c
+}
+
 func mergeInConfig(dst *Config, other *Config) {
 	if other == nil {
 		return
@@ -519,6 +539,14 @@ func mergeInConfig(dst *Config, other *Config) {
 
 	if other.DisableEndpointHostPrefix != nil {
 		dst.DisableEndpointHostPrefix = other.DisableEndpointHostPrefix
+	}
+
+	if other.STSRegionalEndpoint != endpoints.UnsetSTSEndpoint {
+		dst.STSRegionalEndpoint = other.STSRegionalEndpoint
+	}
+
+	if other.S3UsEast1RegionalEndpoint != endpoints.UnsetS3UsEast1Endpoint {
+		dst.S3UsEast1RegionalEndpoint = other.S3UsEast1RegionalEndpoint
 	}
 }
 
