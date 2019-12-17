@@ -351,7 +351,7 @@ type projectedServiceAccountPod struct {
 // lookup calls the TokenReview API in kubernetes to verify the token and secret
 // still exist.
 func (s *serviceAccount) lookup(jwtStr string, tr tokenReviewer) error {
-	r, err := tr.Review(jwtStr)
+	r, err := tr.Review(jwtStr, s.Audience)
 	if err != nil {
 		return err
 	}
