@@ -105,7 +105,7 @@ How the secret is rendered to the file is also configurable.  To configure the t
 used, the user must supply a _template_ annotation using the same unique name of
 the secret.  The annotation must have the following format:
 
-```
+```yaml
 vault.hashicorp.com/agent-inject-template-<unique-name>: |
   < 
     TEMPLATE
@@ -160,38 +160,18 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 #### Vault Agent Configuration Map
 
 For advanced use cases, it may be required to define Vault Agent configuration
-files to mount instead of using secret/template annotations.  The configuration
-map must contain either one or both of the following files:
+files to mount instead of using secret and template annotations.  The Vault Agent 
+Injector supports mounting ConfigMaps by specifying the name using the `vault.hashicorp.com/agent-configmap`
+annotation.  The configuration files will be mounted to `/vault/configs`. 
+
+The configuration map must contain either one or both of the following files:
 
 * `config-init.hcl`: used by the init container.  This must have `exit_after_auth`
   set to `true`.
 * `config.hcl`: used by the sidecarcontainer.  This must have `exit_after_auth`
   set to `false`.
 
-The ConfigMap containing one or both of these files can be mounted using the
-`vault.hashicorp.com/agent-configmap: <name of configmap>` annotation.  The ConfigMap
-will be mounted to `/vault/configs`.
-
 An example of a Vault Agent configuration file [can be found here](docs/agent/template/index.html#vault-agent-templates).
-
-## Installation and Configuration
-
-To install the Vault Agent injector, enable the injection feature using
-[Helm values](docs/platform/k8s/helm.html#configuration-values-) and
-upgrade the installation using `helm upgrade` for existing installs or
-`helm install` for a fresh install.
-
-```bash
-export CA_BUNDLE=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}')
-
-helm install --name=vault \
-  --set="injector.enabled=true" \
-  --set="injector.tls.caBundle=${CA_BUNDLE?}" \
-  https://github.com/hashicorp/vault-helm/archive/v0.3.0tar.gz
-``` 
-
-Other values in the Helm chart can be used to limit the namespaces the injector
-runs in, TLS options and more.
 
 ## Annotations
 

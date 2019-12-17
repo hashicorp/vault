@@ -12,12 +12,16 @@ description: |-
 The following are different configuration examples to support a variety of
 deployment models.
 
+~> A common mistake is to set the annotation on the Deployment or other resource.
+  Ensure that the injector annotations are specified on the pod specification when 
+  using higher level constructs such as deployments, jobs or statefulsets.
+
 ## Patching Existing Pods
 
 To patch existing pods, a Kubernetes patch can be applied to add the required annoations
 to pods.  When applying a patch, the pods will be rescheduled.
 
-The following example patches a deployment.  First, create the patch:
+First, create the patch:
 
 ```bash
 cat <<EOF >> ./patch.yaml
@@ -44,6 +48,13 @@ Next, apply the patch:
 
 ```bash
 kubectl patch deployment <MY DEPLOYMENT> --patch "$(cat patch.yaml)"
+```
+
+The pod should now be rescheduled with additional containers.  The pod can be inspected
+using the `kubectl describe` command:
+
+```bash
+kubectl describe pod <name of pod>
 ```
 
 ## Deployment, Statefulsets, etc.
@@ -92,10 +103,6 @@ kind: ServiceAccount
 metadata:
   name: app-example
 ```
-
-~> A common mistake is to set the annotation on the Deployment or other resource.
-  Ensure that the injector annotations are specified on the pod specification
-  template as shown above.
 
 ## ConfigMap Example
 
