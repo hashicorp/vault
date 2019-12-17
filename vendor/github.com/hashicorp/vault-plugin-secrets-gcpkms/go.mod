@@ -13,8 +13,8 @@ require (
 	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98
-	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
+	github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4
+	github.com/hashicorp/vault/sdk v0.1.14-0.20191216174727-9d51b36f3ae4
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/satori/go.uuid v1.2.0

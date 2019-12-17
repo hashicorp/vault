@@ -6,11 +6,11 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190412020505-60e2075261b6
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.8.0
+	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-sockaddr v1.0.2
-	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/vault/api v1.0.5-0.20190814205728-e9c5cd8aca98
-	github.com/hashicorp/vault/sdk v0.1.14-0.20190814205504-1cad00d1133b
+	github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
+	github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4
+	github.com/hashicorp/vault/sdk v0.1.14-0.20191216174727-9d51b36f3ae4
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
