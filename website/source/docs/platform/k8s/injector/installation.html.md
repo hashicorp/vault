@@ -9,7 +9,7 @@ description: |-
 
 # Installing the Agent Injector
 
-The following are the different methods of installing the Agent Injector in 
+The following are the different methods of installing the Agent Injector in
 Kubernetes.
 
 ## Using Vault Helm
@@ -28,7 +28,7 @@ helm install --name=vault \
   https://github.com/hashicorp/vault-helm/archive/v0.3.0tar.gz
 ``` 
 
-Other values in the Helm chart can be used to limit the namespaces the injector 
+Other values in the Helm chart can be used to limit the namespaces the injector
 runs in, TLS options and more.
 
 ## Manual Installation

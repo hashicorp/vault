@@ -9,55 +9,55 @@ description: |-
 
 # Agent Sidecar Injector
 
-The Vault Agent Injector alters pod specifications to include Vault Agent 
+The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using 
-[Vault Agent templates](/docs/agent/template/index.html).  
+[Vault Agent templates](/docs/agent/template/index.html).
 By rendering secrets to a shared volume, containers within the pod can consume 
 Vault secrets without being Vault aware.
 
-The injector is a [Kubernetes Mutation Webhook Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).  
-The controller intercepts pod events and applies mutations to the pod if annotations exist within 
-the request.  This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) 
-project and can be automatically installed and configured using the 
+The injector is a [Kubernetes Mutation Webhook Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+The controller intercepts pod events and applies mutations to the pod if annotations exist within
+the request.  This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s)
+project and can be automatically installed and configured using the
 [Vault Helm](https://github.com/hashicorp/vault-helm) chart.
 
 ## Overview
 
-The Vault Agent Injector works by intercepting pod `CREATE` and `UPDATE` 
-events in Kubernetes.  The controller parses the event and looks for the metadata 
-annotation `vault.hashicorp.com/agent-inject: true`.  If found, the controller will 
+The Vault Agent Injector works by intercepting pod `CREATE` and `UPDATE`
+events in Kubernetes.  The controller parses the event and looks for the metadata
+annotation `vault.hashicorp.com/agent-inject: true`.  If found, the controller will
 alter the pod specification based on other annotations present.
 
 ### Mutations
 
-At a minimum, every container in the pod will be configured to mount a shared 
-memory volume.  This volume, mounted to `/vault/secrets`, will be used by the Vault 
+At a minimum, every container in the pod will be configured to mount a shared
+memory volume.  This volume, mounted to `/vault/secrets`, will be used by the Vault
 Agent containers for sharing secrets with the other containers in the pod.
 
-Next, two types of Vault Agent can be injected: init and sidecar containers.  The 
-`init` container will prepopulate the shared memory volume with the requested 
-secrets prior to the other containers starting.  The `sidecar` container will 
-continue to authenticate and render secrets to the same location as the pod runs.  
+Next, two types of Vault Agent can be injected: init and sidecar containers.  The
+`init` container will prepopulate the shared memory volume with the requested
+secrets prior to the other containers starting.  The `sidecar` container will
+continue to authenticate and render secrets to the same location as the pod runs.
 Using annotations, the use of `init` and `sidecar` containers is configurable.
 
-Last, two types of volumes can be optionally mounted to the Vault Agent 
-containers.  The first is secret volume containing TLS Cient certificate/key and 
-Certificate Authority certificate/key.  This volume is useful when communicating 
-and verifying the Vault servers authenticity using TLS.  The second is a configuration 
-map containing Vault Agent configuration files.  This volume is useful to customize 
+Last, two types of volumes can be optionally mounted to the Vault Agent
+containers.  The first is secret volume containing TLS Cient certificate/key and
+Certificate Authority certificate/key.  This volume is useful when communicating
+and verifying the Vault servers authenticity using TLS.  The second is a configuration
+map containing Vault Agent configuration files.  This volume is useful to customize
 Vault Agent beyond what the provided annotations offer.
 
 ### Authenticating with Vault
 
-The primary method of authentication with Vault when using the Vault Agent Injector 
-is the service account attached to the pod.  At this time, no other authentication 
+The primary method of authentication with Vault when using the Vault Agent Injector
+is the service account attached to the pod.  At this time, no other authentication
 method is supported by the controller.
 
-The service account must be bound to a Vault role and a policy granting access to 
+The service account must be bound to a Vault role and a policy granting access to
 the secrets desired.
 
-A service account must be present to use the Vault Agent Injector.  It is *not* 
-recommended to bind Vault roles to the default service account provided to pods 
+A service account must be present to use the Vault Agent Injector.  It is *not*
+recommended to bind Vault roles to the default service account provided to pods
 if no service account is defined.
 
 ### Requesting Secrets
@@ -74,12 +74,12 @@ Only one of these methods may be used at any time.
 To configure secret injection using annotations, the user must supply:
 
 * one or more _secret_ annotations,
-* and the Vault role to use to access those secrets.  
+* and the Vault role to use to access those secrets. 
 
-The annotation must have the following format: 
-`vault.hashicorp.com/agent-inject-secret-<unique-name>: /path/to/secret`.  The 
-unique name will be the filename of the rendered secret and must be unique if 
-multiple secrets are defined by the user.  For example, consider the following 
+The annotation must have the format
+`vault.hashicorp.com/agent-inject-secret-<unique-name>: /path/to/secret`.  The
+unique name will be the filename of the rendered secret and must be unique if
+multiple secrets are defined by the user.  For example, consider the following
 secret annotations:
 
 ```yaml
@@ -88,10 +88,10 @@ vault.hashicorp.com/agent-inject-secret-bar: consul/creds/app
 vault.hashicorp.com/role: "app"
 ```
 
-The first annotation will be rendered to `/vault/secrets/foo` and the second 
+The first annotation will be rendered to `/vault/secrets/foo` and the second
 annotation will be rendered to `/vault/secrets/bar`.
 
-It's possible to set the format of the using the annotation.  For example the 
+It's possible to set the format of the using the annotation.  For example the
 following secret will be rendered to `/vault/secrets/foo.txt`:
 
 ```yaml
@@ -101,8 +101,8 @@ vault.hashicorp.com/role: "app"
 
 ##### Secret Templates
 
-How the secret is rendered to the file is also configurable.  To configure the template 
-used, the user must supply a _template_ annotation using the same unique name of 
+How the secret is rendered to the file is also configurable.  To configure the template
+used, the user must supply a _template_ annotation using the same unique name of
 the secret.  The annotation must have the following format:
 
 ```
@@ -141,7 +141,7 @@ By default, if no template is defined, the following generic template is used:
 {{ end }}
 ```
 
-For example, the following annotation will use the default template to render 
+For example, the following annotation will use the default template to render
 PostgreSQL secrets found at the configured path:
 
 ```yaml
@@ -159,8 +159,8 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 
 #### Vault Agent Configuration Map
 
-For advanced use cases, it may be required to define Vault Agent configuration 
-files to mount instead of using secret/template annotations.  The configuration 
+For advanced use cases, it may be required to define Vault Agent configuration
+files to mount instead of using secret/template annotations.  The configuration
 map must contain either one or both of the following files:
 
 * `config-init.hcl`: used by the init container.  This must have `exit_after_auth`
@@ -168,9 +168,9 @@ map must contain either one or both of the following files:
 * `config.hcl`: used by the sidecarcontainer.  This must have `exit_after_auth`
   set to `false`.
 
-The ConfigMap containing one or both of these files can be mounted using the 
-`vault.hashicorp.com/agent-configmap: <name of configmap>` annotation.  The ConfigMap 
-will be mounted to `/vault/configs`. 
+The ConfigMap containing one or both of these files can be mounted using the
+`vault.hashicorp.com/agent-configmap: <name of configmap>` annotation.  The ConfigMap
+will be mounted to `/vault/configs`.
 
 An example of a Vault Agent configuration file [can be found here](docs/agent/template/index.html#vault-agent-templates).
 
@@ -190,7 +190,7 @@ helm install --name=vault \
   https://github.com/hashicorp/vault-helm/archive/v0.3.0tar.gz
 ``` 
 
-Other values in the Helm chart can be used to limit the namespaces the injector 
+Other values in the Helm chart can be used to limit the namespaces the injector
 runs in, TLS options and more.
 
 ## Annotations

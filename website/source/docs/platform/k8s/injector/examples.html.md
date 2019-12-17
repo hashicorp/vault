@@ -14,7 +14,7 @@ deployment models.
 
 ## Patching Existing Pods
 
-To patch existing pods, a Kubernetes patch can be applied to add the required annoations 
+To patch existing pods, a Kubernetes patch can be applied to add the required annoations
 to pods.  When applying a patch, the pods will be rescheduled.
 
 The following example patches a deployment.  First, create the patch:
@@ -48,9 +48,9 @@ kubectl patch deployment <MY DEPLOYMENT> --patch "$(cat patch.yaml)"
 
 ## Deployment, Statefulsets, etc.
 
-The annotations for configuring Vault Agent injection must be on the pod 
-specification. Since higher level resources such as Deployments wrap pod 
-specification templates, Vault Agent Injector can be used with all of these 
+The annotations for configuring Vault Agent injection must be on the pod
+specification. Since higher level resources such as Deployments wrap pod
+specification templates, Vault Agent Injector can be used with all of these
 higher level constructs, too.
 
 An example Deployment below shows how to enable Vault Agent injection:
@@ -93,13 +93,13 @@ metadata:
   name: app-example
 ```
 
-~> A common mistake is to set the annotation on the Deployment or other resource. 
-  Ensure that the injector annotations are specified on the pod specification 
+~> A common mistake is to set the annotation on the Deployment or other resource.
+  Ensure that the injector annotations are specified on the pod specification
   template as shown above.
 
 ## ConfigMap Example
 
-The following example creates a deployment that mounts a Kubernetes ConfigMap 
+The following example creates a deployment that mounts a Kubernetes ConfigMap
 containing Vault Agent configuration files.
 
 ```yaml
