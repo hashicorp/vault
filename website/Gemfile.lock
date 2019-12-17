@@ -167,9 +167,11 @@ PLATFORMS
 
 DEPENDENCIES
   builder
-  bundler (= 2.0.1)
   middleman (~> 4.2)
   middleman-dato
   middleman-hashicorp!
   tzinfo-data
   wdm (~> 0.1)
+
+BUNDLED WITH
+   2.1.0
