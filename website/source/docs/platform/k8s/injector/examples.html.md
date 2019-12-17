@@ -1,7 +1,7 @@
 ---
 layout: "docs"
-page_title: "Examples"
-sidebar_current: "docs-platform-k8s-agent-injector-examples"
+page_title: "Vault Agent Sidecar Injector Examples"
+sidebar_current: "docs-platform-k8s-injector-examples"
 sidebar_title: "Examples"
 description: |-
   This section documents examples of using the Vault Agent Injector.
