@@ -107,7 +107,8 @@ metadata:
 ## ConfigMap Example
 
 The following example creates a deployment that mounts a Kubernetes ConfigMap
-containing Vault Agent configuration files.
+containing Vault Agent configuration files.  For a complete list of the Vault
+Agent configuration settings, [see the agent documentation](/docs/agent/template/index.html#vault-agent-templates).
 
 ```yaml
 apiVersion: apps/v1
