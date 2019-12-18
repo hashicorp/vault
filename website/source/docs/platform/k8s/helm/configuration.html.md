@@ -53,7 +53,7 @@ and consider if they're appropriate for your deployment.
         memory: "10Gi"
     ```
 
-    * `namespaceSelector` (`string: null`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen.  If set to null, all non-system namespaces are eligible for injection.
+    * `namespaceSelector` (`string: ""`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen.  If set to null, all non-system namespaces are eligible for injection.
 
     ```yaml
     # Selectors are defined as a formatted multi-line string.
