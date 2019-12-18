@@ -4,7 +4,7 @@ page_title: "Agent Sidecar Injector Overview"
 sidebar_current: "docs-platform-k8s-injector"
 sidebar_title: "Agent Injector"
 description: |-
-  The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds VAult Agent containers to pods for consuming Vault secrets.
+  The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds Vault Agent containers to pods for consuming Vault secrets.
 ---
 
 # Agent Sidecar Injector
@@ -34,13 +34,13 @@ At a minimum, every container in the pod will be configured to mount a shared
 memory volume.  This volume, mounted to `/vault/secrets`, will be used by the Vault
 Agent containers for sharing secrets with the other containers in the pod.
 
-Next, two types of Vault Agent can be injected: init and sidecar containers.  The
-initialization container will prepopulate the shared memory volume with the requested
+Next, two types of Vault Agent containers  can be injected: init and sidecar.  The
+init container will prepopulate the shared memory volume with the requested
 secrets prior to the other containers starting.  The sidecar container will
 continue to authenticate and render secrets to the same location as the pod runs.
 Using annotations, the intialization and sidecar containers may be disabled.
 
-Last, two types of volumes can be optionally mounted to the Vault Agent
+Last, two addtional types of volumes can be optionally mounted to the Vault Agent
 containers.  The first is secret volume containing TLS Client certificate/key and
 CA (certificate authority) certificate/key.  This volume is useful when communicating
 and verifying the Vault servers authenticity using TLS.  The second is a configuration
@@ -120,8 +120,6 @@ vault.hashicorp.com/agent-inject-template-<unique-name>: |
   >
 ```
 
-~> The default left and right template delimiters are `{{` and `}}`.
-
 For example, consider the following:
 
 ```yaml
@@ -133,14 +131,16 @@ vault.hashicorp.com/agent-inject-template-foo: |
 vault.hashicorp.com/role: "app"
 ```
 
-The rendered secret would look like this within the pod:
+The rendered secret would look like this within the container:
 
 ```bash
 $ cat /vault/secrets/foo
 postgres://v-kubernet-pg-app-q0Z7WPfVN:A1a-BUEuQR52oAqPrP1J@postgres:5432/mydb?sslmode=disable
 ```
 
-By default, if no template is defined, the following generic template is used:
+~> The default left and right template delimiters are `{{` and `}}`.
+
+If no template is provided the following generic template is used:
 
 ```
 {{ with secret "/path/to/secret" }}
@@ -158,7 +158,7 @@ vault.hashicorp.com/agent-inject-secret-foo: "database/roles/pg-app"
 vault.hashicorp.com/role: "app"
 ```
 
-The rendered secret would look like this within the pod:
+The rendered secret would look like this within the container:
 
 ```bash
 $ cat /vault/secrets/foo
