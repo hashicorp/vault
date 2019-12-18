@@ -85,12 +85,13 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 		}
 		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
 	}
-
+	if retErr != nil {
+		return nil, retErr
+	}
 	if timeout := cfg.RequestTimeout; timeout > 0 {
 		conn.SetTimeout(time.Duration(timeout) * time.Second)
 	}
-
-	return conn, retErr.ErrorOrNil()
+	return conn, nil
 }
 
 /*
