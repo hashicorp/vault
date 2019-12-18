@@ -98,7 +98,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 			TLSServerName: c.flagTLSServerName,
 			Insecure:      c.flagTLSSkipVerify,
 		}
-		config.ConfigureTLS(t)
+
+		// Setup TLS config
+		if err := config.ConfigureTLS(t); err != nil {
+			return nil, errors.Wrap(err, "failed to setup TLS config")
+		}
 	}
 
 	// Build the client

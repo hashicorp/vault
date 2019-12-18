@@ -6,6 +6,7 @@ IMPROVEMENTS:
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
+* cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
 
@@ -29,6 +30,7 @@ BUG FIXES:
   a `sts_region` parameter [GH-7922]
 * auth/token: Fix panic when getting batch tokens on a performance standby from a role
   that does not exist [GH-8027]
+* identity: Fix identity token panic during invalidation [GH-8043]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
   retrieved was made [GH-7991]
