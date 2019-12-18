@@ -1796,7 +1796,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 		return nil, false
 	}
 	if name == "postgresql-database-plugin" {
-		return dbPostgres.New, true
+		return dbPostgres.New(false), true
 	}
 	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
 }
