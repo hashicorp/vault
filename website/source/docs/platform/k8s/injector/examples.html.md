@@ -79,7 +79,7 @@ using the `kubectl describe` command:
 kubectl describe pod <name of pod>
 ```
 
-## Deployment, Statefulsets, etc.
+## Deployments, StatefulSets, etc.
 
 The annotations for configuring Vault Agent injection must be on the pod
 specification. Since higher level resources such as Deployments wrap pod
