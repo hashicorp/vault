@@ -16,6 +16,28 @@ deployment models.
   Ensure that the injector annotations are specified on the pod specification when 
   using higher level constructs such as deployments, jobs or statefulsets.
 
+## Before Using the Vault Agent Injector
+
+Before applying Vault Agent injection annotations to pods, the following requirements
+should be satisfied:
+
+* Kubernetes auth method should be configured and enabled in Vault,
+* Pod should have a service account,
+* desired secrets exist within Vault,
+* the service account should be bound to a Vault role with a policy enabling access to desired secrets.
+
+For more information on configuring the Vault Kubernetes auth method,
+[see the official documentation](/docs/auth/kubernetes.html#configuration).
+
+## Debugging
+
+If an error occurs with a mutation request, Kubernetes will attach the error to the 
+owner of the pod.  Check the following for errors:
+
+* If the pod was created by a deployment or statefulset, check for errors in the `replicaset`
+  that owns the pod.
+* If the pod was created by a job, check the `job` for errors.
+
 ## Patching Existing Pods
 
 To patch existing pods, a Kubernetes patch can be applied to add the required annoations
@@ -67,6 +89,12 @@ higher level constructs, too.
 An example Deployment below shows how to enable Vault Agent injection:
 
 ```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-example
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,11 +125,6 @@ spec:
         - name:app 
           image: "app:1.0.0"
       serviceAccountName: app-example
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: app-example
 ```
 
 ## ConfigMap Example
@@ -111,6 +134,12 @@ containing Vault Agent configuration files.  For a complete list of the Vault
 Agent configuration settings, [see the agent documentation](/docs/agent/template/index.html#vault-agent-templates).
 
 ```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-example
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -133,11 +162,6 @@ spec:
         - name:app 
           image: "app:1.0.0"
       serviceAccountName: app-example
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: app-example
 ---
 apiVersion: v1
 kind: ConfigMap

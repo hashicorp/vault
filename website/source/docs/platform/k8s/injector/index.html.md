@@ -120,6 +120,8 @@ vault.hashicorp.com/agent-inject-template-<unique-name>: |
   >
 ```
 
+~> The default left and right template delimiters are `{{` and `}}`.
+
 For example, consider the following:
 
 ```yaml

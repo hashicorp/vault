@@ -4,7 +4,7 @@ page_title: "Agent Sidecar Injector Installation"
 sidebar_current: "docs-platform-k8s-injector-installation"
 sidebar_title: "Installation"
 description: |-
-  The Vault Agent Sidecar Injector can be installed in two ways: using Vault Helm or manually.
+  The Vault Agent Sidecar Injector can be installed using Vault Helm.
 ---
 
 # Installing the Agent Injector
@@ -12,29 +12,43 @@ description: |-
 The following are the different methods of installing the Agent Injector in
 Kubernetes.
 
-## Using Vault Helm
+~> The Vault Agent Injector requires Vault 1.3.1.
 
 To install the Vault Agent injector, enable the injection feature using
-[Helm values](docs/platform/k8s/helm.html#configuration-values-) and
+[Helm values](/docs/platform/k8s/helm.html#configuration-values-) and
 upgrade the installation using `helm upgrade` for existing installs or
 `helm install` for a fresh install.
 
-```bash
-export CA_BUNDLE=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}')
+To install a new instance of Vault and the Vault Agent Injector, run the following:
 
+```bash
 helm install --name=vault \
   --set="injector.enabled=true" \
-  --set="injector.tls.caBundle=${CA_BUNDLE?}" \
   https://github.com/hashicorp/vault-helm/archive/v0.3.0tar.gz
 ``` 
 
 Other values in the Helm chart can be used to limit the namespaces the injector
 runs in, TLS options and more.
 
-## Manual Installation
-
-TODO
-
 ## TLS Options
 
-TODO
+Admission webhook controllers require TLS to run within Kubernetes.  At this time
+the Vault Agent Injector supports two TLS options:
+
+* Auto TLS generation (default)
+* Manual TLS
+
+### Auto TLS
+
+By default, the Vault Agent Injector will bootstrap TLS by generating a certificate
+authority and creating a certificate/key to be used by the controller.  If using
+Vault Helm, the chart will automatically create the neccessary DNS entries for the
+controller's service used to verify the certificate.
+
+### Manual TLS
+
+If desired, users can supply their own TLS certificates, key and certificate authority.
+The following is required to configure TLS manually:
+
+* Server certificate/key
+* Base64 PEM encoded Certificate Authority bundle
