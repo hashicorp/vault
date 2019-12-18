@@ -4,7 +4,7 @@ page_title: "Agent Sidecar Injector Overview"
 sidebar_current: "docs-platform-k8s-injector"
 sidebar_title: "Agent Injector"
 description: |-
-  The Vault Agent Sidecar Injector is a Kubernetes admission webhookHelm chart is the recommended way to install and configure Vault on Kubernetes.
+  The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds VAult Agent containers to pods for consuming Vault secrets.
 ---
 
 # Agent Sidecar Injector
