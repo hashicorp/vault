@@ -43,7 +43,7 @@ Using annotations, the initialization and sidecar containers may be disabled.
 Last, two additional types of volumes can be optionally mounted to the Vault Agent
 containers.  The first is secret volume containing TLS requirements such as client
 and CA (certificate authority) certificates and keys. This volume is useful when
-communicating and verifying the Vault servers authenticity using TLS.  The second
+communicating and verifying the Vault server's authenticity using TLS.  The second
 is a configuration map containing Vault Agent configuration files.  This volume is
 useful to customize Vault Agent beyond what the provided annotations offer.
 
