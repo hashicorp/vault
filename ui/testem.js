@@ -10,7 +10,6 @@ const config = {
         // --no-sandbox is needed when running Chrome inside a container
         process.env.CI ? '--no-sandbox' : null,
         '--headless',
-        // as per https://github.com/ember-cli/ember-cli/pull/8774
         '--disable-software-rasterizer',
         '--mute-audio',
         '--remote-debugging-port=0',
