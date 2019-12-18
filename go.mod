@@ -86,7 +86,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2
 	github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191218003954-7c7ae5018bf6
+	github.com/hashicorp/vault/sdk v0.1.14-0.20191218020134-06959d23b502
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
