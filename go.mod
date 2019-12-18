@@ -79,14 +79,14 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.6.1
+	github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.3
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2
 	github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191216174727-9d51b36f3ae4
+	github.com/hashicorp/vault/sdk v0.1.14-0.20191218003954-7c7ae5018bf6
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -95,6 +95,7 @@ require (
 	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.2

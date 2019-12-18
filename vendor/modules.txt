@@ -386,7 +386,7 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.1
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-secrets-ad v0.6.1
+# github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
@@ -405,7 +405,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191216174727-9d51b36f3ae4 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191218003954-7c7ae5018bf6 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
