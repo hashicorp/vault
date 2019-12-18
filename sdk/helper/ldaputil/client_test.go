@@ -16,7 +16,7 @@ func TestDialLDAP(t *testing.T) {
 	}
 
 	ce := &ConfigEntry{
-		Url:            "ldap://nowherefoo.com",
+		Url:            "ldap://localhost:384654786",
 		RequestTimeout: 3,
 	}
 	if _, err := ldapClient.DialLDAP(ce); err == nil {
