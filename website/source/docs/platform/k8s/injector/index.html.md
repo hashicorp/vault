@@ -38,14 +38,14 @@ Next, two types of Vault Agent containers  can be injected: init and sidecar.  T
 init container will prepopulate the shared memory volume with the requested
 secrets prior to the other containers starting.  The sidecar container will
 continue to authenticate and render secrets to the same location as the pod runs.
-Using annotations, the intialization and sidecar containers may be disabled.
+Using annotations, the initialization and sidecar containers may be disabled.
 
-Last, two addtional types of volumes can be optionally mounted to the Vault Agent
-containers.  The first is secret volume containing TLS Client certificate/key and
-CA (certificate authority) certificate/key.  This volume is useful when communicating
-and verifying the Vault servers authenticity using TLS.  The second is a configuration
-map containing Vault Agent configuration files.  This volume is useful to customize
-Vault Agent beyond what the provided annotations offer.
+Last, two additional types of volumes can be optionally mounted to the Vault Agent
+containers.  The first is secret volume containing TLS requirements such as client
+and CA (certificate authority) certificates and keys. This volume is useful when
+communicating and verifying the Vault servers authenticity using TLS.  The second
+is a configuration map containing Vault Agent configuration files.  This volume is
+useful to customize Vault Agent beyond what the provided annotations offer.
 
 ### Authenticating with Vault
 
