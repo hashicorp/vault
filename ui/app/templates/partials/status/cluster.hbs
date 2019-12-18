@@ -2,78 +2,81 @@
   <div class="box">
     {{#unless version.isOSS}}
       {{#if (and activeCluster.unsealed auth.currentToken)}}
-        {{#if (has-permission 'status' routeParams='replication')}}
-          <nav class="menu">
-            <p class="menu-label">Replication</p>
-            <ul>
-              {{#if cluster.anyReplicationEnabled}}
-                <li>
-                  {{#link-to
-                    "vault.cluster.replication.mode.index"
-                    "dr"
-                    disabled=(not currentToken)
-                    invokeAction=(action onLinkClick)
-                  }}
-                    {{replication-mode-summary
-                      mode="dr"
-                      display='menu'
-                      cluster=cluster
-                    }}
-                  {{/link-to}}
-                </li>
-                <li>
-                  {{#if (has-feature "Performance Replication")}}
+        {{#if (not cluster.dr.isSecondary)}}
+          {{#if (has-permission 'status' routeParams='replication')}}
+            <nav class="menu">
+              <p class="menu-label">Replication</p>
+              <ul>
+                {{#if cluster.anyReplicationEnabled}}
+                  <li>
                     {{#link-to
                       "vault.cluster.replication.mode.index"
-                      "performance"
+                      "dr"
                       disabled=(not currentToken)
                       invokeAction=(action onLinkClick)
                     }}
                       {{replication-mode-summary
+                        mode="dr"
+                        display='menu'
+                        cluster=cluster
+                      }}
+                    {{/link-to}}
+                  </li>
+                  <li>
+                    {{#if (has-feature "Performance Replication")}}
+                      {{#link-to
+                        "vault.cluster.replication.mode.index"
+                        "performance"
+                        disabled=(not currentToken)
+                        invokeAction=(action onLinkClick)
+                      }}
+                        {{replication-mode-summary
+                          mode="performance"
+                          display="menu"
+                          cluster=cluster
+                          tagName="span"
+                        }}
+                      {{/link-to}}
+                    {{else}}
+                      {{replication-mode-summary
                         mode="performance"
                         display="menu"
                         cluster=cluster
-                        tagName="span"
+                        class="menu-item"
                       }}
-                    {{/link-to}}
-                  {{else}}
-                    {{replication-mode-summary
-                      mode="performance"
-                      display="menu"
-                      cluster=cluster
-                      class="menu-item"
+                    {{/if}}
+                  </li>
+                {{else}}
+                  <li>
+                    {{#link-to "vault.cluster.replication"
+                      invokeAction=(action onLinkClick)
                     }}
-                  {{/if}}
-                </li>
-              {{else}}
-                <li>
-                  {{#link-to "vault.cluster.replication"
-                    invokeAction=(action onLinkClick)
-                  }}
-                    <div class="level is-mobile">
-                      <span class="level-left">Enable</span>
-                      <Icon @glyph="plus-circle-outline" @class="has-text-grey-light level-right" />
-                    </div>
-                  {{/link-to}}
-                </li>
-              {{/if}}
-            </ul>
-          </nav>
-          <hr/>
+                      <div class="level is-mobile">
+                        <span class="level-left">Enable</span>
+                        <Icon @glyph="plus-circle-outline" @class="has-text-grey-light level-right" />
+                      </div>
+                    {{/link-to}}
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+            <hr/>
+          {{/if}}
         {{/if}}
       {{/if}}
     {{/unless}}
-      {{#if (or
+      {{#if (and (or
         (and version.features (has-permission 'status' routeParams='license'))
         (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
         )
+        not cluster.dr.isSecondary)
       }}
         <nav class="menu">
           <div class="menu-label">
             Server
           </div>
           <ul class="menu-list">
-            {{#if (and version.features (has-permission 'status' routeParams='license'))}}
+            {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
               <li class="action">
                 {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
                   <div class="level is-mobile">
@@ -104,7 +107,7 @@
         <ul class="menu-list">
           <li class="action">
             {{#if activeCluster.unsealed}}
-              {{#if (has-permission 'status' routeParams='seal')}}
+              {{#if (and (has-permission 'status' routeParams='seal') (not cluster.dr.isSecondary))}}
                 {{#link-to 'vault.cluster.settings.seal' cluster.name
                   invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
                 }}
@@ -132,7 +135,7 @@
           </li>
         </ul>
       </nav>
-      {{#if (has-permission 'metrics' routeParams='requests')}}
+      {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
         <hr />
         <nav class="menu">
           <div class="menu-label">
@@ -140,14 +143,12 @@
           </div>
           <ul class="menu-list">
             <li class="action">
-            {{#if activeCluster.unsealed}}
               {{#link-to "vault.cluster.requests"}}
                 <div class="level is-mobile">
                   <span class="level-left">HTTP Requests</span>
                   <Chevron class="has-text-grey-light level-right" />
                 </div>
               {{/link-to}}
-            {{/if}}
             </li>
           </ul>
         </nav>
