@@ -288,6 +288,7 @@
               'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes',
               'github',
               'ldap',
@@ -340,8 +341,21 @@
               {
                 category: 'k8s',
                 content: [
-                  'helm',
-                  'run'
+                  {
+                    category: 'helm',
+                    content: [
+                      'run',
+                      'configuration',
+                      'examples'
+                    ]
+                  },
+                  {
+                    category: 'injector',
+                    content: [
+                      'installation',
+                      'examples'
+                    ]
+                  },
                 ]
               },
               {
@@ -356,6 +370,7 @@
           {
             category: 'upgrading',
             content: [
+              'plugins',
               'upgrade-to-0.5.0',
               'upgrade-to-0.5.1',
               'upgrade-to-0.6.0',

@@ -72,8 +72,8 @@ Running tests will spin up a Vault dev server on port 9200 via a
 pretest script that testem (the test runner) executes. All of the
 acceptance tests then run, proxing requests back to that server.
 
-- `yarn run test-oss`
-- `yarn run test-oss -s` to keep the test server running after the initial run.
+- `yarn run test:oss`
+- `yarn run test:oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 - `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
