@@ -34,7 +34,7 @@ At a minimum, every container in the pod will be configured to mount a shared
 memory volume.  This volume is mounted to `/vault/secrets` and will be used by the Vault
 Agent containers for sharing secrets with the other containers in the pod.
 
-Next, two types of Vault Agent containers  can be injected: init and sidecar.  The
+Next, two types of Vault Agent containers can be injected: init and sidecar.  The
 init container will prepopulate the shared memory volume with the requested
 secrets prior to the other containers starting.  The sidecar container will
 continue to authenticate and render secrets to the same location as the pod runs.
