@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
@@ -14,11 +16,8 @@ IMPROVEMENTS:
 * agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
-* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
-* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
-* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
 
@@ -26,13 +25,17 @@ BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* auth/aws: Fixes region-related issues when using a custom `sts_endpoint` by adding
+  a `sts_region` parameter [GH-7922]
 * auth/token: Fix panic when getting batch tokens on a performance standby from a role
   that does not exist [GH-8027]
+* identity: Fix identity token panic during invalidation [GH-8043]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
   retrieved was made [GH-7991]
 * replication: Add `generate-public-key` endpoint to list of allowed endpoints
   for existing DR secondaries
+* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]  
 * secrets/pki: Prevent generating certificate on performance standby when storing
   [GH-7904]
 * secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
@@ -40,6 +43,7 @@ BUG FIXES:
   a source during `operator migrate` operations [GH-7966]
 * ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
 * ui: Fix status menu after demotion [GH-7997]
+* ui: Fix select dropdowns in Safari when running Mojave [8023]
 
 ## 1.3 (November 14th, 2019)
 
