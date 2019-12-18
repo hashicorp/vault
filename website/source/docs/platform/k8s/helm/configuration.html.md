@@ -41,7 +41,7 @@ and consider if they're appropriate for your deployment.
     
     * `imageVaultAgent` (`string: "vault:1.3.1"`) - The name of the Docker image (including any tag) for Vault Agent.  This should be the official Vault image.  **Vault 1.3.1+ is required by the admission controller**.
 
-    * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
+    * `resources` (`string: ""`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
     <br>**Setting this is highly recommended.**
 
     ```yaml
