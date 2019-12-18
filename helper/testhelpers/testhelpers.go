@@ -378,7 +378,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
-	leaderInfo := &vault.RetryJoinLeaderInfo{
+	leaderInfo := &raft.LeaderJoinInfo{
 		LeaderAPIAddr: leaderAPI,
 		TLSConfig:     leaderCore.TLSConfig,
 	}

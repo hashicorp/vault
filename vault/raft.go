@@ -2,11 +2,9 @@ package vault
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -15,10 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -37,15 +35,6 @@ var (
 type raftFollowerStates struct {
 	l         sync.RWMutex
 	followers map[string]uint64
-}
-
-type RetryJoinLeaderInfo struct {
-	LeaderAPIAddr    string `json:"leader_api_addr"`
-	LeaderCACert     string `json:"leader_ca_cert"`
-	LeaderClientCert string `json:"leader_client_cert"`
-	LeaderClientKey  string `json:"leader_client_key"`
-	Retry            bool
-	TLSConfig        *tls.Config
 }
 
 func (s *raftFollowerStates) update(nodeID string, appliedIndex uint64) {
@@ -540,8 +529,16 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
 		return false, errors.New("raft storage not configured")
 	}
 
-	retryJoinConfig := raftStorage.RetryJoinConfig()
-	if retryJoinConfig == "" {
+	leaderInfos, err := raftStorage.JoinConfig(nil)
+	if err != nil {
+		return false, err
+	}
+
+	if len(leaderInfos) == 0 {
+		return false, nil
+	}
+
+	if raftStorage.Initialized() {
 		return false, nil
 	}
 
@@ -549,7 +546,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
 	return c.JoinRaftCluster(ctx, nil, false)
 }
 
-func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderInfo, nonVoter bool) (bool, error) {
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return false, errors.New("raft storage not configured")
@@ -567,42 +564,17 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *RetryJoinLeaderI
 		return false, errwrap.Wrapf("join can't be invoked on an initialized cluster: {{err}}", ErrAlreadyInit)
 	}
 
-	var retry bool
-	var leaderInfos []*RetryJoinLeaderInfo
-	switch {
-	case leaderInfo == nil:
-		// leaderInfo will be nil when retry join is being initiated from the config
-		// file. Set retry to true and fetch the retry join information from the
-		// backend's configuration.
-		retry = true
-		retryJoinConfig := raftStorage.RetryJoinConfig()
-		if retryJoinConfig == "" {
-			return false, errors.New("missing leader information for performing retry join")
-		}
-		err := jsonutil.DecodeJSON([]byte(retryJoinConfig), &leaderInfos)
-		if err != nil {
-			return false, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
-		}
-		for _, info := range leaderInfos {
-			var tlsConfig *tls.Config
-			var err error
-			if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-				tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
-				if err != nil {
-					return false, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
-				}
-			}
-			info.TLSConfig = tlsConfig
-		}
-	default:
-		// This is the case for manual join. Retry setting will be sent down via the CLI
-		// flag.
-		retry = leaderInfo.Retry
-		leaderInfos = append(leaderInfos, leaderInfo)
+	leaderInfos, err := raftStorage.JoinConfig(leaderInfo)
+	if err != nil {
+		return false, errwrap.Wrapf("failed to retried join configuration: {{err}}", err)
 	}
+	if len(leaderInfos) == 0 {
+		return false, errors.New("missing leader information")
+	}
+	retry := leaderInfos[0].Retry
 
 	join := func(retry bool) error {
-		joinLeader := func(leaderInfo *RetryJoinLeaderInfo) error {
+		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
 			if leaderInfo == nil {
 				return errors.New("raft leader information is nil")
 			}

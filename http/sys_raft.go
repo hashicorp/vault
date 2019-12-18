@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"github.com/hashicorp/vault/physical/raft"
 	"io"
 	"net/http"
 
@@ -44,7 +45,7 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	leaderInfo := &vault.RetryJoinLeaderInfo{
+	leaderInfo := &raft.LeaderJoinInfo{
 		LeaderAPIAddr: req.LeaderAPIAddr,
 		TLSConfig:     tlsConfig,
 		Retry:         req.Retry,

@@ -2,8 +2,11 @@ package raft
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -106,8 +109,59 @@ type RaftBackend struct {
 	permitPool *physical.PermitPool
 }
 
-func (b *RaftBackend) RetryJoinConfig() string {
-	return b.conf["retry_join"]
+// LeaderJoinInfo contains information required by a node to join itself as a
+// follower to an existing raft cluster
+type LeaderJoinInfo struct {
+	// LeaderAPIAddr is the address of the leader node to connect to
+	LeaderAPIAddr string `json:"leader_api_addr"`
+	// LeaderCACert is the CA cert of the leader node
+	LeaderCACert string `json:"leader_ca_cert"`
+	// LeaderClientCert is the client certificate for the follower node to establish
+	// client authentication during TLS
+	LeaderClientCert string `json:"leader_client_cert"`
+	// LeaderClientKey is the client key for the follower node to establish client
+	// authentication during TLS
+	LeaderClientKey string `json:"leader_client_key"`
+	// Retry indicates if the join process should automatically be retried
+	Retry bool
+	// TLSConfig should not be set. It will be populated using the above fields.
+	TLSConfig *tls.Config
+}
+
+func (b *RaftBackend) JoinConfig(leaderInfo *LeaderJoinInfo) ([]*LeaderJoinInfo, error) {
+	var leaderInfos []*LeaderJoinInfo
+	switch {
+	case leaderInfo == nil:
+		// leaderInfo will be nil when retry join is being initiated from the config
+		// file. Set retry to true and fetch the retry join information from the
+		// config.
+		retryJoinConfig := b.conf["retry_join"]
+		if retryJoinConfig == "" {
+			return nil, errors.New("missing leader information for performing retry join")
+		}
+		err := jsonutil.DecodeJSON([]byte(retryJoinConfig), &leaderInfos)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
+		}
+		for _, info := range leaderInfos {
+			info.Retry = true
+			var tlsConfig *tls.Config
+			var err error
+			if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
+				tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+				if err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+				}
+			}
+			info.TLSConfig = tlsConfig
+		}
+	default:
+		// This is the case for manual join. Retry setting will be sent down via the CLI
+		// flag.
+		leaderInfos = append(leaderInfos, leaderInfo)
+	}
+
+	return leaderInfos, nil
 }
 
 // EnsurePath is used to make sure a path exists
