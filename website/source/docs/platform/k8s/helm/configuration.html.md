@@ -69,7 +69,7 @@ and consider if they're appropriate for your deployment.
 
         * `caBundle` (`string: ""`) - The PEM-encoded CA public certificate bundle for the TLS certificate served by the injector. This must be specified as a string and can't come from a secret because it must be statically configured on the Kubernetes `MutatingAdmissionWebhook` resource. This only needs to be specified if `secretName` is not null.
 
-        * `certName` (`string: tls.crt`) - The name of the certificate file within the `secretName` secret.
+        * `certName` (`string: "tls.crt"`) - The name of the certificate file within the `secretName` secret.
 
         * `keyName` (`string: tls.key`) - The name of the key file within the `secretName` secret.
 
