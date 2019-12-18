@@ -14,7 +14,7 @@ BUG FIXES:
 
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
 
-## 1.3.1 (Unreleased)
+## 1.3.1 (December 18th, 2019)
 
 IMPROVEMENTS:
 
@@ -25,6 +25,8 @@ IMPROVEMENTS:
   requests from hanging [AD-59]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
+* telemetry: Add `enable_hostname_label` option to telemetry stanza [GH-7902]
+* telemetry: Add accept header check for prometheus mime type [GH-7958]
 
 BUG FIXES:
 
@@ -34,6 +36,7 @@ BUG FIXES:
   a `sts_region` parameter [GH-7922]
 * auth/token: Fix panic when getting batch tokens on a performance standby from a role
   that does not exist [GH-8027]
+* core: Improve warning message for lease TTLs [GH-7901]
 * identity: Fix identity token panic during invalidation [GH-8043]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
@@ -48,7 +51,7 @@ BUG FIXES:
   a source during `operator migrate` operations [GH-7966]
 * ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
 * ui: Fix status menu after demotion [GH-7997]
-* ui: Fix select dropdowns in Safari when running Mojave [8023]
+* ui: Fix select dropdowns in Safari when running Mojave [GH-8023]
 
 ## 1.3 (November 14th, 2019)
 
