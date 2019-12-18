@@ -31,6 +31,48 @@ and consider if they're appropriate for your deployment.
 
     * `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
+* `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
+    
+    * `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
+    
+    * `image` (`string: "hashicorp/vault-k8s:0.1.0"`) - The name of the Docker image (including any tag) for `vault-k8s` project. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+
+    * `imagePullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+    
+    * `imageVaultAgent` (`string: "vault:1.3.1"`) - The name of the Docker image (including any tag) for Vault Agent.  This should be the official Vault image.  **Vault 1.3.1+ is required by the admission controller**.
+
+    * `resources` (`string: ""`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
+    <br>**Setting this is highly recommended.**
+
+    ```yaml
+    # Resources are defined as a formatted multi-line string:
+    resources: |
+      requests:
+        memory: "10Gi"
+      limits:
+        memory: "10Gi"
+    ```
+
+    * `namespaceSelector` (`string: ""`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen.  If set to null, all non-system namespaces are eligible for injection.
+
+    ```yaml
+    # Selectors are defined as a formatted multi-line string.
+    # In this example, all namespaces with the label "injection: enabled" are eligible:
+    namespaceSelector: |
+      matchLabels:
+        injection: enabled
+    ```
+
+    * `certs` - The certs section configures how the webhook TLS certs are configured. These are the TLS certs for the Kube apiserver communicating to the webhook. By default, the injector will generate and manage its own certs, but this requires the ability for the injector to update its own `MutatingWebhookConfiguration`. In a production environment, custom certs should probably be used. Configure the values below to enable this.
+
+        * `secretName` (`string: ""`) - secretName is the name of the Kubernetes secret that has the TLS certificate and private key to serve the injector webhook. If this is null, then the injector will default to its automatic management mode.
+
+        * `caBundle` (`string: ""`) - The PEM-encoded CA public certificate bundle for the TLS certificate served by the injector. This must be specified as a string and can't come from a secret because it must be statically configured on the Kubernetes `MutatingAdmissionWebhook` resource. This only needs to be specified if `secretName` is not null.
+
+        * `certName` (`string: "tls.crt"`) - The name of the certificate file within the `secretName` secret.
+
+        * `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
+
 * `server` - Values that configure running a Vault server within Kubernetes.
 
     * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
@@ -85,7 +127,7 @@ and consider if they're appropriate for your deployment.
 
     * `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
-        - `enabled` (`boolean: false`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
+        - `enabled` (`boolean: true`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
 
     * `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server.  This should be a multi-line key/value string.
 
