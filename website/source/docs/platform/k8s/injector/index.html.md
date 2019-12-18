@@ -31,7 +31,7 @@ alter the pod specification based on other annotations present.
 ### Mutations
 
 At a minimum, every container in the pod will be configured to mount a shared
-memory volume.  This volume, mounted to `/vault/secrets`, will be used by the Vault
+memory volume.  This volume is mounted to `/vault/secrets` and will be used by the Vault
 Agent containers for sharing secrets with the other containers in the pod.
 
 Next, two types of Vault Agent containers  can be injected: init and sidecar.  The
