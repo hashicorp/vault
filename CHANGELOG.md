@@ -21,6 +21,8 @@ IMPROVEMENTS:
 * agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
+* auth/kubernetes: Add audience to tokenreview API request for Kube deployments where issuer
+  is not Kube. [GH-74]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
