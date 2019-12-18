@@ -103,6 +103,8 @@ vault.hashicorp.com/agent-inject-secret-foo.txt: database/roles/app
 vault.hashicorp.com/role: "app"
 ```
 
+The secret unique name must consist of alphanumeric characters, `.`, `_` or `-`.
+
 ##### Secret Templates
 
 ~> Vault Agent uses the Consul Template project to render secrets.  For more information
@@ -242,8 +244,9 @@ An example of mounting a Vault Agent configmap [can be found here](/docs/platfor
 * `vault.hashicorp.com/tls-server-name` - name of the Vault server to verify the
   authenticity of the server when communicating with Vault over TLS.
 
-* `vault.hashicorp.com/tls-skip-verify` - configures the Vault Agent to verify
-  Vault's TLS certificate.
+* `vault.hashicorp.com/tls-skip-verify` - if true, configures the Vault Agent to
+  skip verification of Vault's TLS certificate.  It's not recommended to set this
+  value to true in a production environment.
 
 * `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -261,4 +264,5 @@ An example of mounting a Vault Agent configmap [can be found here](/docs/platfor
   attempts when 5xx errors are encountered.  Defaults to 2.
 
 * `vault.hashicorp.com/client-timeout` - configures the request timeout threshold,
-  in seconds, of the Vault Agent when communicating with Vault.  Defaults to `60s`.
+  in seconds, of the Vault Agent when communicating with Vault.  Defaults to `60s` 
+  and accepts value types of `60`, `60s` or `1m`.
