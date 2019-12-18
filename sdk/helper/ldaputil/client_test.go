@@ -2,7 +2,24 @@ package ldaputil
 
 import (
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
 )
+
+func TestDialLDAP(t *testing.T) {
+	ldapClient := Client{
+		Logger: hclog.NewNullLogger(),
+		LDAP:   NewLDAP(),
+	}
+
+	ce := &ConfigEntry{
+		Url:            "ldap://nowherefoo.com",
+		RequestTimeout: 3,
+	}
+	if _, err := ldapClient.DialLDAP(ce); err == nil {
+		t.Fatal("expected error")
+	}
+}
 
 func TestLDAPEscape(t *testing.T) {
 	testcases := map[string]string{
