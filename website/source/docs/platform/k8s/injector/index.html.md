@@ -11,7 +11,7 @@ description: |-
 
 The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using 
-[Vault Agent templates](/docs/agent/template/index.html).
+[Vault Agent Templates](/docs/agent/template/index.html).
 By rendering secrets to a shared volume, containers within the pod can consume 
 Vault secrets without being Vault aware.
 
