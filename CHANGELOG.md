@@ -10,6 +10,10 @@ IMPROVEMENTS:
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
 
+BUG FIXES:
+
+* ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
+
 ## 1.3.1 (Unreleased)
 
 IMPROVEMENTS:
