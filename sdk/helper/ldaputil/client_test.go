@@ -6,6 +6,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+// TestDialLDAP duplicates a potential panic that was
+// present in the previous version of TestDialLDAP,
+// then confirms its fix by passing.
 func TestDialLDAP(t *testing.T) {
 	ldapClient := Client{
 		Logger: hclog.NewNullLogger(),
