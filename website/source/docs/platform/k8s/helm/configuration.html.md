@@ -71,7 +71,7 @@ and consider if they're appropriate for your deployment.
 
         * `certName` (`string: "tls.crt"`) - The name of the certificate file within the `secretName` secret.
 
-        * `keyName` (`string: tls.key`) - The name of the key file within the `secretName` secret.
+        * `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
 
 * `server` - Values that configure running a Vault server within Kubernetes.
 
