@@ -69,7 +69,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		"max_open_connections": 5,
 	}
 
-	db := new()
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -105,7 +105,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -157,7 +157,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -229,7 +229,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 		"password":             "secret",
 	}
 
-	db := new()
+	db := new(false)
 
 	connProducer := db.SQLConnectionProducer
 
@@ -264,7 +264,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -331,7 +331,7 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db := new(false)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
