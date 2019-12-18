@@ -13,7 +13,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"github.com/go-test/deep"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -27,6 +26,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"

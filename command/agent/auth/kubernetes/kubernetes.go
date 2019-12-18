@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -72,15 +73,15 @@ func NewKubernetesAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return k, nil
 }
 
-func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	k.logger.Trace("beginning authentication")
 
 	jwtString, err := k.readJWT()
 	if err != nil {
-		return "", nil, errwrap.Wrapf("error reading JWT with Kubernetes Auth: {{err}}", err)
+		return "", nil, nil, errwrap.Wrapf("error reading JWT with Kubernetes Auth: {{err}}", err)
 	}
 
-	return fmt.Sprintf("%s/login", k.mountPath), map[string]interface{}{
+	return fmt.Sprintf("%s/login", k.mountPath), nil, map[string]interface{}{
 		"role": k.role,
 		"jwt":  jwtString,
 	}, nil

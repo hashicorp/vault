@@ -179,7 +179,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retToken string, retData map[string]interface{}, retErr error) {
+func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retToken string, header http.Header, retData map[string]interface{}, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
@@ -266,7 +266,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 
 	data["role"] = a.role
 
-	return fmt.Sprintf("%s/login", a.mountPath), data, nil
+	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
 }
 
 func (a *awsMethod) NewCreds() chan struct{} {
