@@ -45,12 +45,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: req.LeaderAPIAddr,
-		TLSConfig:     tlsConfig,
-		Retry:         req.Retry,
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: req.LeaderAPIAddr,
+			TLSConfig:     tlsConfig,
+			Retry:         req.Retry,
+		},
 	}
-	joined, err := core.JoinRaftCluster(context.Background(), leaderInfo, req.NonVoter)
+	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

@@ -543,10 +543,10 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
 	}
 
 	c.logger.Info("raft retry join initiated")
-	return c.JoinRaftCluster(ctx, nil, false)
+	return c.JoinRaftCluster(ctx, leaderInfos, false)
 }
 
-func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return false, errors.New("raft storage not configured")
@@ -561,16 +561,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *raft.LeaderJoinI
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
 	if init {
-		return false, errwrap.Wrapf("join can't be invoked on an initialized cluster: {{err}}", ErrAlreadyInit)
+		return true, nil
 	}
 
-	leaderInfos, err := raftStorage.JoinConfig(leaderInfo)
-	if err != nil {
-		return false, errwrap.Wrapf("failed to retried join configuration: {{err}}", err)
-	}
-	if len(leaderInfos) == 0 {
-		return false, errors.New("missing leader information")
-	}
 	retry := leaderInfos[0].Retry
 
 	join := func(retry bool) error {
@@ -675,10 +668,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfo *raft.LeaderJoinI
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
-				}
-				// If retry is set, continue to join after some time
-				if retry {
-					return errors.New("raft join is waiting for unseal keys to be supplied")
 				}
 				return nil
 			}
