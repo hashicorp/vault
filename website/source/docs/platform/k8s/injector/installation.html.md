@@ -15,7 +15,7 @@ Kubernetes.
 ~> The Vault Agent Injector requires Vault 1.3.1.
 
 To install the Vault Agent injector, enable the injection feature using
-[Helm values](/docs/platform/k8s/helm.html#configuration-values-) and
+[Helm values](/docs/platform/k8s/helm/configuration.html) and
 upgrade the installation using `helm upgrade` for existing installs or
 `helm install` for a fresh install.
 
@@ -52,3 +52,14 @@ The following is required to configure TLS manually:
 
 * Server certificate/key
 * Base64 PEM encoded Certificate Authority bundle
+
+For more information on configuring manual TLS, see the [Vault Helm cert values](/docs/platform/k8s/helm/configuration.html#certs).
+
+## Namespace Selector
+
+By default, the Vault Agent Injector will process all namespaces in Kubernetes except
+the system namespaces `kube-system` and `kube-public`.  To limit what namespaces
+the injector can work in a namespace selector can be defined to match labels attached
+to namespaces.
+
+For more information on configuring namespace selection, see the [Vault Helm namespaceSelector value](/docs/platform/k8s/helm/configuration.html#namespaceselector).
