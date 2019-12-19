@@ -73,6 +73,14 @@ func newTransitClient(logger log.Logger, config map[string]string) (*transitClie
 		namespace = config["namespace"]
 	}
 
+	var token string
+	switch {
+	case os.Getenv("VAULT_TRANSIT_SEAL_TOKEN") != "":
+		token = os.Getenv("VAULT_TRANSIT_SEAL_TOKEN")
+	case config["token"] != "":
+		token = config["token"]
+	}
+
 	apiConfig := api.DefaultConfig()
 	if config["address"] != "" {
 		apiConfig.Address = config["address"]
@@ -105,8 +113,8 @@ func newTransitClient(logger log.Logger, config map[string]string) (*transitClie
 	if err != nil {
 		return nil, nil, err
 	}
-	if config["token"] != "" {
-		apiClient.SetToken(config["token"])
+	if token != "" {
+		apiClient.SetToken(token)
 	}
 	if namespace != "" {
 		apiClient.SetNamespace(namespace)

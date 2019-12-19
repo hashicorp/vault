@@ -113,6 +113,50 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 }
 
+func TestTransitSeal_EnvConfig(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip()
+	}
+	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
+	defer cleanup()
+
+	// Set config via env parameters
+	if err := os.Setenv("VAULT_ADDR", retAddress); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("VAULT_TRANSIT_SEAL_TOKEN", token); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("VAULT_TRANSIT_SEAL_MOUNT_PATH", mountPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("VAULT_TRANSIT_SEAL_KEY_NAME", keyName); err != nil {
+		t.Fatal(err)
+	}
+
+	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
+	_, err := s.SetConfig(nil)
+	if err != nil {
+		t.Fatalf("error setting seal config: %v", err)
+	}
+
+	// Test Encrypt and Decrypt calls
+	input := []byte("foo")
+	swi, err := s.Encrypt(context.Background(), input)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	pt, err := s.Decrypt(context.Background(), swi)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(input, pt) {
+		t.Fatalf("expected %s, got %s", input, pt)
+	}
+}
+
 func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, mountPath, keyName string, tlsConfig *api.TLSConfig) {
 	testToken, err := uuid.GenerateUUID()
 	if err != nil {

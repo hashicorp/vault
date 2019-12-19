@@ -50,7 +50,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   This may also be specified by the `VAULT_ADDR` environment variable.
 
 - `token` `(string: <required>)`: The Vault token to use. This may also be
-  specified by the `VAULT_TOKEN` environment variable.
+  specified by the `VAULT_TOKEN` or `VAULT_TRANSIT_SEAL_TOKEN` environment variable.
 
 - `key_name` `(string: <required>)`: The transit key to use for encryption and
   decryption.  This may also be supplied using the `VAULT_TRANSIT_SEAL_KEY_NAME`
