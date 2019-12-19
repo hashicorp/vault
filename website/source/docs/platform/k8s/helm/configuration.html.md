@@ -21,10 +21,6 @@ and consider if they're appropriate for your deployment.
 
     * `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
-    * `image` (`string: "vault:latest"`) - The name of the Docker image (including any tag) for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your Vault version.
-
-    * `imagePullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
-
     * `imagePullSecrets` (`string: ""`) - Defines secrets to be used when pulling images from private registries.
 
         - `name`: (`string: required`) - Name of the secret containing files required for authentication to private image registries.
@@ -35,11 +31,19 @@ and consider if they're appropriate for your deployment.
     
     * `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
     
-    * `image` (`string: "hashicorp/vault-k8s:0.1.0"`) - The name of the Docker image (including any tag) for `vault-k8s` project. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    * `image` - Values that configure the Vault Agent Injector Docker image.
 
-    * `imagePullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+        * `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for `vault-k8s` project.
+
+        * `tag` (`string: "0.1.0"`) - The tag of the Docker image for `vault-k8s` project. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+
+        * `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
     
-    * `imageVaultAgent` (`string: "vault:1.3.1"`) - The name of the Docker image (including any tag) for Vault Agent.  This should be the official Vault image.  **Vault 1.3.1+ is required by the admission controller**.
+    * `agentImage` - Values that configure the Vault Agent sidecar image.
+
+        * `repository` (`string: "vault"`) - The name of the Docker image for the Vault Agent sidecar.  This should be set to the official Vault Docker image.
+
+        * `tag` (`string: "1.3.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.  **Vault 1.3.1+ is required by the admission controller**.
 
     * `resources` (`string: ""`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
     <br>**Setting this is highly recommended.**
@@ -74,6 +78,15 @@ and consider if they're appropriate for your deployment.
         * `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
 
 * `server` - Values that configure running a Vault server within Kubernetes.
+
+    * `image` - Values that configure the Vault Docker image.
+
+        * `repository` (`string: "vault"`) - The name of the Docker image for the containers running Vault.
+
+        * `tag` (`string: "1.3.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+
+        * `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+    
 
     * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
     <br>**Setting this is highly recommended.**
@@ -128,6 +141,50 @@ and consider if they're appropriate for your deployment.
     * `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 
         - `enabled` (`boolean: true`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account.  This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
+
+    * `readinessProbe` - Values that configure the readiness probe for the Vault pods.
+
+        - `enabled` (`boolean: true`) - When set to `true`, a readiness probe will be applied to the Vault pods.
+
+        - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controled by the `tlsDisable` value.
+
+    ```yaml
+     readinessProbe:
+       enabled: true
+       path: /v1/sys/health?standbyok=true
+    ``` 
+
+    * `livelinessProbes` - Values that configure the liveliness probe for the Vault pods.
+
+        - `enabled` (`boolean: false`) - When set to `true`, a liveliness probe will be applied to the Vault pods.
+
+        - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controled by the `tlsDisable` value.
+
+        - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveliness probe when the container starts.
+    ```yaml
+     livelinessProbe:
+       enabled: true
+       path: /v1/sys/health?standbyok=true
+       initialDelaySeconds: 60
+    ``` 
+
+    * `extraContainers` - The extra containers to be applied to the Vault server pods.
+
+    ```yaml
+     extraContainers:
+       - name: mycontainer
+         image: "app:0.0.0"
+         env:
+           ...
+    ```
+
+    ```yaml
+    # Extra Environment Variables are defined as key/value strings.
+     extraEnvironmentVars:
+       GOOGLE_REGION: global
+       GOOGLE_PROJECT: myproject
+       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
+    ```
 
     * `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server.  This should be a multi-line key/value string.
 
@@ -230,12 +287,16 @@ and consider if they're appropriate for your deployment.
     * `service` - Values that configure the Kubernetes service created for Vault.
 
         - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
-
+        
         - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes.  By default the Vault service will be given a Cluster IP address, set to `None` to disable.  When disabled Kubernetes will create a "headless" service.  Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
+        
+        - `type` (`string: "ClusterIP"`) - Sets the type of service to create, such as `NodePort`.
 
         - `port` (`int: 8200`) - Port on which Vault server is listening inside the pod.
 
         - `targetPort` (`int: 8200`) - Port on which the service is listening.
+
+        - `nodePort` (`int: `) - When type is set to `NodePort`, the bound node port can be configured using this value.  A random port will be assigned if this is left blank.
 
         - `annotations` (`string`) - This value defines additional annotations for the service. This should be formatted as a multi-line string.
 

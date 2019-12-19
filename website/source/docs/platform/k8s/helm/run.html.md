@@ -62,7 +62,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.2.1
+$ git checkout v0.3.0
 
 # Run Helm
 $ helm install --name vault ./
