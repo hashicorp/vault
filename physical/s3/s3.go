@@ -111,7 +111,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	pooledTransport := cleanhttp.DefaultPooledTransport()
 	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	s3conn := s3.New(session.New(&aws.Config{
+	sess, err := session.NewSession(&aws.Config{
 		Credentials: creds,
 		HTTPClient: &http.Client{
 			Transport: pooledTransport,
@@ -120,7 +120,11 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		Region:           aws.String(region),
 		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
 		DisableSSL:       aws.Bool(disableSSLBool),
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	s3conn := s3.New(sess)
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
