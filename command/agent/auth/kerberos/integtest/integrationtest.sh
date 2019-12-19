@@ -76,7 +76,6 @@ function create_keytab() {
   docker cp $SAMBA_CONTAINER:/${username}.keytab ${TESTS_DIR}/integration/
 }
 
-# before running main, please be running Vault locally at http://localhost:8200
 function main() {
   # make and start vault
   make dev
