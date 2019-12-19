@@ -33,9 +33,9 @@ and consider if they're appropriate for your deployment.
     
     * `image` - Values that configure the Vault Agent Injector Docker image.
 
-        * `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for `vault-k8s` project.
+        * `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-        * `tag` (`string: "0.1.0"`) - The tag of the Docker image for `vault-k8s` project. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+        * `tag` (`string: "0.1.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
         * `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
     
@@ -161,6 +161,7 @@ and consider if they're appropriate for your deployment.
         - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controled by the `tlsDisable` value.
 
         - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveliness probe when the container starts.
+
     ```yaml
      livelinessProbe:
        enabled: true
@@ -168,7 +169,7 @@ and consider if they're appropriate for your deployment.
        initialDelaySeconds: 60
     ``` 
 
-    * `extraContainers` - The extra containers to be applied to the Vault server pods.
+    * `extraContainers` (`array: []`) - The extra containers to be applied to the Vault server pods.
 
     ```yaml
      extraContainers:
