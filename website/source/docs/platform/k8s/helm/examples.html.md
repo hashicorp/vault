@@ -21,9 +21,12 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   standalone:
     enabled: true
     config: |
@@ -61,10 +64,13 @@ certificate authority:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
   tlsDisable: false
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   extraVolumes:
   - type: secret
     name: vault-server-tls
@@ -102,9 +108,12 @@ auditing enabled.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   standalone:
     enabled: true
     config: |
@@ -149,9 +158,12 @@ Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   extraEnvironmentVars:
     GOOGLE_REGION: global
     GOOGLE_PROJECT: myproject
