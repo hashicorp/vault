@@ -676,7 +676,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				// Wait until unseal keys are supplied
 				c.logger.Info("wait until unseal keys are supplied")
 				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
-					return nil
+					return errors.New("waiting for unseal keys to be supplied")
 				}
 			}
 
