@@ -93,7 +93,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
@@ -223,7 +223,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
@@ -296,7 +296,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.12.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
 workflows:
@@ -418,7 +418,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
-#       GO_VERSION: 1.12.14
+#       GO_VERSION: 1.12.12
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
@@ -455,6 +455,21 @@ workflows:
 #         paths:
 #         - bin
 #         root: .
+#   go-mod-download:
+#     executor: go
+#     steps:
+#     - add_ssh_keys:
+#         fingerprints:
+#         - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+#     - checkout
+#     - restore_go_cache
+#     - run:
+#         command: go mod download
+#         name: Download Go modules
+#     - run:
+#         command: go mod verify
+#         name: Verify checksums of Go modules
+#     - save_go_cache
 #   install-ui-dependencies:
 #     executor: node
 #     steps:
