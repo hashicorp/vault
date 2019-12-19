@@ -21,7 +21,7 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
+  image: "vault:1.3.1"
 
 server:
   standalone:
@@ -61,7 +61,7 @@ certificate authority:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
+  image: "vault:1.3.1"
   tlsDisable: false
 
 server:
@@ -102,7 +102,7 @@ auditing enabled.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
+  image: "vault:1.3.1"
 
 server:
   standalone:
@@ -149,7 +149,7 @@ Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
+  image: "vault:1.3.1"
 
 server:
   extraEnvironmentVars:
