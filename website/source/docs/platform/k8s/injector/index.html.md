@@ -180,7 +180,7 @@ The configuration map must contain either one or both of the following files:
 * `config-init.hcl` used by the init container.  This must have `exit_after_auth` set to `true`.
 * `config.hcl` used by the sidecar container.  This must have `exit_after_auth` set to `false`.
 
-An example of mounting a Vault Agent configmap [can be found here](/docs/platforms/k8s/injector/examples.html#configmap-example).
+An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples.html#configmap-example).
 
 ## Annotations
 
