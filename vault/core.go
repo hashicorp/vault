@@ -18,11 +18,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -44,7 +44,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 )
 
@@ -161,6 +161,7 @@ type raftInformation struct {
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
 	nonVoter            bool
+	joinInProgress      bool
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -202,6 +203,15 @@ type Core struct {
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
+	// that the join is complete
+	raftJoinDoneCh chan struct{}
+
+	// postUnsealStarted indicates the raft retry join routine that unseal key
+	// validation is completed and post unseal has started so that it can complete
+	// the join process when Shamir seal is in use
+	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
 	// peer to an existing raft cluster
@@ -720,7 +730,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode: conf.RecoveryMode,
+		recoveryMode:      conf.RecoveryMode,
+		postUnsealStarted: new(uint32),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -1027,13 +1038,23 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			return c.unsealInternal(ctx, masterKey)
 		}
 
-		// If we are in the middle of a raft join send the answer and wait for
-		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
-			return false, err
+		atomic.StoreUint32(c.postUnsealStarted, 1)
+
+		switch c.raftInfo.joinInProgress {
+		case true:
+			// Wait for the raft join process to complete
+			c.logger.Info("wait for raft retry join process to complete")
+			<-c.raftJoinDoneCh
+			return true, nil
+		default:
+			// If we are in the middle of a raft join send the answer and wait for
+			// data to start streaming in.
+			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+				return false, err
+			}
+			// Reset the state
+			c.raftInfo = nil
 		}
-		// Reset the state
-		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false

@@ -543,6 +543,8 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
 	}
 
 	c.logger.Info("raft retry join initiated")
+
+	c.raftJoinDoneCh = make(chan struct{})
 	return c.JoinRaftCluster(ctx, leaderInfos, false)
 }
 
@@ -567,6 +569,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	retry := leaderInfos[0].Retry
 
 	join := func(retry bool) error {
+		c.logger.Info("raft join attempt initiated")
 		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
 			if leaderInfo == nil {
 				return errors.New("raft leader information is nil")
@@ -663,18 +666,26 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				leaderClient:        apiClient,
 				leaderBarrierConfig: &sealConfig,
 				nonVoter:            nonVoter,
+				joinInProgress:      true,
 			}
 			if c.seal.BarrierType() == seal.Shamir {
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
 				}
-				return nil
+				// Wait until unseal keys are supplied
+				c.logger.Info("wait until unseal keys are supplied")
+				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
+					return nil
+				}
 			}
 
 			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
 				return errwrap.Wrapf("failed to send answer to raft leader node: {{err}}", err)
 			}
+
+			// In case of Shamir unsealing, inform the unseal process that raft join is completed
+			close(c.raftJoinDoneCh)
 
 			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
 

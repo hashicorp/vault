@@ -201,6 +201,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			if err != nil {
 				return nil, err
 			}
+			b.Core.pendingRaftPeers[serverID] = answer
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
@@ -213,7 +214,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		b.Core.pendingRaftPeers[serverID] = answer
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
