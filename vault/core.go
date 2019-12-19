@@ -1049,7 +1049,6 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			c.logger.Info("wait for raft retry join process to complete")
 			<-c.raftJoinDoneCh
 
-			return true, nil
 		default:
 			// This is the case for manual raft join. Send the answer to the leader node and
 			// wait for data to start streaming in.
