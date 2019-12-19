@@ -208,7 +208,7 @@ type Core struct {
 	// that the join is complete
 	raftJoinDoneCh chan struct{}
 
-	// postUnsealStarted indicates the raft retry join routine that unseal key
+	// postUnsealStarted informs the raft retry join routine that unseal key
 	// validation is completed and post unseal has started so that it can complete
 	// the join process when Shamir seal is in use
 	postUnsealStarted *uint32
@@ -1038,17 +1038,21 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			return c.unsealInternal(ctx, masterKey)
 		}
 
-		atomic.StoreUint32(c.postUnsealStarted, 1)
-
 		switch c.raftInfo.joinInProgress {
 		case true:
-			// Wait for the raft join process to complete
+			// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
+			// Inform that routine that unseal key validation is complete so that it can continue to
+			// try and join possible leader nodes, and wait for it to complete.
+
+			atomic.StoreUint32(c.postUnsealStarted, 1)
+
 			c.logger.Info("wait for raft retry join process to complete")
 			<-c.raftJoinDoneCh
+
 			return true, nil
 		default:
-			// If we are in the middle of a raft join send the answer and wait for
-			// data to start streaming in.
+			// This is the case for manual raft join. Send the answer to the leader node and
+			// wait for data to start streaming in.
 			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
 				return false, err
 			}

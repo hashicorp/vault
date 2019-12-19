@@ -523,29 +523,30 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 	}
 }
 
-func (c *Core) InitiateRetryJoin(ctx context.Context) (bool, error) {
+func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
-		return false, errors.New("raft storage not configured")
-	}
-
-	leaderInfos, err := raftStorage.JoinConfig(nil)
-	if err != nil {
-		return false, err
-	}
-
-	if len(leaderInfos) == 0 {
-		return false, nil
+		return errors.New("raft storage not configured")
 	}
 
 	if raftStorage.Initialized() {
-		return false, nil
+		return nil
+	}
+
+	leaderInfos, err := raftStorage.JoinConfig()
+	if err != nil {
+		return err
 	}
 
 	c.logger.Info("raft retry join initiated")
 
 	c.raftJoinDoneCh = make(chan struct{})
-	return c.JoinRaftCluster(ctx, leaderInfos, false)
+
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
@@ -684,8 +685,13 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errwrap.Wrapf("failed to send answer to raft leader node: {{err}}", err)
 			}
 
-			// In case of Shamir unsealing, inform the unseal process that raft join is completed
-			close(c.raftJoinDoneCh)
+			if c.seal.BarrierType() == seal.Shamir {
+				// Reset the state
+				c.raftInfo = nil
+
+				// In case of Shamir unsealing, inform the unseal process that raft join is completed
+				close(c.raftJoinDoneCh)
+			}
 
 			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
 

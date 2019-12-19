@@ -114,51 +114,54 @@ type RaftBackend struct {
 type LeaderJoinInfo struct {
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
+
 	// LeaderCACert is the CA cert of the leader node
 	LeaderCACert string `json:"leader_ca_cert"`
+
 	// LeaderClientCert is the client certificate for the follower node to establish
 	// client authentication during TLS
 	LeaderClientCert string `json:"leader_client_cert"`
+
 	// LeaderClientKey is the client key for the follower node to establish client
 	// authentication during TLS
 	LeaderClientKey string `json:"leader_client_key"`
+
 	// Retry indicates if the join process should automatically be retried
 	Retry bool
-	// TLSConfig should not be set. It will be populated using the above fields.
+
+	// TLSConfig for the API client to use when communicating with the leader node
 	TLSConfig *tls.Config
 }
 
-func (b *RaftBackend) JoinConfig(leaderInfo *LeaderJoinInfo) ([]*LeaderJoinInfo, error) {
+// JoinConfig returns a list of information about possible leader nodes that
+// this node can join as a follower
+func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
+	retryJoinConfig := b.conf["retry_join"]
+	if retryJoinConfig == "" {
+		return nil, errors.New("missing leader information for performing retry join")
+	}
+
 	var leaderInfos []*LeaderJoinInfo
-	switch {
-	case leaderInfo == nil:
-		// leaderInfo will be nil when retry join is being initiated from the config
-		// file. Set retry to true and fetch the retry join information from the
-		// config.
-		retryJoinConfig := b.conf["retry_join"]
-		if retryJoinConfig == "" {
-			return nil, errors.New("missing leader information for performing retry join")
-		}
-		err := jsonutil.DecodeJSON([]byte(retryJoinConfig), &leaderInfos)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
-		}
-		for _, info := range leaderInfos {
-			info.Retry = true
-			var tlsConfig *tls.Config
-			var err error
-			if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-				tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
-				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
-				}
+	err := jsonutil.DecodeJSON([]byte(retryJoinConfig), &leaderInfos)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
+	}
+
+	if len(leaderInfos) == 0 {
+		return nil, errors.New("invalid retry join blocks")
+	}
+
+	for _, info := range leaderInfos {
+		info.Retry = true
+		var tlsConfig *tls.Config
+		var err error
+		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
+			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
 			}
-			info.TLSConfig = tlsConfig
 		}
-	default:
-		// This is the case for manual join. Retry setting will be sent down via the CLI
-		// flag.
-		leaderInfos = append(leaderInfos, leaderInfo)
+		info.TLSConfig = tlsConfig
 	}
 
 	return leaderInfos, nil

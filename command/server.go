@@ -1499,9 +1499,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
 	if config.Storage.Type == "raft" {
-		_, err := core.InitiateRetryJoin(context.Background())
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Failed to initiate raft join, %q", err.Error()))
+		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1
 		}
 	}
