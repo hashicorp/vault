@@ -126,13 +126,15 @@ well.
 
 #### Upgrading Vault Servers
 
-To initiate the upgrade, change the `global.image` value to the
+To initiate the upgrade, change the `server.image` values to the
 desired Vault version. For illustrative purposes, the example below will
 use `vault:123.456`.
 
 ```yaml
-global:
-  image: "vault:123.456"
+server:
+  image:
+    repository: "vault"
+    tag: "123.456"
 ```
 
 Next, run the upgrade. You should run this with `--dry-run` first to verify
@@ -219,9 +221,12 @@ The following is an example of how to configure Vault Helm to use Google KMS:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   extraEnvironmentVars:
     GOOGLE_REGION: global
     GOOGLE_PROJECT: <PROJECT NAME>
@@ -282,9 +287,12 @@ The following is an example of how to configure Vault Helm to use AWS EKS:
 ```yaml
 global:
   enabled: true
-  image: "vault:1.2.4"
 
 server:
+  image:
+    repository: "vault"
+    tag: "1.3.1"
+
   extraSecretEnvironmentVars:
   - envName: AWS_ACCESS_KEY_ID
     secretName: eks-creds
