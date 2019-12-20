@@ -57,7 +57,6 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	// Don't escape special characters for MySQL password
 	password := c.Password
-	fmt.Printf("Type: %s\n", c.Type)
 	if c.Type != "mysql" {
 		password = url.PathEscape(c.Password)
 	}
