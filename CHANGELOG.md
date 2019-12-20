@@ -13,6 +13,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
+* ui: Change `.box-radio` height to min-height to prevent overflow issues [8065]
 
 ## 1.3.1 (December 18th, 2019)
 
