@@ -61,6 +61,31 @@ quickly merge or address your contributions.
 5. The issue is closed. Sometimes, valid issues will be closed to keep
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
+   
+## Pull Requests
+
+We deeply appreciate community pull requests and have placed this guide here to help 
+you complete yours in as few iterations as possible. Please note, Github offers 
+[Draft Pull Requests](https://github.blog/2019-02-14-introducing-draft-pull-requests/) 
+which you are welcome to use as you prepare for review.
+
+A PR that's ready for review was the following components:
+
+- A link to any issues the PR closes, though it isn't required that a PR be related to an open issue.
+
+  - Alternatively, please discuss the motivation for the PR, such as the use case, including steps to 
+    reproduce the problem the PR solves.
+    
+- The code that's been changed, of course.
+
+- At least one each of a positive and negative path for the changed code.
+
+- If the code's tests are not automated, output from running the tests locally on your machine.
+
+- Updated docs, if any are needed.
+
+- As a final step, if any dependencies have been added or stripped, `$ go mod` and `$ go mod vendor`
+may be required to update Vault's `vendor` directory.
 
 ## Setting up Go to work on Vault
 
