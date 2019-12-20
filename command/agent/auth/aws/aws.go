@@ -25,7 +25,6 @@ import (
 const (
 	typeEC2          = "ec2"
 	typeIAM          = "iam"
-	identityEndpoint = "http://169.254.169.254/latest/dynamic/instance-identity"
 
 	/*
 
@@ -183,6 +182,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
+	identityURL := awsutil.InstanceMetadataService.BaseURL + awsutil.InstanceMetadataService.IdentityEndpoint
 
 	switch a.authType {
 	case typeEC2:
@@ -190,9 +190,13 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 
 		// Fetch document
 		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityEndpoint), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityURL), nil)
 			if err != nil {
 				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				return
+			}
+			if err := awsutil.InstanceMetadataService.PrepareRequest(req); err != nil {
+				retErr = errwrap.Wrapf("error preparing instance metadata request: {{err}}", err)
 				return
 			}
 			req = req.WithContext(ctx)
@@ -216,9 +220,13 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 
 		// Fetch signature
 		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityEndpoint), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityURL), nil)
 			if err != nil {
 				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				return
+			}
+			if err := awsutil.InstanceMetadataService.PrepareRequest(req); err != nil {
+				retErr = errwrap.Wrapf("error preparing instance metadata request: {{err}}", err)
 				return
 			}
 			req = req.WithContext(ctx)

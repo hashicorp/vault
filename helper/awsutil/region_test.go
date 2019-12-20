@@ -240,11 +240,11 @@ func setInstanceMetadata(t *testing.T, region string) (cleanup func()) {
 			t.Fatalf("received unexpected request path: %s", reqPath)
 		}
 	}))
-	originalMetadataBaseURL := ec2MetadataBaseURL
-	ec2MetadataBaseURL = ts.URL
+	originalMetadataBaseURL := InstanceMetadataService.BaseURL
+	InstanceMetadataService.BaseURL = ts.URL
 	cleanup = func() {
 		ts.Close()
-		ec2MetadataBaseURL = originalMetadataBaseURL
+		InstanceMetadataService.BaseURL = originalMetadataBaseURL
 	}
 	return
 }
