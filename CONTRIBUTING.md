@@ -78,7 +78,7 @@ A PR that's ready for review was the following components:
     
 - The code that's been changed, of course.
 
-- At least one each of a positive and negative path for the changed code.
+- At least one each of a positive and negative test for the changed code.
 
 - If the code's tests are not automated, output from running the tests locally on your machine.
 
