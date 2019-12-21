@@ -2,8 +2,10 @@ package rafttests
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"fmt"
+	"github.com/hashicorp/vault/helper/namespace"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -30,6 +32,89 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_Retry_Join(t *testing.T) {
+	var conf vault.CoreConfig
+	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftBackendSetup(&conf, &opts)
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	leaderInfo := &raft.LeaderJoinInfo{
+		LeaderAPIAddr: leaderAPI,
+		TLSConfig:     leaderCore.TLSConfig,
+		Retry:         true,
+	}
+
+	{
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		leaderInfos := []*raft.LeaderJoinInfo{
+			leaderInfo,
+		}
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		cluster.UnsealCore(t, core)
+	}
+
+	{
+		core := cluster.Cores[2]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		leaderInfos := []*raft.LeaderJoinInfo{
+			leaderInfo,
+		}
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		cluster.UnsealCore(t, core)
+	}
+
+	checkConfigFunc := func(expected map[string]bool) {
+		secret, err := cluster.Cores[0].Client.Logical().Read("sys/storage/raft/configuration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+		for _, s := range servers {
+			server := s.(map[string]interface{})
+			delete(expected, server["node_id"].(string))
+		}
+		if len(expected) != 0 {
+			t.Fatalf("failed to read configuration successfully")
+		}
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
 }
 
 func TestRaft_Join(t *testing.T) {

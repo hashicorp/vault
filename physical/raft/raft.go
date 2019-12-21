@@ -136,13 +136,13 @@ type LeaderJoinInfo struct {
 // JoinConfig returns a list of information about possible leader nodes that
 // this node can join as a follower
 func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
-	retryJoinConfig := b.conf["retry_join"]
-	if retryJoinConfig == "" {
-		return nil, errors.New("missing leader information for performing retry join")
+	config := b.conf["retry_join"]
+	if config == "" {
+		return nil, nil
 	}
 
 	var leaderInfos []*LeaderJoinInfo
-	err := jsonutil.DecodeJSON([]byte(retryJoinConfig), &leaderInfos)
+	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
 	}

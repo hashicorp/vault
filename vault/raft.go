@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -538,9 +539,12 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 		return err
 	}
 
-	c.logger.Info("raft retry join initiated")
+	// Nothing to do if config wasn't supplied
+	if len(leaderInfos) == 0 {
+		return nil
+	}
 
-	c.raftJoinDoneCh = make(chan struct{})
+	c.logger.Info("raft retry join initiated")
 
 	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
 		return err
@@ -566,8 +570,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	if init {
 		return true, nil
 	}
-
-	retry := leaderInfos[0].Retry
 
 	join := func(retry bool) error {
 		c.logger.Info("raft join attempt initiated")
@@ -596,12 +598,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			// Create an API client to interact with the leader node
 			transport := cleanhttp.DefaultPooledTransport()
+
+			if leaderInfo.TLSConfig == nil && (len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0) {
+				leaderInfo.TLSConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+				if err != nil {
+					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+				}
+			}
+
 			if leaderInfo.TLSConfig != nil {
 				transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
 				if err := http2.ConfigureTransport(transport); err != nil {
 					return errwrap.Wrapf("failed to configure TLS: {{err}}", err)
 				}
 			}
+
 			client := &http.Client{
 				Transport: transport,
 			}
@@ -667,15 +678,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				leaderClient:        apiClient,
 				leaderBarrierConfig: &sealConfig,
 				nonVoter:            nonVoter,
-				joinInProgress:      true,
 			}
+
 			if c.seal.BarrierType() == seal.Shamir {
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
 				}
+
+				if !retry {
+					return nil
+				}
+
 				// Wait until unseal keys are supplied
 				c.logger.Info("wait until unseal keys are supplied")
+				c.raftInfo.joinInProgress = true
 				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 					return errors.New("waiting for unseal keys to be supplied")
 				}
@@ -701,15 +718,17 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// Each join try goes through all the possible leader nodes and attempts to join
 		// them, until one of the attempt succeeds.
 		for _, leaderInfo := range leaderInfos {
-			if err := joinLeader(leaderInfo); err == nil {
+			err = joinLeader(leaderInfo)
+			if err == nil {
 				return nil
 			}
+			c.logger.Info("join attempt failed", "error", err)
 		}
 
 		return errors.New("failed to join any raft leader node")
 	}
 
-	switch retry {
+	switch leaderInfos[0].Retry {
 	case true:
 		go func() {
 			for {
@@ -718,19 +737,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					return
 				default:
 				}
-				err := join(retry)
+				err := join(true)
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to join raft cluster", "error", err, "retry", "5s")
-				time.Sleep(time.Second * 5)
+				c.logger.Error("failed to retry join raft cluster", "error", err, "retry", "5s")
+				time.Sleep(2 * time.Second)
 			}
 		}()
 
 		// Backgrounded so return false
 		return false, nil
 	default:
-		if err := join(retry); err != nil {
+		if err := join(false); err != nil {
 			c.logger.Error("failed to join raft cluster", "error", err)
 			return false, errwrap.Wrapf("failed to join raft cluster: {{err}}", err)
 		}

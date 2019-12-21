@@ -732,6 +732,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		},
 		recoveryMode:      conf.RecoveryMode,
 		postUnsealStarted: new(uint32),
+		raftJoinDoneCh:    make(chan struct{}),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
