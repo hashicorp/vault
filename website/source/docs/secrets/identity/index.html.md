@@ -187,7 +187,7 @@ Identity tokens will always contain, at a minimum, the claims required by OIDC:
 * `iss` - Issuer URL
 * `sub` - Requester's entity ID
 * `aud` - `client_id` for the role
-* `iss` - Time of issue
+* `iat` - Time of issue
 * `exp` - Expiration time for the token
 
 In addition, the operator may configure per-role templates that allow a variety
@@ -228,7 +228,7 @@ which would be merged with the base OIDC claims into the final token:
   "iss": "https://10.1.1.45:8200/v1/identity/oidc",
   "sub": "a2cd63d3-5364-406f-980e-8d71bb0692f5",
   "aud": "SxSouteCYPBoaTFy94hFghmekos",
-  "iss": 1561411915,
+  "iat": 1561411915,
   "exp": 1561412215,
   "color": "green",
   "userinfo": {

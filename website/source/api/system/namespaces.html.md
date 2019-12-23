@@ -40,7 +40,7 @@ $ curl \
 
 ## Create Namespace
 
-This endpoint creates a namespace at the givent path.
+This endpoint creates a namespace at the given path.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
