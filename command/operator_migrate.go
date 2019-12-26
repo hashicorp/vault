@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -199,27 +200,33 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
+	var wg = sync.WaitGroup{}
+	errorCh := make(chan error)
+	go func() {
+		errorCh <- dfsScan(ctx, from, func(ctx context.Context, path string) error {
+			if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
+				return nil
+			}
+
+			entry, err := from.Get(ctx, path)
+
+			if err != nil {
+				return errwrap.Wrapf("error reading entry: {{err}}", err)
+			}
+
+			if entry == nil {
+				return nil
+			}
+
+			if err := to.Put(ctx, entry); err != nil {
+				return errwrap.Wrapf("error writing entry: {{err}}", err)
+			}
+			c.logger.Info("copied key", "path", path)
 			return nil
-		}
-
-		entry, err := from.Get(ctx, path)
-
-		if err != nil {
-			return errwrap.Wrapf("error reading entry: {{err}}", err)
-		}
-
-		if entry == nil {
-			return nil
-		}
-
-		if err := to.Put(ctx, entry); err != nil {
-			return errwrap.Wrapf("error writing entry: {{err}}", err)
-		}
-		c.logger.Info("copied key", "path", path)
-		return nil
-	})
+		}, wg)
+	}()
+	wg.Wait()
+	return <-errorCh
 }
 
 func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string) (physical.Backend, error) {
@@ -339,7 +346,7 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error, wg sync.WaitGroup) error {
 	dfs := []string{""}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
@@ -359,11 +366,17 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 				}
 			}
 		} else {
-			err := cb(ctx, key)
+			errorCh := make(chan error)
+			wg.Add(1)
+			go func() {
+				errorCh <- cb(ctx, key)
+				wg.Done()
+			}()
+
+			err := <- errorCh
 			if err != nil {
 				return err
 			}
-
 			dfs = dfs[:len(dfs)-1]
 		}
 

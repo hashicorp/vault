@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -209,7 +210,7 @@ storage_destination "dest_type2" {
 		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
 			out = append(out, path)
 			return nil
-		})
+		}, sync.WaitGroup{})
 
 		delete(data, trailing_slash_key)
 		delete(data, "")
