@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Policies"
+sidebar_title: "Policies"
 sidebar_current: "docs-concepts-policies"
 description: |-
   Policies are how authorization is done in Vault, allowing you to restrict which parts of Vault a user can access.
@@ -27,7 +28,7 @@ would take to configure Vault to authenticate using a corporate LDAP or
 ActiveDirectory installation. Even though this example uses LDAP, the concept
 applies to all auth methods.
 
-[![Vault Auth Workflow](/assets/images/vault-policy-workflow.svg)](/assets/images/vault-policy-workflow.svg)
+[![Vault Auth Workflow](/img/vault-policy-workflow.svg)](/img/vault-policy-workflow.svg)
 
 1. The security team configures Vault to connect to an auth method.
 This configuration varies by auth method. In the case of LDAP, Vault
@@ -55,7 +56,7 @@ Now Vault has an internal mapping between a backend authentication system and
 internal policy. When a user authenticates to Vault, the actual authentication
 is delegated to the auth method. As a user, the flow looks like:
 
-[![Vault Auth Workflow](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
+[![Vault Auth Workflow](/img/vault-auth-workflow.svg)](/img/vault-auth-workflow.svg)
 
 1. A user attempts to authenticate to Vault using their LDAP credentials,
 providing Vault with their LDAP username and password.
@@ -94,7 +95,7 @@ path "secret/foo" {
 ```
 
 When this policy is assigned to a token, the token can read from `"secret/foo"`.
-However, the token could not update or delete `"secret/foo"`, since the
+However, the token cannot update or delete `"secret/foo"`, since the
 capabilities do not allow it. Because policies are **deny by default**, the
 token would have no other access in Vault.
 
@@ -145,6 +146,21 @@ path "secret/bar/*" {
 # Permit reading everything prefixed with "zip-". An attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
+  capabilities = ["read"]
+}
+```
+
+In addition, a `+` can be used to denote any number of characters bounded
+within a single path segment (this appeared in Vault 1.1):
+
+```ruby
+# Permit reading the "teamb" path under any top-level path under secret/
+path "secret/+/teamb" {
+  capabilities = ["read"]
+}
+
+# Permit reading secret/foo/bar/teamb, secret/bar/foo/teamb, etc.
+path "secret/+/+/teamb" {
   capabilities = ["read"]
 }
 ```
@@ -243,7 +259,7 @@ injected, and currently the `path` keys in policies allow injection.
 | `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
-| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                                        |
+| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                                        |
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                                        |
 
 ### Examples
@@ -264,7 +280,7 @@ If you wanted to create a shared section of KV that is associated with entities 
 group.
 
 ```ruby
-# In the example below, the group ID maps a group and the path 
+# In the example below, the group ID maps a group and the path
 path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
   capabilities = ["create", "update", "read", "delete"]
 }
@@ -439,7 +455,7 @@ wrapping mandatory for a particular path.
     wrapped response.
 
 ```ruby
-# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second. 
+# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second.
 # This also sets this path's wrapped response maximum allowed TTL to 90 seconds.
 path "auth/approle/role/my-role/secret-id" {
     capabilities = ["create", "update"]
@@ -563,10 +579,6 @@ policy in Vault:
 $ vault policy write policy-name policy-file.hcl
 ```
 
--> The `@` tells Vault to read from a file on disk. In the example above, Vault
--will read the contents of `my-policy.hcl` in the current working directory into
--the value for that parameter.
-
 or via the API:
 
 ```sh
@@ -574,10 +586,10 @@ $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
   --data '{"policy":"path \"...\" {...} "}' \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
-In both examples, the name of the policy is "my-policy". You can think of this
+In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
@@ -606,7 +618,7 @@ $ curl \
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
 ```sh
-$ vault delete sys/policy/my-policy
+$ vault delete sys/policy/policy-name
 ```
 
 or via the API:
@@ -615,7 +627,7 @@ or via the API:
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
 This is an idempotent operation. Vault will not return an error when deleting a
@@ -670,3 +682,11 @@ new set of policies.
 However, the _contents_ of policies are parsed in real-time whenever the token is used.
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
+
+
+## Learn
+
+Refer to the following tutorials for further learning:
+
+- [Vault Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-policies)
+- [ACL Policy Path Templating](https://learn.hashicorp.com/vault/identity-access-management/policy-templating)

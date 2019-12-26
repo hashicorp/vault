@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Restore(t *testing.T) {
@@ -90,10 +90,13 @@ func TestTransit_Restore(t *testing.T) {
 		// Seed dermines if we start the test by restoring the initial backup we
 		// took, to test a restore operation based on the key existing or not
 		Seed bool
-		// Force is a pointer to differenciate between default false and given false
+		// Force is a pointer to differentiate between default false and given false
 		Force *bool
 		// The error we expect, if any
 		ExpectedErr error
+
+		// RestoreName is used to restore the key to a differnt name
+		RestoreName string
 	}{
 		{
 			// key does not already exist
@@ -115,6 +118,33 @@ func TestTransit_Restore(t *testing.T) {
 			// using force shouldn't matter if the key doesn't exist
 			Name:  "Restore-with-force-no-seed",
 			Force: boolPtr(true),
+		},
+		{
+			// key already exists, restore to new name
+			Name:        "Restore-new-name",
+			Seed:        true,
+			RestoreName: "new-key",
+		},
+		{
+			// key already exists, restore to bad path, should error
+			Name:        "Restore-new-name-bad-path",
+			Seed:        true,
+			RestoreName: "sub/path/new-key",
+			ExpectedErr: ErrInvalidKeyName,
+		},
+		{
+			// using force shouldn't matter if the restore key name is different
+			Name:        "Restore-with-force-seed-new-name",
+			Seed:        true,
+			Force:       boolPtr(true),
+			RestoreName: "other-key",
+		},
+		{
+			// using force shouldn't matter if the restore key name is different
+			Name:        "Restore-with-out-force-seed-new-name",
+			Seed:        true,
+			Force:       boolPtr(false),
+			RestoreName: "other-key",
 		},
 		{
 			// using force shouldn't matter if the key doesn't exist
@@ -154,8 +184,13 @@ func TestTransit_Restore(t *testing.T) {
 				}
 			}
 
+			restorePath := "restore"
+			if tc.RestoreName != "" {
+				restorePath = fmt.Sprintf("%s/%s", restorePath, tc.RestoreName)
+			}
+
 			restoreReq := &logical.Request{
-				Path:      "restore",
+				Path:      restorePath,
 				Operation: logical.UpdateOperation,
 				Storage:   s,
 				Data: map[string]interface{}{
@@ -184,11 +219,41 @@ func TestTransit_Restore(t *testing.T) {
 				}
 			}
 
+			readKeyName := keyName
+			if tc.RestoreName != "" {
+				readKeyName = tc.RestoreName
+			}
+
+			// read the key and make sure it's there
+			readReq := &logical.Request{
+				Path:      "keys/" + readKeyName,
+				Operation: logical.ReadOperation,
+				Storage:   s,
+			}
+
+			resp, err = b.HandleRequest(context.Background(), readReq)
+			if resp != nil && resp.IsError() {
+				t.Fatalf("resp: %#v\nerr: %v", resp, err)
+			}
+
+			if tc.ExpectedErr == nil && resp == nil {
+				t.Fatal("expected to find a key, but got none")
+			}
+
 			// cleanup / delete key after each run
 			keyReq.Operation = logical.DeleteOperation
 			resp, err = b.HandleRequest(context.Background(), keyReq)
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("resp: %#v\nerr: %v", resp, err)
+			}
+
+			// cleanup / delete restore key after each run, if it was created
+			if tc.RestoreName != "" && tc.ExpectedErr == nil {
+				readReq.Operation = logical.DeleteOperation
+				resp, err = b.HandleRequest(context.Background(), readReq)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("resp: %#v\nerr: %v", resp, err)
+				}
 			}
 		})
 	}

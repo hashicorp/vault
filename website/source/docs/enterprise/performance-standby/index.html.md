@@ -1,21 +1,22 @@
 ---
 layout: "docs"
 page_title: "Performance Standby Nodes - Vault Enterprise"
+sidebar_title: "Performance Standbys"
 sidebar_current: "docs-vault-enterprise-perf-standbys"
 description: |-
   Performance Standby Nodes - Vault Enterprise
 ---
 
-# Performance Standby Nodes 
+# Performance Standby Nodes
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
-is automatically enabled when using a data store that supports it. You can 
+is automatically enabled when using a data store that supports it. You can
 learn more about HA mode on the [Concepts](/docs/concepts/ha.html) page.
 
 Vault Enterprise offers additional features that allow HA nodes to service
 read-only requests on the local standby node. Read-only requests are requests
-that do not modify Vault's storage. 
+that do not modify Vault's storage.
 
 ## Server-to-Server Communication
 

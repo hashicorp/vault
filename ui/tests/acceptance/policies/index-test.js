@@ -1,8 +1,13 @@
 import { currentURL, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { create } from 'ember-cli-page-object';
+
 import page from 'vault/tests/pages/policies/index';
 import authPage from 'vault/tests/pages/auth';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
 
 module('Acceptance | policies/acl', function(hooks) {
   setupApplicationTest(hooks);
@@ -23,5 +28,17 @@ module('Acceptance | policies/acl', function(hooks) {
     await page.findPolicyByName('default').click();
     assert.equal(currentRouteName(), 'vault.cluster.policy.show');
     assert.equal(currentURL(), '/vault/policy/acl/default');
+  });
+
+  test('it allows deletion of policies with dots in names', async function(assert) {
+    const POLICY = 'path "*" { capabilities = ["list"]}';
+    let policyName = 'list.policy';
+    await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy=${btoa(POLICY)}`]);
+    await page.visit({ type: 'acl' });
+    let policy = page.row.filterBy('name', policyName)[0];
+    assert.ok(policy, 'policy is shown in the list');
+    await policy.menu();
+    await page.delete().confirmDelete();
+    assert.notOk(page.findPolicyByName(policyName), 'policy is deleted successfully');
   });
 });

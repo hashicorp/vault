@@ -3,30 +3,48 @@ import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
   _url(backend, id, infix = 'data') {
-    let url = `${this.buildURL()}/${backend}/${infix}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
     return url;
   },
 
   urlForFindRecord(id) {
     let [backend, path, version] = JSON.parse(id);
-    return this._url(backend, path) + `?version=${version}`;
+    let base = this._url(backend, path);
+    return version ? base + `?version=${version}` : base;
+  },
+
+  urlForQueryRecord(id) {
+    return this.urlForFindRecord(id);
   },
 
   findRecord() {
     return this._super(...arguments).catch(errorOrModel => {
-      // if it's a real 404, this will be an error, if not
-      // it will be the body of a deleted / destroyed version
+      // if the response is a real 404 or if the secret is gated by a control group this will be an error,
+      // otherwise the response will be the body of a deleted / destroyed version
       if (errorOrModel instanceof DS.AdapterError) {
         throw errorOrModel;
       }
       return errorOrModel;
+    });
+  },
+
+  queryRecord(id, options) {
+    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then(resp => {
+      if (options.wrapTTL) {
+        return resp;
+      }
+      resp.id = id;
+      resp.backend = backend;
+      return resp;
     });
   },
 
@@ -57,7 +75,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
       () => {
         let model = store.peekRecord('secret-v2-version', id);
-        return model && model.reload();
+        return model && model.rollbackAttributes() && model.reload();
       }
     );
   },

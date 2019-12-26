@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	vaultconsts "github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	vaultconsts "github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -23,7 +23,6 @@ const (
 	// Errors
 	errEmptyRoleName           = "role name is required"
 	errEmptyRoleType           = "role type cannot be empty"
-	errEmptyProjectId          = "project id cannot be empty"
 	errEmptyIamServiceAccounts = "IAM role type must have at least one service account"
 
 	errTemplateEditListWrongType   = "role is type '%s', cannot edit attribute '%s' (expected role type: '%s')"
@@ -39,55 +38,60 @@ const (
 	maxJwtExpMaxMinutes int = 60
 )
 
-var baseRoleFieldSchema = map[string]*framework.FieldSchema{
-	"name": {
-		Type:        framework.TypeString,
-		Description: "Name of the role.",
-	},
-	"type": {
-		Type:        framework.TypeString,
-		Description: "Type of the role. Currently supported: iam, gce",
-	},
-	"policies": {
-		Type:        framework.TypeCommaStringSlice,
-		Description: "Policies to be set on tokens issued using this role.",
-	},
-	// Token Limits
-	"ttl": {
-		Type:    framework.TypeDurationSecond,
-		Default: 0,
-		Description: `
-	Duration in seconds after which the issued token should expire. Defaults to 0,
-	in which case the value will fallback to the system/mount defaults.`,
-	},
-	"max_ttl": {
-		Type:        framework.TypeDurationSecond,
-		Default:     0,
-		Description: "The maximum allowed lifetime of tokens issued using this role.",
-	},
-	"period": {
-		Type:    framework.TypeDurationSecond,
-		Default: 0,
-		Description: `
-	If set, indicates that the token generated using this role should never expire. The token should be renewed within the
-	duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.`,
-	},
-	// -- GCP Information
-	"project_id": {
-		Type:        framework.TypeString,
-		Description: `The id of the project that authorized instances must belong to for this role.`,
-	},
-	"bound_service_accounts": {
-		Type: framework.TypeCommaStringSlice,
-		Description: `
+func baseRoleFieldSchema() map[string]*framework.FieldSchema {
+	d := map[string]*framework.FieldSchema{
+		"name": {
+			Type:        framework.TypeString,
+			Description: "Name of the role.",
+		},
+		"type": {
+			Type:        framework.TypeString,
+			Description: "Type of the role. Currently supported: iam, gce",
+		},
+		// Token Limits
+		"policies": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: tokenutil.DeprecationText("token_policies"),
+			Deprecated:  true,
+		},
+		"ttl": {
+			Type:        framework.TypeDurationSecond,
+			Description: tokenutil.DeprecationText("token_max_ttl"),
+			Deprecated:  true,
+		},
+		"max_ttl": {
+			Type:        framework.TypeDurationSecond,
+			Description: tokenutil.DeprecationText("token_max_ttl"),
+			Deprecated:  true,
+		},
+		"period": {
+			Type:        framework.TypeDurationSecond,
+			Description: tokenutil.DeprecationText("token_period"),
+			Deprecated:  true,
+		},
+		// -- GCP Information
+		"bound_projects": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: `GCP Projects that authenticating entities must belong to.`,
+		},
+		"bound_service_accounts": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `
 	Can be set for both 'iam' and 'gce' roles (required for 'iam'). A comma-seperated list of authorized service accounts.
 	If the single value "*" is given, this is assumed to be all service accounts under the role's project. If this
 	is set on a GCE role, the inferred service account from the instance metadata token will be used.`,
-	},
-	"service_accounts": {
-		Type:        framework.TypeCommaStringSlice,
-		Description: `Deprecated, use bound_service_accounts instead.`,
-	},
+		},
+		"add_group_aliases": {
+			Type:    framework.TypeBool,
+			Default: false,
+			Description: "If true, will add group aliases to auth tokens generated under this role. " +
+				"This will add the full list of ancestors (projects, folders, organizations) " +
+				"for the given entity's project. Requires IAM permission `resourcemanager.projects.get` " +
+				"on this project.",
+		},
+	}
+	tokenutil.AddTokenFields(d)
+	return d
 }
 
 var iamOnlyFieldSchema = map[string]*framework.FieldSchema{
@@ -132,32 +136,21 @@ var gceOnlyFieldSchema = map[string]*framework.FieldSchema{
 			"\"key:value\" strings that must be present on the GCE instance " +
 			"in order to authenticate. This option only applies to \"gce\" roles.",
 	},
-
-	// Deprecated roles
-	"bound_zone": {
-		Type:        framework.TypeString,
-		Description: "Deprecated: use \"bound_zones\" instead.",
-	},
-	"bound_region": {
-		Type:        framework.TypeString,
-		Description: "Deprecated: use \"bound_regions\" instead.",
-	},
-	"bound_instance_group": {
-		Type:        framework.TypeString,
-		Description: "Deprecated: use \"bound_instance_groups\" instead.",
-	},
 }
 
 // pathsRole creates paths for listing roles and CRUD operations.
 func pathsRole(b *GcpAuthBackend) []*framework.Path {
 	roleFieldSchema := map[string]*framework.FieldSchema{}
-	for k, v := range baseRoleFieldSchema {
+	for k, v := range baseRoleFieldSchema() {
 		roleFieldSchema[k] = v
 	}
 	for k, v := range iamOnlyFieldSchema {
 		roleFieldSchema[k] = v
 	}
 	for k, v := range gceOnlyFieldSchema {
+		roleFieldSchema[k] = v
+	}
+	for k, v := range deprecatedFieldSchema {
 		roleFieldSchema[k] = v
 	}
 
@@ -281,39 +274,24 @@ func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 		return nil, nil
 	}
 
-	role.Period /= time.Second
-	role.TTL /= time.Second
-	role.MaxTTL /= time.Second
-	role.MaxJwtExp /= time.Second
-
 	resp := make(map[string]interface{})
+	role.PopulateTokenData(resp)
 
 	if role.RoleType != "" {
-		resp["role"] = role.RoleType
-	}
-	if role.ProjectId != "" {
-		resp["project_id"] = role.ProjectId
-	}
-	if len(role.Policies) > 0 {
-		resp["policies"] = role.Policies
-	}
-	if role.TTL != 0 {
-		resp["ttl"] = role.TTL
-	}
-	if role.MaxTTL != 0 {
-		resp["max_ttl"] = role.MaxTTL
-	}
-	if role.Period != 0 {
-		resp["period"] = role.Period
+		resp["type"] = role.RoleType
 	}
 	if len(role.BoundServiceAccounts) > 0 {
 		resp["bound_service_accounts"] = role.BoundServiceAccounts
 	}
+	if len(role.BoundProjects) > 0 {
+		resp["bound_projects"] = role.BoundProjects
+	}
+	resp["add_group_aliases"] = role.AddGroupAliases
 
 	switch role.RoleType {
 	case iamRoleType:
 		if role.MaxJwtExp != 0 {
-			resp["max_jwt_exp"] = role.MaxJwtExp
+			resp["max_jwt_exp"] = int64(role.MaxJwtExp.Seconds())
 		}
 		resp["allow_gce_inference"] = role.AllowGCEInference
 	case gceRoleType:
@@ -329,6 +307,20 @@ func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 		if len(role.BoundLabels) > 0 {
 			resp["bound_labels"] = role.BoundLabels
 		}
+	}
+
+	// Upgrade vals
+	if len(role.Policies) > 0 {
+		resp["policies"] = resp["token_policies"]
+	}
+	if role.TTL > 0 {
+		resp["ttl"] = int64(role.TTL.Seconds())
+	}
+	if role.MaxTTL > 0 {
+		resp["max_ttl"] = int64(role.MaxTTL.Seconds())
+	}
+	if role.Period > 0 {
+		resp["period"] = int64(role.Period.Seconds())
 	}
 
 	return &logical.Response{
@@ -355,7 +347,7 @@ func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		role = &gcpRole{}
 	}
 
-	warnings, err := role.updateRole(b.System(), req.Operation, data)
+	warnings, err := role.updateRole(b.System(), req, data)
 	if err != nil {
 		resp := logical.ErrorResponse(err.Error())
 		for _, w := range warnings {
@@ -509,6 +501,11 @@ func (b *GcpAuthBackend) role(ctx context.Context, s logical.Storage, name strin
 	modified := false
 
 	// Move old bindings to new fields.
+	if role.ProjectId != "" && len(role.BoundProjects) == 0 {
+		role.BoundProjects = []string{role.ProjectId}
+		role.ProjectId = ""
+		modified = true
+	}
 	if role.BoundRegion != "" && len(role.BoundRegions) == 0 {
 		role.BoundRegions = []string{role.BoundRegion}
 		role.BoundRegion = ""
@@ -522,6 +519,24 @@ func (b *GcpAuthBackend) role(ctx context.Context, s logical.Storage, name strin
 	if role.BoundInstanceGroup != "" && len(role.BoundInstanceGroups) == 0 {
 		role.BoundInstanceGroups = []string{role.BoundInstanceGroup}
 		role.BoundInstanceGroup = ""
+		modified = true
+	}
+
+	// Upgrade token role params
+	if role.TokenTTL == 0 && role.TTL > 0 {
+		role.TokenTTL = role.TTL
+		modified = true
+	}
+	if role.TokenMaxTTL == 0 && role.MaxTTL > 0 {
+		role.TokenMaxTTL = role.MaxTTL
+		modified = true
+	}
+	if role.TokenPeriod == 0 && role.Period > 0 {
+		role.TokenPeriod = role.Period
+		modified = true
+	}
+	if len(role.TokenPolicies) == 0 && len(role.Policies) > 0 {
+		role.TokenPolicies = role.Policies
 		modified = true
 	}
 
@@ -573,11 +588,10 @@ func (b *GcpAuthBackend) storeRole(ctx context.Context, s logical.Storage, roleN
 }
 
 type gcpRole struct {
+	tokenutil.TokenParams
+
 	// Type of this role. See path_role constants for currently supported types.
 	RoleType string `json:"role_type,omitempty"`
-
-	// Project ID in GCP for authorized entities.
-	ProjectId string `json:"project_id,omitempty"`
 
 	// Policies for Vault to assign to authorized entities.
 	Policies []string `json:"policies,omitempty"`
@@ -593,8 +607,14 @@ type gcpRole struct {
 	// with TTL equal to this value.
 	Period time.Duration `json:"period,omitempty"`
 
+	// Projects that entities must belong to
+	BoundProjects []string `json:"bound_projects,omitempty"`
+
 	// Service accounts allowed to login under this role.
 	BoundServiceAccounts []string `json:"bound_service_accounts,omitempty"`
+
+	// AddGroupAliases adds Vault group aliases to the response.
+	AddGroupAliases bool `json:"add_group_aliases,omitempty"`
 
 	// --| IAM-only attributes |--
 	// MaxJwtExp is the duration from time of authentication that a JWT used to authenticate to role must expire within.
@@ -620,6 +640,7 @@ type gcpRole struct {
 
 	// Deprecated fields
 	// TODO: Remove in 0.5.0+
+	ProjectId          string `json:"project_id,omitempty"`
 	BoundRegion        string `json:"bound_region,omitempty"`
 	BoundZone          string `json:"bound_zone,omitempty"`
 	BoundInstanceGroup string `json:"bound_instance_group,omitempty"`
@@ -628,75 +649,61 @@ type gcpRole struct {
 // Update updates the given role with values parsed/validated from given FieldData.
 // Exactly one of the response and error will be nil. The response is only used to pass back warnings.
 // This method does not validate the role. Validation is done before storage.
-func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, data *framework.FieldData) (warnings []string, err error) {
+func (role *gcpRole) updateRole(sys logical.SystemView, req *logical.Request, data *framework.FieldData) (warnings []string, err error) {
+	if e := role.ParseTokenFields(req, data); e != nil {
+		return nil, e
+	}
+
+	// Handle token field upgrades
+	{
+		if e := tokenutil.UpgradeValue(data, "policies", "token_policies", &role.Policies, &role.TokenPolicies); e != nil {
+			return nil, e
+		}
+
+		if e := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &role.TTL, &role.TokenTTL); e != nil {
+			return nil, e
+		}
+
+		if e := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &role.MaxTTL, &role.TokenMaxTTL); e != nil {
+			return nil, e
+		}
+
+		if e := tokenutil.UpgradeValue(data, "period", "token_period", &role.Period, &role.TokenPeriod); e != nil {
+			return nil, e
+		}
+	}
+
 	// Set role type
 	if rt, ok := data.GetOk("type"); ok {
 		roleType := rt.(string)
-		if role.RoleType != roleType && op == logical.UpdateOperation {
+		if role.RoleType != roleType && req.Operation == logical.UpdateOperation {
 			err = errors.New("role type cannot be changed for an existing role")
 			return
 		}
 		role.RoleType = roleType
-	} else if op == logical.CreateOperation {
+	} else if req.Operation == logical.CreateOperation {
 		err = errors.New(errEmptyRoleType)
 		return
 	}
 
-	// Update policies
-	if policies, ok := data.GetOk("policies"); ok {
-		role.Policies = policyutil.ParsePolicies(policies)
-	} else if op == logical.CreateOperation {
-		// Force default policy
-		role.Policies = policyutil.ParsePolicies(nil)
-	}
-
-	// Update GCP project id.
-	if projectId, ok := data.GetOk("project_id"); ok {
-		role.ProjectId = projectId.(string)
-	} else if op == logical.CreateOperation {
-		role.ProjectId = data.Get("project_id").(string)
-	}
-
-	// Update token TTL.
-	if ttl, ok := data.GetOk("ttl"); ok {
-		role.TTL = time.Duration(ttl.(int)) * time.Second
-
-		def := sys.DefaultLeaseTTL()
-		if role.TTL > def {
-			warnings = append(warnings, fmt.Sprintf(`Given "ttl" of %q is greater `+
-				`than the maximum system/mount TTL of %q. The TTL will be capped at `+
-				`%q during login.`, role.TTL, def, def))
-		}
-	} else if op == logical.CreateOperation {
-		role.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
+	def := sys.DefaultLeaseTTL()
+	if role.TokenTTL > def {
+		warnings = append(warnings, fmt.Sprintf(`Given token ttl of %q is greater `+
+			`than the maximum system/mount TTL of %q. The TTL will be capped at `+
+			`%q during login.`, role.TokenTTL, def, def))
 	}
 
 	// Update token Max TTL.
-	if maxTTL, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
-
-		def := sys.MaxLeaseTTL()
-		if role.MaxTTL > def {
-			warnings = append(warnings, fmt.Sprintf(`Given "max_ttl" of %q is greater `+
-				`than the maximum system/mount MaxTTL of %q. The MaxTTL will be `+
-				`capped at %q during login.`, role.MaxTTL, def, def))
-		}
-	} else if op == logical.CreateOperation {
-		role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
+	def = sys.MaxLeaseTTL()
+	if role.TokenMaxTTL > def {
+		warnings = append(warnings, fmt.Sprintf(`Given token max ttl of %q is greater `+
+			`than the maximum system/mount MaxTTL of %q. The MaxTTL will be `+
+			`capped at %q during login.`, role.TokenMaxTTL, def, def))
 	}
-
-	// Update token period.
-	if period, ok := data.GetOk("period"); ok {
-		role.Period = time.Duration(period.(int)) * time.Second
-
-		def := sys.MaxLeaseTTL()
-		if role.Period > def {
-			warnings = append(warnings, fmt.Sprintf(`Given "period" of %q is greater `+
-				`than the maximum system/mount period of %q. The period will be `+
-				`capped at %q during login.`, role.Period, def, def))
-		}
-	} else if op == logical.CreateOperation {
-		role.Period = time.Duration(data.Get("period").(int)) * time.Second
+	if role.TokenPeriod > def {
+		warnings = append(warnings, fmt.Sprintf(`Given token period of %q is greater `+
+			`than the maximum system/mount period of %q. The period will be `+
+			`capped at %q during login.`, role.TokenPeriod, def, def))
 	}
 
 	// Update bound GCP service accounts.
@@ -711,10 +718,35 @@ func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, da
 			role.BoundServiceAccounts = sa.([]string)
 		}
 	}
-
 	if len(role.BoundServiceAccounts) > 0 {
 		role.BoundServiceAccounts = strutil.TrimStrings(role.BoundServiceAccounts)
 		role.BoundServiceAccounts = strutil.RemoveDuplicates(role.BoundServiceAccounts, false)
+	}
+
+	// Update bound GCP projects.
+	boundProjects, givenBoundProj := data.GetOk("bound_projects")
+	if givenBoundProj {
+		role.BoundProjects = boundProjects.([]string)
+	}
+	if projectId, ok := data.GetOk("project_id"); ok {
+		if givenBoundProj {
+			return warnings, errors.New("only one of 'bound_projects' or 'project_id' can be given")
+		}
+		warnings = append(warnings,
+			`The "project_id" (singular) field is deprecated. `+
+				`Please use plural "bound_projects" instead to bind required GCP projects. `+
+				`The "project_id" field will be removed in a later release, so please update accordingly.`)
+		role.BoundProjects = []string{projectId.(string)}
+	}
+	if len(role.BoundProjects) > 0 {
+		role.BoundProjects = strutil.TrimStrings(role.BoundProjects)
+		role.BoundProjects = strutil.RemoveDuplicates(role.BoundProjects, false)
+	}
+
+	// Update bound GCP projects.
+	addGroupAliases, ok := data.GetOk("add_group_aliases")
+	if ok {
+		role.AddGroupAliases = addGroupAliases.(bool)
 	}
 
 	// Update fields specific to this type
@@ -723,14 +755,14 @@ func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, da
 		if err = checkInvalidRoleTypeArgs(data, gceOnlyFieldSchema); err != nil {
 			return
 		}
-		if warnings, err = role.updateIamFields(data, op); err != nil {
+		if warnings, err = role.updateIamFields(data, req.Operation); err != nil {
 			return
 		}
 	case gceRoleType:
 		if err = checkInvalidRoleTypeArgs(data, iamOnlyFieldSchema); err != nil {
 			return
 		}
-		if warnings, err = role.updateGceFields(data, op); err != nil {
+		if warnings, err = role.updateGceFields(data, req.Operation); err != nil {
 			return
 		}
 	}
@@ -756,32 +788,28 @@ func (role *gcpRole) validate(sys logical.SystemView) (warnings []string, err er
 		return warnings, fmt.Errorf("role type '%s' is invalid", role.RoleType)
 	}
 
-	if role.ProjectId == "" {
-		return warnings, errors.New(errEmptyProjectId)
-	}
-
 	defaultLeaseTTL := sys.DefaultLeaseTTL()
-	if role.TTL > defaultLeaseTTL {
+	if role.TokenTTL > defaultLeaseTTL {
 		warnings = append(warnings, fmt.Sprintf(
 			"Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time",
-			role.TTL/time.Second, defaultLeaseTTL/time.Second))
+			role.TokenTTL/time.Second, defaultLeaseTTL/time.Second))
 	}
 
 	defaultMaxTTL := sys.MaxLeaseTTL()
-	if role.MaxTTL > defaultMaxTTL {
+	if role.TokenMaxTTL > defaultMaxTTL {
 		warnings = append(warnings, fmt.Sprintf(
 			"Given max_ttl of %d seconds greater than current mount/system default of %d seconds; max_ttl will be capped at login time",
-			role.MaxTTL/time.Second, defaultMaxTTL/time.Second))
+			role.TokenMaxTTL/time.Second, defaultMaxTTL/time.Second))
 	}
-	if role.MaxTTL < time.Duration(0) {
+	if role.TokenMaxTTL < time.Duration(0) {
 		return warnings, errors.New("max_ttl cannot be negative")
 	}
-	if role.MaxTTL != 0 && role.MaxTTL < role.TTL {
+	if role.TokenMaxTTL != 0 && role.TokenMaxTTL < role.TokenTTL {
 		return warnings, errors.New("ttl should be shorter than max_ttl")
 	}
 
-	if role.Period > sys.MaxLeaseTTL() {
-		return warnings, fmt.Errorf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", role.Period.String(), sys.MaxLeaseTTL().String())
+	if role.TokenPeriod > sys.MaxLeaseTTL() {
+		return warnings, fmt.Errorf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", role.TokenPeriod.String(), sys.MaxLeaseTTL().String())
 	}
 
 	return warnings, nil
@@ -947,7 +975,7 @@ func checkInvalidRoleTypeArgs(data *framework.FieldData, invalidSchema map[strin
 	invalidArgs := []string{}
 
 	for k := range data.Raw {
-		if _, ok := baseRoleFieldSchema[k]; ok {
+		if _, ok := baseRoleFieldSchema()[k]; ok {
 			continue
 		}
 		if _, ok := invalidSchema[k]; ok {
@@ -959,4 +987,28 @@ func checkInvalidRoleTypeArgs(data *framework.FieldData, invalidSchema map[strin
 		return fmt.Errorf(errTemplateInvalidRoleTypeArgs, data.Get("type"), strings.Join(invalidArgs, ","))
 	}
 	return nil
+}
+
+// deprecatedFieldSchema contains the deprecated role attributes
+var deprecatedFieldSchema = map[string]*framework.FieldSchema{
+	"service_accounts": {
+		Type:        framework.TypeCommaStringSlice,
+		Description: "Deprecated: use \"bound_service_accounts\" instead.",
+	},
+	"project_id": {
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_projects\" instead",
+	},
+	"bound_zone": {
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_zones\" instead.",
+	},
+	"bound_region": {
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_regions\" instead.",
+	},
+	"bound_instance_group": {
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_instance_groups\" instead.",
+	},
 }

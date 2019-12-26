@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TLS Certificates - Auth Methods"
+sidebar_title: "TLS Certificates"
 sidebar_current: "docs-auth-cert"
 description: |-
   The "cert" auth method allows users to authenticate with Vault using TLS client certificates.
@@ -17,6 +18,9 @@ external source.
 
 CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
+
+Please note that to use this auth method, `tls_disable` must be false in the Vault 
+configuration. This is because the certificates are sent through TLS communication itself.
 
 ## Revocation Checking
 
@@ -90,7 +94,7 @@ $ curl \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \
-    http://127.0.0.1:8200/v1/auth/cert/login
+    https://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ## Configuration

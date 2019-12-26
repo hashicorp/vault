@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MongoDB - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-mongodb"
+sidebar_title: "MongoDB"
+sidebar_current: "api-http-secret-databases-mongodb"
 description: |-
   The MongoDB plugin for Vault's database secrets engine generates database credentials to access MongoDB servers.
 ---
@@ -18,9 +19,9 @@ In addition to the parameters defined by the [Database
 Backend](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 

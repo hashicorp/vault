@@ -4,30 +4,25 @@ import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
 import createItemPage from 'vault/tests/pages/access/identity/create';
 import showItemPage from 'vault/tests/pages/access/identity/show';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 export const testAliasCRUD = async function(name, itemType, assert) {
   let itemID;
   let aliasID;
   let idRow;
   if (itemType === 'groups') {
-    createItemPage.createItem(itemType, 'external');
+    await createItemPage.createItem(itemType, 'external');
   } else {
-    createItemPage.createItem(itemType);
+    await createItemPage.createItem(itemType);
   }
-  await withFlash();
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
 
-  await withFlash(page.editForm.name(name).submit(), () => {
-    assert.ok(
-      aliasShowPage.flashMessage.latestMessage.startsWith(
-        'Successfully saved',
-        `${itemType}: shows a flash message`
-      )
-    );
-  });
+  await page.editForm.name(name).submit();
+  assert.ok(
+    aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
+    `${itemType}: shows a flash message`
+  );
 
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
@@ -49,12 +44,11 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   await item.menu();
 
   await aliasIndexPage.delete();
-  await withFlash(aliasIndexPage.confirmDelete(), () => {
-    aliasIndexPage.flashMessage.latestMessage.startsWith(
-      'Successfully deleted',
-      `${itemType}: shows flash message`
-    );
-  });
+  await aliasIndexPage.confirmDelete();
+  assert.ok(
+    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
+    `${itemType}: shows flash message`
+  );
 
   assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
 };
@@ -64,16 +58,15 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let aliasID;
   let idRow;
   if (itemType === 'groups') {
-    createItemPage.createItem(itemType, 'external');
+    await createItemPage.createItem(itemType, 'external');
   } else {
-    createItemPage.createItem(itemType);
+    await createItemPage.createItem(itemType);
   }
-  await withFlash();
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
 
-  await withFlash(page.editForm.name(name).submit());
+  await page.editForm.name(name).submit();
 
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
@@ -85,13 +78,11 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
-
-  await withFlash(page.editForm.confirmDelete(), () => {
-    aliasIndexPage.flashMessage.latestMessage.startsWith(
-      'Successfully deleted',
-      `${itemType}: shows flash message`
-    );
-  });
+  await page.editForm.confirmDelete();
+  assert.ok(
+    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
+    `${itemType}: shows flash message`
+  );
 
   assert.equal(
     currentRouteName(),

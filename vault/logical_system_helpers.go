@@ -9,8 +9,8 @@ import (
 
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -84,6 +84,8 @@ var (
 			},
 		}
 	}
+
+	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
 
 // tuneMount is used to set config on a mount point

@@ -2,12 +2,12 @@
   {{#if isRunning}}
     <div class="control console-spinner is-loading"></div>
   {{else}}
-    {{i-con glyph="chevron-right" size=12 }}
+    <Chevron />
   {{/if}}
   <input onkeyup={{action 'handleKeyUp'}} value={{value}} autocomplete="off" spellcheck="false" />
   {{#tool-tip horizontalPosition="auto-right" verticalPosition=(if isFullscreen "above" "below") as |d|}}
     {{#d.trigger tagName="button" type="button" class=(concat "button is-compact" (if isFullscreen " active")) click=(action "fullscreen") data-test-tool-tip-trigger=true}}
-      {{i-con glyph=(if isFullscreen "fullscreen-close" "fullscreen-open") aria-hidden="true" size=16}}
+    <Icon @size="l" @glyph={{if isFullscreen "expand-less" "expand-more"}} aria-label={{if isFullscreen "Minimize" "Maximize"}} />
     {{/d.trigger}}
     {{#d.content class="tool-tip"}}
       <div class="box">

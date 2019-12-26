@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Auth Methods"
+sidebar_title: "Azure"
 sidebar_current: "docs-auth-azure"
 description: |-
   The azure auth method plugin allows automated authentication of Azure Active
@@ -55,7 +56,17 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using bound_service_pricipal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
+The `role` and `jwt` parameters are required. When using bound_service_principal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
+
+For example:
+
+```text
+$ vault write auth/azure/login role="dev-role" \
+     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.hashicorp.com%2F' -H Metadata:true | jq -r '.access_token')" \
+     subscription_id=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .subscriptionId')  \
+     resource_group_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .resourceGroupName') \
+     vm_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .name')
+```
 
 ### Via the API
 
@@ -105,7 +116,7 @@ tool.
 
     ```text
     $ vault write auth/azure/config \
-        tenant_id= 7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
+        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
         resource=https://vault.hashicorp.com \
         client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
         client_secret=IT3B2XfZvWnfB98s1cie8EMe7zWg483Xy8zY004=
@@ -176,7 +187,7 @@ for your server at `path/to/plugins`:
 1. Enable the plugin in the catalog:
 
     ```text
-    $ vault write sys/plugins/catalog/azure-auth \
+    $ vault write sys/plugins/catalog/auth/azure-auth \
         command="vault-plugin-auth-azure" \
         sha256="..."
     ```
@@ -184,7 +195,7 @@ for your server at `path/to/plugins`:
 1. Enable the azure auth method as a plugin:
 
     ```text
-    $ vault auth enable -path=azure -plugin-name=azure-auth plugin
+    $ vault auth enable -path=azure azure-auth
     ```
 
 ## API

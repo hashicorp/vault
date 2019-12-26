@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/rekey-recovery-key - HTTP API"
-sidebar_current: "docs-http-system-rekey-recovery-key"
+sidebar_title: "<code>/sys/rekey-recovery-key</code>"
+sidebar_current: "api-http-system-rekey-recovery-key"
 description: |-
   The `/sys/rekey-recovery-key` endpoints are used to rekey the recovery keys for Vault.
 ---
@@ -16,9 +17,9 @@ The `/sys/rekey-recovery-key` endpoints are used to rekey the recovery keys for 
 
 This endpoint reads the configuration and progress of the current rekey attempt.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey-recovery-key/init`            | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `GET`    | `/sys/rekey-recovery-key/init`            |
 
 ### Sample Request
 
@@ -60,9 +61,9 @@ attempt can take place at a time, and changing the parameters of a rekey
 requires canceling and starting a new rekey, which will also provide a new
 nonce.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey-recovery-key/init`            | `204 (empty body)`     |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey-recovery-key/init`            |
 
 ### Parameters
 
@@ -120,9 +121,9 @@ well as any progress made. This must be called to change the parameters of the
 rekey. Note: verification is still a part of a rekey. If rekeying is canceled
 during the verification flow, the current unseal keys remain valid.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey-recovery-key/init`            | `204 (empty body)`     |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `DELETE` | `/sys/rekey-recovery-key/init`            |
 
 ### Sample Request
 
@@ -139,16 +140,16 @@ This endpoint returns the backup copy of PGP-encrypted recovery key shares. The
 returned value is the nonce of the rekey operation and a map of PGP key
 fingerprint to hex-encoded PGP-encrypted key.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey-recovery-key/backup`          | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `GET`    | `/sys/rekey/recovery-key-backup`          |
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey/recovery-key-backup
 ```
 
 ### Sample Response
@@ -166,9 +167,9 @@ $ curl \
 
 This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey-recovery-key/backup`          | `204 (empty body)`     |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `DELETE` | `/sys/rekey/recovery-key-backup`          |
 
 ### Sample Request
 
@@ -176,7 +177,7 @@ This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey/recovery-key-backup
 ```
 
 ## Submit Key
@@ -195,9 +196,9 @@ If verification was requested, successfully completing this flow will
 immediately put the operation into a verification state, and provide the nonce
 for the verification operation.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey-recovery-key/update`          | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey-recovery-key/update`          |
 
 ### Parameters
 
@@ -248,9 +249,9 @@ whether or not the keys were backed up to physical storage.
 This endpoint reads the configuration and progress of the current rekey
 verification attempt.
 
-| Method   | Path                                        | Produces               |
-| :------- | :------------------------------------------ | :--------------------- |
-| `GET`    | `/sys/rekey-recovery-key/verify`            | `200 application/json` |
+| Method   | Path                                        |
+| :------------------------------------------ | :--------------------- |
+| `GET`    | `/sys/rekey-recovery-key/verify`            |
 
 ### Sample Request
 
@@ -284,9 +285,9 @@ any progress made and resets the nonce. Unlike a `DELETE` against
 operation, not the entire rekey atttempt. The return value is the same as `GET`
 along with the new nonce.
 
-| Method   | Path                                        | Produces               |
-| :------- | :------------------------------------------ | :--------------------- |
-| `DELETE` | `/sys/rekey-recovery-key/verify`            | `200 (empty body)`     |
+| Method   | Path                                        |
+| :------------------------------------------ | :--------------------- |
+| `DELETE` | `/sys/rekey-recovery-key/verify`            | 
 
 ### Sample Request
 
@@ -320,9 +321,9 @@ When the operation is complete, this will return a response like the example
 below; otherwise the response will be the same as the `GET` method against
 `sys/rekey-recovery-key/verify`, providing status on the operation itself.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey-recovery-key/verify`          | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey-recovery-key/verify`          |
 
 ### Parameters
 

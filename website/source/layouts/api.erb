@@ -1,346 +1,170 @@
+<% @meganav_title = 'API Docs' %>
+
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
-    <ul class="nav docs-sidenav">
-      <li<%= sidebar_current("docs-http-overview") %>>
-        <a href="/api/index.html">Overview</a>
-      </li>
-      <li<%= sidebar_current("docs-http-libraries") %>>
-        <a href="/api/libraries.html">Client Libraries</a>
-      </li>
-      <li<%= sidebar_current("docs-http-related") %>>
-        <a href="/api/relatedtools.html">Related Tools</a>
-      </li>
-
-      <hr>
-
-      <li<%= sidebar_current("docs-http-secret") %>>
-        <a href="/api/secret/index.html">Secrets Engines</a>
-        <ul class="nav">
-          <li<%= sidebar_current("docs-http-secret-ad") %>>
-            <a href="/api/secret/ad/index.html">Active Directory</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-alicloud") %>>
-            <a href="/api/secret/alicloud/index.html">AliCloud</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-aws") %>>
-            <a href="/api/secret/aws/index.html">AWS</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-azure") %>>
-            <a href="/api/secret/azure/index.html">Azure</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-consul") %>>
-            <a href="/api/secret/consul/index.html">Consul</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-cubbyhole") %>>
-            <a href="/api/secret/cubbyhole/index.html">Cubbyhole</a>
-          </li>
-
-          <li<%= sidebar_current("docs-http-secret-databases") %>>
-            <a href="/api/secret/databases/index.html">Databases</a>
-            <ul class="nav">
-              <li<%= sidebar_current("docs-http-secret-databases-cassandra") %>>
-                <a href="/api/secret/databases/cassandra.html">Cassandra</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-hanadb") %>>
-                <a href="/api/secret/databases/hanadb.html">HanaDB</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-mongodb") %>>
-                <a href="/api/secret/databases/mongodb.html">MongoDB</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-mssql") %>>
-                <a href="/api/secret/databases/mssql.html">MSSQL</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-mysql-maria") %>>
-                <a href="/api/secret/databases/mysql-maria.html">MySQL/MariaDB</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-postgresql") %>>
-                <a href="/api/secret/databases/postgresql.html">PostgreSQL</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-databases-oracle") %>>
-                <a href="/api/secret/databases/oracle.html">Oracle</a>
-              </li>
-            </ul>
-          </li>
-
-          <li<%= sidebar_current("docs-http-secret-gcp") %>>
-            <a href="/api/secret/gcp/index.html">Google Cloud</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-kv") %>>
-              <a href="/api/secret/kv/index.html">Key/Value</a>
-              <ul class="nav">
-              <li<%= sidebar_current("docs-http-secret-kv-v1") %>>
-                <a href="/api/secret/kv/kv-v1.html">K/V Version 1</a>
-              </li>
-              <li<%= sidebar_current("docs-http-secret-kv-v2") %>>
-                <a href="/api/secret/kv/kv-v2.html">K/V Version 2</a>
-              </li>
-            </ul>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-identity") %>>
-            <a href="/api/secret/identity/index.html">Identity</a>
-            <ul class="nav">
-                <li<%= sidebar_current("docs-http-secret-identity-entity") %>>
-                  <a href="/api/secret/identity/entity.html">Entity</a>
-                </li>
-                <li<%= sidebar_current("docs-http-secret-identity-entity-alias") %>>
-                  <a href="/api/secret/identity/entity-alias.html">Entity Alias</a>
-                </li>
-                <li<%= sidebar_current("docs-http-secret-identity-group") %>>
-                  <a href="/api/secret/identity/group.html">Group</a>
-                </li>
-                <li<%= sidebar_current("docs-http-secret-identity-group-alias") %>>
-                  <a href="/api/secret/identity/group-alias.html">Group Alias</a>
-                </li>
-                <li<%= sidebar_current("docs-http-secret-identity-lookup") %>>
-                  <a href="/api/secret/identity/lookup.html">Lookup</a>
-                </li>
-            </ul>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-nomad") %>>
-            <a href="/api/secret/nomad/index.html">Nomad</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-pki") %>>
-            <a href="/api/secret/pki/index.html">PKI</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
-            <a href="/api/secret/rabbitmq/index.html">RabbitMQ</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-ssh") %>>
-            <a href="/api/secret/ssh/index.html">SSH</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-totp") %>>
-            <a href="/api/secret/totp/index.html">TOTP</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-transit") %>>
-            <a href="/api/secret/transit/index.html">Transit</a>
-          </li>
-
-          <hr>
-
-          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
-            <a href="/api/secret/cassandra/index.html">Cassandra <sup>DEPRECATED</sup></a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
-            <a href="/api/secret/mongodb/index.html">MongoDB <sup>DEPRECATED</sup></a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mssql") %>>
-            <a href="/api/secret/mssql/index.html">MSSQL <sup>DEPRECATED</sup></a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mysql") %>>
-            <a href="/api/secret/mysql/index.html">MySQL <sup>DEPRECATED</sup></a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
-            <a href="/api/secret/postgresql/index.html">PostgreSQL <sup>DEPRECATED</sup></a>
-          </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("docs-http-auth") %>>
-        <a href="/api/auth/index.html">Auth Methods</a>
-        <ul class="nav">
-          <li<%= sidebar_current("docs-http-auth-approle") %>>
-            <a href="/api/auth/approle/index.html">AppRole</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-alicloud") %>>
-            <a href="/api/auth/alicloud/index.html">AliCloud</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-aws") %>>
-            <a href="/api/auth/aws/index.html">AWS</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-azure") %>>
-            <a href="/api/auth/azure/index.html">Azure</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-github") %>>
-            <a href="/api/auth/github/index.html">GitHub</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-gcp") %>>
-            <a href="/api/auth/gcp/index.html">Google Cloud</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-jwt") %>>
-            <a href="/api/auth/jwt/index.html">JWT</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-kubernetes") %>>
-            <a href="/api/auth/kubernetes/index.html">Kubernetes</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-ldap") %>>
-            <a href="/api/auth/ldap/index.html">LDAP</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-okta") %>>
-            <a href="/api/auth/okta/index.html">Okta</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-radius") %>>
-            <a href="/api/auth/radius/index.html">RADIUS</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-cert") %>>
-            <a href="/api/auth/cert/index.html">TLS Certificates</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-token") %>>
-            <a href="/api/auth/token/index.html">Tokens</a>
-          </li>
-          <li<%= sidebar_current("docs-http-auth-userpass") %>>
-            <a href="/api/auth/userpass/index.html">Username & Password</a>
-          </li>
-
-          <hr>
-
-          <li<%= sidebar_current("docs-http-auth-appid") %>>
-            <a href="/api/auth/app-id/index.html">App ID <sup>DEPRECATED</sup></a>
-          </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("docs-http-system")%>>
-        <a href="/api/system/index.html">System Backend</a>
-        <ul class="nav">
-          <li<%= sidebar_current("docs-http-system-audit/") %>>
-            <a href="/api/system/audit.html"><tt>/sys/audit</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-audit-hash") %>>
-            <a href="/api/system/audit-hash.html"><tt>/sys/audit-hash</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-auth") %>>
-            <a href="/api/system/auth.html"><tt>/sys/auth</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-capabilities/") %>>
-            <a href="/api/system/capabilities.html"><tt>/sys/capabilities</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-capabilities-accessor") %>>
-            <a href="/api/system/capabilities-accessor.html"><tt>/sys/capabilities-accessor</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-capabilities-self") %>>
-            <a href="/api/system/capabilities-self.html"><tt>/sys/capabilities-self</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-config-auditing") %>>
-            <a href="/api/system/config-auditing.html"><tt>/sys/config/auditing</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-config-control-group") %>>
-            <a href="/api/system/config-control-group.html"><tt>/sys/config/control-group</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-config-cors") %>>
-            <a href="/api/system/config-cors.html"><tt>/sys/config/cors</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-config-ui") %>>
-            <a href="/api/system/config-ui.html"><tt>/sys/config/ui</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-control-group") %>>
-          <a href="/api/system/control-group.html"><tt>/sys/control-group</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-generate-root") %>>
-            <a href="/api/system/generate-root.html"><tt>/sys/generate-root</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-health") %>>
-            <a href="/api/system/health.html"><tt>/sys/health</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-init") %>>
-            <a href="/api/system/init.html"><tt>/sys/init</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-internal-ui-mounts") %>>
-            <a href="/api/system/internal-ui-mounts.html"><tt>/sys/internal/ui/mounts</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-key-status") %>>
-            <a href="/api/system/key-status.html"><tt>/sys/key-status</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-leader") %>>
-            <a href="/api/system/leader.html"><tt>/sys/leader</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-leases") %>>
-            <a href="/api/system/leases.html"><tt>/sys/leases</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-license") %>>
-            <a href="/api/system/license.html"><tt>/sys/license</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-namespaces") %>>
-            <a href="/api/system/namespaces.html"><tt>/sys/namespaces</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-mfa") %>>
-            <a href="/api/system/mfa.html"><tt>/sys/mfa</tt></a>
-              <ul class="nav">
-                <li<%= sidebar_current("docs-http-system-mfa-duo") %>>
-                  <a href="/api/system/mfa-duo.html"><tt>/sys/mfa/method/duo</tt></a>
-                </li>
-                <li<%= sidebar_current("docs-http-system-mfa-okta") %>>
-                  <a href="/api/system/mfa-okta.html"><tt>/sys/mfa/method/okta</tt></a>
-                </li>
-                <li<%= sidebar_current("docs-http-system-mfa-pingid") %>>
-                  <a href="/api/system/mfa-pingid.html"><tt>/sys/mfa/method/pingid</tt></a>
-                </li>
-                <li<%= sidebar_current("docs-http-system-mfa-totp") %>>
-                  <a href="/api/system/mfa-totp.html"><tt>/sys/mfa/method/totp</tt></a>
-                </li>
-              </ul>
-          </li>
-          <li<%= sidebar_current("docs-http-system-mounts") %>>
-            <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-plugins-reload-backend") %>>
-            <a href="/api/system/plugins-reload-backend.html"><tt>/sys/plugins/reload/backend</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-plugins-catalog") %>>
-            <a href="/api/system/plugins-catalog.html"><tt>/sys/plugins/catalog</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-policy") %>>
-            <a href="/api/system/policy.html"><tt>/sys/policy</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-policies") %>>
-            <a href="/api/system/policies.html"><tt>/sys/policies</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-raw") %>>
-            <a href="/api/system/raw.html"><tt>/sys/raw</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-rekey") %>>
-            <a href="/api/system/rekey.html"><tt>/sys/rekey</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-rekey-recovery-key") %>>
-            <a href="/api/system/rekey-recovery-key.html"><tt>/sys/rekey-recovery-key</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-remount") %>>
-            <a href="/api/system/remount.html"><tt>/sys/remount</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-replication") %>>
-            <a href="/api/system/replication.html"><tt>/sys/replication</tt></a>
-            <ul class="nav">
-              <li<%= sidebar_current("docs-http-system-replication-performance") %>>
-                <a href="/api/system/replication-performance.html"><tt>/sys/replication/performance</tt></a>
-              </li>
-              <li<%= sidebar_current("docs-http-system-replication-dr") %>>
-                <a href="/api/system/replication-dr.html"><tt>/sys/replication/dr</tt></a>
-              </li>
-            </ul>
-          </li>
-          <li<%= sidebar_current("docs-http-system-rotate") %>>
-            <a href="/api/system/rotate.html"><tt>/sys/rotate</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-seal/") %>>
-            <a href="/api/system/seal.html"><tt>/sys/seal</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-seal-status") %>>
-            <a href="/api/system/seal-status.html"><tt>/sys/seal-status</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-step-down") %>>
-            <a href="/api/system/step-down.html"><tt>/sys/step-down</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-tools") %>>
-            <a href="/api/system/tools.html"><tt>/sys/tools</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-unseal") %>>
-            <a href="/api/system/unseal.html"><tt>/sys/unseal</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-wrapping-lookup") %>>
-            <a href="/api/system/wrapping-lookup.html"><tt>/sys/wrapping/lookup</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-wrapping-rewrap") %>>
-            <a href="/api/system/wrapping-rewrap.html"><tt>/sys/wrapping/rewrap</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-wrapping-unwrap") %>>
-            <a href="/api/system/wrapping-unwrap.html"><tt>/sys/wrapping/unwrap</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-wrapping-wrap") %>>
-            <a href="/api/system/wrapping-wrap.html"><tt>/sys/wrapping/wrap</tt></a>
-          </li>
-        </ul>
-      </li>
-    </ul>
+    <div class="nav docs-nav">
+      <hashi-docs-sidenav
+        category='api'
+        current_page='<%= current_page.path %>'
+        data="<%= encode(get_sidebar_data('api')) %>"
+        order="<%= encode([
+          'overview',
+          'libraries',
+          'relatedtools',
+          '------------',
+          {
+            category: 'secret',
+            content: [
+              { category: 'ad' },
+              { category: 'alicloud' },
+              { category: 'aws' },
+              { category: 'azure' },
+              { category: 'consul' },
+              { category: 'cubbyhole' },
+              {
+                category: 'databases',
+                content: [
+                  'cassandra',
+                  'elasticdb',
+                  'influxdb',
+                  'hanadb',
+                  'mongodb',
+                  'mssql',
+                  'mysql-maria',
+                  'postgresql',
+                  'oracle'
+                ]
+              },
+              { category: 'gcp' },
+              { category: 'gcpkms' },
+              { category: 'kmip' },
+              {
+                category: 'kv',
+                content: ['kv-v1', 'kv-v2']
+              }, {
+                category: 'identity',
+                content: [
+                  'entity',
+                  'entity-alias',
+                  'group',
+                  'group-alias',
+                  'tokens',
+                  'lookup'
+                ]
+              },
+              { category: 'nomad' },
+              { category: 'pki' },
+              { category: 'rabbitmq' },
+              { category: 'ssh' },
+              { category: 'totp' },
+              { category: 'transit' },
+              '-----------------------',
+              { category: 'cassandra' },
+              { category: 'mongodb' },
+              { category: 'mssql' },
+              { category: 'mysql' },
+              { category: 'postgresql' }
+            ]
+          }, {
+            category: 'auth',
+            content: [
+            { category: 'alicloud' },
+            { category: 'approle' },
+            { category: 'aws' },
+            { category: 'azure' },
+            { category: 'cf' },
+            { category: 'github' },
+            { category: 'gcp' },
+            { category: 'jwt' },
+            { category: 'kerberos' },
+            { category: 'kubernetes' },
+            { category: 'ldap' },
+            { category: 'oci' },
+            { category: 'okta' },
+            { category: 'radius' },
+            { category: 'cert' },
+            { category: 'token' },
+            { category: 'userpass' },
+            { category: 'app-id' }
+            ]
+          }, {
+            category: 'system',
+            content: [
+              'audit',
+              'audit-hash',
+              'auth',
+              'capabilities',
+              'capabilities-accessor',
+              'capabilities-self',
+              'config-auditing',
+              'config-control-group',
+              'config-cors',
+              'config-state',
+              'config-ui',
+              'control-group',
+              'generate-root',
+              'health',
+              'host-info',
+              'init',
+              'internal-specs-openapi',
+              'internal-ui-mounts',
+              'key-status',
+              'leader',
+              'leases',
+              'license',
+              'metrics',
+              {
+                category: 'mfa',
+                content: [
+                  'duo',
+                  'okta',
+                  'pingid',
+                  'totp'
+                ]
+              },
+              'mounts',
+              'namespaces',
+              'plugins-reload-backend',
+              'plugins-catalog',
+              'policy',
+              'policies',
+              'pprof',
+              'raw',
+              'rekey',
+              'rekey-recovery-key',
+              'remount',
+              {
+                category: 'replication',
+                content: [
+                  'replication-performance',
+                  'replication-dr'
+                ]
+              },
+              'rotate',
+              'seal',
+              'seal-status',
+              'sealwrap-rewrap',
+              'step-down',
+              {
+                category: 'storage',
+                content: [
+                  'raft'
+                ]
+              },
+              'tools',
+              'unseal',
+              'wrapping-lookup',
+              'wrapping-rewrap',
+              'wrapping-unwrap',
+              'wrapping-wrap'
+            ]
+          }
+        ]) %>")
+      ></hashi-docs-sidenav>
+    </div>
   <% end %>
 
-  <%= yield %>
+  <article class='g-content g-type-long-body vault'>
+    <%= yield %>
+  </article>
 <% end %>

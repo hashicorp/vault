@@ -16,6 +16,7 @@ var _ cli.CommandAutocomplete = (*TokenRenewCommand)(nil)
 type TokenRenewCommand struct {
 	*BaseCommand
 
+	flagAccessor  bool
 	flagIncrement time.Duration
 }
 
@@ -28,9 +29,10 @@ func (c *TokenRenewCommand) Help() string {
 Usage: vault token renew [options] [TOKEN]
 
   Renews a token's lease, extending the amount of time it can be used. If a
-  TOKEN is not provided, the locally authenticated token is used. Lease renewal
-  will fail if the token is not renewable, the token has already been revoked,
-  or if the token has already reached its maximum TTL.
+  TOKEN is not provided, the locally authenticated token is used. A token
+  accessor can be used as well. Lease renewal will fail if the token is not
+  renewable, the token has already been revoked, or if the token has already
+  reached its maximum TTL.
 
   Renew a token (this uses the /auth/token/renew endpoint and permission):
 
@@ -55,6 +57,16 @@ Usage: vault token renew [options] [TOKEN]
 func (c *TokenRenewCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "accessor",
+		Target:     &c.flagAccessor,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage: "Treat the argument as an accessor instead of a token. When " +
+			"this option is selected, the output will NOT include the token.",
+	})
 
 	f.DurationVar(&DurationVar{
 		Name:       "increment",
@@ -97,19 +109,6 @@ func (c *TokenRenewCommand) Run(args []string) int {
 		// Use the local token
 	case 1:
 		token = strings.TrimSpace(args[0])
-	case 2:
-		// TODO: remove in 0.9.0 - backwards compat
-		if Format(c.UI) == "table" {
-			c.UI.Warn("Specifying increment as a second argument is deprecated. " +
-				"Please use -increment instead.")
-		}
-		token = strings.TrimSpace(args[0])
-		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Invalid increment: %s", err))
-			return 1
-		}
-		increment = parsed
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
@@ -123,9 +122,12 @@ func (c *TokenRenewCommand) Run(args []string) int {
 
 	var secret *api.Secret
 	inc := truncateToSeconds(increment)
-	if token == "" {
+	switch {
+	case token == "":
 		secret, err = client.Auth().Token().RenewSelf(inc)
-	} else {
+	case c.flagAccessor:
+		secret, err = client.Auth().Token().RenewAccessor(token, inc)
+	default:
 		secret, err = client.Auth().Token().Renew(token, inc)
 	}
 	if err != nil {

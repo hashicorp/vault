@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MongoDB - Secrets Engines"
+sidebar_title: "MongoDB <sup>DEPRECATED</sup>"
 sidebar_current: "docs-secrets-mongodb"
 description: |-
   The mongodb secrets engine for Vault generates database credentials to access MongoDB.

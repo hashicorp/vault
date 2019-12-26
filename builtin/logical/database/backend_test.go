@@ -13,14 +13,18 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
@@ -48,18 +52,15 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
 
-	// exponential backoff-retry
+	// Exponential backoff-retry
 	if err = pool.Retry(func() error {
 		// This will cause a validation to run
-		resp, err := b.HandleRequest(namespace.TestContext(), &logical.Request{
+		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			Storage:   s,
 			Operation: logical.UpdateOperation,
 			Path:      "config/postgresql",
@@ -101,12 +102,13 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain(t *testing.T) {
+func TestBackend_PluginMain_Postgres(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -118,11 +120,33 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
 	postgresql.Run(apiClientMeta.GetTLSConfig())
+}
+
+func TestBackend_PluginMain_Mongo(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	args := []string{"--ca-cert=" + caPEM}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -228,7 +252,7 @@ func TestBackend_config_connection(t *testing.T) {
 			t.Fatal("expected not exists")
 		}
 
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
@@ -243,7 +267,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 		}
 		configReq.Operation = logical.ReadOperation
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
@@ -280,7 +304,7 @@ func TestBackend_config_connection(t *testing.T) {
 			t.Fatal("expected exists")
 		}
 
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
@@ -295,7 +319,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 		}
 		configReq.Operation = logical.ReadOperation
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
@@ -321,7 +345,7 @@ func TestBackend_config_connection(t *testing.T) {
 			Data:      configData,
 		}
 
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
@@ -336,7 +360,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 		}
 		configReq.Operation = logical.ReadOperation
-		resp, err = b.HandleRequest(namespace.TestContext(), configReq)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
@@ -352,7 +376,7 @@ func TestBackend_config_connection(t *testing.T) {
 		Storage:   config.StorageView,
 		Path:      "config/",
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +406,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 
 	respCheck := func(req *logical.Request) {
 		t.Helper()
-		resp, err := b.HandleRequest(namespace.TestContext(), req)
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -441,7 +465,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -458,7 +482,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -470,7 +494,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err := b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -487,7 +511,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -499,7 +523,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -520,7 +544,7 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -534,7 +558,7 @@ func TestBackend_basic(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+		credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (credsResp != nil && credsResp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 		}
@@ -547,7 +571,7 @@ func TestBackend_basic(t *testing.T) {
 		}
 
 		// Revoke creds
-		resp, err = b.HandleRequest(namespace.TestContext(), &logical.Request{
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			Operation: logical.RevokeOperation,
 			Storage:   config.StorageView,
 			Secret: &logical.Secret{
@@ -576,7 +600,7 @@ func TestBackend_basic(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+		credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (credsResp != nil && credsResp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 		}
@@ -590,13 +614,13 @@ func TestBackend_basic(t *testing.T) {
 			Path:      "roles/plugin-role-test",
 			Storage:   config.StorageView,
 		}
-		resp, err = b.HandleRequest(namespace.TestContext(), req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
 		// Revoke creds
-		resp, err = b.HandleRequest(namespace.TestContext(), &logical.Request{
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			Operation: logical.RevokeOperation,
 			Storage:   config.StorageView,
 			Secret: &logical.Secret{
@@ -648,7 +672,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -667,7 +691,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -686,7 +710,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -695,7 +719,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 
 	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -707,7 +731,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
 	data["connection_url"] = connURL
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -723,7 +747,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"root_credentials_rotate_statements": []string(nil),
 	}
 	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -741,7 +765,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -754,7 +778,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err := b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -775,14 +799,14 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	// Read connection
 	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -825,7 +849,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -845,20 +869,9 @@ func TestBackend_roleCrud(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		resp, err = b.HandleRequest(namespace.TestContext(), req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if exists {
-			t.Fatal("expected not exists")
 		}
 
 		// Read the role
@@ -869,7 +882,7 @@ func TestBackend_roleCrud(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		resp, err = b.HandleRequest(namespace.TestContext(), req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
@@ -877,6 +890,8 @@ func TestBackend_roleCrud(t *testing.T) {
 		expected := dbplugin.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+			Rollback:   []string{},
+			Renewal:    []string{},
 		}
 
 		actual := dbplugin.Statements{
@@ -886,8 +901,8 @@ func TestBackend_roleCrud(t *testing.T) {
 			Renewal:    resp.Data["renew_statements"].([]string),
 		}
 
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
+		if diff := deep.Equal(expected, actual); diff != nil {
+			t.Fatal(diff)
 		}
 
 		if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
@@ -913,20 +928,9 @@ func TestBackend_roleCrud(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		resp, err = b.HandleRequest(namespace.TestContext(), req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
-		}
-
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
 		}
 
 		// Read the role
@@ -937,7 +941,7 @@ func TestBackend_roleCrud(t *testing.T) {
 			Storage:   config.StorageView,
 			Data:      data,
 		}
-		resp, err = b.HandleRequest(namespace.TestContext(), req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
@@ -945,6 +949,8 @@ func TestBackend_roleCrud(t *testing.T) {
 		expected := dbplugin.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+			Rollback:   []string{},
+			Renewal:    []string{},
 		}
 
 		actual := dbplugin.Statements{
@@ -990,17 +996,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-			Raw:    data,
-			Schema: pathRoles(b).Fields,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !exists {
-			t.Fatal("expected exists")
-		}
-
 		// Read the role
 		data = map[string]interface{}{}
 		req = &logical.Request{
@@ -1028,8 +1023,8 @@ func TestBackend_roleCrud(t *testing.T) {
 			Renewal:    resp.Data["renew_statements"].([]string),
 		}
 
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
+		if diff := deep.Equal(expected, actual); diff != nil {
+			t.Fatal(diff)
 		}
 
 		if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
@@ -1051,7 +1046,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1064,7 +1059,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1102,7 +1097,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1120,7 +1115,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1137,7 +1132,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1150,9 +1145,9 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err := b.HandleRequest(namespace.TestContext(), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// update connection with glob allowed roles connection
@@ -1167,7 +1162,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1180,7 +1175,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -1201,7 +1196,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1214,7 +1209,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -1235,7 +1230,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1248,9 +1243,9 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// Get creds from allowed role, should work.
@@ -1261,7 +1256,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -1304,7 +1299,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1321,7 +1316,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -1333,7 +1328,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err := b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -1345,7 +1340,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
@@ -1366,7 +1361,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err = b.HandleRequest(namespace.TestContext(), req)
+	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}

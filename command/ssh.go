@@ -294,7 +294,7 @@ func (c *SSHCommand) Run(args []string) int {
 			"WARNING: No -role specified. Use -role to tell Vault which ssh role " +
 				"to use for authentication. In the future, you will need to tell " +
 				"Vault which role to use. For now, Vault will attempt to guess based " +
-				"on the API response. This will be removed in the Vault 0.12."))
+				"on the API response. This will be removed in the Vault 1.1."))
 
 		role, err := c.defaultRole(c.flagMountPoint, ip)
 		if err != nil {
@@ -310,7 +310,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	// If no mode was given, perform the old-school lookup. Keep this now for
-	// backwards-compatability, but print a warning.
+	// backwards-compatibility, but print a warning.
 	//
 	// TODO: remove in 0.9.0, convert to validation error
 	if c.flagMode == "" {
@@ -321,7 +321,7 @@ func (c *SSHCommand) Run(args []string) int {
 				"on the API response. This guess involves creating a temporary " +
 				"credential, reading its type, and then revoking it. To reduce the " +
 				"number of API calls and surface area, specify -mode directly. This " +
-				"will be removed in Vault 0.12."))
+				"will be removed in Vault 1.1."))
 		secret, cred, err := c.generateCredential(username, ip)
 		if err != nil {
 			// This is _very_ hacky, but is the only sane backwards-compatible way
@@ -467,11 +467,11 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		return 2
 	}
 
-	args := append([]string{
+	args := []string{
 		"-i", c.flagPrivateKeyPath,
 		"-i", signedPublicKeyPath,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-	})
+	}
 
 	if userKnownHostsFile != "" {
 		args = append(args,
@@ -727,6 +727,10 @@ func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileM
 		return "", errors.Wrap(err, "writing temporary key"), closer
 	}
 
+	if err := f.Close(); err != nil {
+		return "", errors.Wrap(err, "closing temporary key"), closer
+	}
+
 	return f.Name(), nil, closer
 }
 
@@ -859,7 +863,7 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			continue
 		} else {
 			// The second bare argument is the command to run on the remote host.
-			// We need to break out and stop parsing arugments now
+			// We need to break out and stop parsing arguments now
 			break
 		}
 

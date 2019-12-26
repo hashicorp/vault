@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Seals - Configuration"
+sidebar_title: "<code>seal</code>"
 sidebar_current: "docs-configuration-seal"
 description: |-
   The seal stanza configures the seal type to use for additional data protection.
@@ -15,7 +16,8 @@ will use the Shamir algorithm to cryptographically split the master key if this
 is not configured.
 
 As of Vault 0.9.0, the seal can also be used for [seal wrapping][sealwrap] to
-add an extra layer of protection and satisfy compliance and regulatory requirements.
+add an extra layer of protection and satisfy compliance and regulatory requirements. 
+This feature is only available in Vault Enterprise.
 
 For more examples, please choose a specific auto unsealing technology from the
 sidebar.

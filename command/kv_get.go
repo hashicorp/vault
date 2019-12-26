@@ -101,10 +101,6 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	if v2 {
 		path = addPrefixToVKVPath(path, mountPath, "data")
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 2
-		}
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{

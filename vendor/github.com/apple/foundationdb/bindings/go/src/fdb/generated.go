@@ -92,6 +92,13 @@ func (o NetworkOptions) SetTraceLogGroup(param string) error {
 	return o.setOpt(33, []byte(param))
 }
 
+// Select the format of the log files. xml (the default) and json are supported.
+//
+// Parameter: Format of trace files
+func (o NetworkOptions) SetTraceFormat(param string) error {
+	return o.setOpt(34, []byte(param))
+}
+
 // Set internal tuning or debugging knobs
 //
 // Parameter: knob_name=knob_value
@@ -269,6 +276,49 @@ func (o DatabaseOptions) SetDatacenterId(param string) error {
 	return o.setOpt(22, []byte(param))
 }
 
+// Set a timeout in milliseconds which, when elapsed, will cause each transaction automatically to be cancelled. This sets the ``timeout`` option of each transaction created by this database. See the transaction option description for more information. Using this option requires that the API version is 610 or higher.
+//
+// Parameter: value in milliseconds of timeout
+func (o DatabaseOptions) SetTransactionTimeout(param int64) error {
+	b, e := int64ToBytes(param)
+	if e != nil {
+		return e
+	}
+	return o.setOpt(500, b)
+}
+
+// Set a timeout in milliseconds which, when elapsed, will cause a transaction automatically to be cancelled. This sets the ``retry_limit`` option of each transaction created by this database. See the transaction option description for more information.
+//
+// Parameter: number of times to retry
+func (o DatabaseOptions) SetTransactionRetryLimit(param int64) error {
+	b, e := int64ToBytes(param)
+	if e != nil {
+		return e
+	}
+	return o.setOpt(501, b)
+}
+
+// Set the maximum amount of backoff delay incurred in the call to ``onError`` if the error is retryable. This sets the ``max_retry_delay`` option of each transaction created by this database. See the transaction option description for more information.
+//
+// Parameter: value in milliseconds of maximum delay
+func (o DatabaseOptions) SetTransactionMaxRetryDelay(param int64) error {
+	b, e := int64ToBytes(param)
+	if e != nil {
+		return e
+	}
+	return o.setOpt(502, b)
+}
+
+// Snapshot read operations will see the results of writes done in the same transaction. This is the default behavior.
+func (o DatabaseOptions) SetSnapshotRywEnable() error {
+	return o.setOpt(26, nil)
+}
+
+// Snapshot read operations will not see the results of writes done in the same transaction. This was the default behavior prior to API version 300.
+func (o DatabaseOptions) SetSnapshotRywDisable() error {
+	return o.setOpt(27, nil)
+}
+
 // The transaction, if not self-conflicting, may be committed a second time after commit succeeds, in the event of a fault
 func (o TransactionOptions) SetCausalWriteRisky() error {
 	return o.setOpt(10, nil)
@@ -319,7 +369,7 @@ func (o TransactionOptions) SetPrioritySystemImmediate() error {
 	return o.setOpt(200, nil)
 }
 
-// Specifies that this transaction should be treated as low priority and that default priority transactions should be processed first. Useful for doing batch work simultaneously with latency-sensitive work
+// Specifies that this transaction should be treated as low priority and that default priority transactions will be processed first. Batch priority transactions will also be throttled at load levels smaller than for other types of transactions and may be fully cut off in the event of machine failures. Useful for doing batch work simultaneously with latency-sensitive work
 func (o TransactionOptions) SetPriorityBatch() error {
 	return o.setOpt(201, nil)
 }
@@ -344,14 +394,26 @@ func (o TransactionOptions) SetDebugRetryLogging(param string) error {
 	return o.setOpt(401, []byte(param))
 }
 
-// Enables tracing for this transaction and logs results to the client trace logs. Client trace logging must be enabled to get log output.
+// Deprecated
 //
 // Parameter: String identifier to be used in the logs when tracing this transaction. The identifier must not exceed 100 characters.
 func (o TransactionOptions) SetTransactionLoggingEnable(param string) error {
 	return o.setOpt(402, []byte(param))
 }
 
-// Set a timeout in milliseconds which, when elapsed, will cause the transaction automatically to be cancelled. Valid parameter values are ``[0, INT_MAX]``. If set to 0, will disable all timeouts. All pending and any future uses of the transaction will throw an exception. The transaction can be used again after it is reset. Like all transaction options, a timeout must be reset after a call to onError. This behavior allows the user to make the timeout dynamic.
+// Sets a client provided identifier for the transaction that will be used in scenarios like tracing or profiling. Client trace logging or transaction profiling must be separately enabled.
+//
+// Parameter: String identifier to be used when tracing or profiling this transaction. The identifier must not exceed 100 characters.
+func (o TransactionOptions) SetDebugTransactionIdentifier(param string) error {
+	return o.setOpt(403, []byte(param))
+}
+
+// Enables tracing for this transaction and logs results to the client trace logs. The DEBUG_TRANSACTION_IDENTIFIER option must be set before using this option, and client trace logging must be enabled and to get log output.
+func (o TransactionOptions) SetLogTransaction() error {
+	return o.setOpt(404, nil)
+}
+
+// Set a timeout in milliseconds which, when elapsed, will cause the transaction automatically to be cancelled. Valid parameter values are ``[0, INT_MAX]``. If set to 0, will disable all timeouts. All pending and any future uses of the transaction will throw an exception. The transaction can be used again after it is reset. Prior to API version 610, like all other transaction options, the timeout must be reset after a call to ``onError``. If the API version is 610 or greater, the timeout is not reset after an ``onError`` call. This allows the user to specify a longer timeout on specific transactions than the default timeout specified through the ``transaction_timeout`` database option without the shorter database timeout cancelling transactions that encounter a retryable error. Note that at all API versions, it is safe and legal to set the timeout each time the transaction begins, so most code written assuming the older behavior can be upgraded to the newer behavior without requiring any modification, and the caller is not required to implement special logic in retry loops to only conditionally set this option.
 //
 // Parameter: value in milliseconds of timeout
 func (o TransactionOptions) SetTimeout(param int64) error {
@@ -362,7 +424,7 @@ func (o TransactionOptions) SetTimeout(param int64) error {
 	return o.setOpt(500, b)
 }
 
-// Set a maximum number of retries after which additional calls to onError will throw the most recently seen error code. Valid parameter values are ``[-1, INT_MAX]``. If set to -1, will disable the retry limit. Like all transaction options, the retry limit must be reset after a call to onError. This behavior allows the user to make the retry limit dynamic.
+// Set a maximum number of retries after which additional calls to ``onError`` will throw the most recently seen error code. Valid parameter values are ``[-1, INT_MAX]``. If set to -1, will disable the retry limit. Prior to API version 610, like all other transaction options, the retry limit must be reset after a call to ``onError``. If the API version is 610 or greater, the retry limit is not reset after an ``onError`` call. Note that at all API versions, it is safe and legal to set the retry limit each time the transaction begins, so most code written assuming the older behavior can be upgraded to the newer behavior without requiring any modification, and the caller is not required to implement special logic in retry loops to only conditionally set this option.
 //
 // Parameter: number of times to retry
 func (o TransactionOptions) SetRetryLimit(param int64) error {
@@ -373,7 +435,7 @@ func (o TransactionOptions) SetRetryLimit(param int64) error {
 	return o.setOpt(501, b)
 }
 
-// Set the maximum amount of backoff delay incurred in the call to onError if the error is retryable. Defaults to 1000 ms. Valid parameter values are ``[0, INT_MAX]``. Like all transaction options, the maximum retry delay must be reset after a call to onError. If the maximum retry delay is less than the current retry delay of the transaction, then the current retry delay will be clamped to the maximum retry delay.
+// Set the maximum amount of backoff delay incurred in the call to ``onError`` if the error is retryable. Defaults to 1000 ms. Valid parameter values are ``[0, INT_MAX]``. If the maximum retry delay is less than the current retry delay of the transaction, then the current retry delay will be clamped to the maximum retry delay. Prior to API version 610, like all other transaction options, the maximum retry delay must be reset after a call to ``onError``. If the API version is 610 or greater, the retry limit is not reset after an ``onError`` call. Note that at all API versions, it is safe and legal to set the maximum retry delay each time the transaction begins, so most code written assuming the older behavior can be upgraded to the newer behavior without requiring any modification, and the caller is not required to implement special logic in retry loops to only conditionally set this option.
 //
 // Parameter: value in milliseconds of maximum delay
 func (o TransactionOptions) SetMaxRetryDelay(param int64) error {
@@ -384,12 +446,12 @@ func (o TransactionOptions) SetMaxRetryDelay(param int64) error {
 	return o.setOpt(502, b)
 }
 
-// Snapshot read operations will see the results of writes done in the same transaction.
+// Snapshot read operations will see the results of writes done in the same transaction. This is the default behavior.
 func (o TransactionOptions) SetSnapshotRywEnable() error {
 	return o.setOpt(600, nil)
 }
 
-// Snapshot read operations will not see the results of writes done in the same transaction.
+// Snapshot read operations will not see the results of writes done in the same transaction. This was the default behavior prior to API version 300.
 func (o TransactionOptions) SetSnapshotRywDisable() error {
 	return o.setOpt(601, nil)
 }
@@ -407,6 +469,11 @@ func (o TransactionOptions) SetUsedDuringCommitProtectionDisable() error {
 // The transaction can read from locked databases.
 func (o TransactionOptions) SetReadLockAware() error {
 	return o.setOpt(702, nil)
+}
+
+// This option should only be used by tools which change the database configuration.
+func (o TransactionOptions) SetUseProvisionalProxies() error {
+	return o.setOpt(711, nil)
 }
 
 type StreamingMode int
@@ -505,12 +572,12 @@ func (t Transaction) Min(key KeyConvertible, param []byte) {
 	t.atomicOp(key.FDBKey(), param, 13)
 }
 
-// Transforms ``key`` using a versionstamp for the transaction. Sets the transformed key in the database to ``param``. The key is transformed by removing the final four bytes from the key and reading those as a little-Endian 32-bit integer to get a position ``pos``. The 10 bytes of the key from ``pos`` to ``pos + 10`` are replaced with the versionstamp of the transaction used. The first byte of the key is position 0. A versionstamp is a 10 byte, unique, monotonically (but not sequentially) increasing value for each committed transaction. The first 8 bytes are the committed version of the database (serialized in big-Endian order). The last 2 bytes are monotonic in the serialization order for transactions. WARNING: At this time, versionstamps are compatible with the Tuple layer only in the Java and Python bindings. Also, note that prior to API version 520, the offset was computed from only the final two bytes rather than the final four bytes.
+// Transforms ``key`` using a versionstamp for the transaction. Sets the transformed key in the database to ``param``. The key is transformed by removing the final four bytes from the key and reading those as a little-Endian 32-bit integer to get a position ``pos``. The 10 bytes of the key from ``pos`` to ``pos + 10`` are replaced with the versionstamp of the transaction used. The first byte of the key is position 0. A versionstamp is a 10 byte, unique, monotonically (but not sequentially) increasing value for each committed transaction. The first 8 bytes are the committed version of the database (serialized in big-Endian order). The last 2 bytes are monotonic in the serialization order for transactions. WARNING: At this time, versionstamps are compatible with the Tuple layer only in the Java, Python, and Go bindings. Also, note that prior to API version 520, the offset was computed from only the final two bytes rather than the final four bytes.
 func (t Transaction) SetVersionstampedKey(key KeyConvertible, param []byte) {
 	t.atomicOp(key.FDBKey(), param, 14)
 }
 
-// Transforms ``param`` using a versionstamp for the transaction. Sets the ``key`` given to the transformed ``param``. The parameter is transformed by removing the final four bytes from ``param`` and reading those as a little-Endian 32-bit integer to get a position ``pos``. The 10 bytes of the parameter from ``pos`` to ``pos + 10`` are replaced with the versionstamp of the transaction used. The first byte of the parameter is position 0. A versionstamp is a 10 byte, unique, monotonically (but not sequentially) increasing value for each committed transaction. The first 8 bytes are the committed version of the database (serialized in big-Endian order). The last 2 bytes are monotonic in the serialization order for transactions. WARNING: At this time, versionstamps are compatible with the Tuple layer only in the Java and Python bindings. Also, note that prior to API version 520, the versionstamp was always placed at the beginning of the parameter rather than computing an offset.
+// Transforms ``param`` using a versionstamp for the transaction. Sets the ``key`` given to the transformed ``param``. The parameter is transformed by removing the final four bytes from ``param`` and reading those as a little-Endian 32-bit integer to get a position ``pos``. The 10 bytes of the parameter from ``pos`` to ``pos + 10`` are replaced with the versionstamp of the transaction used. The first byte of the parameter is position 0. A versionstamp is a 10 byte, unique, monotonically (but not sequentially) increasing value for each committed transaction. The first 8 bytes are the committed version of the database (serialized in big-Endian order). The last 2 bytes are monotonic in the serialization order for transactions. WARNING: At this time, versionstamps are compatible with the Tuple layer only in the Java, Python, and Go bindings. Also, note that prior to API version 520, the versionstamp was always placed at the beginning of the parameter rather than computing an offset.
 func (t Transaction) SetVersionstampedValue(key KeyConvertible, param []byte) {
 	t.atomicOp(key.FDBKey(), param, 15)
 }
@@ -523,6 +590,11 @@ func (t Transaction) ByteMin(key KeyConvertible, param []byte) {
 // Performs lexicographic comparison of byte strings. If the existing value in the database is not present, then ``param`` is stored. Otherwise the larger of the two values is then stored in the database.
 func (t Transaction) ByteMax(key KeyConvertible, param []byte) {
 	t.atomicOp(key.FDBKey(), param, 17)
+}
+
+// Performs an atomic ``compare and clear`` operation. If the existing value in the database is equal to the given value, then given key is cleared.
+func (t Transaction) CompareAndClear(key KeyConvertible, param []byte) {
+	t.atomicOp(key.FDBKey(), param, 20)
 }
 
 type conflictRangeType int

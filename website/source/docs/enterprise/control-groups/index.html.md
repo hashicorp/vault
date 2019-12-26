@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Control Groups"
+sidebar_title: "Control Groups"
 sidebar_current: "docs-vault-enterprise-control-groups"
 description: |-
   Vault Enterprise has support for Control Group Authorization.
@@ -14,20 +15,20 @@ add additional authorization factors to be required before satisfying a request.
 
 When a Control Group is required for a request, a limited duration response
 wrapping token is returned to the user instead of the requested data. The
-accessor of the response wrapping token can be passed to the authorizers 
+accessor of the response wrapping token can be passed to the authorizers
 required by the control group policy. Once all authorizations are satisfied,
 the wrapping token can be used to unwrap and process the original request.
 
 ## Control Group Factors
 
 Control Groups can verify the following factors:
- 
+
 - `Identity Groups` - Require an authorizer to be in a specific set of identity
 groups.
 
 ## Control Groups In ACL Policies
 
-Control Group requirements on paths are specified as `control_group` along 
+Control Group requirements on paths are specified as `control_group` along
 with other ACL parameters.
 
 ### Sample ACL Policies
@@ -70,10 +71,10 @@ path "secret/foo" {
 }
 ```
 
-The above policy grants `create` and `update` access to `secret/foo` only after 
+The above policy grants `create` and `update` access to `secret/foo` only after
 two member of the "managers" or "leads" group and one member of the "superusers"
-group authorizes the request.  If an authorizer is a member of both the 
-"managers" and "superusers" group, one authorization for both factors will be 
+group authorizes the request.  If an authorizer is a member of both the
+"managers" and "superusers" group, one authorization for both factors will be
 satisfied.
 
 ## Control Groups in Sentinel
@@ -112,7 +113,12 @@ The above policy will reject the request unless two members of the `managers`
 group have authorized the request. Additionally it verifies the authorizations
 happened in the last hour.
 
-### API
+## Learn
 
-Control Groups can be managed over the HTTP API. Please see 
+Refer to the [Control Groups](https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups)
+guide for a step-by-step tutorial.
+
+## API
+
+Control Groups can be managed over the HTTP API. Please see
 [Control Groups API](/api/system/control-group.html) for more details.

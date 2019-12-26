@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token lookup - Command"
+sidebar_title: "<code>lookup</code>"
 sidebar_current: "docs-commands-token-lookup"
 description: |-
   The "token lookup" displays information about a token or accessor. If a TOKEN

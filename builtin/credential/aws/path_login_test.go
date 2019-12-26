@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
@@ -113,6 +113,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	_, err = parseIamArn("arn:aws:iam::1234556789012:/")
 	if err == nil {
 		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
+	}
+	_, err = parseIamArn("arn:aws:sts::1234556789012:assumed-role/role")
+	if err == nil {
+		t.Error("expected error from malformed assumed role ARN")
 	}
 }
 
@@ -215,7 +219,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		AuthType: iamAuthType,
 	}
 
-	if err := b.nonLockedSetAWSRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
 		t.Fatalf("failed to set entry: %s", err)
 	}
 
@@ -307,10 +311,11 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			}
 
 			loginRequest := &logical.Request{
-				Operation: logical.UpdateOperation,
-				Path:      "login",
-				Storage:   storage,
-				Data:      loginData,
+				Operation:  logical.UpdateOperation,
+				Path:       "login",
+				Storage:    storage,
+				Data:       loginData,
+				Connection: &logical.Connection{},
 			}
 
 			resp, err := b.HandleRequest(context.Background(), loginRequest)

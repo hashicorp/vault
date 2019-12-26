@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Identity and Access Management - Guides"
+sidebar_title: "Identity and Access Management"
 sidebar_current: "guides-identity"
 description: |-
   Once a Vault instance has been installed, the next step is to configure auth

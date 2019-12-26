@@ -1,0 +1,12 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Create a scope
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<EditForm
+  @model={{model}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scopes.index"}}
+  @cancelLinkParams={{array "scopes.index"}}
+/>

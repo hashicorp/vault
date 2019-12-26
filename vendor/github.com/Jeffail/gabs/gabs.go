@@ -377,7 +377,9 @@ func (g *Container) ArrayAppend(value interface{}, path ...string) error {
 	}
 
 	newArray := []interface{}{}
-	newArray = append(newArray, g.Search(path...).Data())
+	if d := g.Search(path...).Data(); d != nil {
+		newArray = append(newArray, d)
+	}
 	newArray = append(newArray, value)
 
 	_, err := g.Set(newArray, path...)

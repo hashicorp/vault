@@ -76,9 +76,10 @@ func (client *Client) CreatePolicyVersionWithCallback(request *CreatePolicyVersi
 // CreatePolicyVersionRequest is the request struct for api CreatePolicyVersion
 type CreatePolicyVersionRequest struct {
 	*requests.RpcRequest
+	SetAsDefault   requests.Boolean `position:"Query" name:"SetAsDefault"`
 	PolicyName     string           `position:"Query" name:"PolicyName"`
 	PolicyDocument string           `position:"Query" name:"PolicyDocument"`
-	SetAsDefault   requests.Boolean `position:"Query" name:"SetAsDefault"`
+	RotateStrategy string           `position:"Query" name:"RotateStrategy"`
 }
 
 // CreatePolicyVersionResponse is the response struct for api CreatePolicyVersion

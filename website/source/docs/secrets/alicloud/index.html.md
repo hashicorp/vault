@@ -1,18 +1,19 @@
 ---
 layout: "docs"
 page_title: "AliCloud - Secrets Engines"
+sidebar_title: "AliCloud"
 sidebar_current: "docs-secrets-alicloud"
 description: |-
-  The AliCloud secrets engine for Vault generates access tokens or STS credentials 
+  The AliCloud secrets engine for Vault generates access tokens or STS credentials
   dynamically based on RAM policies or roles.
 ---
 
 # AliCloud Secrets Engine
 
 The AliCloud secrets engine dynamically generates AliCloud access tokens based on RAM
-policies, or AliCloud STS credentials based on RAM roles. This generally 
-makes working with AliCloud easier, since it does not involve clicking in the web UI. 
-The AliCloud access tokens are time-based and are automatically revoked when the Vault 
+policies, or AliCloud STS credentials based on RAM roles. This generally
+makes working with AliCloud easier, since it does not involve clicking in the web UI.
+The AliCloud access tokens are time-based and are automatically revoked when the Vault
 lease expires. STS credentials are short-lived, non-renewable, and expire on their own.
 
 ## Setup
@@ -30,19 +31,19 @@ management tool.
 
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
-    
-1. [Create a custom policy](https://www.alibabacloud.com/help/doc-detail/28640.htm) 
-in AliCloud that will be used for the access key you will give Vault. See "Example 
+
+1. [Create a custom policy](https://www.alibabacloud.com/help/doc-detail/28640.htm)
+in AliCloud that will be used for the access key you will give Vault. See "Example
 RAM Policy for Vault".
 
-1. [Create a user](https://www.alibabacloud.com/help/faq-detail/28637.htm) in AliCloud 
+1. [Create a user](https://www.alibabacloud.com/help/faq-detail/28637.htm) in AliCloud
 with a name like "hashicorp-vault", and directly apply the new custom policy to that user
 in the "User Authorization Policies" section.
 
 1. Create an access key for that user in AliCloud, which is an action available in
 AliCloud's UI on the user's page.
 
-1. Configure that access key as the credentials that Vault will use to communicate with 
+1. Configure that access key as the credentials that Vault will use to communicate with
 AliCloud to generate credentials:
 
     ```text
@@ -50,19 +51,19 @@ AliCloud to generate credentials:
         access_key=0wNEpMMlzy7szvai \
         secret_key=PupkTg8jdmau1cXxYacgE736PJj4cA
     ```
-    
+
     Alternatively, the AliCloud secrets engine can pick up credentials set as environment variables,
     or credentials available through instance metadata. Since it checks current credentials on every API call,
-    changes in credentials will be picked up almost immediately without a Vault restart. 
-    
-    If available, we recommend using instance metadata for these credentials as they are the most 
+    changes in credentials will be picked up almost immediately without a Vault restart.
+
+    If available, we recommend using instance metadata for these credentials as they are the most
     secure option. To do so, simply ensure that the instance upon which Vault is running has sufficient
     privileges, and do not add any config.
 
-1. Configure a role describing how credentials will be granted. 
+1. Configure a role describing how credentials will be granted.
 
     To generate access tokens using only policies that have already been created in AliCloud:
-    
+
     ```text
     $ vault write alicloud/role/policy-based \
         remote_policies='name:AliyunOSSReadOnlyAccess,type:System' \
@@ -70,7 +71,7 @@ AliCloud to generate credentials:
     ```
     To generate access tokens using only policies that will be dynamically created in AliCloud by
     Vault:
-    
+
     ```text
     $ vault write alicloud/role/policy-based \
         inline_policies=-<<EOF
@@ -91,7 +92,7 @@ AliCloud to generate credentials:
     ```
     Both `inline_policies` and `remote_policies` may be used together. However, neither may be
     used configuring how to generate STS credentials, like so:
-    
+
     ```text
     $ vault write alibaba/role/role-based \
           role_arn='acs:ram::5138828231865461:role/hastrustedactors'
@@ -100,17 +101,17 @@ AliCloud to generate credentials:
     can only be added at role creation time. Trusted actors are entities that can assume the role.
     Since we will be assuming the role to gain credentials, the `access_key` and `secret_key` in
     the config must qualify as a trusted actor.
-    
+
 ### Helpful Links
-    
+
 - [More on roles](https://www.alibabacloud.com/help/doc-detail/28649.htm)
 - [More on policies](https://www.alibabacloud.com/help/doc-detail/28652.htm)
-    
+
 ### Example RAM Policy for Vault
 
 While AliCloud credentials can be supplied by environment variables, an explicit
-setting in the `alicloud/config`, or through instance metadata, the resulting 
-credentials need sufficient permissions to issue secrets. The necessary permissions 
+setting in the `alicloud/config`, or through instance metadata, the resulting
+credentials need sufficient permissions to issue secrets. The necessary permissions
 vary based on the ways roles are configured.
 
 This is an example RAM policy that would allow you to create credentials using
@@ -179,13 +180,13 @@ of the role:
     secret_key         PupkTg8jdmau1cXxYacgE736PJj4cA
     ```
 
-    The `access_key` and `secret_key` returned are also known is an 
+    The `access_key` and `secret_key` returned are also known is an
     `"AccessKeyId"`and `"AccessKeySecret"`, respectively, in the Alibaba's
-    docs. 
-    
-    Retrieving creds for a role using a `role_arn` will carry the additional 
+    docs.
+
+    Retrieving creds for a role using a `role_arn` will carry the additional
     fields of `expiration` and `security_token`, like so:
-    
+
     ```text
     $ vault read alicloud/creds/role-based
     Key                Value

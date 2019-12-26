@@ -7,7 +7,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 )
 
 // AzureProvider is an interface to access underlying Azure client objects and supporting services.
@@ -16,6 +16,7 @@ import (
 type AzureProvider interface {
 	ApplicationsClient
 	ServicePrincipalsClient
+	ADGroupsClient
 	RoleAssignmentsClient
 	RoleDefinitionsClient
 }
@@ -23,10 +24,23 @@ type AzureProvider interface {
 type ApplicationsClient interface {
 	CreateApplication(ctx context.Context, parameters graphrbac.ApplicationCreateParameters) (graphrbac.Application, error)
 	DeleteApplication(ctx context.Context, applicationObjectID string) (autorest.Response, error)
+	GetApplication(ctx context.Context, applicationObjectID string) (graphrbac.Application, error)
+	UpdateApplicationPasswordCredentials(
+		ctx context.Context,
+		applicationObjectID string,
+		parameters graphrbac.PasswordCredentialsUpdateParameters) (result autorest.Response, err error)
+	ListApplicationPasswordCredentials(ctx context.Context, applicationObjectID string) (result graphrbac.PasswordCredentialListResult, err error)
 }
 
 type ServicePrincipalsClient interface {
 	CreateServicePrincipal(ctx context.Context, parameters graphrbac.ServicePrincipalCreateParameters) (graphrbac.ServicePrincipal, error)
+}
+
+type ADGroupsClient interface {
+	AddGroupMember(ctx context.Context, groupObjectID string, parameters graphrbac.GroupAddMemberParameters) (result autorest.Response, err error)
+	RemoveGroupMember(ctx context.Context, groupObjectID, memberObjectID string) (result autorest.Response, err error)
+	GetGroup(ctx context.Context, objectID string) (result graphrbac.ADGroup, err error)
+	ListGroups(ctx context.Context, filter string) (result []graphrbac.ADGroup, err error)
 }
 
 type RoleAssignmentsClient interface {
@@ -49,10 +63,11 @@ type RoleDefinitionsClient interface {
 type provider struct {
 	settings *clientSettings
 
-	appClient *graphrbac.ApplicationsClient
-	spClient  *graphrbac.ServicePrincipalsClient
-	raClient  *authorization.RoleAssignmentsClient
-	rdClient  *authorization.RoleDefinitionsClient
+	appClient    *graphrbac.ApplicationsClient
+	spClient     *graphrbac.ServicePrincipalsClient
+	groupsClient *graphrbac.GroupsClient
+	raClient     *authorization.RoleAssignmentsClient
+	rdClient     *authorization.RoleDefinitionsClient
 }
 
 // newAzureProvider creates an azureProvider, backed by Azure client objects for underlying services.
@@ -78,6 +93,10 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 	spClient.Authorizer = authorizer
 	spClient.AddToUserAgent(userAgent)
 
+	groupsClient := graphrbac.NewGroupsClient(settings.TenantID)
+	groupsClient.Authorizer = authorizer
+	groupsClient.AddToUserAgent(userAgent)
+
 	// build clients that use the Resource Manager endpoint
 	authorizer, err = getAuthorizer(settings, settings.Environment.ResourceManagerEndpoint)
 	if err != nil {
@@ -95,10 +114,11 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 	p := &provider{
 		settings: settings,
 
-		appClient: &appClient,
-		spClient:  &spClient,
-		raClient:  &raClient,
-		rdClient:  &rdClient,
+		appClient:    &appClient,
+		spClient:     &spClient,
+		groupsClient: &groupsClient,
+		raClient:     &raClient,
+		rdClient:     &rdClient,
 	}
 
 	return p, nil
@@ -133,10 +153,22 @@ func (p *provider) CreateApplication(ctx context.Context, parameters graphrbac.A
 	return p.appClient.Create(ctx, parameters)
 }
 
+func (p *provider) GetApplication(ctx context.Context, applicationObjectID string) (graphrbac.Application, error) {
+	return p.appClient.Get(ctx, applicationObjectID)
+}
+
 // DeleteApplication deletes an Azure application object.
 // This will in turn remove the service principal (but not the role assignments).
 func (p *provider) DeleteApplication(ctx context.Context, applicationObjectID string) (autorest.Response, error) {
 	return p.appClient.Delete(ctx, applicationObjectID)
+}
+
+func (p *provider) UpdateApplicationPasswordCredentials(ctx context.Context, applicationObjectID string, parameters graphrbac.PasswordCredentialsUpdateParameters) (result autorest.Response, err error) {
+	return p.appClient.UpdatePasswordCredentials(ctx, applicationObjectID, parameters)
+}
+
+func (p *provider) ListApplicationPasswordCredentials(ctx context.Context, applicationObjectID string) (result graphrbac.PasswordCredentialListResult, err error) {
+	return p.appClient.ListPasswordCredentials(ctx, applicationObjectID)
 }
 
 // CreateServicePrincipal creates a new Azure service principal.
@@ -182,6 +214,31 @@ func (p *provider) DeleteRoleAssignmentByID(ctx context.Context, roleAssignmentI
 func (p *provider) ListRoleAssignments(ctx context.Context, filter string) ([]authorization.RoleAssignment, error) {
 	page, err := p.raClient.List(ctx, filter)
 
+	if err != nil {
+		return nil, err
+	}
+
+	return page.Values(), nil
+}
+
+// AddGroupMember adds a member to a AAD Group.
+func (p *provider) AddGroupMember(ctx context.Context, groupObjectID string, parameters graphrbac.GroupAddMemberParameters) (result autorest.Response, err error) {
+	return p.groupsClient.AddMember(ctx, groupObjectID, parameters)
+}
+
+// RemoveGroupMember removes a member from a AAD Group.
+func (p *provider) RemoveGroupMember(ctx context.Context, groupObjectID, memberObjectID string) (result autorest.Response, err error) {
+	return p.groupsClient.RemoveMember(ctx, groupObjectID, memberObjectID)
+}
+
+// GetGroup gets group information from the directory.
+func (p *provider) GetGroup(ctx context.Context, objectID string) (result graphrbac.ADGroup, err error) {
+	return p.groupsClient.Get(ctx, objectID)
+}
+
+// ListGroups gets list of groups for the current tenant.
+func (p *provider) ListGroups(ctx context.Context, filter string) (result []graphrbac.ADGroup, err error) {
+	page, err := p.groupsClient.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

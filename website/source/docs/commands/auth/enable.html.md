@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth enable - Command"
+sidebar_title: "<code>enable</code>"
 sidebar_current: "docs-commands-auth-enable"
 description: |-
   The "auth enable" command enables an auth method at a given path. If an auth
@@ -53,6 +54,3 @@ flags](/docs/commands/index.html) included on all commands.
 - `-path` `(string: "")` - Place where the auth method will be accessible. This
   must be unique across all auth methods. This defaults to the "type" of the
   auth method. The auth method will be accessible at `/auth/<path>`.
-
-- `-plugin-name` `(string: "")` - Name of the auth method plugin. This plugin
-  name must already exist in the Vault server's plugin catalog.

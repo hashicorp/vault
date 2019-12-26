@@ -10,15 +10,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "(creds|sts)/" + framework.GenericNameRegex("name"),
+		Pattern: "(creds|sts)/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -72,6 +72,18 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	default:
 		ttl = int64(d.Get("ttl").(int))
 	}
+
+	var maxTTL int64
+	if role.MaxSTSTTL > 0 {
+		maxTTL = int64(role.MaxSTSTTL.Seconds())
+	} else {
+		maxTTL = int64(b.System().MaxLeaseTTL().Seconds())
+	}
+
+	if ttl > maxTTL {
+		ttl = maxTTL
+	}
+
 	roleArn := d.Get("role_arn").(string)
 	externalId := d.Get("external_id").(string)
 
@@ -119,9 +131,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, externalId, ttl)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, externalId, ttl)
 	case federationTokenCred:
-		return b.secretTokenCreate(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, ttl)
+		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, ttl)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
 	}

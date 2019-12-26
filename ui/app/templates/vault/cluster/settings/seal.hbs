@@ -17,25 +17,20 @@
     </p>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#confirm-action
-      onConfirmAction=(action "seal")
-      confirmMessage=(concat "Are you sure you want to seal " model.cluster.name "?")
-      confirmButtonText="Seal"
-      buttonClasses="button is-primary"
-      cancelButtonText="Cancel"
-      data-test-seal=true
-      }}
+    <ConfirmAction
+      @buttonClasses="button is-primary"
+      @confirmTitle="Seal this cluster?"
+      @confirmMessage="You will not be able to read or write any data until the cluster is unsealed again."
+      @confirmButtonText="Seal"
+      @horizontalPosition="auto-left"
+      @onConfirmAction={{action "seal"}}
+      data-test-seal="true"
+    >
       Seal
-    {{/confirm-action}}
+    </ConfirmAction>
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">The token you are currently authenticated with does not have sufficient capabilities to seal this vault.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="This token does not have sufficient capabilities to seal this vault"
+  />
 {{/if}}

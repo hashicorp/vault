@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/helper/mfa"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -77,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		LDAP:   ldaputil.NewLDAP(),
 	}
 
-	c, err := ldapClient.DialLDAP(cfg)
+	c, err := ldapClient.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
@@ -88,7 +88,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Clean connection
 	defer c.Close()
 
-	userBindDN, err := ldapClient.GetUserBindDN(cfg, c, username)
+	userBindDN, err := ldapClient.GetUserBindDN(cfg.ConfigEntry, c, username)
 	if err != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("error getting user bind DN", "error", err)
@@ -127,12 +127,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	userDN, err := ldapClient.GetUserDN(cfg, c, userBindDN)
+	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
-	ldapGroups, err := ldapClient.GetLdapGroups(cfg, c, userDN, username)
+	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}

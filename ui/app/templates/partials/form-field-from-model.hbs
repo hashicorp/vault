@@ -1,23 +1,38 @@
 <div class="field">
-  {{#unless (or attr.options.editType (eq attr.type 'boolean'))}}
+  {{#unless
+    (or
+      (contains
+        attr.options.editType
+        (array
+          "boolean"
+          "searchSelect"
+          "mountAccessor"
+          "kv"
+          "file"
+          "ttl"
+          "stringArray"
+          "json"
+        )
+      )
+      (eq attr.type "boolean")
+    )
+  }}
     <label for="{{attr.name}}" class="is-label">
       {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
       {{#if attr.options.helpText}}
-        {{#info-tooltip}}
-          {{attr.options.helpText}}
-        {{/info-tooltip}}
+        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
       {{/if}}
     </label>
   {{/unless}}
   {{#if attr.options.possibleValues}}
-    <div class="control is-expanded" >
+    <div class="control is-expanded">
       <div class="select is-fullwidth">
         <select
           name="{{attr.name}}"
           id="{{attr.name}}"
           onchange={{action (mut (get model attr.name)) value="target.value"}}
           data-test-input={{attr.name}}
-          >
+        >
           {{#each attr.options.possibleValues as |val|}}
             <option selected={{eq (get model attr.name) val}} value={{val}}>
               {{val}}
@@ -26,34 +41,48 @@
         </select>
       </div>
     </div>
-  {{else if (eq attr.options.editType 'ttl')}}
-    {{ttl-picker initialValue=(or (get model attr.name) attr.options.defaultValue) labelText=(if attr.options.label attr.options.label (humanize (dasherize attr.name))) setDefaultValue=false onChange=(action (mut (get model attr.name)))}}
-  {{else if (or (eq attr.type 'number') (eq attr.type 'string'))}}
+  {{else if (eq attr.options.editType "ttl")}}
+    {{ttl-picker
+      initialValue=(or (get model attr.name) attr.options.defaultValue)
+      labelText=(if
+        attr.options.label attr.options.label (humanize (dasherize attr.name))
+      )
+      setDefaultValue=false
+      onChange=(action (mut (get model attr.name)))
+    }}
+  {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
     <div class="control">
-      {{input id=attr.name value=(get model (or attr.options.fieldValue attr.name)) class="input" data-test-input=attr.name}}
-    </div>
-  {{else if (eq attr.type 'boolean')}}
-    <div class="b-checkbox">
-      <input type="checkbox"
-       id="{{attr.name}}"
-       class="styled"
-         checked={{get model attr.name}}
-         onchange={{action (mut (get model attr.name)) value="target.checked"}}
-         data-test-input={{attr.name}}
-        />
-        <label for="{{attr.name}}" class="is-label">
-          {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          {{#if attr.options.helpText}}
-            {{#info-tooltip}}
-              {{attr.options.helpText}}
-            {{/info-tooltip}}
-          {{/if}}
-        </label>
-      </div>
-    {{else if (eq attr.type 'object')}}
-      {{json-editor
-        value=(if (get model attr.name) (stringify (get model attr.name)) emptyData)
-        valueUpdated=(action "codemirrorUpdated" attr.name)
+      {{input
+        id=attr.name
+        value=(get model (or attr.options.fieldValue attr.name))
+        class="input"
+        data-test-input=attr.name
       }}
-    {{/if}}
-  </div>
+    </div>
+  {{else if (eq attr.type "boolean")}}
+    <div class="b-checkbox">
+      <input
+        type="checkbox"
+        id="{{attr.name}}"
+        class="styled"
+        checked={{get model attr.name}}
+        onchange={{action (mut (get model attr.name)) value="target.checked"}}
+        data-test-input={{attr.name}}
+       />
+
+      <label for="{{attr.name}}" class="is-label">
+        {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        {{#if attr.options.helpText}}
+          {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+        {{/if}}
+      </label>
+    </div>
+  {{else if (eq attr.type "object")}}
+    {{json-editor
+      value=(if
+        (get model attr.name) (stringify (get model attr.name)) emptyData
+      )
+      valueUpdated=(action "codemirrorUpdated" attr.name)
+    }}
+  {{/if}}
+</div>

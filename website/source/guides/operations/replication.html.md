@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Setting up Vault Enterprise Performance Replication - Guides"
+sidebar_title: "Replication Setup & Guidance"
 sidebar_current: "guides-operations-replication"
 description: |-
   Learn how to set up and manage Vault Enterprise Performance Replication.

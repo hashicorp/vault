@@ -1,5 +1,5 @@
 import Route from '@ember/routing/route';
-import ListRoute from 'vault/mixins/list-route';
+import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   model(params) {
@@ -10,7 +10,6 @@ export default Route.extend(ListRoute, {
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
-        size: 100,
       })
       .catch(err => {
         if (err.httpStatus === 404) {

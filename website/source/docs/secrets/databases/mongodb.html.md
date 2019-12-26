@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MongoDB - Database - Secrets Engines"
+sidebar_title: "MongoDB"
 sidebar_current: "docs-secrets-databases-mongodb"
 description: |-
   MongoDB is one of the supported plugins for the database secrets engine. This
@@ -40,8 +41,8 @@ more information about setting up the database secrets engine.
         password="Password!"
     ```
 
-1. Configure a role that maps a name in Vault to an SQL statement to execute to
-create the database credential:
+1. Configure a role that maps a name in Vault to a MongoDB command that executes and
+creates the database credential:
 
     ```text
     $ vault write database/roles/my-role \

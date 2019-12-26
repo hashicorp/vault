@@ -126,7 +126,7 @@ func GetTokenFromCLI(resource string) (*Token, error) {
 	azureCLIDefaultPathWindows := fmt.Sprintf("%s\\Microsoft SDKs\\Azure\\CLI2\\wbin; %s\\Microsoft SDKs\\Azure\\CLI2\\wbin", os.Getenv("ProgramFiles(x86)"), os.Getenv("ProgramFiles"))
 
 	// Default path for non-Windows.
-	const azureCLIDefaultPath = "/usr/bin:/usr/local/bin"
+	const azureCLIDefaultPath = "/bin:/sbin:/usr/bin:/usr/local/bin"
 
 	// Validate resource, since it gets sent as a command line argument to Azure CLI
 	const invalidResourceErrorTemplate = "Resource %s is not in expected format. Only alphanumeric characters, [dot], [colon], [hyphen], and [forward slash] are allowed."
@@ -144,13 +144,13 @@ func GetTokenFromCLI(resource string) (*Token, error) {
 		cliCmd = exec.Command(fmt.Sprintf("%s\\system32\\cmd.exe", os.Getenv("windir")))
 		cliCmd.Env = os.Environ()
 		cliCmd.Env = append(cliCmd.Env, fmt.Sprintf("PATH=%s;%s", os.Getenv(azureCLIPath), azureCLIDefaultPathWindows))
-		cliCmd.Args = append(cliCmd.Args, "/c")
+		cliCmd.Args = append(cliCmd.Args, "/c", "az")
 	} else {
-		cliCmd = exec.Command(os.Getenv("SHELL"))
+		cliCmd = exec.Command("az")
 		cliCmd.Env = os.Environ()
 		cliCmd.Env = append(cliCmd.Env, fmt.Sprintf("PATH=%s:%s", os.Getenv(azureCLIPath), azureCLIDefaultPath))
 	}
-	cliCmd.Args = append(cliCmd.Args, "az", "account", "get-access-token", "-o", "json", "--resource", resource)
+	cliCmd.Args = append(cliCmd.Args, "account", "get-access-token", "-o", "json", "--resource", resource)
 
 	var stderr bytes.Buffer
 	cliCmd.Stderr = &stderr

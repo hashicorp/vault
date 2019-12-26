@@ -10,38 +10,34 @@
   {{model.message}}
 {{/unless}}
 
-<div class="box is-sideless is-fullwidth is-marginless">
-  <div class="box">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        {{#if (eq model.httpStatus 400)}}
-          <p class="box is-shadowless has-text-danger" data-test-lease-error="true">
-            {{i-con glyph='close'}}
-            <code class="has-text-danger">{{model.keyId}}</code> is not a valid lease ID
-          </p>
-        {{else if (eq model.httpStatus 404)}}
-          <p class="message">
-          Unable to find lease for the <code>id</code>: <code>{{model.keyId}}</code>. Try going back to the
-            {{#link-to "vault.cluster.access.leases"}}lookup{{/link-to}}
-            and re-entering the <code>id</code>.
-          </p>
-        {{else if (eq model.httpStatus 403)}}
-          <p class="message">
-            You don't have access to <code>{{model.keyId}}</code>. If you think you've reached this page in error, please contact your administrator.
-          </p>
-        {{else}}
-          {{#each model.errors as |error|}}
-            <p class="message">
-              {{error}}
-            </p>
-          {{/each}}
-        {{/if}}
-      </div>
-    </div>
-  </div>
-</div>
-<div class="field is-grouped box is-fullwidth is-bottomless">
-  {{#link-to "vault.cluster.access.leases" class="button"}}
-    Back
-  {{/link-to}}
-</div>
+{{#if (eq model.httpStatus 400)}}
+  <AlertBanner
+    @type="danger"
+    @message="{{model.keyId}} is not a valid lease ID"
+  />
+{{else if (eq model.httpStatus 404)}}
+  <EmptyState
+    @title="No leases with that ID"
+    @message="Unable to find lease for the ID &quot;{{model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
+  >
+    {{#link-to "vault.cluster.access.leases" class="link"}}
+      Back to lookup
+    {{/link-to}}
+  </EmptyState>
+{{else if (eq model.httpStatus 403)}}
+  <EmptyState
+    @title="You don't have access to a lease with that ID"
+    @message="If you think you've reached this page in error, please contact your administrator."
+  >
+    {{#link-to "vault.cluster.access.leases" class="link"}}
+      Back to lookup
+    {{/link-to}}
+  </EmptyState>
+{{else}}
+  {{#each model.errors as |error|}}
+    <AlertBanner
+      @type="danger"
+      @message={{error}}
+    />
+  {{/each}}
+{{/if}}

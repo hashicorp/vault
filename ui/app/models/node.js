@@ -24,6 +24,7 @@ export default DS.Model.extend({
   sealNumShares: alias('n'),
   version: attr('string'),
   type: attr('string'),
+  storageType: attr('string'),
 
   //https://www.vaultproject.io/docs/http/sys-leader.html
   haEnabled: attr('boolean'),

@@ -3,11 +3,15 @@ package identity
 import (
 	"testing"
 
+	"github.com/go-ldap/ldap/v3"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/ldap"
+	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/helper/namespace"
+	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -18,7 +22,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		DisableCache: true,
 		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
-			"ldap": ldap.Factory,
+			"ldap": ldapcred.Factory,
 		},
 	}
 
@@ -51,21 +55,21 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
-		"name": "ldap_Italians",
+		"name": "ldap_ship_crew",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	italiansGroupID := secret.Data["id"].(string)
+	shipCrewGroupID := secret.Data["id"].(string)
 
 	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
-		"name": "ldap_Scientists",
+		"name": "ldap_admin_staff",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	scientistsGroupID := secret.Data["id"].(string)
+	adminStaffGroupID := secret.Data["id"].(string)
 
 	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
@@ -77,8 +81,8 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	devopsGroupID := secret.Data["id"].(string)
 
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
-		"name":           "Italians",
-		"canonical_id":   italiansGroupID,
+		"name":           "ship_crew",
+		"canonical_id":   shipCrewGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -86,8 +90,8 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
-		"name":           "Scientists",
-		"canonical_id":   scientistsGroupID,
+		"name":           "admin_staff",
+		"canonical_id":   adminStaffGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -103,35 +107,40 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err = client.Logical().Read("identity/group/id/" + italiansGroupID)
+	secret, err = client.Logical().Read("identity/group/id/" + shipCrewGroupID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	aliasMap := secret.Data["alias"].(map[string]interface{})
-	if aliasMap["canonical_id"] != italiansGroupID ||
-		aliasMap["name"] != "Italians" ||
+	if aliasMap["canonical_id"] != shipCrewGroupID ||
+		aliasMap["name"] != "ship_crew" ||
 		aliasMap["mount_accessor"] != accessor {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	secret, err = client.Logical().Read("identity/group/id/" + scientistsGroupID)
+	secret, err = client.Logical().Read("identity/group/id/" + adminStaffGroupID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	aliasMap = secret.Data["alias"].(map[string]interface{})
-	if aliasMap["canonical_id"] != scientistsGroupID ||
-		aliasMap["name"] != "Scientists" ||
+	if aliasMap["canonical_id"] != adminStaffGroupID ||
+		aliasMap["name"] != "admin_staff" ||
 		aliasMap["mount_accessor"] != accessor {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	// Configure LDAP auth backend
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	// Configure LDAP auth
 	secret, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
-		"url":      "ldap://ldap.forumsys.com",
-		"userattr": "uid",
-		"userdn":   "dc=example,dc=com",
-		"groupdn":  "dc=example,dc=com",
-		"binddn":   "cn=read-only-admin,dc=example,dc=com",
+		"url":       cfg.Url,
+		"userattr":  cfg.UserAttr,
+		"userdn":    cfg.UserDN,
+		"groupdn":   cfg.GroupDN,
+		"groupattr": cfg.GroupAttr,
+		"binddn":    cfg.BindDN,
+		"bindpass":  cfg.BindPassword,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +163,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Create a local user in LDAP
-	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "engineers,devops",
 	})
@@ -163,8 +172,8 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -178,56 +187,80 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	entityID := secret.Data["entity_id"].(string)
 
-	// Re-read the Scientists, Italians and devops group. This entity ID should have
-	// been added to both of these groups by now.
-	secret, err = client.Logical().Read("identity/group/id/" + italiansGroupID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	groupMap := secret.Data
-	found := false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
+	// Re-read the admin_staff, ship_crew and devops group. This entity ID should have
+	// been added to admin_staff but not ship_crew.
+	assertMember := func(groupName, groupID string, expectFound bool) {
+		secret, err = client.Logical().Read("identity/group/id/" + groupID)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group", entityID)
+		groupMap := secret.Data
+		found := false
+		for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+			if entityIDRaw.(string) == entityID {
+				found = true
+			}
+		}
+		if found != expectFound {
+			negation := ""
+			if !expectFound {
+				negation = "not "
+			}
+			t.Fatalf("expected entity ID %q to %sbe part of %q group", entityID, negation, groupName)
+		}
 	}
 
-	secret, err = client.Logical().Read("identity/group/id/" + scientistsGroupID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	groupMap = secret.Data
-	found = false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
+	assertMember("ship_crew", shipCrewGroupID, false)
+	assertMember("admin_staff", adminStaffGroupID, true)
+	assertMember("devops", devopsGroupID, true)
+	assertMember("engineer", devopsGroupID, true)
+
+	// Now add Hermes to ship_crew
+	{
+		logger := log.New(nil)
+		ldapClient := ldaputil.Client{LDAP: ldaputil.NewLDAP(), Logger: logger}
+		// LDAP server won't accept changes unless we connect with TLS.  This
+		// isn't the default config returned by PrepareTestContainer because
+		// the Vault LDAP backend won't work with it, even with InsecureTLS,
+		// because the ServerName should be planetexpress.com and not localhost.
+		conn, err := ldapClient.DialLDAP(cfg)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of Scientists group", entityID)
+		defer conn.Close()
+
+		err = conn.Bind(cfg.BindDN, cfg.BindPassword)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		hermesDn := "cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com"
+		shipCrewDn := "cn=ship_crew,ou=people,dc=planetexpress,dc=com"
+		ldapreq := ldap.ModifyRequest{DN: shipCrewDn}
+		ldapreq.Add("member", []string{hermesDn})
+		err = conn.Modify(&ldapreq)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
+	// Re-login with LDAP
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	groupMap = secret.Data
-	found = false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of devops group", entityID)
-	}
+
+	// Hermes should now be in ship_crew external group
+	assertMember("ship_crew", shipCrewGroupID, true)
+	assertMember("admin_staff", adminStaffGroupID, true)
+	assertMember("devops", devopsGroupID, true)
+	assertMember("engineer", devopsGroupID, true)
 
 	identityStore := cores[0].IdentityStore()
 
-	group, err := identityStore.MemDBGroupByID(italiansGroupID, true)
+	group, err := identityStore.MemDBGroupByID(shipCrewGroupID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,12 +268,14 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	ctx := namespace.RootContext(nil)
+
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	group, err = identityStore.MemDBGroupByID(italiansGroupID, true)
+	group, err = identityStore.MemDBGroupByID(shipCrewGroupID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +283,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("failed to remove entity ID from the group")
 	}
 
-	group, err = identityStore.MemDBGroupByID(scientistsGroupID, true)
+	group, err = identityStore.MemDBGroupByID(adminStaffGroupID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,12 +291,12 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	group, err = identityStore.MemDBGroupByID(scientistsGroupID, true)
+	group, err = identityStore.MemDBGroupByID(adminStaffGroupID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +312,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,55 +330,13 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// EntityIDs should have been added to the groups again during renewal
-	secret, err = client.Logical().Read("identity/group/id/" + italiansGroupID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	groupMap = secret.Data
-	found = false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group", entityID)
-	}
+	assertMember("ship_crew", shipCrewGroupID, true)
+	assertMember("admin_staff", adminStaffGroupID, true)
+	assertMember("devops", devopsGroupID, true)
+	assertMember("engineer", devopsGroupID, true)
 
-	secret, err = client.Logical().Read("identity/group/id/" + scientistsGroupID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	groupMap = secret.Data
-	found = false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of scientists group", entityID)
-	}
-
-	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	groupMap = secret.Data
-	found = false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
-		if entityIDRaw.(string) == entityID {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected entity ID %q to be part of devops group", entityID)
-	}
-
-	// Remove user tesla from the devops group in LDAP backend
-	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+	// Remove user hermes conrad from the devops group in LDAP backend
+	secret, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "engineers",
 	})

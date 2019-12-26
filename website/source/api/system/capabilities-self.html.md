@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-self - HTTP API"
-sidebar_current: "docs-http-system-capabilities-self"
+sidebar_title: "<code>/sys/capabilities-self</code>"
+sidebar_current: "api-http-system-capabilities-self"
 description: |-
   The `/sys/capabilities-self` endpoint is used to fetch the capabilities of
   client token on the given paths.
@@ -23,9 +24,9 @@ paths are taken in at once and the capabilities of the token for each path is
 returned. For backwards compatibility, if a single path is supplied, a
 `capabilities` field will also be returned.
 
-| Method   | Path                     | Produces               |
-| :------- | :----------------------- | :--------------------- |
-| `POST`   | `/sys/capabilities-self` | `200 application/json` |
+| Method   | Path                     |
+| :----------------------- | :--------------------- |
+| `POST`   | `/sys/capabilities-self` |
 
 
 ### Parameters

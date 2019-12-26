@@ -6,26 +6,15 @@
           {{key}}
         </span>
       </div>
-      <div class="column is-5">
+      <div class="column is-flex">
         {{value}}
       </div>
       <div class="column has-text-right">
-        {{#if model.canEdit}}
-          {{identity/popup-metadata params=(array model key)}}
-        {{/if}}
       </div>
     </div>
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There is no metadata associated with {{model.name}}.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="No metadata associated with {{model.name}} yet"
+  />
 {{/each-in}}

@@ -4,11 +4,17 @@
 .is-underline {
   text-decoration: underline;
 }
+.is-no-underline {
+  text-decoration: none;
+}
 .is-sideless {
   box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
 .is-bottomless {
   box-shadow: 0 -1px 0 0 $grey-light;
+}
+.has-bottom-shadow {
+  box-shadow: $box-shadow !important;
 }
 .is-borderless {
   border: none !important;
@@ -136,4 +142,7 @@
   color: $grey;
   font-size: $size-8;
   text-transform: lowercase;
+}
+.has-bottom-margin {
+  margin-bottom: $spacing-m;
 }

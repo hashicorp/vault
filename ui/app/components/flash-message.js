@@ -7,7 +7,7 @@ export default FlashMessage.extend({
   alertType: computed('flash.type', {
     get() {
       const flashType = getWithDefault(this, 'flash.type', '');
-      let prefix = 'notification has-border is-';
+      let prefix = 'is-';
 
       return `${prefix}${flashType}`;
     },

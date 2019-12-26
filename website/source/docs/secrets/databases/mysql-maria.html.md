@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MySQL/MariaDB - Database - Secrets Engines"
+sidebar_title: "MySQL/MariaDB"
 sidebar_current: "docs-secrets-databases-mysql-maria"
 description: |-
   MySQL is one of the supported plugins for the database secrets engine. This
@@ -12,7 +13,8 @@ description: |-
 
 MySQL is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
-the MySQL database.
+the MySQL database, and also supports [Static
+Roles](/docs/secrets/databases/index.html#static-roles).
 
 This plugin has a few different instances built into vault, each instance is for
 a slightly different MySQL driver. The only difference between these plugins is

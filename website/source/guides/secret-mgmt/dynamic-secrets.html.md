@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secret as a Service - Guides"
+sidebar_title: "Secret as a Service"
 sidebar_current: "guides-secret-mgmt-dynamic-secrets"
 description: |-
   Vault can dynamically generate secrets on-demand for some systems.
@@ -50,7 +51,7 @@ environment variables. The administrator specifies the TTL of the database
 credentials to enforce its validity so that they are automatically revoked when
 they are no longer used.
 
-![Dynamic Secret Workflow](/assets/images/vault-dynamic-secrets.png)
+![Dynamic Secret Workflow](/img/vault-dynamic-secrets.png)
 
 Each app instance can get unique credentials that they don't have to share. By
 making those credentials to be short-lived, you reduced the change of the secret
@@ -203,7 +204,7 @@ command with correct URL to match your environment.
 **Example:**
 
 ```plaintext
-$ vault write database/config/postgresql
+$ vault write database/config/postgresql \
       plugin_name=postgresql-database-plugin \
       allowed_roles=readonly \
       connection_url=postgresql://root:rootpassword@localhost:5432/myapp

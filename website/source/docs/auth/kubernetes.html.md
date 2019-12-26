@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Kubernetes - Auth Methods"
+sidebar_title: "Kubernetes"
 sidebar_current: "docs-auth-kubernetes"
 description: |-
   The Kubernetes auth method allows automated authentication of Kubernetes
@@ -83,6 +84,15 @@ list of available configuration options, please see the API documentation.
         kubernetes_ca_cert=@ca.crt
     ```
 
+    !> **NOTE:** The pattern Vault uses to authenticate Pods depends on sharing
+    the JWT token over the network. Given the [security model of
+    Vault](/docs/internals/security.html), this is allowable because Vault is
+    part of the trusted compute base. In general, Kubernetes applications should
+    **not** share this JWT with other applications, as it allows API calls to be
+    made on behalf of the Pod and can result in unintended access being granted
+    to 3rd parties.
+
+
 1. Create a named role:
 
     ```text
@@ -109,7 +119,7 @@ setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this auth method.
 
 Service Accounts used in this auth method will need to have access to the
-TokenReview API. If Kubernetes is configured to use RBAC roles the Service
+TokenReview API. If Kubernetes is configured to use RBAC roles, the Service
 Account should be granted permissions to access this API. The following
 example ClusterRoleBinding could be used to grant these permissions:
 

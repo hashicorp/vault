@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Azure - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-azure"
+sidebar_title: "Azure"
+sidebar_current: "api-http-secret-azure"
 description: |-
   This is the API documentation for the Vault Azure secrets engine.
 ---
@@ -22,9 +23,9 @@ Configures the credentials required for the plugin to perform API calls
 to Azure. These credentials will be used to query roles and create/delete
 service principals. Environment variables will override any parameters set in the config.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/azure/config`            | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/azure/config`            |
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
   This value can also be provided with the AZURE_SUBSCRIPTION_ID environment variable.
@@ -63,9 +64,9 @@ $ curl \
 
 Return the stored configuration, omitting `client_secret`.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/azure/config`            | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/azure/config`            |
 
 
 ### Sample Request
@@ -95,9 +96,9 @@ $ curl \
 
 Deletes the stored Azure configuration and credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/azure/config`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/azure/config`         |
 
 ### Sample Request
 
@@ -105,26 +106,33 @@ Deletes the stored Azure configuration and credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://127.0.0.1:8200/v1/auth/azure/config
+    https://127.0.0.1:8200/v1/azure/config
 ```
 
 
 ## Create/Update Role
 
-Create or update a Vault role. The provided Azure roles must exist
-for this call to succeed. See the Azure secrets [roles docs][roles]
-for more information about roles.
+Create or update a Vault role. Either `application_object_id` or
+`azure_roles` must be provided, and these resources must exist for this
+call to succeed. See the Azure secrets [roles docs][roles] for more
+information about roles.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/azure/roles/:name`     | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/azure/roles/:name`     |
 
 
 ### Parameters
 
-- `azure_roles` (`string: <required>`) - List of Azure roles to be assigned to the generated service
+- `azure_roles` (`string: ""`) - List of Azure roles to be assigned to the generated service
    principal. The array must be in JSON format, properly escaped as a string. See [roles docs][roles]
    for details on role definition.
+- `azure_groups` (`string: ""`) - List of Azure groups that the generated service principal will be
+   assigned to. The array must be in JSON format, properly escaped as a string. See [groups docs][groups]
+   for more details.
+- `application_object_id` (`string: ""`) - Application Object ID for an existing service principal that will
+   be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored. See
+   [roles docs][roles] for details on role definition.
 - `ttl` (`string: ""`) – Specifies the default TTL for service principals generated using this role.
    Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 - `max_ttl` (`string: ""`) – Specifies the maximum TTL for service principals generated using this role. Accepts time
@@ -164,9 +172,9 @@ $ curl \
 
 Lists all of the roles that are registered with the plugin.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `LIST`   | `/azure/roles`           | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `LIST`   | `/azure/roles`           |
 
 
 ### Sample Request
@@ -195,9 +203,9 @@ $ curl \
 
 This endpoint generates a new service principal based on the named role.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/azure/creds/:name`     | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/azure/creds/:name`     |
 
 ### Parameters
 
@@ -230,3 +238,4 @@ See docs on how to [renew](/api/system/leases.html#renew-lease) and [revoke](/ap
 
 [docs]: /docs/secrets/azure/index.html
 [roles]: /docs/secrets/azure/index.html#roles
+[groups]: /docs/secrets/azure/index.html#azure-groups

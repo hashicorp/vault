@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Cassandra - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-cassandra"
+sidebar_title: "Cassandra <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-cassandra"
 description: |-
   This is the API documentation for the Vault Cassandra secrets engine.
 ---
@@ -27,9 +28,9 @@ please update your API calls accordingly.
 This endpoint configures the connection information used to communicate with
 Cassandra.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/cassandra/config/connection` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/cassandra/config/connection` |
 
 ### Parameters
 
@@ -64,7 +65,7 @@ Cassandra.
 
 - `consistency` `(string: "")` – Specifies the consistency option to use.  See
   the [gocql
-  definition](https://github.com/gocql/gocql/blob/master/frame.go#L203) for
+  definition](https://github.com/gocql/gocql/blob/master/frame.go#L188) for
   valid options.
 
 TLS works as follows:
@@ -112,9 +113,9 @@ $ curl \
 
 This endpoint creates or updates the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/cassandra/roles/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/cassandra/roles/:name`     |
 
 ### Parameters
 
@@ -163,9 +164,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/cassandra/roles/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/cassandra/roles/:name`     |
 
 ### Parameters
 
@@ -197,8 +198,8 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `DELETE` | `/cassandra/roles/:name`     | `204 (no body)`        |
 
 ### Parameters
@@ -220,9 +221,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/cassandra/creds/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/cassandra/creds/:name`     |
 
 ### Parameters
 

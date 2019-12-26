@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "SSH - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-ssh"
+sidebar_title: "SSH"
+sidebar_current: "api-http-secret-ssh"
 description: |-
   This is the API documentation for the Vault SSH secrets engine.
 ---
@@ -20,9 +21,9 @@ update your API calls accordingly.
 
 This endpoint creates or updates a named key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/keys/:name`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/keys/:name`            |
 
 ### Parameters
 
@@ -54,9 +55,9 @@ $ curl \
 
 This endpoint deletes a named key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/ssh/keys/:name`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/keys/:name`            |
 
 
 ### Parameters
@@ -77,9 +78,9 @@ $ curl \
 
 This endpoint creates or updates a named role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/roles/:name`           |
 
 ### Parameters
 
@@ -205,7 +206,10 @@ This endpoint creates or updates a named role.
   available for use: '{{token_display_name}}' - The display name of the token used
   to make the request. '{{role_name}}' - The name of the role signing the request.
   '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
-  e.g. "custom-keyid-{{token_display_name}}",
+  e.g. "custom-keyid-{{token_display_name}}"
+
+- `allowed_user_key_lengths` `(map<string|int>: "")` – Specifies a map of ssh key types
+  and their expected sizes which are allowed to be signed by the CA type.
 
 ### Sample Payload
 
@@ -229,9 +233,9 @@ $ curl \
 
 This endpoint queries a named role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/ssh/roles/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/roles/:name`           |
 
 ### Parameters
 
@@ -295,9 +299,9 @@ For a CA role:
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/ssh/roles`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/ssh/roles`                 |
 
 ### Sample Request
 
@@ -334,9 +338,9 @@ $ curl \
 
 This endpoint deletes a named role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/ssh/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/roles/:name`           |
 
 ### Parameters
 
@@ -357,9 +361,9 @@ $ curl \
 
 This endpoint returns the list of configured zero-address roles.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/ssh/config/zeroaddress`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/config/zeroaddress`    |
 
 ### Sample Request
 
@@ -390,9 +394,9 @@ $ curl \
 
 This endpoint configures zero-address roles.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/config/zeroaddress`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/config/zeroaddress`    |
 
 ### Parameters
 
@@ -422,9 +426,9 @@ $ curl \
 
 This endpoint deletes the zero-address roles configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/ssh/config/zeroaddress`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/config/zeroaddress`    |
 
 ### Sample Request
 
@@ -440,9 +444,9 @@ $ curl \
 This endpoint creates credentials for a specific username and IP with the
 parameters defined in the given role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/creds/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/creds/:name`           |
 
 ### Parameters
 
@@ -521,9 +525,9 @@ For an OTP role:
 
 This endpoint lists all of the roles with which the given IP is associated.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/lookup`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/lookup`                |
 
 ### Parameters
 
@@ -572,9 +576,9 @@ An array of roles as a secret structure.
 This endpoint verifies if the given OTP is valid. This is an unauthenticated
 endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/verify`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/verify`                |
 
 ## Parameters
 
@@ -597,6 +601,7 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/ssh/verify
+```
 
 ### Sample Response
 
@@ -620,8 +625,8 @@ This endpoint allows submitting the CA information for the secrets engine via an
 key pair. _If you have already set a certificate and key, they will be
 overridden._
 
-| Method   | Path                         | Produces                   |
-| :------- | :--------------------------- | :------------------------- |
+| Method   | Path                         |
+| :--------------------------- | :------------------------- |
 | `POST`   | `/ssh/config/ca`             | `200/204 application/json` |
 
 ### Parameters
@@ -676,9 +681,9 @@ This will return a `200` response if `generate_signing_key` was true:
 
 This endpoint deletes the CA information for the backend via an SSH key pair.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/ssh/config/ca`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/config/ca`             |
 
 ### Sample Request
 
@@ -694,8 +699,8 @@ $ curl \
 This endpoint returns the configured/generated public key. This is an unauthenticated
 endpoint.
 
-| Method   | Path                         | Produces         |
-| :------- | :--------------------------- | :--------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------- |
 | `GET`    | `/ssh/public_key`            | `200 text/plain` |
 
 ### Sample Request
@@ -714,9 +719,9 @@ $ curl http://127.0.0.1:8200/v1/ssh/public_key
 
 This endpoint reads the configured/generated public key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/ssh/config/ca`             | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/config/ca`             |
 
 ### Sample Request
 
@@ -745,9 +750,9 @@ $ curl \
 This endpoint signs an SSH public key based on the supplied parameters, subject
 to the restrictions contained in the role named in the endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/ssh/sign/:name`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/sign/:name`            |
 
 ### Parameters
 

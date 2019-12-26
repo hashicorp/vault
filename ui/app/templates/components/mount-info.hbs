@@ -1,0 +1,34 @@
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=model
+      path="vault.cluster.access.method"
+      root=root
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{capitalize model.methodType}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    {{#if (eq section "configuration")}}
+      <div class="field is-grouped">
+        <div class="control">
+          {{#link-to
+            "vault.cluster.settings.auth.configure"
+            model.id
+            class="button is-ghost has-icon-right is-compact"
+            data-test-configure-link=true
+          }}
+            Configure
+            <Chevron />
+          {{/link-to}}
+        </div>
+      </div>
+    {{/if}}
+  </p.levelRight>
+</PageHeader>
+{{section-tabs model "authShow"}}
+{{component (concat "auth-method/" section) model=model}}

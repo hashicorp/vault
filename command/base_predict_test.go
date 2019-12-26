@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/posener/complete"
 )
 
@@ -322,15 +323,53 @@ func TestPredict_Plugins(t *testing.T) {
 			"good_path",
 			client,
 			[]string{
+				"ad",
+				"alicloud",
+				"app-id",
+				"approle",
+				"aws",
+				"azure",
+				"cassandra",
 				"cassandra-database-plugin",
+				"centrify",
+				"cert",
+				"cf",
+				"consul",
+				"elasticsearch-database-plugin",
+				"gcp",
+				"gcpkms",
+				"github",
 				"hana-database-plugin",
+				"influxdb-database-plugin",
+				"jwt",
+				"kerberos",
+				"kmip",
+				"kubernetes",
+				"kv",
+				"ldap",
+				"mongodb",
 				"mongodb-database-plugin",
+				"mssql",
 				"mssql-database-plugin",
+				"mysql",
 				"mysql-aurora-database-plugin",
 				"mysql-database-plugin",
 				"mysql-legacy-database-plugin",
 				"mysql-rds-database-plugin",
+				"nomad",
+				"oci",
+				"oidc",
+				"okta",
+				"pcf", // Deprecated.
+				"pki",
+				"postgresql",
 				"postgresql-database-plugin",
+				"rabbitmq",
+				"radius",
+				"ssh",
+				"totp",
+				"transit",
+				"userpass",
 			},
 		},
 	}
@@ -345,6 +384,15 @@ func TestPredict_Plugins(t *testing.T) {
 				p.client = tc.client
 
 				act := p.plugins()
+
+				if !strutil.StrListContains(act, "kmip") {
+					for i, v := range tc.exp {
+						if v == "kmip" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}

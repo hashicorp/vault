@@ -4,31 +4,39 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 func TestCore_Rekey_Lifecycle(t *testing.T) {
-	bc, _ := TestSealDefConfigs()
-	bc.SecretShares = 1
-	bc.SecretThreshold = 1
-	bc.StoredShares = 0
+	bc := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+		StoredShares:    1,
+	}
 	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, nil)
 	if len(masterKeys) != 1 {
 		t.Fatalf("expected %d keys, got %d", bc.SecretShares-bc.StoredShares, len(masterKeys))
 	}
-	testCore_Rekey_Lifecycle_Common(t, c, masterKeys, false)
+	testCore_Rekey_Lifecycle_Common(t, c, false)
 }
 
-func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, masterKeys [][]byte, recovery bool) {
+func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
+	min, _ := c.barrier.KeyLength()
 	// Verify update not allowed
-	if _, err := c.RekeyUpdate(context.Background(), masterKeys[0], "", recovery); err == nil {
-		t.Fatalf("no rekey should be in progress")
+	_, err := c.RekeyUpdate(context.Background(), make([]byte, min), "", recovery)
+	expected := "no barrier rekey in progress"
+	if recovery {
+		expected = "no recovery rekey in progress"
+	}
+	if err == nil || !strings.Contains(err.Error(), expected) {
+		t.Fatalf("no rekey should be in progress, err: %v", err)
 	}
 
 	// Should be no progress
@@ -130,10 +138,10 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 }
 
 func TestCore_Rekey_Update(t *testing.T) {
-	bc, _ := TestSealDefConfigs()
-	bc.SecretShares = 1
-	bc.SecretThreshold = 1
-	bc.StoredShares = 0
+	bc := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
 	c, masterKeys, _, root := TestCoreUnsealedWithConfigs(t, bc, nil)
 	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
 }
@@ -180,13 +188,6 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	}
 	if result == nil {
 		t.Fatal("nil result after update")
-	}
-	if newConf.StoredShares > 0 {
-		if len(result.SecretShares) > 0 {
-			t.Fatal("got secret shares when should have been storing")
-		}
-	} else if len(result.SecretShares) != newConf.SecretShares {
-		t.Fatalf("rekey update error: %#v", result)
 	}
 
 	// Should be no progress
@@ -321,8 +322,21 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	}
 }
 
+func TestCore_Rekey_Legacy(t *testing.T) {
+	bc := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+	c, masterKeys, _, root := TestCoreUnsealedWithConfigSealOpts(t, bc, nil,
+		&TestSealOpts{StoredKeys: StoredKeysNotSupported})
+	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
+}
+
 func TestCore_Rekey_Invalid(t *testing.T) {
-	bc, _ := TestSealDefConfigs()
+	bc := &SealConfig{
+		SecretShares:    5,
+		SecretThreshold: 3,
+	}
 	bc.StoredShares = 0
 	bc.SecretShares = 1
 	bc.SecretThreshold = 1
@@ -364,6 +378,15 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 	ret, err := c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery)
 	if err == nil {
 		t.Fatalf("expected error, ret is %#v\noldkeystr: %s\nnewkeystr: %s", *ret, oldkeystr, newkeystr)
+	}
+
+	// Check progress has been reset
+	_, num, err := c.RekeyProgress(recovery, false)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if num != 0 {
+		t.Fatalf("rekey progress should be 0, got: %d", num)
 	}
 }
 
@@ -485,5 +508,27 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	}
 	if rekeyResult2 == nil {
 		t.Fatalf("rekey failed")
+	}
+}
+
+// verifies that if we are using recovery keys to force a
+// rekey of a stored-shares barrier that verification is not allowed since
+// the keys aren't returned
+func TestSysRekey_Verification_Invalid(t *testing.T) {
+	core, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
+		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+		&TestSealOpts{StoredKeys: StoredKeysSupportedGeneric})
+
+	err := core.BarrierRekeyInit(&SealConfig{
+		VerificationRequired: true,
+		StoredShares:         1,
+	})
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "requiring verification not supported") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -1,0 +1,16 @@
+-
+  title: "Overview"
+  description: "Topics related to developing applications with the Vault API, including client libraries and related tools."
+  link: "/api/overview"
+-
+  title: "Secrets Engines"
+  description: "Functions related to managing secrets and secrets engines."
+  link: "/api/secret"
+-
+  title: "Auth Methods"
+  description: "Functions related to configuring how users and applications authenticate into Vault."
+  link: "/api/auth"
+-
+  title: "System Backends"
+  description: "Functions related to managing Vault's configuration, including replication, storage, and managing Vault's unseal processes."
+  link: "/api/system"

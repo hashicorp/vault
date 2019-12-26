@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 
 	"github.com/hashicorp/vault/builtin/credential/github"
@@ -178,13 +179,18 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 	ldapMountAccessor1 := auths["ldap/"].Accessor
 
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	// Configure LDAP auth
-	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
-		"url":      "ldap://ldap.forumsys.com",
-		"userattr": "uid",
-		"userdn":   "dc=example,dc=com",
-		"groupdn":  "dc=example,dc=com",
-		"binddn":   "cn=read-only-admin,dc=example,dc=com",
+	secret, err := client.Logical().Write("auth/ldap/config", map[string]interface{}{
+		"url":       cfg.Url,
+		"userattr":  cfg.UserAttr,
+		"userdn":    cfg.UserDN,
+		"groupdn":   cfg.GroupDN,
+		"groupattr": cfg.GroupAttr,
+		"binddn":    cfg.BindDN,
+		"bindpass":  cfg.BindPassword,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -199,7 +205,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Tie the group to a user
-	_, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "testgroup1",
 	})
@@ -208,7 +214,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Create an external group
-	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
 	})
 	if err != nil {
@@ -227,8 +233,8 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Login using LDAP
-	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -241,7 +247,9 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	//
 
 	// Extract the entity ID of the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,10 +270,10 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 	ldapMountAccessor2 := auths["ldap2/"].Accessor
 
-	// Create an entity-alias asserting that the user "tesla" from the first
+	// Create an entity-alias asserting that the user "hermes conrad" from the first
 	// and second LDAP mounts as the same.
 	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "tesla",
+		"name":           "hermes conrad",
 		"mount_accessor": ldapMountAccessor2,
 		"canonical_id":   entityID,
 	})
@@ -273,13 +281,18 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Configure second LDAP auth
-	_, err = client.Logical().Write("auth/ldap2/config", map[string]interface{}{
-		"url":      "ldap://ldap.forumsys.com",
-		"userattr": "uid",
-		"userdn":   "dc=example,dc=com",
-		"groupdn":  "dc=example,dc=com",
-		"binddn":   "cn=read-only-admin,dc=example,dc=com",
+	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup2()
+
+	// Configure LDAP auth
+	secret, err = client.Logical().Write("auth/ldap2/config", map[string]interface{}{
+		"url":       cfg2.Url,
+		"userattr":  cfg2.UserAttr,
+		"userdn":    cfg2.UserDN,
+		"groupdn":   cfg2.GroupDN,
+		"groupattr": cfg2.GroupAttr,
+		"binddn":    cfg2.BindDN,
+		"bindpass":  cfg2.BindPassword,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -294,7 +307,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Create a user in second LDAP auth
-	_, err = client.Logical().Write("auth/ldap2/users/tesla", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap2/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "testgroup2",
 	})
@@ -322,8 +335,8 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Login using second LDAP
-	_, err = client.Logical().Write("auth/ldap2/login/tesla", map[string]interface{}{
-		"password": "password",
+	_, err = client.Logical().Write("auth/ldap2/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)

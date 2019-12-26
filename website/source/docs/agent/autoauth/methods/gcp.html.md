@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth GCP Method"
+sidebar_title: "GCP"
 sidebar_current: "docs-agent-autoauth-methods-gcp"
 description: |-
   GCP Method for Vault Agent Auto-Auth

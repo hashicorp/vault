@@ -96,29 +96,33 @@ const (
 type Connection struct {
 	// Parameters - fill these in before calling Authenticate
 	// They are all optional except UserName, ApiKey and AuthUrl
-	Domain         string            // User's domain name
-	DomainId       string            // User's domain Id
-	UserName       string            // UserName for api
-	UserId         string            // User Id
-	ApiKey         string            // Key for api access
-	AuthUrl        string            // Auth URL
-	Retries        int               // Retries on error (default is 3)
-	UserAgent      string            // Http User agent (default goswift/1.0)
-	ConnectTimeout time.Duration     // Connect channel timeout (default 10s)
-	Timeout        time.Duration     // Data channel timeout (default 60s)
-	Region         string            // Region to use eg "LON", "ORD" - default is use first region (v2,v3 auth only)
-	AuthVersion    int               // Set to 1, 2 or 3 or leave at 0 for autodetect
-	Internal       bool              // Set this to true to use the the internal / service network
-	Tenant         string            // Name of the tenant (v2,v3 auth only)
-	TenantId       string            // Id of the tenant (v2,v3 auth only)
-	EndpointType   EndpointType      // Endpoint type (v2,v3 auth only) (default is public URL unless Internal is set)
-	TenantDomain   string            // Name of the tenant's domain (v3 auth only), only needed if it differs from the user domain
-	TenantDomainId string            // Id of the tenant's domain (v3 auth only), only needed if it differs the from user domain
-	TrustId        string            // Id of the trust (v3 auth only)
-	Transport      http.RoundTripper `json:"-" xml:"-"` // Optional specialised http.Transport (eg. for Google Appengine)
+	Domain                      string            // User's domain name
+	DomainId                    string            // User's domain Id
+	UserName                    string            // UserName for api
+	UserId                      string            // User Id
+	ApiKey                      string            // Key for api access
+	ApplicationCredentialId     string            // Application Credential ID
+	ApplicationCredentialName   string            // Application Credential Name
+	ApplicationCredentialSecret string            // Application Credential Secret
+	AuthUrl                     string            // Auth URL
+	Retries                     int               // Retries on error (default is 3)
+	UserAgent                   string            // Http User agent (default goswift/1.0)
+	ConnectTimeout              time.Duration     // Connect channel timeout (default 10s)
+	Timeout                     time.Duration     // Data channel timeout (default 60s)
+	Region                      string            // Region to use eg "LON", "ORD" - default is use first region (v2,v3 auth only)
+	AuthVersion                 int               // Set to 1, 2 or 3 or leave at 0 for autodetect
+	Internal                    bool              // Set this to true to use the the internal / service network
+	Tenant                      string            // Name of the tenant (v2,v3 auth only)
+	TenantId                    string            // Id of the tenant (v2,v3 auth only)
+	EndpointType                EndpointType      // Endpoint type (v2,v3 auth only) (default is public URL unless Internal is set)
+	TenantDomain                string            // Name of the tenant's domain (v3 auth only), only needed if it differs from the user domain
+	TenantDomainId              string            // Id of the tenant's domain (v3 auth only), only needed if it differs the from user domain
+	TrustId                     string            // Id of the trust (v3 auth only)
+	Transport                   http.RoundTripper `json:"-" xml:"-"` // Optional specialised http.Transport (eg. for Google Appengine)
 	// These are filled in after Authenticate is called as are the defaults for above
 	StorageUrl string
 	AuthToken  string
+	Expires    time.Time // time the token expires, may be Zero if unknown
 	client     *http.Client
 	Auth       Authenticator `json:"-" xml:"-"` // the current authenticator
 	authLock   sync.Mutex    // lock when R/W StorageUrl, AuthToken, Auth
@@ -194,6 +198,9 @@ func setFromEnv(param interface{}, name string) (err error) {
 //     OS_USERNAME - UserName for api
 //     OS_USER_ID - User Id
 //     OS_PASSWORD - Key for api access
+//     OS_APPLICATION_CREDENTIAL_ID - Application Credential ID
+//     OS_APPLICATION_CREDENTIAL_NAME - Application Credential Name
+//     OS_APPLICATION_CREDENTIAL_SECRET - Application Credential Secret
 //     OS_USER_DOMAIN_NAME - User's domain name
 //     OS_USER_DOMAIN_ID - User's domain Id
 //     OS_PROJECT_NAME - Name of the project
@@ -227,6 +234,9 @@ func (c *Connection) ApplyEnvironment() (err error) {
 		{&c.UserName, "OS_USERNAME"},
 		{&c.UserId, "OS_USER_ID"},
 		{&c.ApiKey, "OS_PASSWORD"},
+		{&c.ApplicationCredentialId, "OS_APPLICATION_CREDENTIAL_ID"},
+		{&c.ApplicationCredentialName, "OS_APPLICATION_CREDENTIAL_NAME"},
+		{&c.ApplicationCredentialSecret, "OS_APPLICATION_CREDENTIAL_SECRET"},
 		{&c.AuthUrl, "OS_AUTH_URL"},
 		{&c.Retries, "GOSWIFT_RETRIES"},
 		{&c.UserAgent, "GOSWIFT_USER_AGENT"},
@@ -298,6 +308,7 @@ var (
 	Forbidden           = newError(403, "Operation forbidden")
 	TooLargeObject      = newError(413, "Too Large Object")
 	RateLimit           = newError(498, "Rate Limit")
+	TooManyRequests     = newError(429, "TooManyRequests")
 
 	// Mappings for authentication errors
 	authErrorMap = errorMap{
@@ -323,6 +334,7 @@ var (
 		404: ObjectNotFound,
 		413: TooLargeObject,
 		422: ObjectCorrupted,
+		429: TooManyRequests,
 		498: RateLimit,
 	}
 )
@@ -423,12 +435,15 @@ func (c *Connection) setDefaults() {
 		c.Timeout = 60 * time.Second
 	}
 	if c.Transport == nil {
-		c.Transport = &http.Transport{
+		t := &http.Transport{
 			//		TLSClientConfig:    &tls.Config{RootCAs: pool},
 			//		DisableCompression: true,
-			Proxy:               http.ProxyFromEnvironment,
-			MaxIdleConnsPerHost: 2048,
+			Proxy: http.ProxyFromEnvironment,
+			// Half of linux's default open files limit (1024).
+			MaxIdleConnsPerHost: 512,
 		}
+		SetExpectContinueTimeout(t, 5*time.Second)
+		c.Transport = t
 	}
 	if c.client == nil {
 		c.client = &http.Client{
@@ -507,6 +522,12 @@ again:
 		c.StorageUrl = c.Auth.StorageUrl(c.Internal)
 	}
 	c.AuthToken = c.Auth.Token()
+	if do, ok := c.Auth.(Expireser); ok {
+		c.Expires = do.Expires()
+	} else {
+		c.Expires = time.Time{}
+	}
+
 	if !c.authenticated() {
 		err = newError(0, "Response didn't have storage url and auth token")
 		return
@@ -568,7 +589,14 @@ func (c *Connection) Authenticated() bool {
 //
 // Call with authLock held
 func (c *Connection) authenticated() bool {
-	return c.StorageUrl != "" && c.AuthToken != ""
+	if c.StorageUrl == "" || c.AuthToken == "" {
+		return false
+	}
+	if c.Expires.IsZero() {
+		return true
+	}
+	timeUntilExpiry := c.Expires.Sub(time.Now())
+	return timeUntilExpiry >= 60*time.Second
 }
 
 // SwiftInfo contains the JSON object returned by Swift when the /info
@@ -708,11 +736,11 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 			for k, v := range p.Headers {
 				// Set ContentLength in req if the user passed it in in the headers
 				if k == "Content-Length" {
-					contentLength, err := strconv.ParseInt(v, 10, 64)
+					req.ContentLength, err = strconv.ParseInt(v, 10, 64)
 					if err != nil {
-						return nil, nil, fmt.Errorf("Invalid %q header %q: %v", k, v, err)
+						err = fmt.Errorf("Invalid %q header %q: %v", k, v, err)
+						return
 					}
-					req.ContentLength = contentLength
 				} else {
 					req.Header.Add(k, v)
 				}
@@ -720,13 +748,17 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 		}
 		req.Header.Add("User-Agent", c.UserAgent)
 		req.Header.Add("X-Auth-Token", authToken)
+
+		_, hasCL := p.Headers["Content-Length"]
+		AddExpectAndTransferEncoding(req, hasCL)
+
 		resp, err = c.doTimeoutRequest(timer, req)
 		if err != nil {
 			if (p.Operation == "HEAD" || p.Operation == "GET") && retries > 0 {
 				retries--
 				continue
 			}
-			return nil, nil, err
+			return
 		}
 		// Check to see if token has expired
 		if resp.StatusCode == 401 && retries > 0 {
@@ -738,15 +770,14 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 		}
 	}
 
-	if err = c.parseHeaders(resp, p.ErrorMap); err != nil {
-		return nil, nil, err
-	}
 	headers = readHeaders(resp)
+	if err = c.parseHeaders(resp, p.ErrorMap); err != nil {
+		return
+	}
 	if p.NoResponse {
-		var err error
 		drainAndClose(resp.Body, &err)
 		if err != nil {
-			return nil, nil, err
+			return
 		}
 	} else {
 		// Cancel the request on timeout

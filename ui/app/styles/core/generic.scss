@@ -40,7 +40,7 @@ input::-webkit-inner-spin-button {
   line-height: normal;
   margin: 0;
   padding: 0;
-  text-decoration: underline;
+  font-weight: $font-weight-semibold;
   -webkit-user-select: text; /* Chrome all / Safari all */
   -moz-user-select: text; /* Firefox all */
   -ms-user-select: text; /* IE 10+ */

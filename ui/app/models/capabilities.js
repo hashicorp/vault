@@ -33,7 +33,7 @@ const computedCapability = function(capability) {
       return false;
     }
     // if the path is sudo protected, they'll need sudo + the appropriate capability
-    if (SUDO_PATHS.includes(path) || SUDO_PATH_PREFIXES.find(item => item.startsWith(path))) {
+    if (SUDO_PATHS.includes(path) || SUDO_PATH_PREFIXES.find(item => path.startsWith(item))) {
       return capabilities.includes('sudo') && capabilities.includes(capability);
     }
     return capabilities.includes(capability);

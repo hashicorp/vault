@@ -12,9 +12,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -22,15 +22,19 @@ import (
 // configuration.
 func pathData(b *versionedKVBackend) *framework.Path {
 	return &framework.Path{
-		Pattern: "data/.*",
+		Pattern: "data/" + framework.MatchAllRegex("path"),
 		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: "Location of the secret.",
+			},
 			"version": {
 				Type:        framework.TypeInt,
 				Description: "If provided during a read, the value at the version number will be returned",
 			},
 			"options": {
 				Type: framework.TypeMap,
-				Description: `Options for writing a KV entry. 
+				Description: `Options for writing a KV entry.
 
 Set the "cas" value to use a Check-And-Set operation. If not set the write will
 be allowed. If set to 0 a write will only be allowed if the key doesn’t exist.
@@ -58,10 +62,17 @@ version matches the version specified in the cas parameter.`,
 
 func (b *versionedKVBackend) dataExistenceCheck() framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-		key := strings.TrimPrefix(req.Path, "data/")
+		key := data.Get("path").(string)
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
+			// If we are returning a readonly error it means we are attempting
+			// to write the policy for the first time. This means no data exists
+			// yet and we can safely return false here.
+			if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return false, nil
+			}
+
 			return false, err
 		}
 
@@ -72,7 +83,7 @@ func (b *versionedKVBackend) dataExistenceCheck() framework.ExistenceFunc {
 // pathDataRead handles read commands to a kv entry
 func (b *versionedKVBackend) pathDataRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "data/")
+		key := data.Get("path").(string)
 
 		lock := locksutil.LockForKey(b.locks, key)
 		lock.RLock()
@@ -161,7 +172,10 @@ func (b *versionedKVBackend) pathDataRead() framework.OperationFunc {
 // pathDataWrite handles create and update commands to a kv entry
 func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "data/")
+		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
 
 		config, err := b.config(ctx, req.Storage)
 		if err != nil {
@@ -233,6 +247,21 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			CreatedTime: ptypes.TimestampNow(),
 		}
 
+		ctime, err := ptypes.Timestamp(version.CreatedTime)
+		if err != nil {
+			return logical.ErrorResponse("unexpected error converting %T(%v) to time.Time: %v", version.CreatedTime, version.CreatedTime, err), logical.ErrInvalidRequest
+		}
+
+		if !config.IsDeleteVersionAfterDisabled() {
+			if dtime, ok := deletionTime(ctime, deleteVersionAfter(config), deleteVersionAfter(meta)); ok {
+				dt, err := ptypes.TimestampProto(dtime)
+				if err != nil {
+					return logical.ErrorResponse("error setting deletion_time: converting %v to protobuf: %v", dtime, err), logical.ErrInvalidRequest
+				}
+				version.DeletionTime = dt
+			}
+		}
+
 		buf, err := proto.Marshal(version)
 		if err != nil {
 			return nil, err
@@ -246,7 +275,7 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			return nil, err
 		}
 
-		vm, versionToDelete := meta.AddVersion(version.CreatedTime, nil, config.MaxVersions)
+		vm, versionToDelete := meta.AddVersion(version.CreatedTime, version.DeletionTime, config.MaxVersions)
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		if err != nil {
 			return nil, err
@@ -313,7 +342,7 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathDataDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "data/")
+		key := data.Get("path").(string)
 
 		lock := locksutil.LockForKey(b.locks, key)
 		lock.Lock()

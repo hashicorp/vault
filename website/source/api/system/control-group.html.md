@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/control-group - HTTP API"
-sidebar_current: "docs-http-system-control-group"
+sidebar_title: "<code>/sys/control-group</code>"
+sidebar_current: "api-http-system-control-group"
 description: |-
   The '/sys/control-group' endpoint handles the Control Group workflow.
 ---
@@ -12,9 +13,9 @@ description: |-
 
 This endpoint authorizes a control group request.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/control-group/authorize`   | `200 (application/json)`     |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `POST`   | `/sys/control-group/authorize`   | 
 
 ### Parameters
 
@@ -52,9 +53,9 @@ $ curl \
 
 This endpoint checks the status of a control group request.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/control-group/request`   | `200 (application/json)`     |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `POST`   | `/sys/control-group/request`   | 
 
 ### Parameters
 

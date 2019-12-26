@@ -18,9 +18,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -507,9 +507,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with a high safety buffer, nothing should happen
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "3h",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
+				"safety_buffer":      "3h",
+				"tidy_cert_store":    true,
+				"tidy_revoked_certs": true,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -528,9 +528,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with both values set false, nothing should happen
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "1s",
-				"tidy_cert_store":      false,
-				"tidy_revocation_list": false,
+				"safety_buffer":      "1s",
+				"tidy_cert_store":    false,
+				"tidy_revoked_certs": false,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -549,9 +549,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with a short safety buffer and both set to true, both should be cleared
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "1s",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
+				"safety_buffer":      "1s",
+				"tidy_cert_store":    true,
+				"tidy_revoked_certs": true,
 			})
 			if err != nil {
 				t.Fatal(err)

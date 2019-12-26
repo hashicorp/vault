@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Consul - Storage Backends - Configuration"
+sidebar_title: "Consul"
 sidebar_current: "docs-configuration-storage-consul"
 description: |-
   The Consul storage backend is used to persist Vault's data in Consul's
@@ -108,7 +109,7 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
   lesser value.
 
 - `lock_wait_time` `(string: "15s")` - Specifies the wait time before a lock
-  lock acquisition is made. This affects the minimum time it takes to cancel a
+  acquisition is made. This affects the minimum time it takes to cancel a
   lock acquisition.
 
 The following settings apply when communicating with Consul via an encrypted
@@ -134,8 +135,8 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
   use. Accepted values are `"tls10"`, `"tls11"` or `"tls12"`.
 
-- `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
-  should be disabled. It is highly discouraged that you disable this option.
+- `tls_skip_verify` `(string: "false")` – Disable verification of TLS certificates.
+  Using this option is highly discouraged.
 
 ## ACLs
 
@@ -167,6 +168,40 @@ the following will work for most use-cases, assuming that your service name is
 
   },
   "session": {
+    "": {
+      "policy": "write"
+    }
+  }
+}
+```
+
+For Consul 1.4+, the following example takes into account the changed ACL
+language:
+
+```json
+{
+  "key_prefix": {
+    "vault/": {
+      "policy": "write"
+    }
+  },
+  "node_prefix": {
+    "": {
+      "policy": "write"
+    }
+  },
+  "service": {
+    "vault": {
+      "policy": "write"
+    }
+  },
+  "agent_prefix": {
+    "": {
+      "policy": "write"
+    }
+
+  },
+  "session_prefix": {
     "": {
       "policy": "write"
     }

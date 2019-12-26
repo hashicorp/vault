@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth Methods"
+sidebar_title: "Methods"
 sidebar_current: "docs-agent-autoauth-methods"
 description: |-
   Methods for Vault Agent Auto-Auth

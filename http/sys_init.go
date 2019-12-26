@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -41,7 +39,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	// Parse the request
 	var req InitRequest
-	if err := parseRequest(r, w, &req); err != nil {
+	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -60,42 +58,6 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		PGPKeys:         req.RecoveryPGPKeys,
 	}
 
-	// N.B. Although the core is capable of handling situations where some keys
-	// are stored and some aren't, in practice, replication + HSMs makes this
-	// extremely hard to reason about, to the point that it will probably never
-	// be supported. The reason is that each HSM needs to encode the master key
-	// separately, which means the shares must be generated independently,
-	// which means both that the shares will be different *AND* there would
-	// need to be a way to actually allow fetching of the generated keys by
-	// operators.
-	if core.SealAccess().StoredKeysSupported() {
-		if len(barrierConfig.PGPKeys) > 0 {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("PGP keys not supported when storing shares"))
-			return
-		}
-		barrierConfig.SecretShares = 1
-		barrierConfig.SecretThreshold = 1
-		barrierConfig.StoredShares = 1
-		core.Logger().Warn("stored keys supported on init, forcing shares/threshold to 1")
-	} else {
-		if barrierConfig.StoredShares > 0 {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported by the current seal type"))
-			return
-		}
-	}
-
-	if len(barrierConfig.PGPKeys) > 0 && len(barrierConfig.PGPKeys) != barrierConfig.SecretShares {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys"))
-		return
-	}
-
-	if core.SealAccess().RecoveryKeySupported() {
-		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for recovery"))
-			return
-		}
-	}
-
 	initParams := &vault.InitParams{
 		BarrierConfig:   barrierConfig,
 		RecoveryConfig:  recoveryConfig,
@@ -104,7 +66,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
-		if !errwrap.ContainsType(initErr, new(vault.NonFatalError)) {
+		if vault.IsFatalError(initErr) {
 			respondError(w, http.StatusBadRequest, initErr)
 			return
 		} else {
@@ -136,7 +98,10 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	core.UnsealWithStoredKeys(ctx)
+	if err := core.UnsealWithStoredKeys(ctx); err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	respondOk(w, resp)
 }

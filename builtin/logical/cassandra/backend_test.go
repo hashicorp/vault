@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
@@ -45,10 +46,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 	}
 
 	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
@@ -78,7 +76,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()
@@ -92,7 +90,7 @@ func TestBackend_basic(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, hostname),
 			testAccStepRole(t),
@@ -102,7 +100,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()
@@ -116,7 +114,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, hostname),
 			testAccStepRole(t),

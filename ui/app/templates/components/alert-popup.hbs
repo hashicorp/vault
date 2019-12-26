@@ -1,0 +1,25 @@
+<div class="message {{type.class}}">
+  <div class="columns is-mobile is-variable is-1">
+    <div class="column is-narrow message-icon">
+      <Icon
+        aria-hidden="true"
+        @size="l"
+        @glyph="{{type.glyph}}"
+      />
+    </div>
+    <div class="column">
+      <button type="button" class="close-button" {{action close}}>
+        <Icon
+          @glyph="cancel-plain"
+          @aria-label="Close"
+        />
+      </button>
+      <div class="message-title">
+        {{type.text}}
+      </div>
+      {{#if message}}
+        <p class="message-body {{if @isPreformatted 'pre'}}" data-test-flash-message-body="true">{{message}}</p>
+      {{/if}}
+    </div>
+  </div>
+</div>

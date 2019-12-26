@@ -1,5 +1,14 @@
 <SplashPage as |Page|>
-  {{#if keyData}}
+  {{#if (and this.model.usingRaft (not this.prefersInit))}}
+    <Page.header>
+      <h1 class="title is-4">
+        Raft Storage
+      </h1>
+    </Page.header>
+    <Page.content>
+      <RaftJoin @onDismiss={{action (mut prefersInit) true}} />
+    </Page.content>
+  {{else if keyData}}
     <Page.header>
       {{#let (or keyData.recovery_keys keyData.keys) as |keyArray|}}
         <h1 class="title is-4">
@@ -31,32 +40,35 @@
           </p>
         </div>
         <div
-          class="message is-list is-highlight has-copy-button"
-          tabindex="-1"
+          class="message is-list is-highlight"
         >
-          <HoverCopyButton
-            @alwaysShow=true
-            @copyValue={{keyData.root_token}}
-          />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
-              Initial Root Token
+              Initial root token
             </h4>
-            <code class="is-word-break">{{keyData.root_token}}</code>
+            <MaskedInput
+              @class="is-highlight has-label"
+              @displayOnly={{true}}
+              @value={{keyData.root_token}}
+              @allowCopy={{true}}
+            />
           </div>
         </div>
         {{#each (or keyData.recovery_keys_base64 keyData.recovery_keys keyData.keys_base64 keyData.keys) as |key index|}}
           <div
             data-test-key-box
-            class="message is-list has-copy-button"
-            tabindex="-1"
+            class="message is-list"
           >
-            <HoverCopyButton @copyValue={{key}} />
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
                 Key {{add index 1}}
               </h4>
-              <code class="is-word-break">{{key}}</code>
+              <MaskedInput
+                @class="has-label"
+                @displayOnly={{true}}
+                @value={{key}}
+                @allowCopy={{true}}
+              />
             </div>
           </div>
         {{/each}}
@@ -94,7 +106,7 @@
             @class="button is-ghost"
             @stringify={{true}}
           >
-            <ICon @glyph="download" @size=16 /> Download Keys
+            <Icon @glyph="download" /> Download keys
           </DownloadButton>
         </div>
       </div>
@@ -126,18 +138,19 @@
               for="key-shares"
               class="is-label"
             >
-              Key Shares
+              Key shares
             </label>
             <div class="control">
-              {{input 
-                data-test-key-shares="true" 
-                class="input" 
-                autocomplete="off" 
-                name="key-shares" 
+              {{input
+                data-test-key-shares="true"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
+                name="key-shares"
                 type="number"
-                step="1" 
-                min="1" 
-                pattern="[0-9]*" 
+                step="1"
+                min="1"
+                pattern="[0-9]*"
                 value=secret_shares
               }}
             </div>
@@ -150,13 +163,15 @@
               for="key-threshold"
               class="is-label"
             >
-              Key Threshold
+              Key threshold
             </label>
             <div class="control">
-              {{input 
-                data-test-key-threshold="true" 
-                class="input" autocomplete="off" 
-                name="key-threshold" 
+              {{input
+                data-test-key-threshold="true"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
+                name="key-threshold"
                 type="number"
                 step="1"
                 min="1"
@@ -169,8 +184,8 @@
             </p>
           </div>
           <ToggleButton
-            @openLabel="Encrypt Output with PGP"
-            @closedLabel="Encrypt Output with PGP"
+            @openLabel="Encrypt output with PGP"
+            @closedLabel="Encrypt output with PGP"
             @toggleTarget={{this}}
             @toggleAttr="use_pgp"
             @class="is-block"
@@ -187,8 +202,8 @@
             </div>
           {{/if}}
           <ToggleButton
-            @openLabel="Encrypt Root Token with PGP"
-            @closedLabel="Encrypt Root Token with PGP"
+            @openLabel="Encrypt root token with PGP"
+            @closedLabel="Encrypt root token with PGP"
             @toggleTarget={{this}}
             @toggleAttr="use_pgp_for_root"
             @class="is-block"
@@ -215,7 +230,7 @@
             Initialize
           </button>
           <div class="init-illustration">
-            {{partial "svg/initialize"}}
+            {{svg-jar "initialize"}}
           </div>
         </div>
       </form>

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "HSM Integration - Vault Enterprise"
+sidebar_title: "HSM Support"
 sidebar_current: "docs-vault-enterprise-hsm"
 description: |-
   Vault Enterprise has HSM support, allowing for external master key storage and automatic unsealing.
@@ -19,6 +20,8 @@ to provide three pieces of special functionality:
    allowing for automatic unsealing
  * [Seal Wrapping](/docs/enterprise/sealwrap/index.html) to provide FIPS
    KeyStorage-conforming functionality for Critical Security Parameters
+ * [Entropy Augmentation](/docs/enterprise/entropy-augmentation/index.html) to
+   allow Vault to sample entropy from an external cryptographic module.
 
 HSM support is available for devices that support PKCS#11 version 2.20+
 interfaces and provide integration libraries, and is currently available for

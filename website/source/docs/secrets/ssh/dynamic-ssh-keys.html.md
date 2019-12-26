@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Dynamic SSH Keys - SSH - Secrets Engines"
+sidebar_title: "Dynamic Key"
 sidebar_current: "docs-secrets-ssh-dynamic-ssh-keys"
 description: |-
   When using this type, the administrator registers a secret key with

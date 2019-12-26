@@ -18,7 +18,7 @@ package ram
 // PublicKey is a nested struct in ram response
 type PublicKey struct {
 	CreateDate    string `json:"CreateDate" xml:"CreateDate"`
-	PublicKeySpec string `json:"PublicKeySpec" xml:"PublicKeySpec"`
 	PublicKeyId   string `json:"PublicKeyId" xml:"PublicKeyId"`
 	Status        string `json:"Status" xml:"Status"`
+	PublicKeySpec string `json:"PublicKeySpec" xml:"PublicKeySpec"`
 }

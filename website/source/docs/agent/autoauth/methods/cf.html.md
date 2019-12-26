@@ -1,0 +1,22 @@
+---
+layout: "docs"
+page_title: "Vault Agent Auto-Auth CF Method"
+sidebar_title: "CF"
+sidebar_current: "docs-agent-autoauth-methods-cf"
+description: |-
+  CF Method for Vault Agent Auto-Auth
+---
+
+# Vault Agent Auto-Auth CF Method
+
+The `cf` method performs authentication against the [CF Auth 
+method] (https://www.vaultproject.io/docs/auth/cf.html).
+
+## Credentials
+
+The Vault agent will use the `CF_INSTANCE_CERT` and `CF_INSTANCE_KEY` env variables to
+construct a valid login call for CF.
+
+## Configuration
+
+- `role` `(string: required)` - The role to authenticate against on Vault.

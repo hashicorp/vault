@@ -8,22 +8,23 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
 func connectToFoundationDB(clusterFile string) (*fdb.Database, error) {
-	if err := fdb.APIVersion(510); err != nil {
+	if err := fdb.APIVersion(520); err != nil {
 		return nil, errwrap.Wrapf("failed to set FDB API version: {{err}}", err)
 	}
 
@@ -110,39 +111,26 @@ func TestFoundationDBBackend(t *testing.T) {
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
-	b, err := NewFDBBackend(map[string]string{
+	config := map[string]string{
 		"path":         topDir,
-		"api_version":  "510",
+		"api_version":  "520",
 		"cluster_file": clusterFile,
-	}, logger)
+	}
 
+	b, err := NewFDBBackend(config, logger)
+	if err != nil {
+		t.Fatalf("foundationdb: failed to create new backend: %s", err)
+	}
+
+	b2, err := NewFDBBackend(config, logger)
 	if err != nil {
 		t.Fatalf("foundationdb: failed to create new backend: %s", err)
 	}
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
-
 	physical.ExerciseTransactionalBackend(t, b)
-
-	ha1, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("foundationdb does not implement HABackend")
-	}
-
-	b2, err := NewFDBBackend(map[string]string{
-		"path":         topDir,
-		"api_version":  "510",
-		"cluster_file": clusterFile,
-	}, logger)
-
-	if err != nil {
-		t.Fatalf("foundationdb: failed to create new backend for HA test: %s", err)
-	}
-
-	ha2 := b2.(physical.HABackend)
-
-	physical.ExerciseHABackend(t, ha1, ha2)
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }
 
 func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), string) {
@@ -164,8 +152,18 @@ func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), stri
 	clusterFile := tmpFile.Name()
 
 	cleanup := func() {
-		pool.Purge(resource)
+		var err error
+		for i := 0; i < 10; i++ {
+			err = pool.Purge(resource)
+			if err == nil {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
 		os.Remove(clusterFile)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
 	}
 
 	setup := func() error {

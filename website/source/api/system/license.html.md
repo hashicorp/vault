@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/license - HTTP API"
-sidebar_current: "docs-http-system-license"
+sidebar_title: "<code>/sys/license</code>"
+sidebar_current: "api-http-system-license"
 description: |-
   The `/sys/license` endpoint is used to view and update the license used in 
   Vault.
@@ -18,9 +19,9 @@ Vault.
 
 This endpoint returns information about the currently installed license.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/license`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/license`                |
 
 ### Sample Request
 
@@ -55,9 +56,9 @@ $ curl \
 
 This endpoint is used to install a license into Vault.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/license`                | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/license`                |
 
 ### Parameters
 

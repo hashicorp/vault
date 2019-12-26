@@ -1,0 +1,13 @@
+executor: node
+resource_class: medium+
+steps:
+  - checkout
+  - restore_yarn_cache
+  - attach_workspace:
+      at: .
+  - run:
+      name: Run Browserstack Tests
+      command: |
+        # Add ./bin to the PATH so vault binary can be found.
+        export PATH="${PWD}"/bin:${PATH}
+        make test-ui-browserstack

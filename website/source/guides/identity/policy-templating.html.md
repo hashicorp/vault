@@ -129,7 +129,7 @@ templating delimiters: `{{<parameter>}}`.
 | `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
-| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                         |
+| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                         |
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                         |
 
 
@@ -141,11 +141,15 @@ group, the **group ID** or **group name** must be provided (e.g.
 Example:
 
 This policy allows users to change their own password given that the username
-and password are defined in the `userpass` auth method.
+and password are defined in the `userpass` auth method. The mount accessor
+value (`auth_userpass_6671d643` in this example) can be read from the `sys/auth` endpoint.
 
 ```hcl
-path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}/password" {
+path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}" {
   capabilities = [ "update" ]
+  allowed_parameters = {
+    "password" = []
+  }
 }
 ```
 
@@ -261,7 +265,7 @@ then login.
 1. Toggle **Upload file**, and click **Choose a file** to select the
    `user-tmpl.hcl` file you wrote at [Step 1](#step1).
 
-    ![Create Policy](/assets/images/vault-ctrl-grp-2.png)
+    ![Create Policy](/img/vault-ctrl-grp-2.png)
 
     This loads the policy and sets the **Name** to `user-tmpl`.
 
@@ -276,7 +280,7 @@ Let's create an entity, **`bob_smith`** with a user **`bob`** as its entity
 alias. Also, create a group, **`education`** and add the **`bob_smith`** entity
 as its group member.
 
-![Entity & Group](/assets/images/vault-acl-templating.png)
+![Entity & Group](/img/vault-acl-templating.png)
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups. Refer to the [Identity - Entities and
@@ -332,7 +336,7 @@ following command to create a new user, **`bob`**.
     ```plaintext
     $ vault write auth/userpass/users/bob password="training"
     ```
-    ![Create Policy](/assets/images/vault-ctrl-grp-3.png)
+    ![Create Policy](/img/vault-ctrl-grp-3.png)
 
 1. Click the icon (**`>_`**) again to hide the shell.
 
@@ -355,7 +359,7 @@ following command to create a new user, **`bob`**.
 **Policies** fields. Under **Metadata**, enter **`region`** as a key and
 **`us-west`** as the key value. Enter the `bob_smith` entity ID in the **Member
 Entity IDs** field.
-    ![Group](/assets/images/vault-acl-templating-2.png)
+    ![Group](/img/vault-acl-templating-2.png)
 
 1. Click **Create**.
 
@@ -570,7 +574,7 @@ version.
 1. Click **Enable Engine**.
 
 1. Now, sign out as the current user so that you can log in as `bob`. ![Sign
-off](/assets/images/vault-acl-templating-3.png)
+off](/img/vault-acl-templating-3.png)
 
 1. In the Vault sign in page, select **Username** and then enter **`bob`** in
 the **Username** field, and **`training`** in the **Password** field.

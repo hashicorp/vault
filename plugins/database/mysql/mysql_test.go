@@ -9,11 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	stdmysql "github.com/go-sql-driver/mysql"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/ory/dockertest"
 )
+
+var _ dbplugin.Database = (*MySQL)(nil)
 
 func prepareMySQLTestContainer(t *testing.T, legacy bool) (cleanup func(), retURL string) {
 	if os.Getenv("MYSQL_URL") != "" {
@@ -36,10 +41,7 @@ func prepareMySQLTestContainer(t *testing.T, legacy bool) (cleanup func(), retUR
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
@@ -77,7 +79,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -227,7 +229,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)
@@ -308,6 +310,64 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 }
 
+func TestMySQL_SetCredentials(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t, false)
+	defer cleanup()
+
+	// create the database user and verify we can access
+	dbUser := "vaultstatictest"
+	createTestMySQLUser(t, connURL, dbUser, "password", testRoleStaticCreate)
+	if err := testCredsExist(t, connURL, dbUser, "password"); err != nil {
+		t.Fatalf("Could not connect with credentials: %s", err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	newPassword, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userConfig := dbplugin.StaticUserConfig{
+		Username: dbUser,
+		Password: newPassword,
+	}
+
+	statements := dbplugin.Statements{
+		Rotation: []string{testRoleStaticRotate},
+	}
+
+	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// verify new password works
+	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// call SetCredentials again, password will change
+	newPassword, _ = db.GenerateCredentials(context.Background())
+	userConfig.Password = newPassword
+	_, _, err = db.SetCredentials(context.Background(), statements, userConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "root:secret", fmt.Sprintf("%s:%s", username, password), 1)
@@ -317,6 +377,56 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	}
 	defer db.Close()
 	return db.Ping()
+}
+
+func createTestMySQLUser(t *testing.T, connURL, username, password, query string) {
+	t.Helper()
+	db, err := sql.Open("mysql", connURL)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// copied from mysql.go
+	for _, query := range strutil.ParseArbitraryStringSlice(query, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+		query = dbutil.QueryHelper(query, map[string]string{
+			"name":     username,
+			"password": password,
+		})
+
+		stmt, err := tx.PrepareContext(ctx, query)
+		if err != nil {
+			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+				_, err = tx.ExecContext(ctx, query)
+				if err != nil {
+					t.Fatal(err)
+				}
+				stmt.Close()
+				continue
+			}
+
+			t.Fatal(err)
+		}
+		if _, err := stmt.ExecContext(ctx); err != nil {
+			stmt.Close()
+			t.Fatal(err)
+		}
+		stmt.Close()
+	}
 }
 
 const testMySQLRolePreparedStmt = `
@@ -333,4 +443,13 @@ GRANT SELECT ON *.* TO '{{name}}'@'%';
 const testMySQLRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 DROP USER '{{name}}'@'%';
+`
+
+const testRoleStaticCreate = `
+CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+GRANT SELECT ON *.* TO '{{name}}'@'%';
+`
+
+const testRoleStaticRotate = `
+ALTER USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 `

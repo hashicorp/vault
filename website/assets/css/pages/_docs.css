@@ -1,0 +1,37 @@
+#sidebar {
+  & .g-docs-sidebar {
+    margin-right: 25px;
+  }
+}
+
+#intro {
+  padding-bottom: 0px;
+
+  & .g-section-header {
+    margin-bottom: 48px;
+
+    & h3 {
+      margin: 1em auto 0 auto;
+      width: 85%;
+    }
+  }
+}
+
+#categories {
+  & .g-linked-text-summary-list {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+#sitemap {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+#get-started {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}

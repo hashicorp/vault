@@ -4,7 +4,7 @@
       <li>
         {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
           <span class="sep">&#x0002f;</span>
-          {{uppercase policyType}} Policies
+          {{uppercase policyType}} policies
         {{/link-to}}
       </li>
     </nav>
@@ -20,34 +20,34 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarDownloadButton
+      @actionText="Download policy"
+      @extension={{if (eq policyType "acl") model.format "sentinel"}}
+      @filename={{model.name}}
+      @data={{model.policy}}
+    />
+    {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
+      <ToolbarLink
+        @params={{array 'vault.cluster.policy.edit' model.id}}
+        @data-test-policy-edit-toggle=true
+      >
+        Edit policy
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
-  <div class="level is-mobile">
-    <div class="level-left">
-      <label for="policy" class="is-label">Policy</label>
-      {{#if (eq policyType "acl")}}
-      <span class="tag is-white is-size-9" data-test-acl-format>({{uppercase model.format}} format)</span>
-      {{/if}}
-    </div>
-    <div class="level-right">
-      <div class="field is-horizontal is-flex-end is-single-line">
-        {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
-          <div class="control is-flex">
-            {{input
-              id="edit"
-              type="checkbox"
-              name="navToEdit"
-              class="switch is-rounded is-success is-small"
-              checked=false
-              change=(action (nav-to-route 'vault.cluster.policy.edit' model.id replace=true) )
-              data-test-policy-edit-toggle=true
-            }}
-            <label for="edit">Edit</label>
-          </div>
-        {{/if}}
-      </div>
-    </div>
-  </div>
   <div class="field">
+    <label for="policy" class="is-label">
+      Policy
+      {{#if (eq policyType "acl")}}
+        <span class="tag is-white is-size-9 has-text-grey" data-test-acl-format>
+          ({{uppercase model.format}} format)
+        </span>
+      {{/if}}
+    </label>
     {{ivy-codemirror
       value=model.policy
       options=(hash
@@ -71,13 +71,4 @@
       </ul>
     </div>
   {{/if}}
-  <div class="field box is-shadowless no-bottom-padding is-marginless">
-    {{download-button
-      classNames="link is-pulled-right"
-      actionText="Download policy"
-      extension=(if (eq policyType "acl") model.format "sentinel")
-      filename=model.name
-      data=model.policy
-    }}
-  </div>
 </div>

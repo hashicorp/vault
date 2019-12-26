@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathCredsCreate(b *backend) *framework.Path {

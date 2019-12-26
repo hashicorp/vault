@@ -1,21 +1,30 @@
 ---
 layout: "docs"
 page_title: "Plugin System"
+sidebar_title: "Plugins"
 sidebar_current: "docs-internals-plugins"
 description: |-
   Learn about Vault's plugin system.
 ---
 
 # Plugin System
-Certain Vault backends utilize plugins to extend their functionality outside of
-what is available in the core Vault code. Often times these backends will
-provide both builtin plugins and a mechanism for executing external plugins.
-Builtin plugins are shipped with Vault, often for commonly used implementations,
-and require no additional operator intervention to run. Builtin plugins are
-just like any other backend code inside Vault. External plugins, on the other
-hand, are not shipped with the Vault binary and must be registered to Vault by
-a privileged Vault user. This section of the documentation will describe the
-architecture and security of external plugins.
+All Vault auth and secret backends are considered plugins. This simple concept
+allows both built-in and external plugins to be treated like Legos. Any plugin
+can exist at multiple different locations. Different versions of a plugin may
+be at each one, with each version differing from Vault's version.
+
+## Built-In Plugins
+Built-in plugins are shipped with Vault, often for commonly used implementations,
+and require no additional operator intervention to run. Built-in plugins are
+just like any other backend code inside Vault.
+
+To use a different or edited version of a built-in plugin, you would first edit
+the plugin's code or navigate to the Vault version holding the version of the
+plugin you desire. Then, you'd `$ cd` into the `cmd/:plugin-name` directory
+contained alongside that plugin's code. For instance, for AppRole, you would:
+`$ cd vault/builtin/credential/approle/cmd/approle`. Once in that directory,
+you would run `$ go build` to obtain a new binary for the AppRole plugin. Then
+you would add it to the plugin catalog as per normal, and enable it.
 
 # Plugin Architecture
 Vault's plugins are completely separate, standalone applications that Vault
@@ -23,6 +32,10 @@ executes and communicates with over RPC. This means the plugin process does not
 share the same memory space as Vault and therefore can only access the
 interfaces and arguments given to it. This also means a crash in a plugin can not
 crash the entirety of Vault.
+
+It is possible to enable a custom plugin with a name that's identical to a
+built-in plugin. In such a situation, Vault will always choose the custom plugin
+when enabling it.
 
 ## Plugin Communication
 Vault creates a mutually authenticated TLS connection for communication with the
@@ -49,7 +62,8 @@ plugin directory and the plugin catalog entry.
 ### Plugin Directory
 The plugin directory is a configuration option of Vault, and can be specified in
 the [configuration file](https://www.vaultproject.io/docs/configuration/index.html).
-This setting specifies a directory that all plugin binaries must live. A plugin
+This setting specifies a directory in which all plugin binaries must live;
+_this value cannot be a symbolic link_. A plugin
 can not be added to Vault unless it exists in the plugin directory. There is no
 default for this configuration option, and if it is not set plugins can not be
 added to Vault.
@@ -72,10 +86,10 @@ docs](/api/system/plugins-catalog.html).
 An example plugin submission looks like:
 
 ```
-$ vault write sys/plugins/catalog/myplugin-database-plugin \
+$ vault write sys/plugins/catalog/database/myplugin-database-plugin \
     sha256=<expected SHA256 Hex value of the plugin binary> \
     command="myplugin"
-Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
+Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 ```
 
 ### Plugin Execution
@@ -115,20 +129,33 @@ package main
 import (
 	"os"
 
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/plugins"
+	myPlugin "your/plugin/import/path"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func main() {
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
-	flags.Parse(os.Args)
+	flags.Parse(os.Args[1:])
 
-	plugins.Serve(New().(MyPlugin), apiClientMeta.GetTLSConfig())
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
+	err := plugin.Serve(&plugin.ServeOpts{
+		BackendFactoryFunc: myPlugin.Factory,
+		TLSProviderFunc:    tlsProviderFunc,
+	})
+	if err != nil {
+		logger := hclog.New(&hclog.LoggerOptions{})
+
+		logger.Error("plugin shutting down", "error", err)
+		os.Exit(1)
+	}
 }
 ```
 
-And that's basically it! You would just need to change MyPlugin to your actual
-plugin.
+And that's basically it! You would just need to change `myPlugin` to your actual
+plugin. For more information on how to register and enable your plugin, check out the [Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends) tutorial.
 
 [api_addr]: /docs/configuration/index.html#api_addr

@@ -27,6 +27,75 @@ module('Unit | Lib | console helpers', function() {
       ],
     },
     {
+      name: 'write with space in a value',
+      command: `vault write \
+      auth/ldap/config \
+      url=ldap://ldap.example.com:3268 \
+      binddn="CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com" \
+      bindpass="xxxxxxxxxxxxxxxxxxxxxxxxxx" \
+      userdn="DC=example,DC=com" \
+      groupdn="DC=example,DC=com" \
+      insecure_tls=true \
+      starttls=false
+      `,
+      expected: [
+        'write',
+        [],
+        'auth/ldap/config',
+        [
+          'url=ldap://ldap.example.com:3268',
+          'binddn=CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com',
+          'bindpass=xxxxxxxxxxxxxxxxxxxxxxxxxx',
+          'userdn=DC=example,DC=com',
+          'groupdn=DC=example,DC=com',
+          'insecure_tls=true',
+          'starttls=false',
+        ],
+      ],
+    },
+    {
+      name: 'write with double quotes',
+      command: `vault write \
+      auth/token/create \
+      policies="foo"
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with single quotes',
+      command: `vault write \
+      auth/token/create \
+      policies='foo'
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with unmatched quotes',
+      command: `vault write \
+      auth/token/create \
+      policies="'foo"
+      `,
+      expected: ['write', [], 'auth/token/create', ["policies='foo"]],
+    },
+    {
+      name: 'write with shell characters',
+      /* eslint-disable no-useless-escape */
+      command: `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" default_ttl=1h max_ttl=24h
+      `,
+      expected: [
+        'write',
+        [],
+        'database/roles/api-prod',
+        [
+          'db_name=apiprod',
+          `creation_statements=CREATE ROLE {{name}} WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{name}};`,
+          'default_ttl=1h',
+          'max_ttl=24h',
+        ],
+      ],
+    },
+
+    {
       name: 'read with field',
       command: `vault read -field=access_key aws/creds/my-role`,
       expected: ['read', ['-field=access_key'], 'aws/creds/my-role', []],
@@ -122,6 +191,30 @@ module('Unit | Lib | console helpers', function() {
       expectedData: {
         type: 'success',
         content: 'Success! Data deleted (if it existed) at: foo/bar',
+      },
+    },
+    {
+      name: 'read, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', {}],
+      expectedData: {
+        type: 'object',
+        content: { foo: 'bar', one: 'two' },
+      },
+    },
+    {
+      name: 'read with -format=json flag, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', { format: 'json' }],
+      expectedData: {
+        type: 'json',
+        content: { foo: 'bar', one: 'two' },
+      },
+    },
+    {
+      name: 'read with -field flag, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', { field: 'one' }],
+      expectedData: {
+        type: 'text',
+        content: 'two',
       },
     },
     {

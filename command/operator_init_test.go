@@ -303,7 +303,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			"-root-token-pgp-key", pubFiles[0],
 		})
 		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+			t.Fatalf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
 		re := regexp.MustCompile(`Unseal Key \d+: (.+)`)
@@ -333,7 +333,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		root := match[0][1]
 		decryptedRoot := testPGPDecrypt(t, pgpkeys.TestPrivKey1, root)
 
-		if l, exp := len(decryptedRoot), vault.TokenLength; l != exp {
+		if l, exp := len(decryptedRoot), vault.TokenLength+2; l != exp {
 			t.Errorf("expected %d to be %d", l, exp)
 		}
 	})

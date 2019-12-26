@@ -3,9 +3,10 @@ package vault
 import (
 	"context"
 	"errors"
+	"io"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -54,6 +55,12 @@ const (
 	// keyring to discover the new master key. The new master key is then
 	// used to reload the keyring itself.
 	masterKeyPath = "core/master"
+
+	// shamirKekPath is used with Shamir in v1.3+ to store a copy of the
+	// unseal key behind the barrier.  As with masterKeyPath this is primarily
+	// used by standbys to handle rekeys.  It also comes into play when restoring
+	// raft snapshots.
+	shamirKekPath = "core/shamir-kek"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -68,11 +75,13 @@ type SecurityBarrier interface {
 	Initialized(ctx context.Context) (bool, error)
 
 	// Initialize works only if the barrier has not been initialized
-	// and makes use of the given master key.
-	Initialize(context.Context, []byte) error
+	// and makes use of the given master key.  When sealKey is provided
+	// it's because we're using a new-style Shamir seal, and masterKey
+	// is to be stored using sealKey to encrypt it.
+	Initialize(ctx context.Context, masterKey []byte, sealKey []byte, random io.Reader) error
 
 	// GenerateKey is used to generate a new key
-	GenerateKey() ([]byte, error)
+	GenerateKey(io.Reader) ([]byte, error)
 
 	// KeyLength is used to sanity check a key
 	KeyLength() (int, int)
@@ -109,7 +118,7 @@ type SecurityBarrier interface {
 
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
-	Rotate(ctx context.Context) (uint32, error)
+	Rotate(ctx context.Context, reader io.Reader) (uint32, error)
 
 	// CreateUpgrade creates an upgrade path key to the given term from the previous term
 	CreateUpgrade(ctx context.Context, term uint32) error
@@ -130,7 +139,7 @@ type SecurityBarrier interface {
 	Keyring() (*Keyring, error)
 
 	// SecurityBarrier must provide the storage APIs
-	BarrierStorage
+	logical.Storage
 
 	// SecurityBarrier must provide the encryption APIs
 	BarrierEncryptor
@@ -139,10 +148,10 @@ type SecurityBarrier interface {
 // BarrierStorage is the storage only interface required for a Barrier.
 type BarrierStorage interface {
 	// Put is used to insert or update an entry
-	Put(ctx context.Context, entry *Entry) error
+	Put(ctx context.Context, entry *logical.StorageEntry) error
 
 	// Get is used to fetch an entry
-	Get(ctx context.Context, key string) (*Entry, error)
+	Get(ctx context.Context, key string) (*logical.StorageEntry, error)
 
 	// Delete is used to permanently delete an entry
 	Delete(ctx context.Context, key string) error
@@ -158,22 +167,6 @@ type BarrierStorage interface {
 type BarrierEncryptor interface {
 	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
 	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
-}
-
-// Entry is used to represent data stored by the security barrier
-type Entry struct {
-	Key      string
-	Value    []byte
-	SealWrap bool
-}
-
-// Logical turns the Entry into a logical storage entry.
-func (e *Entry) Logical() *logical.StorageEntry {
-	return &logical.StorageEntry{
-		Key:      e.Key,
-		Value:    e.Value,
-		SealWrap: e.SealWrap,
-	}
 }
 
 // KeyInfo is used to convey information about the encryption key

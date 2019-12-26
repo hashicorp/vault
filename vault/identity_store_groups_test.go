@@ -3,13 +3,138 @@ package vault
 import (
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_FixOverwrittenMemberGroupIDs(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create a group
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "group1",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	expectedMemberGroupIDs := []string{groupID}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             "group2",
+			"policies":         "default",
+			"member_group_ids": expectedMemberGroupIDs,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": "default,another-policy",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Read the group and check if the member_group_ids is intact
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Data["member_group_ids"], expectedMemberGroupIDs) {
+		t.Fatalf("bad: member_group_ids; expected: %#v\n, actual: %#v", expectedMemberGroupIDs, resp.Data["member_group_ids"])
+	}
+}
+
+func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
+	c, keys, rootToken := TestCoreUnsealed(t)
+
+	// Create a group
+	resp, err := c.identityStore.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Create a memdb transaction
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	// Fetch the above created group
+	group, err := c.identityStore.MemDBGroupByNameInTxn(namespace.RootContext(nil), txn, "testgroup", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually add an invalid entity as the group's member
+	group.MemberEntityIDs = []string{"invalidentityid"}
+
+	ctx := namespace.RootContext(nil)
+
+	// Persist the group
+	err = c.identityStore.UpsertGroupInTxn(ctx, txn, group, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txn.Commit()
+
+	// Perform seal and unseal forcing an upgrade
+	err = c.Seal(rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("failed to unseal")
+		}
+	}
+
+	// Read the group and ensure that invalid entity id is cleaned up
+	group, err = c.identityStore.MemDBGroupByName(namespace.RootContext(nil), "testgroup", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(group.MemberEntityIDs) != 0 {
+		t.Fatalf("bad: member entity IDs; expected: none, actual: %#v", group.MemberEntityIDs)
+	}
+}
 
 func TestIdentityStore_MemberGroupIDDelete(t *testing.T) {
 	ctx := namespace.RootContext(nil)
@@ -77,6 +202,77 @@ func TestIdentityStore_MemberGroupIDDelete(t *testing.T) {
 	memberGroupIDs = resp.Data["member_group_ids"].([]string)
 	if len(memberGroupIDs) != 0 {
 		t.Fatalf("bad: length of member group ids; expected: %d, actual: %d", 0, len(memberGroupIDs))
+	}
+}
+
+func TestIdentityStore_CaseInsensitiveGroupName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	testGroupName := "testGroupName"
+
+	// Create an group with case sensitive name
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": testGroupName,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	groupID := resp.Data["id"].(string)
+
+	// Lookup the group by ID and check that name returned is case sensitive
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/id/" + groupID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	groupName := resp.Data["name"].(string)
+	if groupName != testGroupName {
+		t.Fatalf("bad group name; expected: %q, actual: %q", testGroupName, groupName)
+	}
+
+	// Lookup the group by case sensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/" + testGroupName,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	groupName = resp.Data["name"].(string)
+	if groupName != testGroupName {
+		t.Fatalf("bad group name; expected: %q, actual: %q", testGroupName, groupName)
+	}
+
+	// Lookup the group by case insensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/" + strings.ToLower(testGroupName),
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	groupName = resp.Data["name"].(string)
+	if groupName != testGroupName {
+		t.Fatalf("bad group name; expected: %q, actual: %q", testGroupName, groupName)
+	}
+
+	// Ensure that there is only one group
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("bad length of groups; expected: 1, actual: %d", len(resp.Data["keys"].([]string)))
 	}
 }
 
@@ -302,7 +498,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	// Insert it into memdb
@@ -325,7 +521,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid2", "testparentgroupid3"},
 		MemberEntityIDs: []string{"testentityid2", "testentityid3"},
 		Policies:        []string{"testpolicy2", "testpolicy3"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid2"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid2"),
 	}
 
 	// Insert it into memdb
@@ -482,6 +678,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -604,6 +801,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)

@@ -85,7 +85,11 @@ func (p *Packet) Response(code Code) *Packet {
 // encoded packet is too long (due to its Attributes), or if the packet has an
 // unknown Code.
 func (p *Packet) Encode() ([]byte, error) {
-	size := 20 + p.Attributes.wireSize()
+	attributesSize := p.Attributes.wireSize()
+	if attributesSize == -1 {
+		return nil, errors.New("invalid packet attribute length")
+	}
+	size := 20 + attributesSize
 	if size > MaxPacketLength {
 		return nil, errors.New("encoded packet is too long")
 	}
@@ -97,7 +101,7 @@ func (p *Packet) Encode() ([]byte, error) {
 	p.Attributes.encodeTo(b[20:])
 
 	switch p.Code {
-	case CodeAccessRequest:
+	case CodeAccessRequest, CodeStatusServer:
 		copy(b[4:20], p.Authenticator[:])
 	case CodeAccessAccept, CodeAccessReject, CodeAccountingRequest, CodeAccountingResponse, CodeAccessChallenge, CodeDisconnectRequest, CodeDisconnectACK, CodeDisconnectNAK, CodeCoARequest, CodeCoAACK, CodeCoANAK:
 		hash := md5.New()
@@ -143,7 +147,7 @@ func IsAuthenticRequest(request, secret []byte) bool {
 	}
 
 	switch Code(request[0]) {
-	case CodeAccessRequest:
+	case CodeAccessRequest, CodeStatusServer:
 		return true
 	case CodeAccountingRequest, CodeDisconnectRequest, CodeCoARequest:
 		hash := md5.New()

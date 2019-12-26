@@ -48,6 +48,21 @@ func TestSplitIDFromString(t *testing.T) {
 			"",
 			"foo.foo/",
 		},
+		{
+			"b.foo",
+			"",
+			"b.foo",
+		},
+		{
+			"s.foo",
+			"",
+			"s.foo",
+		},
+		{
+			"t.foo",
+			"foo",
+			"t",
+		},
 	}
 
 	for _, c := range tcases {

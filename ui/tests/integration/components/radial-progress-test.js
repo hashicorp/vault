@@ -10,16 +10,10 @@ const component = create(radialProgress);
 module('Integration | Component | radial progress', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders', async function(assert) {
-    let circumference = (19 / 2) * Math.PI * 2;
+    // We have to manually round the circumference, strokeDash, and strokeDashOffset because
+    // ie11 truncates decimals differently than other browsers.
+    let circumference = ((19 / 2) * Math.PI * 2).toFixed(2);
     await render(hbs`{{radial-progress progressDecimal=0.5}}`);
 
     assert.equal(component.viewBox, '0 0 20 20');
@@ -29,7 +23,7 @@ module('Integration | Component | radial progress', function(hooks) {
     assert.equal(component.r, 19 / 2);
     assert.equal(component.cx, 10);
     assert.equal(component.cy, 10);
-    assert.equal(component.strokeDash, circumference);
-    assert.equal(component.strokeDashOffset, circumference * 0.5);
+    assert.equal(Number(component.strokeDash).toFixed(2), circumference);
+    assert.equal(Number(component.strokeDashOffset).toFixed(3), (circumference * 0.5).toFixed(3));
   });
 });

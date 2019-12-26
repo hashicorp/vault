@@ -1,11 +1,11 @@
-import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
@@ -14,10 +14,11 @@ const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-export default Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   wizard: service(),
   router: service(),
   store: service(),
+  flashMessages: service(),
 
   // a key model
   key: null,
@@ -31,6 +32,10 @@ export default Component.extend(FocusOnInsertMixin, {
   mode: null,
 
   secretData: null,
+
+  wrappedData: null,
+  isWrapping: false,
+  showWrapButton: computed.not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -90,7 +95,7 @@ export default Component.extend(FocusOnInsertMixin, {
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
-      if (context.mode === 'create') {
+      if (!context.model || context.mode === 'create') {
         return;
       }
       let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
@@ -105,13 +110,13 @@ export default Component.extend(FocusOnInsertMixin, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('updatePath.canDelete'),
+  canDelete: alias('model.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   v2UpdatePath: maybeQueryRecord(
     'capabilities',
     context => {
-      if (context.mode === 'create' || context.isV2 === false) {
+      if (!context.model || context.mode === 'create' || context.isV2 === false) {
         return;
       }
       let backend = context.get('model.engine.id');
@@ -127,62 +132,14 @@ export default Component.extend(FocusOnInsertMixin, {
   ),
   canEditV2Secret: alias('v2UpdatePath.canUpdate'),
 
-  deleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/delete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
-  destroyVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/destroy/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
-  undeleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/undelete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
-
-  isFetchingVersionCapabilities: or(
-    'deleteVersionPath.isPending',
-    'destroyVersionPath.isPending',
-    'undeleteVersionPath.isPending'
-  ),
-
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  buttonDisabled: or(
-    'requestInFlight',
-    'model.isFolder',
-    'model.isError',
-    'model.flagsIsInvalid',
-    'hasLintError',
-    'error'
-  ),
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
   modelForData: computed('isV2', 'model', function() {
-    return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
+    let { model } = this;
+    if (!model) return null;
+    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -201,8 +158,21 @@ export default Component.extend(FocusOnInsertMixin, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
+  isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
+    if (!this.model) return;
+    // if the version couldn't be read from the server
+    if (this.isV2 && this.modelForData.failedServerRead) {
+      return true;
+    }
+    // if the model couldn't be read from the server
+    if (!this.isV2 && this.model.failedServerRead) {
+      return true;
+    }
+    return false;
+  }),
+
   transitionToRoute() {
-    this.router.transitionTo(...arguments);
+    return this.router.transitionTo(...arguments);
   },
 
   onEscape(e) {
@@ -220,19 +190,21 @@ export default Component.extend(FocusOnInsertMixin, {
   // successCallback is called in the context of the component
   persistKey(successCallback) {
     let secret = this.model;
-    let model = this.modelForData;
+    let secretData = this.modelForData;
     let isV2 = this.isV2;
-    let key = model.get('path') || model.id;
+    let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
-      model.set(model.pathAttr, key);
+      secretData.set(secretData.pathAttr, key);
     }
 
-    return model.save().then(() => {
-      if (!model.isError) {
-        if (isV2 && Object.keys(secret.changedAttributes()).length) {
+    return secretData.save().then(() => {
+      if (!secretData.isError) {
+        if (isV2) {
           secret.set('id', key);
+        }
+        if (isV2 && Object.keys(secret.changedAttributes()).length) {
           // save secret metadata
           secret
             .save()
@@ -279,29 +251,72 @@ export default Component.extend(FocusOnInsertMixin, {
       set(this.modelForData, 'secretData', this.secretData.toJSON());
     },
 
+    handleWrapClick() {
+      this.set('isWrapping', true);
+      if (this.isV2) {
+        this.store
+          .adapterFor('secret-v2-version')
+          .queryRecord(this.modelForData.id, { wrapTTL: 1800 })
+          .then(resp => {
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
+          })
+          .finally(() => {
+            this.set('isWrapping', false);
+          });
+      } else {
+        this.store
+          .adapterFor('secret')
+          .queryRecord(null, null, { backend: this.model.backend, id: this.modelForData.id, wrapTTL: 1800 })
+          .then(resp => {
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
+          })
+          .finally(() => {
+            this.set('isWrapping', false);
+          });
+      }
+    },
+
+    clearWrappedData() {
+      this.set('wrappedData', null);
+    },
+
+    handleCopySuccess() {
+      this.flashMessages.success('Copied Wrapped Data!');
+      this.send('clearWrappedData');
+    },
+
+    handleCopyError() {
+      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.send('clearWrappedData');
+    },
+
     createOrUpdateKey(type, event) {
       event.preventDefault();
       let model = this.modelForData;
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && isBlank(model.get('path') || model.id)) {
+      if (type === 'create' && isBlank(model.path || model.id)) {
         return;
       }
 
-      this.persistKey(key => {
-        this.transitionToRoute(SHOW_ROUTE, key);
+      this.persistKey(() => {
+        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
 
     deleteKey() {
+      let { id } = this.model;
       this.model.destroyRecord().then(() => {
-        this.transitionToRoute(LIST_ROOT_ROUTE);
+        this.navToNearestAncestor.perform(id);
       });
-    },
-
-    deleteVersion(deleteType = 'destroy') {
-      let id = this.modelForData.id;
-      return this.store.adapterFor('secret-v2-version').v2DeleteOperation(this.store, id, deleteType);
     },
 
     refresh() {
@@ -339,6 +354,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (noErrors) {
         try {
           this.secretData.fromJSONString(val);
+          set(this.modelForData, 'secretData', this.secretData.toJSON());
         } catch (e) {
           this.set('error', e.message);
         }

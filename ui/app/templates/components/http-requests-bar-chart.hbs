@@ -1,0 +1,19 @@
+{{! template-lint-disable no-inline-styles}}
+
+<svg class="http-requests-bar-chart">
+  <defs>
+    <linearGradient id="bg-gradient" gradientTransform="rotate(90)">
+      <stop stop-color="#5b92ff" stop-opacity="1" offset="0%"></stop>
+      <stop stop-color="#5b92ff" stop-opacity="0.5" offset="100%"></stop>
+    </linearGradient>
+  </defs>
+  <g  class="gridlines"></g>
+  <g class="x-axis"></g>
+  <g class="y-axis"></g>
+  <g clip-path="url(#bars-container-{{this.elementId}})">
+    <rect x="0" y="0" width="100%" height="100%" style="fill: url(#bg-gradient)"></rect>
+    <clipPath id="bars-container-{{this.elementId}}">
+    </clipPath>
+  </g>
+    <g class="shadow-bars"></g>
+</svg>

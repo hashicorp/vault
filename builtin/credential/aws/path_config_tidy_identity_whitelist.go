@@ -4,25 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	identityWhitelistConfigPath = "config/tidy/identity-whitelist"
 )
 
-func pathConfigTidyIdentityWhitelist(b *backend) *framework.Path {
+func (b *backend) pathConfigTidyIdentityWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", identityWhitelistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 259200, //72h
 				Description: `The amount of extra time that must have passed beyond the identity's
 expiration, before it is removed from the backend storage.`,
 			},
-			"disable_periodic_tidy": &framework.FieldSchema{
+			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to 'true', disables the periodic tidying of the 'identity-whitelist/<instance_id>' entries.",
@@ -31,11 +31,19 @@ expiration, before it is removed from the backend storage.`,
 
 		ExistenceCheck: b.pathConfigTidyIdentityWhitelistExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
-			logical.ReadOperation:   b.pathConfigTidyIdentityWhitelistRead,
-			logical.DeleteOperation: b.pathConfigTidyIdentityWhitelistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigTidyIdentityWhitelistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigTidyIdentityWhitelistHelpSyn,

@@ -1,12 +1,12 @@
-raft [![Build Status](https://travis-ci.org/hashicorp/raft.png)](https://travis-ci.org/hashicorp/raft)
+raft [![Build Status](https://travis-ci.org/hashicorp/raft.png)](https://travis-ci.org/hashicorp/raft) [![CircleCI](https://circleci.com/gh/hashicorp/raft.svg?style=svg)](https://circleci.com/gh/hashicorp/raft)
 ====
 
 raft is a [Go](http://www.golang.org) library that manages a replicated
 log and can be used with an FSM to manage replicated state machines. It
 is a library for providing [consensus](http://en.wikipedia.org/wiki/Consensus_(computer_science)).
 
-The use cases for such a library are far-reaching as replicated state
-machines are a key component of many distributed systems. They enable
+The use cases for such a library are far-reaching, such as replicated state
+machines which are a key component of many distributed systems. They enable
 building Consistent, Partition Tolerant (CP) systems, with limited
 fault tolerance as well.
 
@@ -52,10 +52,10 @@ to port Consul to these new interfaces.
 
 ## Protocol
 
-raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://raft.github.io/raft.pdf)
 
 A high level overview of the Raft protocol is described below, but for details please read the full
-[Raft paper](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+[Raft paper](https://raft.github.io/raft.pdf)
 followed by the raft source. Any questions about the raft protocol should be sent to the
 [raft-dev mailing list](https://groups.google.com/forum/#!forum/raft-dev).
 

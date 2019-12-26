@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/lookup - HTTP API"
-sidebar_current: "docs-http-system-wrapping-lookup"
+sidebar_title: "<code>/sys/wrapping/lookup</code>"
+sidebar_current: "api-http-system-wrapping-lookup"
 description: |-
   The `/sys/wrapping/lookup` endpoint returns wrapping token properties.
 ---
@@ -14,9 +15,9 @@ The `/sys/wrapping/lookup` endpoint returns wrapping token properties.
 
 This endpoint looks up wrapping properties for the given token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/lookup`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/lookup`       |
 
 ### Parameters
 

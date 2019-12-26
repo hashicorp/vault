@@ -66,13 +66,14 @@ const (
 //
 // Exact staleness
 //
-// An exact staleness timestamp bound executes reads at a user-specified timestamp.
-// Reads at a timestamp are guaranteed to see a consistent prefix of the global
-// transaction history: they observe modifications done by all transactions with a
-// commit timestamp less than or equal to the read timestamp, and observe none of the
-// modifications done by transactions with a larger commit timestamp. They will block
-// until all conflicting transactions that may be assigned commit timestamps less
-// than or equal to the read timestamp have finished.
+// An exact staleness timestamp bound executes reads at a user-specified
+// timestamp. Reads at a timestamp are guaranteed to see a consistent prefix of
+// the global transaction history: they observe modifications done by all
+// transactions with a commit timestamp less than or equal to the read
+// timestamp, and observe none of the modifications done by transactions with a
+// larger commit timestamp. They will block until all conflicting transactions
+// that may be assigned commit timestamps less than or equal to the read
+// timestamp have finished.
 //
 // The timestamp can either be expressed as an absolute Cloud Spanner commit
 // timestamp or a staleness relative to the current time.
@@ -86,10 +87,10 @@ const (
 //
 // Bounded staleness
 //
-// Bounded staleness modes allow Cloud Spanner to pick the read timestamp, subject to
-// a user-provided staleness bound. Cloud Spanner chooses the newest timestamp within
-// the staleness bound that allows execution of the reads at the closest
-// available replica without blocking.
+// Bounded staleness modes allow Cloud Spanner to pick the read timestamp,
+// subject to a user-provided staleness bound. Cloud Spanner chooses the newest
+// timestamp within the staleness bound that allows execution of the reads at
+// the closest available replica without blocking.
 //
 // All rows yielded are consistent with each other: if any part of the read
 // observes a transaction, all parts of the read see the transaction. Boundedly
@@ -114,12 +115,12 @@ const (
 //
 // Old read timestamps and garbage collection
 //
-// Cloud Spanner continuously garbage collects deleted and overwritten data in the
-// background to reclaim storage space. This process is known as "version
+// Cloud Spanner continuously garbage collects deleted and overwritten data in
+// the background to reclaim storage space. This process is known as "version
 // GC". By default, version GC reclaims versions after they are four hours
-// old. Because of this, Cloud Spanner cannot perform reads at read timestamps more
-// than four hours in the past. This restriction also applies to in-progress
-// reads and/or SQL queries whose timestamps become too old while
+// old. Because of this, Cloud Spanner cannot perform reads at read timestamps
+// more than four hours in the past. This restriction also applies to
+// in-progress reads and/or SQL queries whose timestamps become too old while
 // executing. Reads and SQL queries with too-old read timestamps fail with the
 // error ErrorCode.FAILED_PRECONDITION.
 type TimestampBound struct {
@@ -197,8 +198,8 @@ func durationProto(d time.Duration) *pbd.Duration {
 	}
 }
 
-// timestampProto takes a time.Time and converts it into pbt.Timestamp for calling
-// gRPC APIs.
+// timestampProto takes a time.Time and converts it into pbt.Timestamp for
+// calling gRPC APIs.
 func timestampProto(t time.Time) *pbt.Timestamp {
 	return &pbt.Timestamp{
 		Seconds: t.Unix(),
@@ -206,8 +207,9 @@ func timestampProto(t time.Time) *pbt.Timestamp {
 	}
 }
 
-// buildTransactionOptionsReadOnly converts a spanner.TimestampBound into a sppb.TransactionOptions_ReadOnly
-// transaction option, which is then used in transactional reads.
+// buildTransactionOptionsReadOnly converts a spanner.TimestampBound into a
+// sppb.TransactionOptions_ReadOnly transaction option, which is then used in
+// transactional reads.
 func buildTransactionOptionsReadOnly(tb TimestampBound, returnReadTimestamp bool) *sppb.TransactionOptions_ReadOnly {
 	pb := &sppb.TransactionOptions_ReadOnly{
 		ReturnReadTimestamp: returnReadTimestamp,

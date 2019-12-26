@@ -13,11 +13,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"gopkg.in/mgo.v2"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	mgo "gopkg.in/mgo.v2"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -61,7 +60,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MongoDB), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -156,6 +155,56 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	return username, password, nil
 }
 
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	session, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+
+	dialInfo, err := parseMongoURL(m.ConnectionURL)
+	if err != nil {
+		return "", "", err
+	}
+
+	mongoUser := mgo.User{
+		Username: username,
+		Password: password,
+	}
+
+	err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
+
+	switch {
+	case err == nil:
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		session, err := m.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
+		if err != nil {
+			return "", "", err
+		}
+	default:
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
 // RenewUser is not supported on MongoDB, so this is a no-op.
 func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
@@ -223,5 +272,5 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
 }

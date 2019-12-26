@@ -2,33 +2,34 @@ package gcpauth
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"runtime"
-	"sync"
+	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
+)
+
+var (
+	// cacheTime is the duration for which to cache clients and credentials. This
+	// must be less than 60 minutes.
+	cacheTime = 30 * time.Minute
 )
 
 type GcpAuthBackend struct {
 	*framework.Backend
 
-	// OAuth scopes for generating HTTP and GCP service clients.
-	oauthScopes []string
-
-	// Locks for guarding service clients
-	clientMutex sync.RWMutex
-
-	// -- GCP service clients --
-	iamClient *iam.Service
-	gceClient *compute.Service
+	// cache is the internal client/object cache. Callers should never access the
+	// cache directly.
+	cache *cache.Cache
 }
 
 // Factory returns a new backend as logical.Backend.
@@ -42,16 +43,12 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func Backend() *GcpAuthBackend {
 	b := &GcpAuthBackend{
-		oauthScopes: []string{
-			iam.CloudPlatformScope,
-			compute.ComputeReadonlyScope,
-		},
+		cache: cache.New(),
 	}
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
-		Invalidate:  b.invalidate,
 		Help:        backendHelp,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
@@ -68,123 +65,167 @@ func Backend() *GcpAuthBackend {
 			},
 			pathsRole(b),
 		),
+
+		Invalidate: b.invalidate,
 	}
 	return b
 }
 
-func (b *GcpAuthBackend) invalidate(_ context.Context, key string) {
+// IAMClient returns a new IAM client. The client is cached.
+func (b *GcpAuthBackend) IAMClient(s logical.Storage) (*iam.Service, error) {
+	httpClient, err := b.httpClient(s)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to create IAM HTTP client: {{err}}", err)
+	}
+
+	client, err := b.cache.Fetch("iam", cacheTime, func() (interface{}, error) {
+		client, err := iam.New(httpClient)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create IAM client: {{err}}", err)
+		}
+		client.UserAgent = useragent.String()
+
+		return client, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.(*iam.Service), nil
+}
+
+// ComputeClient returns a new Compute client. The client is cached.
+func (b *GcpAuthBackend) ComputeClient(s logical.Storage) (*compute.Service, error) {
+	httpClient, err := b.httpClient(s)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to create Compute HTTP client: {{err}}", err)
+	}
+
+	client, err := b.cache.Fetch("compute", cacheTime, func() (interface{}, error) {
+		client, err := compute.New(httpClient)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create Compute client: {{err}}", err)
+		}
+		client.UserAgent = useragent.String()
+
+		return client, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.(*compute.Service), nil
+}
+
+// CRMClient returns a new Cloud Resource Manager client. The client is cached.
+func (b *GcpAuthBackend) CRMClient(s logical.Storage) (*cloudresourcemanager.Service, error) {
+	httpClient, err := b.httpClient(s)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to create Cloud Resource Manager HTTP client: {{err}}", err)
+	}
+
+	client, err := b.cache.Fetch("crm", cacheTime, func() (interface{}, error) {
+		client, err := cloudresourcemanager.New(httpClient)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create Cloud Resource Manager client: {{err}}", err)
+		}
+		client.UserAgent = useragent.String()
+
+		return client, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.(*cloudresourcemanager.Service), nil
+}
+
+// httpClient returns a new http.Client that is authenticated using the provided
+// credentials. The underlying httpClient is cached among all clients.
+func (b *GcpAuthBackend) httpClient(s logical.Storage) (*http.Client, error) {
+	creds, err := b.credentials(s)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to create oauth2 http client: {{err}}", err)
+	}
+
+	client, err := b.cache.Fetch("HTTPClient", cacheTime, func() (interface{}, error) {
+		b.Logger().Debug("creating oauth2 http client")
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
+		return oauth2.NewClient(ctx, creds.TokenSource), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.(*http.Client), nil
+}
+
+// credentials returns the credentials which were specified in the
+// configuration. If no credentials were given during configuration, this uses
+// default application credentials. If no default application credentials are
+// found, this function returns an error. The credentials are cached in-memory
+// for performance.
+func (b *GcpAuthBackend) credentials(s logical.Storage) (*google.Credentials, error) {
+	creds, err := b.cache.Fetch("credentials", cacheTime, func() (interface{}, error) {
+		b.Logger().Debug("loading credentials")
+
+		ctx := context.Background()
+
+		config, err := b.config(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get creds from the config
+		credBytes, err := config.formatAndMarshalCredentials()
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to marshal credential JSON: {{err}}", err)
+		}
+
+		// If credentials were provided, use those. Otherwise fall back to the
+		// default application credentials.
+		var creds *google.Credentials
+		if len(credBytes) > 0 {
+			creds, err = google.CredentialsFromJSON(ctx, credBytes, iam.CloudPlatformScope)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to parse credentials: {{err}}", err)
+			}
+		} else {
+			creds, err = google.FindDefaultCredentials(ctx, iam.CloudPlatformScope)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to get default credentials: {{err}}", err)
+			}
+		}
+
+		return creds, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return creds.(*google.Credentials), nil
+}
+
+// ClearCaches deletes all cached clients and credentials.
+func (b *GcpAuthBackend) ClearCaches() {
+	b.cache.Clear()
+}
+
+// invalidate resets the plugin. This is called when a key is updated via
+// replication.
+func (b *GcpAuthBackend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config":
-		b.Close()
+		b.ClearCaches()
 	}
-}
-
-// Close deletes created GCP clients in backend.
-func (b *GcpAuthBackend) Close() {
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	b.iamClient = nil
-	b.gceClient = nil
-}
-
-func (b *GcpAuthBackend) IAM(ctx context.Context, s logical.Storage) (*iam.Service, error) {
-	b.clientMutex.RLock()
-	if b.iamClient != nil {
-		defer b.clientMutex.RUnlock()
-		return b.iamClient, nil
-	}
-
-	b.clientMutex.RUnlock()
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	// Check if client was created during lock switch.
-	if b.iamClient == nil {
-		err := b.initClients(ctx, s)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b.iamClient, nil
-}
-
-func (b *GcpAuthBackend) GCE(ctx context.Context, s logical.Storage) (*compute.Service, error) {
-	b.clientMutex.RLock()
-	if b.gceClient != nil {
-		defer b.clientMutex.RUnlock()
-		return b.gceClient, nil
-	}
-
-	b.clientMutex.RUnlock()
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	// Check if client was created during lock switch.
-	if b.gceClient == nil {
-		err := b.initClients(ctx, s)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b.gceClient, nil
-}
-
-// Initialize attempts to create GCP clients from stored config.
-// It does not attempt to claim the client lock.
-func (b *GcpAuthBackend) initClients(ctx context.Context, s logical.Storage) (err error) {
-	config, err := b.config(ctx, s)
-	if err != nil {
-		return err
-	}
-
-	var httpClient *http.Client
-	if config == nil || config.Credentials == nil {
-		_, tknSrc, err := gcputil.FindCredentials("", ctx, b.oauthScopes...)
-		if err != nil {
-			return fmt.Errorf("credentials were not configured and fallback to application default credentials failed: %v", err)
-		}
-		cleanCtx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
-		httpClient = oauth2.NewClient(cleanCtx, tknSrc)
-	} else {
-		httpClient, err = gcputil.GetHttpClient(config.Credentials, b.oauthScopes...)
-		if err != nil {
-			return err
-		}
-	}
-
-	userAgentStr := fmt.Sprintf("(%s %s) Vault/%s", runtime.GOOS, runtime.GOARCH, version.GetVersion().FullVersionNumber(true))
-
-	b.iamClient, err = iam.New(httpClient)
-	if err != nil {
-		b.Close()
-		return err
-	}
-	b.iamClient.UserAgent = userAgentStr
-
-	b.gceClient, err = compute.New(httpClient)
-	if err != nil {
-		b.Close()
-		return err
-	}
-	b.gceClient.UserAgent = userAgentStr
-
-	return nil
 }
 
 const backendHelp = `
-The GCP backend plugin allows authentication for Google Cloud Platform entities.
-Currently, it supports authentication for:
+The GCP auth method allows machines to authenticate Google Cloud Platform
+entities. It supports two modes of authentication:
 
-* IAM Service Accounts:
-	IAM service accounts provide a signed JSON Web Token (JWT), signed by
-	calling GCP APIs directly or via the Vault CL helper.
+- IAM service accounts: provides a signed JSON Web Token for a given
+  service account key
 
-* GCE VM Instances:
-	GCE provide a signed instance metadata JSON Web Token (JWT), obtained from the
-	GCE instance metadata server  (http://metadata.google.internal/computeMetadata/v1/instance).
-	Using the /service-accounts/<service-account-name>/identity	endpoint, the instance
-	can obtain this JWT and pass it to Vault on login.
+- GCE VM metadata: provides a signed JSON Web Token using instance metadata
+  obtained from the GCE instance metadata server
 `

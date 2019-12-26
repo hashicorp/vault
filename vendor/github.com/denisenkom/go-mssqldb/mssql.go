@@ -29,24 +29,19 @@ var driverInstanceNoProcess = &Driver{processQueryText: false}
 func init() {
 	sql.Register("mssql", driverInstance)
 	sql.Register("sqlserver", driverInstanceNoProcess)
-	createDialer = func(p *connectParams) dialer {
-		return tcpDialer{&net.Dialer{KeepAlive: p.keepAlive}}
+	createDialer = func(p *connectParams) Dialer {
+		return netDialer{&net.Dialer{KeepAlive: p.keepAlive}}
 	}
 }
 
-// Abstract the dialer for testing and for non-TCP based connections.
-type dialer interface {
-	Dial(ctx context.Context, addr string) (net.Conn, error)
-}
+var createDialer func(p *connectParams) Dialer
 
-var createDialer func(p *connectParams) dialer
-
-type tcpDialer struct {
+type netDialer struct {
 	nd *net.Dialer
 }
 
-func (d tcpDialer) Dial(ctx context.Context, addr string) (net.Conn, error) {
-	return d.nd.DialContext(ctx, "tcp", addr)
+func (d netDialer) DialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
+	return d.nd.DialContext(ctx, network, addr)
 }
 
 type Driver struct {
@@ -125,6 +120,21 @@ type Connector struct {
 	// SessionInitSQL is optional. The session will be reset even if
 	// SessionInitSQL is empty.
 	SessionInitSQL string
+
+	// Dialer sets a custom dialer for all network operations.
+	// If Dialer is not set, normal net dialers are used.
+	Dialer Dialer
+}
+
+type Dialer interface {
+	DialContext(ctx context.Context, network string, addr string) (net.Conn, error)
+}
+
+func (c *Connector) getDialer(p *connectParams) Dialer {
+	if c != nil && c.Dialer != nil {
+		return c.Dialer
+	}
+	return createDialer(p)
 }
 
 type Conn struct {
@@ -310,12 +320,12 @@ func (d *Driver) open(ctx context.Context, dsn string) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.connect(ctx, params)
+	return d.connect(ctx, nil, params)
 }
 
 // connect to the server, using the provided context for dialing only.
-func (d *Driver) connect(ctx context.Context, params connectParams) (*Conn, error) {
-	sess, err := connect(ctx, d.log, params)
+func (d *Driver) connect(ctx context.Context, c *Connector, params connectParams) (*Conn, error) {
+	sess, err := connect(ctx, c, d.log, params)
 	if err != nil {
 		// main server failed, try fail-over partner
 		if params.failOverPartner == "" {
@@ -327,7 +337,7 @@ func (d *Driver) connect(ctx context.Context, params connectParams) (*Conn, erro
 			params.port = params.failOverPort
 		}
 
-		sess, err = connect(ctx, d.log, params)
+		sess, err = connect(ctx, c, d.log, params)
 		if err != nil {
 			// fail-over partner also failed, now fail
 			return nil, err
@@ -335,6 +345,7 @@ func (d *Driver) connect(ctx context.Context, params connectParams) (*Conn, erro
 	}
 
 	conn := &Conn{
+		connector:        c,
 		sess:             sess,
 		transactionCtx:   context.Background(),
 		processQueryText: d.processQueryText,

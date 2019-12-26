@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -14,8 +15,9 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
@@ -41,6 +43,7 @@ type OperatorMigrateCommand struct {
 type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
+	ClusterAddr        string          `hcl:"cluster_addr"`
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -149,31 +152,31 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	}
 
 	if c.flagReset {
-		if err := SetMigration(from, false); err != nil {
+		if err := SetStorageMigration(from, false); err != nil {
 			return errwrap.Wrapf("error reseting migration lock: {{err}}", err)
 		}
 		return nil
 	}
 
-	to, err := c.newBackend(config.StorageDestination.Type, config.StorageDestination.Config)
+	to, err := c.createDestinationBackend(config.StorageDestination.Type, config.StorageDestination.Config, config)
 	if err != nil {
 		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
 	}
 
-	migrationStatus, err := CheckMigration(from)
+	migrationStatus, err := CheckStorageMigration(from)
 	if err != nil {
-		return errors.New("error checking migration status")
+		return errwrap.Wrapf("error checking migration status: {{err}}", err)
 	}
 
 	if migrationStatus != nil {
 		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetMigration(from, true); err != nil {
+	if err := SetStorageMigration(from, true); err != nil {
 		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
 	}
 
-	defer SetMigration(from, false)
+	defer SetStorageMigration(from, false)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -184,6 +187,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	select {
 	case err := <-doneCh:
+		cancelFunc()
 		return err
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Migration shutdown triggered\n")
@@ -191,13 +195,12 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		<-doneCh
 		return errAbort
 	}
-	return nil
 }
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
 	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == migrationLock || path == vault.CoreLockPath {
+		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
 
@@ -226,6 +229,46 @@ func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string)
 	}
 
 	return factory(conf, c.logger)
+}
+
+func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[string]string, config *migratorConfig) (physical.Backend, error) {
+	storage, err := c.newBackend(kind, conf)
+	if err != nil {
+		return nil, err
+	}
+
+	switch kind {
+	case "raft":
+		if len(config.ClusterAddr) == 0 {
+			return nil, errors.New("cluster_addr config not set")
+		}
+
+		raftStorage, ok := storage.(*raft.RaftBackend)
+		if !ok {
+			return nil, errors.New("wrong storage type for raft backend")
+		}
+
+		parsedClusterAddr, err := url.Parse(config.ClusterAddr)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+		}
+		if err := raftStorage.Bootstrap(context.Background(), []raft.Peer{
+			{
+				ID:      raftStorage.NodeID(),
+				Address: parsedClusterAddr.Host,
+			},
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+		}
+
+		if err := raftStorage.SetupCluster(context.Background(), raft.SetupOpts{
+			StartAsLeader: true,
+		}); err != nil {
+			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+		}
+	}
+
+	return storage, nil
 }
 
 // loadMigratorConfig loads the configuration at the given path
@@ -311,7 +354,9 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 			// remove List-triggering key and add children in reverse order
 			dfs = dfs[:len(dfs)-1]
 			for i := len(children) - 1; i >= 0; i-- {
-				dfs = append(dfs, key+children[i])
+				if children[i] != "" {
+					dfs = append(dfs, key+children[i])
+				}
 			}
 		} else {
 			err := cb(ctx, key)

@@ -2,24 +2,26 @@ package awsauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/copystructure"
 )
 
 var (
-	currentRoleStorageVersion = 2
+	currentRoleStorageVersion = 3
 )
 
-func pathRole(b *backend) *framework.Path {
-	return &framework.Path{
+func (b *backend) pathRole() *framework.Path {
+	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
@@ -130,29 +132,25 @@ of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
 is only allowed if auth_type is ec2.`,
 			},
-			"period": &framework.FieldSchema{
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				Description: `
-If set, indicates that the token generated using this role should never expire.
-The token should be renewed within the duration specified by this value. At
-each renewal, the token's TTL will be set to the value of this parameter.`,
+			"period": {
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_period"),
+				Deprecated:  true,
 			},
 			"ttl": {
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				Description: `Duration in seconds after which the issued token should expire. Defaults
-to 0, in which case the value will fallback to the system/mount defaults.`,
+				Type:        framework.TypeDurationSecond,
+				Description: tokenutil.DeprecationText("token_ttl"),
+				Deprecated:  true,
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Default:     0,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_max_ttl"),
+				Deprecated:  true,
 			},
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
-				Default:     "default",
-				Description: "Policies to be set on tokens issued using this role.",
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
 			"allow_instance_migration": {
 				Type:    framework.TypeBool,
@@ -177,24 +175,37 @@ auth_type is ec2.`,
 
 		ExistenceCheck: b.pathRoleExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathRoleCreateUpdate,
-			logical.UpdateOperation: b.pathRoleCreateUpdate,
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleDelete,
+			},
 		},
 
 		HelpSynopsis:    pathRoleSyn,
 		HelpDescription: pathRoleDesc,
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
-func pathListRole(b *backend) *framework.Path {
+func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
@@ -202,12 +213,14 @@ func pathListRole(b *backend) *framework.Path {
 	}
 }
 
-func pathListRoles(b *backend) *framework.Path {
+func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
@@ -218,82 +231,83 @@ func pathListRoles(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedAWSRole(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
+	entry, err := b.role(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-// lockedAWSRole returns the properties set on the given role. This method
-// acquires the read lock before reading the role from the storage.
-func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
+// role fetches the role entry from cache, or loads from disk if necessary
+func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	b.roleMutex.RLock()
-	roleEntry, err := b.nonLockedAWSRole(ctx, s, roleName)
-	// we manually unlock rather than defer the unlock because we might need to grab
-	// a read/write lock in the upgrade path
-	b.roleMutex.RUnlock()
-	if err != nil {
-		return nil, err
-	}
-	if roleEntry == nil {
-		return nil, nil
-	}
-	needUpgrade, err := b.upgradeRoleEntry(ctx, s, roleEntry)
-	if err != nil {
-		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
-	}
-	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		b.roleMutex.Lock()
-		defer b.roleMutex.Unlock()
-		// Now that we have a R/W lock, we need to re-read the role entry in case it was
-		// written to between releasing the read lock and acquiring the write lock
-		roleEntry, err = b.nonLockedAWSRole(ctx, s, roleName)
-		if err != nil {
-			return nil, err
+	roleEntryRaw, found := b.roleCache.Get(roleName)
+	if found && roleEntryRaw != nil {
+		roleEntry, ok := roleEntryRaw.(*awsRoleEntry)
+		if !ok {
+			return nil, errors.New("could not convert role entry internally")
 		}
-		// somebody deleted the role, so no use in putting it back
 		if roleEntry == nil {
-			return nil, nil
-		}
-		// now re-check to see if we need to upgrade
-		if needUpgrade, err = b.upgradeRoleEntry(ctx, s, roleEntry); err != nil {
-			return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
-		}
-		if needUpgrade {
-			if err = b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry); err != nil {
-				return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
-			}
+			return nil, errors.New("converted role entry is nil")
 		}
 	}
-	return roleEntry, nil
-}
 
-// lockedSetAWSRole creates or updates a role in the storage. This method
-// acquires the write lock before creating or updating the role at the storage.
-func (b *backend) lockedSetAWSRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
-	if roleName == "" {
-		return fmt.Errorf("missing role name")
-	}
-
-	if roleEntry == nil {
-		return fmt.Errorf("nil role entry")
-	}
-
+	// Not found, or was nil
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	return b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry)
+	return b.roleInternal(ctx, s, roleName)
 }
 
-// nonLockedSetAWSRole creates or updates a role in the storage. This method
-// does not acquire the write lock before reading the role from the storage. If
-// locking is desired, use lockedSetAWSRole instead.
-func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, roleName string,
+// roleInternal does not perform locking, and rechecks the cache, going to disk if necessar
+func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
+	// Check cache again now that we have the lock
+	roleEntryRaw, found := b.roleCache.Get(roleName)
+	if found && roleEntryRaw != nil {
+		roleEntry, ok := roleEntryRaw.(*awsRoleEntry)
+		if !ok {
+			return nil, errors.New("could not convert role entry internally")
+		}
+		if roleEntry == nil {
+			return nil, errors.New("converted role entry is nil")
+		}
+	}
+
+	// Fetch from storage
+	entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	result := new(awsRoleEntry)
+	if err := entry.DecodeJSON(result); err != nil {
+		return nil, err
+	}
+
+	needUpgrade, err := b.upgradeRole(ctx, s, result)
+	if err != nil {
+		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
+	}
+	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+		if err = b.setRole(ctx, s, roleName, result); err != nil {
+			return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
+		}
+	}
+
+	b.roleCache.SetDefault(roleName, result)
+
+	return result, nil
+}
+
+// setRole creates or updates a role in the storage. The caller must hold
+// the write lock.
+func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName string,
 	roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
@@ -312,12 +326,127 @@ func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, ro
 		return err
 	}
 
+	b.roleCache.SetDefault(roleName, roleEntry)
+
 	return nil
+}
+
+// initialize is used to initialize the AWS roles
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+
+	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
+	// Initialize only if we are either:
+	//   (1) A local mount.
+	//   (2) Are _NOT_ a replicated performance secondary
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+
+		s := req.Storage
+
+		logger := b.Logger().Named("initialize")
+		logger.Debug("starting initialization")
+
+		var upgradeCtx context.Context
+		upgradeCtx, b.upgradeCancelFunc = context.WithCancel(context.Background())
+
+		go func() {
+			// The vault will become unsealed while this goroutine is running,
+			// so we could see some role requests block until the lock is
+			// released.  However we'd rather see those requests block (and
+			// potentially start timing out) than allow a non-upgraded role to
+			// be fetched.
+			b.roleMutex.Lock()
+			defer b.roleMutex.Unlock()
+
+			upgraded, err := b.upgrade(upgradeCtx, s)
+			if err != nil {
+				logger.Error("error running initialization", "error", err)
+				return
+			}
+			if upgraded {
+				logger.Info("an upgrade was performed during initialization")
+			}
+		}()
+
+	}
+
+	return nil
+}
+
+// awsVersion stores info about the the latest aws version that we have
+// upgraded to.
+type awsVersion struct {
+	Version int `json:"version"`
+}
+
+// currentAwsVersion stores the latest version that we have upgraded to.
+// Note that this is tracked independently from currentRoleStorageVersion.
+const currentAwsVersion = 1
+
+// upgrade does an upgrade, if necessary
+func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) {
+	entry, err := s.Get(ctx, "config/version")
+	if err != nil {
+		return false, err
+	}
+	var version awsVersion
+	if entry != nil {
+		err = entry.DecodeJSON(&version)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	upgraded := version.Version < currentAwsVersion
+	switch version.Version {
+	case 0:
+		// Read all the role names.
+		roleNames, err := s.List(ctx, "role/")
+		if err != nil {
+			return false, err
+		}
+
+		// Upgrade the roles as necessary.
+		for _, roleName := range roleNames {
+			// make sure the context hasn't been canceled
+			if ctx.Err() != nil {
+				return false, err
+			}
+			_, err := b.roleInternal(ctx, s, roleName)
+			if err != nil {
+				return false, err
+			}
+		}
+		fallthrough
+
+	case currentAwsVersion:
+		version.Version = currentAwsVersion
+
+	default:
+		return false, fmt.Errorf("unrecognized role version: %d", version.Version)
+	}
+
+	// save the current version
+	if upgraded {
+		entry, err = logical.StorageEntryJSON("config/version", &version)
+		if err != nil {
+			return false, err
+		}
+		err = s.Put(ctx, entry)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgraded, nil
 }
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
 // (and thus needs to be persisted)
-func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
+func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
 	if roleEntry == nil {
 		return false, fmt.Errorf("received nil roleEntry")
 	}
@@ -391,8 +520,8 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundVpcIDs = []string{roleEntry.BoundVpcID}
 			roleEntry.BoundVpcID = ""
 		}
-		roleEntry.Version = 1
 		fallthrough
+
 	case 1:
 		// Make BoundIamRoleARNs and BoundIamInstanceProfileARNs explicitly prefix-matched
 		for i, arn := range roleEntry.BoundIamRoleARNs {
@@ -401,42 +530,39 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 		for i, arn := range roleEntry.BoundIamInstanceProfileARNs {
 			roleEntry.BoundIamInstanceProfileARNs[i] = fmt.Sprintf("%s*", arn)
 		}
-		roleEntry.Version = 2
 		fallthrough
+
+	case 2:
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return false, err
+		}
+		roleEntry.RoleID = roleID
+		fallthrough
+
 	case currentRoleStorageVersion:
+		roleEntry.Version = currentRoleStorageVersion
+
 	default:
 		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
 	}
 
+	// Add tokenutil upgrades. These don't need to be persisted, they're fine
+	// being upgraded each time until changed.
+	if roleEntry.TokenTTL == 0 && roleEntry.TTL > 0 {
+		roleEntry.TokenTTL = roleEntry.TTL
+	}
+	if roleEntry.TokenMaxTTL == 0 && roleEntry.MaxTTL > 0 {
+		roleEntry.TokenMaxTTL = roleEntry.MaxTTL
+	}
+	if roleEntry.TokenPeriod == 0 && roleEntry.Period > 0 {
+		roleEntry.TokenPeriod = roleEntry.Period
+	}
+	if len(roleEntry.TokenPolicies) == 0 && len(roleEntry.Policies) > 0 {
+		roleEntry.TokenPolicies = roleEntry.Policies
+	}
+
 	return upgraded, nil
-
-}
-
-// nonLockedAWSRole returns the properties set on the given role. This method
-// does not acquire the read lock before reading the role from the storage. If
-// locking is desired, use lockedAWSRole instead.
-// This method also does NOT check to see if a role upgrade is required. It is
-// the responsibility of the caller to check if a role upgrade is required and,
-// if so, to upgrade the role
-func (b *backend) nonLockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
-	if roleName == "" {
-		return nil, fmt.Errorf("missing role name")
-	}
-
-	entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName))
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	var result awsRoleEntry
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
 }
 
 // pathRoleDelete is used to delete the information registered for a given AMI ID.
@@ -449,24 +575,29 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	return nil, req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
+	err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
+	if err != nil {
+		return nil, errwrap.Wrapf("error deleting role: {{err}}", err)
+	}
+
+	b.roleCache.Delete(roleName)
+
+	return nil, nil
 }
 
 // pathRoleList is used to list all the AMI IDs registered with Vault.
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.roleMutex.RLock()
-	defer b.roleMutex.RUnlock()
-
 	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
+
 	return logical.ListResponse(roles), nil
 }
 
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
+	roleEntry, err := b.role(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -489,25 +620,31 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	roleEntry, err := b.nonLockedAWSRole(ctx, req.Storage, roleName)
+	// We use the internal one here to ensure that we have fresh data and
+	// nobody else is concurrently modifying. This will also call the upgrade
+	// path on existing role entries.
+	roleEntry, err := b.roleInternal(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
 		roleEntry = &awsRoleEntry{
+			RoleID:  roleID,
 			Version: currentRoleStorageVersion,
 		}
 	} else {
-		needUpdate, err := b.upgradeRoleEntry(ctx, req.Storage, roleEntry)
+		// We want to always use a copy so we aren't modifying items in the
+		// version in the cache while other users may be looking it up (or if
+		// we fail somewhere)
+		cp, err := copystructure.Copy(roleEntry)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to update roleEntry: %v", err)), nil
+			return nil, err
 		}
-		if needUpdate {
-			err = b.nonLockedSetAWSRole(ctx, req.Storage, roleName, roleEntry)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("failed to save upgraded roleEntry: %v", err)), nil
-			}
-		}
+		roleEntry = cp.(*awsRoleEntry)
 	}
 
 	// Fetch and set the bound parameters. There can't be default values
@@ -692,14 +829,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if numBinds == 0 {
-		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
-	}
-
-	policiesRaw, ok := data.GetOk("policies")
-	if ok {
-		roleEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.Policies = []string{}
+		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
 	disallowReauthenticationBool, ok := data.GetOk("disallow_reauthentication")
@@ -728,48 +858,54 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	var resp logical.Response
 
-	ttlRaw, ok := data.GetOk("ttl")
-	if ok {
-		ttl := time.Duration(ttlRaw.(int)) * time.Second
-		defaultLeaseTTL := b.System().DefaultLeaseTTL()
-		if ttl > defaultLeaseTTL {
-			resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", ttl/time.Second, defaultLeaseTTL/time.Second))
-		}
-		roleEntry.TTL = ttl
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
+	if err := roleEntry.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	maxTTLInt, ok := data.GetOk("max_ttl")
-	if ok {
-		maxTTL := time.Duration(maxTTLInt.(int)) * time.Second
-		systemMaxTTL := b.System().MaxLeaseTTL()
-		if maxTTL > systemMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds greater than current mount/system default of %d seconds; max_ttl will be capped at login time", maxTTL/time.Second, systemMaxTTL/time.Second))
+	// Handle upgrade cases
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &roleEntry.Policies, &roleEntry.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		if maxTTL < time.Duration(0) {
-			return logical.ErrorResponse("max_ttl cannot be negative"), nil
+		if err := tokenutil.UpgradeValue(data, "ttl", "token_ttl", &roleEntry.TTL, &roleEntry.TokenTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		// Special case here for old lease value
+		_, ok := data.GetOk("token_ttl")
+		if !ok {
+			_, ok = data.GetOk("ttl")
+			if !ok {
+				ttlRaw, ok := data.GetOk("lease")
+				if ok {
+					roleEntry.TTL = time.Duration(ttlRaw.(int)) * time.Second
+					roleEntry.TokenTTL = roleEntry.TTL
+				}
+			}
 		}
 
-		roleEntry.MaxTTL = maxTTL
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
+		if err := tokenutil.UpgradeValue(data, "max_ttl", "token_max_ttl", &roleEntry.MaxTTL, &roleEntry.TokenMaxTTL); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		if err := tokenutil.UpgradeValue(data, "period", "token_period", &roleEntry.Period, &roleEntry.TokenPeriod); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
-	if roleEntry.MaxTTL != 0 && roleEntry.MaxTTL < roleEntry.TTL {
-		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
+	defaultLeaseTTL := b.System().DefaultLeaseTTL()
+	systemMaxTTL := b.System().MaxLeaseTTL()
+	if roleEntry.TokenTTL > defaultLeaseTTL {
+		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", roleEntry.TokenTTL/time.Second, defaultLeaseTTL/time.Second))
 	}
-
-	periodRaw, ok := data.GetOk("period")
-	if ok {
-		roleEntry.Period = time.Second * time.Duration(periodRaw.(int))
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.Period = time.Second * time.Duration(data.Get("period").(int))
+	if roleEntry.TokenMaxTTL > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max ttl of %d seconds greater than current mount/system default of %d seconds; max ttl will be capped at login time", roleEntry.TokenMaxTTL/time.Second, systemMaxTTL/time.Second))
 	}
-
-	if roleEntry.Period > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	if roleEntry.TokenMaxTTL != 0 && roleEntry.TokenMaxTTL < roleEntry.TokenTTL {
+		return logical.ErrorResponse("ttl should be shorter than max ttl"), nil
+	}
+	if roleEntry.TokenPeriod > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("period of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
 	roleTagStr, ok := data.GetOk("role_tag")
@@ -794,7 +930,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
-	if err := b.nonLockedSetAWSRole(ctx, req.Storage, roleName, roleEntry); err != nil {
+	if err := b.setRole(ctx, req.Storage, roleName, roleEntry); err != nil {
 		return nil, err
 	}
 
@@ -807,29 +943,35 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	AuthType                    string        `json:"auth_type" `
-	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
-	BoundAccountIDs             []string      `json:"bound_account_id_list"`
-	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
-	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
-	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
-	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list"`
-	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list"`
-	BoundRegions                []string      `json:"bound_region_list"`
-	BoundSubnetIDs              []string      `json:"bound_subnet_id_list"`
-	BoundVpcIDs                 []string      `json:"bound_vpc_id_list"`
-	InferredEntityType          string        `json:"inferred_entity_type"`
-	InferredAWSRegion           string        `json:"inferred_aws_region"`
-	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids"`
-	RoleTag                     string        `json:"role_tag"`
-	AllowInstanceMigration      bool          `json:"allow_instance_migration"`
-	TTL                         time.Duration `json:"ttl"`
-	MaxTTL                      time.Duration `json:"max_ttl"`
-	Policies                    []string      `json:"policies"`
-	DisallowReauthentication    bool          `json:"disallow_reauthentication"`
-	HMACKey                     string        `json:"hmac_key"`
-	Period                      time.Duration `json:"period"`
-	Version                     int           `json:"version"`
+	tokenutil.TokenParams
+
+	RoleID                      string   `json:"role_id"`
+	AuthType                    string   `json:"auth_type"`
+	BoundAmiIDs                 []string `json:"bound_ami_id_list"`
+	BoundAccountIDs             []string `json:"bound_account_id_list"`
+	BoundEc2InstanceIDs         []string `json:"bound_ec2_instance_id_list"`
+	BoundIamPrincipalARNs       []string `json:"bound_iam_principal_arn_list"`
+	BoundIamPrincipalIDs        []string `json:"bound_iam_principal_id_list"`
+	BoundIamRoleARNs            []string `json:"bound_iam_role_arn_list"`
+	BoundIamInstanceProfileARNs []string `json:"bound_iam_instance_profile_arn_list"`
+	BoundRegions                []string `json:"bound_region_list"`
+	BoundSubnetIDs              []string `json:"bound_subnet_id_list"`
+	BoundVpcIDs                 []string `json:"bound_vpc_id_list"`
+	InferredEntityType          string   `json:"inferred_entity_type"`
+	InferredAWSRegion           string   `json:"inferred_aws_region"`
+	ResolveAWSUniqueIDs         bool     `json:"resolve_aws_unique_ids"`
+	RoleTag                     string   `json:"role_tag"`
+	AllowInstanceMigration      bool     `json:"allow_instance_migration"`
+	DisallowReauthentication    bool     `json:"disallow_reauthentication"`
+	HMACKey                     string   `json:"hmac_key"`
+	Version                     int      `json:"version"`
+
+	// Deprecated: These are superceded by TokenUtil
+	TTL      time.Duration `json:"ttl"`
+	MaxTTL   time.Duration `json:"max_ttl"`
+	Period   time.Duration `json:"period"`
+	Policies []string      `json:"policies"`
+
 	// DEPRECATED -- these are the old fields before we supported lists and exist for backwards compatibility
 	BoundAmiID                 string `json:"bound_ami_id,omitempty" `
 	BoundAccountID             string `json:"bound_account_id,omitempty"`
@@ -858,13 +1000,24 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"inferred_entity_type":           r.InferredEntityType,
 		"inferred_aws_region":            r.InferredAWSRegion,
 		"resolve_aws_unique_ids":         r.ResolveAWSUniqueIDs,
+		"role_id":                        r.RoleID,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
-		"ttl":                            r.TTL / time.Second,
-		"max_ttl":                        r.MaxTTL / time.Second,
-		"policies":                       r.Policies,
 		"disallow_reauthentication":      r.DisallowReauthentication,
-		"period":                         r.Period / time.Second,
+	}
+
+	r.PopulateTokenData(responseData)
+	if r.TTL > 0 {
+		responseData["ttl"] = int64(r.TTL.Seconds())
+	}
+	if r.MaxTTL > 0 {
+		responseData["max_ttl"] = int64(r.MaxTTL.Seconds())
+	}
+	if r.Period > 0 {
+		responseData["period"] = int64(r.Period.Seconds())
+	}
+	if len(r.Policies) > 0 {
+		responseData["policies"] = responseData["token_policies"]
 	}
 
 	convertNilToEmptySlice := func(data map[string]interface{}, field string) {

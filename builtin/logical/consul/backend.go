@@ -3,8 +3,8 @@ package consul
 import (
 	"context"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -25,9 +25,9 @@ func Backend() *backend {
 		},
 
 		Paths: []*framework.Path{
-			pathConfigAccess(),
+			pathConfigAccess(&b),
 			pathListRoles(&b),
-			pathRoles(),
+			pathRoles(&b),
 			pathToken(&b),
 		},
 

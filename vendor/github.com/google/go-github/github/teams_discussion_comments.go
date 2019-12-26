@@ -24,7 +24,6 @@ type DiscussionComment struct {
 	Number        *int       `json:"number,omitempty"`
 	UpdatedAt     *Timestamp `json:"updated_at,omitempty"`
 	URL           *string    `json:"url,omitempty"`
-	Reactions     *Reactions `json:"reactions,omitempty"`
 }
 
 func (c DiscussionComment) String() string {

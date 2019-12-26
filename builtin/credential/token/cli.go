@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/sdk/helper/password"
 )
 
 type CLIHandler struct {

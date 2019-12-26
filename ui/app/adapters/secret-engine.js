@@ -1,10 +1,19 @@
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   url(path) {
     const url = `${this.buildURL()}/mounts`;
-    return path ? url + '/' + path : url;
+    return path ? url + '/' + encodePath(path) : url;
+  },
+
+  internalURL(path) {
+    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    if (path) {
+      url = `${url}/${encodePath(path)}`;
+    }
+    return url;
   },
 
   pathForType() {
@@ -12,11 +21,7 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
-    if (query.path) {
-      url = `${url}/${query.path}`;
-    }
-    return this.ajax(url, 'GET');
+    return this.ajax(this.internalURL(query.path), 'GET');
   },
 
   createRecord(store, type, snapshot) {
@@ -34,14 +39,14 @@ export default ApplicationAdapter.extend({
 
   findRecord(store, type, path, snapshot) {
     if (snapshot.attr('type') === 'ssh') {
-      return this.ajax(`/v1/${path}/config/ca`, 'GET');
+      return this.ajax(`/v1/${encodePath(path)}/config/ca`, 'GET');
     }
     return;
   },
 
   queryRecord(store, type, query) {
     if (query.type === 'aws') {
-      return this.ajax(`/v1/${query.backend}/config/lease`, 'GET').then(resp => {
+      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then(resp => {
         resp.path = query.backend + '/';
         return resp;
       });
@@ -57,25 +62,25 @@ export default ApplicationAdapter.extend({
     if (apiPath) {
       const serializer = store.serializerFor(type.modelName);
       const data = serializer.serialize(snapshot);
-      const path = snapshot.id;
+      const path = encodePath(snapshot.id);
       return this.ajax(`/v1/${path}/${apiPath}`, options.isDelete ? 'DELETE' : 'POST', { data });
     }
   },
 
   saveAWSRoot(store, type, snapshot) {
     let { data } = snapshot.adapterOptions;
-    const path = snapshot.id;
+    const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
   },
 
   saveAWSLease(store, type, snapshot) {
     let { data } = snapshot.adapterOptions;
-    const path = snapshot.id;
+    const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/lease`, 'POST', { data });
   },
 
   saveZeroAddressConfig(store, type, snapshot) {
-    const path = snapshot.id;
+    const path = encodePath(snapshot.id);
     const roles = store
       .peekAll('role-ssh')
       .filterBy('zeroAddress')

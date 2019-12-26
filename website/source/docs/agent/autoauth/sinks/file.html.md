@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth File Sink"
+sidebar_title: "File"
 sidebar_current: "docs-agent-autoauth-sinks-file"
 description: |-
   File sink for Vault Agent Auto-Auth
@@ -17,8 +18,10 @@ generally it is best for the client to remove the file as soon as it is seen.
 
 It is also best practice to write the file to a ramdisk, ideally an encrypted
 ramdisk, and use appropriate filesystem permissions. The file is currently
-always written with `0640` permissions.
+written with `0640` permissions as default, but can be overridden with the optional
+'mode' setting.
 
 ## Configuration
 
 - `path` `(string: required)` - The path to use to write the token file
+- `mode` `(int: optional)` - A string containing an octal number representing the bit pattern for the file mode, similar to chmod. Set to "0000" to prevent Vault from modifying the file mode

@@ -8,9 +8,9 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -87,7 +87,8 @@ consumption:
 	for {
 		select {
 		case <-ah.OutputCh:
-			// Nothing
+		case <-ah.TemplateTokenCh:
+		// Nothing
 		case <-time.After(stopTime.Sub(time.Now())):
 			if !closed {
 				cancelFunc()

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Transit Secrets Re-wrapping - Guides"
+sidebar_title: "Transit Secrets Re-wrapping"
 sidebar_current: "guides-encryption-transit-rewrap"
 description: |-
   The goal of this guide is to demonstrate one possible way to re-wrap data after
@@ -21,7 +22,7 @@ large files such as images, can be protected with the transit engine.  This EaaS
 function can augment or eliminate the need for Transparent Data Encryption (TDE)
 with databases to encrypt the contents of a bucket, volume, and disk, etc.  
 
-![Encryption as a Service](/assets/images/vault-encryption.png)
+![Encryption as a Service](/img/vault-encryption.png)
 
 ## Encryption Key Rotation
 
@@ -36,7 +37,7 @@ rotating an encryption key in the transit engine in Vault.
 
 ## Reference Material
 
-- [Encryption as a Service](/guides/encryption/transit.html) 
+- [Encryption as a Service](/guides/encryption/transit.html)
 - [Transit Secret Engine](/docs/secrets/transit/index.html)
 - [Transit Secret Engine API](/api/secret/transit/index.html)
 - [Transparent Data Encryption in the Modern Datacenter](https://www.hashicorp.com/blog/transparent-data-encryption-in-the-modern-datacenter)

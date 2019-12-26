@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "One-Time SSH Passwords (OTP) - SSH - Secrets Engines"
+sidebar_title: "SSH OTP"
 sidebar_current: "docs-secrets-ssh-one-time-ssh-passwords"
 description: |-
   The One-Time SSH Password (OTP) SSH secrets engine type allows a Vault server
@@ -107,6 +108,12 @@ username@<IP of remote host>:~$
 
 Note: `sshpass` cannot handle host key checking. Host key checking can be
 disabled by setting `-strict-host-key-checking=no`.
+
+## Learn
+
+Refer to the [SSH Secrets Engine: One-Time SSH
+Password](https://learn.hashicorp.com/vault/secrets-management/sm-ssh-otp) guide
+for a step-by-step tutorial.
 
 ## API
 

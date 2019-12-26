@@ -17,8 +17,8 @@ package ram
 
 // SecurityPreference is a nested struct in ram response
 type SecurityPreference struct {
+	MFAPreference          MFAPreference          `json:"MFAPreference" xml:"MFAPreference"`
 	LoginProfilePreference LoginProfilePreference `json:"LoginProfilePreference" xml:"LoginProfilePreference"`
 	PublicKeyPreference    PublicKeyPreference    `json:"PublicKeyPreference" xml:"PublicKeyPreference"`
-	MFAPreference          MFAPreference          `json:"MFAPreference" xml:"MFAPreference"`
 	AccessKeyPreference    AccessKeyPreference    `json:"AccessKeyPreference" xml:"AccessKeyPreference"`
 }

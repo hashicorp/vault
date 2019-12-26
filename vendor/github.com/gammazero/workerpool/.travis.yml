@@ -1,0 +1,17 @@
+language: go
+
+go:
+  - "1.8"
+  - "1.9"
+  - "1.10"
+  - "1.11"
+  - "tip"
+
+before_script:
+  - go vet ./...
+
+script:
+  - ./go.test.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

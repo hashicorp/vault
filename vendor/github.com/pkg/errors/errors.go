@@ -229,7 +229,7 @@ func WithMessagef(err error, format string, args ...interface{}) error {
 	}
 	return &withMessage{
 		cause: err,
-		msg: fmt.Sprintf(format, args...),
+		msg:   fmt.Sprintf(format, args...),
 	}
 }
 

@@ -5,25 +5,31 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
-			"role_tag": &framework.FieldSchema{
+			"role_tag": {
 				Type: framework.TypeString,
 				Description: `Role tag to be blacklisted. The tag can be supplied as-is. In order
 to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRoletagBlacklistUpdate,
-			logical.ReadOperation:   b.pathRoletagBlacklistRead,
-			logical.DeleteOperation: b.pathRoletagBlacklistDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistDelete,
+			},
 		},
 
 		HelpSynopsis:    pathRoletagBlacklistSyn,
@@ -32,12 +38,14 @@ to avoid any encoding problems, it can be base64 encoded.`,
 }
 
 // Path to list all the blacklisted tags.
-func pathListRoletagBlacklist(b *backend) *framework.Path {
+func (b *backend) pathListRoletagBlacklist() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoletagBlacklistsList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoletagBlacklistsList,
+			},
 		},
 
 		HelpSynopsis:    pathListRoletagBlacklistHelpSyn,
@@ -163,7 +171,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Get the entry for the role mentioned in the role tag.
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, rTag.Role)
+	roleEntry, err := b.role(ctx, req.Storage, rTag.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +204,8 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	// Decide the expiration time based on the max_ttl values. Since this is
 	// restricting access, use the greatest duration, not the least.
 	maxDur := rTag.MaxTTL
-	if roleEntry.MaxTTL > maxDur {
-		maxDur = roleEntry.MaxTTL
+	if roleEntry.TokenMaxTTL > maxDur {
+		maxDur = roleEntry.TokenMaxTTL
 	}
 	if b.System().MaxLeaseTTL() > maxDur {
 		maxDur = b.System().MaxLeaseTTL()

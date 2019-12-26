@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "RabbitMQ - Secrets Engines"
+sidebar_title: "RabbitMQ"
 sidebar_current: "docs-secrets-rabbitmq"
 description: |-
   The RabbitMQ secrets engine for Vault generates user credentials to access RabbitMQ.
@@ -61,9 +62,15 @@ generate credentials:
     ```
 
     By writing to the `roles/my-role` path we are defining the `my-role` role.
-    This role will be created by evaluating the given `vhosts` and `tags`
-    statements. By default, no tags and no virtual hosts are assigned to a role.
-    You can read more about [RabbitMQ management tags][rmq-perms].
+    This role will be created by evaluating the given `vhosts`, `vhost_topics`
+    and `tags` statements. By default, no tags, no virtual hosts or topic
+    permissions are assigned to a role. If no topic permissions are defined
+    and the default authorisation backend is used, publishing to a topic
+    exchange or consuming from a topic is always authorised. You can read
+    more about [RabbitMQ management tags][rmq-perms]
+    and [RabbitMQ topic authorization][rmq-topics].
+
+ 
 
 ## Usage
 
@@ -95,3 +102,4 @@ The RabbitMQ secrets engine has a full HTTP API. Please see the
 details.
 
 [rmq-perms]: https://www.rabbitmq.com/management.html#permissions
+[rmq-topics]: https://www.rabbitmq.com/access-control.html#topic-authorisation

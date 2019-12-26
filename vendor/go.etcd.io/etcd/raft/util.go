@@ -77,10 +77,7 @@ func DescribeMessage(m pb.Message, f EntryFormatter) string {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "%x->%x %v Term:%d Log:%d/%d", m.From, m.To, m.Type, m.Term, m.LogTerm, m.Index)
 	if m.Reject {
-		fmt.Fprintf(&buf, " Rejected")
-		if m.RejectHint != 0 {
-			fmt.Fprintf(&buf, "(Hint:%d)", m.RejectHint)
-		}
+		fmt.Fprintf(&buf, " Rejected (Hint: %d)", m.RejectHint)
 	}
 	if m.Commit != 0 {
 		fmt.Fprintf(&buf, " Commit:%d", m.Commit)
@@ -99,6 +96,12 @@ func DescribeMessage(m pb.Message, f EntryFormatter) string {
 		fmt.Fprintf(&buf, " Snapshot:%v", m.Snapshot)
 	}
 	return buf.String()
+}
+
+// PayloadSize is the size of the payload of this Entry. Notably, it does not
+// depend on its Index or Term.
+func PayloadSize(e pb.Entry) int {
+	return len(e.Data)
 }
 
 // DescribeEntry returns a concise human-readable description of an

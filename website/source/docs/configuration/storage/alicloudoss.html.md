@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Alicloud OSS - Storage Backends - Configuration"
+sidebar_title: "AliCloud OSS"
 sidebar_current: "docs-configuration-storage-alicloudoss"
 description: |-
   The Alicloud OSS storage backend is used to persist Vault's data in

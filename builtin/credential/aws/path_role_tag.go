@@ -11,56 +11,58 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const roleTagVersion = "v1"
 
-func pathRoleTag(b *backend) *framework.Path {
+func (b *backend) pathRoleTag() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
 
-			"instance_id": &framework.FieldSchema{
+			"instance_id": {
 				Type: framework.TypeString,
 				Description: `Instance ID for which this tag is intended for.
 If set, the created tag can only be used by the instance with the given ID.`,
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies. If set, but set to an empty value, only the 'default' policy will be given to issued tokens.",
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
 				Description: "If set, specifies the maximum allowed token lifetime.",
 			},
 
-			"allow_instance_migration": &framework.FieldSchema{
+			"allow_instance_migration": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.",
 			},
 
-			"disallow_reauthentication": &framework.FieldSchema{
+			"disallow_reauthentication": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using the 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint.",
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRoleTagUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleTagUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathRoleTagSyn,
@@ -77,7 +79,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
+	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +112,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	if ok {
 		policies = policyutil.ParsePolicies(policiesRaw)
 	}
-	if !strutil.StrListSubset(roleEntry.Policies, policies) {
+	if !strutil.StrListSubset(roleEntry.TokenPolicies, policies) {
 		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")
 	}
 
@@ -135,8 +137,8 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the mount maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, b.System().MaxLeaseTTL()/time.Second))
 	}
 	// If max_ttl is set for the role, check the bounds for tag's max_ttl value using that.
-	if roleEntry.MaxTTL != time.Duration(0) && maxTTL > roleEntry.MaxTTL {
-		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the role maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, roleEntry.MaxTTL/time.Second))
+	if roleEntry.TokenMaxTTL != time.Duration(0) && maxTTL > roleEntry.TokenMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the role maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, roleEntry.TokenMaxTTL/time.Second))
 	}
 
 	if maxTTL < time.Duration(0) {
@@ -349,7 +351,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.lockedAWSRole(ctx, s, rTag.Role)
+	roleEntry, err := b.role(ctx, s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

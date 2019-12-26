@@ -330,6 +330,10 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
 	}
 
+	if status.Migration {
+		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
+	}
+
 	out = append(out, fmt.Sprintf("Version | %s", status.Version))
 
 	if status.ClusterName != "" && status.ClusterID != "" {

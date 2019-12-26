@@ -1,36 +1,30 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=model
-      path="vault.cluster.access.method"
-      root=root
-      showCurrent=true
-    }}
+    {{#key-value-header path="vault.cluster.access.methods"}}
+      <li>
+        <span class="sep">
+          /
+        </span>
+        {{#link-to "vault.cluster.access.methods"}}
+          methods
+        {{/link-to}}
+      </li>
+    {{/key-value-header}}
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{capitalize model.methodType}}
+      {{model.id}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#if (eq section "configuration")}}
-      <div class="field is-grouped">
-        <div class="control">
-          {{#link-to
-            "vault.cluster.settings.auth.configure"
-            model.id
-            class="button is-ghost has-icon-right is-compact"
-            data-test-configure-link=true
-          }}
-            Configure
-            {{i-con glyph="chevron-right" size=11}}
-          {{/link-to}}
-        </div>
-      </div>
-    {{/if}}
-  </p.levelRight>
 </PageHeader>
-
-{{section-tabs model 'authShow'}}
+{{section-tabs model "authShow" paths}}
+{{#if (eq section "configuration")}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @params={{array "vault.cluster.settings.auth.configure" model.id}} @data-test-configure-link="true">
+        Configure
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
 {{component (concat "auth-method/" section) model=model}}
-

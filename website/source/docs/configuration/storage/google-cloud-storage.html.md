@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud Storage - Storage Backends - Configuration"
+sidebar_title: "Google Cloud Storage"
 sidebar_current: "docs-configuration-storage-google-cloud"
 description: |-
   The Google Cloud Storage storage backend is used to persist Vault's data in

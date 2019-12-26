@@ -1,7 +1,7 @@
 .is-sidebar {
   border-right: $base-border;
   display: flex;
-  flex: 1;
+  flex: 1 1 auto;
   margin: 0.75rem 0.75rem 0.75rem 0;
   padding: 0 0 0 0.75rem;
 
@@ -10,13 +10,13 @@
     bottom: 0;
     left: -1.5rem;
     margin: 0;
-    max-width: 300px;
-    padding-left: 0;
+    max-width: $drawer-width;
+    padding: $spacing-m 0 0;
     position: absolute;
     right: $size-2;
     transform: translateX(-100%);
     transition: transform $speed;
-    top: -3rem;
+    top: 0;
     z-index: 5;
   }
 
@@ -24,19 +24,24 @@
     @include until($tablet) {
       transform: translateX(0);
     }
+
+    .menu-toggle {
+      left: auto;
+      right: $size-10;
+    }
   }
 
   .menu-toggle {
     color: $blue;
     cursor: pointer;
     display: none;
+    margin-left: $size-10;
+    left: 100%;
+    position: absolute;
+    top: 0;
 
     @include until($tablet) {
       display: block;
-      margin-left: $size-8;
-      position: absolute;
-      top: 4.2rem;
-      left: 100%;
     }
 
     .button {
@@ -45,7 +50,7 @@
   }
 
   .menu {
-    flex: 1;
+    flex: 1 1 auto;
     padding-top: 5.25rem;
     position: relative;
 
@@ -56,7 +61,7 @@
 
   .menu-label {
     color: $grey-light;
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-bold;
     font-size: $size-small;
     line-height: 1;
     margin-bottom: $size-8;
@@ -66,6 +71,10 @@
   .menu-list {
     border-top: $base-border;
     padding: $size-9 0;
+
+    @include until($tablet) {
+      padding-top: $size-4;
+    }
 
     a {
       color: $grey-dark;

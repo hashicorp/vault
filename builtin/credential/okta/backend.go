@@ -7,8 +7,9 @@ import (
 
 	"github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/helper/mfa"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -63,6 +64,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 	if cfg == nil {
 		return nil, logical.ErrorResponse("Okta auth method not configured"), nil, nil
+	}
+
+	// Check for a CIDR match.
+	if len(cfg.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
 	}
 
 	client := cfg.OktaClient()
@@ -182,6 +194,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			switch result.FactorResult {
 			case "WAITING":
 				verifyReq, err := client.NewRequest("POST", requestPath, payload)
+				if err != nil {
+					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
+				}
 				rsp, err := client.Do(verifyReq, &result)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil

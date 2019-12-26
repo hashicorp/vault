@@ -30,6 +30,7 @@ package fdb
 import "C"
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"runtime"
@@ -37,9 +38,9 @@ import (
 	"unsafe"
 )
 
-/* Would put this in futures.go but for the documented issue with
-/* exports and functions in preamble
-/* (https://code.google.com/p/go-wiki/wiki/cgo#Global_functions) */
+// Would put this in futures.go but for the documented issue with
+// exports and functions in preamble
+// (https://code.google.com/p/go-wiki/wiki/cgo#Global_functions)
 //export unlockMutex
 func unlockMutex(p unsafe.Pointer) {
 	m := (*sync.Mutex)(p)
@@ -138,7 +139,7 @@ func APIVersion(version int) error {
 			if e == 2203 {
 				maxSupportedVersion := C.fdb_get_max_api_version()
 				if headerVersion > int(maxSupportedVersion) {
-					return fmt.Errorf("This version of the FoundationDB Go binding is not supported by the installed FoundationDB C library. The binding requires a library that supports API version %d, but the installed library supports a maximum version of %d.", version, maxSupportedVersion)
+					return fmt.Errorf("This version of the FoundationDB Go binding is not supported by the installed FoundationDB C library. The binding requires a library that supports API version %d, but the installed library supports a maximum version of %d.", headerVersion, maxSupportedVersion)
 				}
 				return fmt.Errorf("API version %d is not supported by the installed FoundationDB C library.", version)
 			}
@@ -192,17 +193,10 @@ var apiVersion int
 var networkStarted bool
 var networkMutex sync.Mutex
 
-type DatabaseId struct {
-	clusterFile string
-	dbName      string
-}
-
-var openClusters map[string]Cluster
-var openDatabases map[DatabaseId]Database
+var openDatabases map[string]Database
 
 func init() {
-	openClusters = make(map[string]Cluster)
-	openDatabases = make(map[DatabaseId]Database)
+	openDatabases = make(map[string]Database)
 }
 
 func startNetwork() error {
@@ -222,10 +216,9 @@ func startNetwork() error {
 	return nil
 }
 
-// StartNetwork initializes the FoundationDB client networking engine. It is not
-// necessary to call StartNetwork when using the fdb.Open or fdb.OpenDefault
-// functions to obtain a database handle. StartNetwork must not be called more
-// than once.
+// Deprecated: the network is started automatically when a database is opened.
+// StartNetwork initializes the FoundationDB client networking engine. StartNetwork
+// must not be called more than once.
 func StartNetwork() error {
 	networkMutex.Lock()
 	defer networkMutex.Unlock()
@@ -237,17 +230,15 @@ func StartNetwork() error {
 	return startNetwork()
 }
 
-// DefaultClusterFile should be passed to fdb.Open or fdb.CreateCluster to allow
-// the FoundationDB C library to select the platform-appropriate default cluster
-// file on the current machine.
+// DefaultClusterFile should be passed to fdb.Open to allow the FoundationDB C
+// library to select the platform-appropriate default cluster file on the current machine.
 const DefaultClusterFile string = ""
 
-// OpenDefault returns a database handle to the default database from the
-// FoundationDB cluster identified by the DefaultClusterFile on the current
-// machine. The FoundationDB client networking engine will be initialized first,
-// if necessary.
+// OpenDefault returns a database handle to the FoundationDB cluster identified
+// by the DefaultClusterFile on the current machine. The FoundationDB client
+// networking engine will be initialized first, if necessary.
 func OpenDefault() (Database, error) {
-	return Open(DefaultClusterFile, []byte("DB"))
+	return OpenDatabase(DefaultClusterFile)
 }
 
 // MustOpenDefault is like OpenDefault but panics if the default database cannot
@@ -260,13 +251,9 @@ func MustOpenDefault() Database {
 	return db
 }
 
-// Open returns a database handle to the named database from the FoundationDB
-// cluster identified by the provided cluster file and database name. The
-// FoundationDB client networking engine will be initialized first, if
-// necessary.
-//
-// In the current release, the database name must be []byte("DB").
-func Open(clusterFile string, dbName []byte) (Database, error) {
+// Open returns a database handle to the FoundationDB cluster identified
+// by the provided cluster file and database name.
+func OpenDatabase(clusterFile string) (Database, error) {
 	networkMutex.Lock()
 	defer networkMutex.Unlock()
 
@@ -283,27 +270,36 @@ func Open(clusterFile string, dbName []byte) (Database, error) {
 		}
 	}
 
-	cluster, ok := openClusters[clusterFile]
+	db, ok := openDatabases[clusterFile]
 	if !ok {
-		cluster, e = createCluster(clusterFile)
+		db, e = createDatabase(clusterFile)
 		if e != nil {
 			return Database{}, e
 		}
-		openClusters[clusterFile] = cluster
-	}
-
-	db, ok := openDatabases[DatabaseId{clusterFile, string(dbName)}]
-	if !ok {
-		db, e = cluster.OpenDatabase(dbName)
-		if e != nil {
-			return Database{}, e
-		}
-		openDatabases[DatabaseId{clusterFile, string(dbName)}] = db
+		openDatabases[clusterFile] = db
 	}
 
 	return db, nil
 }
 
+func MustOpenDatabase(clusterFile string) Database {
+	db, err := OpenDatabase(clusterFile)
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+// Deprecated: Use OpenDatabase instead
+// The database name must be []byte("DB").
+func Open(clusterFile string, dbName []byte) (Database, error) {
+	if bytes.Compare(dbName, []byte("DB")) != 0 {
+		return Database{}, Error{2013} // invalid_database_name
+	}
+	return OpenDatabase(clusterFile)
+}
+
+// Deprecated: Use MustOpenDatabase instead
 // MustOpen is like Open but panics if the database cannot be opened.
 func MustOpen(clusterFile string, dbName []byte) Database {
 	db, err := Open(clusterFile, dbName)
@@ -313,7 +309,7 @@ func MustOpen(clusterFile string, dbName []byte) Database {
 	return db
 }
 
-func createCluster(clusterFile string) (Cluster, error) {
+func createDatabase(clusterFile string) (Database, error) {
 	var cf *C.char
 
 	if len(clusterFile) != 0 {
@@ -321,23 +317,18 @@ func createCluster(clusterFile string) (Cluster, error) {
 		defer C.free(unsafe.Pointer(cf))
 	}
 
-	f := C.fdb_create_cluster(cf)
-	fdb_future_block_until_ready(f)
-
-	var outc *C.FDBCluster
-
-	if err := C.fdb_future_get_cluster(f, &outc); err != 0 {
-		return Cluster{}, Error{int(err)}
+	var outdb *C.FDBDatabase
+	if err := C.fdb_create_database(cf, &outdb); err != 0 {
+		return Database{}, Error{int(err)}
 	}
 
-	C.fdb_future_destroy(f)
+	db := &database{outdb}
+	runtime.SetFinalizer(db, (*database).destroy)
 
-	c := &cluster{outc}
-	runtime.SetFinalizer(c, (*cluster).destroy)
-
-	return Cluster{c}, nil
+	return Database{db}, nil
 }
 
+// Deprecated: Use OpenDatabase instead.
 // CreateCluster returns a cluster handle to the FoundationDB cluster identified
 // by the provided cluster file.
 func CreateCluster(clusterFile string) (Cluster, error) {
@@ -352,7 +343,7 @@ func CreateCluster(clusterFile string) (Cluster, error) {
 		return Cluster{}, errNetworkNotSetup
 	}
 
-	return createCluster(clusterFile)
+	return Cluster{clusterFile}, nil
 }
 
 func byteSliceToPtr(b []byte) *C.uint8_t {
@@ -375,6 +366,30 @@ type Key []byte
 // FDBKey allows Key to (trivially) satisfy the KeyConvertible interface.
 func (k Key) FDBKey() Key {
 	return k
+}
+
+// String describes the key as a human readable string.
+func (k Key) String() string {
+	return Printable(k)
+}
+
+// Printable returns a human readable version of a byte array. The bytes that correspond with
+// ASCII printable characters [32-127) are passed through. Other bytes are
+// replaced with \x followed by a two character zero-padded hex code for byte.
+func Printable(d []byte) string {
+	buf := new(bytes.Buffer)
+	for _, b := range d {
+		if b >= 32 && b < 127 && b != '\\' {
+			buf.WriteByte(b)
+			continue
+		}
+		if b == '\\' {
+			buf.WriteString("\\\\")
+			continue
+		}
+		buf.WriteString(fmt.Sprintf("\\x%02x", b))
+	}
+	return buf.String()
 }
 
 func panicToError(e *error) {

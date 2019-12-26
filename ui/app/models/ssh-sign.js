@@ -18,7 +18,10 @@ export default DS.Model.extend({
   role: attr('object', {
     readOnly: true,
   }),
-  publicKey: attr('string'),
+  publicKey: attr('string', {
+    label: 'Public Key',
+    editType: 'textarea',
+  }),
   ttl: attr({
     label: 'TTL',
     editType: 'ttl',

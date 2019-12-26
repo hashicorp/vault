@@ -76,11 +76,11 @@ func (client *Client) CreateUserWithCallback(request *CreateUserRequest, callbac
 // CreateUserRequest is the request struct for api CreateUser
 type CreateUserRequest struct {
 	*requests.RpcRequest
-	UserName    string `position:"Query" name:"UserName"`
+	Comments    string `position:"Query" name:"Comments"`
 	DisplayName string `position:"Query" name:"DisplayName"`
 	MobilePhone string `position:"Query" name:"MobilePhone"`
 	Email       string `position:"Query" name:"Email"`
-	Comments    string `position:"Query" name:"Comments"`
+	UserName    string `position:"Query" name:"UserName"`
 }
 
 // CreateUserResponse is the response struct for api CreateUser

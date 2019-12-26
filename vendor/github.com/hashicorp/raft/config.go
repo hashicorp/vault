@@ -3,12 +3,13 @@ package raft
 import (
 	"fmt"
 	"io"
-	"log"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
-// These are the versions of the protocol (which includes RPC messages as
-// well as Raft-specific log entries) that this server can _understand_. Use
+// ProtocolVersion is the version of the protocol (which includes RPC messages
+// as well as Raft-specific log entries) that this server can _understand_. Use
 // the ProtocolVersion member of the Config object to control the version of
 // the protocol to use when _speaking_ to other servers. Note that depending on
 // the protocol version being spoken, some otherwise understood RPC messages
@@ -37,7 +38,8 @@ import (
 //
 // 1. Remove the server from the cluster with RemoveServer, using its network
 //    address as its ServerID.
-// 2. Update the server's config to a better ID (restarting the server).
+// 2. Update the server's config to use a UUID or something else that is
+//	  not tied to the machine as the ServerID (restarting the server).
 // 3. Add the server back to the cluster with AddVoter, using its new ID.
 //
 // You can do this during the rolling upgrade from N+1 to N+2 of your app, or
@@ -86,13 +88,15 @@ import (
 type ProtocolVersion int
 
 const (
+	// ProtocolVersionMin is the minimum protocol version
 	ProtocolVersionMin ProtocolVersion = 0
-	ProtocolVersionMax                 = 3
+	// ProtocolVersionMax is the maximum protocol version
+	ProtocolVersionMax = 3
 )
 
-// These are versions of snapshots that this server can _understand_. Currently,
-// it is always assumed that this server generates the latest version, though
-// this may be changed in the future to include a configurable version.
+// SnapshotVersion is the version of snapshots that this server can understand.
+// Currently, it is always assumed that the server generates the latest version,
+// though this may be changed in the future to include a configurable version.
 //
 // Version History
 //
@@ -110,8 +114,10 @@ const (
 type SnapshotVersion int
 
 const (
+	// SnapshotVersionMin is the minimum snapshot version
 	SnapshotVersionMin SnapshotVersion = 0
-	SnapshotVersionMax                 = 1
+	// SnapshotVersionMax is the maximum snapshot version
+	SnapshotVersionMax = 1
 )
 
 // Config provides any necessary configuration for the Raft server.
@@ -190,9 +196,20 @@ type Config struct {
 	// Defaults to os.Stderr.
 	LogOutput io.Writer
 
-	// Logger is a user-provided logger. If nil, a logger writing to LogOutput
-	// is used.
-	Logger *log.Logger
+	// LogLevel represents a log level. If a no matching string is specified,
+	// hclog.NoLevel is assumed.
+	LogLevel string
+
+	// Logger is a user-provided hc-log logger. If nil, a logger writing to
+	// LogOutput with LogLevel is used.
+	Logger hclog.Logger
+
+	// NoSnapshotRestoreOnStart controls if raft will restore a snapshot to the
+	// FSM on start. This is useful if your FSM recovers from other mechanisms
+	// than raft snapshotting. Snapshot metadata will still be used to initalize
+	// raft's configuration and index values. This is used in NewRaft and
+	// RestoreCluster.
+	NoSnapshotRestoreOnStart bool
 }
 
 // DefaultConfig returns a Config with usable defaults.
@@ -208,6 +225,7 @@ func DefaultConfig() *Config {
 		SnapshotInterval:   120 * time.Second,
 		SnapshotThreshold:  8192,
 		LeaderLeaseTimeout: 500 * time.Millisecond,
+		LogLevel:           "DEBUG",
 	}
 }
 

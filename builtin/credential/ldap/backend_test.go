@@ -1,5 +1,3 @@
-// +build !travis
-
 package ldap
 
 import (
@@ -10,10 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -199,7 +201,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 				"groups":   "EngineerS",
 				"policies": "userpolicy",
 			},
-			Path:    "users/teSlA",
+			Path:    "users/hermeS conRad",
 			Storage: storage,
 		}
 		resp, err = b.HandleRequest(ctx, userReq)
@@ -212,11 +214,11 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 		switch caseSensitive {
 		case true:
-			if keys[0] != "teSlA" {
+			if keys[0] != "hermeS conRad" {
 				t.Fatalf("bad: %s", keys[0])
 			}
 		default:
-			if keys[0] != "tesla" {
+			if keys[0] != "hermes conrad" {
 				t.Fatalf("bad: %s", keys[0])
 			}
 		}
@@ -230,8 +232,9 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 					"groups":   "EngineerS",
 					"policies": "userpolicy",
 				},
-				Path:    "users/tesla",
-				Storage: storage,
+				Path:       "users/Hermes Conrad",
+				Storage:    storage,
+				Connection: &logical.Connection{},
 			}
 			resp, err = b.HandleRequest(ctx, userReq)
 			if err != nil || (resp != nil && resp.IsError()) {
@@ -241,11 +244,12 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 
 		loginReq := &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      "login/tesla",
+			Path:      "login/Hermes Conrad",
 			Data: map[string]interface{}{
-				"password": "password",
+				"password": "hermes",
 			},
-			Storage: storage,
+			Storage:    storage,
+			Connection: &logical.Connection{},
 		}
 		resp, err = b.HandleRequest(ctx, loginReq)
 		if err != nil || (resp != nil && resp.IsError()) {
@@ -257,17 +261,19 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":      "ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
-			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"url":       cfg.Url,
+			"userattr":  cfg.UserAttr,
+			"userdn":    cfg.UserDN,
+			"groupdn":   cfg.GroupDN,
+			"groupattr": cfg.GroupAttr,
+			"binddn":    cfg.BindDN,
+			"bindpass":  cfg.BindPassword,
 		},
 		Storage: storage,
 	}
@@ -301,17 +307,19 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":      "ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
-			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"url":          cfg.Url,
+			"userattr":     cfg.UserAttr,
+			"userdn":       cfg.UserDN,
+			"groupdn":      cfg.GroupDN,
+			"groupattr":    cfg.GroupAttr,
+			"binddn":       cfg.BindDN,
+			"bindpassword": cfg.BindPassword,
 		},
 		Storage: storage,
 	}
@@ -325,8 +333,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"policies": "grouppolicy",
 		},
-		Path:    "groups/engineers",
-		Storage: storage,
+		Path:       "groups/engineers",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -339,8 +348,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 			"groups":   "engineers",
 			"policies": "userpolicy",
 		},
-		Path:    "users/tesla",
-		Storage: storage,
+		Path:       "users/hermes conrad",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), userReq)
@@ -350,11 +360,12 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 
 	loginReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "login/tesla",
+		Path:      "login/hermes conrad",
 		Data: map[string]interface{}{
-			"password": "password",
+			"password": "hermes",
 		},
-		Storage: storage,
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), loginReq)
@@ -370,18 +381,18 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 /*
  * Acceptance test for LDAP Auth Method
  *
- * The tests here rely on a public LDAP server:
- * [http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/]
+ * The tests here rely on a docker LDAP server:
+ * [https://github.com/rroemhild/docker-test-openldap]
  *
- * ...as well as existence of a person object, `uid=tesla,dc=example,dc=com`,
- *    which is a member of a group, `ou=scientists,dc=example,dc=com`
+ * ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
+ *    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
  *
  * Querying the server from the command line:
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub \
- *       '(&(objectClass=groupOfUniqueNames)(uniqueMember=uid=tesla,dc=example,dc=com))'
- *
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub uid=tesla
- */
+ *   $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+ *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+ *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+         'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
+*/
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
@@ -400,59 +411,67 @@ func factory(t *testing.T) logical.Backend {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
-			// Map Scientists group (from LDAP server) with foo policy
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrl(t, cfg),
+			// Map Admin_staff group (from LDAP server) with foo policy
+			testAccStepGroup(t, "admin_staff", "foo"),
 
 			// Map engineers group (local) with bar policy
 			testAccStepGroup(t, "engineers", "bar"),
 
-			// Map tesla user with local engineers group
-			testAccStepUser(t, "tesla", "engineers"),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
 
 			// Authenticate
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 
 			// Verify both groups mappings can be listed back
-			testAccStepGroupList(t, []string{"engineers", "Scientists"}),
+			testAccStepGroupList(t, []string{"engineers", "admin_staff"}),
 
 			// Verify user mapping can be listed back
-			testAccStepUserList(t, []string{"tesla"}),
+			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
 }
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
+			testAccStepConfigUrl(t, cfg),
 			// Create LDAP user
-			testAccStepUser(t, "tesla", ""),
+			testAccStepUser(t, "hermes conrad", ""),
 			// Authenticate
-			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
-			testAccStepUserList(t, []string{"tesla"}),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
 }
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
+			testAccStepConfigUrl(t, cfg),
 			// Create engineers group with no policies
 			testAccStepGroup(t, "engineers", ""),
-			// Map tesla user with local engineers group
-			testAccStepUser(t, "tesla", "engineers"),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
 			// Authenticate
-			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
 			// Verify group mapping can be listed back
 			testAccStepGroupList(t, []string{"engineers"}),
 		},
@@ -461,45 +480,51 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlWithAuthBind(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 		},
 	})
 }
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlWithDiscover(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlWithDiscover(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 		},
 	})
 }
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlNoGroupDN(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlNoGroupDN(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLoginNoGroupDN(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLoginNoGroupDN(t, "hermes conrad", "hermes"),
 		},
 	})
 }
@@ -508,7 +533,7 @@ func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
 			testAccStepReadGroup(t, "g1", "foo"),
@@ -525,7 +550,7 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -569,70 +594,78 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	})
 }
 
-func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
 
-func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
 			// In this test we also exercise multiple URL support
-			"url":                  "foobar://ldap.example.com,ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
-			"binddn":               "cn=read-only-admin,dc=example,dc=com",
-			"bindpass":             "password",
+			"url":                  "foobar://ldap.example.com," + cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
 
-func testAccStepConfigUrlWithDiscover(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlWithDiscover(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
 
-func testAccStepConfigUrlNoGroupDN(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"request_timeout":      cfg.RequestTimeout,
 		},
 	}
 }
@@ -687,7 +720,7 @@ func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "g1", "bar"),
 			testAccStepReadUser(t, "g1", "bar"),
@@ -751,8 +784,8 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		},
 		Unauthenticated: true,
 
-		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuth([]string{"abc", "bar", "default", "foo", "xyz"}),
 	}
 }
 
@@ -765,8 +798,8 @@ func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) 
 		},
 		Unauthenticated: true,
 
-		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"default"}),
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuth([]string{"abc", "default", "xyz"}),
 	}
 }
 
@@ -838,4 +871,100 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 			return nil
 		},
 	}
+}
+
+func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	ctx := context.Background()
+
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                    cfg.Url,
+			"userattr":               cfg.UserAttr,
+			"userdn":                 cfg.UserDN,
+			"groupdn":                cfg.GroupDN,
+			"groupattr":              cfg.GroupAttr,
+			"binddn":                 cfg.BindDN,
+			"bindpass":               cfg.BindPassword,
+			"token_period":           "5m",
+			"token_explicit_max_ttl": "24h",
+			"request_timeout":        cfg.RequestTimeout,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+	resp, err = b.HandleRequest(ctx, configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	fd, err := b.getConfigFieldData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defParams, err := ldaputil.NewConfigEntry(nil, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	falseBool := new(bool)
+	*falseBool = false
+
+	exp := &ldapConfigEntry{
+		TokenParams: tokenutil.TokenParams{
+			TokenPeriod:         5 * time.Minute,
+			TokenExplicitMaxTTL: 24 * time.Hour,
+		},
+		ConfigEntry: &ldaputil.ConfigEntry{
+			Url:                      cfg.Url,
+			UserAttr:                 cfg.UserAttr,
+			UserDN:                   cfg.UserDN,
+			GroupDN:                  cfg.GroupDN,
+			GroupAttr:                cfg.GroupAttr,
+			BindDN:                   cfg.BindDN,
+			BindPassword:             cfg.BindPassword,
+			GroupFilter:              defParams.GroupFilter,
+			DenyNullBind:             defParams.DenyNullBind,
+			TLSMinVersion:            defParams.TLSMinVersion,
+			TLSMaxVersion:            defParams.TLSMaxVersion,
+			CaseSensitiveNames:       falseBool,
+			UsePre111GroupCNBehavior: new(bool),
+			RequestTimeout:           cfg.RequestTimeout,
+		},
+	}
+
+	configEntry, err := b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Store just the config entry portion, for upgrade testing
+	entry, err := logical.StorageEntryJSON("config", configEntry.ConfigEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = configReq.Storage.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configEntry, err = b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We won't have token params anymore so nil those out
+	exp.TokenParams = tokenutil.TokenParams{}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
+	}
+
 }

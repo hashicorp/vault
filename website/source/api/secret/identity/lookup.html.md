@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Lookup - HTTP API"
-sidebar_current: "docs-http-secret-identity-lookup"
+sidebar_title: "Lookup"
+sidebar_current: "api-http-secret-identity-lookup"
 description: |-
   This is the API documentation for entity and group lookups from identity
   store.
@@ -13,9 +14,9 @@ This endpoint queries the entity based on the given criteria. The criteria can
 be `name`, `id`, `alias_id`, or a combination of `alias_name` and
 `alias_mount_accessor`.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :----------------------|
-| `POST`   | `/identity/lookup/entity`  | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :----------------------|
+| `POST`   | `/identity/lookup/entity`  |
 
 ### Parameters
 
@@ -75,9 +76,9 @@ This endpoint queries the group based on the given criteria. The criteria can
 be `name`, `id`, `alias_id`, or a combination of `alias_name` and
 `alias_mount_accessor`.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :----------------------|
-| `POST`   | `/identity/lookup/group`   | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :----------------------|
+| `POST`   | `/identity/lookup/group`   |
 
 ### Parameters
 

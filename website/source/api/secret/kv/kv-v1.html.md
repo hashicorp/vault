@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv-v1"
+sidebar_title: "K/V Version 1"
+sidebar_current: "api-http-secret-kv-v1"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---
@@ -20,9 +21,9 @@ location, please update your API calls accordingly.
 
 This endpoint retrieves the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/:path`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/:path`              |
 
 ### Parameters
 
@@ -43,18 +44,19 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "foo": "bar"
+    "foo": "bar",
+    "ttl": "1h"
   },
-  "lease_duration": 2764800,
+  "lease_duration": 3600,
   "lease_id": "",
   "renewable": false
 }
 ```
 
-_Note_: the `lease_duration` field (which on the CLI shows as
-`refresh_interval`) is advisory. No lease is created. This is a way for writers
-to indicate how often a given value should be re-read by the client. See the
-[Vault KV secrets engine documentation](/docs/secrets/kv/index.html)
+_Note_: the `lease_duration` field, which will be populated if a "ttl" field
+was included in the data, is advisory. No lease is created. This is a way for
+writers to indicate how often a given value should be re-read by the client.
+See the [Vault KV secrets engine documentation](/docs/secrets/kv/index.html)
 for more details.
 
 ## List Secrets
@@ -65,9 +67,9 @@ value. Note that no policy-based filtering is performed on keys; do not encode
 sensitive information in key names. The values themselves are not accessible via
 this command.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/secret/:path`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/secret/:path`              |
 
 ### Parameters
 
@@ -108,10 +110,10 @@ yet exist, the calling token must have an ACL policy granting the `create`
 capability. If the value already exists, the calling token must have an ACL
 policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/:path`              | `204 (empty body)`     |
-| `PUT`    | `/secret/:path`              | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/:path`              |
+| `PUT`    | `/secret/:path`              |
 
 ### Parameters
 
@@ -147,9 +149,9 @@ $ curl \
 
 This endpoint deletes the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/secret/:path`              | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/secret/:path`              |
 
 ### Parameters
 

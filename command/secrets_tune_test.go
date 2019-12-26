@@ -70,6 +70,80 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("protect_downgrade", func(t *testing.T) {
+		t.Parallel()
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testSecretsTuneCommand(t)
+		cmd.client = client
+
+		// Mount
+		if err := client.Sys().Mount("kv", &api.MountInput{
+			Type: "kv",
+			Options: map[string]string{
+				"version": "2",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		// confirm default max_versions
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		mountInfo, ok := mounts["kv/"]
+		if !ok {
+			t.Fatalf("expected mount to exist")
+		}
+		if exp := "kv"; mountInfo.Type != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+		}
+		if exp := "2"; mountInfo.Options["version"] != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Options["version"], exp)
+		}
+
+		if exp := ""; mountInfo.Options["max_versions"] != exp {
+			t.Errorf("expected %s to be empty", mountInfo.Options["max_versions"])
+		}
+
+		// omitting the version should not cause a downgrade
+		code := cmd.Run([]string{
+			"-options", "max_versions=2",
+			"kv/",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Tuned the secrets engine at: kv/"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		mounts, err = client.Sys().ListMounts()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		mountInfo, ok = mounts["kv/"]
+		if !ok {
+			t.Fatalf("expected mount to exist")
+		}
+		if exp := "2"; mountInfo.Options["version"] != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Options["version"], exp)
+		}
+		if exp := "kv"; mountInfo.Type != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+		}
+		if exp := "2"; mountInfo.Options["max_versions"] != exp {
+			t.Errorf("expected %s to be %s", mountInfo.Options["max_versions"], exp)
+		}
+	})
+
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()

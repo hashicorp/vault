@@ -149,6 +149,9 @@ func parseArgsDataString(stdin io.Reader, args []string) (map[string]string, err
 	if err := mapstructure.WeakDecode(raw, &result); err != nil {
 		return nil, errors.Wrap(err, "failed to convert values to strings")
 	}
+	if result == nil {
+		result = make(map[string]string)
+	}
 	return result, nil
 }
 

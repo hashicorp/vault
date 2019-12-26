@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Path Help"
+sidebar_title: "<code>path-help</code>"
 sidebar_current: "docs-commands-path-help"
 description: |-
   The Vault CLI has a built-in help system that can be used to get help for not only the CLI itself, but also any paths that the CLI can be used with within Vault.

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/leases - HTTP API"
-sidebar_current: "docs-http-system-leases"
+sidebar_title: "<code>/sys/leases</code>"
+sidebar_current: "api-http-system-leases"
 description: |-
   The `/sys/leases` endpoints are used to view and manage leases.
 ---
@@ -14,9 +15,9 @@ The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
 This endpoint retrieve lease metadata.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/lookup`          | `200 application/json` |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/lookup`          |
 
 ### Parameters
 
@@ -59,9 +60,9 @@ This endpoint returns a list of lease ids.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/leases/lookup/:prefix` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/leases/lookup/:prefix` |
 
 
 ### Sample Request
@@ -89,11 +90,12 @@ $ curl \
 
 ## Renew Lease
 
-This endpoint renews a lease, requesting to extend the lease.
+This endpoint renews a lease, requesting to extend the lease.  Token leases 
+cannot be renewed using this endpoint, use instead the auth/token/renew endpoint.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/renew`           | `200 application/json` |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/renew`           |
 
 ### Parameters
 
@@ -136,9 +138,9 @@ $ curl \
 
 This endpoint revokes a lease immediately.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke`          | `204 (empty body)`     |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke`          |
 
 ### Parameters
 
@@ -176,9 +178,9 @@ this endpoint should be tightly controlled.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                                | Produces               |
-| :------- | :---------------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke-force/:prefix`  | `204 (empty body)`     |
+| Method   | Path                                |
+| :---------------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke-force/:prefix`  |
 
 ### Parameters
 
@@ -203,9 +205,9 @@ used to revoke very large numbers of secrets/tokens at once.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                                | Produces               |
-| :------- | :---------------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke-prefix/:prefix` | `204 (empty body)`     |
+| Method   | Path                                |
+| :---------------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke-prefix/:prefix` |
 
 ### Parameters
 
@@ -219,4 +221,24 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/aws/creds
+```
+
+
+## Tidy Leases
+
+This endpoint cleans up the dangling storage entries for leases. Generally,
+running this is not needed unless upgrade notes or support personnel suggest it.
+This may perform a lot of I/O to the storage method so should be used sparingly.
+
+| Method | Path               |
+|:-------|:-------------------|
+| `POST` | `/sys/leases/tidy` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/leases/tidy
 ```

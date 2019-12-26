@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MSSQL - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-mssql"
+sidebar_title: "MSSQL <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-mssql"
 description: |-
   This is the API documentation for the Vault MSSQL secrets engine.
 ---
@@ -26,9 +27,9 @@ please update your API calls accordingly.
 This endpoint configures the connection DSN used to communicate with Microsoft
 SQL Server.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/mssql/config/connection`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/mssql/config/connection`   |
 
 ### Parameters
 
@@ -64,9 +65,9 @@ $ curl \
 
 This endpoint configures the lease settings for generated credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/mysql/config/lease`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/mysql/config/lease`        |
 
 ### Parameters
 
@@ -100,9 +101,9 @@ $ curl \
 
 This endpoint creates or updates the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/mssql/roles/:name`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/mssql/roles/:name`         |
 
 ### Parameters
 
@@ -134,9 +135,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/mssql/roles/:name`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/mssql/roles/:name`         |
 
 ### Parameters
 
@@ -166,9 +167,9 @@ $ curl \
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/mssql/roles`               | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/mssql/roles`               |
 
 ### Sample Request
 
@@ -197,9 +198,9 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/mssql/roles/:name`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/mssql/roles/:name`         |
 
 ### Parameters
 
@@ -220,9 +221,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/mssql/creds/:name`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/mssql/creds/:name`         |
 
 ### Parameters
 

@@ -36,19 +36,28 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    editType: 'stringArray',
+    label: 'Policies',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['policy/acl', 'policy/rgp'],
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/group'],
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/group'],
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/entity'],
   }),
   hasMembers: computed(
     'memberEntityIds',

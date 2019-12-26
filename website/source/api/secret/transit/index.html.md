@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Transit - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-transit"
+sidebar_title: "Transit"
+sidebar_current: "api-http-secret-transit"
 description: |-
   This is the API documentation for the Vault Transit secrets engine.
 ---
@@ -21,9 +22,9 @@ location, please update your API calls accordingly.
 This endpoint creates a new named encryption key of the specified type. The
 values set here cannot be changed after key creation.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -50,14 +51,18 @@ values set here cannot be changed after key creation.
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
 
-    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+    - `aes128-gcm96` – AES-128 wrapped with GCM using a 96-bit nonce size AEAD
       (symmetric, supports derivation and convergent encryption)
+    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+      (symmetric, supports derivation and convergent encryption, default)
     - `chacha20-poly1305` – ChaCha20-Poly1305 AEAD (symmetric, supports
       derivation and convergent encryption)
     - `ed25519` – ED25519 (asymmetric, supports derivation). When using
       derivation, a sign operation with the same context will derive the same
       key and signature; this is a signing analogue to `convergent_encryption`.
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
+    - `ecdsa-p384` – ECDSA using the P-384 elliptic curve (asymmetric)
+    - `ecdsa-p521` – ECDSA using the P-521 elliptic curve (asymmetric)
     - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
     - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
@@ -65,7 +70,7 @@ values set here cannot be changed after key creation.
 
 ```json
 {
-  "type": "ecdsa-p256",
+  "type": "ed25519",
   "derived": true
 }
 ```
@@ -88,9 +93,9 @@ themselves. Depending on the type of key, different information may be returned,
 e.g. an asymmetric key will return its public key in a standard format for the
 type.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/transit/keys/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -134,9 +139,9 @@ $ curl \
 This endpoint returns a list of keys. Only the key names are returned (not the
 actual keys themselves).
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/transit/keys`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/transit/keys`              |
 
 ### Sample Request
 
@@ -167,9 +172,9 @@ decrypt any data encrypted with the named key. Because this is a potentially
 catastrophic operation, the `deletion_allowed` tunable must be set in the key's
 `/config` endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/transit/keys/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -190,9 +195,9 @@ $ curl \
 This endpoint allows tuning configuration values for a given key. (These values
 are returned during a read operation on the named key.)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/config` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/config` |
 
 ### Parameters
 
@@ -244,9 +249,9 @@ ciphertext to be encrypted with the latest version of the key, use the `rewrap`
 endpoint. This is only supported with keys that support encryption and
 decryption operations.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/rotate` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/rotate` |
 
 ### Sample Request
 
@@ -266,9 +271,9 @@ provided. Depending on the type of key, different information may be returned.
 The key must be exportable to support this operation and the version must still
 be valid.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/transit/export/:key_type/:name(/:version)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/transit/export/:key_type/:name(/:version)` |
 
 ### Parameters
 
@@ -318,9 +323,9 @@ requires derivation depends on whether the context parameter is empty or not).
 If the user only has `update` capability and the key does not exist, an error
 will be returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/encrypt/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/encrypt/:name`     |
 
 ### Parameters
 
@@ -376,13 +381,33 @@ will be returned.
   all nonces are unique for a given context.  Failing to do so will severely
   impact the ciphertext's security.
 
+**NOTE:** All plaintext data **must be base64-encoded**. The reason for this
+requirement is that Vault does not require that the plaintext is "text". It
+could be a binary file such as a PDF or image. The easiest safe transport
+mechanism for this data as part of a JSON payload is to base64-encode it.
+
 ### Sample Payload
+
+Fist, encode the plaintext with base64:
+
+```sh
+$ base64 <<< "the quick brown fox"
+dGhlIHF1aWNrIGJyb3duIGZveAo=
+```
+
+Use the base64-encoded plaintext in the payload:
 
 ```json
 {
-  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
 }
 ```
+
+!> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+of service attack. This can be tuned per [`listener`
+block](/docs/configuration/listener/tcp.html) in the Vault server
+configuration.
+
 
 ### Sample Request
 
@@ -399,7 +424,7 @@ $ curl \
 ```json
 {
   "data": {
-    "ciphertext": "vault:v1:abcdefgh"
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   }
 }
 ```
@@ -408,9 +433,9 @@ $ curl \
 
 This endpoint decrypts the provided ciphertext using the named key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/decrypt/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/decrypt/:name`     |
 
 ### Parameters
 
@@ -479,9 +504,9 @@ This endpoint rewraps the provided ciphertext using the latest version of the
 named key. Because this never returns plaintext, it is possible to delegate this
 functionality to untrusted users or scripts.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/rewrap/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/rewrap/:name`      |
 
 ### Parameters
 
@@ -557,9 +582,9 @@ control whether a user is allowed to retrieve the plaintext value of a key. This
 is useful if you want an untrusted user or operation to generate keys that are
 then made available to trusted users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/datakey/:type/:name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/datakey/:type/:name` |
 
 ### Parameters
 
@@ -617,9 +642,9 @@ $ curl \
 
 This endpoint returns high-quality random bytes of the specified length.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/random(/:bytes)`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/random(/:bytes)`   |
 
 ### Parameters
 
@@ -662,9 +687,9 @@ $ curl \
 This endpoint returns the cryptographic hash of given data using the specified
 algorithm.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/hash(/:algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/hash(/:algorithm)` |
 
 ### Parameters
 
@@ -717,9 +742,9 @@ the raw key will be marshaled into bytes to be used for the HMAC function. If
 the key is of a type that supports rotation, the latest (current) version will
 be used.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/hmac/:name(/:algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/hmac/:name(/:algorithm)` |
 
 ### Parameters
 
@@ -738,15 +763,29 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
+  `input` or `batch_input` must be supplied.
 
-### Sample Payload
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, if the parameter 'input' is also set, it will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
+  describing the error. The format for batch_input is:
 
-```json
-{
-  "input": "adba32=="
-}
-```
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32=="
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg=="
+        }
+      ]
+    }
+    ```
+
 
 ### Sample Request
 
@@ -756,6 +795,14 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/hmac/my-key/sha2-512
+```
+
+### Sample Payload
+
+```json
+{
+  "input": "adba32=="
+}
 ```
 
 ### Sample Response
@@ -768,15 +815,58 @@ $ curl \
 }
 ```
 
+### Sample Payload with batch_input
+
+```json
+{
+  "batch_input": [
+    {
+      "input": "adba32=="
+    },
+    {
+      "input": "adba32=="
+    },
+    {},
+    {
+      "input": ""
+    }
+  ]
+}
+```
+
+### Sample Response for batch_input
+
+```json
+{
+  "data": {
+    "batch_results": [
+      {
+        "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+      },
+      {
+        "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+      },
+      {
+        "error": "missing input for HMAC"
+      },
+      {
+        "hmac": "vault:v1:/wsSP6iQ9ECO9RRkefKLXey9sDntzSjoiW0vBrWfUsYB0ISroyC6plUt/jN7gcOv9O+Ecow"
+      }
+    ]
+  }
+}
+```
+
+
 ## Sign Data
 
 This endpoint returns the cryptographic signature of the given data using the
 named key and the specified hash algorithm. The key must be of a type that
 supports signing.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/sign/:name(/:hash_algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/sign/:name(/:hash_algorithm)` |
 
 ### Parameters
 
@@ -792,12 +882,36 @@ supports signing.
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
+  `input` or `batch_input` must be supplied.
+
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, any supplied 'input' or 'context' parameters will be
+  ignored.  Responses are returned in the 'batch_results' array component of the
+  'data' element of the response. If the input data value of an item is invalid, the
+  corresponding item in the 'batch_results' will have the key 'error' with a value
+  describing the error. The format for batch_input is:
+
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32==",
+          "context": "abcd"
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg==",
+          "context": "efgh"
+        }
+      ]
+    }
+    ```
 
 - `context` `(string: "")` - Base64 encoded context for key derivation.
    Required if key derivation is enabled; currently only available with ed25519
@@ -818,14 +932,12 @@ supports signing.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys. Supported types are:
 
-### Sample Payload
-
-```json
-{
-  "input": "adba32=="
-}
-```
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also change the output encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Request
 
@@ -835,6 +947,14 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/sign/my-key/sha2-512
+```
+
+### Sample Payload
+
+```json
+{
+  "input": "adba32=="
+}
 ```
 
 ### Sample Response
@@ -847,14 +967,55 @@ $ curl \
 }
 ```
 
+### Sample Payload with batch_input
+
+ Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and
+ the response will include the derived public key for each item.
+```
+{
+  "batch_input": [
+    {
+      "input": "adba32==",
+      "context": "efgh"
+    },
+    {
+      "input": "adba32==",
+      "context": "abcd"
+    },
+    {}
+  ]
+}
+```
+
+### Sample Response for batch_input
+```
+{
+  "data": {
+    "batch_results": [
+      {
+        "signature": "vault:v1:+R3cxAy6j4KriYzAyExU6p1glnyT/eLDSaUZO7gr8a8kgi/zSynNbOBSDJcGaAfLD1OF2hGupYBYTjmZMNoVAA==",
+        "publickey": "2fQIaaem7+EhSGs3jUebAS/8qP2+sUrmxOmgqZIZc0c="
+      },
+      {
+        "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA==",
+        "publickey": "goDXuePo7L9z6HOw+a54O4HeV189BLECK9nAUudwp4Y="
+      },
+      {
+        "error": "missing input"
+      }
+    ]
+  },
+}
+```
+
 ## Verify Signed Data
 
 This endpoint returns whether the provided signature is valid for the given
 data.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/verify/:name(/:hash_algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/verify/:name(/:hash_algorithm)` |
 
 ### Parameters
 
@@ -864,12 +1025,14 @@ data.
 - `hash_algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of
+  `input` or `batch_input` must be supplied.
 
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
@@ -878,6 +1041,31 @@ data.
 - `hmac` `(string: "")` – Specifies the signature output from the
   `/transit/hmac` function. Either this must be supplied or `signature` must be
   supplied.
+
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters
+  will be ignored.  'batch_input' items should contain an 'input' parameter and
+  either an 'hmac' or 'signature' parameter. All items in the batch must consistently
+  supply either 'hmac' or 'signature' parameters.  It is an error for some items to
+  supply 'hmac' while others supply 'signature'. Responses are returned in the
+  'batch_results' array component of the 'data' element of the response. If the
+  input data value of an item is invalid, the corresponding item in the 'batch_results'
+  will have the key 'error' with a value describing the error. The format for batch_input is:
+
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32==",
+          "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg==",
+          "hmac": "vault:v1:/wsSP6iQ9ECO9RRkefKLXey9sDntzSjoiW0vBrWfUsYB0ISroyC6plUt/jN7gcOv9O+Ecow"
+        }
+      ]
+    }
+    ```
 
 - `context` `(string: "")` - Base64 encoded context for key derivation.
    Required if key derivation is enabled; currently only available with ed25519
@@ -894,14 +1082,12 @@ data.
     - `pss`
     - `pkcs1v15`
 
-### Sample Payload
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature was originally marshaled. This currently only applies to ECDSA keys. Supported types are:
 
-```json
-{
-  "input": "abcd13==",
-  "signature": "vault:v1:MEUCIQCyb869d7KWuA..."
-}
-```
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also expect the input encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Request
 
@@ -911,6 +1097,15 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/verify/my-key/sha2-512
+```
+
+### Sample Payload
+
+```json
+{
+  "input": "abcd13==",
+  "signature": "vault:v1:MEUCIQCyb869d7KWuA..."
+}
 ```
 
 ### Sample Response
@@ -923,6 +1118,49 @@ $ curl \
 }
 ```
 
+### Sample Payload with batch_input
+
+```
+{
+  "batch_input": [
+    {
+      "input": "adba32==",
+      "context": "abcd",
+      "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA=="
+    },
+    {
+      "input": "adba32==",
+      "context": "efgh",
+      "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA=="
+    },
+    {
+      "input": "",
+      "context": "abcd",
+      "signature": "vault:v1:C/pxm5V1RI6kqudLdbLdj5Bpm2P38FKgvxoV69oNXphvJukRcQIqjZO793jCa2JPYPG21Y7vquDWy/Ff4Ma4AQ=="
+    }
+  ]
+}
+```
+
+### Sample Response for batch_input
+```
+{
+  "data": {
+    "batch_results": [
+      {
+        "valid": true
+      },
+      {
+        "valid": false
+      },
+      {
+        "valid": true
+      }
+    ]
+  },
+}
+```
+
 ## Backup Key
 
 This endpoint returns a plaintext backup of a named key. The backup contains all
@@ -930,9 +1168,9 @@ the configuration data and keys of all the versions along with the HMAC key.
 The response from this endpoint can be used with the `/restore` endpoint to
 restore the key.
 
-| Method  | Path                    | Produces               |
-| :------ | :---------------------- | :--------------------- |
-| `GET`   | `/transit/backup/:name` | `200 application/json` |
+| Method  | Path                    |
+| :---------------------- | :--------------------- |
+| `GET`   | `/transit/backup/:name` |
 
 ### Parameters
 
@@ -965,11 +1203,11 @@ input to this endpoint should be the output of `/backup` endpoint.
  ~> For safety, by default the backend will refuse to restore to an existing
  key. If you want to reuse a key name, it is recommended you delete the key
  before restoring. It is a good idea to attempt restoring to a different key
- name first to verify that the operation successfully completes. 
+ name first to verify that the operation successfully completes.
 
-| Method   | Path                        | Produces               |
-| :------- | :-------------------------- | :--------------------- |
-| `POST`   | `/transit/restore(/:name)`  | `204 (empty body)`     |
+| Method   | Path                        |
+| :-------------------------- | :--------------------- |
+| `POST`   | `/transit/restore(/:name)`  |
 
 ### Parameters
 
@@ -1003,17 +1241,18 @@ $ curl \
 This endpoint trims older key versions setting a minimum version for the
 keyring. Once trimmed, previous versions of the key cannot be recovered.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/trim` | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/trim` |
 
 ### Parameters
 
-- `min_version` `(int: <required>)` - The minimum version for the key ring. All
-  versions before this version will be permanently deleted. This value can at
-  most be equal to the lesser of `min_decryption_version` and
-  `min_encryption_version`. This is not allowed to be set when either
-  `min_encryption_version` or `min_decryption_version` is set to zero.
+- `min_available_version` `(int: <required>)` - The minimum available version
+  for the key ring. All versions before this version will be permanently
+  deleted. This value can at most be equal to the lesser of
+  `min_decryption_version` and `min_encryption_version`. This is not allowed to
+  be set when either `min_encryption_version` or `min_decryption_version` is set
+  to zero.
 
 ### Sample Payload
 
@@ -1032,3 +1271,64 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/keys/my-key/trim
 ```
+
+## Configure Cache
+
+This endpoint is used to configure the transit engine's cache. Note that configuration
+changes will not be applied until the transit plugin is reloaded which can be achieved
+ using the [`/sys/plugins/reload/backend`][sys-plugin-reload-backend] endpoint.
+
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `POST`   | `/transit/cache-config` |
+
+### Parameters
+
+- `size` `(int: 0)` - Specifies the size in terms of number of entries. A size of
+  `0` means unlimited. A _Least Recently Used_ (LRU) caching strategy is used for a
+  non-zero cache size.
+
+### Sample Payload
+
+```json
+{
+  "size": 456
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..."
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/transit/cache-config
+```
+
+## Read Transit Cache Configuration
+
+This endpoint retrieves configurations for the transit engine's cache.
+
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `GET`   | `/transit/cache-config` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..."
+    --request GET \
+    http://127.0.0.1:8200/v1/transit/cache-config
+```
+
+### Sample Response
+
+```json
+  "data": {
+    "size": 0
+  },
+```
+
+[sys-plugin-reload-backend]: /api/system/plugins-reload-backend.html#reload-plugins

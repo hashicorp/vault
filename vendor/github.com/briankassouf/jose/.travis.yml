@@ -1,0 +1,14 @@
+language: go
+
+go:
+  - 1.6
+  - 1.7
+  - tip
+
+sudo: false
+
+install:
+  - go get -u github.com/golang/lint/golint
+
+script:
+  - ./_test.sh

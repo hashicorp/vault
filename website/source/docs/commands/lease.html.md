@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "lease - Command"
+sidebar_title: "<code>lease</code>"
 sidebar_current: "docs-commands-lease"
 description: |-
   The "lease" command groups subcommands for interacting with leases attached to

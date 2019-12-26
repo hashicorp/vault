@@ -5,10 +5,11 @@ package spanner
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -20,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // KeyRange represents a range of rows in a table or index.
 //
@@ -29,7 +30,8 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 //
 // Keys are represented by lists, where the ith value in the list
 // corresponds to the ith component of the table or index primary key.
-// Individual values are encoded as described [here][google.spanner.v1.TypeCode].
+// Individual values are encoded as described
+// [here][google.spanner.v1.TypeCode].
 //
 // For example, consider the following table definition:
 //
@@ -226,128 +228,14 @@ func (m *KeyRange) GetEndOpen() *_struct.ListValue {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*KeyRange) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _KeyRange_OneofMarshaler, _KeyRange_OneofUnmarshaler, _KeyRange_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*KeyRange) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*KeyRange_StartClosed)(nil),
 		(*KeyRange_StartOpen)(nil),
 		(*KeyRange_EndClosed)(nil),
 		(*KeyRange_EndOpen)(nil),
 	}
-}
-
-func _KeyRange_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*KeyRange)
-	// start_key_type
-	switch x := m.StartKeyType.(type) {
-	case *KeyRange_StartClosed:
-		b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.StartClosed); err != nil {
-			return err
-		}
-	case *KeyRange_StartOpen:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.StartOpen); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("KeyRange.StartKeyType has unexpected type %T", x)
-	}
-	// end_key_type
-	switch x := m.EndKeyType.(type) {
-	case *KeyRange_EndClosed:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.EndClosed); err != nil {
-			return err
-		}
-	case *KeyRange_EndOpen:
-		b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.EndOpen); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("KeyRange.EndKeyType has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _KeyRange_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*KeyRange)
-	switch tag {
-	case 1: // start_key_type.start_closed
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(_struct.ListValue)
-		err := b.DecodeMessage(msg)
-		m.StartKeyType = &KeyRange_StartClosed{msg}
-		return true, err
-	case 2: // start_key_type.start_open
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(_struct.ListValue)
-		err := b.DecodeMessage(msg)
-		m.StartKeyType = &KeyRange_StartOpen{msg}
-		return true, err
-	case 3: // end_key_type.end_closed
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(_struct.ListValue)
-		err := b.DecodeMessage(msg)
-		m.EndKeyType = &KeyRange_EndClosed{msg}
-		return true, err
-	case 4: // end_key_type.end_open
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(_struct.ListValue)
-		err := b.DecodeMessage(msg)
-		m.EndKeyType = &KeyRange_EndOpen{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _KeyRange_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*KeyRange)
-	// start_key_type
-	switch x := m.StartKeyType.(type) {
-	case *KeyRange_StartClosed:
-		s := proto.Size(x.StartClosed)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *KeyRange_StartOpen:
-		s := proto.Size(x.StartOpen)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	// end_key_type
-	switch x := m.EndKeyType.(type) {
-	case *KeyRange_EndClosed:
-		s := proto.Size(x.EndClosed)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *KeyRange_EndOpen:
-		s := proto.Size(x.EndOpen)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 // `KeySet` defines a collection of Cloud Spanner keys and/or key ranges. All
@@ -363,8 +251,8 @@ type KeySet struct {
 	// with which this `KeySet` is used.  Individual key values are
 	// encoded as described [here][google.spanner.v1.TypeCode].
 	Keys []*_struct.ListValue `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
-	// A list of key ranges. See [KeyRange][google.spanner.v1.KeyRange] for more information about
-	// key range specifications.
+	// A list of key ranges. See [KeyRange][google.spanner.v1.KeyRange] for more
+	// information about key range specifications.
 	Ranges []*KeyRange `protobuf:"bytes,2,rep,name=ranges,proto3" json:"ranges,omitempty"`
 	// For convenience `all` can be set to `true` to indicate that this
 	// `KeySet` matches all keys in the table or index. Note that any keys

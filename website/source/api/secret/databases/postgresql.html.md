@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "PostgreSQL - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-postgresql"
+sidebar_title: "PostgreSQL"
+sidebar_current: "api-http-secret-databases-postgresql"
 description: |-
   The PostgreSQL plugin for Vault's database secrets engine generates database credentials to access PostgreSQL servers.
 ---
@@ -18,9 +19,9 @@ In addition to the parameters defined by the [Database
 Backend](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the PostgreSQL DSN. This field
@@ -39,9 +40,9 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
-- `username` `(string: "")` - The root credential username used in the connection URL. 
+- `username` `(string: "")` - The root credential username used in the connection URL.
 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `password` `(string: "")` - The root credential password used in the connection URL.
 
 ### Sample Payload
 
@@ -84,7 +85,8 @@ list the plugin does not support that statement type.
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
   array. The '{{name}}', '{{password}}' and '{{expiration}}' values will be
-  substituted.
+  substituted. The generated password will be a random alphanumeric 20 character
+  string.
 
 - `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a
@@ -104,4 +106,11 @@ list the plugin does not support that statement type.
   functionality. Must be a semicolon-separated string, a base64-encoded
   semicolon-separated string, a serialized JSON string array, or a
   base64-encoded serialized JSON string array. The '{{name}}' and
-  '{{expiration}}` values will be substituted.
+  '{{expiration}}' values will be substituted.
+
+- `rotation_statements` `(list: [])` – Specifies the database statements to be
+  executed to rotate the password for a given username. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The '{{name}}' and '{{password}}' values will be substituted. The
+  generated password will be a random alphanumeric 20 character string.

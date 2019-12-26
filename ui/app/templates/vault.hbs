@@ -1,0 +1,36 @@
+
+{{outlet}}
+  <footer class="footer has-text-grey has-text-centered">
+    <span class="is-inline-block">
+      <Icon
+        @glyph="hashicorp"
+        @size="l"
+        aria-hidden="true"
+        class="has-text-grey-light" />
+      &copy; {{date-format (now) "YYYY"}} HashiCorp
+    </span>
+    <span>
+      Vault {{activeCluster.leaderNode.version}}
+    </span>
+    {{#if (is-version "OSS")}}
+      <span>
+        <a
+          href="https://hashicorp.com/products/vault/trial?source=vaultui"
+          class="link has-text-grey"
+        >
+          Upgrade to Vault Enterprise
+        </a>
+      </span>
+    {{/if}}
+    <span>
+      <a class="has-text-grey" target="_blank" rel="noreferrer noopener" href="https://www.vaultproject.io/docs/index.html">Documentation</a>
+    </span>
+  </footer>
+  {{#if (eq env "development") }}
+    <div class="env-banner level development">
+      <div class="level-item notification">
+        <Icon @glyph="git-branch" /><Icon @glyph="edit" /> Local development <Icon @glyph="edit" /><Icon @glyph="git-branch" />
+      </div>
+    </div>
+  {{/if}}
+  <div id="modal-wormhole"></div>

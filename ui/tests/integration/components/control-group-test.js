@@ -25,15 +25,10 @@ module('Integration | Component | control group', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.register('service:auth', authService);
     this.owner.register('service:control-group', controlGroupService);
     this.controlGroup = this.owner.lookup('service:controlGroup');
     this.auth = this.owner.lookup('service:auth');
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   const setup = (modelData = {}, authData = {}) => {
@@ -65,7 +60,7 @@ module('Integration | Component | control group', function(hooks) {
     await render(hbs`{{control-group model=model}}`);
     assert.ok(component.showsAccessorCallout, 'shows accessor callout');
     assert.equal(component.bannerPrefix, 'Locked');
-    assert.equal(component.bannerText, 'The path you requested is locked by a control group');
+    assert.equal(component.bannerText, 'The path you requested is locked by a Control Group');
     assert.equal(component.requestorText, `You are requesting access to ${model.requestPath}`);
     assert.equal(component.showsTokenText, false, 'does not show token message when there is no token');
     assert.ok(component.showsRefresh, 'shows refresh button');
@@ -122,7 +117,7 @@ module('Integration | Component | control group', function(hooks) {
     await render(hbs`{{control-group model=model}}`);
 
     assert.equal(component.bannerPrefix, 'Locked');
-    assert.equal(component.bannerText, 'Someone is requesting access to a path locked by a control group');
+    assert.equal(component.bannerText, 'Someone is requesting access to a path locked by a Control Group');
     assert.equal(
       component.requestorText,
       `${model.requestEntity.name} is requesting access to ${model.requestPath}`
@@ -177,7 +172,7 @@ module('Integration | Component | control group', function(hooks) {
     this.set('auth.authData', authData);
     await render(hbs`{{control-group model=model}}`);
     assert.equal(component.bannerPrefix, 'Success!');
-    assert.equal(component.bannerText, 'This control group has been authorized');
+    assert.equal(component.bannerText, 'This Control Group has been authorized');
     assert.ok(component.showsBackLink, 'back link is visible');
     assert.notOk(component.showsSuccessComponent, 'does not render control group success');
   });

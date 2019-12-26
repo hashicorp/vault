@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "DynamoDB - Storage Backends - Configuration"
+sidebar_title: "DynamoDB"
 sidebar_current: "docs-configuration-storage-dynamodb"
 description: |-
   The DynamoDB storage backend is used to persist Vault's data in DynamoDB
@@ -50,8 +51,9 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
   provided via the environment variable `AWS_DEFAULT_REGION`.
 
 - `read_capacity` `(int: 5)` – Specifies the maximum number of reads consumed
-  per second on the table. This can also be provided via the environment
-  variable `AWS_DYNAMODB_READ_CAPACITY`.
+  per second on the table, for use if Vault creates the DynamoDB table. This has
+  no effect if the `table` already exists. This can also be provided via the
+  environment variable `AWS_DYNAMODB_READ_CAPACITY`.
 
 - `table` `(string: "vault-dynamodb-backend")` – Specifies the name of the
   DynamoDB table in which to store Vault data. If the specified table does not
@@ -60,8 +62,9 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
   information on the table schema below.
 
 - `write_capacity` `(int: 5)` – Specifies the maximum number of writes performed
-  per second on the table. This can also be provided via the environment
-  variable `AWS_DYNAMODB_WRITE_CAPACITY`.
+  per second on the table, for use if Vault creates the DynamoDB table. This value
+  has no effect if the `table` already exists. This can also be provided via the
+  environment variable `AWS_DYNAMODB_WRITE_CAPACITY`.
 
 The following settings are used for authenticating to AWS. If you are
 running your Vault server on an EC2 instance, you can also make use of the EC2
@@ -91,8 +94,8 @@ the required operations on the DynamoDB table:
         "dynamodb:DescribeLimits",
         "dynamodb:DescribeTimeToLive",
         "dynamodb:ListTagsOfResource",
-        "dynamodb:DescribeReserveCapacityOfferings",
-        "dynamodb:DescribeReserveCapacity",
+        "dynamodb:DescribeReservedCapacityOfferings",
+        "dynamodb:DescribeReservedCapacity",
         "dynamodb:ListTables",
         "dynamodb:BatchGetItem",
         "dynamodb:BatchWriteItem",
@@ -128,7 +131,7 @@ resource "aws_dynamodb_table" "dynamodb-table" {
   write_capacity = 1
 	hash_key       = "Path"
 	range_key      = "Key"
-	attribute [
+	attribute      = [
 		{
 			name = "Path"
 			type = "S"
@@ -144,6 +147,14 @@ resource "aws_dynamodb_table" "dynamodb-table" {
   }
 }
 ```
+
+If a table with the configured name already exists, Vault will not modify it -
+and the Vault configuration values of `read_capacity` and `write_capacity` have
+no effect.
+
+If the table does not already exist, Vault will try to create it, with read and
+write capacities set to the values of `read_capacity` and `write_capacity`
+respectively.
 
 ## DynamoDB Examples of Vault Configuration
 
@@ -162,7 +173,7 @@ storage "dynamodb" {
 
 ### Enabling High Availability
 
-This example show enabling high availability for the DynamoDB storage backend.
+This example shows enabling high availability for the DynamoDB storage backend.
 
 ```hcl
 api_addr = "https://vault-leader.my-company.internal"

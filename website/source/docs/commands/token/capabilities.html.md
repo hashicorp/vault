@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token capabilities - Command"
+sidebar_title: "<code>capabilities</code>"
 sidebar_current: "docs-commands-token-capabilities"
 description: |-
   The "token capabilities" command fetches the capabilities of a token for a

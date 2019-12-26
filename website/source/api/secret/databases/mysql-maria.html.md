@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MySQL/MariaDB - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-mysql-maria"
+sidebar_title: "MySQL/MariaDB"
+sidebar_current: "api-http-secret-databases-mysql-maria"
 description: |-
   The MySQL/MariaDB plugin for Vault's database secrets engine generates database credentials to access MySQL and MariaDB servers.
 ---
@@ -18,9 +19,9 @@ In addition to the parameters defined by the [Database
 Backend](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the MySQL DSN. This field
@@ -39,9 +40,9 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
-- `username` `(string: "")` - The root credential username used in the connection URL. 
+- `username` `(string: "")` - The root credential username used in the connection URL.
 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `password` `(string: "")` - The root credential password used in the connection URL.
 
 ### Sample Payload
 
@@ -83,7 +84,8 @@ list the plugin does not support that statement type.
   statements executed to create and configure a user. Must be a
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
-  array. The '{{name}}' and '{{password}}' values will be substituted.
+  array. The '{{name}}' and '{{password}}' values will be substituted. The
+  generated password will be a random alphanumeric 20 character string.
 
 - `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a

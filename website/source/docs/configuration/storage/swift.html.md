@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Swift - Storage Backends - Configuration"
+sidebar_title: "Swift"
 sidebar_current: "docs-configuration-storage-swift"
 description: |-
   The Swift storage backend is used to persist Vault's data in an OpenStack

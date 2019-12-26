@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Entity Alias - HTTP API"
-sidebar_current: "docs-http-secret-identity-entity-alias"
+sidebar_title: "Entity Alias"
+sidebar_current: "api-http-secret-identity-entity-alias"
 description: |-
   This is the API documentation for managing entity aliases in the identity store.
 ---
@@ -10,9 +11,9 @@ description: |-
 
 This endpoint creates a new alias for an entity.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :----------------------|
-| `POST`   | `/identity/entity-alias`   | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :----------------------|
+| `POST`   | `/identity/entity-alias`   |
 
 ### Parameters
 
@@ -64,9 +65,9 @@ $ curl \
 
 This endpoint queries the entity alias by its identifier.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `GET`    | `/identity/entity-alias/id/:id`  | `200 application/json` |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `GET`    | `/identity/entity-alias/id/:id`  |
 
 ### Parameters
 
@@ -105,9 +106,9 @@ $ curl \
 
 This endpoint is used to update an existing entity alias.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `POST`    | `/identity/entity-alias/id/:id`  | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `POST`    | `/identity/entity-alias/id/:id`  |
 
 ### Parameters
 
@@ -158,11 +159,11 @@ $ curl \
 
 This endpoint deletes an alias from its corresponding entity.
 
-| Method     | Path                             | Produces               |
-| :--------- | :------------------------------- | :----------------------|
-| `DELETE`   | `/identity/entity-alias/id/:id`  | `204 (empty body)`     |
+| Method     | Path                             |
+| :------------------------------- | :----------------------|
+| `DELETE`   | `/identity/entity-alias/id/:id`  |
 
-## Parameters
+### Parameters
 
 - `id` `(string: <required>)` – Identifier of the entity alias.
 
@@ -179,10 +180,10 @@ $ curl \
 
 This endpoint returns a list of available entity aliases by their identifiers.
 
-| Method   | Path                                  | Produces               |
-| :------- | :------------------------------------ | :--------------------- |
-| `LIST`   | `/identity/entity-alias/id`           | `200 application/json` |
-| `GET`    | `/identity/entity-alias/id?list=true` | `200 application/json` |
+| Method   | Path                                  |
+| :------------------------------------ | :--------------------- |
+| `LIST`   | `/identity/entity-alias/id`           |
+| `GET`    | `/identity/entity-alias/id?list=true` |
 
 ### Sample Request
 

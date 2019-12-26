@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
@@ -42,6 +42,11 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	server, ok := conf["server"]
 	if !ok || server == "" {
 		return nil, fmt.Errorf("missing server")
+	}
+
+	port, ok := conf["port"]
+	if !ok {
+		port = ""
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -98,6 +103,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		connectionString += ";password=" + password
 	}
 
+	if port != "" {
+		connectionString += ";port=" + port
+	}
+
 	db, err := sql.Open("mssql", connectionString)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to connect to mssql: {{err}}", err)
@@ -114,16 +123,13 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
-		if _, err := db.Exec("USE " + database); err != nil {
-			return nil, errwrap.Wrapf("failed to switch mssql database: {{err}}", err)
-		}
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM " + database + ".sys.schemas WHERE name = '" + schema + "'").Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
-			if _, err := db.Exec("CREATE SCHEMA " + schema); err != nil {
+			if _, err := db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')"); err != nil {
 				return nil, errwrap.Wrapf("failed to create mssql schema: {{err}}", err)
 			}
 

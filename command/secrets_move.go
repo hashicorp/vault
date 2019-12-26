@@ -27,6 +27,9 @@ Usage: vault secrets move [options] SOURCE DESTINATION
   secrets engine are revoked, but all configuration associated with the engine
   is preserved.
 
+  This command only works within a namespace; it cannot be used to move engines
+  to different namespaces.
+
   WARNING! Moving an existing secrets engine will revoke any leases from the
   old engine.
 

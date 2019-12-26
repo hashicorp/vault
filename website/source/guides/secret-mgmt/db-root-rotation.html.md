@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "DB Root Credential Rotation - Guides"
+sidebar_title: "DB Root Credential Rotation"
 sidebar_current: "guides-secret-mgmt-db-root-rotation"
 description: |-
   Vault enables the combined database secret engines to automate the rotation of
@@ -53,7 +54,7 @@ surrounding that data stored in the database.
 Use the Vault's **`/database/rotate-root/:name`** API endpoint to rotate the
 root credentials stored for the database connection.
 
-![DB Root Credentials](/assets/images/vault-db-root-rotation.png)
+![DB Root Credentials](/img/vault-db-root-rotation.png)
 
 ~> **Best Practice:** Use this feature to rotate the root credentials
 immediately after the initial configuration of each database.

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Group - HTTP API"
-sidebar_current: "docs-http-secret-identity-group"
+sidebar_title: "Group"
+sidebar_current: "api-http-secret-identity-group"
 description: |-
   This is the API documentation for managing groups in the identity store.
 ---
@@ -10,9 +11,9 @@ description: |-
 
 This endpoint creates or updates a Group.
 
-| Method   | Path                | Produces               |
-| :------- | :------------------ | :----------------------|
-| `POST`   | `/identity/group`   | `200 application/json` |
+| Method   | Path                |
+| :------------------ | :----------------------|
+| `POST`   | `/identity/group`   |
 
 ### Parameters
 
@@ -71,9 +72,9 @@ $ curl \
 
 This endpoint queries the group by its identifier.
 
-| Method   | Path                        | Produces               |
-| :------- | :-------------------------- | :--------------------- |
-| `GET`    | `/identity/group/id/:id`    | `200 application/json` |
+| Method   | Path                        |
+| :-------------------------- | :--------------------- |
+| `GET`    | `/identity/group/id/:id`    |
 
 ### Parameters
 
@@ -116,9 +117,9 @@ $ curl \
 
 This endpoint is used to update an existing group.
 
-| Method   | Path                        | Produces               |
-| :------- | :-------------------------- | :--------------------- |
-| `POST`    | `/identity/group/id/:id`   | `200 application/json` |
+| Method   | Path                        |
+| :-------------------------- | :--------------------- |
+| `POST`    | `/identity/group/id/:id`   |
 
 ### Parameters
 
@@ -145,9 +146,9 @@ This endpoint is used to update an existing group.
 ```json
 {
   "name": "testgroupname",
-    "metadata": {
-      "hello": "everyone"
-    },
+  "metadata": {
+    "hello": "everyone"
+  },
   "policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```
@@ -177,9 +178,9 @@ $ curl \
 
 This endpoint deletes a group.
 
-| Method     | Path                       | Produces               |
-| :--------- | :------------------------- | :----------------------|
-| `DELETE`   | `/identity/group/id/:id`   | `204 (empty body)`     |
+| Method     | Path                       |
+| :------------------------- | :----------------------|
+| `DELETE`   | `/identity/group/id/:id`   |
 
 ## Parameters
 
@@ -198,10 +199,10 @@ $ curl \
 
 This endpoint returns a list of available groups by their identifiers.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `LIST`   | `/identity/group/id`           | `200 application/json` |
-| `GET`    | `/identity/group/id?list=true` | `200 application/json` |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `LIST`   | `/identity/group/id`           |
+| `GET`    | `/identity/group/id?list=true` |
 
 ### Sample Request
 
@@ -233,9 +234,9 @@ $ curl \
 
 This endpoint is used to create or update a group by its name.
 
-| Method   | Path                            | Produces               |
-| :------- | :------------------------------ | :--------------------- |
-| `POST`    | `/identity/group/name/:name`   | `200 application/json` |
+| Method   | Path                            |
+| :------------------------------ | :--------------------- |
+| `POST`    | `/identity/group/name/:name`   |
 
 
 ### Parameters
@@ -260,9 +261,9 @@ This endpoint is used to create or update a group by its name.
 
 ```json
 {
-    "metadata": {
-      "hello": "everyone"
-    },
+  "metadata": {
+    "hello": "everyone"
+  },
   "policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```
@@ -296,9 +297,9 @@ $ curl \
 
 This endpoint queries the group by its name.
 
-| Method   | Path                            | Produces               |
-| :------- | :------------------------------ | :--------------------- |
-| `GET`    | `/identity/group/name/:name`    | `200 application/json` |
+| Method   | Path                            |
+| :------------------------------ | :--------------------- |
+| `GET`    | `/identity/group/name/:name`    |
 
 ### Parameters
 
@@ -342,9 +343,9 @@ $ curl \
 
 This endpoint deletes a group, given its name.
 
-| Method     | Path                           | Produces               |
-| :--------- | :----------------------------- | :----------------------|
-| `DELETE`   | `/identity/group/name/:name`   | `204 (empty body)`     |
+| Method     | Path                           |
+| :----------------------------- | :----------------------|
+| `DELETE`   | `/identity/group/name/:name`   |
 
 ## Parameters
 
@@ -363,10 +364,10 @@ $ curl \
 
 This endpoint returns a list of available groups by their names.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `LIST`   | `/identity/group/name`           | `200 application/json` |
-| `GET`    | `/identity/group/name?list=true` | `200 application/json` |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `LIST`   | `/identity/group/name`           |
+| `GET`    | `/identity/group/name?list=true` |
 
 ### Sample Request
 

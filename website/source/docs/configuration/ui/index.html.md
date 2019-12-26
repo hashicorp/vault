@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "UI - Configuration"
+sidebar_title: "<code>ui</code>"
 sidebar_current: "docs-configuration-ui"
 description: |-
   Vault features a user interface (web interface) for interacting with Vault.
@@ -52,14 +53,14 @@ In this case, the UI is accessible the following URL from any machine on the
 subnet (provided no network firewalls are in place):
 
 ```text
-https://10.0.1.35:8200/ui
+https://10.0.1.35:8200/ui/
 ```
 
 It is also accessible at any DNS entry that resolves to that IP address, such as
 the Consul service address (if using Consul):
 
 ```text
-https://vault.service.consul:8200/ui
+https://vault.service.consul:8200/ui/
 ```
 
 ### Note on TLS

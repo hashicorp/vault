@@ -5,7 +5,7 @@
         <span class="feature-progress" style={{bar.style}} {{! template-lint-disable }}></span>
       </span>
       {{#if bar.showIcon}}
-        <ICon class="feature-check {{if bar.completed 'completed-check' 'incomplete-check'}}" @glyph="check-circle-fill" @size="16" @excludeIconClass={{true}}/>
+        <Icon class="feature-check {{if bar.completed 'completed-check' 'incomplete-check'}}" @glyph="check-circle-fill" />
       {{/if}}
     </div>
   {{/each}}

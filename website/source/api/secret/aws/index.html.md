@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-secret-aws"
 description: |-
   This is the API documentation for the Vault AWS secrets engine.
 ---
@@ -38,9 +39,9 @@ files, or IAM/ECS instances.
 At present, this endpoint does not confirm that the provided AWS credentials are
 valid AWS credentials with proper permissions.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/root`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/root`           |
 
 ### Parameters
 
@@ -80,6 +81,36 @@ $ curl \
     http://127.0.0.1:8200/v1/aws/config/root
 ```
 
+## Read Root Configuration
+
+This endpoint allows you to read non-secure values that have been configured in the
+`config/root` endpoint. In particular, the `secret_key` parameter is never returned.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/aws/config/root`           |
+
+### Sample Request
+```
+$ curl
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/aws/config/root
+
+```
+
+### Sample Response
+```json
+{
+  "data": {
+    "access_key": "AKIAEXAMPLE",
+    "region": "us-west-2",
+    "iam_endpoint": "https://iam.amazonaws.com",
+    "sts_endpoint": "https://sts.us-west-2.amazonaws.com",
+    "max_retries": -1
+  }
+}
+```
+
 ## Rotate Root IAM Credentials
 
 When you have configured Vault with static credentials, you can use this
@@ -93,9 +124,9 @@ key on the IAM user; otherwise, generation of a new access key will fail. Once
 this method is called, Vault will now be the only entity that knows the AWS
 secret key is used to access AWS.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/rotate-root`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/rotate-root`    |
 
 ### Parameters
 
@@ -126,9 +157,9 @@ The new access key Vault uses is returned by this operation.
 This endpoint configures lease settings for the AWS secrets engine. It is
 optional, as there are default values for `lease` and `lease_max`.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/lease`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/lease`          |
 
 ### Parameters
 
@@ -162,9 +193,9 @@ $ curl \
 
 This endpoint returns the current lease settings for the AWS secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/config/lease`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/config/lease`          |
 
 ### Sample Request
 
@@ -191,9 +222,9 @@ This endpoint creates or updates the role with the given `name`. If a role with
 the name does not exist, it will be created. If the role exists, it will be
 updated with the new attributes.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/roles/:name`           |
 
 ### Parameters
 
@@ -208,9 +239,12 @@ updated with the new attributes.
   is allowed to assume. Required when `credential_type` is `assumed_role` and
   prohibited otherwise. This is a comma-separated string or JSON array.
 
-- `policy_arns` `(list: [])` – Specifies the ARNs of the AWS managed policies to
-  be attached to IAM users when they are requested. Valid only when
-  `credential_type` is `iam_user`. When `credential_type` is `iam_user`, at
+- `policy_arns` `(list: [])` – Specifies a list of AWS managed policy ARN. The
+  behavior depends on the credential type. With `iam_user`, the policies will
+  be attached to IAM users when they are requested. With `assumed_role` and
+  `federation_token`, the policy ARNs will act as a filter on what the
+  credentials can do, similar to `policy_document`.
+  When `credential_type` is `iam_user` or `federation_token`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
 
@@ -218,12 +252,25 @@ updated with the new attributes.
   behavior depends on the credential type. With `iam_user`, the policy document
   will be attached to the IAM user generated and augment the permissions the IAM
   user has. With `assumed_role` and `federation_token`, the policy document will
-  act as a filter on what the credentials can do.
+  act as a filter on what the credentials can do, similar to `policy_arns`.
 
 - `default_sts_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
   specified when STS credentials are requested, and a default TTL is specified
   on the role, then this default TTL will be used. Valid only when
   `credential_type` is one of `assumed_role` or `federation_token`.
+
+- `max_sts_ttl` `(string)` - The max allowed TTL for STS credentials (credentials
+  TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
+  `assumed_role` or `federation_token`.
+
+- `user_path` `(string)` - The path for the user name. Valid only when
+  `credential_type` is `iam_user`. Default is `/`
+
+- `permissions_boundary_arn` `(string)` - The ARN of the [AWS Permissions
+  Boundary](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+  to attach to IAM users created in the role. Valid only when `credential_type`
+  is `iam_user`. If not specified, then no permissions boundary policy will be
+  attached.
 
 Legacy parameters:
 
@@ -271,9 +318,9 @@ Using an ARN:
 This endpoint queries an existing role by the given name. If the role does not
 exist, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/roles/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/roles/:name`           |
 
 If invalid role data was supplied to the role from an earlier version of Vault,
 then it will show up in the response as `invalid_data`.
@@ -323,9 +370,9 @@ For a role ARN:
 
 This endpoint lists all existing roles in the secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/aws/roles`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/aws/roles`                 |
 
 ### Sample Request
 
@@ -353,9 +400,9 @@ $ curl
 This endpoint deletes an existing role by the given name. If the role does not
 exist, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`  | `/aws/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`  | `/aws/roles/:name`           |
 
 ### Parameters
 
@@ -376,10 +423,10 @@ $ curl \
 This endpoint generates credentials based on the named role. This role must be
 created before queried.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/creds/:name`           | `200 application/json` |
-| `GET`    | `/aws/sts/:name`             | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/creds/:name`           |
+| `GET`    | `/aws/sts/:name`             |
 
 The `/aws/creds` and `/aws/sts` endpoints are almost identical. The exception is
 when retrieving credentials for a role that was specified with the legacy `arn`

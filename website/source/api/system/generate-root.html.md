@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/generate-root - HTTP API"
-sidebar_current: "docs-http-system-generate-root"
+sidebar_title: "<code>/sys/generate-root</code>"
+sidebar_current: "api-http-system-generate-root"
 description: |-
   The `/sys/generate-root/` endpoints are used to create a new root key for
   Vault.
@@ -16,9 +17,9 @@ The `/sys/generate-root` endpoint is used to create a new root key for Vault.
 This endpoint reads the configuration and process of the current root generation
 attempt.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/generate-root/attempt` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/generate-root/attempt` |
 
 ### Sample Request
 
@@ -37,6 +38,7 @@ $ curl \
   "required": 3,
   "encoded_token": "",
   "pgp_fingerprint": "",
+  "otp_length": 24,
   "complete": false
 }
 ```
@@ -44,18 +46,27 @@ $ curl \
 If a root generation is started, `progress` is how many unseal keys have been
 provided for this generation attempt, where `required` must be reached to
 complete. The `nonce` for the current attempt and whether the attempt is
-complete is also displayed. If a PGP key is being used to encrypt the final root
-token, its fingerprint will be returned. Note that if an OTP is being used to
-encode the final root token, it will never be returned.
+complete is also displayed.
+
+If a PGP key is being used to encrypt the final root
+token, its fingerprint will be returned.
+
+If an OTP is being used to encode the final root token it will be returned only
+once, on the response to the start request.
+
+The OTP is a base62 string, with length of otp_length.
+The raw bytes (char codes) of the token will be XOR'd with
+this value before being returned  as a response to the final unseal
+key, encoded as base64.
 
 ## Start Root Token Generation
 
 This endpoint initializes a new root generation attempt. Only a single root
 generation attempt can take place at a time. 
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/generate-root/attempt` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/generate-root/attempt` |
 
 ### Parameters
 
@@ -91,9 +102,9 @@ $ curl \
 This endpoint cancels any in-progress root generation attempt. This clears any
 progress made. This must be called to change the OTP or PGP key being used.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/generate-root/attempt` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/generate-root/attempt` |
 
 ### Sample Request
 
@@ -111,9 +122,9 @@ Vault will complete the root generation and issue the new token.  Otherwise,
 this API must be called multiple times until that threshold is met. The attempt
 nonce must be provided with each call.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/generate-root/update`  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/generate-root/update`  |
 
 ### Parameters
 

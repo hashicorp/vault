@@ -1,10 +1,23 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
+export const KMIP = {
+  displayName: 'KMIP',
+  value: 'kmip',
+  type: 'kmip',
+  category: 'generic',
+};
+
 const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Active Directory',
     value: 'ad',
     type: 'ad',
+    category: 'cloud',
+  },
+  {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
     category: 'cloud',
   },
   {
@@ -35,6 +48,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Google Cloud',
     value: 'gcp',
     type: 'gcp',
+    category: 'cloud',
+  },
+  {
+    displayName: 'Google Cloud KMS',
+    value: 'gcpkms',
+    type: 'gcpkms',
     category: 'cloud',
   },
   {

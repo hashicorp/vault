@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Mount Filter - Guides"
+sidebar_title: "Mount Filter"
 sidebar_current: "guides-operations-mount-filter"
 description: |-
   This guide demonstrates how to selectively filter out secret mounts for
@@ -21,7 +22,7 @@ part of replication. The mount filter feature allows users to whitelist or
 blacklist which secret engines are replicated, thereby allowing users to further
 control the movement of secrets across their infrastructure.
 
-![Performance Replication](/assets/images/vault-mount-filter-2.png)
+![Performance Replication](/img/vault-mount-filter-2.png)
 
 
 ## Reference Materials
@@ -57,7 +58,7 @@ The [***Preparing for GDPR Compliance with HashiCorp
 Vault***](https://www.hashicorp.com/resources/preparing-for-gdpr-compliance-with-hashicorp-vault)
 webinar discusses the GDPR compliance further in details.
 
-[![YouTube](/assets/images/vault-mount-filter.png)](https://youtu.be/hmf6sN4W8pE)
+[![YouTube](/img/vault-mount-filter.png)](https://youtu.be/hmf6sN4W8pE)
 
 ## Prerequisites
 
@@ -75,7 +76,7 @@ States by setting up a secondary cluster and enable the performance
 replication. However, some data must remain in EU and should ***not*** be
 replicated to the US cluster.
 
-![Guide Scenario](/assets/images/vault-mount-filter-0.png)
+![Guide Scenario](/img/vault-mount-filter-0.png)
 
 Leverage the mount filter feature to blacklist the secrets, that are subject to
 GDPR, from being replicated across the regions.
@@ -129,9 +130,9 @@ https://eu-west-1.compute.com:8200/ui) and then login.
 
 Select **Enable new engine** and enter corresponding parameter values:
 
-![GDPR KV](/assets/images/vault-mount-filter-3.png)
+![GDPR KV](/img/vault-mount-filter-3.png)
 
-![Non-GDPR KV](/assets/images/vault-mount-filter-4.png)
+![Non-GDPR KV](/img/vault-mount-filter-4.png)
 
 
 Click **Enable Engine** to complete.
@@ -256,12 +257,12 @@ Click **Enable Engine** to complete.
 #### Web UI
 
 1. Select **Replication** and check the **Performance** radio button.
-  ![Performance Replication - primary](/assets/images/vault-mount-filter-5.png)
+  ![Performance Replication - primary](/img/vault-mount-filter-5.png)
 
 1. Click **Enable replication**.
 
 1. Select the **Secondaries** tab, and then click **Add**.
-  ![Performance Replication - primary](/assets/images/vault-mount-filter-6.png)
+  ![Performance Replication - primary](/img/vault-mount-filter-6.png)
 
 1. Populate the **Secondary ID** field, and then select **Configure performance
 mount filtering** to set your mount filter options.  You can filter by
@@ -269,17 +270,17 @@ whitelisting or blacklisting. For this example, select **Blacklist**.
 
 1. Check **EU_GDPR_data** to prevent it from being replicated to the secondary
 cluster.
-  ![Performance Replication - primary](/assets/images/vault-mount-filter-7.png)
+  ![Performance Replication - primary](/img/vault-mount-filter-7.png)
 
 1. Click **Generate token**.
-  ![Performance Replication - primary](/assets/images/vault-mount-filter-8.png)
+  ![Performance Replication - primary](/img/vault-mount-filter-8.png)
 
 1. Click **Copy** to copy the token.
 
 1. Now, launch the Vault UI for the secondary cluster (e.g. https://us-central.compute.com:8201/ui), and then click **Replication**.
 
 1. Check the **Performance** radio button, and then select **secondary** under the **Cluster mode**. Paste the token you copied from the primary.
-  ![Performance Replication - secondary](/assets/images/vault-mount-filter-9.png)
+  ![Performance Replication - secondary](/img/vault-mount-filter-9.png)
 
 1. Click **Enable replication**.
 
@@ -449,7 +450,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 On the **EU** cluster, select **EU_GDPR_data** > **Create secret**:
 
-![Secrets](/assets/images/vault-mount-filter-12.png)
+![Secrets](/img/vault-mount-filter-12.png)
 
 Enter the values and click **Save**.  Repeat the step to write some secrets at
 the **US_NON_GDPR_data** path as well.
@@ -458,7 +459,7 @@ the **US_NON_GDPR_data** path as well.
 On the **US** cluster, select **US_NON_GDPR_data**. You should be able to see
 the `apikey` under `US_NON_GDPR_data/secret`.
 
-![Secrets](/assets/images/vault-mount-filter-13.png)
+![Secrets](/img/vault-mount-filter-13.png)
 
 The **EU_GDPR_data** data is not replicated, so you won't be able to see the
 secrets.
@@ -504,7 +505,7 @@ $ curl --header "X-Vault-Token: ..." \
 Be sure to select the check box for **Local** to keep it mounted locally within
 the cluster.
 
-![Local Secret](/assets/images/vault-mount-filter-10.png)
+![Local Secret](/img/vault-mount-filter-10.png)
 
 <br>
 

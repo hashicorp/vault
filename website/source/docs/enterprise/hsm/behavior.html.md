@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Behavioral Changes - HSM Integration - Vault Enterprise"
+sidebar_title: "Behavioral Changes"
 sidebar_current: "docs-vault-enterprise-hsm-behavior"
 description: |-
   Vault Enterprise HSM support changes the way Vault works with regard to unseal and recovery keys as well as rekey and recovery operations.
@@ -86,7 +87,7 @@ returned to the users that submitted their recovery keys.
 
 The recovery key can be rekeyed to change the number of shares/threshold or to
 target different key holders via different PGP keys. When using the Vault CLI,
-this is performed by using the `-recovery-key=true` flag to `vault operator rekey`.
+this is performed by using the `-target=recovery` flag to `vault operator rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`

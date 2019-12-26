@@ -5,7 +5,7 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
 
   url(/*role*/) {
-    assert('Override the `url` method to extend the SSH adapter', false);
+    assert('Override the `url` method to extend the PKI adapter', false);
   },
 
   createRecord(store, type, snapshot, requestType) {

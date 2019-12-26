@@ -12,4 +12,10 @@ export default create({
   configLink: clickable('[data-test-engine-config]', {
     testContainer: '#ember-testing',
   }),
+  disableButton: clickable('[data-test-confirm-action-trigger]', {
+    testContainer: '#ember-testing',
+  }),
+  confirmDisable: clickable('[data-test-confirm-button]', {
+    testContainer: '#ember-testing',
+  }),
 });

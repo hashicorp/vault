@@ -13,10 +13,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // CassandraBackend is a physical backend that stores data in Cassandra.
@@ -256,12 +256,18 @@ func (c *CassandraBackend) Put(ctx context.Context, entry *physical.Entry) error
 
 	// Execute inserts to each key prefix simultaneously
 	stmt := fmt.Sprintf(`INSERT INTO "%s" (bucket, key, value) VALUES (?, ?, ?)`, c.table)
-	results := make(chan error)
 	buckets := c.buckets(entry.Key)
-	for _, _bucket := range buckets {
-		go func(bucket string) {
-			results <- c.sess.Query(stmt, bucket, entry.Key, entry.Value).Exec()
-		}(_bucket)
+	results := make(chan error, len(buckets))
+	for i, _bucket := range buckets {
+		go func(i int, bucket string) {
+			var value []byte
+			if i == len(buckets)-1 {
+				// Only store the full value if this is the leaf bucket where the entry will actually be read
+				// otherwise this write is just to allow for list operations
+				value = entry.Value
+			}
+			results <- c.sess.Query(stmt, bucket, entry.Key, value).Exec()
+		}(i, _bucket)
 	}
 	for i := 0; i < len(buckets); i++ {
 		if err := <-results; err != nil {
@@ -296,8 +302,8 @@ func (c *CassandraBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cassandra", "delete"}, time.Now())
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE bucket = ? AND key = ?`, c.table)
-	results := make(chan error)
 	buckets := c.buckets(key)
+	results := make(chan error, len(buckets))
 
 	for _, bucket := range buckets {
 		go func(bucket string) {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/dbtxn"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const SecretCredsType = "creds"
@@ -118,13 +118,15 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	defer rows.Close()
 
 	for rows.Next() {
-		var loginName, dbName, qUsername string
-		var aliasName sql.NullString
+		var loginName, dbName, qUsername, aliasName sql.NullString
 		err = rows.Scan(&loginName, &dbName, &qUsername, &aliasName)
 		if err != nil {
 			return nil, err
 		}
-		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName, username, username))
+		if !dbName.Valid {
+			continue
+		}
+		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName.String, username, username))
 	}
 
 	// we do not stop on error, as we want to remove as

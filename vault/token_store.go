@@ -2,35 +2,37 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
-	"sync/atomic"
-
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -44,7 +46,7 @@ const (
 	accessorPrefix = "accessor/"
 
 	// parentPrefix is the prefix used to store tokens for their
-	// secondar parent based index
+	// secondary parent based index
 	parentPrefix = "parent/"
 
 	// tokenSubPath is the sub-path used for the token store
@@ -62,7 +64,7 @@ const (
 )
 
 var (
-	// TokenLength is the size of tokens we are currenlty generating, without
+	// TokenLength is the size of tokens we are currently generating, without
 	// any namespace information
 	TokenLength = 24
 
@@ -82,16 +84,8 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS == nil {
-			return namespace.ErrNoNamespace
-		}
-
-		switch tokenNS.ID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -108,7 +102,7 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
-	return []*framework.Path{
+	p := []*framework.Path{
 		{
 			Pattern: "roles/?$",
 
@@ -129,70 +123,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    tokenListAccessorsHelp,
 			HelpDescription: tokenListAccessorsHelp,
-		},
-
-		{
-			Pattern: "roles/" + framework.GenericNameRegex("role_name"),
-			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Name of the role",
-				},
-
-				"allowed_policies": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: tokenAllowedPoliciesHelp,
-				},
-
-				"disallowed_policies": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: tokenDisallowedPoliciesHelp,
-				},
-
-				"orphan": &framework.FieldSchema{
-					Type:        framework.TypeBool,
-					Default:     false,
-					Description: tokenOrphanHelp,
-				},
-
-				"period": &framework.FieldSchema{
-					Type:        framework.TypeDurationSecond,
-					Default:     0,
-					Description: tokenPeriodHelp,
-				},
-
-				"path_suffix": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Default:     "",
-					Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
-				},
-
-				"explicit_max_ttl": &framework.FieldSchema{
-					Type:        framework.TypeDurationSecond,
-					Default:     0,
-					Description: tokenExplicitMaxTTLHelp,
-				},
-
-				"renewable": &framework.FieldSchema{
-					Type:        framework.TypeBool,
-					Default:     true,
-					Description: tokenRenewableHelp,
-				},
-
-				"bound_cidrs": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   ts.tokenStoreRoleRead,
-				logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
-				logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
-				logical.DeleteOperation: ts.tokenStoreRoleDelete,
-			},
-
-			ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 		},
 
 		{
@@ -236,13 +166,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "lookup" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "lookup",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to lookup (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to lookup (POST request body)",
@@ -259,13 +185,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "lookup-accessor" + framework.OptionalParamRegex("urlaccessor"),
+			Pattern: "lookup-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Accessor of the token to lookup (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
-				},
 				"accessor": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to look up (request body)",
@@ -300,13 +222,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke-accessor" + framework.OptionalParamRegex("urlaccessor"),
+			Pattern: "revoke-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Accessor of the token to revoke (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
-				},
 				"accessor": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Accessor of the token (request body)",
@@ -333,13 +251,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "revoke",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
@@ -355,13 +269,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke-orphan" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "revoke-orphan",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
@@ -374,6 +284,29 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
 			HelpDescription: strings.TrimSpace(tokenRevokeOrphanHelp),
+		},
+
+		{
+			Pattern: "renew-accessor",
+
+			Fields: map[string]*framework.FieldSchema{
+				"accessor": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Accessor of the token to renew (request body)",
+				},
+				"increment": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Default:     0,
+					Description: "The desired increment in seconds to the token expiration",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: ts.handleUpdateRenewAccessor,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(tokenRenewAccessorHelp),
+			HelpDescription: strings.TrimSpace(tokenRenewAccessorHelp),
 		},
 
 		{
@@ -400,13 +333,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "renew" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "renew",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to renew (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to renew (request body)",
@@ -437,6 +366,79 @@ func (ts *TokenStore) paths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(tokenTidyDesc),
 		},
 	}
+
+	rolesPath := &framework.Path{
+		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+		Fields: map[string]*framework.FieldSchema{
+			"role_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the role",
+			},
+
+			"allowed_policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenAllowedPoliciesHelp,
+			},
+
+			"disallowed_policies": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenDisallowedPoliciesHelp,
+			},
+
+			"orphan": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: tokenOrphanHelp,
+			},
+
+			"period": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Use 'token_period' instead.",
+				Deprecated:  true,
+			},
+
+			"path_suffix": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
+			},
+
+			"explicit_max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Use 'token_explicit_max_ttl' instead.",
+				Deprecated:  true,
+			},
+
+			"renewable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: tokenRenewableHelp,
+			},
+
+			"bound_cidrs": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "Use 'token_bound_cidrs' instead.",
+				Deprecated:  true,
+			},
+
+			"allowed_entity_aliases": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation. This field supports globbing.",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   ts.tokenStoreRoleRead,
+			logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
+			logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
+			logical.DeleteOperation: ts.tokenStoreRoleDelete,
+		},
+
+		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
+	}
+
+	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
+	p = append(p, rolesPath)
+
+	return p
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -472,6 +474,8 @@ type TokenStore struct {
 	activeContext context.Context
 
 	core *Core
+
+	batchTokenEncryptor BarrierEncryptor
 
 	baseBarrierView     *BarrierView
 	idBarrierView       *BarrierView
@@ -515,6 +519,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 	t := &TokenStore{
 		activeContext:         ctx,
 		core:                  core,
+		batchTokenEncryptor:   core.barrier,
 		baseBarrierView:       view,
 		idBarrierView:         view.SubView(idPrefix),
 		accessorBarrierView:   view.SubView(accessorPrefix),
@@ -549,6 +554,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 				salt.DefaultLocation,
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 
 	t.Backend.Paths = append(t.Backend.Paths, t.paths()...)
@@ -559,7 +565,6 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-	//ts.logger.Debug("invalidating key", "key", key)
 
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
@@ -600,6 +605,8 @@ func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
+	tokenutil.TokenParams
+
 	// The name of the role. Embedded so it can be used for pathing
 	Name string `json:"name" mapstructure:"name" structs:"name"`
 
@@ -630,6 +637,9 @@ type tsRoleEntry struct {
 
 	// The set of CIDRs that tokens generated using this role will be bound to
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// The set of allowed entity aliases used during token creation
+	AllowedEntityAliases []string `json:"allowed_entity_aliases" mapstructure:"allowed_entity_aliases" structs:"allowed_entity_aliases"`
 }
 
 type accessorEntry struct {
@@ -657,11 +667,16 @@ func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 		return "", err
 	}
 
-	if ns.ID != namespace.RootNamespaceID {
-		return "h" + s.GetHMAC(id), nil
+	// For tokens of older format and belonging to the root namespace, use SHA1
+	// hash for salting.
+	if ns.ID == namespace.RootNamespaceID && !strings.Contains(id, ".") {
+		return s.SaltID(id), nil
 	}
 
-	return s.SaltID(id), nil
+	// For all other tokens, use SHA2-256 HMAC for salting. This includes
+	// tokens of older format, but belonging to a namespace other than the root
+	// namespace.
+	return "h" + s.GetHMAC(id), nil
 }
 
 // rootToken is used to generate a new token with root privileges and no parent
@@ -673,6 +688,7 @@ func (ts *TokenStore) rootToken(ctx context.Context) (*logical.TokenEntry, error
 		DisplayName:  "root",
 		CreationTime: time.Now().Unix(),
 		NamespaceID:  namespace.RootNamespaceID,
+		Type:         logical.TokenTypeService,
 	}
 	if err := ts.create(ctx, te); err != nil {
 		return nil, err
@@ -698,7 +714,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 	for _, entry := range entries {
 		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
 		if err != nil {
-			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
 			continue
 		}
 
@@ -725,7 +741,7 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 
 	var err error
 	// Create a random accessor
-	entry.Accessor, err = base62.Random(TokenLength, true)
+	entry.Accessor, err = base62.Random(TokenLength)
 	if err != nil {
 		return err
 	}
@@ -771,14 +787,6 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 // a newly generated ID if not provided.
 func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
-	// Generate an ID if necessary
-	if entry.ID == "" {
-		var err error
-		entry.ID, err = base62.Random(TokenLength, true)
-		if err != nil {
-			return err
-		}
-	}
 
 	tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 	if err != nil {
@@ -788,30 +796,113 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		return namespace.ErrNoNamespace
 	}
 
-	if tokenNS.ID != namespace.RootNamespaceID {
-		entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		if entry.CubbyholeID == "" {
-			cubbyholeID, err := base62.Random(TokenLength, true)
+	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		metrics.IncrCounter([]string{"token", "create_root"}, 1)
+	}
+
+	switch entry.Type {
+	case logical.TokenTypeDefault, logical.TokenTypeService:
+		// In case it was default, force to service
+		entry.Type = logical.TokenTypeService
+
+		// Generate an ID if necessary
+		userSelectedID := true
+		if entry.ID == "" {
+			userSelectedID = false
+			var err error
+			entry.ID, err = base62.RandomWithReader(TokenLength, ts.core.secureRandomReader)
 			if err != nil {
 				return err
 			}
-			entry.CubbyholeID = cubbyholeID
 		}
+
+		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
+			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		}
+
+		if !userSelectedID {
+			entry.ID = fmt.Sprintf("s.%s", entry.ID)
+		}
+
+		// Attach namespace ID for tokens that are not belonging to the root
+		// namespace
+		if tokenNS.ID != namespace.RootNamespaceID {
+			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
+			if entry.CubbyholeID == "" {
+				cubbyholeID, err := base62.Random(TokenLength)
+				if err != nil {
+					return err
+				}
+				entry.CubbyholeID = cubbyholeID
+			}
+		}
+
+		// If the user didn't specifically pick the ID, e.g. because they were
+		// sudo/root, check for collision; otherwise trust the process
+		if userSelectedID {
+			exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
+			if exist != nil {
+				return fmt.Errorf("cannot create a token with a duplicate ID")
+			}
+		}
+
+		err = ts.createAccessor(ctx, entry)
+		if err != nil {
+			return err
+		}
+
+		return ts.storeCommon(ctx, entry, true)
+
+	case logical.TokenTypeBatch:
+		// Ensure fields we don't support/care about are nilled, proto marshal,
+		// encrypt, skip persistence
+		entry.ID = ""
+		pEntry := &pb.TokenEntry{
+			Parent:       entry.Parent,
+			Policies:     entry.Policies,
+			Path:         entry.Path,
+			Meta:         entry.Meta,
+			DisplayName:  entry.DisplayName,
+			CreationTime: entry.CreationTime,
+			TTL:          int64(entry.TTL),
+			Role:         entry.Role,
+			EntityID:     entry.EntityID,
+			NamespaceID:  entry.NamespaceID,
+			Type:         uint32(entry.Type),
+		}
+
+		boundCIDRs := make([]string, len(entry.BoundCIDRs))
+		for i, cidr := range entry.BoundCIDRs {
+			boundCIDRs[i] = cidr.String()
+		}
+		pEntry.BoundCIDRs = boundCIDRs
+
+		mEntry, err := proto.Marshal(pEntry)
+		if err != nil {
+			return err
+		}
+
+		eEntry, err := ts.batchTokenEncryptor.Encrypt(ctx, "", mEntry)
+		if err != nil {
+			return err
+		}
+
+		bEntry := base64.RawURLEncoding.EncodeToString(eEntry)
+		entry.ID = fmt.Sprintf("b.%s", bEntry)
+
+		if tokenNS.ID != namespace.RootNamespaceID {
+			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		return nil
+
+	default:
+		return fmt.Errorf("cannot create a token of type %d", entry.Type)
 	}
-
-	exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
-	if exist != nil {
-		return fmt.Errorf("cannot create a token with a duplicate ID")
-	}
-
-	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
-
-	err = ts.createAccessor(ctx, entry)
-	if err != nil {
-		return err
-	}
-
-	return ts.storeCommon(ctx, entry, true)
 }
 
 // Store is used to store an updated token entry without writing the
@@ -975,6 +1066,11 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
 
+	// If it starts with "b." it's a batch token
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
+		return ts.lookupBatchToken(ctx, id)
+	}
+
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -982,8 +1078,8 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	return ts.lookupInternal(ctx, id, false, false)
 }
 
-// lookupTainted is used to find a token that may or maynot be tainted given its
-// ID. It acquires a read lock, then calls lookupInternal.
+// lookupTainted is used to find a token that may or may not be tainted given
+// its ID. It acquires a read lock, then calls lookupInternal.
 func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
@@ -997,6 +1093,48 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.To
 	return ts.lookupInternal(ctx, id, false, true)
 }
 
+func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+	// Strip the b. from the front and namespace ID from the back
+	bEntry, _ := namespace.SplitIDFromString(id[2:])
+
+	eEntry, err := base64.RawURLEncoding.DecodeString(bEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	mEntry, err := ts.batchTokenEncryptor.Decrypt(ctx, "", eEntry)
+	if err != nil {
+		return nil, nil
+	}
+
+	pEntry := new(pb.TokenEntry)
+	if err := proto.Unmarshal(mEntry, pEntry); err != nil {
+		return nil, err
+	}
+
+	te, err := pb.ProtoTokenEntryToLogicalTokenEntry(pEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
+		return nil, nil
+	}
+
+	if te.Parent != "" {
+		pte, err := ts.Lookup(ctx, te.Parent)
+		if err != nil {
+			return nil, err
+		}
+		if pte == nil {
+			return nil, nil
+		}
+	}
+
+	te.ID = id
+	return te, nil
+}
+
 // lookupInternal is used to find a token given its (possibly salted) ID. If
 // tainted is true, entries that are in some revocation state (currently,
 // indicated by num uses < 0), the entry will be returned anyways
@@ -1004,6 +1142,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to find namespace in context: {{err}}", err)
+	}
+
+	// If it starts with "b." it's a batch token
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
+		return ts.lookupBatchToken(ctx, id)
 	}
 
 	var raw *logical.StorageEntry
@@ -1061,6 +1204,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 
 	if entry.NamespaceID == "" {
 		entry.NamespaceID = namespace.RootNamespaceID
+	}
+
+	// This will be the upgrade case
+	if entry.Type == logical.TokenTypeDefault {
+		entry.Type = logical.TokenTypeService
 	}
 
 	persistNeeded := false
@@ -1490,6 +1638,25 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	return nil
 }
 
+func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.tokenStore == nil {
+		return false, fmt.Errorf("no token store")
+	}
+
+	name := strings.TrimPrefix(path, "auth/token/create/")
+	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
+	if err != nil {
+		return false, err
+	}
+	if roleEntry == nil {
+		return false, fmt.Errorf("unknown role")
+	}
+	return roleEntry.TokenType == logical.TokenTypeBatch, nil
+}
+
 // handleCreateAgainstRole handles the auth/token/create path for a role
 func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("role_name").(string)
@@ -1586,7 +1753,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed get namespace from context: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
 	}
 
 	go func() {
@@ -1613,6 +1780,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			parentList, err := ts.parentView(ns).List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
+			}
+
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1688,9 +1861,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
+				countCubbyholeKeys,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor int64
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
+
+			validCubbyholeKeys := make(map[string]bool)
 
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
@@ -1735,10 +1912,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				lock.RUnlock()
 
-				// If token entry is not found assume that the token is not valid any
-				// more and conclude that accessor, leases, and secondary index entries
-				// for this token should not exist as well.
-				if te == nil {
+				switch {
+				case te == nil:
+					// If token entry is not found assume that the token is not valid any
+					// more and conclude that accessor, leases, and secondary index entries
+					// for this token should not exist as well.
+
 					ts.logger.Info("deleting token with nil entry referenced by accessor", "salted_accessor", saltedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
@@ -1768,6 +1947,41 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						continue
 					}
 					deletedCountAccessorInvalidToken++
+				default:
+					// Cache the cubbyhole storage key when the token is valid
+					switch {
+					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
+						saltedID, err := ts.SaltID(quitCtx, te.ID)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							continue
+						}
+						validCubbyholeKeys[salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)] = true
+					default:
+						if te.CubbyholeID == "" {
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
+							continue
+						}
+						validCubbyholeKeys[te.CubbyholeID] = true
+					}
+				}
+			}
+
+			// Revoke invalid cubbyhole storage keys
+			for _, key := range cubbyholeKeys {
+				countCubbyholeKeys++
+				if countCubbyholeKeys%500 == 0 {
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+				}
+
+				key := strings.TrimSuffix(key, "/")
+				if !validCubbyholeKeys[key] {
+					ts.logger.Info("deleting invalid cubbyhole", "key", key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
+					}
+					deletedCountInvalidCubbyholeKey++
 				}
 			}
 
@@ -1779,6 +1993,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+			ts.logger.Info("number of deleted cubbyhole keys that were invalid", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}
@@ -1797,14 +2012,9 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
 func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
-		accessor = data.Get("urlaccessor").(string)
-		if accessor == "" {
-			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
-		}
-		urlaccessor = true
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 	}
 
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
@@ -1841,8 +2051,52 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 		resp.Data["id"] = ""
 	}
 
-	if urlaccessor {
-		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
+	return resp, nil
+}
+
+func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
+	}
+
+	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": aEntry.TokenID,
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": {
+				Type: framework.TypeString,
+			},
+			"increment": {
+				Type: framework.TypeDurationSecond,
+			},
+		},
+	}
+	if inc, ok := data.GetOk("increment"); ok {
+		d.Raw["increment"] = inc
+	}
+
+	resp, err := ts.handleRenew(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("failed to lookup the token")
+	}
+	if resp.IsError() {
+		return resp, nil
+	}
+
+	// Remove the token ID from the response
+	if resp.Auth != nil {
+		resp.Auth.ClientToken = ""
 	}
 
 	return resp, nil
@@ -1851,14 +2105,9 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 // handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
 func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
-		accessor = data.Get("urlaccessor").(string)
-		if accessor == "" {
-			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
-		}
-		urlaccessor = true
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 	}
 
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, true)
@@ -1893,12 +2142,6 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	if urlaccessor {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
-		return resp, nil
-	}
-
 	return nil, nil
 }
 
@@ -1924,6 +2167,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if parent == nil {
 		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
+	if parent.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot create more tokens"), nil
+	}
 
 	// A token with a restricted number of uses cannot create a new token
 	// otherwise it could escape the restriction count.
@@ -1933,7 +2179,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
+	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	// Read and parse the fields
 	var data struct {
@@ -1949,6 +2195,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		DisplayName     string `mapstructure:"display_name"`
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
+		Type            string `mapstructure:"type"`
+		EntityAlias     string `mapstructure:"entity_alias"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -1974,7 +2222,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required generate a namespace admin token"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("root or sudo privileges required to directly generate a token in a child namespace"), logical.ErrInvalidRequest
 		}
 
 		if strutil.StrListContains(data.Policies, "root") {
@@ -1982,10 +2230,112 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	renewable := true
+	if data.Renewable != nil {
+		renewable = *data.Renewable
+	}
+
+	tokenType := logical.TokenTypeService
+	tokenTypeStr := data.Type
+	if role != nil {
+		switch role.TokenType {
+		case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
+			// Use the user-given value, but fall back to service
+		case logical.TokenTypeDefaultBatch:
+			// Use the user-given value, but fall back to batch
+			if tokenTypeStr == "" {
+				tokenTypeStr = logical.TokenTypeBatch.String()
+			}
+		case logical.TokenTypeService:
+			tokenTypeStr = logical.TokenTypeService.String()
+		case logical.TokenTypeBatch:
+			tokenTypeStr = logical.TokenTypeBatch.String()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("role being used for token creation contains invalid token type %q", role.TokenType.String())), nil
+		}
+	}
+	switch tokenTypeStr {
+	case "", "service":
+	case "batch":
+		var badReason string
+		switch {
+		case data.ExplicitMaxTTL != "":
+			dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
+			if err != nil {
+				return logical.ErrorResponse(`"explicit_max_ttl" value could not be parsed`), nil
+			}
+			if dur != 0 {
+				badReason = "explicit_max_ttl"
+			}
+		case data.NumUses != 0:
+			badReason = "num_uses"
+		case data.Period != "":
+			dur, err := parseutil.ParseDurationSecond(data.Period)
+			if err != nil {
+				return logical.ErrorResponse(`"period" value could not be parsed`), nil
+			}
+			if dur != 0 {
+				badReason = "period"
+			}
+		}
+		if badReason != "" {
+			return logical.ErrorResponse(fmt.Sprintf("batch tokens cannot have %q set", badReason)), nil
+		}
+		tokenType = logical.TokenTypeBatch
+		renewable = false
+	default:
+		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
+	}
+
 	// Verify the number of uses is positive
 	if data.NumUses < 0 {
 		return logical.ErrorResponse("number of uses cannot be negative"),
 			logical.ErrInvalidRequest
+	}
+
+	// Verify the entity alias
+	var explicitEntityID string
+	if data.EntityAlias != "" {
+		// Parameter is only allowed in combination with token role
+		if role == nil {
+			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
+		}
+
+		// Check if there is a concrete match
+		if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) &&
+			!strutil.StrListContainsGlob(role.AllowedEntityAliases, data.EntityAlias) {
+			return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+		}
+
+		// Get mount accessor which is required to lookup entity alias
+		mountValidationResp := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
+		if mountValidationResp == nil {
+			return logical.ErrorResponse("auth token mount accessor not found"), nil
+		}
+
+		// Create alias for later processing
+		alias := &logical.Alias{
+			Name:          data.EntityAlias,
+			MountAccessor: mountValidationResp.Accessor,
+			MountType:     mountValidationResp.Type,
+		}
+
+		// Create or fetch entity from entity alias
+		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+		if entity == nil {
+			return nil, errors.New("failed to create or fetch entity from given entity alias")
+		}
+
+		// Validate that the entity is not disabled
+		if entity.Disabled {
+			return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
+		}
+
+		// Set new entity id
+		explicitEntityID = entity.ID
 	}
 
 	// Setup the token entry
@@ -2002,11 +2352,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses:      data.NumUses,
 		CreationTime: time.Now().Unix(),
 		NamespaceID:  ns.ID,
-	}
-
-	renewable := true
-	if data.Renewable != nil {
-		renewable = *data.Renewable
+		Type:         tokenType,
 	}
 
 	// If the role is not nil, we add the role name as part of the token's
@@ -2021,6 +2367,16 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// renewability disabled, set renewable false
 		if renewable && !role.Renewable {
 			renewable = false
+		}
+
+		// Update te.NumUses which is equal to req.Data["num_uses"] at this point
+		// 0 means unlimited so 1 is actually less than 0
+		switch {
+		case role.TokenNumUses == 0:
+		case te.NumUses == 0:
+			te.NumUses = role.TokenNumUses
+		case role.TokenNumUses < te.NumUses:
+			te.NumUses = role.TokenNumUses
 		}
 
 		if role.PathSuffix != "" {
@@ -2071,7 +2427,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// isn't in the disallowed list, add it. This is in line with the idea
 		// that roles, when allowed/disallowed ar set, allow a subset of
 		// policies to be set disjoint from the parent token's policies.
-		if !data.NoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
+		if !data.NoDefaultPolicy && !role.TokenNoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
 			localAddDefault = true
 		}
 
@@ -2169,10 +2525,17 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	// Prevent attempts to create a root token without an actual root token as parent.
-	// This is to thwart privilege escalation by tokens having 'sudo' privileges.
-	if strutil.StrListContains(data.Policies, "root") && !strutil.StrListContains(parent.Policies, "root") {
-		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
+	if strutil.StrListContains(te.Policies, "root") {
+		// Prevent attempts to create a root token without an actual root token as parent.
+		// This is to thwart privilege escalation by tokens having 'sudo' privileges.
+		if !strutil.StrListContains(parent.Policies, "root") {
+			return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
+		}
+
+		if te.Type == logical.TokenTypeBatch {
+			// Batch tokens cannot be revoked so we should never have root batch tokens
+			return logical.ErrorResponse("batch tokens cannot be root tokens"), nil
+		}
 	}
 
 	//
@@ -2186,8 +2549,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			te.Parent = ""
 		}
 
-		if len(role.BoundCIDRs) > 0 {
-			te.BoundCIDRs = role.BoundCIDRs
+		if len(role.TokenBoundCIDRs) > 0 {
+			te.BoundCIDRs = role.TokenBoundCIDRs
 		}
 
 	case data.NoParent:
@@ -2207,10 +2570,23 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// At this point, it is clear whether the token is going to be an orphan or
-	// not. If the token is not going to be an orphan, inherit the parent's
+	// not. If setEntityID is set, the entity identifier will be overwritten.
+	// Otherwise, if the token is not going to be an orphan, inherit the parent's
 	// entity identifier into the child token.
-	if te.Parent != "" {
+	switch {
+	case explicitEntityID != "":
+		// Overwrite the entity identifier
+		te.EntityID = explicitEntityID
+	case te.Parent != "":
 		te.EntityID = parent.EntityID
+
+		// If the parent has bound CIDRs, copy those into the child. We don't
+		// do this if role is not nil because then we always use the role's
+		// bound CIDRs; roles allow escalation of privilege in proper
+		// circumstances.
+		if role == nil {
+			te.BoundCIDRs = parent.BoundCIDRs
+		}
 	}
 
 	var explicitMaxTTLToUse time.Duration
@@ -2269,33 +2645,35 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = dur
 	}
 
-	// Set the lesser period/explicit max TTL if defined both in arguments and in role
-	if role != nil {
-		if role.ExplicitMaxTTL != 0 {
+	// Set the lesser period/explicit max TTL if defined both in arguments and
+	// in role. Batch tokens will error out if not set via role, but here we
+	// need to explicitly check
+	if role != nil && te.Type != logical.TokenTypeBatch {
+		if role.TokenExplicitMaxTTL != 0 {
 			switch {
 			case explicitMaxTTLToUse == 0:
-				explicitMaxTTLToUse = role.ExplicitMaxTTL
+				explicitMaxTTLToUse = role.TokenExplicitMaxTTL
 			default:
-				if role.ExplicitMaxTTL < explicitMaxTTLToUse {
-					explicitMaxTTLToUse = role.ExplicitMaxTTL
+				if role.TokenExplicitMaxTTL < explicitMaxTTLToUse {
+					explicitMaxTTLToUse = role.TokenExplicitMaxTTL
 				}
 				resp.AddWarning(fmt.Sprintf("Explicit max TTL specified both during creation call and in role; using the lesser value of %d seconds", int64(explicitMaxTTLToUse.Seconds())))
 			}
 		}
-		if role.Period != 0 {
+		if role.TokenPeriod != 0 {
 			switch {
 			case periodToUse == 0:
-				periodToUse = role.Period
+				periodToUse = role.TokenPeriod
 			default:
-				if role.Period < periodToUse {
-					periodToUse = role.Period
+				if role.TokenPeriod < periodToUse {
+					periodToUse = role.TokenPeriod
 				}
 				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(periodToUse.Seconds())))
 			}
 		}
 	}
 
-	sysView := ts.System()
+	sysView := ts.System().(extendedSystemView)
 
 	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
 	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
@@ -2324,6 +2702,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.BoundCIDRs = nil
 	}
 
+	if te.ID != "" {
+		resp.AddWarning("Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups.")
+	}
+
 	// Create the token
 	if err := ts.create(ctx, &te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -2345,6 +2727,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		Period:         periodToUse,
 		ExplicitMaxTTL: explicitMaxTTLToUse,
 		CreationPath:   te.Path,
+		TokenType:      te.Type,
+		Orphan:         te.Parent == "",
 	}
 
 	for _, p := range te.Policies {
@@ -2364,50 +2748,26 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	te, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil {
-		return nil, err
-	}
-	if te == nil {
-		return nil, nil
-	}
-
-	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-	if err != nil {
-		return nil, err
-	}
-	if tokenNS == nil {
-		return nil, namespace.ErrNoNamespace
-	}
-
-	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
-	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ts.expiration.Revoke(revokeCtx, leaseID)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return ts.revokeCommon(ctx, req, data, req.ClientToken)
 }
 
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
+		return resp, err
+	}
+
+	return nil, nil
+}
+
+func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -2416,6 +2776,10 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return nil, nil
 	}
 
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be revoked"), nil
+	}
+
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
 	if err != nil {
 		return nil, err
@@ -2433,12 +2797,6 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 	err = ts.expiration.Revoke(revokeCtx, leaseID)
 	if err != nil {
 		return nil, err
-	}
-
-	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
 	}
 
 	return nil, nil
@@ -2448,19 +2806,14 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
+	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	if !isSudo {
 		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
@@ -2477,15 +2830,13 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("token to revoke not found"), logical.ErrInvalidRequest
 	}
 
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be revoked"), nil
+	}
+
 	// Revoke and orphan
 	if err := ts.revokeOrphan(ctx, id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
 	}
 
 	return nil, nil
@@ -2499,14 +2850,7 @@ func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
-	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id != "" {
-			urltoken = true
-		}
-	}
 	if id == "" {
 		id = req.ClientToken
 	}
@@ -2545,6 +2889,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
 			"entity_id":        out.EntityID,
+			"type":             out.Type.String(),
 		},
 	}
 
@@ -2607,10 +2952,6 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		}
 	}
 
-	if urltoken {
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-	}
-
 	return resp, nil
 }
 
@@ -2622,14 +2963,9 @@ func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request,
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
 func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	incrementRaw := data.Get("increment").(int)
 
@@ -2645,12 +2981,14 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	// Renew the token and its children
-	resp, err := ts.expiration.RenewToken(ctx, req, te, increment)
+	var resp *logical.Response
 
-	if urltoken {
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be renewed"), nil
 	}
+
+	// Renew the token and its children
+	resp, err = ts.expiration.RenewToken(ctx, req, te, increment)
 
 	return resp, err
 }
@@ -2682,8 +3020,8 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("original token role %q could not be found, not renewing", te.Role)
 	}
 
-	req.Auth.Period = role.Period
-	req.Auth.ExplicitMaxTTL = role.ExplicitMaxTTL
+	req.Auth.Period = role.TokenPeriod
+	req.Auth.ExplicitMaxTTL = role.TokenExplicitMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 
@@ -2704,6 +3042,22 @@ func (ts *TokenStore) tokenStoreRole(ctx context.Context, name string) (*tsRoleE
 	var result tsRoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	if result.TokenType == logical.TokenTypeDefault {
+		result.TokenType = logical.TokenTypeDefaultService
+	}
+
+	// Token field upgrades. We preserve the original value for read
+	// compatibility.
+	if result.Period > 0 && result.TokenPeriod == 0 {
+		result.TokenPeriod = result.Period
+	}
+	if result.ExplicitMaxTTL > 0 && result.TokenExplicitMaxTTL == 0 {
+		result.TokenExplicitMaxTTL = result.ExplicitMaxTTL
+	}
+	if len(result.BoundCIDRs) > 0 && len(result.TokenBoundCIDRs) == 0 {
+		result.TokenBoundCIDRs = result.BoundCIDRs
 	}
 
 	return &result, nil
@@ -2751,21 +3105,32 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 		return nil, nil
 	}
 
+	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"period":              int64(role.Period.Seconds()),
-			"explicit_max_ttl":    int64(role.ExplicitMaxTTL.Seconds()),
-			"disallowed_policies": role.DisallowedPolicies,
-			"allowed_policies":    role.AllowedPolicies,
-			"name":                role.Name,
-			"orphan":              role.Orphan,
-			"path_suffix":         role.PathSuffix,
-			"renewable":           role.Renewable,
+			"period":                 int64(role.Period.Seconds()),
+			"token_period":           int64(role.TokenPeriod.Seconds()),
+			"explicit_max_ttl":       int64(role.ExplicitMaxTTL.Seconds()),
+			"token_explicit_max_ttl": int64(role.TokenExplicitMaxTTL.Seconds()),
+			"disallowed_policies":    role.DisallowedPolicies,
+			"allowed_policies":       role.AllowedPolicies,
+			"name":                   role.Name,
+			"orphan":                 role.Orphan,
+			"path_suffix":            role.PathSuffix,
+			"renewable":              role.Renewable,
+			"token_type":             role.TokenType.String(),
+			"allowed_entity_aliases": role.AllowedEntityAliases,
 		},
 	}
 
+	if len(role.TokenBoundCIDRs) > 0 {
+		resp.Data["token_bound_cidrs"] = role.TokenBoundCIDRs
+	}
 	if len(role.BoundCIDRs) > 0 {
 		resp.Data["bound_cidrs"] = role.BoundCIDRs
+	}
+	if role.TokenNumUses > 0 {
+		resp.Data["token_num_uses"] = role.TokenNumUses
 	}
 
 	return resp, nil
@@ -2802,100 +3167,197 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		}
 	}
 
-	// In this series of blocks, if we do not find a user-provided value and
-	// it's a creation operation, we call data.Get to get the appropriate
-	// default
+	// First parse fields not duplicated by the token helper
+	{
+		orphanInt, ok := data.GetOk("orphan")
+		if ok {
+			entry.Orphan = orphanInt.(bool)
+		} else if req.Operation == logical.CreateOperation {
+			entry.Orphan = data.Get("orphan").(bool)
+		}
 
-	orphanInt, ok := data.GetOk("orphan")
-	if ok {
-		entry.Orphan = orphanInt.(bool)
-	} else if req.Operation == logical.CreateOperation {
-		entry.Orphan = data.Get("orphan").(bool)
-	}
+		renewableInt, ok := data.GetOk("renewable")
+		if ok {
+			entry.Renewable = renewableInt.(bool)
+		} else if req.Operation == logical.CreateOperation {
+			entry.Renewable = data.Get("renewable").(bool)
+		}
 
-	periodInt, ok := data.GetOk("period")
-	if ok {
-		entry.Period = time.Second * time.Duration(periodInt.(int))
-	} else if req.Operation == logical.CreateOperation {
-		entry.Period = time.Second * time.Duration(data.Get("period").(int))
-	}
-
-	renewableInt, ok := data.GetOk("renewable")
-	if ok {
-		entry.Renewable = renewableInt.(bool)
-	} else if req.Operation == logical.CreateOperation {
-		entry.Renewable = data.Get("renewable").(bool)
-	}
-
-	boundCIDRsRaw, ok := data.GetOk("bound_cidrs")
-	if ok {
-		boundCIDRs := boundCIDRsRaw.([]string)
-		if len(boundCIDRs) > 0 {
-			var parsedCIDRs []*sockaddr.SockAddrMarshaler
-			for _, v := range boundCIDRs {
-				parsedCIDR, err := sockaddr.NewSockAddr(v)
-				if err != nil {
-					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("invalid value %q when parsing bound cidrs: {{err}}", v), err).Error()), nil
+		pathSuffixInt, ok := data.GetOk("path_suffix")
+		if ok {
+			pathSuffix := pathSuffixInt.(string)
+			switch {
+			case pathSuffix != "":
+				matched := pathSuffixSanitize.MatchString(pathSuffix)
+				if !matched {
+					return logical.ErrorResponse(fmt.Sprintf(
+						"given role path suffix contains invalid characters; must match %s",
+						pathSuffixSanitize.String())), nil
 				}
-				parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
 			}
-			entry.BoundCIDRs = parsedCIDRs
+			entry.PathSuffix = pathSuffix
+		} else if req.Operation == logical.CreateOperation {
+			entry.PathSuffix = data.Get("path_suffix").(string)
+		}
+
+		if strings.Contains(entry.PathSuffix, "..") {
+			return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
+		}
+
+		allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
+		if ok {
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+		} else if req.Operation == logical.CreateOperation {
+			entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
+		}
+
+		disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
+		if ok {
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+		}
+	}
+
+	// We handle token type a bit differently than tokenutil does so we need to
+	// cache and handle it after
+	var tokenTypeStr *string
+	oldEntryTokenType := entry.TokenType
+	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
+		tokenTypeStr = new(string)
+		*tokenTypeStr = tokenTypeRaw.(string)
+		delete(data.Raw, "token_type")
+		entry.TokenType = logical.TokenTypeDefault
+	}
+
+	// Next parse token fields from the helper
+	if err := entry.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
+	}
+
+	entry.TokenType = oldEntryTokenType
+	if entry.TokenType == logical.TokenTypeDefault {
+		entry.TokenType = logical.TokenTypeDefaultService
+	}
+	if tokenTypeStr != nil {
+		switch *tokenTypeStr {
+		case "service":
+			entry.TokenType = logical.TokenTypeService
+		case "batch":
+			entry.TokenType = logical.TokenTypeBatch
+		case "default-service":
+			entry.TokenType = logical.TokenTypeDefaultService
+		case "default-batch":
+			entry.TokenType = logical.TokenTypeDefaultBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", *tokenTypeStr)), nil
 		}
 	}
 
 	var resp *logical.Response
 
-	explicitMaxTTLInt, ok := data.GetOk("explicit_max_ttl")
-	if ok {
-		entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLInt.(int))
-	} else if req.Operation == logical.CreateOperation {
-		entry.ExplicitMaxTTL = time.Second * time.Duration(data.Get("explicit_max_ttl").(int))
+	// Now handle backwards compat. Prefer token_ fields over others if both
+	// are set. We set the original fields here so that on read of token role
+	// we can return the same values that were set. We clear out the Token*
+	// values because otherwise when we read the role back we'll read stale
+	// data since if they're not emptied they'll take precedence.
+	periodRaw, ok := data.GetOk("token_period")
+	if !ok {
+		periodRaw, ok = data.GetOk("period")
+		if ok {
+			entry.Period = time.Second * time.Duration(periodRaw.(int))
+			entry.TokenPeriod = entry.Period
+		}
+	} else {
+		_, ok = data.GetOk("period")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_period' and deprecated 'period' value supplied, ignoring the deprecated value")
+		}
+		entry.Period = 0
 	}
-	if entry.ExplicitMaxTTL != 0 {
+
+	boundCIDRsRaw, ok := data.GetOk("token_bound_cidrs")
+	if !ok {
+		boundCIDRsRaw, ok = data.GetOk("bound_cidrs")
+		if ok {
+			boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw.([]string))
+			if err != nil {
+				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
+			}
+			entry.BoundCIDRs = boundCIDRs
+			entry.TokenBoundCIDRs = entry.BoundCIDRs
+		}
+	} else {
+		_, ok = data.GetOk("bound_cidrs")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_bound_cidrs' and deprecated 'bound_cidrs' value supplied, ignoring the deprecated value")
+		}
+		entry.BoundCIDRs = nil
+	}
+
+	finalExplicitMaxTTL := entry.TokenExplicitMaxTTL
+	explicitMaxTTLRaw, ok := data.GetOk("token_explicit_max_ttl")
+	if !ok {
+		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
+		if ok {
+			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
+			entry.TokenExplicitMaxTTL = entry.ExplicitMaxTTL
+		}
+		finalExplicitMaxTTL = entry.ExplicitMaxTTL
+	} else {
+		_, ok = data.GetOk("explicit_max_ttl")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_explicit_max_ttl' and deprecated 'explicit_max_ttl' value supplied, ignoring the deprecated value")
+		}
+		entry.ExplicitMaxTTL = 0
+	}
+	if finalExplicitMaxTTL != 0 {
 		sysView := ts.System()
 
-		if sysView.MaxLeaseTTL() != time.Duration(0) && entry.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
+		if sysView.MaxLeaseTTL() != time.Duration(0) && finalExplicitMaxTTL > sysView.MaxLeaseTTL() {
 			if resp == nil {
 				resp = &logical.Response{}
 			}
 			resp.AddWarning(fmt.Sprintf(
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
-				int64(entry.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
 	}
 
-	pathSuffixInt, ok := data.GetOk("path_suffix")
+	// no legacy version without the token_ prefix to check for
+	tokenNumUses, ok := data.GetOk("token_num_uses")
 	if ok {
-		pathSuffix := pathSuffixInt.(string)
-		if pathSuffix != "" {
-			matched := pathSuffixSanitize.MatchString(pathSuffix)
-			if !matched {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"given role path suffix contains invalid characters; must match %s",
-					pathSuffixSanitize.String())), nil
-			}
-			entry.PathSuffix = pathSuffix
+		entry.TokenNumUses = tokenNumUses.(int)
+	}
+
+	// Run validity checks on token type
+	if entry.TokenType == logical.TokenTypeBatch {
+		if !entry.Orphan {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate non-orphan tokens"), nil
 		}
-	} else if req.Operation == logical.CreateOperation {
-		entry.PathSuffix = data.Get("path_suffix").(string)
+		if entry.Period != 0 || entry.TokenPeriod != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
+		}
+		if entry.Renewable {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate renewable tokens"), nil
+		}
+		if entry.ExplicitMaxTTL != 0 || entry.TokenExplicitMaxTTL != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with an explicit max TTL"), nil
+		}
 	}
 
-	if strings.Contains(entry.PathSuffix, "..") {
-		return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
-	}
-
-	allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
+	allowedEntityAliasesRaw, ok := data.GetOk("allowed_entity_aliases")
 	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
-	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
-	}
-
-	disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
-	if ok {
-		entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+		entry.AllowedEntityAliases = strutil.RemoveDuplicates(allowedEntityAliasesRaw.([]string), true)
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -2935,6 +3397,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
 	tokenListRolesHelp       = `This endpoint lists configured roles.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
+	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
 	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`

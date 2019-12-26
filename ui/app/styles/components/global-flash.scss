@@ -1,17 +1,13 @@
 .global-flash {
-  position: fixed;
-  max-width: 450px;
-  width: 95%;
   bottom: 0;
-  left: 0;
+  left: $spacing-s;
   margin: 10px;
+  max-width: $drawer-width;
+  position: fixed;
+  width: 95%;
   z-index: 300;
 
-  .notification {
+  .message {
     box-shadow: $box-shadow-high;
-    margin: 20px;
-    @include until($desktop) {
-      margin: 1rem 0;
-    }
   }
 }

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Okta MFA - MFA Support - Vault Enterprise"
+sidebar_title: "Okta MFA"
 sidebar_current: "docs-vault-enterprise-mfa-okta"
 description: |-
   Vault Enterprise supports Okta MFA type.

@@ -97,7 +97,7 @@ func main() {
 ## Notes:
 
 * All options are *strings* with the following exceptions:
-   * `cfg.Log` - an instance of [`log.Logger`](https://golang.org/pkg/log/#Logger) or something else (e.g. [logrus](https://github.com/sirupsen/logrus)) which can be used to satisfy the interface requirements.
+   * `cfg.Log` - an instance of [`log.Logger`](https://golang.org/pkg/log/#Logger) or something else (e.g. [logrus](https://github.com/Sirupsen/logrus)) which can be used to satisfy the interface requirements.
    * `cfg.Debug` - a boolean true|false.
 * At a minimum, one of either `API.TokenKey` or `Check.SubmissionURL` is **required** for cgm to function.
 * Check management can be disabled by providing a `Check.SubmissionURL` without an `API.TokenKey`. Note: the supplied URL needs to be http or the broker needs to be running with a cert which can be verified. Otherwise, the `API.TokenKey` will be required to retrieve the correct CA certificate to validate the broker's cert for the SSL connection.

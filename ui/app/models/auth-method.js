@@ -2,19 +2,15 @@ import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-import { queryRecord } from 'ember-computed-query';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+
+import apiPath from 'vault/utils/api-path';
+import attachCapabilities from 'vault/lib/attach-capabilities';
 
 const { attr, hasMany } = DS;
 
-const configPath = function configPath(strings, key) {
-  return function(...values) {
-    return `${strings[0]}${values[key]}${strings[1]}`;
-  };
-};
-export default DS.Model.extend({
+let Model = DS.Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -31,7 +27,7 @@ export default DS.Model.extend({
   config: fragment('mount-config', { defaultValue: {} }),
   local: attr('boolean', {
     helpText:
-      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+      'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
   }),
   sealWrap: attr('boolean', {
     helpText:
@@ -50,7 +46,7 @@ export default DS.Model.extend({
   tuneAttrs: computed(function() {
     return expandAttributeMeta(this, [
       'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
     ]);
   }),
 
@@ -69,7 +65,7 @@ export default DS.Model.extend({
       'accessor',
       'local',
       'sealWrap',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
     ];
   }),
 
@@ -82,7 +78,7 @@ export default DS.Model.extend({
           'config.listingVisibility',
           'local',
           'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
         ],
       },
     ];
@@ -95,29 +91,17 @@ export default DS.Model.extend({
   fieldGroups: computed('formFieldGroups', function() {
     return fieldToAttrs(this, this.get('formFieldGroups'));
   }),
-
-  configPathTmpl: computed('type', function() {
-    const type = this.get('type');
-    if (type === 'aws') {
-      return configPath`auth/${0}/config/client`;
-    } else {
-      return configPath`auth/${0}/config`;
-    }
-  }),
-
-  configPath: queryRecord(
-    'capabilities',
-    context => {
-      const { id, configPathTmpl } = context.getProperties('id', 'configPathTmpl');
-      return {
-        id: configPathTmpl(id),
-      };
-    },
-    'id',
-    'configPathTmpl'
-  ),
-
-  deletePath: lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id'),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),
+});
+
+export default attachCapabilities(Model, {
+  deletePath: apiPath`sys/auth/${'id'}`,
+  configPath: function(context) {
+    if (context.type === 'aws') {
+      return apiPath`auth/${'id'}/config/client`;
+    } else {
+      return apiPath`auth/${'id'}/config`;
+    }
+  },
 });

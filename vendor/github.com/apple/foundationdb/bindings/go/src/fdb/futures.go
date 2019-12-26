@@ -87,6 +87,13 @@ func fdb_future_block_until_ready(f *C.FDBFuture) {
 		return
 	}
 
+	// The mutex here is used as a signal that the callback is complete.
+	// We first lock it, then pass it to the callback, and then lock it
+	// again. The second call to lock won't return until the callback has
+	// fired.
+	//
+	// See https://groups.google.com/forum/#!topic/golang-nuts/SPjQEcsdORA
+	// for the history of why this pattern came to be used.
 	m := &sync.Mutex{}
 	m.Lock()
 	C.go_set_callback(unsafe.Pointer(f), unsafe.Pointer(m))
@@ -141,10 +148,11 @@ func (f *futureByteSlice) Get() ([]byte, error) {
 
 		if err := C.fdb_future_get_value(f.ptr, &present, &value, &length); err != 0 {
 			f.e = Error{int(err)}
-		} else {
-			if present != 0 {
-				f.v = C.GoBytes(unsafe.Pointer(value), length)
-			}
+			return
+		}
+
+		if present != 0 {
+			f.v = C.GoBytes(unsafe.Pointer(value), length)
 		}
 
 		C.fdb_future_release_memory(f.ptr)
@@ -194,10 +202,10 @@ func (f *futureKey) Get() (Key, error) {
 
 		if err := C.fdb_future_get_key(f.ptr, &value, &length); err != 0 {
 			f.e = Error{int(err)}
-		} else {
-			f.k = C.GoBytes(unsafe.Pointer(value), length)
+			return
 		}
 
+		f.k = C.GoBytes(unsafe.Pointer(value), length)
 		C.fdb_future_release_memory(f.ptr)
 	})
 

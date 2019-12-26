@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Tokens and Leases - Guides"
+sidebar_title: "Tokens and Leases"
 sidebar_current: "guides-identity-lease"
 description: |-
   Tokens are the core method for authentication within Vault. For every

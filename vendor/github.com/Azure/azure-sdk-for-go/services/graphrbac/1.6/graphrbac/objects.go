@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -41,81 +41,24 @@ func NewObjectsClientWithBaseURI(baseURI string, tenantID string) ObjectsClient 
 	return ObjectsClient{NewWithBaseURI(baseURI, tenantID)}
 }
 
-// GetCurrentUser gets the details for the currently logged-in user.
-func (client ObjectsClient) GetCurrentUser(ctx context.Context) (result AADObject, err error) {
-	req, err := client.GetCurrentUserPreparer(ctx)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetCurrentUser", nil, "Failure preparing request")
-		return
-	}
-
-	resp, err := client.GetCurrentUserSender(req)
-	if err != nil {
-		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetCurrentUser", resp, "Failure sending request")
-		return
-	}
-
-	result, err = client.GetCurrentUserResponder(resp)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetCurrentUser", resp, "Failure responding to request")
-	}
-
-	return
-}
-
-// GetCurrentUserPreparer prepares the GetCurrentUser request.
-func (client ObjectsClient) GetCurrentUserPreparer(ctx context.Context) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
-		"tenantID": autorest.Encode("path", client.TenantID),
-	}
-
-	const APIVersion = "1.6"
-	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
-	}
-
-	preparer := autorest.CreatePreparer(
-		autorest.AsGet(),
-		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/{tenantID}/me", pathParameters),
-		autorest.WithQueryParameters(queryParameters))
-	return preparer.Prepare((&http.Request{}).WithContext(ctx))
-}
-
-// GetCurrentUserSender sends the GetCurrentUser request. The method will close the
-// http.Response Body if it receives an error.
-func (client ObjectsClient) GetCurrentUserSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-}
-
-// GetCurrentUserResponder handles the response to the GetCurrentUser request. The method always
-// closes the http.Response Body.
-func (client ObjectsClient) GetCurrentUserResponder(resp *http.Response) (result AADObject, err error) {
-	err = autorest.Respond(
-		resp,
-		client.ByInspecting(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result),
-		autorest.ByClosing())
-	result.Response = autorest.Response{Response: resp}
-	return
-}
-
-// GetObjectsByObjectIds gets AD group membership for the specified AD object IDs.
+// GetObjectsByObjectIds gets the directory objects specified in a list of object IDs. You can also specify which
+// resource collections (users, groups, etc.) should be searched by specifying the optional types parameter.
 // Parameters:
 // parameters - objects filtering parameters.
-func (client ObjectsClient) GetObjectsByObjectIds(ctx context.Context, parameters GetObjectsParameters) (result GetObjectsResultPage, err error) {
-	if err := validation.Validate([]validation.Validation{
-		{TargetValue: parameters,
-			Constraints: []validation.Constraint{{Target: "parameters.IncludeDirectoryObjectReferences", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("graphrbac.ObjectsClient", "GetObjectsByObjectIds", err.Error())
+func (client ObjectsClient) GetObjectsByObjectIds(ctx context.Context, parameters GetObjectsParameters) (result DirectoryObjectListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ObjectsClient.GetObjectsByObjectIds")
+		defer func() {
+			sc := -1
+			if result.dolr.Response.Response != nil {
+				sc = result.dolr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
 	}
-
-	result.fn = func(lastResult GetObjectsResult) (GetObjectsResult, error) {
+	result.fn = func(ctx context.Context, lastResult DirectoryObjectListResult) (DirectoryObjectListResult, error) {
 		if lastResult.OdataNextLink == nil || len(to.String(lastResult.OdataNextLink)) < 1 {
-			return GetObjectsResult{}, nil
+			return DirectoryObjectListResult{}, nil
 		}
 		return client.GetObjectsByObjectIdsNext(ctx, *lastResult.OdataNextLink)
 	}
@@ -127,12 +70,12 @@ func (client ObjectsClient) GetObjectsByObjectIds(ctx context.Context, parameter
 
 	resp, err := client.GetObjectsByObjectIdsSender(req)
 	if err != nil {
-		result.gor.Response = autorest.Response{Response: resp}
+		result.dolr.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetObjectsByObjectIds", resp, "Failure sending request")
 		return
 	}
 
-	result.gor, err = client.GetObjectsByObjectIdsResponder(resp)
+	result.dolr, err = client.GetObjectsByObjectIdsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetObjectsByObjectIds", resp, "Failure responding to request")
 	}
@@ -170,7 +113,7 @@ func (client ObjectsClient) GetObjectsByObjectIdsSender(req *http.Request) (*htt
 
 // GetObjectsByObjectIdsResponder handles the response to the GetObjectsByObjectIds request. The method always
 // closes the http.Response Body.
-func (client ObjectsClient) GetObjectsByObjectIdsResponder(resp *http.Response) (result GetObjectsResult, err error) {
+func (client ObjectsClient) GetObjectsByObjectIdsResponder(resp *http.Response) (result DirectoryObjectListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -182,7 +125,17 @@ func (client ObjectsClient) GetObjectsByObjectIdsResponder(resp *http.Response) 
 }
 
 // GetObjectsByObjectIdsComplete enumerates all values, automatically crossing page boundaries as required.
-func (client ObjectsClient) GetObjectsByObjectIdsComplete(ctx context.Context, parameters GetObjectsParameters) (result GetObjectsResultIterator, err error) {
+func (client ObjectsClient) GetObjectsByObjectIdsComplete(ctx context.Context, parameters GetObjectsParameters) (result DirectoryObjectListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ObjectsClient.GetObjectsByObjectIds")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetObjectsByObjectIds(ctx, parameters)
 	return
 }
@@ -190,7 +143,17 @@ func (client ObjectsClient) GetObjectsByObjectIdsComplete(ctx context.Context, p
 // GetObjectsByObjectIdsNext gets AD group membership for the specified AD object IDs.
 // Parameters:
 // nextLink - next link for the list operation.
-func (client ObjectsClient) GetObjectsByObjectIdsNext(ctx context.Context, nextLink string) (result GetObjectsResult, err error) {
+func (client ObjectsClient) GetObjectsByObjectIdsNext(ctx context.Context, nextLink string) (result DirectoryObjectListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ObjectsClient.GetObjectsByObjectIdsNext")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetObjectsByObjectIdsNextPreparer(ctx, nextLink)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ObjectsClient", "GetObjectsByObjectIdsNext", nil, "Failure preparing request")
@@ -241,7 +204,7 @@ func (client ObjectsClient) GetObjectsByObjectIdsNextSender(req *http.Request) (
 
 // GetObjectsByObjectIdsNextResponder handles the response to the GetObjectsByObjectIdsNext request. The method always
 // closes the http.Response Body.
-func (client ObjectsClient) GetObjectsByObjectIdsNextResponder(resp *http.Response) (result GetObjectsResult, err error) {
+func (client ObjectsClient) GetObjectsByObjectIdsNextResponder(resp *http.Response) (result DirectoryObjectListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),

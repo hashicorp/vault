@@ -5,9 +5,13 @@
     </h1>
   </Page.header>
   <Page.content>
-    <MessageInPage data-test-cluster-status @type="warning" @class="unseal-warning">
-      {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}
-    </MessageInPage>
+    <AlertBanner
+      @type="warning"
+      @title="{{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}"
+      @message="You can unseal the vault by entering a portion of the master key. Once all portions are entered, the vault will be unsealed."
+      @class="unseal-warning"
+      data-test-cluster-status
+    />
     <ShamirFlow
       @action="unseal"
       @onUpdate={{action 'setUnsealState'}}
@@ -17,10 +21,6 @@
       @isComplete={{action 'isUnsealed'}}
       @threshold={{model.sealThreshold}}
       @progress={{model.sealProgress}}
-      >
-      <p class="has-text-grey-dark">
-        Unseal the vault by entering a portion of the master key. Once all portions are entered, the vault will be unsealed.
-      </p>
-    </ShamirFlow>
+    />
   </Page.content>
 </SplashPage>

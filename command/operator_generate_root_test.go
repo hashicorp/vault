@@ -161,13 +161,11 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("cancel", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "3JhHkONiyiaNYj14nnD9xZQS"
-
 		client, closer := testVaultServer(t)
 		defer closer()
 
 		// Initialize a generation
-		if _, err := client.Sys().GenerateRootInit(otp, ""); err != nil {
+		if _, err := client.Sys().GenerateRootInit("", ""); err != nil {
 			t.Fatal(err)
 		}
 
@@ -200,8 +198,6 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("init_otp", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "3JhHkONiyiaNYj14nnD9xZQS"
-
 		client, closer := testVaultServer(t)
 		defer closer()
 
@@ -210,7 +206,6 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 
 		code := cmd.Run([]string{
 			"-init",
-			"-otp", otp,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -330,7 +325,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			keys[len(keys)-1], // the last unseal key
 		})
 		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
+			t.Fatalf("expected %d to be %d, out=%q, err=%q", code, exp, ui.OutputWriter, ui.ErrorWriter)
 		}
 
 		reToken := regexp.MustCompile(`Encoded Token\s+(.+)`)
@@ -350,7 +345,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength; l != exp {
+		if l, exp := len(token), vault.TokenLength+2; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})
@@ -436,7 +431,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength; l != exp {
+		if l, exp := len(token), vault.TokenLength+2; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})

@@ -8,9 +8,9 @@ import (
 	"encoding/pem"
 	"errors"
 
-	"github.com/SermoDigital/jose/jws"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/briankassouf/jose/jws"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathConfig returns the path configuration for CRUD operations on the backend
@@ -23,15 +23,22 @@ func pathConfig(b *kubeAuthBackend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.",
 			},
+
 			"kubernetes_ca_cert": {
 				Type:        framework.TypeString,
 				Description: "PEM encoded CA cert for use by the TLS client used to talk with the API.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Kubernetes CA Certificate",
+				},
 			},
 			"token_reviewer_jwt": {
 				Type: framework.TypeString,
 				Description: `A service account JWT used to access the
 TokenReview API to validate other JWTs during login. If not set
 the JWT used for login will be used to access the API.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Token Reviewer JWT",
+				},
 			},
 			"pem_keys": {
 				Type: framework.TypeCommaStringSlice,
@@ -39,6 +46,16 @@ the JWT used for login will be used to access the API.`,
 used to verify the signatures of kubernetes service account
 JWTs. If a certificate is given, its public key will be
 extracted. Not every installation of Kuberentes exposes these keys.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Service account verification keys",
+				},
+			},
+			"issuer": {
+				Type:        framework.TypeString,
+				Description: "Optional JWT issuer. If no issuer is specified, then this plugin will use kubernetes.io/serviceaccount as the default issuer.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "JWT Issuer",
+				},
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -66,6 +83,7 @@ func (b *kubeAuthBackend) pathConfigRead() framework.OperationFunc {
 					"kubernetes_host":    config.Host,
 					"kubernetes_ca_cert": config.CACert,
 					"pem_keys":           config.PEMKeys,
+					"issuer":             config.Issuer,
 				},
 			}
 
@@ -84,6 +102,7 @@ func (b *kubeAuthBackend) pathConfigWrite() framework.OperationFunc {
 
 		pemList := data.Get("pem_keys").([]string)
 		caCert := data.Get("kubernetes_ca_cert").(string)
+		issuer := data.Get("issuer").(string)
 		if len(pemList) == 0 && len(caCert) == 0 {
 			return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
 		}
@@ -103,6 +122,7 @@ func (b *kubeAuthBackend) pathConfigWrite() framework.OperationFunc {
 			Host:             host,
 			CACert:           caCert,
 			TokenReviewerJWT: tokenReviewer,
+			Issuer:           issuer,
 		}
 
 		var err error
@@ -139,6 +159,8 @@ type kubeConfig struct {
 	CACert string `json:"ca_cert"`
 	// TokenReviewJWT is the bearer to use during the TokenReview API call
 	TokenReviewerJWT string `json:"token_reviewer_jwt"`
+	// Issuer is the claim that specifies who issued the token
+	Issuer string `json:"issuer"`
 }
 
 // PasrsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs

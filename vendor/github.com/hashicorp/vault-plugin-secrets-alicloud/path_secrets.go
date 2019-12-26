@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault-plugin-secrets-alicloud/clients"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const secretType = "alicloud"

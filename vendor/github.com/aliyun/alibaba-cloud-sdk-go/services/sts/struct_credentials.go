@@ -17,8 +17,8 @@ package sts
 
 // Credentials is a nested struct in sts response
 type Credentials struct {
-	SecurityToken   string `json:"SecurityToken" xml:"SecurityToken"`
 	AccessKeySecret string `json:"AccessKeySecret" xml:"AccessKeySecret"`
-	AccessKeyId     string `json:"AccessKeyId" xml:"AccessKeyId"`
 	Expiration      string `json:"Expiration" xml:"Expiration"`
+	AccessKeyId     string `json:"AccessKeyId" xml:"AccessKeyId"`
+	SecurityToken   string `json:"SecurityToken" xml:"SecurityToken"`
 }

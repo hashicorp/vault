@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Using the HTTP APIs with Authentication"
+sidebar_title: "HTTP API"
 sidebar_current: "gettingstarted-apis"
 description: |-
   Using the HTTP APIs for authentication and secret access.

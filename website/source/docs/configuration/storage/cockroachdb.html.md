@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "CockroachDB - Storage Backends - Configuration"
+sidebar_title: "CockroachDB"
 sidebar_current: "docs-configuration-storage-cockroachdb"
 description: |-
   The CockroachDB storage backend is used to persist Vault's data in a CockroachDB
@@ -44,7 +45,7 @@ uses that driver to interact with the database.
 
 ## `cockroachdb` Examples
 
-This example shows connecting to a PostgresSQL cluster using full SSL
+This example shows connecting to a PostgreSQL cluster using full SSL
 verification (recommended).
 
 ```hcl

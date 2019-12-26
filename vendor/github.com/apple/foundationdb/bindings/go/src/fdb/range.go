@@ -90,7 +90,11 @@ type ExactRange interface {
 // that the default zero-value of KeyRange specifies an empty range before all
 // keys in the database.
 type KeyRange struct {
-	Begin, End KeyConvertible
+	// The (inclusive) beginning of the range
+	Begin KeyConvertible
+
+	// The (exclusive) end of the range
+	End KeyConvertible
 }
 
 // FDBRangeKeys allows KeyRange to satisfy the ExactRange interface.
@@ -286,6 +290,8 @@ func (ri *RangeIterator) MustGet() KeyValue {
 	return kv
 }
 
+// Strinc returns the first key that would sort outside the range prefixed by
+// prefix, or an error if prefix is empty or contains only 0xFF bytes.
 func Strinc(prefix []byte) ([]byte, error) {
 	for i := len(prefix) - 1; i >= 0; i-- {
 		if prefix[i] != 0xFF {
@@ -311,7 +317,7 @@ func PrefixRange(prefix []byte) (KeyRange, error) {
 	copy(begin, prefix)
 	end, e := Strinc(begin)
 	if e != nil {
-		return KeyRange{}, nil
+		return KeyRange{}, e
 	}
 	return KeyRange{Key(begin), Key(end)}, nil
 }

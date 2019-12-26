@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "unwrap - Command"
+sidebar_title: "<code>unwrap</code>"
 sidebar_current: "docs-commands-unwrap"
 description: |-
   The "unwrap" command unwraps a wrapped secret from Vault by the given token.

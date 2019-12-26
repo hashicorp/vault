@@ -1,11 +1,12 @@
 ---
 layout: "docs"
 page_title: "operator init - Command"
+sidebar_title: "<code>init</code>"
 sidebar_current: "docs-commands-operator-init"
 description: |-
   The "operator init" command initializes a Vault server. Initialization is the
   process by which Vault's storage backend is prepared to receive data. Since
-  Vault server's share the same storage backend in HA mode, you only need to
+  Vault servers share the same storage backend in HA mode, you only need to
   initialize one Vault to initialize the storage backend.
 ---
 
@@ -13,7 +14,7 @@ description: |-
 
 The `operator init` command initializes a Vault server. Initialization is the
 process by which Vault's storage backend is prepared to receive data. Since
-Vault server's share the same storage backend in HA mode, you only need to
+Vault servers share the same storage backend in HA mode, you only need to
 initialize one Vault to initialize the storage backend.
 
 During initialization, Vault generates an in-memory master key and applies
@@ -41,6 +42,15 @@ $ vault operator init \
     -key-shares=3 \
     -key-threshold=2 \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
+```
+
+Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
+
+```text
+$ vault operator init \
+    -recovery-shares=1 \
+    -recovery-threshold=1 \
+    -recovery-pgp-keys="keybase:grahamhashicorp"
 ```
 
 Encrypt the initial root token using a pgp key:
@@ -74,7 +84,7 @@ flags](/docs/commands/index.html) included on all commands.
   containing public GPG keys OR a comma-separated list of Keybase usernames
   using the format `keybase:<username>`. When supplied, the generated unseal
   keys will be encrypted and base64-encoded in the order specified in this list.
-  The number of entries must match -key-shares, unless -store-shares are used.
+  The number of entries must match -key-shares, unless -stored-shares are used.
 
 - `-root-token-pgp-key` `(string: "")` - Path to a file on disk containing a
   binary or base64-encoded public GPG key. This can also be specified as a
@@ -101,7 +111,7 @@ flags](/docs/commands/index.html) included on all commands.
 - `-consul-service` `(string: "vault")` - Name of the service in Consul under
   which the Vault servers are registered.
 
-### HSM Options
+### HSM and KMS Options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
   recovery key shares. This is only used in HSM mode.

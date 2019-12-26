@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -35,6 +35,7 @@ func TestSysSealStatus(t *testing.T) {
 		"type":          "shamir",
 		"recovery_seal": false,
 		"initialized":   true,
+		"migration":     false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -52,8 +53,8 @@ func TestSysSealStatus(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -118,6 +119,7 @@ func TestSysUnseal(t *testing.T) {
 			"type":          "shamir",
 			"recovery_seal": false,
 			"initialized":   true,
+			"migration":     false,
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -144,8 +146,8 @@ func TestSysUnseal(t *testing.T) {
 		} else {
 			expected["cluster_id"] = actual["cluster_id"]
 		}
-		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("bad: expected: \n%#v\nactual: \n%#v", expected, actual)
+		if diff := deep.Equal(actual, expected); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 }
@@ -198,6 +200,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 			"type":          "shamir",
 			"recovery_seal": false,
 			"initialized":   true,
+			"migration":     false,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -219,8 +222,8 @@ func TestSysUnseal_Reset(t *testing.T) {
 		} else {
 			expected["cluster_id"] = actual["cluster_id"]
 		}
-		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
+		if diff := deep.Equal(actual, expected); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 
@@ -237,6 +240,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"type":          "shamir",
 		"recovery_seal": false,
 		"initialized":   true,
+		"migration":     false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -255,8 +259,8 @@ func TestSysUnseal_Reset(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 
 }

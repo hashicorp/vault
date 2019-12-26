@@ -1,21 +1,21 @@
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
-import utils from '../lib/key-utils';
+import utils from 'vault/lib/key-utils';
 
 export default Mixin.create({
   // what attribute has the path for the key
   // will.be 'path' for v2 or 'id' v1
-  pathAttr: 'id',
+  pathAttr: 'path',
   flags: null,
 
   initialParentKey: null,
 
   isCreating: computed('initialParentKey', function() {
-    return this.get('initialParentKey') != null;
+    return this.initialParentKey != null;
   }),
 
   pathVal() {
-    return this.get(this.pathAttr);
+    return this[this.pathAttr] || this.id;
   },
 
   // rather than using defineProperty for all of these,

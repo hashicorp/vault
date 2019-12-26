@@ -1,5 +1,6 @@
 import ApplicationAdapter from './application';
 import { pluralize } from 'ember-inflector';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -47,29 +48,29 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = `${this.buildURL()}/${backend}/keys/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/keys/`;
     if (id) {
-      url += id;
+      url += encodePath(id);
     }
     return url;
   },
 
   urlForAction(action, backend, id, param) {
-    let urlBase = `${this.buildURL()}/${backend}/${action}`;
+    let urlBase = `${this.buildURL()}/${encodePath(backend)}/${action}`;
     // these aren't key-specific
     if (action === 'hash' || action === 'random') {
       return urlBase;
     }
     if (action === 'datakey' && param) {
       // datakey action has `wrapped` or `plaintext` as part of the url
-      return `${urlBase}/${param}/${id}`;
+      return `${urlBase}/${param}/${encodePath(id)}`;
     }
     if (action === 'export' && param) {
       let [type, version] = param;
-      const exportBase = `${urlBase}/${type}-key/${id}`;
+      const exportBase = `${urlBase}/${type}-key/${encodePath(id)}`;
       return version ? `${exportBase}/${version}` : exportBase;
     }
-    return `${urlBase}/${id}`;
+    return `${urlBase}/${encodePath(id)}`;
   },
 
   optionsForQuery(id) {

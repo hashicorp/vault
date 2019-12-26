@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"math"
 	"sync/atomic"
 	"time"
@@ -25,7 +25,7 @@ func (b *backend) pathRotateCredentials() *framework.Path {
 }
 
 func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	engineConf, err := b.readConfig(ctx, req.Storage)
+	engineConf, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

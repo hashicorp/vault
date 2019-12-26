@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy fmt - Command"
+sidebar_title: "<code>fmt</code>"
 sidebar_current: "docs-commands-policy-fmt"
 description: |-
   The "policy fmt" formats a local policy file to the policy specification. This

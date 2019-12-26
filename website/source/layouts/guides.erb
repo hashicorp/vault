@@ -1,214 +1,70 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
-    <ul class="nav docs-sidenav">
-
-
-      <li<%= sidebar_current("getting-started")%>>
-        <a href="/guides/getting-started/index.html">Getting Started</a>
-      </li>
-
-      <li<%= sidebar_current("guides-operations")%>>
-        <a href="/guides/operations/index.html">Vault Operations</a>
-        <ul class="nav">
-          <li<%= sidebar_current("guides-operations-reference-architecture") %>>
-            <a href="/guides/operations/reference-architecture.html">Reference Architecture</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-deployment-guide") %>>
-            <a href="/guides/operations/deployment-guide.html">Deployment Guide</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-vault-ha") %>>
-            <a href="/guides/operations/vault-ha-consul.html">Vault HA with Consul</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-production-hardening") %>>
-            <a href="/guides/operations/production.html">Production Hardening</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-generate-root") %>>
-            <a href="/guides/operations/generate-root.html">Root Token Generation</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-rekeying-and-rotating") %>>
-            <a href="/guides/operations/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-plugin-backends") %>>
-            <a href="/guides/operations/plugin-backends.html">Building Plugin Backends</a>
-          </li>
-          <hr>
-          <li<%= sidebar_current("guides-operations-replication") %>>
-            <a href="/guides/operations/replication.html">Replication Setup &amp; Guidance</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-dr") %>>
-            <a href="/guides/operations/disaster-recovery.html">Disaster Recovery Setup</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-mount-filter") %>>
-            <a href="/guides/operations/mount-filter.html">Mount Filter</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-performance-nodes") %>>
-            <a href="/guides/operations/performance-nodes.html">Performance Standby Nodes</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-multi-tenant") %>>
-            <a href="/guides/operations/multi-tenant.html">Multi-Tenant: Namespaces</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-autounseal-aws-kms") %>>
-            <a href="/guides/operations/autounseal-aws-kms.html">Vault Auto-unseal with AWS KMS</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-seal-wrap") %>>
-            <a href="/guides/operations/seal-wrap.html">Seal Wrap / FIPS 140-2</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-monitoring") %>>
-            <a href="/guides/operations/monitoring.html">Vault Cluster Monitoring</a>
-          </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("guides-identity")%>>
-        <a href="/guides/identity/index.html">Identity and Access Management</a>
-        <ul class="nav">
-          <li<%= sidebar_current("guides-identity-secure-intro") %>>
-            <a href="/guides/identity/secure-intro.html">Secure Introduction of Vault Clients</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-policies") %>>
-            <a href="/guides/identity/policies.html">Policies</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-policy-templating") %>>
-            <a href="/guides/identity/policy-templating.html">ACL Policy Path Templating</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-authentication") %>>
-            <a href="/guides/identity/authentication.html">AppRole Pull Authentication</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-approle-tf-chef") %>>
-            <a href="/guides/identity/approle-trusted-entities.html">AppRole with Terraform and Chef</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-lease") %>>
-            <a href="/guides/identity/lease.html">Tokens and Leases</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-identity") %>>
-            <a href="/guides/identity/identity.html">Identity - Entities &amp; Groups</a>
-          </li>
-          <hr>
-          <li<%= sidebar_current("guides-identity-sentinel") %>>
-            <a href="/guides/identity/sentinel.html">Sentinel Policies</a>
-          </li>
-          <li<%= sidebar_current("guides-identity-control-groups") %>>
-            <a href="/guides/identity/control-groups.html">Control Groups</a>
-          </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("guides-secret-mgmt")%>>
-        <a href="/guides/secret-mgmt/index.html">Secrets Management</a>
-        <ul class="nav">
-          <li<%= sidebar_current("guides-secret-mgmt-static-secrets") %>>
-            <a href="/guides/secret-mgmt/static-secrets.html">Static Secrets</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-versioned-kv") %>>
-            <a href="/guides/secret-mgmt/versioned-kv.html">Versioned KV Secret Engine</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-dynamic-secrets") %>>
-            <a href="/guides/secret-mgmt/dynamic-secrets.html">Secret as a Service</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-db-root-rotation") %>>
-            <a href="/guides/secret-mgmt/db-root-rotation.html">DB Root Credential Rotation</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-cubbyhole") %>>
-            <a href="/guides/secret-mgmt/cubbyhole.html">Cubbyhole Response Wrapping</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-ssh-otp") %>>
-            <a href="/guides/secret-mgmt/ssh-otp.html">One-Time SSH Password</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-pki") %>>
-            <a href="/guides/secret-mgmt/pki-engine.html">Build Your Own CA</a>
-          </li>
-          <li<%= sidebar_current("guides-secret-mgmt-app-integration") %>>
-            <a href="/guides/secret-mgmt/app-integration.html">Direct Application Integration</a>
-          </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("guides-encryption")%>>
-        <a href="/guides/encryption/index.html">Encryption as a Service</a>
-        <ul class="nav">
-          <li<%= sidebar_current("guides-encryption-transit") %>>
-            <a href="/guides/encryption/transit.html">Encryption as a Service</a>
-          </li>
-          <li<%= sidebar_current("guides-encryption-spring-demo") %>>
-            <a href="/guides/encryption/spring-demo.html">Java Application Demo</a>
-          </li>
-          <li<%= sidebar_current("guides-encryption-transit-rewrap") %>>
-            <a href="/guides/encryption/transit-rewrap.html">Transit Secrets Re-wrapping</a>
-          </li>
-        </ul>
-      </li>
-
-      <hr>
-
-      <li<%= sidebar_current("guides-upgrading")%>>
-        <a href="/guides/upgrading/index.html">Upgrade Guides</a>
-        <ul class="nav">
-          <li<%= sidebar_current("guides-upgrading-to-0.5.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.5.0.html">Upgrade to 0.5.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.5.1") %>>
-            <a href="/guides/upgrading/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.6.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.6.0.html">Upgrade to 0.6.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.6.1") %>>
-            <a href="/guides/upgrading/upgrade-to-0.6.1.html">Upgrade to 0.6.1</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.6.2") %>>
-            <a href="/guides/upgrading/upgrade-to-0.6.2.html">Upgrade to 0.6.2</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.6.3") %>>
-            <a href="/guides/upgrading/upgrade-to-0.6.3.html">Upgrade to 0.6.3</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.6.4") %>>
-            <a href="/guides/upgrading/upgrade-to-0.6.4.html">Upgrade to 0.6.4</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.7.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.7.0.html">Upgrade to 0.7.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.8.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.8.0.html">Upgrade to 0.8.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.9.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.9.0.html">Upgrade to 0.9.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.9.1") %>>
-            <a href="/guides/upgrading/upgrade-to-0.9.1.html">Upgrade to 0.9.1</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.9.2") %>>
-            <a href="/guides/upgrading/upgrade-to-0.9.2.html">Upgrade to 0.9.2</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.9.3") %>>
-            <a href="/guides/upgrading/upgrade-to-0.9.3.html">Upgrade to 0.9.3</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.9.6") %>>
-            <a href="/guides/upgrading/upgrade-to-0.9.6.html">Upgrade to 0.9.6</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.10.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.10.0.html">Upgrade to 0.10.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.10.2") %>>
-            <a href="/guides/upgrading/upgrade-to-0.10.2.html">Upgrade to 0.10.2</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.10.4") %>>
-            <a href="/guides/upgrading/upgrade-to-0.10.4.html">Upgrade to 0.10.4</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.11.0") %>>
-            <a href="/guides/upgrading/upgrade-to-0.11.0.html">Upgrade to 0.11.0</a>
-          </li>
-          <li<%= sidebar_current("guides-upgrading-to-0.11.2") %>>
-            <a href="/guides/upgrading/upgrade-to-0.11.2.html">Upgrade to 0.11.2</a>
-          </li>
-        </ul>
-      </li>
-      
-      <li<%= sidebar_current("guides-partnerships")%>>
-        <a href="/guides/partnerships/index.html">Vault Integration Program</a>
-      </li>
-    
-    </ul>
+    <div class="nav docs-nav">
+      <hashi-docs-sidenav
+        category='guides'
+        current_page='<%= current_page.path %>'
+        data="<%= encode(get_sidebar_data('guides')) %>"
+        order="<%= encode([
+          {
+            category: 'getting-started',
+          }, {
+            category: 'operations',
+            content: [
+              'reference-architecture',
+              'vault-ha-consul',
+              'production',
+              'generate-root',
+              'rekeying-and-rotating',
+              'plugin-backends',
+              '--------------',
+              'replication',
+              'disaster-recovery',
+              'mount-filter',
+              'multi-tenant',
+              'autounseal-aws-kms',
+              'seal-wrap',
+              'monitoring'
+            ]
+          }, {
+            category: 'identity',
+            content: [
+              'secure-intro',
+              'policies',
+              'authentication',
+              'approle-trusted-entities',
+              'lease',
+              'identity',
+              '--------------',
+              'sentinel',
+              'control-groups'
+            ]
+          }, {
+            category: 'secret-mgmt',
+            content: [
+              'static-secrets',
+              'versioned-kv',
+              'dynamic-secrets',
+              'db-root-rotation',
+              'cubbyhole',
+              'ssh-otp',
+              'pki-engine',
+              'app-integration'
+            ]
+          }, {
+            category: 'encryption',
+            content: [
+              'transit',
+              'spring-demo',
+              'transit-rewrap'
+            ]
+          }
+        ]) %>")
+      ></hashi-docs-sidenav>
+    </div>
   <% end %>
 
-  <%= yield %>
+  <article class='g-content g-type-long-body vault'>
+    <%= yield %>
+  </article>
 <% end %>

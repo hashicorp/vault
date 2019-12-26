@@ -8,18 +8,21 @@ export default Route.extend(ModelBoundaryRoute, {
   controlGroup: service(),
   flashMessages: service(),
   console: service(),
+  permissions: service(),
+  namespaceService: service('namespace'),
 
   modelTypes: computed(function() {
     return ['secret', 'secret-engine'];
   }),
 
   beforeModel() {
-    this.get('auth').deleteCurrentToken();
-    this.get('controlGroup').deleteTokens();
-    this.get('console').set('isOpen', false);
-    this.get('console').clearLog(true);
-    this.clearModelCache();
-    this.replaceWith('vault.cluster');
-    this.get('flashMessages').clearMessages();
+    this.auth.deleteCurrentToken();
+    this.controlGroup.deleteTokens();
+    this.namespaceService.reset();
+    this.console.set('isOpen', false);
+    this.console.clearLog(true);
+    this.flashMessages.clearMessages();
+    this.permissions.reset();
+    this.replaceWith('vault.cluster.auth');
   },
 });

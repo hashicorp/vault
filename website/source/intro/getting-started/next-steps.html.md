@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Next Steps - Getting Started"
-sidebar_current: "gettingstarted-nextsteps"
+sidebar_title: "Next Steps"
+sidebar_current: "gettingstarted-next-steps"
 description: |-
   After completing the getting started guide, learn about what to do next with Vault.
 ---

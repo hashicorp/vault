@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Secrets Engines - Getting Started"
-sidebar_current: "gettingstarted-secretbackends"
+sidebar_title: "Secrets Engines"
+sidebar_current: "gettingstarted-secret-backends"
 description: |-
   secrets engines are what create, read, update, and delete secrets.
 ---
@@ -18,8 +19,8 @@ $ vault write foo/bar a=b
 * no handler for route 'foo/bar'
 ```
 
-The path prefix tells Vault which secrets engine to which it should route
-traffic. When a request comes to Vault, it matches the initial path part using a
+The path prefix tells Vault which secrets engine it should route
+traffic to. When a request comes to Vault, it matches the initial path part using a
 longest prefix match and then passes the request to the corresponding secrets
 engine enabled at that path.
 

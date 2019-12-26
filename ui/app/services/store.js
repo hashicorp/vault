@@ -6,6 +6,9 @@ import { assert } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
 import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
+import config from 'vault/config/environment';
+
+const { DEFAULT_PAGE_SIZE } = config.APP;
 
 export function normalizeModelName(modelName) {
   return dasherize(modelName);
@@ -69,7 +72,9 @@ export default DS.Store.extend({
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');
-    assert('size is required', query.size);
+    if (!query.size) {
+      query.size = DEFAULT_PAGE_SIZE;
+    }
 
     if (dataCache) {
       return resolve(this.fetchPage(modelName, query));

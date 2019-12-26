@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TOTP MFA - MFA Support - Vault Enterprise"
+sidebar_title: "TOTP MFA"
 sidebar_current: "docs-vault-enterprise-mfa-totp"
 description: |-
   Vault Enterprise supports TOTP MFA type.

@@ -3,50 +3,24 @@ import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
+import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
+import ListController from 'core/mixins/list-controller';
 
-export default Controller.extend(BackendCrumbMixin, {
+export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNearestAncestor, {
   flashMessages: service(),
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
-  page: 1,
-  pageFilter: null,
-  filterFocused: false,
-
-  // set via the route `loading` action
-  isLoading: false,
-
-  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
-    return !!(content.length && content.findBy('id', filter));
-  }),
-
-  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
-    var filterMatchesKey = this.get('filterMatchesKey');
-    var re = new RegExp('^' + filter);
-    return filterMatchesKey
-      ? null
-      : content.find(function(key) {
-          return re.test(key.get('id'));
-        });
-  }),
 
   filterIsFolder: computed('filter', function() {
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 
+  isConfigurableTab: computed('isCertTab', 'isConfigure', function() {
+    return this.get('isCertTab') || this.get('isConfigure');
+  }),
+
   actions: {
-    setFilter(val) {
-      this.set('filter', val);
-    },
-
-    setFilterFocus(bool) {
-      this.set('filterFocused', bool);
-    },
-
     chooseAction(action) {
       this.set('selectedAction', action);
     },
@@ -71,7 +45,7 @@ export default Controller.extend(BackendCrumbMixin, {
         this.get('flashMessages').success(`${name} was successfully deleted.`);
         this.send('reload');
         if (type === 'secret') {
-          return this.transitionToRoute('vault.cluster.secrets.backend.list-root');
+          this.navToNearestAncestor.perform(name);
         }
       });
     },

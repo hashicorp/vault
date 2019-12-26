@@ -13,6 +13,7 @@ const POLL_INTERVAL_MS = 10000;
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   namespaceService: service('namespace'),
   version: service(),
+  permissions: service(),
   store: service(),
   auth: service(),
   currentCluster: service(),
@@ -51,13 +52,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     }
   },
 
-  beforeModel() {
+  async beforeModel() {
     const params = this.paramsFor(this.routeName);
     this.clearNonGlobalModels();
     this.get('namespaceService').setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
       this.get('auth').setCluster(id);
+      await this.get('permissions').getPaths.perform();
       return this.get('version').fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
@@ -88,7 +90,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  afterModel(model) {
+  afterModel(model, transition) {
     this._super(...arguments);
     this.get('currentCluster').setCluster(model);
 
@@ -97,7 +99,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.get('namespaceService.path') && !this.get('version.hasNamespaces')) {
       return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
-    return this.transitionToTargetRoute();
+    return this.transitionToTargetRoute(transition);
   },
 
   setupController() {

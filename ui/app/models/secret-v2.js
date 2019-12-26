@@ -8,6 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr, hasMany, belongsTo, Model } = DS;
 
 export default Model.extend(KeyMixin, {
+  failedServerRead: attr('boolean'),
   engine: belongsTo('secret-engine', { async: false }),
   engineId: attr('string'),
   versions: hasMany('secret-v2-version', { async: false, inverse: null }),
@@ -33,6 +34,6 @@ export default Model.extend(KeyMixin, {
   secretPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
 
   canEdit: alias('versionPath.canUpdate'),
-  canDelete: alias('secretPath.canUpdate'),
+  canDelete: alias('secretPath.canDelete'),
   canRead: alias('secretPath.canRead'),
 });

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Transit - Secrets Engines"
+sidebar_title: "Transit"
 sidebar_current: "docs-secrets-transit"
 description: |-
   The transit secrets engine for Vault encrypts/decrypts data in-transit. It doesn't store any secrets.
@@ -31,13 +32,14 @@ disabled to accommodate auditing requirements.
 
 ## Working Set Management
 
-This secrets engine does not currently delete keys. Keys that are out of the
-working set (earlier than a key's specified `min_decryption_version` are
-instead archived. This is a performance consideration to keep key loading fast,
-as well as a security consideration: by disallowing decryption of old versions
-of keys, found ciphertext corresponding to obsolete (but sensitive) data can
-not be decrypted by most users, but in an emergency the
-`min_decryption_version` can be moved back to allow for legitimate decryption.
+The Transit engine supports versioning of keys. Key versions that are earlier
+than a key's specified `min_decryption_version` gets archived, and the rest of
+the key versions belong to the working set. This is a performance consideration
+to keep key loading fast, as well as a security consideration: by disallowing
+decryption of old versions of keys, found ciphertext corresponding to obsolete
+(but sensitive) data can not be decrypted by most users, but in an emergency
+the `min_decryption_version` can be moved back to allow for legitimate
+decryption.
 
 Currently this archive is stored in a single storage entry. With some storage
 backends, notably those using Raft or Paxos for HA capabilities, frequent
@@ -53,16 +55,22 @@ time.
 As of now, the transit secrets engine supports the following key types (all key
 types also generate separate HMAC keys):
 
-* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+* `aes128-gcm96`: AES-GCM with a 128-bit AES key and a 96-bit nonce; supports
   encryption, decryption, key derivation, and convergent encryption
+* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+  encryption, decryption, key derivation, and convergent encryption (default)
 * `chacha20-poly1305`: ChaCha20-Poly1305 with a 256-bit key; supports
   encryption, decryption, key derivation, and convergent encryption
 * `ed25519`: Ed25519; supports signing, signature verification, and key
   derivation
-* `ecdsa-p256`: ECDSA using curve P256; supports signing and signature
+* `ecdsa-p256`: ECDSA using curve P-256; supports signing and signature
+  verification
+* `ecdsa-p384`: ECDSA using curve P-384; supports signing and signature
+  verification
+* `ecdsa-p521`: ECDSA using curve P-521; supports signing and signature
   verification
 * `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
-  signature verification 
+  signature verification
 * `rsa-4096`: 4096-bit RSA key; supports encryption, decryption, signing, and
   signature verification
 
@@ -126,6 +134,11 @@ the proper permission, it can use this secrets engine.
 
 1. Encrypt some plaintext data using the `/encrypt` endpoint with a named key:
 
+    **NOTE:** All plaintext data **must be base64-encoded**. The reason for this
+    requirement is that Vault does not require that the plaintext is "text". It
+    could be a binary file such as a PDF or image. The easiest safe transport
+    mechanism for this data as part of a JSON payload is to base64-encode it.
+
     ```text
     $ vault write transit/encrypt/my-key plaintext=$(base64 <<< "my secret data")
 
@@ -134,14 +147,20 @@ the proper permission, it can use this secrets engine.
     ciphertext    vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
     ```
 
-    All plaintext data **must be base64-encoded**. The reason for this
-    requirement is that Vault does not require that the plaintext is "text". It
-    could be a binary file such as a PDF or image. The easiest safe transport
-    mechanism for this data as part of a JSON payload is to base64-encode it.
+    The returned ciphertext starts with `vault:v1:`. The first prefix (`vault`)
+    identifies that it has been wrapped by Vault. The `v1` indicates the key
+    version 1 was used to encrypt the plaintext; therefore, when you rotate
+    keys, Vault knows which version to use for decryption. The rest is a base64
+    concatenation of the initialization vector (IV) and ciphertext.
 
     Note that Vault does not _store_ any of this data. The caller is responsible
     for storing the encrypted ciphertext. When the caller wants the plaintext,
     it must provide the ciphertext back to Vault to decrypt the value.
+
+    !> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+    of service attack. This can be tuned per [`listener`
+    block](/docs/configuration/listener/tcp.html) in the Vault server
+    configuration.
 
 1. Decrypt a piece of data using the `/decrypt` endpoint with a named key:
 
@@ -200,6 +219,12 @@ plaintext with the newest key in the keyring.
     could grant almost an untrusted process the ability to "rewrap" encrypted
     data, since the process would not be able to get access to the plaintext
     data.
+
+## Learn
+
+Refer to the [Encryption as a Service: Transit Secrets
+Engine](https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit)
+guide for a step-by-step tutorial.
 
 ## API
 

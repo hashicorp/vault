@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-accessor - HTTP API"
-sidebar_current: "docs-http-system-capabilities-accessor"
+sidebar_title: "<code>/sys/capabilities-accessor</code>"
+sidebar_current: "api-http-system-capabilities-accessor"
 description: |-
   The `/sys/capabilities-accessor` endpoint is used to fetch the capabilities of
   the token associated with an accessor, on the given paths.
@@ -22,9 +23,9 @@ capabilities of the token associated with the given accessor for each path is
 returned. For backwards compatibility, if a single path is supplied, a
 `capabilities` field will also be returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/capabilities-accessor` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/capabilities-accessor` |
 
 ### Parameters
 

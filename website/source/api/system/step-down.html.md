@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/step-down - HTTP API"
-sidebar_current: "docs-http-system-step-down"
+sidebar_title: "<code>/sys/step-down</code>"
+sidebar_current: "api-http-system-step-down"
 description: |-
   The `/sys/step-down` endpoint causes the node to give up active status.
 ---
@@ -19,9 +20,9 @@ standby nodes grab the active lock in the interim, the same node may become the
 active node again. Requires a token with `root` policy or `sudo` capability on
 the path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/step-down`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/step-down`             |
 
 ### Sample Request
 

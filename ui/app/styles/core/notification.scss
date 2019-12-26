@@ -1,8 +1,10 @@
 .notification {
-  padding: 1rem 2.5rem 1rem 1.5rem;
+  padding: $spacing-m $spacing-m $spacing-m $spacing-s;
+
   .title {
     font-weight: $weight-bold;
   }
+
   &.has-border {
     border: 1px solid currentColor;
     border-left-width: 10px;
@@ -18,16 +20,13 @@
     &.is-#{$name} {
       background-color: lighten($color, $color-lightning);
       border-color: $color;
-      color: desaturate(
-        darken($color, $darken-percentage),
-        $desaturate-percentage
-      );
+      color: desaturate(darken($color, $darken-percentage), $desaturate-percentage);
       .delete {
         color: $color;
       }
       .title {
         color: $color-invert;
-        margin-bottom: .5rem;
+        margin-bottom: 0.5rem;
       }
     }
   }

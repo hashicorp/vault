@@ -6,19 +6,23 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/vault/seal/shamir"
+
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oklog/run"
 )
 
@@ -34,16 +38,16 @@ const (
 	// rotation taking place.
 	keyRotateCheckInterval = 10 * time.Second
 
-	// keyRotateGracePeriod is how long we allow an upgrade path
-	// for standby instances before we delete the upgrade keys
-	keyRotateGracePeriod = 2 * time.Minute
-
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
 )
 
 var (
+	// KeyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	KeyRotateGracePeriod = 2 * time.Minute
+
 	addEnterpriseHaActors func(*Core, *run.Group) chan func()            = addEnterpriseHaActorsNoop
 	interruptPerfStandby  func(chan func(), chan struct{}) chan struct{} = interruptPerfStandbyNoop
 )
@@ -87,7 +91,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// Check if we are the leader
 	if !c.standby {
 		c.stateLock.RUnlock()
-		return true, c.redirectAddr, c.clusterAddr, nil
+		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
@@ -108,28 +112,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", nil
 	}
 
-	c.clusterLeaderParamsLock.RLock()
-	localLeaderUUID := c.clusterLeaderUUID
-	localRedirAddr := c.clusterLeaderRedirectAddr
-	localClusterAddr := c.clusterLeaderClusterAddr
-	c.clusterLeaderParamsLock.RUnlock()
+	var localLeaderUUID, localRedirectAddr, localClusterAddr string
+	clusterLeaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	}
 
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
-	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
 		c.stateLock.RUnlock()
-		return false, localRedirAddr, localClusterAddr, nil
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
 	defer c.stateLock.RUnlock()
-	c.clusterLeaderParamsLock.Lock()
-	defer c.clusterLeaderParamsLock.Unlock()
+	c.leaderParamsLock.Lock()
+	defer c.leaderParamsLock.Unlock()
 
 	// Validate base conditions again
-	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, localRedirAddr, localClusterAddr, nil
+	clusterLeaderParams = c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	} else {
+		localLeaderUUID = ""
+		localRedirectAddr = ""
+		localClusterAddr = ""
+	}
+
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
@@ -174,9 +191,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 	// Don't set these until everything has been parsed successfully or we'll
 	// never try again
-	c.clusterLeaderRedirectAddr = adv.RedirectAddr
-	c.clusterLeaderClusterAddr = adv.ClusterAddr
-	c.clusterLeaderUUID = leaderUUID
+	c.clusterLeaderParams.Store(&ClusterLeaderParams{
+		LeaderUUID:         leaderUUID,
+		LeaderRedirectAddr: adv.RedirectAddr,
+		LeaderClusterAddr:  adv.ClusterAddr,
+	})
 
 	return false, adv.RedirectAddr, adv.ClusterAddr, nil
 }
@@ -192,6 +211,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+
 	if c.Sealed() {
 		return nil
 	}
@@ -212,10 +232,6 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
@@ -223,6 +239,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
 	}
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
@@ -233,9 +250,10 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
+		auth.TokenType = te.Type
 	}
 
-	logInput := &audit.LogInput{
+	logInput := &logical.LogInput{
 		Auth:    auth,
 		Request: req,
 	}
@@ -248,14 +266,12 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	if te != nil && te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -326,11 +342,11 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		}, func(error) {})
 	}
 	{
-		// Monitor for key rotation
+		// Monitor for key rotations
 		keyRotateStop := make(chan struct{})
 
 		g.Add(func() error {
-			c.periodicCheckKeyUpgrade(context.Background(), keyRotateStop)
+			c.periodicCheckKeyUpgrades(context.Background(), keyRotateStop)
 			return nil
 		}, func(error) {
 			close(keyRotateStop)
@@ -405,6 +421,14 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if leaderLostCh == nil {
 			return
 		}
+
+		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
+			c.heldHALock = nil
+			lock.Unlock()
+			c.logger.Info("marked never become active, giving up active state")
+			continue
+		}
+
 		c.logger.Info("acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
@@ -412,6 +436,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeTime := time.Now()
 
 		continueCh := interruptPerfStandby(newLeaderCh, stopCh)
+
 		// Grab the statelock or stop
 		if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh); stopped {
 			lock.Unlock()
@@ -447,18 +472,31 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
-				// We call this in a goroutine so that we can give up the
-				// statelock and have this shut us down; sealInternal has a
-				// workflow where it watches for the stopCh to close so we want
-				// to return from here
 				c.logger.Error("error performing key upgrades", "error", err)
-				go c.Shutdown()
+
+				// If we fail due to anything other than a context canceled
+				// error we should shutdown as we may have the incorrect Keys.
+				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+					// We call this in a goroutine so that we can give up the
+					// statelock and have this shut us down; sealInternal has a
+					// workflow where it watches for the stopCh to close so we want
+					// to return from here
+					go c.Shutdown()
+				}
+
 				c.heldHALock = nil
 				lock.Unlock()
 				close(continueCh)
 				c.stateLock.Unlock()
 				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
-				return
+
+				// If we are shutting down we should return from this function,
+				// otherwise continue
+				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+					continue
+				} else {
+					return
+				}
 			}
 		}
 
@@ -495,6 +533,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.leaderUUID = uuid
 		}
 
 		close(continueCh)
@@ -541,6 +580,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.leaderUUID = ""
 
 			// Seal
 			if err := c.preSeal(); err != nil {
@@ -553,7 +593,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					c.logger.Error("clearing leader advertisement failed", "error", err)
 				}
 
-				c.heldHALock.Unlock()
+				if err := c.heldHALock.Unlock(); err != nil {
+					c.logger.Error("unlocking HA lock failed", "error", err)
+				}
 				c.heldHALock = nil
 			}
 
@@ -566,6 +608,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 	}
 }
 
+// grabLockOrStop returns true if we failed to get the lock before stopCh
+// was closed.  Returns false if the lock was obtained, in which case it's
+// the caller's responsibility to unlock it.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	// Grab the lock as we need it for cluster setup, which needs to happen
 	// before advertising;
@@ -620,6 +665,12 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				lopCount := opCount
 				isLeader, _, newClusterAddr, _ := c.Leader()
 
+				// If we are the leader reset the clusterAddr since the next
+				// failover might go to the node that was previously active.
+				if isLeader {
+					clusterAddr = ""
+				}
+
 				if !isLeader && newClusterAddr != clusterAddr && newLeaderCh != nil {
 					select {
 					case newLeaderCh <- nil:
@@ -639,8 +690,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
-func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}) {
+func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
 	opCount := new(int32)
+	_, isRaft := c.underlyingPhysical.(*raft.RaftBackend)
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
@@ -669,13 +721,20 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, stopCh chan struct{}
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
 				if entry != nil && len(entry.Value) > 0 {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-					go c.Shutdown()
+					// If we are using raft storage we do not want to shut down
+					// raft during replication secondary enablement. This will
+					// allow us to keep making progress on the raft log.
+					go c.sealInternalWithOptions(true, false, !isRaft)
 					atomic.AddInt32(lopCount, -1)
 					return
 				}
 
 				if err := c.checkKeyUpgrades(ctx); err != nil {
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
+				}
+
+				if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+					c.logger.Error("raft tls periodic upgrade check failed", "error", err)
 				}
 
 				atomic.AddInt32(lopCount, -1)
@@ -708,17 +767,56 @@ func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 	return nil
 }
 
+func (c *Core) reloadMasterKey(ctx context.Context) error {
+	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
+		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+	}
+	return nil
+}
+
+func (c *Core) reloadShamirKey(ctx context.Context) error {
+	_ = c.seal.SetBarrierConfig(ctx, nil)
+	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+		return nil
+	}
+	var shamirKey []byte
+	switch c.seal.StoredKeysSupported() {
+	case StoredKeysSupportedGeneric:
+		return nil
+	case StoredKeysSupportedShamirMaster:
+		entry, err := c.barrier.Get(ctx, shamirKekPath)
+		if err != nil {
+			return err
+		}
+		if entry == nil {
+			return nil
+		}
+		shamirKey = entry.Value
+	case StoredKeysNotSupported:
+		keyring, err := c.barrier.Keyring()
+		if err != nil {
+			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
+		}
+		shamirKey = keyring.masterKey
+	}
+	return c.seal.GetAccess().(*shamir.ShamirSeal).SetKey(shamirKey)
+}
+
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
 	if err := c.checkKeyUpgrades(ctx); err != nil {
 		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
+	if err := c.reloadMasterKey(ctx); err != nil {
 		return errwrap.Wrapf("error reloading master key: {{err}}", err)
 	}
 
 	if err := c.barrier.ReloadKeyring(ctx); err != nil {
 		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
+	}
+
+	if err := c.reloadShamirKey(ctx); err != nil {
+		return errwrap.Wrapf("error reloading shamir kek key: {{err}}", err)
 	}
 
 	if err := c.scheduleUpgradeCleanup(ctx); err != nil {
@@ -743,7 +841,7 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	}
 
 	// Schedule cleanup for all of them
-	time.AfterFunc(keyRotateGracePeriod, func() {
+	time.AfterFunc(KeyRotateGracePeriod, func() {
 		sealed, err := c.barrier.Sealed()
 		if err != nil {
 			c.logger.Warn("failed to check barrier status at upgrade cleanup time")
@@ -784,7 +882,9 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-chan struct{}) error {
-	go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
+	if leaderLostCh != nil {
+		go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
+	}
 
 	var key *ecdsa.PrivateKey
 	switch c.localClusterPrivateKey.Load().(type) {
@@ -795,7 +895,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey.Load())
 	}
 
-	keyParams := &clusterKeyParams{
+	keyParams := &certutil.ClusterKeyParams{
 		Type: corePrivateKeyTypeP521,
 		X:    key.X,
 		Y:    key.Y,
@@ -807,7 +907,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	copy(localCert, locCert)
 	adv := &activeAdvertisement{
 		RedirectAddr:     c.redirectAddr,
-		ClusterAddr:      c.clusterAddr,
+		ClusterAddr:      c.ClusterAddr(),
 		ClusterCert:      localCert,
 		ClusterKeyParams: keyParams,
 	}
@@ -815,7 +915,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	if err != nil {
 		return err
 	}
-	ent := &Entry{
+	ent := &logical.StorageEntry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}
@@ -824,9 +924,8 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return err
 	}
 
-	sd, ok := c.ha.(physical.ServiceDiscovery)
-	if ok {
-		if err := sd.NotifyActiveStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify active status", "error", err)
 			}
@@ -860,9 +959,8 @@ func (c *Core) clearLeader(uuid string) error {
 	err := c.barrier.Delete(context.Background(), key)
 
 	// Advertise ourselves as a standby
-	sd, ok := c.ha.(physical.ServiceDiscovery)
-	if ok {
-		if err := sd.NotifyActiveStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify standby status", "error", err)
 			}
@@ -870,4 +968,12 @@ func (c *Core) clearLeader(uuid string) error {
 	}
 
 	return err
+}
+
+func (c *Core) SetNeverBecomeActive(on bool) {
+	if on {
+		atomic.StoreUint32(c.neverBecomeActive, 1)
+	} else {
+		atomic.StoreUint32(c.neverBecomeActive, 0)
+	}
 }

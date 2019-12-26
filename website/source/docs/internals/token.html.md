@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Token Authentication"
+sidebar_title: "Token Authentication"
 sidebar_current: "docs-internals-token"
 description: |-
   Learn about the client token authentication in Vault.

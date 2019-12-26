@@ -18,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // A Timestamp represents a point in time independent of any time zone
 // or calendar, represented as seconds and fractions of seconds at
@@ -83,7 +83,9 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // {hour}, {min}, and {sec} are zero-padded to two digits each. The fractional
 // seconds, which can go up to 9 digits (i.e. up to 1 nanosecond resolution),
 // are optional. The "Z" suffix indicates the timezone ("UTC"); the timezone
-// is required, though only UTC (as indicated by "Z") is presently supported.
+// is required. A proto3 JSON serializer should always use UTC (as indicated by
+// "Z") when printing the Timestamp type and a proto3 JSON parser should be
+// able to accept both UTC and other timezones (as indicated by an offset).
 //
 // For example, "2017-01-15T01:30:15.01Z" encodes 15.01 seconds past
 // 01:30 UTC on January 15, 2017.
@@ -94,8 +96,8 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // to this format using [`strftime`](https://docs.python.org/2/library/time.html#time.strftime)
 // with the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one
 // can use the Joda Time's [`ISODateTimeFormat.dateTime()`](
-// http://www.joda.org/joda-time/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime--)
-// to obtain a formatter capable of generating timestamps in this format.
+// http://www.joda.org/joda-time/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime--
+// ) to obtain a formatter capable of generating timestamps in this format.
 //
 //
 type Timestamp struct {

@@ -4,19 +4,24 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathMetadata returns the path configuration for CRUD operations on the
 // metadata endpoint
 func pathMetadata(b *versionedKVBackend) *framework.Path {
 	return &framework.Path{
-		Pattern: "metadata/.*",
+		Pattern: "metadata/" + framework.MatchAllRegex("path"),
 		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: "Location of the secret.",
+			},
 			"cas_required": {
 				Type: framework.TypeBool,
 				Description: `
@@ -28,6 +33,15 @@ If false, the backend’s configuration will be used.`,
 				Description: `
 The number of versions to keep. If not set, the backend’s configured max
 version is used.`,
+			},
+			"delete_version_after": {
+				Type: framework.TypeDurationSecond,
+				Description: `
+The length of time before a version is deleted. If not set, the backend's
+configured delete_version_after is used. Cannot be greater than the
+backend's delete_version_after. A zero duration clears the current setting.
+A negative duration will cause an error.
+`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -47,10 +61,17 @@ version is used.`,
 
 func (b *versionedKVBackend) metadataExistenceCheck() framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
+			// If we are returning a readonly error it means we are attempting
+			// to write the policy for the first time. This means no data exists
+			// yet and we can safely return false here.
+			if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return false, nil
+			}
+
 			return false, err
 		}
 
@@ -60,7 +81,7 @@ func (b *versionedKVBackend) metadataExistenceCheck() framework.ExistenceFunc {
 
 func (b *versionedKVBackend) pathMetadataList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		// Get an encrypted key storage object
 		wrapper, err := b.getKeyEncryptor(ctx, req.Storage)
@@ -78,7 +99,7 @@ func (b *versionedKVBackend) pathMetadataList() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
@@ -97,15 +118,24 @@ func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 			}
 		}
 
+		var deleteVersionAfter time.Duration
+		if meta.GetDeleteVersionAfter() != nil {
+			deleteVersionAfter, err = ptypes.Duration(meta.GetDeleteVersionAfter())
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"versions":        versions,
-				"current_version": meta.CurrentVersion,
-				"oldest_version":  meta.OldestVersion,
-				"created_time":    ptypesTimestampToString(meta.CreatedTime),
-				"updated_time":    ptypesTimestampToString(meta.UpdatedTime),
-				"max_versions":    meta.MaxVersions,
-				"cas_required":    meta.CasRequired,
+				"versions":             versions,
+				"current_version":      meta.CurrentVersion,
+				"oldest_version":       meta.OldestVersion,
+				"created_time":         ptypesTimestampToString(meta.CreatedTime),
+				"updated_time":         ptypesTimestampToString(meta.UpdatedTime),
+				"max_versions":         meta.MaxVersions,
+				"cas_required":         meta.CasRequired,
+				"delete_version_after": deleteVersionAfter.String(),
 			},
 		}, nil
 	}
@@ -113,13 +143,17 @@ func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
 
 		maxRaw, mOk := data.GetOk("max_versions")
 		casRaw, cOk := data.GetOk("cas_required")
+		deleteVersionAfterRaw, dvaOk := data.GetOk("delete_version_after")
 
 		// Fast path validation
-		if !mOk && !cOk {
+		if !mOk && !cOk && !dvaOk {
 			return nil, nil
 		}
 
@@ -158,6 +192,9 @@ func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 		if cOk {
 			meta.CasRequired = casRaw.(bool)
 		}
+		if dvaOk {
+			meta.DeleteVersionAfter = ptypes.DurationProto(time.Duration(deleteVersionAfterRaw.(int)) * time.Second)
+		}
 
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		return resp, err
@@ -166,7 +203,7 @@ func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		lock := locksutil.LockForKey(b.locks, key)
 		lock.Lock()

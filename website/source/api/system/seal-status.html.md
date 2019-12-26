@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/seal-status - HTTP API"
-sidebar_current: "docs-http-system-seal-status"
+sidebar_title: "<code>/sys/seal-status</code>"
+sidebar_current: "api-http-system-seal-status"
 description: |-
   The `/sys/seal-status` endpoint is used to check the seal status of a Vault.
 ---
@@ -15,9 +16,9 @@ The `/sys/seal-status` endpoint is used to check the seal status of a Vault.
 This endpoint returns the seal status of the Vault. This is an unauthenticated
 endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/seal-status`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/seal-status`           |
 
 ### Sample Request
 

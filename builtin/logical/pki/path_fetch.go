@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Returns the CA in raw format
@@ -177,7 +177,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
-		certificate = []byte(certStr)
+		certificate = []byte(strings.TrimSpace(certStr))
 		goto reply
 	}
 

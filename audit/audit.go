@@ -3,8 +3,8 @@ package audit
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Backend interface must be implemented for an audit
@@ -16,13 +16,13 @@ type Backend interface {
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogRequest(context.Context, *LogInput) error
+	LogRequest(context.Context, *logical.LogInput) error
 
 	// LogResponse is used to synchronously log a response. This is done after
 	// the request is processed but before the response is sent. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogResponse(context.Context, *LogInput) error
+	LogResponse(context.Context, *logical.LogInput) error
 
 	// GetHash is used to return the given data with the backend's hash,
 	// so that a caller can determine if a value in the audit log matches
@@ -34,16 +34,6 @@ type Backend interface {
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
-}
-
-// LogInput contains the input parameters passed into LogRequest and LogResponse
-type LogInput struct {
-	Auth                *logical.Auth
-	Request             *logical.Request
-	Response            *logical.Response
-	OuterErr            error
-	NonHMACReqDataKeys  []string
-	NonHMACRespDataKeys []string
 }
 
 // BackendConfig contains configuration parameters used in the factory func to

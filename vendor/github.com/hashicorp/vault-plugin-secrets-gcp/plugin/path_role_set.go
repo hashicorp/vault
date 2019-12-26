@@ -8,10 +8,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -46,11 +47,19 @@ func pathsRoleSet(b *backend) []*framework.Path {
 				},
 			},
 			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.DeleteOperation: b.pathRoleSetDelete,
-				logical.ReadOperation:   b.pathRoleSetRead,
-				logical.CreateOperation: b.pathRoleSetCreateUpdate,
-				logical.UpdateOperation: b.pathRoleSetCreateUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetDelete,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetRead,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetCreateUpdate,
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetCreateUpdate,
+				},
 			},
 			HelpSynopsis:    pathRoleSetHelpSyn,
 			HelpDescription: pathRoleSetHelpDesc,
@@ -65,8 +74,10 @@ func pathsRoleSet(b *backend) []*framework.Path {
 				},
 			},
 			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSetRotateAccount,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetRotateAccount,
+				},
 			},
 			HelpSynopsis:    pathRoleSetRotateHelpSyn,
 			HelpDescription: pathRoleSetRotateHelpDesc,
@@ -81,8 +92,10 @@ func pathsRoleSet(b *backend) []*framework.Path {
 				},
 			},
 			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSetRotateKey,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetRotateKey,
+				},
 			},
 			HelpSynopsis:    pathRoleSetRotateKeyHelpSyn,
 			HelpDescription: pathRoleSetRotateKeyHelpDesc,
@@ -90,8 +103,10 @@ func pathsRoleSet(b *backend) []*framework.Path {
 		// Paths for listing role sets
 		{
 			Pattern: "rolesets/?",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleSetList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetList,
+				},
 			},
 
 			HelpSynopsis:    pathListRoleSetHelpSyn,
@@ -99,8 +114,10 @@ func pathsRoleSet(b *backend) []*framework.Path {
 		},
 		{
 			Pattern: "roleset/?",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleSetList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.pathRoleSetList,
+				},
 			},
 
 			HelpSynopsis:    pathListRoleSetHelpSyn,
@@ -144,7 +161,7 @@ func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *
 
 	if rs.AccountId != nil {
 		data["service_account_email"] = rs.AccountId.EmailOrId
-		data["service_account_project"] = rs.AccountId.Project
+		data["project"] = rs.AccountId.Project
 	}
 
 	if rs.TokenGen != nil && rs.SecretType == SecretTypeAccessToken {
@@ -212,12 +229,12 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 	}
 
 	// Clean up resources:
-	httpC, err := newHttpClient(ctx, req.Storage)
+	httpC, err := b.HTTPClient(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	iamAdmin, err := iam.New(httpC)
+	iamAdmin, err := iam.NewService(ctx, option.WithHTTPClient(httpC))
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +355,9 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("bindings are required for new role set"), nil
 	}
 
-	if !newBindings {
+	// If no new bindings or new bindings are exactly same as old bindings,
+	// just update the role set without rotating service account.
+	if !newBindings || rs.bindingHash() == getStringHash(bRaw.(string)) {
 		// Just save role with updated metadata:
 		if err := rs.save(ctx, req.Storage); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -356,6 +375,7 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("unable to parse any bindings from given bindings HCL"), nil
 	}
 	rs.RawBindings = bRaw.(string)
+
 	updateWarns, err := b.saveRoleSetWithNewAccount(ctx, req.Storage, rs, project, bindings, scopes)
 	if updateWarns != nil {
 		warnings = append(warnings, updateWarns...)
@@ -462,14 +482,14 @@ const pathRoleSetRotateHelpDesc = `
 This path allows you to rotate (i.e. recreate) the service account used to
 generate secrets for a given role set.`
 const pathRoleSetRotateKeyHelpDesc = `
-This path allows you to rotate (i.e. recreate) the service account 
+This path allows you to rotate (i.e. recreate) the service account
 key used to generate access tokens under a given role set. This
 path only applies to role sets that generate access tokens `
 
 const pathRoleSetHelpDesc = `
 This path allows you create role sets, which bind sets of IAM roles
-to specific GCP resources. Secrets (either service account keys or 
-access tokens) are generated under a role set and will have the 
+to specific GCP resources. Secrets (either service account keys or
+access tokens) are generated under a role set and will have the
 given set of roles on resources.
 
 The specified binding file accepts an HCL (or JSON) string
@@ -487,17 +507,17 @@ resource "some/gcp/resource/uri" {
 The given resource can have the following
 
 * Project-level self link
-	Self-link for a resource under a given project 
+	Self-link for a resource under a given project
 	(i.e. resource name starts with 'projects/...')
-	Use if you need to provide a versioned object or 
+	Use if you need to provide a versioned object or
 	are directly using resource.self_link.
 
 	Example (Compute instance):
 		http://www.googleapis.com/compute/v1/projects/$PROJECT/zones/$ZONE/instances/$INSTANCE_NAME
 
 * Full Resource Name
-	A scheme-less URI consisting of a DNS-compatible 
-	API service name and a resource path (i.e. the 
+	A scheme-less URI consisting of a DNS-compatible
+	API service name and a resource path (i.e. the
 	relative resource name). Useful if you need to
 	specify what service this resource is under
 	but just want the preferred supported API version.
@@ -507,15 +527,15 @@ The given resource can have the following
 
 	Example (IAM service account):
 		//$SERVICE.googleapis.com/projects/my-project/serviceAccounts/myserviceaccount@...
-	
+
 * Relative Resource Name:
-	A URI path (path-noscheme) without the leading "/". 
+	A URI path (path-noscheme) without the leading "/".
 	It identifies a resource within the API service.
 	Use if there is only one service that your
 	resource could belong to. If there are multiple
 	API versions that support the resource, we will
 	attempt to use the preferred version and ask
-	for more specific format otherwise. 
+	for more specific format otherwise.
 
 	Example (Pubsub subscription):
 		projects/myproject/subscriptions/mysub

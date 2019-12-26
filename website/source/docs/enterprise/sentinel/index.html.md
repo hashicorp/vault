@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Sentinel Integration"
+sidebar_title: "Sentinel"
 sidebar_current: "docs-vault-enterprise-sentinel"
 description: |-
   An overview of how Sentinel interacts with Vault Enterprise.
@@ -110,3 +111,8 @@ See the [Examples](/docs/enterprise/sentinel/examples.html) page for examples
 of Sentinel in action, and the
 [Properties](/docs/enterprise/sentinel/properties.html) page for detailed
 property documentation.
+
+## Learn
+
+Refer to the [Sentinel Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-sentinel)
+guide for a step-by-step tutorial.

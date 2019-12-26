@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/namespaces - HTTP API"
-sidebar_current: "docs-http-system-namespaces"
+sidebar_title: "<code>/sys/namespaces</code>"
+sidebar_current: "api-http-system-namespaces"
 description: |-
   The `/sys/namespaces` endpoint is used manage namespaces in Vault.
 ---
@@ -14,9 +15,9 @@ The `/sys/namespaces` endpoint is used manage namespaces in Vault.
 
 This endpoints lists all the namespaces.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/namespaces`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/namespaces`            |
 
 ### Sample Request
 
@@ -41,9 +42,9 @@ $ curl \
 
 This endpoint creates a namespace at the givent path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/namespaces/:path`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/namespaces/:path`      |
 
 ### Parameters
 
@@ -63,9 +64,9 @@ $ curl \
 
 This endpoint deletes a namespace at the specified path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/namespaces/:path`      | `204 (empty body)    ` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/namespaces/:path`      | 
 
 ### Sample Request
 
@@ -80,9 +81,9 @@ $ curl \
 
 This endpoint get the metadata for the given namespace path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/namespaces/:path`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/namespaces/:path`      |
 
 ### Sample Request
 

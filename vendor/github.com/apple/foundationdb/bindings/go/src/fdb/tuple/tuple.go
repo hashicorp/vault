@@ -30,16 +30,19 @@
 // (https://apple.github.io/foundationdb/data-modeling.html#tuples).
 //
 // FoundationDB tuples can currently encode byte and unicode strings, integers,
-// floats, doubles, booleans, UUIDs, tuples, and NULL values. In Go these are
-// represented as []byte (or fdb.KeyConvertible), string, int64 (or int),
-// float32, float64, bool, UUID, Tuple, and nil.
+// large integers, floats, doubles, booleans, UUIDs, tuples, and NULL values.
+// In Go these are represented as []byte (or fdb.KeyConvertible), string, int64
+// (or int, uint, uint64), *big.Int (or big.Int), float32, float64, bool,
+// UUID, Tuple, and nil.
 package tuple
 
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 )
@@ -50,7 +53,8 @@ import (
 // result in a runtime panic).
 //
 // The valid types for TupleElement are []byte (or fdb.KeyConvertible), string,
-// int64 (or int), float, double, bool, UUID, Tuple, and nil.
+// int64 (or int, uint, uint64), *big.Int (or big.Int), float, double, bool,
+// UUID, Tuple, and nil.
 type TupleElement interface{}
 
 // Tuple is a slice of objects that can be encoded as FoundationDB tuples. If
@@ -59,7 +63,7 @@ type TupleElement interface{}
 //
 // Given a Tuple T containing objects only of these types, then T will be
 // identical to the Tuple returned by unpacking the byte slice obtained by
-// packing T (modulo type normalization to []byte and int64).
+// packing T (modulo type normalization to []byte, uint64, and int64).
 type Tuple []TupleElement
 
 // UUID wraps a basic byte array as a UUID. We do not provide any special
@@ -69,6 +73,39 @@ type Tuple []TupleElement
 // an instance of this type.
 type UUID [16]byte
 
+// Versionstamp is struct for a FoundationDB verionstamp. Versionstamps are
+// 12 bytes long composed of a 10 byte transaction version and a 2 byte user
+// version. The transaction version is filled in at commit time and the user
+// version is provided by the application to order results within a transaction.
+type Versionstamp struct {
+	TransactionVersion [10]byte
+	UserVersion        uint16
+}
+
+var incompleteTransactionVersion = [10]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+const versionstampLength = 12
+
+// IncompleteVersionstamp is the constructor you should use to make
+// an incomplete versionstamp to use in a tuple.
+func IncompleteVersionstamp(userVersion uint16) Versionstamp {
+	return Versionstamp{
+		TransactionVersion: incompleteTransactionVersion,
+		UserVersion:        userVersion,
+	}
+}
+
+// Bytes converts a Versionstamp struct to a byte slice for encoding in a tuple.
+func (v Versionstamp) Bytes() []byte {
+	var scratch [versionstampLength]byte
+
+	copy(scratch[:], v.TransactionVersion[:])
+
+	binary.BigEndian.PutUint16(scratch[10:], v.UserVersion)
+
+	return scratch[:]
+}
+
 // Type codes: These prefix the different elements in a packed Tuple
 // to indicate what type they are.
 const nilCode = 0x00
@@ -76,13 +113,14 @@ const bytesCode = 0x01
 const stringCode = 0x02
 const nestedCode = 0x05
 const intZeroCode = 0x14
-const posIntEnd = 0x1c
-const negIntStart = 0x0c
+const posIntEnd = 0x1d
+const negIntStart = 0x0b
 const floatCode = 0x20
 const doubleCode = 0x21
 const falseCode = 0x26
 const trueCode = 0x27
 const uuidCode = 0x30
+const versionstampCode = 0x33
 
 var sizeLimits = []uint64{
 	1<<(0*8) - 1,
@@ -95,6 +133,8 @@ var sizeLimits = []uint64{
 	1<<(7*8) - 1,
 	1<<(8*8) - 1,
 }
+
+var minInt64BigInt = big.NewInt(math.MinInt64)
 
 func bisectLeft(u uint64) int {
 	var n int
@@ -117,7 +157,15 @@ func adjustFloatBytes(b []byte, encode bool) {
 }
 
 type packer struct {
-	buf []byte
+	versionstampPos int32
+	buf             []byte
+}
+
+func newPacker() *packer {
+	return &packer{
+		versionstampPos: -1,
+		buf:             make([]byte, 0, 64),
+	}
 }
 
 func (p *packer) putByte(b byte) {
@@ -148,28 +196,77 @@ func (p *packer) encodeBytes(code byte, b []byte) {
 	p.putByte(0x00)
 }
 
-func (p *packer) encodeInt(i int64) {
+func (p *packer) encodeUint(i uint64) {
 	if i == 0 {
-		p.putByte(0x14)
+		p.putByte(intZeroCode)
 		return
 	}
 
-	var n int
+	n := bisectLeft(i)
 	var scratch [8]byte
 
-	switch {
-	case i > 0:
-		n = bisectLeft(uint64(i))
-		p.putByte(byte(intZeroCode + n))
-		binary.BigEndian.PutUint64(scratch[:], uint64(i))
-	case i < 0:
-		n = bisectLeft(uint64(-i))
-		p.putByte(byte(0x14 - n))
-		offsetEncoded := int64(sizeLimits[n]) + i
-		binary.BigEndian.PutUint64(scratch[:], uint64(offsetEncoded))
-	}
+	p.putByte(byte(intZeroCode + n))
+	binary.BigEndian.PutUint64(scratch[:], i)
 
 	p.putBytes(scratch[8-n:])
+}
+
+func (p *packer) encodeInt(i int64) {
+	if i >= 0 {
+		p.encodeUint(uint64(i))
+		return
+	}
+
+	n := bisectLeft(uint64(-i))
+	var scratch [8]byte
+
+	p.putByte(byte(intZeroCode - n))
+	offsetEncoded := int64(sizeLimits[n]) + i
+	binary.BigEndian.PutUint64(scratch[:], uint64(offsetEncoded))
+
+	p.putBytes(scratch[8-n:])
+}
+
+func (p *packer) encodeBigInt(i *big.Int) {
+	length := len(i.Bytes())
+	if length > 0xff {
+		panic(fmt.Sprintf("Integer magnitude is too large (more than 255 bytes)"))
+	}
+
+	if i.Sign() >= 0 {
+		intBytes := i.Bytes()
+		if length > 8 {
+			p.putByte(byte(posIntEnd))
+			p.putByte(byte(len(intBytes)))
+		} else {
+			p.putByte(byte(intZeroCode + length))
+		}
+
+		p.putBytes(intBytes)
+	} else {
+		add := new(big.Int).Lsh(big.NewInt(1), uint(length*8))
+		add.Sub(add, big.NewInt(1))
+		transformed := new(big.Int)
+		transformed.Add(i, add)
+
+		intBytes := transformed.Bytes()
+		if length > 8 {
+			p.putByte(byte(negIntStart))
+			p.putByte(byte(length ^ 0xff))
+		} else {
+			p.putByte(byte(intZeroCode - length))
+		}
+
+		// For large negative numbers whose absolute value begins with 0xff bytes,
+		// the transformed bytes may begin with 0x00 bytes. However, intBytes
+		// will only contain the non-zero suffix, so this loop is needed to make
+		// the value written be the correct length.
+		for i := len(intBytes); i < length; i++ {
+			p.putByte(0x00)
+		}
+
+		p.putBytes(intBytes)
+	}
 }
 
 func (p *packer) encodeFloat(f float32) {
@@ -195,7 +292,22 @@ func (p *packer) encodeUUID(u UUID) {
 	p.putBytes(u[:])
 }
 
-func (p *packer) encodeTuple(t Tuple, nested bool) {
+func (p *packer) encodeVersionstamp(v Versionstamp) {
+	p.putByte(versionstampCode)
+
+	isIncomplete := v.TransactionVersion == incompleteTransactionVersion
+	if isIncomplete {
+		if p.versionstampPos != -1 {
+			panic(fmt.Sprintf("Tuple can only contain one incomplete versionstamp"))
+		}
+
+		p.versionstampPos = int32(len(p.buf))
+	}
+
+	p.putBytes(v.Bytes())
+}
+
+func (p *packer) encodeTuple(t Tuple, nested bool, versionstamps bool) {
 	if nested {
 		p.putByte(nestedCode)
 	}
@@ -203,16 +315,24 @@ func (p *packer) encodeTuple(t Tuple, nested bool) {
 	for i, e := range t {
 		switch e := e.(type) {
 		case Tuple:
-			p.encodeTuple(e, true)
+			p.encodeTuple(e, true, versionstamps)
 		case nil:
 			p.putByte(nilCode)
 			if nested {
 				p.putByte(0xff)
 			}
-		case int64:
-			p.encodeInt(e)
 		case int:
 			p.encodeInt(int64(e))
+		case int64:
+			p.encodeInt(e)
+		case uint:
+			p.encodeUint(uint64(e))
+		case uint64:
+			p.encodeUint(e)
+		case *big.Int:
+			p.encodeBigInt(e)
+		case big.Int:
+			p.encodeBigInt(&e)
 		case []byte:
 			p.encodeBytes(bytesCode, e)
 		case fdb.KeyConvertible:
@@ -231,6 +351,12 @@ func (p *packer) encodeTuple(t Tuple, nested bool) {
 			}
 		case UUID:
 			p.encodeUUID(e)
+		case Versionstamp:
+			if versionstamps == false && e.TransactionVersion == incompleteTransactionVersion {
+				panic(fmt.Sprintf("Incomplete Versionstamp included in vanilla tuple pack"))
+			}
+
+			p.encodeVersionstamp(e)
 		default:
 			panic(fmt.Sprintf("unencodable element at index %d (%v, type %T)", i, t[i], t[i]))
 		}
@@ -243,16 +369,102 @@ func (p *packer) encodeTuple(t Tuple, nested bool) {
 
 // Pack returns a new byte slice encoding the provided tuple. Pack will panic if
 // the tuple contains an element of any type other than []byte,
-// fdb.KeyConvertible, string, int64, int, float32, float64, bool, tuple.UUID,
-// nil, or a Tuple with elements of valid types.
+// fdb.KeyConvertible, string, int64, int, uint64, uint, *big.Int, big.Int, float32,
+// float64, bool, tuple.UUID, tuple.Versionstamp, nil, or a Tuple with elements of
+// valid types. It will also panic if an integer is specified with a value outside
+// the range [-2**2040+1, 2**2040-1]
 //
 // Tuple satisfies the fdb.KeyConvertible interface, so it is not necessary to
 // call Pack when using a Tuple with a FoundationDB API function that requires a
 // key.
+//
+// This method will panic if it contains an incomplete Versionstamp. Use
+// PackWithVersionstamp instead.
+//
 func (t Tuple) Pack() []byte {
-	p := packer{buf: make([]byte, 0, 64)}
-	p.encodeTuple(t, false)
+	p := newPacker()
+	p.encodeTuple(t, false, false)
 	return p.buf
+}
+
+// PackWithVersionstamp packs the specified tuple into a key for versionstamp
+// operations. See Pack for more information. This function will return an error
+// if you attempt to pack a tuple with more than one versionstamp. This function will
+// return an error if you attempt to pack a tuple with a versionstamp position larger
+// than an uint16 if the API version is less than 520.
+func (t Tuple) PackWithVersionstamp(prefix []byte) ([]byte, error) {
+	hasVersionstamp, err := t.HasIncompleteVersionstamp()
+	if err != nil {
+		return nil, err
+	}
+
+	apiVersion, err := fdb.GetAPIVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	if hasVersionstamp == false {
+		return nil, errors.New("No incomplete versionstamp included in tuple pack with versionstamp")
+	}
+
+	p := newPacker()
+
+	if prefix != nil {
+		p.putBytes(prefix)
+	}
+
+	p.encodeTuple(t, false, true)
+
+	if hasVersionstamp {
+		var scratch [4]byte
+		var offsetIndex int
+		if apiVersion < 520 {
+			if p.versionstampPos > math.MaxUint16 {
+				return nil, errors.New("Versionstamp position too large")
+			}
+
+			offsetIndex = 2
+			binary.LittleEndian.PutUint16(scratch[:], uint16(p.versionstampPos))
+		} else {
+			offsetIndex = 4
+			binary.LittleEndian.PutUint32(scratch[:], uint32(p.versionstampPos))
+		}
+
+		p.putBytes(scratch[0:offsetIndex])
+	}
+
+	return p.buf, nil
+}
+
+// HasIncompleteVersionstamp determines if there is at least one incomplete
+// versionstamp in a tuple. This function will return an error this tuple has
+// more than one versionstamp.
+func (t Tuple) HasIncompleteVersionstamp() (bool, error) {
+	incompleteCount := t.countIncompleteVersionstamps()
+
+	var err error
+	if incompleteCount > 1 {
+		err = errors.New("Tuple can only contain one incomplete versionstamp")
+	}
+
+	return incompleteCount >= 1, err
+}
+
+func (t Tuple) countIncompleteVersionstamps() int {
+	incompleteCount := 0
+
+	for _, el := range t {
+		switch e := el.(type) {
+		case Versionstamp:
+			if e.TransactionVersion == incompleteTransactionVersion {
+				incompleteCount++
+			}
+		case Tuple:
+			incompleteCount += e.countIncompleteVersionstamps()
+		}
+	}
+
+	return incompleteCount
 }
 
 func findTerminator(b []byte) int {
@@ -282,9 +494,9 @@ func decodeString(b []byte) (string, int) {
 	return string(bp), idx
 }
 
-func decodeInt(b []byte) (int64, int) {
+func decodeInt(b []byte) (interface{}, int) {
 	if b[0] == intZeroCode {
-		return 0, 1
+		return int64(0), 1
 	}
 
 	var neg bool
@@ -299,14 +511,55 @@ func decodeInt(b []byte) (int64, int) {
 	copy(bp[8-n:], b[1:n+1])
 
 	var ret int64
-
 	binary.Read(bytes.NewBuffer(bp), binary.BigEndian, &ret)
 
 	if neg {
-		ret -= int64(sizeLimits[n])
+		return ret - int64(sizeLimits[n]), n + 1
 	}
 
-	return ret, n + 1
+	if ret > 0 {
+		return ret, n + 1
+	}
+
+	// The encoded value claimed to be positive yet when put in an int64
+	// produced a negative value. This means that the number must be a positive
+	// 64-bit value that uses the most significant bit. This can be fit in a
+	// uint64, so return that. Note that this is the *only* time we return
+	// a uint64.
+	return uint64(ret), n + 1
+}
+
+func decodeBigInt(b []byte) (interface{}, int) {
+	val := new(big.Int)
+	offset := 1
+	var length int
+
+	if b[0] == negIntStart || b[0] == posIntEnd {
+		length = int(b[1])
+		if b[0] == negIntStart {
+			length ^= 0xff
+		}
+
+		offset += 1
+	} else {
+		// Must be a negative 8 byte integer
+		length = 8
+	}
+
+	val.SetBytes(b[offset : length+offset])
+
+	if b[0] < intZeroCode {
+		sub := new(big.Int).Lsh(big.NewInt(1), uint(length)*8)
+		sub.Sub(sub, big.NewInt(1))
+		val.Sub(val, sub)
+	}
+
+	// This is the only value that fits in an int64 or uint64 that is decoded with this function
+	if val.Cmp(minInt64BigInt) == 0 {
+		return val.Int64(), length + offset
+	}
+
+	return val, length + offset
 }
 
 func decodeFloat(b []byte) (float32, int) {
@@ -333,6 +586,20 @@ func decodeUUID(b []byte) (UUID, int) {
 	return u, 17
 }
 
+func decodeVersionstamp(b []byte) (Versionstamp, int) {
+	var transactionVersion [10]byte
+	var userVersion uint16
+
+	copy(transactionVersion[:], b[1:11])
+
+	userVersion = binary.BigEndian.Uint16(b[11:])
+
+	return Versionstamp{
+		TransactionVersion: transactionVersion,
+		UserVersion:        userVersion,
+	}, versionstampLength + 1
+}
+
 func decodeTuple(b []byte, nested bool) (Tuple, int, error) {
 	var t Tuple
 
@@ -357,8 +624,12 @@ func decodeTuple(b []byte, nested bool) (Tuple, int, error) {
 			el, off = decodeBytes(b[i:])
 		case b[i] == stringCode:
 			el, off = decodeString(b[i:])
-		case negIntStart <= b[i] && b[i] <= posIntEnd:
+		case negIntStart+1 < b[i] && b[i] < posIntEnd:
 			el, off = decodeInt(b[i:])
+		case negIntStart+1 == b[i] && (b[i+1]&0x80 != 0):
+			el, off = decodeInt(b[i:])
+		case negIntStart <= b[i] && b[i] <= posIntEnd:
+			el, off = decodeBigInt(b[i:])
 		case b[i] == floatCode:
 			if i+5 > len(b) {
 				return nil, i, fmt.Errorf("insufficient bytes to decode float starting at position %d of byte array for tuple", i)
@@ -380,6 +651,11 @@ func decodeTuple(b []byte, nested bool) (Tuple, int, error) {
 				return nil, i, fmt.Errorf("insufficient bytes to decode UUID starting at position %d of byte array for tuple", i)
 			}
 			el, off = decodeUUID(b[i:])
+		case b[i] == versionstampCode:
+			if i+versionstampLength+1 > len(b) {
+				return nil, i, fmt.Errorf("insufficient bytes to decode Versionstamp starting at position %d of byte array for tuple", i)
+			}
+			el, off = decodeVersionstamp(b[i:])
 		case b[i] == nestedCode:
 			var err error
 			el, off, err = decodeTuple(b[i+1:], true)

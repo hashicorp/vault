@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Commands (CLI)"
+sidebar_title: "Commands (CLI)"
 sidebar_current: "docs-commands"
 description: |-
   In addition to a verbose HTTP API, Vault features a command-line interface
@@ -37,6 +38,47 @@ To get help for a subcommand, run:
 ```text
 $ vault <subcommand> -h
 ```
+
+## CLI Command Structure
+
+There are a number of command and subcommand options available: HTTP options,
+output options, and command specific options.
+
+Construct your Vault CLI command such that the command options precede its path
+and arguments if any:
+
+```text
+vault <command> [options] [path] [args]
+```
+
+- `options` - [Flags](/docs/commands/index.html#flags) to specify additional settings
+- `args` - API arguments specific to the operation
+
+  -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
+
+#### Examples:
+
+The following `write` command creates a new user (`bob`) in the userpass auth
+method. It passes the `-address` flag to specify the Vault server address which
+precedes the path (`auth/userpass/users/bob`) and its
+[argument](/api/auth/userpass/index.html#create-update-user)
+(`password="long-password"`) at last.
+
+```text
+$ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password="long-password"
+```
+
+If multiple options (`-address` and `-namespace`) and
+[arguments](/api/auth/userpass/index.html#create-update-user) (`password` and
+`policies`) are specified, the command would look like:
+
+```text
+$ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
+        auth/userpass/users/bob password="long-password" policies="admin"
+```
+
+The options (flags) come after the command (or subcommand) preceding the path,
+and the args always follow the path to set API parameter values.
 
 ## Exit Codes
 
@@ -229,18 +271,18 @@ If provided, Vault output will not include ANSI color escape sequence characters
 
 ### `VAULT_RATE_LIMIT`
 
-This enviroment variable will limit the rate at which the `vault` command
+This environment variable will limit the rate at which the `vault` command
 sends requests to Vault.
 
-This enviroment variable has the format `rate[:burst]` (where items in `[]` are
-optional). If not specified, the burst value defaults to rate. Both rate and 
+This environment variable has the format `rate[:burst]` (where items in `[]` are
+optional). If not specified, the burst value defaults to rate. Both rate and
 burst are specified in "operations per second". If the environment variable is
-not specified, then the rate and burst will be unlimited *i.e.* rate 
+not specified, then the rate and burst will be unlimited *i.e.* rate
 limiting is off by default.
 
 *Note:* The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
-this enviroment variable is most useful when using the Go 
+this environment variable is most useful when using the Go
 [Vault client API](https://www.vaultproject.io/api/libraries.html#go).
 
 ### `VAULT_NAMESPACE`
@@ -260,7 +302,7 @@ used.
 
 ## Flags
 
-There are diffrent CLI flags that are avaialble depending on subcommands. Some
+There are different CLI flags that are available depending on subcommands. Some
 flags, such as those used for setting HTTP and output options, are available
 globally, while others are specific to a particular subcommand. For a completely
 list of available flags, run:

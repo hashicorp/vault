@@ -7,6 +7,7 @@ export default Controller.extend({
   store: service(),
   media: service(),
   router: service(),
+  permissions: service(),
   namespaceService: service('namespace'),
 
   vaultVersion: service('version'),
@@ -23,6 +24,7 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
+  /* eslint-disable-next-line ember/no-observers */
   onQPChange: observer('namespaceQueryParam', function() {
     this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
   }),

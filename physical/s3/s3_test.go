@@ -9,25 +9,37 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-func TestS3Backend(t *testing.T) {
+func TestDefaultS3Backend(t *testing.T) {
+	DoS3BackendTest(t, "")
+}
+
+func TestS3BackendSseKms(t *testing.T) {
+	DoS3BackendTest(t, "alias/aws/s3")
+}
+
+func DoS3BackendTest(t *testing.T, kmsKeyId string) {
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
+
 	credsConfig := &awsutil.CredentialsConfig{}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	_, err = credsChain.Get()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	// If the variable is empty or doesn't exist, the default
@@ -83,7 +95,9 @@ func TestS3Backend(t *testing.T) {
 
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{
-		"bucket": bucket,
+		"bucket":   bucket,
+		"kmsKeyId": kmsKeyId,
+		"path":     "test/vault",
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "RabbitMQ - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-rabbitmq"
+sidebar_title: "RabbitMQ"
+sidebar_current: "api-http-secret-rabbitmq"
 description: |-
   This is the API documentation for the Vault RabbitMQ secrets engine.
 ---
@@ -21,9 +22,9 @@ location, please update your API calls accordingly.
 This endpoint configures the connection string used to communicate with
 RabbitMQ.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/config/connection` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/config/connection` |
 
 ### Parameters
 
@@ -63,9 +64,9 @@ $ curl \
 
 This endpoint configures the lease settings for generated credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/config/lease`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/config/lease`     |
 
 ### Parameters
 
@@ -96,9 +97,9 @@ $ curl \
 
 This endpoint creates or updates the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/roles/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/roles/:name`      |
 
 ### Parameters
 
@@ -107,15 +108,19 @@ This endpoint creates or updates the role definition.
 
 - `tags` `(string: "")` – Specifies a comma-separated RabbitMQ management tags.
 
-- `vhost` `(string: "")` – Specifies a map of virtual hosts to
+- `vhosts` `(string: "")` – Specifies a map of virtual hosts to
   permissions.
+
+- `vhost_topics` `(string: "")` – Specifies a map of virtual hosts and exchanges
+  to topic permissions. This option requires RabbitMQ 3.7.0 or later.
 
 ### Sample Payload
 
 ```json
 {
   "tags": "tag1,tag2",
-  "vhost": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+  "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}",
+  "vhost_topics": "{\"/\": {\"amq.topic\": {\"write\":\".*\", \"read\": \".*\"}}}"
 }
 ```
 
@@ -133,9 +138,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/rabbitmq/roles/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/rabbitmq/roles/:name`      |
 
 ### Parameters
 
@@ -156,7 +161,8 @@ $ curl \
 {
   "data": {
     "tags": "",
-    "vhost": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+    "vhosts": "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}",
+    "vhost_topics": "{\"/\": {\"amq.topic\": {\"write\":\".*\", \"read\": \".*\"}}}"
   }
 }
 ```
@@ -165,9 +171,9 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/rabbitmq/roles/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/rabbitmq/roles/:name`     |
 
 ### Parameters
 
@@ -188,9 +194,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/rabbitmq/creds/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/rabbitmq/creds/:name`      |
 
 ### Parameters
 

@@ -14,6 +14,10 @@ export default Route.extend(UnloadModel, {
     };
   },
 
+  pathForType() {
+    return 'sign';
+  },
+
   model(params) {
     const role = params.secret;
     const backendModel = this.backendModel();

@@ -1,0 +1,602 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/hashicorp/vault/sdk/plugin/pb";
+
+import "google/protobuf/timestamp.proto";
+import "sdk/logical/identity.proto";
+import "sdk/logical/plugin.proto";
+
+message Empty {}
+
+message Header {
+	repeated string header = 1;
+}
+
+message ProtoError {
+	// Error type can be one of:
+	// ErrTypeUnknown uint32 = iota
+	// ErrTypeUserError
+	// ErrTypeInternalError
+	// ErrTypeCodedError
+	// ErrTypeStatusBadRequest
+	// ErrTypeUnsupportedOperation
+	// ErrTypeUnsupportedPath
+	// ErrTypeInvalidRequest
+	// ErrTypePermissionDenied
+	// ErrTypeMultiAuthzPending
+	uint32 err_type = 1;
+	string err_msg = 2;
+	int64 err_code = 3;
+}
+
+// Paths is the structure of special paths that is used for SpecialPaths.
+message Paths {
+	// Root are the paths that require a root token to access
+	repeated string root = 1;
+
+	// Unauthenticated are the paths that can be accessed without any auth.
+	repeated string unauthenticated = 2;
+
+	// LocalStorage are paths (prefixes) that are local to this instance; this
+	// indicates that these paths should not be replicated
+	repeated string local_storage = 3;
+
+	// SealWrapStorage are storage paths that, when using a capable seal,
+	// should be seal wrapped with extra encryption. It is exact matching
+	// unless it ends with '/' in which case it will be treated as a prefix.
+	repeated string seal_wrap_storage = 4;
+}
+
+message Request {
+	// Id is the uuid associated with each request
+	string id = 1;
+
+	// If set, the name given to the replication secondary where this request
+	// originated
+	string ReplicationCluster = 2;
+
+	// Operation is the requested operation type
+	string operation = 3;
+
+	// Path is the part of the request path not consumed by the
+	// routing. As an example, if the original request path is "prod/aws/foo"
+	// and the AWS logical backend is mounted at "prod/aws/", then the
+	// final path is "foo" since the mount prefix is trimmed.
+	string path = 4;
+
+	// Request data is a JSON object that must have keys with string type.
+	string data = 5;
+
+	// Secret will be non-nil only for Revoke and Renew operations
+	// to represent the secret that was returned prior.
+	Secret secret = 6;
+
+	// Auth will be non-nil only for Renew operations
+	// to represent the auth that was returned prior.
+	Auth auth = 7;
+
+	// Headers will contain the http headers from the request. This value will
+	// be used in the audit broker to ensure we are auditing only the allowed
+	// headers.
+	map<string, Header> headers = 8;
+
+	// ClientToken is provided to the core so that the identity
+	// can be verified and ACLs applied. This value is passed
+	// through to the logical backends but after being salted and
+	// hashed.
+	string client_token = 9;
+
+	// ClientTokenAccessor is provided to the core so that the it can get
+	// logged as part of request audit logging.
+	string client_token_accessor = 10;
+
+	// DisplayName is provided to the logical backend to help associate
+	// dynamic secrets with the source entity. This is not a sensitive
+	// name, but is useful for operators.
+	string display_name = 11;
+
+	// MountPoint is provided so that a logical backend can generate
+	// paths relative to itself. The `Path` is effectively the client
+	// request path with the MountPoint trimmed off.
+	string mount_point = 12;
+
+	// MountType is provided so that a logical backend can make decisions
+	// based on the specific mount type (e.g., if a mount type has different
+	// aliases, generating different defaults depending on the alias)
+	string mount_type = 13;
+
+	// MountAccessor is provided so that identities returned by the authentication
+	// backends can be tied to the mount it belongs to.
+	string mount_accessor = 14;
+
+	// WrapInfo contains requested response wrapping parameters
+	RequestWrapInfo wrap_info = 15;
+
+	// ClientTokenRemainingUses represents the allowed number of uses left on the
+	// token supplied
+	int64 client_token_remaining_uses = 16;
+
+	// EntityID is the identity of the caller extracted out of the token used
+	// to make this request
+	string entity_id = 17;
+
+	// PolicyOverride indicates that the requestor wishes to override
+	// soft-mandatory Sentinel policies
+	bool policy_override = 18;
+
+	// Whether the request is unauthenticated, as in, had no client token
+	// attached. Useful in some situations where the client token is not made
+	// accessible.
+	bool unauthenticated = 19;
+
+   	// Connection will be non-nil only for credential providers to
+	// inspect the connection information and potentially use it for
+	// authentication/protection.
+	Connection connection = 20;
+}
+
+message Auth {
+	LeaseOptions lease_options = 1;
+
+	// InternalData is a JSON object that is stored with the auth struct.
+	// This will be sent back during a Renew/Revoke for storing internal data
+	// used for those operations.
+	string internal_data = 2;
+
+	// DisplayName is a non-security sensitive identifier that is
+	// applicable to this Auth. It is used for logging and prefixing
+	// of dynamic secrets. For example, DisplayName may be "armon" for
+	// the github credential backend. If the client token is used to
+	// generate a SQL credential, the user may be "github-armon-uuid".
+	// This is to help identify the source without using audit tables.
+	string display_name = 3;
+
+	// Policies is the list of policies that the authenticated user
+	// is associated with.
+	repeated string policies = 4;
+
+	// Metadata is used to attach arbitrary string-type metadata to
+	// an authenticated user. This metadata will be outputted into the
+	// audit log.
+	map<string, string> metadata = 5;
+
+	// ClientToken is the token that is generated for the authentication.
+	// This will be filled in by Vault core when an auth structure is
+	// returned. Setting this manually will have no effect.
+	string client_token = 6;
+
+	// Accessor is the identifier for the ClientToken. This can be used
+	// to perform management functionalities (especially revocation) when
+	// ClientToken in the audit logs are obfuscated. Accessor can be used
+	// to revoke a ClientToken and to lookup the capabilities of the ClientToken,
+	// both without actually knowing the ClientToken.
+	string accessor = 7;
+
+	// Period indicates that the token generated using this Auth object
+	// should never expire. The token should be renewed within the duration
+	// specified by this period.
+	int64 period = 8;
+
+	// Number of allowed uses of the issued token
+	int64 num_uses = 9;
+
+	// EntityID is the identifier of the entity in identity store to which the
+	// identity of the authenticating client belongs to.
+	string entity_id = 10;
+
+	// Alias is the information about the authenticated client returned by
+	// the auth backend
+	logical.Alias alias = 11;
+
+	// GroupAliases are the informational mappings of external groups which an
+	// authenticated user belongs to. This is used to check if there are
+	// mappings groups for the group aliases in identity store. For all the
+	// matching groups, the entity ID of the user will be added.
+	repeated logical.Alias group_aliases = 12;
+
+	// If set, restricts usage of the certificates to client IPs falling within
+	// the range of the specified CIDR(s).
+	repeated string bound_cidrs = 13;
+
+	// TokenPolicies and IdentityPolicies break down the list in Policies to
+	// help determine where a policy was sourced
+	repeated string token_policies = 14;
+	repeated string identity_policies = 15;
+
+	// Explicit maximum lifetime for the token. Unlike normal TTLs, the maximum
+	// TTL is a hard limit and cannot be exceeded, also counts for periodic tokens.
+	int64 explicit_max_ttl = 16;
+
+	// TokenType is the type of token being requested
+	uint32 token_type = 17;
+
+	// Whether the default policy should be added automatically by core
+	bool no_default_policy = 18;
+}
+
+message TokenEntry {
+	string id = 1;
+	string accessor = 2;
+	string parent = 3;
+	repeated string policies = 4;
+	string path = 5;
+	map<string, string> meta = 6;
+	string display_name = 7;
+	int64 num_uses = 8;
+	int64 creation_time = 9;
+	int64 ttl = 10;
+	int64 explicit_max_ttl = 11;
+	string role = 12;
+	int64 period = 13;
+	string entity_id = 14;
+	repeated string bound_cidrs = 15;
+	string namespace_id = 16;
+	string cubbyhole_id = 17;
+	uint32 type = 18;
+}
+
+message LeaseOptions {
+	int64 TTL = 1;
+	
+	bool renewable = 2;
+
+	int64 increment = 3;
+
+	google.protobuf.Timestamp issue_time = 4;
+
+	int64 MaxTTL = 5;
+}
+
+message Secret {
+	LeaseOptions lease_options = 1;
+
+	// InternalData is a JSON object that is stored with the secret.
+	// This will be sent back during a Renew/Revoke for storing internal data
+	// used for those operations.
+	string internal_data = 2;
+
+	// LeaseID is the ID returned to the user to manage this secret.
+	// This is generated by Vault core. Any set value will be ignored.
+	// For requests, this will always be blank.
+	string lease_id = 3;
+}
+
+message Response {
+	// Secret, if not nil, denotes that this response represents a secret.
+	Secret secret = 1;
+
+	// Auth, if not nil, contains the authentication information for
+	// this response. This is only checked and means something for
+	// credential backends.
+	Auth auth = 2;
+
+	// Response data is a JSON object that must have string keys. For
+	// secrets, this data is sent down to the user as-is. To store internal
+	// data that you don't want the user to see, store it in
+	// Secret.InternalData.
+	string data = 3;
+
+	// Redirect is an HTTP URL to redirect to for further authentication.
+	// This is only valid for credential backends. This will be blanked
+	// for any logical backend and ignored.
+	string redirect = 4;
+
+	// Warnings allow operations or backends to return warnings in response
+	// to user actions without failing the action outright.
+	repeated string warnings = 5;
+
+	// Information for wrapping the response in a cubbyhole
+	ResponseWrapInfo wrap_info = 6;
+
+	// Headers will contain the http headers from the response. This value will
+	// be used in the audit broker to ensure we are auditing only the allowed
+	// headers.
+	map<string, Header> headers = 7;
+}
+
+message ResponseWrapInfo {
+	// Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	int64 TTL = 1;
+
+	// The token containing the wrapped response
+	string token = 2;
+
+	// The token accessor for the wrapped response token
+	string accessor = 3;
+
+	// The creation time. This can be used with the TTL to figure out an
+	// expected expiration.
+	google.protobuf.Timestamp creation_time = 4;
+
+	// If the contained response is the output of a token creation call, the
+	// created token's accessor will be accessible here
+	string wrapped_accessor = 5;
+
+	// WrappedEntityID is the entity identifier of the caller who initiated the
+	// wrapping request
+	string wrapped_entity_id = 6;
+
+	// The format to use. This doesn't get returned, it's only internal.
+	string format = 7;
+
+	// CreationPath is the original request path that was used to create
+	// the wrapped response.
+	string creation_path = 8;
+
+	// Controls seal wrapping behavior downstream for specific use cases
+	bool seal_wrap = 9;
+}
+
+message RequestWrapInfo {
+	// Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	int64 TTL = 1;
+
+	// The format to use for the wrapped response; if not specified it's a bare
+	// token
+	string format = 2;
+
+	// A flag to conforming backends that data for a given request should be
+	// seal wrapped
+	bool seal_wrap = 3;
+}
+
+// HandleRequestArgs is the args for HandleRequest method.
+message HandleRequestArgs {
+	uint32 storage_id = 1;
+	Request request = 2;
+}
+
+// HandleRequestReply is the reply for HandleRequest method.
+message HandleRequestReply {
+	Response response = 1;
+	ProtoError err = 2;
+}
+
+// InitializeArgs is the args for Initialize method.
+message InitializeArgs {
+}
+
+// InitializeReply is the reply for Initialize method.
+message InitializeReply {
+	ProtoError err = 1;
+}
+
+// SpecialPathsReply is the reply for SpecialPaths method.
+message SpecialPathsReply {
+	Paths paths = 1;
+}
+
+// HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
+message HandleExistenceCheckArgs {
+	uint32 storage_id = 1;
+	Request  request = 2;
+}
+
+// HandleExistenceCheckReply is the reply for HandleExistenceCheck method.
+message HandleExistenceCheckReply {
+	bool check_found = 1;
+	bool exists = 2;
+	ProtoError err = 3;
+}
+
+// SetupArgs is the args for Setup method.
+message SetupArgs {
+	uint32 broker_id = 1; 
+	map<string, string> Config = 2;
+	string backendUUID = 3;
+}
+
+// SetupReply is the reply for Setup method.
+message SetupReply {
+	string err = 1;
+}
+
+// TypeReply is the reply for the Type method.
+message TypeReply {
+	uint32 type = 1;
+}
+
+message InvalidateKeyArgs {
+	string key = 1;
+}
+
+// Backend is the interface that plugins must satisfy. The plugin should
+// implement the server for this service. Requests will first run the
+// HandleExistenceCheck rpc then run the HandleRequests rpc.
+service Backend {
+	// HandleRequest is used to handle a request and generate a response.
+	// The plugins must check the operation type and handle appropriately.
+	rpc HandleRequest(HandleRequestArgs) returns (HandleRequestReply);
+
+	// SpecialPaths is a list of paths that are special in some way.
+	// See PathType for the types of special paths. The key is the type
+	// of the special path, and the value is a list of paths for this type.
+	// This is not a regular expression but is an exact match. If the path
+	// ends in '*' then it is a prefix-based match. The '*' can only appear
+	// at the end.
+	rpc SpecialPaths(Empty) returns (SpecialPathsReply);
+
+	// HandleExistenceCheck is used to handle a request and generate a response
+	// indicating whether the given path exists or not; this is used to
+	// understand whether the request must have a Create or Update capability
+	// ACL applied. The first bool indicates whether an existence check
+	// function was found for the backend; the second indicates whether, if an
+	// existence check function was found, the item exists or not.
+	rpc HandleExistenceCheck(HandleExistenceCheckArgs) returns (HandleExistenceCheckReply);
+
+	// Cleanup is invoked during an unmount of a backend to allow it to
+	// handle any cleanup like connection closing or releasing of file handles.
+	// Cleanup is called right before Vault closes the plugin process.
+	rpc Cleanup(Empty) returns (Empty);
+
+	// InvalidateKey may be invoked when an object is modified that belongs
+	// to the backend. The backend can use this to clear any caches or reset
+	// internal state as needed.
+	rpc InvalidateKey(InvalidateKeyArgs) returns (Empty);
+
+	// Setup is used to set up the backend based on the provided backend
+	// configuration. The plugin's setup implementation should use the provided
+	// broker_id to create a connection back to Vault for use with the Storage
+	// and SystemView clients.
+	rpc Setup(SetupArgs) returns (SetupReply);
+
+	// Initialize is invoked just after mounting a backend to allow it to
+	// handle any initialization tasks that need to be performed.
+	rpc Initialize(InitializeArgs) returns (InitializeReply);
+
+   	// Type returns the BackendType for the particular backend
+	rpc Type(Empty) returns (TypeReply);
+}
+
+message StorageEntry {
+	string key = 1;
+	bytes value = 2;
+	bool seal_wrap = 3;
+}
+
+message StorageListArgs {
+	string prefix = 1;
+}
+
+message StorageListReply {
+	repeated string keys = 1;
+	string err = 2;
+}
+
+message StorageGetArgs {
+	string key = 1;
+}
+
+message StorageGetReply {
+	StorageEntry entry = 1;
+	string err = 2;
+}
+
+message StoragePutArgs {
+	StorageEntry entry = 1;
+}
+
+message StoragePutReply {
+	string err = 1;
+}
+
+message StorageDeleteArgs {
+	string key = 1;
+}
+
+message StorageDeleteReply {
+	string err = 1;
+}
+
+// Storage is the way that plugins are able read/write data. Plugins should
+// implement the client for this service.
+service Storage {
+	rpc List(StorageListArgs) returns (StorageListReply);
+	rpc Get(StorageGetArgs) returns (StorageGetReply);
+	rpc Put(StoragePutArgs) returns (StoragePutReply);
+	rpc Delete(StorageDeleteArgs) returns (StorageDeleteReply);
+}
+
+message TTLReply {
+	int64 TTL = 1;
+}
+
+message TaintedReply {
+	bool tainted = 1;
+}
+
+message CachingDisabledReply {
+	bool disabled = 1;
+}
+
+message ReplicationStateReply {
+	int32 state = 1;
+}
+
+message ResponseWrapDataArgs {
+	string data = 1;
+	int64 TTL = 2;
+	bool JWT = 3;
+}
+
+message ResponseWrapDataReply {
+	ResponseWrapInfo wrap_info = 1;
+	string err = 2;
+}
+
+message MlockEnabledReply {
+	bool enabled = 1;
+}
+
+message LocalMountReply {
+	bool local = 1;
+}
+
+message EntityInfoArgs {
+	string entity_id = 1;
+}
+
+message EntityInfoReply {
+	logical.Entity entity = 1;
+	string err = 2;
+}
+
+message PluginEnvReply {
+	logical.PluginEnvironment plugin_environment = 1;
+	string err = 2;
+}
+
+// SystemView exposes system configuration information in a safe way for plugins
+// to consume. Plugins should implement the client for this service.
+service SystemView {
+  	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
+	rpc DefaultLeaseTTL(Empty) returns (TTLReply);
+	
+   	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
+	// authors should take care not to issue credentials that last longer than
+	// this value, as Vault will revoke them
+	rpc MaxLeaseTTL(Empty) returns (TTLReply);
+
+	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
+	// process of being unmounted. This should only be used in special
+	// circumstances; a primary use-case is as a guard in revocation functions.
+	// If revocation of a backend's leases fails it can keep the unmounting
+	// process from being successful. If the reason for this failure is not
+	// relevant when the mount is tainted (for instance, saving a CRL to disk
+	// when the stored CRL will be removed during the unmounting process
+	// anyways), we can ignore the errors to allow unmounting to complete.
+	rpc Tainted(Empty) returns (TaintedReply);
+
+	// CachingDisabled returns true if caching is disabled. If true, no caches
+	// should be used, despite known slowdowns.
+	rpc CachingDisabled(Empty) returns (CachingDisabledReply);
+
+   	// ReplicationState indicates the state of cluster replication
+	rpc ReplicationState(Empty) returns (ReplicationStateReply);
+
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
+	rpc ResponseWrapData(ResponseWrapDataArgs) returns (ResponseWrapDataReply);
+
+	// MlockEnabled returns the configuration setting for enabling mlock on
+	// plugins.
+	rpc MlockEnabled(Empty) returns (MlockEnabledReply);
+
+	// LocalMount, when run from a system view attached to a request, indicates
+	// whether the request is affecting a local mount or not
+	rpc LocalMount(Empty) returns (LocalMountReply);
+
+	// EntityInfo returns the basic entity information for the given entity id
+	rpc EntityInfo(EntityInfoArgs) returns (EntityInfoReply);
+
+	// PluginEnv returns Vault environment information used by plugins
+	rpc PluginEnv(Empty) returns (PluginEnvReply);
+}
+
+message Connection {
+	// RemoteAddr is the network address that sent the request.
+	string remote_addr = 1;
+}

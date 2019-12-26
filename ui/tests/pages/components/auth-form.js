@@ -5,6 +5,7 @@ export default {
     name: text(),
     link: clickable('[data-test-auth-method-link]'),
   }),
+  selectMethod: fillable('[data-test-select=auth-method]'),
   username: fillable('[data-test-username]'),
   token: fillable('[data-test-token]'),
   tokenValue: value('[data-test-token]'),

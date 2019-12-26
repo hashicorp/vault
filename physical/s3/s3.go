@@ -7,12 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,11 +19,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify S3Backend satisfies the correct interfaces
@@ -34,6 +34,8 @@ var _ physical.Backend = (*S3Backend)(nil)
 // within an S3 bucket.
 type S3Backend struct {
 	bucket     string
+	path       string
+	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
 	permitPool *physical.PermitPool
@@ -50,6 +52,8 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			return nil, fmt.Errorf("'bucket' must be set")
 		}
 	}
+
+	path := conf["path"]
 
 	accessKey, ok := conf["access_key"]
 	if !ok {
@@ -135,9 +139,16 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		}
 	}
 
+	kmsKeyId, ok := conf["kms_key_id"]
+	if !ok {
+		kmsKeyId = ""
+	}
+
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
+		path:       path,
+		kmsKeyId:   kmsKeyId,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
@@ -151,11 +162,21 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
 
-	_, err := s.client.PutObject(&s3.PutObjectInput{
+	// Setup key
+	key := path.Join(s.path, entry.Key)
+
+	putObjectInput := &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(entry.Key),
+		Key:    aws.String(key),
 		Body:   bytes.NewReader(entry.Value),
-	})
+	}
+
+	if s.kmsKeyId != "" {
+		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
+		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
+	}
+
+	_, err := s.client.PutObject(putObjectInput)
 
 	if err != nil {
 		return err
@@ -170,6 +191,9 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
+
+	// Setup key
+	key = path.Join(s.path, key)
 
 	resp, err := s.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -201,6 +225,11 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, err
 	}
 
+	// Strip path prefix
+	if s.path != "" {
+		key = strings.TrimPrefix(key, s.path+"/")
+	}
+
 	ent := &physical.Entry{
 		Key:   key,
 		Value: data.Bytes(),
@@ -215,6 +244,9 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
+
+	// Setup key
+	key = path.Join(s.path, key)
 
 	_, err := s.client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -235,6 +267,14 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
+
+	// Setup prefix
+	prefix = path.Join(s.path, prefix)
+
+	// Validate prefix (if present) is ending with a "/"
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
 
 	params := &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),

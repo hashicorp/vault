@@ -1,5 +1,6 @@
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -8,8 +9,11 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', { data });
+    const path = snapshot.record.path;
+    return this.ajax(this.urlForSecret(snapshot.attr('backend'), path || id), 'POST', { data }).then(() => {
+      data.id = path || id;
+      return data;
+    });
   },
 
   createRecord() {
@@ -26,30 +30,41 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = `${this.buildURL()}/${backend}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
 
     return url;
   },
 
-  optionsForQuery(id, action) {
+  pathForType() {
+    return 'mounts';
+  },
+
+  optionsForQuery(id, action, wrapTTL) {
     let data = {};
     if (action === 'query') {
-      data['list'] = true;
+      data.list = true;
     }
-
+    if (wrapTTL) {
+      return { data, wrapTTL };
+    }
     return { data };
   },
 
   fetchByQuery(query, action) {
-    const { id, backend } = query;
-    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
-      resp.id = id;
-      resp.backend = backend;
-      return resp;
-    });
+    const { id, backend, wrapTTL } = query;
+    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action, wrapTTL)).then(
+      resp => {
+        if (wrapTTL) {
+          return resp;
+        }
+        resp.id = id;
+        resp.backend = backend;
+        return resp;
+      }
+    );
   },
 
   query(store, type, query) {

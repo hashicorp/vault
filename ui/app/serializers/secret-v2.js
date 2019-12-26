@@ -38,6 +38,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
         return body;
       });
     }
+    payload.data.engine_id = payload.backend;
     payload.data.id = payload.id;
     return requestType === 'queryRecord' ? payload.data : [payload.data];
   },

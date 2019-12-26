@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AppRole - Auth Methods"
+sidebar_title: "AppRole"
 sidebar_current: "docs-auth-approle"
 description: |-
   The AppRole auth method allows machines and services to authenticate with
@@ -228,6 +229,12 @@ more constraint parameters to support varied set of Apps. Some constraints will
 not require a credential, but still enforce constraints for login.  For
 example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
+
+## Learn
+
+Refer to the [AppRole Pull
+Authentication](https://learn.hashicorp.com/vault/identity-access-management/iam-authentication)
+guide for a step-by-step tutorial.
 
 ## API
 

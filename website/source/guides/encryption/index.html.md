@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Encryption as a Service - Guides"
+sidebar_title: "Encryption as a Service"
 sidebar_current: "guides-encryption"
 description: |-
   The transit secrets engine handles cryptographic functions on data in-transit.

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Operations - Guides"
+sidebar_title: "Vault Operations"
 sidebar_current: "guides-operations"
 description: |-
   Vault architecture guide covers Vault infrastructure discussions including

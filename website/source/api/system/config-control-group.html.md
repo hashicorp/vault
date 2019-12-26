@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/config/control-group - HTTP API"
-sidebar_current: "docs-http-system-config-control-group"
+sidebar_title: "<code>/sys/config/control-group</code>"
+sidebar_current: "api-http-system-config-control-group"
 description: |-
   The '/sys/config/control-group' endpoint configures control groups.
 ---
@@ -17,9 +18,9 @@ settings.
 
 This endpoint returns the current Control Group configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/control-group` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/control-group` |
 
 ### Sample Request
 
@@ -41,9 +42,9 @@ $ curl \
 
 This endpoint allows configuring control groups.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/config/control-group` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/config/control-group` |
 
 ### Parameters
 
@@ -71,9 +72,9 @@ $ curl \
 
 This endpoint removes any control group configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/config/control-group` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/config/control-group` |
 
 ### Sample Request
 

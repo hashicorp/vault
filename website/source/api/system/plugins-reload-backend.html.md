@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/plugins/reload/backend - HTTP API"
-sidebar_current: "docs-http-system-plugins-reload-backend"
+sidebar_title: "<code>/sys/plugins/reload/backend</code>"
+sidebar_current: "api-http-system-plugins-reload-backend"
 description: |-
   The `/sys/plugins/reload/backend` endpoint is used to reload plugin backends.
 ---
@@ -17,9 +18,9 @@ provided, all mounted paths that use that plugin backend will be reloaded.
 
 This endpoint reloads mounted plugin backends.
 
-| Method   | Path                      -   | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/plugins/reload/backend` | `204 (empty body)`     |
+| Method   | Path                      -   |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/plugins/reload/backend` |
 
 ### Parameters
 

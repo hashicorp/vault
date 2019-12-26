@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PKI - Secrets Engines"
+sidebar_title: "PKI (Certificates)"
 sidebar_current: "docs-secrets-pki"
 description: |-
   The PKI secrets engine for Vault generates TLS certificates.
@@ -89,11 +90,11 @@ certificate. When users or machines generate credentials, they are generated
 against this role:
 
     ```text
-    $ vault write pki/roles/my-role \
+    $ vault write pki/roles/example-dot-com \
         allowed_domains=my-website.com \
         allow_subdomains=true \
         max_ttl=72h
-    Success! Data written to: pki/roles/my-role
+    Success! Data written to: pki/roles/example-dot-com
     ```
 
 ## Usage
@@ -105,7 +106,7 @@ the proper permission, it can generate credentials.
 of the role:
 
     ```text
-    $ vault write pki/issue/my-role \
+    $ vault write pki/issue/example-dot-com \
         common_name=www.my-website.com
 
     Key                 Value
@@ -672,6 +673,11 @@ certificate. The issuing CA certificate and CA trust chain are returned as well.
 The CA Chain returns all the intermediate authorities in the trust chain. The root
 authority is not included since that will usually be trusted by the underlying
 OS.
+
+## Learn
+
+Refer to the [Build Your Own Certificate Authority (CA)](https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine)
+guide for a step-by-step tutorial.
 
 ## API
 

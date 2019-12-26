@@ -25,6 +25,7 @@ type AuthTuneCommand struct {
 	flagListingVisibility        string
 	flagMaxLeaseTTL              time.Duration
 	flagOptions                  map[string]string
+	flagTokenType                string
 	flagVersion                  int
 }
 
@@ -57,14 +58,14 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the request data object.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the response data object.",
 	})
 
@@ -82,14 +83,14 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:   flagNameDescription,
 		Target: &c.flagDescription,
-		Usage: "Human-friendly description of the this auth method. This overrides" +
+		Usage: "Human-friendly description of the this auth method. This overrides " +
 			"the current stored value, if any.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:   flagNameListingVisibility,
 		Target: &c.flagListingVisibility,
-		Usage: "Determines the visibility of the mount in the UI-specific listing" +
+		Usage: "Determines the visibility of the mount in the UI-specific listing " +
 			"endpoint.",
 	})
 
@@ -110,6 +111,12 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Completion: complete.PredictAnything,
 		Usage: "Key-value pair provided as key=value for the mount options. " +
 			"This can be specified multiple times.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameTokenType,
+		Target: &c.flagTokenType,
+		Usage:  "Sets a forced token type for the mount.",
 	})
 
 	f.IntVar(&IntVar{
@@ -183,6 +190,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			mountConfigInput.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNameTokenType {
+			mountConfigInput.TokenType = c.flagTokenType
 		}
 	})
 

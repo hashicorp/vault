@@ -14,7 +14,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	log "github.com/hashicorp/go-hclog"
 	"golang.org/x/crypto/ssh"
@@ -213,6 +214,18 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 		result[key] = fmt.Sprintf("%v", value)
 	}
 	return result
+}
+
+func convertMapToIntValue(initial map[string]interface{}) (map[string]int, error) {
+	result := map[string]int{}
+	for key, value := range initial {
+		v, err := parseutil.ParseInt(value)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = int(v)
+	}
+	return result, nil
 }
 
 // Serve a template processor for custom format inputs

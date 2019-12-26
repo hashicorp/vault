@@ -5,14 +5,153 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_EntityDeleteGroupMembershipUpdate(t *testing.T) {
+	i, _, _ := testIdentityStoreWithGithubAuth(namespace.RootContext(nil), t)
+
+	// Create an entity
+	resp, err := i.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testentity",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Create a group
+	resp, err = i.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              "testgroup",
+			"member_entity_ids": []string{entityID},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Ensure that the group has entity ID as its member
+	resp, err = i.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "group/name/testgroup",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	expected := []string{entityID}
+	actual := resp.Data["member_entity_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: member entity ids; expected: %#v\nactual: %#v", expected, actual)
+	}
+
+	// Delete the entity
+	resp, err = i.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "entity/name/testentity",
+		Operation: logical.DeleteOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Ensure that the group does not have entity ID as it's member anymore
+	resp, err = i.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "group/name/testgroup",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	expected = []string{}
+	actual = resp.Data["member_entity_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: member entity ids; expected: %#v\nactual: %#v", expected, actual)
+	}
+}
+
+func TestIdentityStore_CaseInsensitiveEntityName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	testEntityName := "testEntityName"
+
+	// Create an entity with case sensitive name
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": testEntityName,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Lookup the entity by ID and check that name returned is case sensitive
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/id/" + entityID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityName := resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Lookup the entity by case sensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/" + testEntityName,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	entityName = resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Lookup the entity by case insensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/" + strings.ToLower(testEntityName),
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	entityName = resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Ensure that there is only one entity
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("bad length of entities; expected: 1, actual: %d", len(resp.Data["keys"].([]string)))
+	}
+}
 
 func TestIdentityStore_EntityByName(t *testing.T) {
 	ctx := namespace.RootContext(nil)
@@ -340,7 +479,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -472,7 +611,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	}
 
 	// Identity store will be mounted by now, just fetch it from router
-	identitystore := c.router.MatchingBackend(namespace.TestContext(), "identity/")
+	identitystore := c.router.MatchingBackend(namespace.RootContext(nil), "identity/")
 	if identitystore == nil {
 		t.Fatalf("failed to fetch identity store from router")
 	}
@@ -594,7 +733,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -625,7 +764,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	txn = is.db.Txn(false)
-	entitiesFetched, err := is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
+	entitiesFetched, err := is.MemDBEntitiesByBucketKeyInTxn(txn, entity.BucketKey)
 	if err != nil {
 		t.Fatal(err)
 	}

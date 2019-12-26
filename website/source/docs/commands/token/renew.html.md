@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token renew - Command"
+sidebar_title: "<code>renew</code>"
 sidebar_current: "docs-commands-token-renew"
 description: |-
   The "token renew" renews a token's lease, extending the amount of time it can

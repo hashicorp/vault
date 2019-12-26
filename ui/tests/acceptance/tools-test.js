@@ -82,6 +82,9 @@ module('Acceptance | tools', function(hooks) {
       JSON.parse(DATA_TO_WRAP),
       'unwrapped data equals input data'
     );
+    await click('[data-test-button-details]');
+    await click('[data-test-button-data]');
+    assert.dom('.CodeMirror').exists();
 
     //random
     await click('[data-test-tools-action-link="random"]');

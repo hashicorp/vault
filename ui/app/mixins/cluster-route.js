@@ -6,28 +6,47 @@ const INIT = 'vault.cluster.init';
 const UNSEAL = 'vault.cluster.unseal';
 const AUTH = 'vault.cluster.auth';
 const CLUSTER = 'vault.cluster';
+const CLUSTER_INDEX = 'vault.cluster.index';
+const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
+const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
 
-export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
+export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
 
 export default Mixin.create({
   auth: service(),
+  store: service(),
+  router: service(),
 
-  transitionToTargetRoute() {
-    const targetRoute = this.targetRouteName();
-    if (targetRoute && targetRoute !== this.routeName) {
+  transitionToTargetRoute(transition = {}) {
+    const targetRoute = this.targetRouteName(transition);
+
+    if (
+      targetRoute &&
+      targetRoute !== this.routeName &&
+      targetRoute !== transition.targetName &&
+      targetRoute !== this.router.currentRouteName
+    ) {
+      if (
+        // only want to redirect if we're going to authenticate
+        targetRoute === AUTH &&
+        transition.targetName !== CLUSTER_INDEX &&
+        !EXCLUDED_REDIRECT_URLS.includes(this.router.currentURL)
+      ) {
+        return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
+      }
       return this.transitionTo(targetRoute);
     }
 
     return RSVP.resolve();
   },
 
-  beforeModel() {
-    return this.transitionToTargetRoute();
+  beforeModel(transition) {
+    return this.transitionToTargetRoute(transition);
   },
 
   clusterModel() {
-    return this.modelFor(CLUSTER);
+    return this.modelFor(CLUSTER) || this.store.peekRecord('cluster', 'vault');
   },
 
   authToken() {
@@ -38,7 +57,7 @@ export default Mixin.create({
     return !!get(this.controllerFor(INIT), 'keyData');
   },
 
-  targetRouteName() {
+  targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
     if (get(cluster, 'needsInit')) {
@@ -54,6 +73,9 @@ export default Mixin.create({
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
+      if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
+        return OIDC_CALLBACK;
+      }
       return AUTH;
     }
     if (

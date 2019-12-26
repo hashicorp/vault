@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Cubbyhole - Secrets Engines"
+sidebar_title: "Cubbyhole"
 sidebar_current: "docs-secrets-cubbyhole"
 description: |-
   The cubbyhole secrets engine can store arbitrary secrets scoped to a single token.
@@ -50,6 +51,11 @@ engine allows for writing keys with arbitrary values.
     ---         -----
     my-value    s3cr3t
     ```
+
+## Learn
+
+Refer to the [Cubbyhole Response Wrapping](https://learn.hashicorp.com/vault/secrets-management/sm-cubbyhole)
+guide for a step-by-step tutorial.
 
 ## API
 

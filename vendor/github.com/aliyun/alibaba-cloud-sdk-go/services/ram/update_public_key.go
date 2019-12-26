@@ -76,8 +76,8 @@ func (client *Client) UpdatePublicKeyWithCallback(request *UpdatePublicKeyReques
 // UpdatePublicKeyRequest is the request struct for api UpdatePublicKey
 type UpdatePublicKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserPublicKeyId string `position:"Query" name:"UserPublicKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 	Status          string `position:"Query" name:"Status"`
 }
 

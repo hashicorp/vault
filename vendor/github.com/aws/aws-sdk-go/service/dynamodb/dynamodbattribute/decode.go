@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
@@ -17,7 +18,7 @@ import (
 // 			Value int
 // 		}
 //
-// 		func (u *exampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+// 		func (u *ExampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 // 			if av.N == nil {
 // 				return nil
 // 			}
@@ -27,7 +28,7 @@ import (
 // 				return err
 // 			}
 //
-// 			u.Value = n
+// 			u.Value = int(n)
 // 			return nil
 // 		}
 type Unmarshaler interface {
@@ -155,6 +156,7 @@ var byteSliceType = reflect.TypeOf([]byte(nil))
 var byteSliceSlicetype = reflect.TypeOf([][]byte(nil))
 var numberType = reflect.TypeOf(Number(""))
 var timeType = reflect.TypeOf(time.Time{})
+var ptrStringType = reflect.TypeOf(aws.String(""))
 
 func (d *Decoder) decode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	var u Unmarshaler
@@ -172,23 +174,23 @@ func (d *Decoder) decode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag 
 	}
 
 	switch {
-	case len(av.B) != 0:
+	case len(av.B) != 0 || (av.B != nil && d.EnableEmptyCollections):
 		return d.decodeBinary(av.B, v)
 	case av.BOOL != nil:
 		return d.decodeBool(av.BOOL, v)
-	case len(av.BS) != 0:
+	case len(av.BS) != 0 || (av.BS != nil && d.EnableEmptyCollections):
 		return d.decodeBinarySet(av.BS, v)
-	case len(av.L) != 0:
+	case len(av.L) != 0 || (av.L != nil && d.EnableEmptyCollections):
 		return d.decodeList(av.L, v)
-	case len(av.M) != 0:
+	case len(av.M) != 0 || (av.M != nil && d.EnableEmptyCollections):
 		return d.decodeMap(av.M, v)
 	case av.N != nil:
 		return d.decodeNumber(av.N, v, fieldTag)
-	case len(av.NS) != 0:
+	case len(av.NS) != 0 || (av.NS != nil && d.EnableEmptyCollections):
 		return d.decodeNumberSet(av.NS, v)
-	case av.S != nil:
+	case av.S != nil: // DynamoDB does not allow for empty strings, so we do not consider the length or EnableEmptyCollections flag here
 		return d.decodeString(av.S, v, fieldTag)
-	case len(av.SS) != 0:
+	case len(av.SS) != 0 || (av.SS != nil && d.EnableEmptyCollections):
 		return d.decodeStringSet(av.SS, v)
 	}
 
@@ -487,7 +489,8 @@ func (d *Decoder) decodeMap(avMap map[string]*dynamodb.AttributeValue, v reflect
 
 	if v.Kind() == reflect.Map {
 		for k, av := range avMap {
-			key := reflect.ValueOf(k)
+			key := reflect.New(v.Type().Key()).Elem()
+			key.SetString(k)
 			elem := reflect.New(v.Type().Elem()).Elem()
 			if err := d.decode(av, elem, tag{}); err != nil {
 				return err
@@ -738,9 +741,9 @@ func (e *InvalidUnmarshalError) Message() string {
 	return "cannot unmarshal to nil value, " + e.Type.String()
 }
 
-// An UnmarshalError wraps an error that occured while unmarshaling a DynamoDB
+// An UnmarshalError wraps an error that occurred while unmarshaling a DynamoDB
 // AttributeValue element into a Go type. This is different from UnmarshalTypeError
-// in that it wraps the underlying error that occured.
+// in that it wraps the underlying error that occurred.
 type UnmarshalError struct {
 	Err   error
 	Value string

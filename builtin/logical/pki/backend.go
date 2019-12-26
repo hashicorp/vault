@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Factory creates a new backend implementing the logical.Backend interface

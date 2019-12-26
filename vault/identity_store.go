@@ -8,13 +8,14 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 )
 
 var (
+	caseSensitivityKey           = "casesensitivity"
 	sendGroupUpgrade             = func(*IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
@@ -31,21 +33,29 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
-// NewIdentityStore creates a new identity store
-func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
+func (i *IdentityStore) resetDB(ctx context.Context) error {
 	var err error
 
-	// Create a new in-memory database for the identity store
-	db, err := memdb.NewMemDB(identityStoreSchema())
+	i.db, err = memdb.NewMemDB(identityStoreSchema(!i.disableLowerCasedNames))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create memdb for identity store: {{err}}", err)
+		return err
 	}
 
+	return nil
+}
+
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
 		view:   config.StorageView,
-		db:     db,
 		logger: logger,
 		core:   core,
+	}
+
+	// Create a memdb instance, which by default, operates on lower cased
+	// identity names
+	err := iStore.resetDB(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
@@ -63,10 +73,23 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	iStore.Backend = &framework.Backend{
-		BackendType: logical.TypeLogical,
-		Paths:       iStore.paths(),
-		Invalidate:  iStore.Invalidate,
+		BackendType:    logical.TypeLogical,
+		Paths:          iStore.paths(),
+		Invalidate:     iStore.Invalidate,
+		InitializeFunc: iStore.initialize,
+		PathsSpecial: &logical.Paths{
+			Unauthenticated: []string{
+				"oidc/.well-known/*",
+			},
+		},
+		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			iStore.oidcPeriodicFunc(ctx)
+
+			return nil
+		},
 	}
+
+	iStore.oidcCache = newOIDCCache()
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -84,7 +107,24 @@ func (i *IdentityStore) paths() []*framework.Path {
 		groupPaths(i),
 		lookupPaths(i),
 		upgradePaths(i),
+		oidcPaths(i),
 	)
+}
+
+func (i *IdentityStore) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	// Only primary should write the status
+	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
+	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
+		DisableLowerCasedNames: i.disableLowerCasedNames,
+	})
+	if err != nil {
+		return err
+	}
+
+	return i.view.Put(ctx, entry)
 }
 
 // Invalidate is a callback wherein the backend is informed that the value at
@@ -98,15 +138,43 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	defer i.lock.Unlock()
 
 	switch {
-	// Check if the key is a storage entry key for an entity bucket
-	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.entityPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
+	case key == caseSensitivityKey:
+		entry, err := i.view.Get(ctx, caseSensitivityKey)
+		if err != nil {
+			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
+			return
+		}
+		if entry == nil {
 			return
 		}
 
+		var setting casesensitivity
+		if err := entry.DecodeJSON(&setting); err != nil {
+			i.logger.Error("failed to decode case sensitivity setting during invalidation", "error", err)
+			return
+		}
+
+		// Fast return if the setting is the same
+		if i.disableLowerCasedNames == setting.DisableLowerCasedNames {
+			return
+		}
+
+		// If the setting is different, reset memdb and reload all the artifacts
+		i.disableLowerCasedNames = setting.DisableLowerCasedNames
+		if err := i.resetDB(ctx); err != nil {
+			i.logger.Error("failed to reset memdb during invalidation", "error", err)
+			return
+		}
+		if err := i.loadEntities(ctx); err != nil {
+			i.logger.Error("failed to load entities during invalidation", "error", err)
+			return
+		}
+		if err := i.loadGroups(ctx); err != nil {
+			i.logger.Error("failed to load groups during invalidation", "error", err)
+			return
+		}
+	// Check if the key is a storage entry key for an entity bucket
+	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -115,9 +183,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// entry key of the entity bucket. Fetch all the entities that
 		// belong to this bucket using the hash value. Remove these entities
 		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		entitiesFetched, err := i.MemDBEntitiesByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
 			return
 		}
 
@@ -174,20 +242,13 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, groupBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.groupPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
-			return
-		}
-
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		groupsFetched, err := i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch groups using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch groups using the bucket key", "key", key)
 			return
 		}
 
@@ -197,6 +258,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			if err != nil {
 				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
 				return
+			}
+
+			if group.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete group alias from MemDB", "error", err)
+					return
+				}
 			}
 		}
 
@@ -234,7 +303,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				}
 
 				// Only update MemDB and don't touch the storage
-				err = i.UpsertGroupInTxn(txn, group, false)
+				err = i.UpsertGroupInTxn(ctx, txn, group, false)
 				if err != nil {
 					i.logger.Error("failed to update group in MemDB", "error", err)
 					return
@@ -244,6 +313,11 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 		txn.Commit()
 		return
+
+	case strings.HasPrefix(key, oidcTokensPrefix):
+		if err := i.oidcCache.Flush(noNamespace); err != nil {
+			i.logger.Error("error flushing oidc cache", "error", err)
+		}
 	}
 }
 
@@ -277,7 +351,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.LastUpdateTime = oldEntity.LastUpdateTime
 		entity.MergedEntityIDs = oldEntity.MergedEntityIDs
 		entity.Policies = oldEntity.Policies
-		entity.BucketKeyHash = oldEntity.BucketKeyHash
+		entity.BucketKey = oldEntity.BucketKeyHash
 		entity.MFASecrets = oldEntity.MFASecrets
 		// Copy each alias individually since the format of aliases were
 		// also different
@@ -319,7 +393,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		}
 
 		// Store the entity with new format
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err
 		}
@@ -398,6 +472,7 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
+	var update bool
 
 	if alias == nil {
 		return nil, fmt.Errorf("alias is nil")
@@ -420,12 +495,12 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alais
+	// Check if an entity already exists for the given alias
 	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, err
 	}
-	if entity != nil {
+	if entity != nil && changedAliasIndex(entity, alias) == -1 {
 		return entity, nil
 	}
 
@@ -437,40 +512,50 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	defer txn.Abort()
 
 	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
 	if err != nil {
 		return nil, err
 	}
 	if entity != nil {
-		return entity, nil
+		idx := changedAliasIndex(entity, alias)
+		if idx == -1 {
+			return entity, nil
+		}
+		a := entity.Aliases[idx]
+		a.Metadata = alias.Metadata
+		a.LastUpdateTime = ptypes.TimestampNow()
+
+		update = true
 	}
 
-	entity = new(identity.Entity)
-	err = i.sanitizeEntity(ctx, entity)
-	if err != nil {
-		return nil, err
-	}
+	if !update {
+		entity = new(identity.Entity)
+		err = i.sanitizeEntity(ctx, entity)
+		if err != nil {
+			return nil, err
+		}
 
-	// Create a new alias
-	newAlias := &identity.Alias{
-		CanonicalID:   entity.ID,
-		Name:          alias.Name,
-		MountAccessor: alias.MountAccessor,
-		Metadata:      alias.Metadata,
-		MountPath:     mountValidationResp.MountPath,
-		MountType:     mountValidationResp.MountType,
-	}
+		// Create a new alias
+		newAlias := &identity.Alias{
+			CanonicalID:   entity.ID,
+			Name:          alias.Name,
+			MountAccessor: alias.MountAccessor,
+			Metadata:      alias.Metadata,
+			MountPath:     mountValidationResp.MountPath,
+			MountType:     mountValidationResp.MountType,
+		}
 
-	err = i.sanitizeAlias(ctx, newAlias)
-	if err != nil {
-		return nil, err
-	}
+		err = i.sanitizeAlias(ctx, newAlias)
+		if err != nil {
+			return nil, err
+		}
 
-	i.logger.Debug("creating a new entity", "alias", newAlias)
+		i.logger.Debug("creating a new entity", "alias", newAlias)
 
-	// Append the new alias to the new entity
-	entity.Aliases = []*identity.Alias{
-		newAlias,
+		// Append the new alias to the new entity
+		entity.Aliases = []*identity.Alias{
+			newAlias,
+		}
 	}
 
 	// Update MemDB and persist entity object
@@ -482,4 +567,18 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn.Commit()
 
 	return entity, nil
+}
+
+// changedAliasIndex searches an entity for changed alias metadata.
+//
+// If a match is found, the changed alias's index is returned. If no alias
+// names match or no metadata is different, -1 is returned.
+func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
+	for i, a := range entity.Aliases {
+		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
+			return i
+		}
+	}
+
+	return -1
 }

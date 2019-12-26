@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/rewrap - HTTP API"
-sidebar_current: "docs-http-system-wrapping-rewrap"
+sidebar_title: "<code>/sys/wrapping/rewrap</code>"
+sidebar_current: "api-http-system-wrapping-rewrap"
 description: |-
   The `/sys/wrapping/rewrap` endpoint can be used to rotate a wrapping token and refresh its TTL.
 ---
@@ -18,9 +19,9 @@ creation TTL as the original token and contain the same response. The old token
 will be invalidated. This can be used for long-term storage of a secret in a
 response-wrapped token when rotation is a requirement.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/rewrap`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/rewrap`       |
 
 ### Parameters
 

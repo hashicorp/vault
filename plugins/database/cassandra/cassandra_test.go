@@ -2,16 +2,16 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
-	"fmt"
-
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/ory/dockertest"
 )
 
@@ -40,10 +40,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 	}
 
 	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
@@ -73,7 +70,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 }
 
 func TestCassandra_Initialize(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -94,7 +91,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -118,7 +115,7 @@ func TestCassandra_Initialize(t *testing.T) {
 }
 
 func TestCassandra_CreateUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -158,7 +155,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 }
 
 func TestMyCassandra_RenewUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -203,7 +200,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 }
 
 func TestCassandra_RevokeUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -253,7 +250,7 @@ func TestCassandra_RevokeUser(t *testing.T) {
 }
 
 func TestCassandra_RotateRootCredentials(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)

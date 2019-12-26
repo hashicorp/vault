@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault HA with Consul - Guides"
+sidebar_title: "Vault HA with Consul"
 sidebar_current: "guides-operations-vault-ha"
 description: |-
   This guide will walk you through a simple Vault Highly Available (HA) cluster
@@ -23,7 +24,7 @@ and ***active***. Within a Vault cluster, only a single instance will be
 _active_ and handles all requests (reads and writes) and all _standby_ nodes
 redirect requests to the _active_ node.
 
-![Reference Architecture](/assets/images/vault-ha-consul-3.png)
+![Reference Architecture](/img/vault-ha-consul-3.png)
 
 > **NOTE:** As of version **0.11**, those standby nodes can handle most
 read-only requests and behave as read-replica nodes. This **Performance Standby
@@ -69,7 +70,7 @@ consisting of the following:
 
 This diagram lays out the simple architecture details for reference:
 
-![Reference Architecture](/assets/images/vault-ha-consul.png)
+![Reference Architecture](/img/vault-ha-consul.png)
 
 You perform the following:
 
@@ -229,7 +230,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir -p /var/run/consul
 ExecStartPre=/bin/chown -R consul:consul /var/run/consul
 ExecStart=/usr/local/bin/consul agent \
-    -config-file=/usr/local/etc/consul/server_agent.json \
+    -config-file=/usr/local/etc/consul/client_agent.json \
     -pid-file=/var/run/consul/consul.pid
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
@@ -267,7 +268,7 @@ system and verify the status:
        Memory: 13.6M
           CPU: 0m 52.784s
        CGroup: /system.slice/consul.service
-               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/server_agent.json -pid-file=/var/run/consul/consul.pid
+               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
 
 After starting all Consul server agents, let’s check the Consul cluster status:
 
@@ -294,7 +295,7 @@ this example.  Now, you are good to move on to the Vault server configuration.
 
 The Vault server nodes require **both** the Consul and Vault binaries on each node. Consul will be configured as a **client** agent and Vault will be configured as a server.
 
-![Reference Architecture](/assets/images/vault-ha-consul-2.png)
+![Reference Architecture](/img/vault-ha-consul-2.png)
 
 
 #### Consul Client Agent Configuration
@@ -499,7 +500,7 @@ We're setting the following parameters for our `tcp` listener:
 This configuration allows for listening on all interfaces (such that a Vault
 command against the loopback address would succeed, for example).
 
-We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accesing Vault through a load balancer, for example).
+We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
 
 For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha.html#client-redirection) documentation for more information on client access patterns and their implications.
 

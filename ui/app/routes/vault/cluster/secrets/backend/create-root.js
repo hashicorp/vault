@@ -6,9 +6,10 @@ let secretModel = (store, backend, key) => {
   let backendModel = store.peekRecord('secret-engine', backend);
   let modelType = backendModel.get('modelTypeForKV');
   if (modelType !== 'secret-v2') {
-    return store.createRecord(modelType, {
-      id: key,
+    let model = store.createRecord(modelType, {
+      path: key,
     });
+    return model;
   }
   let secret = store.createRecord(modelType);
   secret.set('engine', backendModel);
@@ -33,7 +34,8 @@ export default EditBase.extend({
       }
       return this.store.createRecord(modelType);
     }
-    return secretModel(this.store, backend, transition.queryParams.initialKey);
+
+    return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 
   model(params, transition) {

@@ -1,0 +1,19 @@
+{{#if (eq model.mode 'unsupported')}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3 has-text-grey">
+        Replication unsupported
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <EmptyState
+    @title="The current cluster configuration does not support replication"
+  />
+{{else}}
+  <ReplicationSummary
+    @cluster={{model}}
+    @showModeSummary={{true}}
+    @onEnable={{action "onEnable"}}
+    @onDisable={{action "onDisable"}}
+  />
+{{/if}}

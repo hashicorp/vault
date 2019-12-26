@@ -1,14 +1,15 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export function linkParams({ mode, secret, queryParams }) {
   let params;
   const route = `vault.cluster.secrets.backend.${mode}`;
 
-  if (!secret || secret === ' ') {
+  if ((mode !== 'versions' && !secret) || secret === ' ') {
     params = [route + '-root'];
   } else {
-    params = [route, secret];
+    params = [route, encodePath(secret)];
   }
 
   if (queryParams) {
@@ -19,7 +20,10 @@ export function linkParams({ mode, secret, queryParams }) {
 }
 
 export default Component.extend({
+  onLinkClick() {},
   tagName: '',
+  // so that ember-test-selectors doesn't log a warning
+  supportsDataTestProperties: true,
   mode: 'list',
 
   secret: null,

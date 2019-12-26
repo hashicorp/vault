@@ -26,11 +26,10 @@ type TokenCreateCommand struct {
 	flagNoDefaultPolicy bool
 	flagUseLimit        int
 	flagRole            string
+	flagType            string
 	flagMetadata        map[string]string
 	flagPolicies        []string
-
-	// Deprecated flags
-	flagLease time.Duration
+	flagEntityAlias     string
 }
 
 func (c *TokenCreateCommand) Synopsis() string {
@@ -70,8 +69,8 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Name:       "id",
 		Target:     &c.flagID,
 		Completion: complete.PredictAnything,
-		Usage: "Value for the token. By default, this is an auto-generated 36 " +
-			"character UUID. Specifying this value requires sudo permissions.",
+		Usage: "Value for the token. By default, this is an auto-generated " +
+			"string. Specifying this value requires sudo permissions.",
 	})
 
 	f.StringVar(&StringVar{
@@ -87,7 +86,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Target:     &c.flagTTL,
 		Completion: complete.PredictAnything,
 		Usage: "Initial TTL to associate with the token. Token renewals may be " +
-			"able to extend beyond this value, depending on the configured maximum" +
+			"able to extend beyond this value, depending on the configured maximum " +
 			"TTLs. This is specified as a numeric string with suffix like \"30s\" " +
 			"or \"5m\".",
 	})
@@ -153,6 +152,13 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 			"must have permission for \"auth/token/create/<role>\".",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "type",
+		Target:  &c.flagType,
+		Default: "service",
+		Usage:   `The type of token to create. Can be "service" or "batch".`,
+	})
+
 	f.StringMapVar(&StringMapVar{
 		Name:       "metadata",
 		Target:     &c.flagMetadata,
@@ -171,13 +177,14 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 			"specified multiple times to attach multiple policies.",
 	})
 
-	// Deprecated flags
-	// TODO: remove in 0.9.0
-	f.DurationVar(&DurationVar{
-		Name:    "lease", // prefer -ttl
-		Target:  &c.flagLease,
-		Default: 0,
-		Hidden:  true,
+	f.StringVar(&StringVar{
+		Name:    "entity-alias",
+		Target:  &c.flagEntityAlias,
+		Default: "",
+		Usage: "Name of the entity alias to associate with during token creation. " +
+			"Only works in combination with -role argument and used entity alias " +
+			"must be listed in allowed_entity_aliases. If this has been specified, " +
+			"the entity will not be inherited from the parent.",
 	})
 
 	return set
@@ -205,12 +212,8 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	// TODO: remove in 0.9.0
-	if c.flagLease != 0 {
-		if Format(c.UI) == "table" {
-			c.UI.Warn("The -lease flag is deprecated. Please use -ttl instead.")
-			c.flagTTL = c.flagLease
-		}
+	if c.flagType == "batch" {
+		c.flagRenewable = false
 	}
 
 	client, err := c.Client()
@@ -231,6 +234,8 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		Renewable:       &c.flagRenewable,
 		ExplicitMaxTTL:  c.flagExplicitMaxTTL.String(),
 		Period:          c.flagPeriod.String(),
+		Type:            c.flagType,
+		EntityAlias:     c.flagEntityAlias,
 	}
 
 	var secret *api.Secret

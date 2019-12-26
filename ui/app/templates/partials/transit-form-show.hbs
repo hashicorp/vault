@@ -1,5 +1,5 @@
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs sub-nav">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs">
     <ul>
       <li class="{{if (eq tab '') 'is-active'}}">
         {{#secret-link
@@ -9,7 +9,7 @@
           queryParams=(query-params tab='')
           data-test-transit-link="details"
           }}
-            Details
+          Details
         {{/secret-link}}
       </li>
 
@@ -21,12 +21,43 @@
           queryParams=(query-params tab='versions')
           data-test-transit-link="versions"
           }}
-            Versions
+          Versions
         {{/secret-link}}
       </li>
     </ul>
   </nav>
 </div>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if (eq tab 'versions')}}
+      <TransitKeyActions
+        @key={{key}}
+        @selectedAction="rotate"
+        @capabilities={{capabilities}}
+        @onRefresh={{action "refresh"}}
+      />
+    {{/if}}
+    {{#if (eq mode "show") }}
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+        <ToolbarSecretLink
+          @secret={{key.id}}
+          @mode="edit"
+          replace=true
+        >
+          Edit encryption key
+        </ToolbarSecretLink>
+      {{/if}}
+      <ToolbarSecretLink
+        @secret={{key.id}}
+        @mode="actions"
+        @data-test-transit-key-actions-link=true
+      >
+        Key actions
+      </ToolbarSecretLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 
 {{#if (eq tab 'versions')}}
   {{#if (or
@@ -52,16 +83,16 @@
           <div class="td is-borderless">
             {{version}}
             {{#if (coerce-eq key.minDecryptionVersion version)}}
-            <p class="help has-text-grey">(current minimum decryption version)</p>
+              <p class="help has-text-grey">(current minimum decryption version)</p>
             {{/if}}
           </div>
         </div>
         <div class="column is-half td">
           <div class="td is-borderless">
-            {{moment-format (unix creationTimestamp) 'MMM DD, YYYY hh:mm:ss A'}}
-            <br/>
+            {{date-format creationTimestamp 'MMM DD, YYYY hh:mm:ss A'}}
+            <br />
             <small class="is-font-mono has-text-grey">
-              {{moment-format (unix creationTimestamp) }}
+              {{date-format creationTimestamp }}
             </small>
           </div>
         </div>
@@ -95,7 +126,8 @@
       </div>
     </div>
     {{#each-in key.keys as |version meta|}}
-      <div class="columns is-gapless is-marginless table {{if (get this (concat version '-open')) 'has-background-grey-lighter' }}" data-test-transit-key-version-row={{version}}>
+      <div class="columns is-gapless is-marginless table {{if (get this (concat version '-open')) 'has-background-grey-lighter' }}"
+        data-test-transit-key-version-row={{version}}>
         <div class="column {{if (get this (concat version '-open')) '' 'td' }}">
           <div class="columns is-marginless is-gapless">
             <div class="column is-11">
@@ -116,10 +148,10 @@
                 <div class="column is-one-third">
                   <div class="td is-borderless">
                     <div>
-                      {{moment-format meta.creation_time 'MMM DD, YYYY hh:mm:ss A'}}
-                      <br/>
+                      {{date-format meta.creation_time 'MMM DD, YYYY hh:mm:ss A'}}
+                      <br />
                       <small class="is-font-mono has-text-grey">
-                        {{moment-format meta.creation_time}}
+                        {{date-format meta.creation_time}}
                       </small>
                     </div>
                   </div>
@@ -128,7 +160,11 @@
             </div>
             <div class="column is-1 has-text-centered is-flex-v-centered">
               <button class="button is-transparent" type="button" {{action (toggle (concat version '-open') this)}}>
-                {{i-con glyph="more" size=18 aria-label=(concat backend.path ' details')}}
+                <Icon
+                  @glyph="more-horizontal"
+                  class="has-text-black auto-width"
+                  aria-label={{concat backend.path " options"}}
+                />
               </button>
             </div>
           </div>
@@ -136,38 +172,30 @@
       </div>
       {{#if (get this (concat version '-open'))}}
         <div class="table has-background-grey-lighter is-paddingless is-marginless">
-        <div class="td">
-          <div>
-            <span class="is-label">
-              Public Key
-            </span>
-            <pre class="has-background-transparent"><code class="is-paddingless">{{meta.public_key}}</code></pre>
-            <div class="box is-fullwidth has-background-transparent is-shadowless">
-              <div class="control">
-                {{#copy-button
-                  clipboardText=meta.public_key
-                  class="button"
-                  buttonType="button"
-                  success=(action (set-flash-message (concat 'Public key for version ' version ' copied!')))
+          <div class="td">
+            <div>
+              <span class="is-label">
+                Public Key
+              </span>
+              <pre class="has-background-transparent"><code class="is-paddingless">{{meta.public_key}}</code></pre>
+              <div class="box is-fullwidth has-background-transparent is-shadowless">
+                <div class="control">
+                  {{#copy-button
+                    clipboardText=meta.public_key
+                    class="button"
+                    buttonType="button"
+                    success=(action (set-flash-message (concat 'Public key for version ' version ' copied!')))
                   }}
-                  Copy
-                {{/copy-button}}
+                    Copy
+                  {{/copy-button}}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        </div>
       {{/if}}
     {{/each-in}}
   {{/if}}
-  <p>
-    {{transit-key-actions
-      key=key
-      selectedAction="rotate"
-      capabilities=capabilities
-      onRefresh=(action "refresh")
-    }}
-  </p>
 {{else}}
   {{info-table-row label="Type" value=key.type}}
   {{info-table-row label="Deletion allowed" value=(stringify key.deletionAllowed)}}

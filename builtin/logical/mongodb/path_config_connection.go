@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"gopkg.in/mgo.v2"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	mgo "gopkg.in/mgo.v2"
 )
 
 func pathConfigConnection(b *backend) *framework.Path {

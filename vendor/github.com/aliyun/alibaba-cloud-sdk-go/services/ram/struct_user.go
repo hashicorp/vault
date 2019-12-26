@@ -17,15 +17,15 @@ package ram
 
 // User is a nested struct in ram response
 type User struct {
+	MobilePhone   string `json:"MobilePhone" xml:"MobilePhone"`
+	Comments      string `json:"Comments" xml:"Comments"`
 	CreateDate    string `json:"CreateDate" xml:"CreateDate"`
+	AttachDate    string `json:"AttachDate" xml:"AttachDate"`
 	Email         string `json:"Email" xml:"Email"`
 	UserId        string `json:"UserId" xml:"UserId"`
-	Comments      string `json:"Comments" xml:"Comments"`
-	DisplayName   string `json:"DisplayName" xml:"DisplayName"`
-	LastLoginDate string `json:"LastLoginDate" xml:"LastLoginDate"`
-	MobilePhone   string `json:"MobilePhone" xml:"MobilePhone"`
-	UserName      string `json:"UserName" xml:"UserName"`
-	AttachDate    string `json:"AttachDate" xml:"AttachDate"`
-	JoinDate      string `json:"JoinDate" xml:"JoinDate"`
 	UpdateDate    string `json:"UpdateDate" xml:"UpdateDate"`
+	UserName      string `json:"UserName" xml:"UserName"`
+	JoinDate      string `json:"JoinDate" xml:"JoinDate"`
+	LastLoginDate string `json:"LastLoginDate" xml:"LastLoginDate"`
+	DisplayName   string `json:"DisplayName" xml:"DisplayName"`
 }

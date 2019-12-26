@@ -109,7 +109,7 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { token, password, username, path } = data;
+    const { role, jwt, token, password, username, path } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
     let options = {
@@ -119,6 +119,8 @@ export default ApplicationAdapter.extend({
       options.headers = {
         'X-Vault-Token': token,
       };
+    } else if (backend === 'jwt' || backend === 'oidc') {
+      options.data = { role, jwt };
     } else {
       options.data = token ? { token, password } : { password };
     }
@@ -139,9 +141,12 @@ export default ApplicationAdapter.extend({
     const authBackend = type.toLowerCase();
     const authURLs = {
       github: 'login',
+      jwt: 'login',
+      oidc: 'login',
       userpass: `login/${encodeURIComponent(username)}`,
       ldap: `login/${encodeURIComponent(username)}`,
       okta: `login/${encodeURIComponent(username)}`,
+      radius: `login/${encodeURIComponent(username)}`,
       token: 'lookup-self',
     };
     const urlSuffix = authURLs[authBackend];
@@ -180,7 +185,7 @@ export default ApplicationAdapter.extend({
   generateDrOperationToken(data, options) {
     const verb = options && options.checkStatus ? 'GET' : 'PUT';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.otp) {
+    if (!data || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {

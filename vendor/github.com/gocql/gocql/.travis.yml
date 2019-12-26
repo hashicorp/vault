@@ -1,0 +1,47 @@
+language: go
+
+sudo: required
+dist: trusty
+
+cache:
+  directories:
+    - $HOME/.ccm/repository
+    - $HOME/.local/lib/python2.7
+
+matrix:
+  fast_finish: true
+
+branches:
+  only:
+  - master
+
+env:
+  global:
+    - GOMAXPROCS=2
+  matrix:
+    - CASS=2.2.13
+      AUTH=true
+    - CASS=2.2.13
+      AUTH=false
+    - CASS=3.0.17
+      AUTH=false
+    - CASS=3.11.3
+      AUTH=false
+
+go:
+  - "1.10"
+  - "1.11"
+
+install:
+  - ./install_test_deps.sh $TRAVIS_REPO_SLUG
+  - cd ../..
+  - cd gocql/gocql
+  - go get .
+
+script:
+  - set -e
+  - PATH=$PATH:$HOME/.local/bin bash integration.sh $CASS $AUTH
+  - go vet .
+
+notifications:
+  - email: false

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Cassandra - Secrets Engines"
+sidebar_title: "Cassandra <sup>DEPRECATED</sup>"
 sidebar_current: "docs-secrets-cassandra"
 description: |-
   The Cassandra secrets engine for Vault generates database credentials to access Cassandra.

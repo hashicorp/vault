@@ -2,21 +2,24 @@ package kv
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathsDelete returns the path configuration for the delete and undelete paths
 func pathsDelete(b *versionedKVBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
-			Pattern: "delete/.*",
+			Pattern: "delete/" + framework.MatchAllRegex("path"),
 			Fields: map[string]*framework.FieldSchema{
+				"path": {
+					Type:        framework.TypeString,
+					Description: "Location of the secret.",
+				},
 				"versions": {
 					Type:        framework.TypeCommaIntSlice,
 					Description: "The versions to be archived. The versioned data will not be deleted, but it will no longer be returned in normal get requests.",
@@ -31,8 +34,12 @@ func pathsDelete(b *versionedKVBackend) []*framework.Path {
 			HelpDescription: deleteHelpDesc,
 		},
 		&framework.Path{
-			Pattern: "undelete/.*",
+			Pattern: "undelete/" + framework.MatchAllRegex("path"),
 			Fields: map[string]*framework.FieldSchema{
+				"path": {
+					Type:        framework.TypeString,
+					Description: "Location of the secret.",
+				},
 				"versions": {
 					Type:        framework.TypeCommaIntSlice,
 					Description: "The versions to unarchive. The versions will be restored and their data will be returned on normal get requests.",
@@ -52,11 +59,16 @@ func pathsDelete(b *versionedKVBackend) []*framework.Path {
 // pathUndeleteWrite is used to undelete a set of versions
 func (b *versionedKVBackend) pathUndeleteWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "undelete/")
+		key := data.Get("path").(string)
 
 		versions := data.Get("versions").([]int)
 		if len(versions) == 0 {
 			return logical.ErrorResponse("No version number provided"), logical.ErrInvalidRequest
+		}
+
+		config, err := b.config(ctx, req.Storage)
+		if err != nil {
+			return nil, err
 		}
 
 		lock := locksutil.LockForKey(b.locks, key)
@@ -77,8 +89,17 @@ func (b *versionedKVBackend) pathUndeleteWrite() framework.OperationFunc {
 			if lv == nil || lv.Destroyed {
 				continue
 			}
-
 			lv.DeletionTime = nil
+
+			if !config.IsDeleteVersionAfterDisabled() {
+				if dtime, ok := deletionTime(time.Now(), deleteVersionAfter(config), deleteVersionAfter(meta)); ok {
+					dt, err := ptypes.TimestampProto(dtime)
+					if err != nil {
+						return logical.ErrorResponse("error setting deletion_time: converting %v to protobuf: %v", dtime, err), logical.ErrInvalidRequest
+					}
+					lv.DeletionTime = dt
+				}
+			}
 		}
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		if err != nil {
@@ -92,7 +113,7 @@ func (b *versionedKVBackend) pathUndeleteWrite() framework.OperationFunc {
 // pathDeleteWrite is used to delete a set of versions.
 func (b *versionedKVBackend) pathDeleteWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "delete/")
+		key := data.Get("path").(string)
 
 		versions := data.Get("versions").([]int)
 		if len(versions) == 0 {

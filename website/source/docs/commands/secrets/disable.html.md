@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets disable - Command"
+sidebar_title: "<code>disable</code>"
 sidebar_current: "docs-commands-secrets-disable"
 description: |-
   The "secrets disable" command disables an secrets engine at a given PATH. The

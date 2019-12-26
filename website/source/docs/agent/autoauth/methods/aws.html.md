@@ -1,12 +1,13 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth AWS Method"
+sidebar_title: "AWS"
 sidebar_current: "docs-agent-autoauth-methods-aws"
 description: |-
   AWS Method for Vault Agent Auto-Auth
 ---
 
-# Vault Agent Auto-Auth AWS Method 
+# Vault Agent Auto-Auth AWS Method
 
 The `aws` method performs authentication against the [AWS Auth
 method](https://www.vaultproject.io/docs/auth/aws.html). Both `ec2` and `iam`
@@ -26,14 +27,14 @@ will use the first valid credentials it finds in the following order:
 2. Environment variables
 3. A file containing credentials
 4. From any identity services available in its physical environment like container environment variables or role-based instance metadata
- 
-Wherever possible, we recommend using identity services (method 4) for credentials. 
-These rotate regularly and require no effort on your part to provision, making 
-identity services the most secure of the four methods. If using identity services _and_ a custom 
+
+Wherever possible, we recommend using identity services (method 4) for credentials.
+These rotate regularly and require no effort on your part to provision, making
+identity services the most secure of the four methods. If using identity services _and_ a custom
 `credential_poll_interval`, be sure the frequency is set low enough to pick up new credentials
 from the physical environment as they become available.
 
-To use identity services, choose the `iam` type and leave the `access_key`, `secret_key`, and `session_token` 
+To use identity services, choose the `iam` type and leave the `access_key`, `secret_key`, and `session_token`
 parameters unset in your configuration.
 
 ## Configuration
@@ -48,7 +49,18 @@ parameters unset in your configuration.
 
 - `secret_key` `(string: optional)` - When using static credentials, the secret key to use.
 
+- `region` `(string: "us-east-1")` - The region to use for signing the authentication request. The
+   region Agent uses should match that corresponding to
+   [`sts_endpoint`](https://www.vaultproject.io/api/auth/aws/index.html#sts_endpoint),
+   if a custom endpoint has been configured on the Vault server.
+
 - `session_token` `(string: optional)` - The session token to use for authentication, if needed.
 
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for
   [`iam_server_id_header_value`](https://www.vaultproject.io/api/auth/aws/index.html#iam_server_id_header_value).
+
+## Learn
+
+Refer to the [Vault Agent with
+AWS](https://learn.hashicorp.com/vault/identity-access-management/vault-agent-aws)
+guide for a step-by-step tutorial.

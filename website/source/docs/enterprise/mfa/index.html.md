@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MFA Support - Vault Enterprise"
+sidebar_title: "MFA"
 sidebar_current: "docs-vault-enterprise-mfa"
 description: |-
   Vault Enterprise has support for Multi-factor Authentication (MFA), using different authentication types.

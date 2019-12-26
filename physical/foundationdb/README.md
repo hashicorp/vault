@@ -6,14 +6,27 @@ this procedure will fail with a descriptive error message at runtime.
 
 ## Installing the Go bindings
 
-You will need to install the FoundationDB Go bindings to build the FoundationDB
-backend. Make sure you have the FoundationDB client library installed on your
-system, along with Mono (core is enough), then install the Go bindings using
-the `fdb-go-install.sh` script:
+### Picking a version
+
+The version of the Go bindings and the FoundationDB client library used to
+build them must match.
+
+This version will determine the minimum API version that can be used, hence
+it should be no higher than the version of FoundationDB used in your cluster,
+and must also satisfy the requirements of the backend code.
+
+The minimum required API version for the FoundationDB backend is 520.
+
+### Installation
+
+Make sure you have Mono installed (core is enough), then install the
+Go bindings using the `fdb-go-install.sh` script:
 
 ```
-$ physical/foundationdb/fdb-go-install.sh
+$ physical/foundationdb/fdb-go-install.sh install --fdbver x.y.z
 ```
+
+By default, if `--fdbver x.y.z` is not specified, version 5.2.4 will be used.
 
 ## Building Vault
 

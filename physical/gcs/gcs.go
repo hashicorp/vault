@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,14 +12,14 @@ import (
 	"strings"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"cloud.google.com/go/storage"
-	"github.com/armon/go-metrics"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -147,7 +148,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		logger.Warn("specifying credentials_file as an option is " +
 			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
 			"variable or instance credentials instead.")
-		opts = append(opts, option.WithServiceAccountFile(credentialsFile))
+		opts = append(opts, option.WithCredentialsFile(credentialsFile))
 	}
 
 	ctx := context.Background()
@@ -157,9 +158,9 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		bucket:    bucket,
-		haEnabled: haEnabled,
-
+		bucket:     bucket,
+		haEnabled:  haEnabled,
+		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,
@@ -177,6 +178,8 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
+	md5Array := md5.Sum(entry.Value)
+	w.MD5 = md5Array[:]
 	defer func() {
 		closeErr := w.Close()
 		if closeErr != nil {

@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -47,7 +48,22 @@ var (
 
 // enableCredential is used to enable a new credential backend
 func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
-	return c.enableCredentialInternal(ctx, entry, MountTableUpdateStorage)
+	// Enable credential internally
+	if err := c.enableCredentialInternal(ctx, entry, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
+			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
+		}
+		return err
+	}
+	return nil
 }
 
 // enableCredential is used to enable a new credential backend
@@ -75,7 +91,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	// Populate cache
 	NamespaceByID(ctx, ns.ID, c)
 
-	// Look for matching name
+	// Basic check for matching names
 	for _, ent := range c.auth.Entries {
 		if ns.ID == ent.NamespaceID {
 			switch {
@@ -84,7 +100,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 			case strings.HasPrefix(ent.Path, entry.Path):
 				fallthrough
 			case strings.HasPrefix(entry.Path, ent.Path):
-				return logical.CodedError(409, "path is already in use")
+				return logical.CodedError(409, fmt.Sprintf("path is already in use at %s", ent.Path))
 			}
 		}
 	}
@@ -94,6 +110,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
+	// Check for conflicts according to the router
 	if conflict := c.router.MountConflict(ctx, credentialRoutePrefix+entry.Path); conflict != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", conflict))
 	}
@@ -126,6 +143,12 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
 
+	// Singleton mounts cannot be filtered on a per-secondary basis
+	// from replication
+	if strutil.StrListContains(singletonMounts, entry.Type) {
+		addFilterablePath(c, viewPath)
+	}
+
 	nilMount, err := preprocessMount(c, entry, view)
 	if err != nil {
 		return err
@@ -141,11 +164,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	var backend logical.Backend
 	// Create the new backend
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
-	// Create the new backend
 	backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
@@ -156,8 +174,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	// Check for the correct backend type
 	backendType := backend.Type()
-	if entry.Type == "plugin" && backendType != logical.TypeCredential {
-		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Config.PluginName, backendType)
+	if backendType != logical.TypeCredential {
+		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
 
 	addPathCheckers(c, entry, backend, viewPath)
@@ -188,14 +206,24 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return err
 	}
 
+	if !nilMount {
+		// restore the original readOnlyErr, so we can write to the view in
+		// Initialize() if necessary
+		view.setReadOnlyErr(origViewReadOnlyErr)
+		// initialize, using the core's active context.
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type)
 	}
 	return nil
 }
 
-// disableCredential is used to disable an existing credential backend; the
-// boolean indicates if it existed
+// disableCredential is used to disable an existing credential backend
 func (c *Core) disableCredential(ctx context.Context, path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
@@ -207,7 +235,17 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
-	return c.disableCredentialInternal(ctx, path, MountTableUpdateStorage)
+	// Disable credential internally
+	if err := c.disableCredentialInternal(ctx, path, MountTableUpdateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		// Even we failed to evaluate filtered paths, the unmount operation was still successful
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+	}
+	return nil
 }
 
 func (c *Core) disableCredentialInternal(ctx context.Context, path string, updateStorage bool) error {
@@ -262,17 +300,23 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 		backend.Cleanup(ctx)
 	}
 
-	// Unmount the backend
-	if err := c.router.Unmount(ctx, path); err != nil {
-		return err
-	}
-
 	viewPath := entry.ViewPath()
 	switch {
 	case !updateStorage:
-	case c.IsDRSecondary(), entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+		// Don't attempt to clear data, replication will handle this
+	case c.IsDRSecondary():
+		// If we are a dr secondary we want to clear the view, but the provided
+		// view is marked as read only. We use the barrier here to get around
+		// it.
+
+		if err := logical.ClearViewWithLogging(ctx, NewBarrierView(c.barrier, viewPath), c.logger.Named("auth.deletion").With("namespace", ns.ID, "path", path)); err != nil {
+			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
+			return err
+		}
+
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
-		if err := logical.ClearView(ctx, view); err != nil {
+		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("auth.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
@@ -285,6 +329,11 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 
 	// Remove the mount table entry
 	if err := c.removeCredEntry(ctx, strings.TrimPrefix(path, credentialRoutePrefix), updateStorage); err != nil {
+		return err
+	}
+
+	// Unmount the backend
+	if err := c.router.Unmount(ctx, path); err != nil {
 		return err
 	}
 
@@ -329,10 +378,10 @@ func (c *Core) removeCredEntry(ctx context.Context, path string, updateStorage b
 	return nil
 }
 
-// remountCredEntryForce takes a copy of the mount entry for the path and fully
+// remountCredEntryForceInternal takes a copy of the mount entry for the path and fully
 // unmounts and remounts the backend to pick up any changes, such as filtered
-// paths
-func (c *Core) remountCredEntryForce(ctx context.Context, path string) error {
+// paths. This should be only used internal.
+func (c *Core) remountCredEntryForceInternal(ctx context.Context, path string, updateStorage bool) error {
 	fullPath := credentialRoutePrefix + path
 	me := c.router.MatchingMountEntry(ctx, fullPath)
 	if me == nil {
@@ -344,10 +393,21 @@ func (c *Core) remountCredEntryForce(ctx context.Context, path string) error {
 		return err
 	}
 
-	if err := c.disableCredential(ctx, path); err != nil {
+	if err := c.disableCredentialInternal(ctx, path, updateStorage); err != nil {
 		return err
 	}
-	return c.enableCredential(ctx, me)
+
+	// Enable credential internally
+	if err := c.enableCredentialInternal(ctx, me, updateStorage); err != nil {
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+		return err
+	}
+	return nil
 }
 
 // taintCredEntry is used to mark an entry in the auth table as tainted
@@ -521,7 +581,7 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   path,
 			Value: compressedBytes,
 		}
@@ -600,15 +660,11 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
 
 		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			if entry.Type == "plugin" {
+			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeCredential) {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
@@ -624,8 +680,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		{
 			// Check for the correct backend type
 			backendType := backend.Type()
-			if entry.Type == "plugin" && backendType != logical.TypeCredential {
-				return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Config.PluginName, backendType)
+			if backendType != logical.TypeCredential {
+				return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 			}
 
 			addPathCheckers(c, entry, backend, viewPath)
@@ -661,6 +717,10 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		if entry.Type == "token" {
 			c.tokenStore = backend.(*TokenStore)
 
+			// At some point when this isn't beta we may persist this but for
+			// now always set it on mount
+			entry.Config.TokenType = logical.TokenTypeDefaultService
+
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
@@ -670,6 +730,23 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Populate cache
 		NamespaceByID(ctx, entry.NamespaceID, c)
+
+		// Initialize
+		if !nilMount {
+			// Bind locally
+			localEntry := entry
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				if backend == nil {
+					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					return
+				}
+
+				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				if err != nil {
+					c.logger.Error("failed to initialize auth entry", "path", localEntry.Path, "error", err)
+				}
+			})
+		}
 	}
 
 	if persistNeeded {
@@ -713,7 +790,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %q", t)
+		f = plugin.Factory
 	}
 
 	// Set up conf to pass in plugin_name
@@ -721,9 +798,15 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
-	if entry.Config.PluginName != "" {
+
+	switch {
+	case entry.Type == "plugin":
 		conf["plugin_name"] = entry.Config.PluginName
+	default:
+		conf["plugin_name"] = t
 	}
+
+	conf["plugin_type"] = consts.PluginTypeCredential.String()
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)

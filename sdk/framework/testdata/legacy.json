@@ -1,0 +1,64 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
+  },
+  "paths": {
+    "/lookup/{id}": {
+      "description": "Synopsis",
+      "parameters": [
+        {
+          "name": "id",
+          "description": "My id parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "get": {
+        "operationId": "getLookupId",
+        "summary": "Synopsis",
+        "tags": ["secrets"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "operationId": "postLookupId",
+        "summary": "Synopsis",
+        "tags": ["secrets"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "My token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -6,8 +6,9 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfigURLs(b *backend) *framework.Path {
@@ -53,7 +54,7 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
+func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, error) {
 	entry, err := req.Storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
 		return nil, nil
 	}
 
-	var entries urlEntries
+	var entries certutil.URLEntries
 	if err := entry.DecodeJSON(&entries); err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
 	return &entries, nil
 }
 
-func writeURLs(ctx context.Context, req *logical.Request, entries *urlEntries) error {
+func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		return nil, err
 	}
 	if entries == nil {
-		entries = &urlEntries{
+		entries = &certutil.URLEntries{
 			IssuingCertificates:   []string{},
 			CRLDistributionPoints: []string{},
 			OCSPServers:           []string{},
@@ -139,12 +140,6 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	}
 
 	return nil, writeURLs(ctx, req, entries)
-}
-
-type urlEntries struct {
-	IssuingCertificates   []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
-	CRLDistributionPoints []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
-	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
 const pathConfigURLsHelpSyn = `

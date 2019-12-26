@@ -31,7 +31,7 @@ func (c *SecretsClient) Get(conf *client.ADConf, serviceAccountName string) (*cl
 		return nil, fmt.Errorf("unable to find service account named %s in active directory, searches are case sensitive", serviceAccountName)
 	}
 	if len(entries) > 1 {
-		return nil, fmt.Errorf("expected one matching service account, but received %s", entries)
+		return nil, fmt.Errorf("expected one matching service account, but received %+v", entries)
 	}
 	return entries[0], nil
 }

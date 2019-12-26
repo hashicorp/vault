@@ -17,8 +17,8 @@ package ram
 
 // PolicyVersion is a nested struct in ram response
 type PolicyVersion struct {
-	CreateDate       string `json:"CreateDate" xml:"CreateDate"`
-	PolicyDocument   string `json:"PolicyDocument" xml:"PolicyDocument"`
 	VersionId        string `json:"VersionId" xml:"VersionId"`
+	PolicyDocument   string `json:"PolicyDocument" xml:"PolicyDocument"`
+	CreateDate       string `json:"CreateDate" xml:"CreateDate"`
 	IsDefaultVersion bool   `json:"IsDefaultVersion" xml:"IsDefaultVersion"`
 }

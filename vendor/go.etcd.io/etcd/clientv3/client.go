@@ -20,20 +20,19 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/util/backoffutils"
+	"github.com/google/uuid"
 	"go.etcd.io/etcd/clientv3/balancer"
 	"go.etcd.io/etcd/clientv3/balancer/picker"
 	"go.etcd.io/etcd/clientv3/balancer/resolver/endpoint"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	"go.etcd.io/etcd/pkg/logutil"
 	"go.uber.org/zap"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -311,6 +310,10 @@ func (c *Client) getToken(ctx context.Context) error {
 		var resp *AuthenticateResponse
 		resp, err = auth.authenticate(ctx, c.Username, c.Password)
 		if err != nil {
+			// return err without retrying other endpoints
+			if err == rpctypes.ErrAuthNotEnabled {
+				return err
+			}
 			continue
 		}
 
@@ -443,7 +446,7 @@ func newClient(cfg *Config) (*Client, error) {
 		callOpts: defaultCallOpts,
 	}
 
-	lcfg := DefaultLogConfig
+	lcfg := logutil.DefaultZapLoggerConfig
 	if cfg.LogConfig != nil {
 		lcfg = *cfg.LogConfig
 	}
@@ -477,7 +480,7 @@ func newClient(cfg *Config) (*Client, error) {
 
 	// Prepare a 'endpoint://<unique-client-id>/' resolver for the client and create a endpoint target to pass
 	// to dial so the client knows to use this resolver.
-	client.resolverGroup, err = endpoint.NewResolverGroup(fmt.Sprintf("client-%s", strconv.FormatInt(time.Now().UnixNano(), 36)))
+	client.resolverGroup, err = endpoint.NewResolverGroup(fmt.Sprintf("client-%s", uuid.New().String()))
 	if err != nil {
 		client.cancel()
 		return nil, err
@@ -489,7 +492,7 @@ func newClient(cfg *Config) (*Client, error) {
 	}
 	dialEndpoint := cfg.Endpoints[0]
 
-	// Use an provided endpoint target so that for https:// without any tls config given, then
+	// Use a provided endpoint target so that for https:// without any tls config given, then
 	// grpc will assume the certificate server name is the endpoint host.
 	conn, err := client.dialWithBalancer(dialEndpoint, grpc.WithBalancerName(roundRobinBalancerName))
 	if err != nil {
@@ -527,10 +530,10 @@ func (c *Client) roundRobinQuorumBackoff(waitBetween time.Duration, jitterFracti
 		n := uint(len(c.Endpoints()))
 		quorum := (n/2 + 1)
 		if attempt%quorum == 0 {
-			c.lg.Info("backoff", zap.Uint("attempt", attempt), zap.Uint("quorum", quorum), zap.Duration("waitBetween", waitBetween), zap.Float64("jitterFraction", jitterFraction))
-			return backoffutils.JitterUp(waitBetween, jitterFraction)
+			c.lg.Debug("backoff", zap.Uint("attempt", attempt), zap.Uint("quorum", quorum), zap.Duration("waitBetween", waitBetween), zap.Float64("jitterFraction", jitterFraction))
+			return jitterUp(waitBetween, jitterFraction)
 		}
-		c.lg.Info("backoff skipped", zap.Uint("attempt", attempt), zap.Uint("quorum", quorum))
+		c.lg.Debug("backoff skipped", zap.Uint("attempt", attempt), zap.Uint("quorum", quorum))
 		return 0
 	}
 }
@@ -662,12 +665,4 @@ func IsConnCanceled(err error) bool {
 	}
 	// <= gRPC v1.7.x returns 'errors.New("grpc: the client connection is closing")'
 	return strings.Contains(err.Error(), "grpc: the client connection is closing")
-}
-
-func getHost(ep string) string {
-	url, uerr := url.Parse(ep)
-	if uerr != nil || !strings.Contains(ep, "://") {
-		return ep
-	}
-	return url.Host
 }

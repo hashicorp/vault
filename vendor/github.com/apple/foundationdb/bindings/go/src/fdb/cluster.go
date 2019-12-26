@@ -28,47 +28,18 @@ package fdb
 */
 import "C"
 
-import (
-	"runtime"
-)
-
+// Deprecated: Use OpenDatabase or OpenDefault to obtain a database handle directly
 // Cluster is a handle to a FoundationDB cluster. Cluster is a lightweight
 // object that may be efficiently copied, and is safe for concurrent use by
 // multiple goroutines.
-//
-// It is generally preferable to use Open or OpenDefault to obtain a database
-// handle directly.
 type Cluster struct {
-	*cluster
+	clusterFileName string
 }
 
-type cluster struct {
-	ptr *C.FDBCluster
-}
-
-func (c *cluster) destroy() {
-	C.fdb_cluster_destroy(c.ptr)
-}
-
-// OpenDatabase returns a database handle from the FoundationDB cluster. It is
-// generally preferable to use Open or OpenDefault to obtain a database handle
-// directly.
+// Deprecated: Use OpenDatabase or OpenDefault to obtain a database handle directly
+// OpenDatabase returns a database handle from the FoundationDB cluster.
 //
-// In the current release, the database name must be []byte("DB").
+// The database name must be []byte("DB").
 func (c Cluster) OpenDatabase(dbName []byte) (Database, error) {
-	f := C.fdb_cluster_create_database(c.ptr, byteSliceToPtr(dbName), C.int(len(dbName)))
-	fdb_future_block_until_ready(f)
-
-	var outd *C.FDBDatabase
-
-	if err := C.fdb_future_get_database(f, &outd); err != 0 {
-		return Database{}, Error{int(err)}
-	}
-
-	C.fdb_future_destroy(f)
-
-	d := &database{outd}
-	runtime.SetFinalizer(d, (*database).destroy)
-
-	return Database{d}, nil
+	return Open(c.clusterFileName, dbName)
 }

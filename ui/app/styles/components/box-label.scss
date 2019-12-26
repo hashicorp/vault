@@ -33,11 +33,11 @@ label.box-label {
     color: $grey-light;
   }
 
-  input[type=radio] {
+  input[type='radio'] {
     display: none;
   }
 
-  input[type=radio] + label {
+  input[type='radio'] + label {
     border: 1px solid $grey-light;
     border-radius: 50%;
     cursor: pointer;
@@ -47,7 +47,7 @@ label.box-label {
     width: 1rem;
   }
 
-  input[type=radio]:checked + label {
+  input[type='radio']:checked + label {
     background: $blue;
     border: 1px solid $blue;
     box-shadow: inset 0 0 0 0.15rem $white;

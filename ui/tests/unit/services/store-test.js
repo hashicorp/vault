@@ -4,6 +4,9 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { normalizeModelName, keyForCache } from 'vault/services/store';
 import clamp from 'vault/utils/clamp';
+import config from 'vault/config/environment';
+
+const { DEFAULT_PAGE_SIZE } = config.APP;
 
 module('Unit | Service | store', function(hooks) {
   setupTest(hooks);
@@ -197,10 +200,12 @@ module('Unit | Service | store', function(hooks) {
     let response = {
       data: ['foo'],
     };
+    let queryArgs;
     const store = this.owner.factoryFor('service:store').create({
       adapterFor() {
         return {
-          query() {
+          query(store, modelName, query) {
+            queryArgs = query;
             return resolve(response);
           },
         };
@@ -217,6 +222,12 @@ module('Unit | Service | store', function(hooks) {
       { response: { data: null }, dataset: ['foo'] },
       'stores returned dataset'
     );
+
+    run(function() {
+      store.lazyPaginatedQuery('secret', { page: 1, responsePath: 'data' });
+    });
+    assert.equal(queryArgs.size, DEFAULT_PAGE_SIZE, 'calls query with DEFAULT_PAGE_SIZE');
+
     assert.throws(
       () => {
         store.lazyPaginatedQuery('transit-key', {});
@@ -230,13 +241,6 @@ module('Unit | Service | store', function(hooks) {
       },
       /page is required/,
       'requires page'
-    );
-    assert.throws(
-      () => {
-        store.lazyPaginatedQuery('transit-key', { responsePath: 'foo', page: 1 });
-      },
-      /size is required/,
-      'requires size'
     );
   });
 });
