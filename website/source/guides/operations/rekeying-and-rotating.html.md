@@ -68,6 +68,8 @@ Rekeying the Vault requires a quorum of unseal keys. Before continuing, you
 should ensure enough unseal key holders are available to assist with the
 rekeying to match the threshold configured when the keys were issued.
 
+Please also observe that if Vault is configured with *auto_unseal* (and the keys thus are the *recovery_keys*) an extra flag `-target=recovery` has to be provided for each of the commands below. Otherwise the *key-shares* will default to **1** no matter what value you set.
+
 First, initialize a rekeying operation. The flags represent the **newly
 desired** number of keys and threshold:
 
