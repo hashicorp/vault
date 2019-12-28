@@ -260,11 +260,10 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			if ids {
 				compare = group.ID
 			} else {
-				if p.Namespace != nil && group.NamespaceID == p.Namespace.ID {
-					compare = group.Name
-				} else {
+				if p.Namespace != nil && group.NamespaceID != p.Namespace.ID {
 					continue
 				}
+				compare = group.Name
 			}
 
 			if compare == accessorSplit[0] {

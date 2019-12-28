@@ -267,7 +267,14 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 
 	aliases := make([]*logical.Alias, len(entity.Aliases))
 	for i, a := range entity.Aliases {
+
+		// Don't return aliases from other namespaces
+		if a.NamespaceID != d.mountEntry.NamespaceID {
+			continue
+		}
+
 		alias := &logical.Alias{
+			ID:            a.ID,
 			MountAccessor: a.MountAccessor,
 			Name:          a.Name,
 		}
@@ -288,6 +295,52 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	ret.Aliases = aliases
 
 	return ret, nil
+}
+
+func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	groups, inheritedGroups, err := d.core.identityStore.groupsByEntityID(entityID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups = append(groups, inheritedGroups...)
+
+	logicalGroups := make([]*logical.Group, len(groups))
+	for i, g := range groups {
+		// Don't return groups from other namespaces
+		if g.NamespaceID != d.mountEntry.NamespaceID {
+			continue
+		}
+
+		group := &logical.Group{
+			ID:   g.ID,
+			Name: g.Name,
+		}
+
+		if g.Metadata != nil {
+			group.Metadata = make(map[string]string, len(g.Metadata))
+			for k, v := range g.Metadata {
+				group.Metadata[k] = v
+			}
+		}
+
+		logicalGroups[i] = group
+	}
+
+	return logicalGroups, nil
 }
 
 func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {

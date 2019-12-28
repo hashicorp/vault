@@ -5,7 +5,7 @@ package vault
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/sdk/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

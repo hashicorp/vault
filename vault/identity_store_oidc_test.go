@@ -10,9 +10,9 @@ import (
 
 	"github.com/go-test/deep"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
 	"gopkg.in/square/go-jose.v2"

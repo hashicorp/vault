@@ -413,6 +413,7 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	}
 	path = ns.Path + path
 
+	fmt.Println(path)
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()

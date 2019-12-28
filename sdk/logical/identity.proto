@@ -34,4 +34,18 @@ message Alias {
 
 	// Metadata represents the custom data tied to this alias
 	map<string, string> metadata = 4;
+
+    // ID is the unique identifier for the alias
+    string ID = 5;
+}
+
+message Group {
+	// ID is the unique identifier for the group
+	string ID = 1;
+
+	// Name is the human-friendly unique identifier for the group
+	string name = 2;
+
+	// Metadata represents the custom data tied to this group
+	map<string, string> metadata = 3;
 }
